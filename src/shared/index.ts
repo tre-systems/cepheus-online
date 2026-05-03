@@ -1,4 +1,5 @@
 export * from './commands'
+export * from './characterCreation'
 export * from './dice'
 export * from './events'
 export * from './ids'

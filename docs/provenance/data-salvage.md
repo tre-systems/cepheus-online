@@ -36,12 +36,16 @@ layout and the intended normalization target.
 - Made `pieceSchema.ts` self-contained by moving old piece visibility/freedom
   constants into the schema file.
 - Rehomed schema type imports away from old path aliases.
+- Reimplemented the legacy character creation status machine and first career
+  rules helpers as pure shared code in `src/shared/characterCreation.ts`,
+  without XState, React, Zustand, Amplify, or Material UI.
 
 ## Next Salvage Candidates
 
 Do not copy these blindly. Extract the domain logic and tests:
 
-- character creation state machine
+- deeper character creation rules: terms, aging, benefits, events, mishaps,
+  cascade skills, and career completion
 - dice and combat calculations
 - initiative ordering
 - equipment ledger behavior
