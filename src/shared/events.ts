@@ -1,4 +1,11 @@
-import type {BoardId, CharacterId, EventId, GameId, PieceId, UserId} from './ids'
+import type {
+  BoardId,
+  CharacterId,
+  EventId,
+  GameId,
+  PieceId,
+  UserId
+} from './ids'
 import type {
   CharacterSheetPatch,
   CharacterType,
@@ -47,6 +54,12 @@ export type GameEvent =
   | {
       type: 'BoardSelected'
       boardId: BoardId
+    }
+  | {
+      type: 'DoorStateChanged'
+      boardId: BoardId
+      doorId: string
+      open: boolean
     }
   | {
       type: 'PieceCreated'

@@ -1,5 +1,5 @@
-import type {EventEnvelope} from './events'
-import type {CharacterCharacteristics, GameState} from './state'
+import type { EventEnvelope } from './events'
+import type { CharacterCharacteristics, GameState } from './state'
 
 const diceRevealAt = (createdAt: string): string =>
   new Date(Date.parse(createdAt) + 2500).toISOString()
@@ -80,7 +80,7 @@ export const projectGameState = (
         }
         if (event.skills !== undefined) character.skills = [...event.skills]
         if (event.equipment !== undefined) {
-          character.equipment = event.equipment.map((item) => ({...item}))
+          character.equipment = event.equipment.map((item) => ({ ...item }))
         }
         if (event.credits !== undefined) character.credits = event.credits
 
@@ -97,7 +97,8 @@ export const projectGameState = (
           url: event.url,
           width: event.width,
           height: event.height,
-          scale: event.scale
+          scale: event.scale,
+          doors: {}
         }
         state.selectedBoardId = state.selectedBoardId ?? event.boardId
         state.eventSeq = envelope.seq
@@ -107,6 +108,16 @@ export const projectGameState = (
         if (!state) throw new Error('BoardSelected before GameCreated')
         if (!state.boards[event.boardId]) break
         state.selectedBoardId = event.boardId
+        state.eventSeq = envelope.seq
+        break
+
+      case 'DoorStateChanged':
+        if (!state) throw new Error('DoorStateChanged before GameCreated')
+        if (!state.boards[event.boardId]) break
+        state.boards[event.boardId].doors[event.doorId] = {
+          id: event.doorId,
+          open: event.open
+        }
         state.eventSeq = envelope.seq
         break
 
@@ -172,7 +183,9 @@ export const projectGameState = (
 
       default: {
         const exhaustive: never = event
-        throw new Error(`Unhandled event ${(exhaustive as {type: string}).type}`)
+        throw new Error(
+          `Unhandled event ${(exhaustive as { type: string }).type}`
+        )
       }
     }
   }

@@ -200,14 +200,8 @@ describe('Worker static client', () => {
     assert.equal(body.includes('data:image/'), true)
     assert.equal(body.includes('drawImage(image'), true)
     assert.equal(body.includes('renderRail'), true)
-    assert.equal(
-      includesCode('let boardCamera = {zoom: 1, panX: 0, panY: 0}'),
-      true
-    )
-    assert.equal(
-      includesCode('const boardTransform = (board, cssWidth, cssHeight)'),
-      true
-    )
+    assert.equal(body.includes('DEFAULT_BOARD_CAMERA'), true)
+    assert.equal(body.includes('./board-geometry.js'), true)
     assert.equal(
       includesCode('const screenToBoard = (screen, _board, transform)'),
       true
@@ -266,6 +260,23 @@ describe('Worker static client', () => {
     assert.equal(body.includes("expression: '2d6'"), true)
     assert.equal(body.includes("reason: name + ': ' + skill"), true)
     assert.equal(body.includes('tab.dataset.sheetTab'), true)
+  })
+
+  it('serves the dependency-free board geometry helper module', async () => {
+    const response = await worker.fetch(
+      new Request('https://cepheus.test/client/app/board-geometry.js'),
+      {} as Env
+    )
+    const body = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.equal(
+      response.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(body.includes('deriveBoardTransform'), true)
+    assert.equal(body.includes('deriveCameraZoom'), true)
+    assert.equal(body.includes('findHitPiece'), true)
   })
 
   it('serves the dependency-free dice helper module', async () => {

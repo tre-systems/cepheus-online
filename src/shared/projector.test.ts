@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
-import {describe, it} from 'node:test'
+import { describe, it } from 'node:test'
 
-import type {EventEnvelope} from './events'
+import type { EventEnvelope } from './events'
 import {
   asBoardId,
   asCharacterId,
@@ -10,7 +10,7 @@ import {
   asPieceId,
   asUserId
 } from './ids'
-import {projectGameState} from './projector'
+import { projectGameState } from './projector'
 
 const gameId = asGameId('game-1')
 const actorId = asUserId('user-1')
@@ -64,6 +64,49 @@ describe('game state projection', () => {
     ])
 
     assert.equal(state?.selectedBoardId, asBoardId('board-2'))
+    assert.deepEqual(state?.boards[asBoardId('board-1')]?.doors, {})
+    assert.equal(state?.eventSeq, 4)
+  })
+
+  it('projects board door state changes by board and door id', () => {
+    const boardId = asBoardId('board-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'BoardCreated',
+        boardId,
+        name: 'Downport',
+        imageAssetId: null,
+        url: null,
+        width: 1000,
+        height: 800,
+        scale: 50
+      }),
+      envelope(3, {
+        type: 'DoorStateChanged',
+        boardId,
+        doorId: 'iris-1',
+        open: true
+      }),
+      envelope(4, {
+        type: 'DoorStateChanged',
+        boardId,
+        doorId: 'iris-1',
+        open: false
+      })
+    ])
+
+    assert.deepEqual(state?.boards[boardId]?.doors, {
+      'iris-1': {
+        id: 'iris-1',
+        open: false
+      }
+    })
     assert.equal(state?.eventSeq, 4)
   })
 
@@ -126,7 +169,7 @@ describe('game state projection', () => {
     })
     assert.deepEqual(character?.skills, ['Pilot 1'])
     assert.deepEqual(character?.equipment, [
-      {name: 'Vacc suit', quantity: 1, notes: ''}
+      { name: 'Vacc suit', quantity: 1, notes: '' }
     ])
     assert.equal(character?.credits, 900)
   })
@@ -186,7 +229,7 @@ describe('game state projection', () => {
     })
     assert.deepEqual(character?.skills, ['Engineer 1'])
     assert.deepEqual(character?.equipment, [
-      {name: 'Vacc suit', quantity: 1, notes: 'Tailored'}
+      { name: 'Vacc suit', quantity: 1, notes: 'Tailored' }
     ])
     assert.equal(character?.credits, 1200)
   })
@@ -257,7 +300,7 @@ describe('game state projection', () => {
     })
     assert.deepEqual(character?.skills, ['Pilot 1', 'Vacc Suit 0'])
     assert.deepEqual(character?.equipment, [
-      {name: 'Medkit', quantity: 2, notes: 'Field issue'}
+      { name: 'Medkit', quantity: 2, notes: 'Field issue' }
     ])
     assert.equal(character?.credits, 1200)
   })

@@ -6,12 +6,19 @@ import {
   deriveDieFaces,
   deriveDieTilt
 } from '../dice.js'
+import {
+  DEFAULT_BOARD_CAMERA,
+  deriveBoardTransform,
+  deriveCameraZoom,
+  findHitPiece,
+  screenToBoard as screenPointToBoard,
+  clampPiecePosition as clampPiecePositionToBoard
+} from './board-geometry.js'
 
 const DEFAULT_GAME_ID = 'demo-room'
 const DEFAULT_ACTOR_ID = 'local-user'
 const INSTALL_DISMISSED_KEY = 'cepheus-online-pwa-install-dismissed'
 const INSTALL_ACCEPTED_KEY = 'cepheus-online-pwa-install-accepted'
-const TOUCH_HIT_TARGET_PX = 44
 const DRAG_START_SLOP_PX = 6
 
 const qs = new URLSearchParams(location.search)
@@ -97,7 +104,7 @@ let selectedPieceId = null
 let sheetOpen = false
 let activeSheetTab = 'details'
 let drag = null
-let boardCamera = { zoom: 1, panX: 0, panY: 0 }
+let boardCamera = { ...DEFAULT_BOARD_CAMERA }
 let cameraBoardId = null
 let requestCounter = 0
 let diceHideTimer = null
@@ -806,10 +813,8 @@ const loadBoardImage = (board) =>
 const loadPieceImage = (piece) =>
   loadImage(pieceImageUrl(piece), pieceImageCache)
 
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
-
 const resetBoardCamera = () => {
-  boardCamera = { zoom: 1, panX: 0, panY: 0 }
+  boardCamera = { ...DEFAULT_BOARD_CAMERA }
 }
 
 const ensureBoardCamera = (board) => {
@@ -827,13 +832,7 @@ const canvasCssSize = () => {
 }
 
 const boardTransform = (board, cssWidth, cssHeight) => {
-  const baseScale = Math.min(cssWidth / board.width, cssHeight / board.height)
-  const scale = baseScale * boardCamera.zoom
-  return {
-    scale,
-    x: (cssWidth - board.width * scale) / 2 + boardCamera.panX,
-    y: (cssHeight - board.height * scale) / 2 + boardCamera.panY
-  }
+  return deriveBoardTransform(board, boardCamera, cssWidth, cssHeight)
 }
 
 const screenPoint = (event) => {
@@ -844,10 +843,8 @@ const screenPoint = (event) => {
   }
 }
 
-const screenToBoard = (screen, _board, transform) => ({
-  x: (screen.x - transform.x) / transform.scale,
-  y: (screen.y - transform.y) / transform.scale
-})
+const screenToBoard = (screen, _board, transform) =>
+  screenPointToBoard(screen, transform)
 
 const canvasPoint = (event) => {
   const board = selectedBoard()
@@ -863,25 +860,21 @@ const canvasPoint = (event) => {
 const clampPiecePosition = (piece, x, y) => {
   const board = selectedBoard()
   if (!board) return { x, y }
-  return {
-    x: clamp(x, 0, Math.max(0, board.width - piece.width * piece.scale)),
-    y: clamp(y, 0, Math.max(0, board.height - piece.height * piece.scale))
-  }
+  return clampPiecePositionToBoard(board, piece, x, y)
 }
 
 const setCameraZoom = (nextZoom, anchorScreen = null) => {
   const board = selectedBoard()
   if (!board) return
   const size = canvasCssSize()
-  const beforeTransform = boardTransform(board, size.width, size.height)
-  const anchor = anchorScreen || { x: size.width / 2, y: size.height / 2 }
-  const boardAnchor = screenToBoard(anchor, board, beforeTransform)
-  boardCamera.zoom = clamp(nextZoom, 0.5, 5)
-  const afterTransform = boardTransform(board, size.width, size.height)
-  boardCamera.panX +=
-    anchor.x - (afterTransform.x + boardAnchor.x * afterTransform.scale)
-  boardCamera.panY +=
-    anchor.y - (afterTransform.y + boardAnchor.y * afterTransform.scale)
+  boardCamera = deriveCameraZoom({
+    board,
+    camera: boardCamera,
+    cssWidth: size.width,
+    cssHeight: size.height,
+    nextZoom,
+    anchorScreen
+  })
   render()
 }
 
@@ -891,30 +884,8 @@ const releaseCanvasPointer = (pointerId) => {
   }
 }
 
-const pieceTouchPadding = (piece, transform, pointerType) => {
-  if (pointerType === 'mouse' || !transform) return { x: 0, y: 0 }
-  const drawW = piece.width * piece.scale
-  const drawH = piece.height * piece.scale
-  const targetBoardSize = TOUCH_HIT_TARGET_PX / transform.scale
-  return {
-    x: Math.max(0, (targetBoardSize - drawW) / 2),
-    y: Math.max(0, (targetBoardSize - drawH) / 2)
-  }
-}
-
 const hitPiece = (point, transform = null, pointerType = 'mouse') => {
-  const pieces = boardPieces().sort((a, b) => b.z - a.z)
-  return (
-    pieces.find((piece) => {
-      const padding = pieceTouchPadding(piece, transform, pointerType)
-      return (
-        point.x >= piece.x - padding.x &&
-        point.x <= piece.x + piece.width * piece.scale + padding.x &&
-        point.y >= piece.y - padding.y &&
-        point.y <= piece.y + piece.height * piece.scale + padding.y
-      )
-    }) || null
-  )
+  return findHitPiece(point, boardPieces(), transform, pointerType)
 }
 
 const selectedPiece = () => {

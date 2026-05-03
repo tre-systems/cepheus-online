@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
-import {describe, it} from 'node:test'
+import { describe, it } from 'node:test'
 
-import type {Command} from '../../shared/commands'
+import type { Command } from '../../shared/commands'
 import {
   asBoardId,
   asCharacterId,
@@ -9,10 +9,10 @@ import {
   asPieceId,
   asUserId
 } from '../../shared/ids'
-import {getProjectedGameState} from './projection'
-import {runCommandPublication} from './publication'
-import {gameSeedKey, readCheckpoint, readEventStream} from './storage'
-import {createMemoryStorage} from './test-support'
+import { getProjectedGameState } from './projection'
+import { runCommandPublication } from './publication'
+import { gameSeedKey, readCheckpoint, readEventStream } from './storage'
+import { createMemoryStorage } from './test-support'
 
 const gameId = asGameId('game-1')
 const actorId = asUserId('user-1')
@@ -246,7 +246,7 @@ describe('room publication flow', () => {
         dex: 9
       },
       skills: ['Pilot 1'],
-      equipment: [{name: 'Vacc suit', quantity: 1, notes: ''}],
+      equipment: [{ name: 'Vacc suit', quantity: 1, notes: '' }],
       credits: 1200
     })
 
@@ -271,7 +271,7 @@ describe('room publication flow', () => {
     assert.equal(character?.characteristics.dex, null)
     assert.deepEqual(character?.skills, ['Pilot 1'])
     assert.deepEqual(character?.equipment, [
-      {name: 'Vacc suit', quantity: 1, notes: ''}
+      { name: 'Vacc suit', quantity: 1, notes: '' }
     ])
     assert.equal(character?.credits, 900)
   })
@@ -349,7 +349,7 @@ describe('room publication flow', () => {
       gameId,
       actorId,
       characterId,
-      equipment: [{name: '  ', quantity: 1, notes: ''}]
+      equipment: [{ name: '  ', quantity: 1, notes: '' }]
     })
 
     assert.equal(rejected.ok, false)
@@ -450,6 +450,57 @@ describe('room publication flow', () => {
     assert.equal(selected.ok, false)
     if (selected.ok) return
     assert.equal(selected.error.code, 'missing_entity')
+    assert.equal((await readEventStream(storage, gameId)).length, 1)
+  })
+
+  it('publishes door state changes against existing boards', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+    await publish(storage, createBoardCommand(asBoardId('board-1')))
+
+    const changed = await publish(storage, {
+      type: 'SetDoorOpen',
+      gameId,
+      actorId,
+      boardId: asBoardId('board-1'),
+      doorId: 'iris-1',
+      open: true
+    })
+
+    assert.equal(changed.ok, true)
+    if (!changed.ok) return
+    assert.deepEqual(changed.value.state.boards[asBoardId('board-1')]?.doors, {
+      'iris-1': {
+        id: 'iris-1',
+        open: true
+      }
+    })
+
+    const storedEvent = (await readEventStream(storage, gameId))[2]?.event
+    assert.deepEqual(storedEvent, {
+      type: 'DoorStateChanged',
+      boardId: asBoardId('board-1'),
+      doorId: 'iris-1',
+      open: true
+    })
+  })
+
+  it('rejects door state changes when the board does not exist', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+
+    const changed = await publish(storage, {
+      type: 'SetDoorOpen',
+      gameId,
+      actorId,
+      boardId: asBoardId('missing-board'),
+      doorId: 'iris-1',
+      open: true
+    })
+
+    assert.equal(changed.ok, false)
+    if (changed.ok) return
+    assert.equal(changed.error.code, 'missing_entity')
     assert.equal((await readEventStream(storage, gameId)).length, 1)
   })
 

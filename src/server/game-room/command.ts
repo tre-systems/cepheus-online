@@ -1,10 +1,10 @@
-import type {Command} from '../../shared/commands'
-import {rollDiceExpression} from '../../shared/dice'
-import type {GameEvent} from '../../shared/events'
-import {deriveEventRng} from '../../shared/prng'
-import {err, ok, type Result} from '../../shared/result'
-import type {GameState} from '../../shared/state'
-import type {CommandError} from '../../shared/protocol'
+import type { Command } from '../../shared/commands'
+import { rollDiceExpression } from '../../shared/dice'
+import type { GameEvent } from '../../shared/events'
+import { deriveEventRng } from '../../shared/prng'
+import { err, ok, type Result } from '../../shared/result'
+import type { GameState } from '../../shared/state'
+import type { CommandError } from '../../shared/protocol'
 
 export interface CommandContext {
   state: GameState | null
@@ -21,7 +21,9 @@ const commandError = (
   message
 })
 
-const requireGame = (state: GameState | null): Result<GameState, CommandError> =>
+const requireGame = (
+  state: GameState | null
+): Result<GameState, CommandError> =>
   state
     ? ok(state)
     : err(commandError('game_not_found', 'Game has not been created'))
@@ -182,18 +184,16 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterSheetUpdated',
           characterId: command.characterId,
-          ...(command.notes === undefined ? {} : {notes: command.notes}),
-          ...(command.age === undefined ? {} : {age: command.age}),
+          ...(command.notes === undefined ? {} : { notes: command.notes }),
+          ...(command.age === undefined ? {} : { age: command.age }),
           ...(command.characteristics === undefined
             ? {}
-            : {characteristics: command.characteristics}),
-          ...(command.skills === undefined ? {} : {skills: command.skills}),
+            : { characteristics: command.characteristics }),
+          ...(command.skills === undefined ? {} : { skills: command.skills }),
           ...(command.equipment === undefined
             ? {}
-            : {equipment: command.equipment}),
-          ...(command.credits === undefined
-            ? {}
-            : {credits: command.credits})
+            : { equipment: command.equipment }),
+          ...(command.credits === undefined ? {} : { credits: command.credits })
         }
       ])
     }
@@ -236,6 +236,25 @@ export const deriveEventsForCommand = (
         {
           type: 'BoardSelected',
           boardId: command.boardId
+        }
+      ])
+    }
+
+    case 'SetDoorOpen': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      if (!state.value.boards[command.boardId]) {
+        return err(commandError('missing_entity', 'Board does not exist'))
+      }
+      const doorId = requireNonEmptyString(command.doorId, 'doorId')
+      if (!doorId.ok) return doorId
+
+      return ok([
+        {
+          type: 'DoorStateChanged',
+          boardId: command.boardId,
+          doorId: doorId.value,
+          open: command.open
         }
       ])
     }
@@ -283,9 +302,9 @@ export const deriveEventsForCommand = (
           imageAssetId: command.imageAssetId ?? null,
           x: command.x,
           y: command.y,
-          ...(command.width === undefined ? {} : {width: command.width}),
-          ...(command.height === undefined ? {} : {height: command.height}),
-          ...(command.scale === undefined ? {} : {scale: command.scale})
+          ...(command.width === undefined ? {} : { width: command.width }),
+          ...(command.height === undefined ? {} : { height: command.height }),
+          ...(command.scale === undefined ? {} : { scale: command.scale })
         }
       ])
     }
@@ -370,7 +389,7 @@ export const deriveEventsForCommand = (
       return err(
         commandError(
           'invalid_command',
-          `Unhandled command ${(exhaustive as {type: string}).type}`
+          `Unhandled command ${(exhaustive as { type: string }).type}`
         )
       )
     }

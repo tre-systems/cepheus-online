@@ -13,7 +13,9 @@ import {
 } from '../shared/ids'
 import type { ClientMessage, ServerMessage } from '../shared/protocol'
 import type {
+  CharacterCharacteristics,
   CharacterEquipmentItem,
+  CharacteristicKey,
   CharacterSheetPatch,
   CharacterState,
   GameState
@@ -57,6 +59,21 @@ type CreatePieceDimensions = {
 }
 type CreatePieceCommandWithDimensions = CreatePieceCommand &
   Partial<CreatePieceDimensions>
+type CharacteristicFormValue =
+  | string
+  | number
+  | null
+  | undefined
+  | { value: string | number | null | undefined }
+
+const CHARACTERISTIC_KEYS = [
+  'str',
+  'dex',
+  'end',
+  'int',
+  'edu',
+  'soc'
+] satisfies CharacteristicKey[]
 
 export const resolveClientIdentity = (
   searchParams: URLSearchParams
@@ -164,6 +181,71 @@ export const normalizeCharacterEquipmentText = (
   }
 
   return equipment
+}
+
+export const formatCharacterEquipmentText = (
+  equipment: readonly CharacterEquipmentItem[]
+): string =>
+  equipment
+    .map((item) => [item.name, item.quantity, item.notes].join(' | '))
+    .join('\n')
+
+const formValue = (value: CharacteristicFormValue): string | number | null => {
+  if (value === undefined) return null
+  if (value && typeof value === 'object' && 'value' in value) {
+    return formValue(value.value)
+  }
+  return value
+}
+
+const parseNullableFormNumber = (
+  value: CharacteristicFormValue
+): number | null => {
+  const rawValue = formValue(value)
+  if (rawValue === null) return null
+  if (typeof rawValue === 'number') {
+    return Number.isFinite(rawValue) ? rawValue : null
+  }
+
+  const trimmed = rawValue.trim()
+  if (!trimmed) return null
+  const number = Number.parseInt(trimmed, 10)
+  return Number.isFinite(number) ? number : null
+}
+
+export const parseCharacterCharacteristicsPatch = (
+  values: Partial<
+    Record<
+      CharacteristicKey | Uppercase<CharacteristicKey>,
+      CharacteristicFormValue
+    >
+  >
+): Partial<CharacterCharacteristics> => {
+  const characteristics: Partial<CharacterCharacteristics> = {}
+
+  for (const key of CHARACTERISTIC_KEYS) {
+    const upperKey = key.toUpperCase() as Uppercase<CharacteristicKey>
+    if (values[key] === undefined && values[upperKey] === undefined) continue
+    characteristics[key] = parseNullableFormNumber(
+      values[key] ?? values[upperKey]
+    )
+  }
+
+  return characteristics
+}
+
+export const buildCharacterSkillRollReason = ({
+  character,
+  skill,
+  fallbackName = 'Character'
+}: {
+  character: Pick<CharacterState, 'name'> | null | undefined
+  skill: string
+  fallbackName?: string
+}): string => {
+  const characterName = character?.name.trim() || fallbackName
+  const skillName = skill.trim() || 'Skill'
+  return `${characterName}: ${skillName}`
 }
 
 const hasCharacterSheetPatch = (patch: CharacterSheetPatch): boolean =>

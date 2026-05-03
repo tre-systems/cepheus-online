@@ -58,10 +58,100 @@ const isMapAssetKind = (value: unknown): value is MapAssetKind =>
 const isPositiveFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value > 0
 
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value)
+
 const hasUnsafePathSegment = (path: string): boolean =>
   path
     .split(/[\\/]/)
     .some((segment) => segment === '' || segment === '.' || segment === '..')
+
+const isCoordinateInBounds = (value: unknown, max: number): value is number =>
+  isFiniteNumber(value) && value >= 0 && value <= max
+
+const pushSegmentErrors = (
+  errors: string[],
+  occluder: Record<string, unknown>,
+  index: number,
+  width: number,
+  height: number
+): void => {
+  const { x1, y1, x2, y2 } = occluder
+
+  if (!isCoordinateInBounds(x1, width)) {
+    errors.push(`Occluder ${index} x1 must be within map bounds.`)
+  }
+  if (!isCoordinateInBounds(x2, width)) {
+    errors.push(`Occluder ${index} x2 must be within map bounds.`)
+  }
+  if (!isCoordinateInBounds(y1, height)) {
+    errors.push(`Occluder ${index} y1 must be within map bounds.`)
+  }
+  if (!isCoordinateInBounds(y2, height)) {
+    errors.push(`Occluder ${index} y2 must be within map bounds.`)
+  }
+
+  if (x1 === x2 && y1 === y2) {
+    errors.push(`Occluder ${index} must have a non-zero segment length.`)
+  }
+}
+
+const validateMapOccluder = (
+  value: unknown,
+  index: number,
+  width: number,
+  height: number,
+  seenIds: Set<string>
+): Result<MapOccluder, string[]> => {
+  const errors: string[] = []
+
+  if (!isObject(value)) {
+    return err([`Occluder ${index} must be an object.`])
+  }
+
+  const { type, id, x1, y1, x2, y2, open } = value
+
+  if (type !== 'wall' && type !== 'door') {
+    errors.push(`Occluder ${index} type must be wall or door.`)
+  }
+
+  if (typeof id !== 'string' || id.length === 0) {
+    errors.push(`Occluder ${index} id is required.`)
+  } else if (seenIds.has(id)) {
+    errors.push(`Occluder ${index} id must be unique.`)
+  } else {
+    seenIds.add(id)
+  }
+
+  pushSegmentErrors(errors, value, index, width, height)
+
+  if (type === 'door' && typeof open !== 'boolean') {
+    errors.push(`Occluder ${index} door open state must be boolean.`)
+  }
+
+  if (errors.length > 0) return err(errors)
+
+  const segment = { id, x1, y1, x2, y2 } as {
+    id: string
+    x1: number
+    y1: number
+    x2: number
+    y2: number
+  }
+
+  if (type === 'door') {
+    return ok({
+      type,
+      ...segment,
+      open
+    } as MapOccluder)
+  }
+
+  return ok({
+    type,
+    ...segment
+  } as MapOccluder)
+}
 
 export const deriveGeomorphTileKind = (
   width: number,
@@ -134,3 +224,64 @@ export const validateLocalMapAssetMetadata = (
     tileKind
   })
 }
+
+export const validateMapLosSidecar = (
+  value: unknown
+): Result<MapLosSidecar, string[]> => {
+  const errors: string[] = []
+
+  if (!isObject(value)) {
+    return err(['LOS sidecar must be an object.'])
+  }
+
+  const { assetRef, width, height, gridScale, occluders } = value
+
+  if (typeof assetRef !== 'string' || assetRef.length === 0) {
+    errors.push('Asset reference is required.')
+  }
+  if (!isPositiveFiniteNumber(width)) errors.push('Width must be positive.')
+  if (!isPositiveFiniteNumber(height)) errors.push('Height must be positive.')
+  if (!isPositiveFiniteNumber(gridScale)) {
+    errors.push('Grid scale must be positive.')
+  }
+  if (!Array.isArray(occluders)) {
+    errors.push('Occluders must be an array.')
+  }
+
+  if (errors.length > 0) return err(errors)
+
+  const validWidth = width as number
+  const validHeight = height as number
+  const seenIds = new Set<string>()
+  const validOccluders: MapOccluder[] = []
+
+  for (const [index, occluder] of (occluders as unknown[]).entries()) {
+    const result = validateMapOccluder(
+      occluder,
+      index,
+      validWidth,
+      validHeight,
+      seenIds
+    )
+    if (result.ok) {
+      validOccluders.push(result.value)
+    } else {
+      errors.push(...result.error)
+    }
+  }
+
+  if (errors.length > 0) return err(errors)
+
+  return ok({
+    assetRef,
+    width: validWidth,
+    height: validHeight,
+    gridScale: gridScale as number,
+    occluders: validOccluders
+  } as MapLosSidecar)
+}
+
+export const filterBlockingMapOccluders = (
+  occluders: readonly MapOccluder[]
+): MapOccluder[] =>
+  occluders.filter((occluder) => occluder.type === 'wall' || !occluder.open)

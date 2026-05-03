@@ -13,12 +13,15 @@ import {
   applyServerMessage,
   buildBootstrapCommands,
   buildCharacterSheetPatchCommand,
+  buildCharacterSkillRollReason,
   buildCreatePieceCommand,
   buildDefaultCharacterSheetUpdateCommand,
   buildMovePieceCommand,
   buildSequencedCommand,
+  formatCharacterEquipmentText,
   normalizeCharacterEquipmentText,
   normalizeCharacterSkillList,
+  parseCharacterCharacteristicsPatch,
   resolveClientIdentity
 } from './game-commands'
 
@@ -59,7 +62,8 @@ const stateWithBoard = {
       url: null,
       width: 1200,
       height: 800,
-      scale: 50
+      scale: 50,
+      doors: {}
     }
   },
   selectedBoardId: boardId
@@ -246,6 +250,63 @@ describe('client command helpers', () => {
           notes: 'ship locker'
         }
       ]
+    )
+  })
+
+  it('formats character equipment into editable protocol text', () => {
+    assert.equal(
+      formatCharacterEquipmentText([
+        {
+          name: 'Vacc suit',
+          quantity: 1,
+          notes: 'Emergency suit'
+        },
+        {
+          name: 'Medkit',
+          quantity: 2,
+          notes: ''
+        }
+      ]),
+      'Vacc suit | 1 | Emergency suit\nMedkit | 2 | '
+    )
+  })
+
+  it('parses characteristic patches from form-like values', () => {
+    assert.deepEqual(
+      parseCharacterCharacteristicsPatch({
+        str: { value: '7' },
+        dex: ' 8 ',
+        END: '',
+        int: 'not a number',
+        edu: 9,
+        soc: undefined
+      }),
+      {
+        str: 7,
+        dex: 8,
+        end: null,
+        int: null,
+        edu: 9
+      }
+    )
+  })
+
+  it('builds character skill roll reasons with stable fallbacks', () => {
+    assert.equal(
+      buildCharacterSkillRollReason({
+        character: stateWithCharacter.characters[characterId],
+        skill: ' Pilot 1 '
+      }),
+      'Scout: Pilot 1'
+    )
+
+    assert.equal(
+      buildCharacterSkillRollReason({
+        character: null,
+        fallbackName: 'Scout token',
+        skill: ''
+      }),
+      'Scout token: Skill'
     )
   })
 

@@ -46,6 +46,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/board-geometry.js',
+    source: join(compiledClientRoot, 'app', 'board-geometry.js'),
+    exportName: 'CLIENT_BOARD_GEOMETRY_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/dice.js',
     source: join(compiledClientRoot, 'dice.js'),
     exportName: 'CLIENT_DICE_JS',

@@ -1,4 +1,4 @@
-import type {BoardId, CharacterId, GameId, PieceId, UserId} from './ids'
+import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
 import type {
   CharacterSheetPatch,
   CharacterType,
@@ -50,6 +50,15 @@ export type Command =
       actorId: UserId
       expectedSeq?: number
       boardId: BoardId
+    }
+  | {
+      type: 'SetDoorOpen'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      boardId: BoardId
+      doorId: string
+      open: boolean
     }
   | {
       type: 'CreatePiece'

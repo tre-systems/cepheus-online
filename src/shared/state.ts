@@ -1,4 +1,4 @@
-import type {BoardId, CharacterId, GameId, PieceId, UserId} from './ids'
+import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
 
 export type CharacterType = 'PLAYER' | 'NPC' | 'ANIMAL' | 'ROBOT'
 
@@ -65,6 +65,12 @@ export interface BoardState {
   width: number
   height: number
   scale: number
+  doors: Record<string, BoardDoorState>
+}
+
+export interface BoardDoorState {
+  id: string
+  open: boolean
 }
 
 export interface PieceState {

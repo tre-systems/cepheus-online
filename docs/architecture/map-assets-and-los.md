@@ -71,6 +71,14 @@ adapters can use the validated metadata to build previews, upload reviewed
 assets, or attach a reviewed LOS sidecar while keeping published assets out of
 git.
 
+The same boundary owns dependency-free LOS sidecar checks. Importers should call
+`validateMapLosSidecar` after referee review and before creating board data.
+Validation keeps sidecars tied to a non-empty asset reference, positive board
+dimensions and grid scale, unique occluder ids, in-bounds non-zero segments, and
+explicit door open state. Runtime visibility code should call
+`filterBlockingMapOccluders` before ray tests so walls and closed doors block
+line of sight while open doors do not.
+
 ## Board Camera
 
 Board pan and zoom are client-only inspection controls. They change the local

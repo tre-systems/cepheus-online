@@ -1,13 +1,7 @@
-import {
-  asBoardId,
-  asCharacterId,
-  asGameId,
-  asPieceId,
-  asUserId
-} from './ids'
-import {err, ok, type Result} from './result'
-import type {Command} from './commands'
-import type {GameState} from './state'
+import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
+import { err, ok, type Result } from './result'
+import type { Command } from './commands'
+import type { GameState } from './state'
 import type {
   CharacterEquipmentItem,
   CharacteristicKey,
@@ -16,7 +10,7 @@ import type {
   PieceFreedom,
   PieceVisibility
 } from './state'
-import {isObject, isString} from './util'
+import { isObject, isString } from './util'
 
 export type CommandErrorCode =
   | 'invalid_message'
@@ -340,6 +334,17 @@ const parsePieceFreedom = (
   return err(invalidCommand('freedom is not supported'))
 }
 
+const parseBoolean = (
+  raw: unknown,
+  label: string
+): Result<boolean, CommandError> => {
+  if (typeof raw !== 'boolean') {
+    return err(invalidCommand(`${label} must be a boolean`))
+  }
+
+  return ok(raw)
+}
+
 const parseBaseCommand = (
   raw: Record<string, unknown>
 ): Result<
@@ -360,7 +365,7 @@ const parseBaseCommand = (
     actorId: actorId.value,
     ...(expectedSeq.value === undefined
       ? {}
-      : {expectedSeq: expectedSeq.value})
+      : { expectedSeq: expectedSeq.value })
   })
 }
 
@@ -388,11 +393,7 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
     }
 
     case 'CreateCharacter': {
-      const characterId = parseId(
-        raw.characterId,
-        'characterId',
-        asCharacterId
-      )
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
       if (!characterId.ok) return characterId
       const characterType = parseCharacterType(raw.characterType)
       if (!characterType.ok) return characterType
@@ -409,11 +410,7 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
     }
 
     case 'UpdateCharacterSheet': {
-      const characterId = parseId(
-        raw.characterId,
-        'characterId',
-        asCharacterId
-      )
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
       if (!characterId.ok) return characterId
       const sheetPatch = parseCharacterSheetPatch(raw)
       if (!sheetPatch.ok) return sheetPatch
@@ -466,6 +463,23 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
       })
     }
 
+    case 'SetDoorOpen': {
+      const boardId = parseId(raw.boardId, 'boardId', asBoardId)
+      if (!boardId.ok) return boardId
+      const doorId = parseString(raw.doorId, 'doorId')
+      if (!doorId.ok) return doorId
+      const open = parseBoolean(raw.open, 'open')
+      if (!open.ok) return open
+
+      return ok({
+        type: 'SetDoorOpen',
+        ...base.value,
+        boardId: boardId.value,
+        doorId: doorId.value,
+        open: open.value
+      })
+    }
+
     case 'CreatePiece': {
       const pieceId = parseId(raw.pieceId, 'pieceId', asPieceId)
       if (!pieceId.ok) return pieceId
@@ -502,9 +516,9 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
         imageAssetId: imageAssetId.value,
         x: x.value,
         y: y.value,
-        ...(width.value === undefined ? {} : {width: width.value}),
-        ...(height.value === undefined ? {} : {height: height.value}),
-        ...(scale.value === undefined ? {} : {scale: scale.value})
+        ...(width.value === undefined ? {} : { width: width.value }),
+        ...(height.value === undefined ? {} : { height: height.value }),
+        ...(scale.value === undefined ? {} : { scale: scale.value })
       })
     }
 
@@ -586,7 +600,7 @@ export const decodeClientMessage = (
 
     return ok({
       type: 'ping',
-      ...(raw.requestId === undefined ? {} : {requestId: raw.requestId})
+      ...(raw.requestId === undefined ? {} : { requestId: raw.requestId })
     })
   }
 

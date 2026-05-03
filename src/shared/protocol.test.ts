@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
-import {describe, it} from 'node:test'
+import { describe, it } from 'node:test'
 
-import {decodeClientMessage, decodeCommand} from './protocol'
+import { decodeClientMessage, decodeCommand } from './protocol'
 
 describe('protocol validation', () => {
   it('accepts a command envelope with a typed command', () => {
@@ -45,7 +45,7 @@ describe('protocol validation', () => {
     if (!result.ok) return
     assert.equal(result.value.type, 'command')
     if (result.value.type !== 'command') return
-    const {command} = result.value
+    const { command } = result.value
     assert.equal(command.type, 'CreatePiece')
     if (command.type !== 'CreatePiece') return
     assert.equal(
@@ -75,7 +75,7 @@ describe('protocol validation', () => {
     if (!result.ok) return
     assert.equal(result.value.type, 'command')
     if (result.value.type !== 'command') return
-    const {command} = result.value
+    const { command } = result.value
     assert.equal(command.type, 'CreatePiece')
     if (command.type !== 'CreatePiece') return
     assert.equal(command.characterId, 'enemy-character-1')
@@ -104,7 +104,7 @@ describe('protocol validation', () => {
     if (!result.ok) return
     assert.equal(result.value.type, 'command')
     if (result.value.type !== 'command') return
-    const {command} = result.value
+    const { command } = result.value
     assert.equal(command.type, 'CreatePiece')
     if (command.type !== 'CreatePiece') return
     assert.equal(command.width, 50)
@@ -165,21 +165,21 @@ describe('protocol validation', () => {
     if (!result.ok) return
     assert.equal(result.value.type, 'command')
     if (result.value.type !== 'command') return
-    const {command} = result.value
+    const { command } = result.value
     assert.equal(command.type, 'UpdateCharacterSheet')
     if (command.type !== 'UpdateCharacterSheet') return
     assert.equal(command.notes, 'Ship shares: 2\nMortgage due monthly')
     assert.equal(command.age, 34)
-    assert.deepEqual(command.characteristics, {str: 7, dex: null})
+    assert.deepEqual(command.characteristics, { str: 7, dex: null })
     assert.deepEqual(command.skills, ['Pilot 1', 'Gun Combat 0'])
     assert.deepEqual(command.equipment, [
-      {name: 'Vacc suit', quantity: 1, notes: ''}
+      { name: 'Vacc suit', quantity: 1, notes: '' }
     ])
     assert.equal(command.credits, 1200)
   })
 
   it('accepts expected sequence on all decoded command types', () => {
-    const base = {gameId: 'game-1', actorId: 'player-1', expectedSeq: 7}
+    const base = { gameId: 'game-1', actorId: 'player-1', expectedSeq: 7 }
     const commands = [
       {
         type: 'CreateCharacter',
@@ -207,6 +207,13 @@ describe('protocol validation', () => {
         type: 'SelectBoard',
         ...base,
         boardId: 'board-1'
+      },
+      {
+        type: 'SetDoorOpen',
+        ...base,
+        boardId: 'board-1',
+        doorId: 'iris-1',
+        open: true
       },
       {
         type: 'CreatePiece',
@@ -252,6 +259,51 @@ describe('protocol validation', () => {
     }
   })
 
+  it('accepts door state commands for board occluders', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-door',
+      command: {
+        type: 'SetDoorOpen',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        boardId: 'board-1',
+        doorId: 'iris-1',
+        open: false
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    const { command } = result.value
+    assert.equal(command.type, 'SetDoorOpen')
+    if (command.type !== 'SetDoorOpen') return
+    assert.equal(command.boardId, 'board-1')
+    assert.equal(command.doorId, 'iris-1')
+    assert.equal(command.open, false)
+  })
+
+  it('rejects malformed door state commands', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-door',
+      command: {
+        type: 'SetDoorOpen',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        boardId: 'board-1',
+        doorId: '',
+        open: 'yes'
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+  })
+
   it('rejects non-string character sheet notes', () => {
     const result = decodeClientMessage({
       type: 'command',
@@ -293,7 +345,7 @@ describe('protocol validation', () => {
     if (!result.ok) return
     assert.equal(result.value.type, 'command')
     if (result.value.type !== 'command') return
-    const {command} = result.value
+    const { command } = result.value
     assert.equal(command.type, 'CreateBoard')
     if (command.type !== 'CreateBoard') return
     assert.equal(command.imageAssetId, 'board-image-1')
@@ -316,7 +368,7 @@ describe('protocol validation', () => {
     if (!result.ok) return
     assert.equal(result.value.type, 'command')
     if (result.value.type !== 'command') return
-    const {command} = result.value
+    const { command } = result.value
     assert.equal(command.type, 'SelectBoard')
     if (command.type !== 'SelectBoard') return
     assert.equal(command.boardId, 'main-board')
