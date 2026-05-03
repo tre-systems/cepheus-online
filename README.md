@@ -69,6 +69,7 @@ or notes, not a UI framework.
 - [Delta-V transfer](docs/delta-v-transfer.md)
 - [Patterns](docs/patterns.md)
 - [Development standards](docs/development-standards.md)
+- [Discussion record](docs/discussion-record.md)
 - [Security baseline](docs/security-baseline.md)
 - [Testing strategy](docs/testing-strategy.md)
 - [SRD source](docs/srd-source.md)
