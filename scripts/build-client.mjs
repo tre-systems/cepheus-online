@@ -52,6 +52,18 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/board-view.js',
+    source: join(compiledClientRoot, 'client', 'app', 'board-view.js'),
+    exportName: 'CLIENT_BOARD_VIEW_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/client/app/bootstrap-flow.js',
+    source: join(compiledClientRoot, 'client', 'app', 'bootstrap-flow.js'),
+    exportName: 'CLIENT_BOOTSTRAP_FLOW_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/image-assets.js',
     source: join(compiledClientRoot, 'client', 'app', 'image-assets.js'),
     exportName: 'CLIENT_IMAGE_ASSETS_JS',

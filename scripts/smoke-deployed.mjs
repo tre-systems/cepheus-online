@@ -14,6 +14,28 @@ const GAME_ID = `smoke-${Date.now().toString(36)}-${RUN_ID}`
 const ACTOR_ID = `smoke-ref-${RUN_ID}`
 const BOARD_ID = `smoke-board-${RUN_ID}`
 const PIECE_ID = `smoke-piece-${RUN_ID}`
+const CLIENT_MODULES = new Map([
+  [
+    '/client/app/app.js',
+    {
+      markers: ['new WebSocket', 'serviceWorker'],
+      imports: [
+        '/client/dice.js',
+        '/client/app/board-geometry.js',
+        '/client/app/board-view.js',
+        '/client/app/bootstrap-flow.js',
+        '/client/app/image-assets.js',
+        '/client/app/room-api.js'
+      ]
+    }
+  ],
+  ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
+  ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
+  ['/client/app/bootstrap-flow.js', { markers: ['nextBootstrapCommand'] }],
+  ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
+  ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
+  ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }]
+])
 
 const usage = `Cepheus deployed Worker smoke
 
@@ -86,6 +108,82 @@ const fetchJson = async (pathname, init = {}) => {
   }
 
   return { response, json }
+}
+
+const extractModuleImports = (body) => {
+  const imports = new Set()
+  const importPattern =
+    /\bimport\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g
+
+  for (const match of body.matchAll(importPattern)) {
+    imports.add(match[1] ?? match[2])
+  }
+
+  return [...imports]
+}
+
+const resolveModulePath = (fromPathname, specifier) => {
+  assert(
+    specifier.startsWith('./') ||
+      specifier.startsWith('../') ||
+      specifier.startsWith('/'),
+    `${fromPathname} imports non-runtime module ${specifier}`
+  )
+
+  return new URL(specifier, target(fromPathname)).pathname
+}
+
+const assertSameMembers = (actual, expected, label) => {
+  const actualSet = new Set(actual)
+  const expectedSet = new Set(expected)
+  const missing = [...expectedSet].filter((value) => !actualSet.has(value))
+  const extra = [...actualSet].filter((value) => !expectedSet.has(value))
+
+  assert(
+    missing.length === 0 && extra.length === 0,
+    `${label} mismatch; missing ${missing.join(', ') || 'none'}; extra ${
+      extra.join(', ') || 'none'
+    }`
+  )
+}
+
+const smokeClientModuleGraph = async () => {
+  const queued = ['/client/app/app.js']
+  const seen = new Set()
+
+  while (queued.length > 0) {
+    const pathname = queued.shift()
+    if (seen.has(pathname)) continue
+    seen.add(pathname)
+
+    const expected = CLIENT_MODULES.get(pathname)
+    assert(expected, `unexpected client runtime module ${pathname}`)
+
+    const { response, body } = await fetchText(pathname)
+    assert(response.ok, `${pathname} returned HTTP ${response.status}`)
+    assert(
+      response.headers.get('content-type')?.includes('text/javascript'),
+      `${pathname} content-type mismatch`
+    )
+
+    for (const marker of expected.markers) {
+      assert(body.includes(marker), `${pathname} missing marker ${marker}`)
+    }
+
+    const imports = extractModuleImports(body).map((specifier) =>
+      resolveModulePath(pathname, specifier)
+    )
+
+    if (expected.imports) {
+      assertSameMembers(imports, expected.imports, `${pathname} imports`)
+    }
+
+    for (const importedPathname of imports) {
+      queued.push(importedPathname)
+    }
+  }
+
+  assertSameMembers(seen, CLIENT_MODULES.keys(), 'served client module graph')
 }
 
 const postCommand = async (command, requestId) =>
@@ -211,15 +309,6 @@ await step('shell assets', async () => {
   const assets = [
     ['/', 'text/html', 'Cepheus Online'],
     ['/client.js', 'text/javascript', 'import "/client/app/app.js"'],
-    [
-      '/client/app/app.js',
-      'text/javascript',
-      ['./board-geometry.js', './room-api.js']
-    ],
-    ['/client/app/board-geometry.js', 'text/javascript', 'deriveBoardTransform'],
-    ['/client/app/image-assets.js', 'text/javascript', 'browserImageUrl'],
-    ['/client/app/room-api.js', 'text/javascript', 'postRoomCommand'],
-    ['/client/dice.js', 'text/javascript', 'DICE_PIP_SLOTS'],
     ['/styles.css', 'text/css', '.app-shell']
   ]
 
@@ -234,6 +323,8 @@ await step('shell assets', async () => {
       assert(body.includes(marker), `${pathname} missing marker ${marker}`)
     }
   }
+
+  await smokeClientModuleGraph()
 })
 
 await step('manifest, icons, and service worker', async () => {

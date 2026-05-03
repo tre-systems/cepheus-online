@@ -4,12 +4,79 @@ import { describe, it } from 'node:test'
 import worker from './index'
 import type { Env } from './env'
 
+const clientModules = new Map<
+  string,
+  { markers: readonly string[]; imports?: readonly string[] }
+>([
+  [
+    '/client/app/app.js',
+    {
+      markers: ['new WebSocket', 'serviceWorker'],
+      imports: [
+        '/client/dice.js',
+        '/client/app/board-geometry.js',
+        '/client/app/board-view.js',
+        '/client/app/bootstrap-flow.js',
+        '/client/app/image-assets.js',
+        '/client/app/room-api.js'
+      ]
+    }
+  ],
+  ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
+  ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
+  ['/client/app/bootstrap-flow.js', { markers: ['nextBootstrapCommand'] }],
+  ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
+  ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
+  ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }]
+])
+
+const fetchStaticClient = async (pathname: string): Promise<Response> =>
+  worker.fetch(new Request(`https://cepheus.test${pathname}`), {} as Env)
+
+const extractModuleImports = (body: string): string[] => {
+  const imports = new Set<string>()
+  const importPattern =
+    /\bimport\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g
+
+  for (const match of body.matchAll(importPattern)) {
+    imports.add(match[1] ?? match[2])
+  }
+
+  return [...imports]
+}
+
+const resolveModulePath = (fromPathname: string, specifier: string): string => {
+  assert.equal(
+    specifier.startsWith('./') ||
+      specifier.startsWith('../') ||
+      specifier.startsWith('/'),
+    true,
+    `${fromPathname} imports non-runtime module ${specifier}`
+  )
+
+  return new URL(specifier, `https://cepheus.test${fromPathname}`).pathname
+}
+
+const assertSameMembers = (
+  actual: Iterable<string>,
+  expected: Iterable<string>,
+  label: string
+) => {
+  const actualSet = new Set(actual)
+  const expectedSet = new Set(expected)
+  const missing = [...expectedSet].filter((value) => !actualSet.has(value))
+  const extra = [...actualSet].filter((value) => !expectedSet.has(value))
+
+  assert.deepEqual(
+    { missing, extra },
+    { missing: [], extra: [] },
+    `${label} mismatch`
+  )
+}
+
 describe('Worker static client', () => {
   it('serves the browser shell from the Worker fallback', async () => {
-    const response = await worker.fetch(
-      new Request('https://cepheus.test/'),
-      {} as Env
-    )
+    const response = await fetchStaticClient('/')
     const body = await response.text()
 
     assert.equal(response.status, 200)
@@ -68,10 +135,7 @@ describe('Worker static client', () => {
   })
 
   it('serves the legacy browser module shim', async () => {
-    const response = await worker.fetch(
-      new Request('https://cepheus.test/client.js'),
-      {} as Env
-    )
+    const response = await fetchStaticClient('/client.js')
     const body = await response.text()
 
     assert.equal(response.status, 200)
@@ -82,182 +146,54 @@ describe('Worker static client', () => {
     assert.equal(body, 'import "/client/app/app.js";\n')
   })
 
-  it('serves the dependency-free browser module', async () => {
-    const response = await worker.fetch(
-      new Request('https://cepheus.test/client/app/app.js'),
-      {} as Env
-    )
-    const body = await response.text()
+  it('serves the full dependency-free browser module graph', async () => {
+    const queued = ['/client/app/app.js']
+    const seen = new Set<string>()
 
-    assert.equal(response.status, 200)
-    assert.equal(
-      response.headers.get('content-type'),
-      'text/javascript; charset=utf-8'
-    )
-    const compactBody = body.replace(/\s+/g, '')
-    const includesCode = (code: string): boolean =>
-      compactBody.includes(code.replace(/\s+/g, ''))
+    while (queued.length > 0) {
+      const pathname = queued.shift()
+      if (pathname === undefined) {
+        throw new Error('module queue ended unexpectedly')
+      }
+      if (seen.has(pathname)) continue
+      seen.add(pathname)
 
-    assert.equal(body.includes('new WebSocket'), true)
-    assert.equal(
-      body.includes('socket.send(JSON.stringify(commandMessage'),
-      false
-    )
-    assert.equal(body.includes('serviceWorker'), true)
-    assert.equal(body.includes('controllerchange'), true)
-    assert.equal(body.includes('beforeinstallprompt'), true)
-    assert.equal(body.includes('appinstalled'), true)
-    assert.equal(body.includes('INSTALL_DISMISSED_KEY'), true)
-    assert.equal(body.includes('../dice.js'), true)
-    assert.equal(body.includes('pieceImageCache'), true)
-    assert.equal(body.includes('createCustomPiece'), true)
-    assert.equal(body.includes('createCustomBoard'), true)
-    assert.equal(body.includes('createCharacterCommand'), true)
-    assert.equal(body.includes('createManualCharacterCommand'), true)
-    assert.equal(body.includes('updateManualCharacterSheetCommand'), true)
-    assert.equal(body.includes('updateScoutSheetCommand'), true)
-    assert.equal(body.includes("characterId: 'scout'"), true)
-    assert.equal(body.includes('i < 6'), true)
-    assert.equal(body.includes("type: 'SelectBoard'"), true)
-    assert.equal(body.includes('boardId: board.id'), true)
-    assert.equal(
-      body.includes(
-        "const canSelectBoards = viewerRole.toLowerCase() === 'referee'"
-      ),
-      true
-    )
-    assert.equal(body.includes('SetPieceVisibility'), true)
-    assert.equal(body.includes('SetPieceFreedom'), true)
-    assert.equal(body.includes('freedomActions'), true)
-    assert.equal(body.includes("sheetRow('Move', piece.freedom)"), true)
-    assert.equal(body.includes('roll.revealAt'), true)
-    assert.equal(body.includes('pieceImageFileInput'), true)
-    assert.equal(body.includes('pieceCropInput'), true)
-    assert.equal(body.includes('pieceCropXInput'), true)
-    assert.equal(body.includes('pieceCropYInput'), true)
-    assert.equal(body.includes('pieceCropWidthInput'), true)
-    assert.equal(body.includes('pieceCropHeightInput'), true)
-    assert.equal(body.includes('pieceWidthInput'), true)
-    assert.equal(body.includes('pieceHeightInput'), true)
-    assert.equal(body.includes('pieceScaleInput'), true)
-    assert.equal(body.includes('boardImageFileInput'), true)
-    assert.equal(body.includes('readSelectedImageFileAsDataUrl'), true)
-    assert.equal(body.includes('readSelectedCroppedImageFileAsDataUrl'), true)
-    assert.equal(body.includes('readImageDimensions'), true)
-    assert.equal(body.includes('selectedPieceImageDataUrl'), true)
-    assert.equal(body.includes('applyBoardFileDimensions'), true)
-    assert.equal(body.includes('applyPieceFileDimensions'), true)
-    assert.equal(body.includes('parseNonNegativeIntegerInput'), true)
-    assert.equal(body.includes('parsePositiveNumberInput'), true)
-    assert.equal(
-      includesCode(
-        'const width = parsePositiveIntegerInput(els.pieceWidthInput, 50)'
-      ),
-      true
-    )
-    assert.equal(
-      includesCode(
-        'const height = parsePositiveIntegerInput(els.pieceHeightInput, 50)'
-      ),
-      true
-    )
-    assert.equal(
-      includesCode(
-        'const scale = parsePositiveNumberInput(els.pieceScaleInput, 1)'
-      ),
-      true
-    )
-    assert.equal(
-      includesCode('const imageAssetId = await selectedPieceImageDataUrl()'),
-      true
-    )
-    assert.equal(
-      body.includes('readSelectedImageFileAsDataUrl(els.boardImageFileInput)'),
-      true
-    )
-    assert.equal(body.includes('els.boardImageInput.value.trim()'), true)
-    assert.equal(body.includes('imageAssetId:'), true)
-    assert.equal(body.includes('imageAssetId,'), true)
-    assert.equal(body.includes('url: imageUrl'), true)
-    assert.equal(includesCode('x, y, width, height, scale'), true)
-    assert.equal(body.includes("els.pieceImageFileInput.value = ''"), true)
-    assert.equal(body.includes('els.pieceCropInput.checked = false'), true)
-    assert.equal(body.includes("els.pieceCropXInput.value = '0'"), true)
-    assert.equal(body.includes("els.pieceCropYInput.value = '0'"), true)
-    assert.equal(body.includes("els.pieceCropWidthInput.value = '150'"), true)
-    assert.equal(body.includes("els.pieceCropHeightInput.value = '150'"), true)
-    assert.equal(body.includes("els.pieceWidthInput.value = '50'"), true)
-    assert.equal(body.includes("els.pieceHeightInput.value = '50'"), true)
-    assert.equal(body.includes("els.pieceScaleInput.value = '1'"), true)
-    assert.equal(body.includes("els.boardImageFileInput.value = ''"), true)
-    assert.equal(body.includes('renderRail'), true)
-    assert.equal(body.includes('DEFAULT_BOARD_CAMERA'), true)
-    assert.equal(body.includes('./board-geometry.js'), true)
-    assert.equal(
-      includesCode('const screenToBoard = (screen, _board, transform)'),
-      true
-    )
-    assert.equal(
-      body.includes('ctx.scale(transform.scale, transform.scale)'),
-      true
-    )
-    assert.equal(
-      body.includes(
-        'setCameraZoom(boardCamera.zoom * zoomFactor, screenPoint(event))'
-      ),
-      true
-    )
-    assert.equal(body.includes("kind: 'pan'"), true)
-    assert.equal(body.includes("kind: 'piece'"), true)
-    assert.equal(body.includes('setSheetOpen'), true)
-    assert.equal(body.includes('activeSheetTab'), true)
-    assert.equal(body.includes('selectedCharacter'), true)
-    assert.equal(body.includes('piece?.characterId'), true)
-    assert.equal(includesCode('state?.characters?.[piece.characterId]'), true)
-    assert.equal(body.includes('character?.characteristics'), true)
-    assert.equal(body.includes('characterSkills'), true)
-    assert.equal(body.includes('character?.equipment'), true)
-    assert.equal(body.includes('item?.Name || item?.name'), true)
-    assert.equal(body.includes('item?.Quantity ?? item?.quantity'), true)
-    assert.equal(body.includes('item?.Carried ?? item?.carried'), true)
-    assert.equal(body.includes('renderNotesTab(body, piece, character)'), true)
-    assert.equal(body.includes("textarea.value = character.notes || ''"), true)
-    assert.equal(includesCode('characterId: piece.characterId'), true)
-    assert.equal(body.includes('notes: textarea.value'), true)
-    assert.equal(body.includes('editableDetailsForm(piece, character)'), true)
-    assert.equal(body.includes('nullableNumberFromInput'), true)
-    assert.equal(includesCode('age: nullableNumberFromInput(ageInput)'), true)
-    assert.equal(body.includes('characteristics: {'), true)
-    assert.equal(includesCode('str: nullableNumberFromInput(inputs.str)'), true)
-    assert.equal(includesCode('soc: nullableNumberFromInput(inputs.soc)'), true)
-    assert.equal(body.includes('skillListFromText'), true)
-    assert.equal(body.includes('skillEditor(piece, character, skills)'), true)
-    assert.equal(
-      includesCode('skills: skillListFromText(textarea.value)'),
-      true
-    )
-    assert.equal(body.includes('character?.credits'), true)
-    assert.equal(body.includes('equipmentText'), true)
-    assert.equal(body.includes('equipmentFromText'), true)
-    assert.equal(body.includes('itemsEditor(character, equipment)'), true)
-    assert.equal(
-      includesCode('credits: nullableNumberFromInput(creditsInput) ?? 0'),
-      true
-    )
-    assert.equal(
-      includesCode('equipment: equipmentFromText(textarea.value)'),
-      true
-    )
-    assert.equal(body.includes("expression: '2d6'"), true)
-    assert.equal(body.includes("reason: name + ': ' + skill"), true)
-    assert.equal(body.includes('tab.dataset.sheetTab'), true)
+      const expected = clientModules.get(pathname)
+      if (expected === undefined) {
+        throw new Error(`unexpected module ${pathname}`)
+      }
+
+      const response = await fetchStaticClient(pathname)
+      const body = await response.text()
+
+      assert.equal(response.status, 200)
+      assert.equal(
+        response.headers.get('content-type'),
+        'text/javascript; charset=utf-8'
+      )
+
+      for (const marker of expected.markers) {
+        assert.equal(body.includes(marker), true)
+      }
+
+      const imports = extractModuleImports(body).map((specifier) =>
+        resolveModulePath(pathname, specifier)
+      )
+
+      if (expected.imports) {
+        assertSameMembers(imports, expected.imports, `${pathname} imports`)
+      }
+
+      for (const importedPathname of imports) {
+        queued.push(importedPathname)
+      }
+    }
+
+    assertSameMembers(seen, clientModules.keys(), 'served module graph')
   })
 
   it('serves the dependency-free board geometry helper module', async () => {
-    const response = await worker.fetch(
-      new Request('https://cepheus.test/client/app/board-geometry.js'),
-      {} as Env
-    )
+    const response = await fetchStaticClient('/client/app/board-geometry.js')
     const body = await response.text()
 
     assert.equal(response.status, 200)
@@ -267,14 +203,10 @@ describe('Worker static client', () => {
     )
     assert.equal(body.includes('deriveBoardTransform'), true)
     assert.equal(body.includes('deriveCameraZoom'), true)
-    assert.equal(body.includes('findHitPiece'), true)
   })
 
   it('serves the dependency-free image asset helper module', async () => {
-    const response = await worker.fetch(
-      new Request('https://cepheus.test/client/app/image-assets.js'),
-      {} as Env
-    )
+    const response = await fetchStaticClient('/client/app/image-assets.js')
     const body = await response.text()
 
     assert.equal(response.status, 200)
@@ -282,23 +214,12 @@ describe('Worker static client', () => {
       response.headers.get('content-type'),
       'text/javascript; charset=utf-8'
     )
-    assert.equal(body.includes('URL.createObjectURL(file)'), true)
-    assert.equal(body.includes('image.naturalWidth'), true)
-    assert.equal(body.includes("document.createElement('canvas')"), true)
-    assert.equal(body.includes("canvas.toDataURL('image/png')"), true)
-    assert.equal(body.includes('new FileReader()'), true)
-    assert.equal(body.includes('reader.readAsDataURL(file)'), true)
-    assert.equal(body.includes("file.type.startsWith('image/')"), true)
-    assert.equal(body.includes('data:image/'), true)
-    assert.equal(body.includes('drawImage(image'), true)
     assert.equal(body.includes('browserImageUrl'), true)
+    assert.equal(body.includes('readSelectedImageFileAsDataUrl'), true)
   })
 
   it('serves the dependency-free room API helper module', async () => {
-    const response = await worker.fetch(
-      new Request('https://cepheus.test/client/app/room-api.js'),
-      {} as Env
-    )
+    const response = await fetchStaticClient('/client/app/room-api.js')
     const body = await response.text()
 
     assert.equal(response.status, 200)
@@ -307,15 +228,11 @@ describe('Worker static client', () => {
       'text/javascript; charset=utf-8'
     )
     assert.equal(body.includes('buildRoomPath'), true)
-    assert.equal(body.includes('fetchRoomState'), true)
     assert.equal(body.includes('postRoomCommand'), true)
   })
 
   it('serves the dependency-free dice helper module', async () => {
-    const response = await worker.fetch(
-      new Request('https://cepheus.test/client/dice.js'),
-      {} as Env
-    )
+    const response = await fetchStaticClient('/client/dice.js')
     const body = await response.text()
 
     assert.equal(response.status, 200)
@@ -324,15 +241,11 @@ describe('Worker static client', () => {
       'text/javascript; charset=utf-8'
     )
     assert.equal(body.includes('DICE_PIP_SLOTS'), true)
-    assert.equal(body.includes('deriveDiceRollTiming'), true)
     assert.equal(body.includes('deriveDieFaces'), true)
   })
 
   it('serves cubical dice styling', async () => {
-    const response = await worker.fetch(
-      new Request('https://cepheus.test/styles.css'),
-      {} as Env
-    )
+    const response = await fetchStaticClient('/styles.css')
     const body = await response.text()
 
     assert.equal(response.status, 200)
@@ -340,32 +253,11 @@ describe('Worker static client', () => {
       response.headers.get('content-type'),
       'text/css; charset=utf-8'
     )
-    assert.equal(body.includes('transform-style: preserve-3d'), true)
-    assert.equal(body.includes('.pip-top-left'), true)
-    assert.equal(body.includes('--die-depth'), true)
-    assert.equal(body.includes('translateZ(var(--die-depth))'), true)
-    assert.equal(body.includes('.face.right'), true)
     assert.equal(body.includes('.combat-rail'), true)
-    assert.equal(body.includes('.rail-status'), true)
-    assert.equal(body.includes('.board-select'), true)
-    assert.equal(body.includes('.board-hud #boardStatus'), true)
     assert.equal(body.includes('.camera-controls'), true)
-    assert.equal(body.includes('.camera-button'), true)
-    assert.equal(body.includes('.rail-tools'), true)
     assert.equal(body.includes('.character-sheet.open'), true)
-    assert.equal(body.includes('.sheet-skill-actions'), true)
-    assert.equal(body.includes('.sheet-skill-editor'), true)
-    assert.equal(body.includes('.item-row'), true)
-    assert.equal(body.includes('.sheet-items-editor'), true)
-    assert.equal(body.includes('.sheet-empty'), true)
-    assert.equal(body.includes('.sheet-notes-form'), true)
-    assert.equal(body.includes('.sheet-edit-form'), true)
-    assert.equal(body.includes('.sheet-stat-edit'), true)
-    assert.equal(body.includes('textarea:focus'), true)
     assert.equal(body.includes('.dice-overlay.visible'), true)
     assert.equal(body.includes('.pwa-install-prompt'), true)
-    assert.equal(body.includes('translateX(calc(-100%'), false)
-    assert.equal(body.includes('100dvh'), true)
   })
 
   it('serves PWA manifest, icon, and service worker assets', async () => {

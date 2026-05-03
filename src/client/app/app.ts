@@ -15,13 +15,33 @@ import {
   clampPiecePosition as clampPiecePositionToBoard
 } from './board-geometry.js'
 import {
-  browserImageUrl,
+  boardList,
+  boardOptionLabel,
+  boardSelectTitle,
+  boardStatusLabel,
+  selectedBoard as selectSelectedBoard,
+  selectedBoardId as selectSelectedBoardId,
+  selectedBoardPieces,
+  pieceImageUrl,
+  boardImageUrl
+} from './board-view.js'
+import {
   cssUrl,
   loadBrowserImage,
   readImageDimensions,
   readSelectedCroppedImageFileAsDataUrl,
   readSelectedImageFileAsDataUrl
 } from './image-assets.js'
+import {
+  createGameCommand,
+  nextBootstrapCommand,
+  parseNonNegativeIntegerValue,
+  parsePositiveIntegerValue,
+  parsePositiveNumberValue,
+  uniqueBoardId,
+  uniqueCharacterId,
+  uniquePieceId
+} from './bootstrap-flow.js'
 import {
   buildRoomPath,
   buildViewerQuery,
@@ -193,12 +213,6 @@ els.pwaInstallDismissButton?.addEventListener('click', () => {
 const requestId = (prefix) =>
   prefix + '-' + Date.now().toString(36) + '-' + (++requestCounter).toString(36)
 
-const idFromName = (name, fallback) =>
-  name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '') || fallback
-
 const sequenceCommand = (command) => {
   if (
     !state ||
@@ -292,116 +306,16 @@ const fetchState = async () => {
   handleServerMessage(message)
 }
 
-const createGameCommand = () => ({
-  type: 'CreateGame',
-  gameId: roomId,
-  actorId,
-  slug: roomId,
-  name: 'Cepheus Room ' + roomId
-})
-
-const createBoardCommand = () => ({
-  type: 'CreateBoard',
-  gameId: roomId,
-  actorId,
-  boardId: 'main-board',
-  name: 'Downport Skirmish',
-  width: 1200,
-  height: 800,
-  scale: 50
-})
-
-const createCharacterCommand = () => ({
-  type: 'CreateCharacter',
-  gameId: roomId,
-  actorId,
-  characterId: 'scout',
-  characterType: 'PLAYER',
-  name: 'Scout'
-})
-
-const updateScoutSheetCommand = () => ({
-  type: 'UpdateCharacterSheet',
-  gameId: roomId,
-  actorId,
-  characterId: 'scout',
-  age: 34,
-  characteristics: {
-    str: 7,
-    dex: 8,
-    end: 8,
-    int: 7,
-    edu: 9,
-    soc: 6
-  },
-  skills: ['Vacc Suit-0', 'Gun Combat-0', 'Mechanic-0', 'Recon-0'],
-  equipment: [
-    { name: 'Vacc Suit', quantity: 1, notes: 'Carried' },
-    { name: 'Laser Carbine', quantity: 1, notes: 'Carried' },
-    { name: 'Medkit', quantity: 1, notes: 'Stowed' }
-  ],
-  credits: 1200
-})
-
-const createPieceCommand = (boardId) => ({
-  type: 'CreatePiece',
-  gameId: roomId,
-  actorId,
-  pieceId: 'scout-1',
-  boardId,
-  name: 'Scout',
-  characterId: 'scout',
-  imageAssetId: null,
-  x: 220,
-  y: 180
-})
-
-const uniqueBoardId = (name) => {
-  const base = idFromName(name, 'board')
-  let index = Object.keys(state?.boards || {}).length + 1
-  let boardId = base + '-' + index
-  while (state?.boards?.[boardId]) {
-    index += 1
-    boardId = base + '-' + index
-  }
-  return boardId
-}
-
-const uniquePieceId = (name) => {
-  const base = idFromName(name, 'piece')
-  let index = Object.keys(state?.pieces || {}).length + 1
-  let pieceId = base + '-' + index
-  while (state?.pieces?.[pieceId]) {
-    index += 1
-    pieceId = base + '-' + index
-  }
-  return pieceId
-}
-
-const uniqueCharacterId = (name) => {
-  const base = idFromName(name, 'character')
-  let index = Object.keys(state?.characters || {}).length + 1
-  let characterId = base + '-' + index
-  while (state?.characters?.[characterId]) {
-    index += 1
-    characterId = base + '-' + index
-  }
-  return characterId
-}
-
 const parsePositiveIntegerInput = (input, fallback) => {
-  const value = Number.parseInt(input.value, 10)
-  return Number.isFinite(value) && value > 0 ? value : fallback
+  return parsePositiveIntegerValue(input.value, fallback)
 }
 
 const parsePositiveNumberInput = (input, fallback) => {
-  const value = Number.parseFloat(input.value)
-  return Number.isFinite(value) && value > 0 ? value : fallback
+  return parsePositiveNumberValue(input.value, fallback)
 }
 
 const parseNonNegativeIntegerInput = (input, fallback) => {
-  const value = Number.parseInt(input.value, 10)
-  return Number.isFinite(value) && value >= 0 ? value : fallback
+  return parseNonNegativeIntegerValue(input.value, fallback)
 }
 
 const applyBoardFileDimensions = async () => {
@@ -477,19 +391,17 @@ const updateManualCharacterSheetCommand = (characterId) => ({
   credits: 0
 })
 
-const boardList = () => Object.values(state?.boards || {})
+const currentBoardList = () => boardList(state)
 
-const selectedBoardId = () => {
-  if (!state) return null
-  if (state.selectedBoardId && state.boards[state.selectedBoardId])
-    return state.selectedBoardId
-  return Object.keys(state.boards)[0] || null
-}
+const currentSelectedBoardId = () => selectSelectedBoardId(state)
 
 const createCustomBoard = async () => {
   setError('')
   if (!state) {
-    await postCommand(createGameCommand(), requestId('create-game-for-board'))
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-board')
+    )
   }
 
   const name =
@@ -498,7 +410,7 @@ const createCustomBoard = async () => {
   const width = parsePositiveIntegerInput(els.boardWidthInput, 1200)
   const height = parsePositiveIntegerInput(els.boardHeightInput, 800)
   const scale = parsePositiveIntegerInput(els.boardScaleInput, 50)
-  const boardId = uniqueBoardId(name)
+  const boardId = uniqueBoardId(state, name)
   const imageUrl =
     (await readSelectedImageFileAsDataUrl(els.boardImageFileInput)) ||
     els.boardImageInput.value.trim() ||
@@ -551,9 +463,9 @@ const createCustomPiece = async () => {
       140 + Math.floor(pieceIndex / 8) * 58
     )
   )
-  const pieceId = uniquePieceId(name)
+  const pieceId = uniquePieceId(state, name)
   const characterId = els.pieceSheetInput.checked
-    ? uniqueCharacterId(name)
+    ? uniqueCharacterId(state, name)
     : null
   const imageAssetId = await selectedPieceImageDataUrl()
   if (characterId) {
@@ -591,23 +503,10 @@ const createCustomPiece = async () => {
   render()
 }
 
-const nextBootstrapCommand = () => {
-  if (!state) return createGameCommand()
-  const boardIds = Object.keys(state.boards || {})
-  if (boardIds.length === 0) return createBoardCommand()
-  if (!state.characters?.scout) return createCharacterCommand()
-  if ((state.characters.scout.skills || []).length === 0)
-    return updateScoutSheetCommand()
-  if (Object.keys(state.pieces || {}).length === 0) {
-    return createPieceCommand(selectedBoardId() || boardIds[0])
-  }
-  return null
-}
-
 const bootstrapScene = async () => {
   setError('')
   for (let i = 0; i < 6; i++) {
-    const command = nextBootstrapCommand()
+    const command = nextBootstrapCommand({ roomId, actorId, state })
     if (!command) break
     await postCommand(command, 'bootstrap-' + i)
   }
@@ -661,22 +560,12 @@ const applyState = (nextState) => {
 }
 
 const selectedBoard = () => {
-  const boardId = selectedBoardId()
-  return boardId ? state.boards[boardId] : null
+  return selectSelectedBoard(state)
 }
 
 const boardPieces = () => {
-  const board = selectedBoard()
-  if (!state || !board) return []
-  return Object.values(state.pieces).filter(
-    (piece) => piece.boardId === board.id
-  )
+  return selectedBoardPieces(state)
 }
-
-const pieceImageUrl = (piece) => browserImageUrl(piece.imageAssetId)
-
-const boardImageUrl = (board) =>
-  browserImageUrl(board.url) || browserImageUrl(board.imageAssetId)
 
 const loadImage = (url, cache) => {
   return loadBrowserImage(url, cache, render)
@@ -1326,27 +1215,20 @@ const renderRail = () => {
 }
 
 const renderBoardControls = () => {
-  const boards = boardList()
+  const boards = currentBoardList()
   const board = selectedBoard()
-  const selectedIndex = board
-    ? boards.findIndex((candidate) => candidate.id === board.id)
-    : -1
-  els.boardStatus.textContent = board
-    ? board.name + ' (' + (selectedIndex + 1) + '/' + boards.length + ')'
-    : 'No board'
+  els.boardStatus.textContent = boardStatusLabel(boards, board)
 
   const options = boards.map((candidate, index) => {
     const option = document.createElement('option')
     option.value = candidate.id
-    option.textContent = 'B' + (index + 1) + ' ' + candidate.name
+    option.textContent = boardOptionLabel(candidate, index)
     return option
   })
   els.boardSelect.replaceChildren(...options)
   els.boardSelect.value = board?.id || ''
   els.boardSelect.disabled = boards.length === 0 || !canSelectBoards
-  els.boardSelect.title = canSelectBoards
-    ? board?.name || 'Board'
-    : 'Board selection is referee-only'
+  els.boardSelect.title = boardSelectTitle(board, canSelectBoards)
   els.zoomOut.disabled = !board
   els.zoomReset.disabled = !board
   els.zoomIn.disabled = !board
@@ -1733,7 +1615,8 @@ els.boardImageFileInput.addEventListener('change', () => {
 
 els.boardSelect.addEventListener('change', () => {
   const boardId = els.boardSelect.value
-  if (!boardId || boardId === selectedBoardId() || !canSelectBoards) return
+  if (!boardId || boardId === currentSelectedBoardId() || !canSelectBoards)
+    return
   selectedPieceId = null
   drag = null
   sendCommand({

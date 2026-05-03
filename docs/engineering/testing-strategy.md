@@ -11,11 +11,13 @@ test plan should continue to grow in layers as implementation expands.
 - Current tests cover shared protocol/dice/projection behavior, event envelope
   versioning, chunk-boundary storage, import boundaries, stale `expectedSeq`
   rejection, Durable Object HTTP flow, Worker static fallback including PWA
-  assets, and dependency-free client command helpers.
+  assets and the served client module graph, and dependency-free client command
+  helpers.
 - `npm run smoke:deployed`: dependency-free production smoke for a deployed
   Worker URL. It creates a disposable room and verifies health, shell/PWA
-  assets including served browser modules, room commands, stale command
-  rejection, viewer filtering, and WebSocket broadcasts.
+  assets, the full served browser module graph from `/client/app/app.js`, room
+  commands, stale command rejection, viewer filtering, and WebSocket
+  broadcasts.
 
 ## First Gate
 
