@@ -1194,6 +1194,36 @@ h1 {
   text-transform: uppercase;
 }
 
+.sheet-items-editor {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid rgba(244, 255, 248, 0.16);
+  padding-top: 8px;
+}
+
+.sheet-items-editor label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sheet-items-editor textarea {
+  min-height: 118px;
+  padding: 9px 10px;
+  line-height: 1.32;
+}
+
+.sheet-items-editor button {
+  min-height: 34px;
+  justify-self: end;
+  padding: 0 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
 .stat-strip {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -2474,11 +2504,68 @@ const itemCarried = (item) => item?.Carried ?? item?.carried;
 
 const itemNotes = (item) => item?.notes || item?.Notes || "";
 
+const equipmentText = (equipment) =>
+  equipment.map((item) => [itemName(item), itemQuantity(item), itemNotes(item)].join(" | ")).join("\n");
+
+const equipmentFromText = (value) =>
+  value.split("\n").map((line) => {
+    const [name = "", quantity = "1", ...notes] = line.split("|").map((part) => part.trim());
+    if (!name) return null;
+    const parsedQuantity = Number.parseInt(quantity, 10);
+    return {
+      name,
+      quantity: Number.isFinite(parsedQuantity) ? parsedQuantity : 1,
+      notes: notes.join(" | ")
+    };
+  }).filter(Boolean);
+
+const itemsEditor = (character, equipment) => {
+  if (!character) return null;
+
+  const form = document.createElement("div");
+  form.className = "sheet-items-editor";
+  const creditsLabel = document.createElement("label");
+  creditsLabel.textContent = "Credits";
+  const creditsInput = document.createElement("input");
+  creditsInput.name = "credits";
+  creditsInput.inputMode = "numeric";
+  creditsInput.autocomplete = "off";
+  creditsInput.value = character.credits == null ? "0" : String(character.credits);
+  creditsLabel.append(creditsInput);
+
+  const equipmentLabel = document.createElement("label");
+  equipmentLabel.textContent = "Equipment";
+  const textarea = document.createElement("textarea");
+  textarea.value = equipmentText(equipment);
+  textarea.placeholder = "Laser Pistol | 1 | 3D6\nMesh | 1 | AR 5";
+  textarea.spellcheck = false;
+  equipmentLabel.append(textarea);
+
+  const save = document.createElement("button");
+  save.type = "button";
+  save.textContent = "Save items";
+  save.addEventListener("click", () => {
+    sendCommand({
+      type: "UpdateCharacterSheet",
+      gameId: roomId,
+      actorId,
+      characterId: character.id,
+      credits: nullableNumberFromInput(creditsInput) ?? 0,
+      equipment: equipmentFromText(textarea.value)
+    }).catch((error) => setError(error.message));
+  });
+
+  form.append(creditsLabel, equipmentLabel, save);
+  return form;
+};
+
 const renderItemsTab = (body, character) => {
   body.append(sheetRow("Credits", character?.credits == null ? "-" : String(character.credits)));
   const equipment = Array.isArray(character?.equipment) ? character.equipment : [];
   if (equipment.length === 0) {
     body.append(emptySheetText("No equipment listed"));
+    const editor = itemsEditor(character, equipment);
+    if (editor) body.append(editor);
     return;
   }
 
@@ -2498,7 +2585,9 @@ const renderItemsTab = (body, character) => {
     row.append(name, meta);
     list.append(row);
   }
-  body.append(list);
+  const editor = itemsEditor(character, equipment);
+  if (editor) body.append(list, editor);
+  else body.append(list);
 };
 
 const renderNotesTab = (body, piece, character) => {

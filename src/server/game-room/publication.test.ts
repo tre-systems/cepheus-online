@@ -303,6 +303,34 @@ describe('room publication flow', () => {
     assert.equal((await readEventStream(storage, gameId)).length, 2)
   })
 
+  it('rejects empty character sheet equipment names during publication', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+
+    const rejected = await publish(storage, {
+      type: 'UpdateCharacterSheet',
+      gameId,
+      actorId,
+      characterId,
+      equipment: [{name: '  ', quantity: 1, notes: ''}]
+    })
+
+    assert.equal(rejected.ok, false)
+    if (rejected.ok) return
+    assert.equal(rejected.error.code, 'invalid_command')
+    assert.equal(rejected.error.message, 'equipment[0].name cannot be empty')
+    assert.equal((await readEventStream(storage, gameId)).length, 2)
+  })
+
   it('validates piece character links during publication', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')

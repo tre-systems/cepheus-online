@@ -190,6 +190,77 @@ describe('game state projection', () => {
     assert.equal(character?.credits, 1200)
   })
 
+  it('replaces manual character sheet equipment without changing other fields', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterSheetUpdated',
+        characterId,
+        notes: 'Scout service term notes',
+        age: 34,
+        characteristics: {
+          dex: 9,
+          edu: 8
+        },
+        skills: ['Pilot 1', 'Vacc Suit 0'],
+        equipment: [
+          {
+            name: 'Vacc suit',
+            quantity: 1,
+            notes: 'Tailored'
+          },
+          {
+            name: 'Laser carbine',
+            quantity: 1,
+            notes: ''
+          }
+        ],
+        credits: 1200
+      }),
+      envelope(4, {
+        type: 'CharacterSheetUpdated',
+        characterId,
+        equipment: [
+          {
+            name: 'Medkit',
+            quantity: 2,
+            notes: 'Field issue'
+          }
+        ]
+      })
+    ])
+
+    const character = state?.characters[characterId]
+    assert.equal(character?.notes, 'Scout service term notes')
+    assert.equal(character?.age, 34)
+    assert.deepEqual(character?.characteristics, {
+      str: null,
+      dex: 9,
+      end: null,
+      int: null,
+      edu: 8,
+      soc: null
+    })
+    assert.deepEqual(character?.skills, ['Pilot 1', 'Vacc Suit 0'])
+    assert.deepEqual(character?.equipment, [
+      {name: 'Medkit', quantity: 2, notes: 'Field issue'}
+    ])
+    assert.equal(character?.credits, 1200)
+  })
+
   it('projects piece character links', () => {
     const characterId = asCharacterId('char-1')
     const pieceId = asPieceId('piece-1')
