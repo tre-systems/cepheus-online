@@ -1,0 +1,58 @@
+import type {BoardId, CharacterId, GameId, PieceId, UserId} from './ids'
+
+export type CharacterType = 'PLAYER' | 'NPC' | 'ANIMAL' | 'ROBOT'
+
+export type PieceVisibility = 'HIDDEN' | 'PREVIEW' | 'VISIBLE'
+export type PieceFreedom = 'LOCKED' | 'UNLOCKED'
+
+export interface GameState {
+  id: GameId
+  slug: string
+  name: string
+  ownerId: UserId
+  players: Record<UserId, PlayerState>
+  characters: Record<CharacterId, CharacterState>
+  boards: Record<BoardId, BoardState>
+  pieces: Record<PieceId, PieceState>
+  selectedBoardId: BoardId | null
+  eventSeq: number
+}
+
+export interface PlayerState {
+  userId: UserId
+  role: 'REFEREE' | 'PLAYER' | 'SPECTATOR'
+}
+
+export interface CharacterState {
+  id: CharacterId
+  ownerId: UserId | null
+  type: CharacterType
+  name: string
+  active: boolean
+  notes: string
+}
+
+export interface BoardState {
+  id: BoardId
+  name: string
+  imageAssetId: string | null
+  url: string | null
+  width: number
+  height: number
+  scale: number
+}
+
+export interface PieceState {
+  id: PieceId
+  boardId: BoardId
+  characterId: CharacterId | null
+  name: string
+  x: number
+  y: number
+  z: number
+  width: number
+  height: number
+  scale: number
+  visibility: PieceVisibility
+  freedom: PieceFreedom
+}

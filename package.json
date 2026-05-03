@@ -1,0 +1,14 @@
+{
+  "name": "cepheus-online",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "list:salvage": "find data src/shared/schemas docs legacy -maxdepth 3 -type f | sort"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,1101 @@
+
+01/93248 BALLISTIC VEST
+A flexible and relatively light flak jacket intended to be worn semi-discreetly.
+It is still fairly obviously armour but can be concealed under a light jacket,
+whereas a flak jacket is much more blatant.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Ballistic Vest +4 8 - 1 Cr500 None
+
+
+
+
+
+
+
+01/89789 CERAMIC CARAPACE
+Made from specially contoured plates of advanced ceramic/metal alloys
+positioned over the vital organs of the Traveller, keeping them well protected.
+Ceramic alloys are designed to slough off heat and flame, giving the armour a
+much higher rate of protection against lasers, flamethrowers and other heat/
+fire-based attacks. Against such weapons, the armour gains an additional +6
+Protection.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Ceramic +10 12 - 4 Cr12000 None
+Carapace
+
+
+
+
+
+
+
+01/08316 CLOTH
+A heavy-duty coverall tailored from ballistic cloth, it sometimes containing
+light metal or ceramic plates at critical points. The fabric absorbs impact
+energy, distributing the blow over the body of the target and usually resulting
+in bruising. Cloth armour can be concealed under clothing but is fairly easy to
+spot – a Routine (6+) Investigate or Recon check is all that is required to spot
+the armour. At TL12, a thin type of cloth armour becomes available that is light
+enough that it can be worn under other types of armour, adding its protection.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Cloth +5 7 - 10 Cr250 None
+Cloth +8 10 - 5 Cr500 None
+Cloth +4 12 - 2 Cr750 None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11
+
+13
+01/30833 DIPLO VEST
+Essentially a shirt-only version of the protec suit, the diplo vest can be
+worn under a normal shirt. The advantage is that while a protec suit
+is easily spotted, a diplo vest is completely concealed. It is ideal for
+sensitive occasions where armour is not appropriate, hence the term ‘diplo’
+(diplomatic) vest.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Diplo Vest +3 10 - - Cr250 None
+
+
+
+
+
+
+
+01/74908 FLAK JACKET
+A heavy sleeveless jacket of ballistic cloth, often with ceramic or metal
+inserts to stop powerful projectiles. Generally covering only the torso and
+groin, a flak jacket can be concealed under a bulky coat but will be spotted
+by all but the most cursory of glances.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Flak Jacket +3 7 - 8 Cr100 None
++5 8 - 6 Cr300
+
+
+
+
+
+
+01/58094 FLAK SHELL
+A heavy back-and-breastplate formed from metal or ceramic composites.
+A flak shell is essentially a stronger and more advanced flak jacket, but is
+extremely heavy and imposes DM-1 on all skill checks that involve physical
+action.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Flak Shell +8 9 - 8 Cr1000 None
+
+
+
+
+
+
+
+01/70249 JACK
+A jacket or body suit of tough natural or synthetic material such as leather,
+pseudohide or something similar covering the torso and arms. Jack may
+be armour or simply a tough piece of clothing. It is somewhat better than
+ordinary clothing or bare skin when defending against blades but fairly
+useless against high velocity attacks. The leather or hide armour of low-tech
+troops is usually equivalent to jack.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Jack +1 1 - 1 Cr50 None
+
+
+
+
+
+
+
+
+
+12
+
+14
+01/54864 MESH
+A jacket or body suit made of natural or synthetic leather and reinforced with
+a lining of flexible metal mesh. It is primarily useful against hand weapons.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Mesh +2 6 - 2 Cr150 None
+
+
+
+
+
+
+
+
+01/97465 POLY CARAPACE
+A bodysuit of fibrous material with attached plates of polymer plastics
+designed to shield major arteries and organs, the carapace comes complete
+with an armoured facemask and half-helmet. It is good protection against all
+forms of weapons, but can be restrictive to limb movement. Poly carapace
+armour imposes DM-1 to all skill checks that require physical action. More
+advanced lightweight versions are also available that are less bulky, do not
+restrict movement, but still provides a better protection.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Advanced Poly +16 13 - 2 Cr35000 None
+Carapace
+Lightweight Poly +12 11 - 2 Cr15000 None
+Carapace
+Poly Carapace +10 10 - 2 Cr10000 None
+
+
+
+
+
+
+
+
+
+
+01/03723 POST-APOCALYPTIC
+This is scavenged armour cobbled together from plate pieces, salvaged rubber
+and other toughened materials that can be riveted, welded or glued together.
+It covers the torso and upper legs, and maybe an arm.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Post-Apocalyptic +4 6 - 3 Cr150 None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+13
+
+15
+01/30835 PROTEC SUIT
+A slim-fitting business suit woven from protective fibres, the protec suit is
+obviously armour but also confers a degree of respectability without making
+the Traveller appear like a thug. It is capable of turning melee weapons while
+softening the blow of small arms fire.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Protec Suit +4 9 - 1 Cr500 None
+
+
+
+
+
+
+
+01/38385 TACTICAL RIOT ARMOUR
+Developed for law enforcement agencies, tactical riot armour protects the
+torso, arms and head of the Traveller primarily from improvised weapons used
+by rebellious civilians. The design of this armour emphasises intimidation
+while rendering the Traveller anonymous among others so equipped. The
+Traveller gains a Boon to all Persuade checks made to intimidate while
+wearing this armour.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Tactical Riot +4 7 - 6 Cr600 None
+Armour
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ARCHAIC ARMOUR
+
+Occasionally Travellers may encounter enemies encased in primitive body armour or may be forced
+into a position to purchase and use it themselves. While inefficient, it can be effective against
+melee weapons and some weak firearms.
+
+Against ranged weapon of a higher Tech Level, all armour in this section halves its Protection
+(rounding up).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+14
+
+16
+01/62653 BREASTPLATE
+A metal breastplate covers the front and back of the torso, offering decent
+protection against hand weapons and archaic projectiles. It is less much
+useful against firearms.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Breastplate +3 1 - 5 Cr200 None
+
+
+
+
+
+
+
+01/90636 FULL PLATE
+A complete suit of armour comprising shaped and fitted metal plates, riveted
+and interlocked to cover the entire body. It includes gauntlets, heavy leather
+boots, and a helmet. Plate is designed to distribute the weight over the body,
+so hampers movement less than might be expected. However, it is heavy and
+tiring to wear, and the sheer mass of metal that has to be moved imposes DM-2
+on all checks that involve physical activity, but there is no penalty to close
+combat attacks.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Full Plate +6 2 - 20 Cr1000 None
+
+
+
+
+
+
+
+01/78641 HALF-PLATE
+Favoured by heavy cavalry even after infantry have dispensed with meaningful
+armour themselves, half-plate consists of articulated plates backed by light
+mail and padding.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Half-Plate +5 2 - 12 Cr800 None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+15
+
+17
+01/02202 MAIL HAUBERK
+A knee-length coat of interlocking large or small metal rings set on a leather
+backing, a hauberk offers excellent protection against hand weapons, and is
+used mainly by heavy infantry and cavalry. Scale mail (constructed with small
+plates rather than rings) offers similar protection and is a variation of the mail
+hauberk.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Mail Hauberk +4 2 - 8 Cr500 None
+
+
+
+
+
+
+
+
+
+
+
+ANTI-ENERGY ARMOUR
+
+Lasers and energy weapons require a special type of protection not
+always afforded by other armour. The armour showcased here has
+little value against conventional weapons such as firearms, but offers
+significant protection against lasers, flamethrowers and ‘energy’
+weapons such as plasma rifles.
+
+Importantly, unless otherwise stated, all armour in this section can be
+worn over the top of other types of armour. However, only one additional
+type of armour can be worn in this way.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+01/31249 ABLAT
+Ablat is a cheap alternative to reflec, and is fashioned from a material which
+will ablate (vaporise) when hit by laser fire or other energy weapons. The
+ablation of the material carries away the energy of the laser, and protects
+the Traveller. Continued fire against Ablat degrades its effectiveness, but
+the armour is cheap and easily replaceable. Ablat also has a minimal value
+against other forms of attack but it cannot be combined with other types of
+armour. Each laser hit on ablat armour reduces its Protection score by one.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Ablat +1 (+6 vs. lasers) 9 - 2 Cr75 None
+
+
+
+
+
+
+
+16
+
+18
+01/42361 CONDUIT-BLEED
+Designed specifically to supercool plasma energy, this dense suit of polymer-
+alloy mixtures is perfectly suited to pad the impact of most blows as well. The
+advances made to these materials means directed plasma energy is far less
+likely to harm the Traveller.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Conduit- +4 (+15 vs. 14 - 8 Cr3500 None
+Bleed plasma)
+
+
+
+
+
+
+
+
+01/29042 DISPERSION
+A semi-metallic polymer that wraps the Traveller in advanced energy-
+dispersion materials. This protective suit is not quite as physically protective
+as anti-ballistic cloth, but is built to absorb and eliminate most wavelengths
+of energy that strikes it.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Dispersion +2 (+10 vs. 12 - 3 Cr2000 None
+fire, lasers and
+energy)
+
+
+
+
+
+
+01/93611 FIREPROOF SUIT
+A fireproof suit is a complete body suit of light flexible material designed to
+resist heat and shed burning chemicals. It resembles the suits worn by racing
+drivers under their coveralls. It has no value against any weapons other than
+lasers, energy weapons and fire.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Fireproof +0 (+4 vs. 7 - 1 Cr50 None
+Suit fire, lasers and
+energy)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+17
+
+19
+01/58246 REFLEC
+Reflective material on a plastic base can be tailored into a body suit which is
+ineffective against most weapons, but superior in defence against laser fire.
+Reflec is expensive and often difficult to obtain and imposes a Bane on any
+Stealth checks the Traveller attempts.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Reflec +0 (+10 vs. 10 - 1 Cr1500 None
+lasers)
+
+
+
+
+
+
+
+
+01/83945 NEURAL SHEATH
+Cloth weaved with thin-spun chains of advanced neural crystals, this
+protective suit is worthless against physical damage but immensely useful
+against blocking energies created and manipulated by psions. The neural
+sheath is extremely thin and lightweight, and can be worn beneath any other
+form of armour or clothing. Any form of damage originating from neural or
+psionic powers or weaponry or attack is affected by a neural sheath.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Neural +0 (+20 vs. 17 - 2 Cr80000 None
+Sheath psionics)
+
+
+
+
+
+
+
+
+
+
+
+
+NON-POWERED SUITS
+
+Some armour comes as a complete suit and is usually worn with helmet and
+any additional gear such as air tanks attached. Suits, if sealed, offer total
+protection from gas and airborne biological agents.
+
+Unless otherwise stated, non-powered suits come equipped with the
+electronics suite opposite, appropriate to their Tech Level.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+18
+
+20
+01/22656 BOARDING VACC SUIT
+An armoured suit hardened to the dangers of exposure to vacuum or hostile
+environments, the boarding vacc suit was originally used to help battle
+against pirates when life support failed during an attack. As technology
+improves the suits become thinner and sturdier, revolutionising their use
+in ship-to-ship combat. A boarding vacc suit will sometimes have a melee
+weapon/pistol combination grafted to the cuffs of the suit.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Boarding +11 11 50 25 Cr18000 Vacc Suit 1
+Vacc Suit +13 12 75 12 Cr24000 Vacc Suit 1
+
+
+
+
+
+
+
+
+ELECTRONICS SUITE
+
+
+Tech Level Electronics Suite
+8 Eye Protection, Geiger Counter, Radio Transceiver
+9 Computer/0, Eye Protection, Geiger Counter, Radio
+Transceiver
+10 Computer /1, Binoculars, Eye Protection, Geiger
+Counter, IR Goggles, Radio Transceiver, Scope
+11 Computer /1, Binoculars, Eye Protection, Geiger
+Counter, IR Goggles, Radio Transceiver, Scope
+12 Computer /2, Binoculars, Eye Protection, Geiger
+Counter, IR Goggles, Light Intensifier Goggles, Radio
+Transceiver, Scope
+13 Computer /2, Eye Protection, Geiger Counter, IR
+Goggles, Light Intensifier Goggles, PRIS Binoculars,
+Radio Transceiver, Scope
+14 Computer /2, Eye Protection, Geiger Counter, IR
+Goggles, Light Intensifier Goggles, PRIS Binoculars,
+Radio Transceiver, Scope
+15 Computer /3, Eye Protection, Geiger Counter, IR
+Goggles, Light Intensifier Goggles, PRIS Binoculars,
+Radio Transceiver, Scope
+16 Bioscanner, Computer /4, Eye Protection, Geiger
+Counter, IR Goggles, Light Intensifier Goggles, PRIS
+Binoculars, Radio Transceiver, Scope
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+19
+
+21
+01/81039 CERAMIC COMBAT ARMOUR
+A heavy suit of advanced materials, overlapping ceramic alloy plates grant
+the armour and integrated helmet extreme durability. Besides the six-hour
+capacity for complete environmental sealing, the ceramic alloy grants a much
+higher degree of protection against lasers, flamethrowers and other energy-
+based attacks.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Ceramic +12 (+18 vs. 13 150 15 Cr300000 Vacc Suit 1
+Combat fire, lasers and
+Armour energy)
+
+
+
+
+
+
+
+
+
+01/57376 COMBAT ARMOUR
+Combat armour is a complete array of metal and synthetic armour, strictly
+military and not available on the open market. It contains oxygen tanks for six
+hours and a recycling unit which can more than double this endurance if the
+user is not unduly exerting himself.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Combat +13 10 85 20 Cr96000 Vacc Suit 1
+Armour +17 12 145 16 Cr88000 Vacc Suit 0
++19 14 180 12 Cr160000 Vacc Suit 0
+
+
+
+
+
+
+
+
+01/63084 COMBAT ENVIRONMENT SUIT
+A neck to toe, airtight, loosely fitting suit constructed of ballistic cloth.
+Generally worn open at the neck and wrists, the combat environment suit
+can be sealed by donning gauntlets and a clear flexible plastic hood, giving
+complete protection against chemical agents, tainted atmospheres, biological
+agents, and moderate defence against radiation. A Combat Environment Suit
+will protect against most atmospheric hazards and support the user in very
+thin atmospheres. It will fail fairly quickly in a Trace atmosphere (D3 hours
+typically) and more rapidly (D3 x 10 minutes) in vacuum. Electronics suite
+not included.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Combat +8 10 20 2 Cr1000 None
+Environment Suit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+20
+
+22
+EMERGENCY HOSTILE
+01/10128
+ENVIRONMENT SUIT
+A disposable emergency vacc suit designed to protect the Traveller from
+corrosive, insidious and similarly hazardous atmospheres (and, of course,
+vacuum). The suit is good for 6-8 hours, after which there is a 1 in 6
+(non-cumulative) chance it will fail every hour. Emergency suits are usually
+carried by starships to allow engineering crew to make emergency repairs
+under unusual conditions. The suit can be refurbished for Cr6000, but each
+refurbishment inflicts DM-1 to the chance of failure after the ‘safe’ time,
+and additionally reduces time to possible failure by 1 hour. Once the failure
+chance has reached a 4 in 6 chance, the suit is too degraded to be any
+further use. Electronics suite not included.
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Emergency +4 10 - 20 Cr9000 Vacc Suit 1
+Hostile
+Environment
+Suit
+
+
+
+
+
+
+
+
+01/57860 EMERGENCY SOFTSUIT
+A disposable emergency vacc suit including gloves and a soft, collapsible
+‘bubble’ helmet, the softsuit offers no protection against hostile environments
+or attack – only against vacuum and non-corrosive atmospheres. Starships are
+required to carry enough emergency suits or rescue balls to allow the crew
+and all passengers to survive depressurisation. Well-equipped ships include a
+softsuit at each crew position and a few spares at strategic points, in addition
+to crewmembers’ own vacc suits.
+
+The softsuit includes a small air bottle (4 hour capacity) and can be plugged
+into shipboard life-support points to prolong this supply. It is rather flimsy,
+and it offers no protection against radiation, making it a poor choice for repair
+work or routine duty and a desperate last resort for EVA work. Electronics
+suite not included.
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Emergency +0 10 - 10 Cr2000 Vacc Suit 0
+Softsuit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+21
+
+23
+01/17938 EXPLOSIVE ORDNANCE
+DISPOSAL SUIT
+This very heavily armoured suit is designed to mitigate the worst effects of an
+explosion at extremely close ranges but does so at the expense of mobility.
+Fine dexterity is not affected, as the hands of the Traveller retain freedom
+of action but other movements are difficult due to the heavy protection. The
+speed of the Traveller is halved and all physical actions that do not require
+manual dexterity alone suffer a Bane.
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Explosive +12 8 - 35 Cr8000 None
+Ordnance
+Disposal Suit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+HOSTILE ENVIRONMENT
+01/81780
+VACC SUIT
+Hostile environment suits are designed for conditions where a normal vacc
+suit would be insufficient, such as deep underwater, worlds with toxic
+atmosphere, extremes of radiation or temperature. HEV suits provide life
+support for six hours.
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Hostile +8 9 75 22 Cr24000 Vacc Suit 1
+Environment +9 10 90 13 Cr20000 Vacc Suit 1
+Vacc Suit +12 11 140 13 Cr22000 Vacc Suit 0
++14 13 170 10 Cr40000 Vacc Suit 0
++15 14 185 9 Cr60000 Vacc Suit 0
+
+
+
+
+
+
+
+
+
+
+
+
+22
+
+24
+01/29344 PRESSURE SLEEVE
+A form-fitting garment similar to a wetsuit, worn as an under-uniform by
+some spacefaring services. The pressure sleeve is designed to protect the
+user in low pressure environments (allowing normal function in Very Thin and
+Trace atmospheres) and give some protection against vacuum. The ankles
+seal to boots, and a set of gloves are normally carried in a belt pouch. To be
+of any use, the suit’s hood must be pulled up and sealed to a life-support
+mask (see page 41, not included in the price of the suit). The pressure
+sleeve is designed to give personnel a survival margin in an emergency. It is
+not a substitute for a proper vacc suit, though it can be worn under one. A
+user with a proper mask can function indefinitely in Very Thin atmosphere,
+for about 15 minutes in Trace Atmosphere, and about 5 minutes in hard
+vacuum. Electronics suite not included.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Pressure +0 10 - - Cr600 None
+Sleeve
+
+
+
+
+
+
+
+
+
+
+PSI-ENHANCED
+01/17998
+COMBAT ARMOUR
+This suit of advanced combat armour is rigged with a latticework of neural
+crystals, drawing from the Traveller’s natural psionic strength to create an
+invisible reinforcement across the armour. As well as having a full 8 hour air
+supply built into the suit when sealed, the Traveller adds half (round down)
+his PSI to the Protection score of the armour while worn.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Psi- +15 (+ ½ 16 250 10 Cr500000 None
+Enhanced PSI)
+Combat
+Armour
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+23
+
+25
+01/10200 RESCUE SUIT
+A rescue suit is a heavy vacc suit designed for emergency situations such as
+damage control or entering a damaged spacecraft. It is very tough, and some
+models are sold as ‘boarding suits’ to mercenary forces who cannot afford or
+obtain combat armour. The rescue suit carries oxygen tanks with a six hour
+capacity and a variety of tools for use in an emergency situation. Rescue suits
+are mainly designed to protect against physical hazards like torn wreckage and
+debris, plus radiation.
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Rescue Suit +12 12 120 22 Cr25000 Vacc Suit 1
+
+
+
+
+
+
+
+
+01/23897 VACC SUIT
+At lower Tech Levels, a rather bulky suit providing protection from hard
+vacuum and temperatures encountered in space. The suit also gives some
+radiation protection and includes a six-hour air supply. At higher Tech Levels,
+the vacc suit becomes much thinner and easier to use, though its level of
+protection increases.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Vacc Suit +4 8 10 17 Cr12000 Vacc Suit 1
++8 10 60 10 Cr11000 Vacc Suit 0
++10 12 90 8 Cr20000 Vacc Suit 0
+
+
+
+
+
+
+
+POWERED ARMOUR
+
+There is a class of armoured suit falling between unpowered combat
+armour and the extremely advanced battle dress rigs; these are collectively
+called powered armour. Aided by servos, pneumatics and counterweight
+mechanisms, powered armour suits enhance the Traveller’s strength at the
+cost of limited use between refuelling or charging. Powered suits, if sealed,
+offer total protection from gas and airborne biological agents as well as
+ample radiation shielding. While powered and active, the mass of a powered
+armour suit does not count against the encumbrance of the Traveller, and is
+effectively weightless.
+
+When a powered armour suit is not currently charged or fuelled, the mass of
+the suit counts does against the Traveller. Additionally, any STR bonus the
+armour provides is lost and any DEX penalty the armour imposes is doubled.
+
+Unless otherwise stated, powered armour comes equipped with the
+electronics suite shown on page 30, appropriate to their Tech Level.
+
+
+
+
+
+
+
+
+
+
+24
+
+26
+01/19304 CERAMIC POWERED PLATE
+An advanced form of the more common powered plate made of advanced
+ceramic-metal hybrid alloys, this armoured suit has a higher rate of protection
+against lasers, flamethrowers and other heat/fire-based attacks. Also, while
+the suit is running efficiently on its 85 hour power cell (Cr250 to replace), it
+adds STR +2 to the Traveller but inflicts a DEX-2 penalty.
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Ceramic +16 (+20 vs. 13 175 35 Cr90000 Vacc Suit 1
+Powered fire, lasers and
+Plate energy)
+
+
+
+
+
+
+
+
+
+
+
+
+GRAV-ENHANCED
+01/91171
+POWERED PLATE
+A much improved version of the powered plate suit, this high-tech powered
+armour comes equipped with gravitic gyros in its limbs and torso. These
+increase the augmentation of the Traveller’s abilities without drawing much
+from the suit’s 500 hour power cell (Cr 750 to replace), and adds STR+3 to
+the Traveller while only reducing DEX when unpowered, and then only by -1.
+Additionally, the grav-enhanced powered plate can use the grav-gyros in its
+legs to move faster, increasing the Traveller’s speed by +50%.
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Grav- +20 15 220 32 Cr120000 Vacc Suit 0
+Enhanced
+Powered
+Plate
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+25
+
+27
+01/81937 MECHANICAL CARAPACE
+A suit of sealed carapace plates attached to a simple framework of
+mechanical ratchets and pneumatics, this armour is durable but not very
+sophisticated. Fuelled for up to ten hours (Cr25 to refuel), the suit adds STR
++1 to the Traveller but inflicts a DEX-1 penalty.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Mechanical +8 9 30 30 Cr15000 Vacc Suit 2
+Carapace +10 12 60 25 Cr30000 Vacc Suit 1
+
+
+
+
+
+
+
+01/17109 POWERED PLATE
+A large and bulky suit of insulated powered armour made up of metallic
+plates forming a complete body shell, powered plate is tough and inflexible.
+So long as the suit’s hundred-hour power cell (Cr250 to replace) has energy,
+the suit adds STR +2 to the Traveller but inflicts a DEX-2 penalty. The TL14
+version has a 200 hour power cell and adds STR +3 to the Traveller but
+inflicts a DEX-1 penalty.
+
+
+Armour Type Protection TL Rad Kg Cost Required Skill
+Powered Plate +14 10 120 40 Cr50000 Vacc Suit 1
++18 14 200 30 Cr85000 Vacc Suit 0

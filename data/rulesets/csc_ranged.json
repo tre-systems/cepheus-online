@@ -1,0 +1,831 @@
+[
+  {
+    "Name": "Demolition Gun",
+    "Description": "This is a short-barrelled petard weapon designed to deliver an extremely large explosive charge over a short distance. The demolition gun is normally mounted aboard engineering or assault support vehicles, to demolish fortifications and flatten obstructions.  ",
+    "Category": "RANGED_WEAPON",
+    "TL": 6,
+    "Cost": 30000,
+    "Wgt": 5000,
+    "Range": 100,
+    "Dmg": "1DD",
+    "Magazine": 1,
+    "MagazineCost": 500,
+    "Traits": {
+      "AP": 10,
+      "Blast": 10,
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Black Powder Mortar",
+    "Description": "A primitive short-barrelled smoothbore weapon, the black powder mortar is little more than a very short cannon placed upon a high-angle mount. They are sometimes called ‘grasshopper guns’ due to their tendency to jump about when firing.  ",
+    "Category": "RANGED_WEAPON",
+    "TL": 3,
+    "Cost": 2000,
+    "Wgt": 500,
+    "Range": 500,
+    "Dmg": "6D",
+    "Magazine": 1,
+    "MagazineCost": 50,
+    "Traits": {
+      "Blast": 6,
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Bombardment Gun",
+    "Description": "A fairly practical weapon as these things go, this super heavy gun is designed for bombardment of static or slow-moving targets. It is normally fielded as a railway gun, aboard a maritime vessel or as a coastal defence weapon.  ",
+    "Category": "RANGED_WEAPON",
+    "TL": 5,
+    "Cost": null,
+    "Wgt": 220000,
+    "Range": 30000,
+    "Dmg": "2DD",
+    "Magazine": 1,
+    "MagazineCost": 1500,
+    "Traits": {
+      "Blast": 20,
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Heavy Bombardment Gun",
+    "Description": "This huge artillery piece most likely to be encountered as a coastal defence piece or aboard a maritime naval ship. Weapons of this type are occasionally used to launch sub-calibre rockets or missiles in the hope of creating a rudimentary aerospace defence capability but these are rarely successful. They are extremely slow to reload, with most models requiring 1D hours between firing shells.  ",
+    "Category": "RANGED_WEAPON",
+    "TL": 5,
+    "Cost": null,
+    "Wgt": 500000,
+    "Range": 40000,
+    "Dmg": "3DD",
+    "Magazine": 1,
+    "MagazineCost": 2500,
+    "Traits": {
+      "Blast": 20,
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Heavy Gun",
+    "Description": "A standard artillery piece on many worlds, this gun is usually mounted on a vehicle. Some versions can handle small nuclear warheads but this is not usual. This weapon is theoretically capable of firing over open sights but it is somewhat ineffective in this role. The heavy gun may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 8,
+    "Cost": 120000,
+    "Wgt": 12000,
+    "Range": 12000,
+    "Dmg": "1DD",
+    "Magazine": 1,
+    "MagazineCost": 400,
+    "Traits": {
+      "AP": 8,
+      "Blast": 10,
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Infantry Mortar",
+    "Description": "A light man-portable support weapon capable of launching small explosive bombs (or other munitions, including smoke).   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 5,
+    "Cost": 3500,
+    "Wgt": 12,
+    "Range": 1,
+    "Dmg": "2D",
+    "Magazine": 1,
+    "MagazineCost": 50,
+    "Traits": {
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Light Howitzer",
+    "Description": "A short-barrelled artillery piece crewed by up to six personnel and usually moved by animal power or towed by a vehicle, the light howitzer can deliver shells to far off targets. It can also fire over open sights but there are far better weapons for this role. The light howitzer may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 5,
+    "Cost": 50000,
+    "Wgt": 2000,
+    "Range": 6000,
+    "Dmg": "8D",
+    "Magazine": 1,
+    "MagazineCost": 150,
+    "Traits": {
+      "Blast": 10,
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Light Gun",
+    "Description": "A long-barrelled artillery piece, this gun has a higher muzzle velocity than the equivalent howitzer and can hit targets further away. It is also more capable in the direct fire role. The light gun may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 6,
+    "Cost": 75000,
+    "Wgt": 2000,
+    "Range": 9000,
+    "Dmg": "8D",
+    "Magazine": 1,
+    "MagazineCost": 200,
+    "Traits": {
+      "AP": 5,
+      "Blast": 10,
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Siege Gun",
+    "Description": "An updated version of the largest artillery piece ever built on old Terra, this 800 mm siege gun must be moved in parts and assembled in its firing position, making it unwieldy and prone to counter-battery fire by lesser, but more practical, pieces. Its awesome warhead can be delivered to a target many kilometres away and a direct hit from its five ton shell would flatten a tank or even a maritime vessel with ease – before detonating. It is extremely slow to reload, requiring 1D hours between firing shells.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 7,
+    "Cost": null,
+    "Wgt": 1200000,
+    "Range": 50000,
+    "Dmg": "4DD",
+    "Magazine": 1,
+    "MagazineCost": 5000,
+    "Traits": {
+      "AP": 10,
+      "Blast": 50,
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Mass Driver",
+    "Description": "An advanced tube-based artillery piece using electromagnetic acceleration to hurl its payload, a mass driver will normally be mounted on a vehicle. It requires a crew of at least eight, including power technicians as well as gunners, and is effective in the direct-fire role. The mass driver may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 12,
+    "Cost": null,
+    "Wgt": 7000,
+    "Range": 40000,
+    "Dmg": "1DD",
+    "Magazine": 1,
+    "MagazineCost": 750,
+    "Traits": {
+      "Blast": 10,
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Aerospace Defence Laser",
+    "Description": "A powerful laser weapon designed for emplaced or mobile aerospace defence, the ADL consumes immense power but delivers impressive damage. It is intended primarily to engage missiles and small craft but can attack at starships, aircraft and grav vehicles equally well.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 12,
+    "Cost": null,
+    "Wgt": 12000,
+    "Range": 120000,
+    "Dmg": "8D",
+    "Magazine": null,
+    "MagazineCost": null,
+    "Traits": {
+      "Track": true
+    }
+  },
+  {
+    "Name": "Black Powder Cannon",
+    "Description": "This is a simple smoothbore black-powder cannon capable of delivering shot out to a kilometre or so without any real degree of accuracy. Roundshot is the most commonly used ammunition, though canister shot is also popular. The black powder cannon typically requires a crew of six or so plus beasts of burden to move it around. It may use canister rounds (see page 139).   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 3,
+    "Cost": 3000,
+    "Wgt": 500,
+    "Range": 500,
+    "Dmg": "7D",
+    "Magazine": 1,
+    "MagazineCost": 50,
+    "Traits": {}
+  },
+  {
+    "Name": "Support Mortar",
+    "Description": "A heavy mortar mounted on a wheeled carriage rather than being carried by infantry, the support mortar flings a bomb in the 120 mm range over a respectable distance.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 7,
+    "Cost": 11000,
+    "Wgt": 250,
+    "Range": 3000,
+    "Dmg": "9D",
+    "Magazine": 1,
+    "MagazineCost": 100,
+    "Traits": {
+      "Blast": 6,
+      "Artillery": true
+    }
+  },
+  {
+    "Name": "Cannon",
+    "Description": "A large calibre gun used to arm the heavy tanks and armoured vehicles of mid-Tech Level armies. The cannon may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 8,
+    "Cost": 400000,
+    "Wgt": 2500,
+    "Range": 2000,
+    "Dmg": "1DD",
+    "Magazine": 30,
+    "MagazineCost": 5000,
+    "Traits": {
+      "Blast": 10
+    }
+  },
+  {
+    "Name": "Field Gun",
+    "Description": "A rifled muzzle-loading cannon mounted on a horse-drawn carriage and requiring a crew of six or more men, the field gun is more accurate at range than a smoothbore cannon. Field guns may use canister rounds (see page 139).   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 4,
+    "Cost": 5000,
+    "Wgt": 500,
+    "Range": 1000,
+    "Dmg": "8D",
+    "Magazine": 1,
+    "MagazineCost": 75,
+    "Traits": {}
+  },
+  {
+    "Name": "Fusion Gun",
+    "Description": "One of the most powerful ground-based weapons ever made, the fusion gun can blast through just about any material.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 13,
+    "Cost": null,
+    "Wgt": 4000,
+    "Range": 3000,
+    "Dmg": "3DD",
+    "Magazine": null,
+    "MagazineCost": null,
+    "Traits": {
+      "AP": 10,
+      "Blast": 15,
+      "Radiation": true
+    }
+  },
+  {
+    "Name": "Gauss Cannon",
+    "Description": "This weapon uses advanced electromagnetic (‘gauss’) propulsion to accelerate a metal dart to tremendous speed. The projectile is a lump of dense metal which damages the target using kinetic energy and the gauss cannon is capable of firing them rapidly. The gauss cannon may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 12,
+    "Cost": 100000,
+    "Wgt": 1000,
+    "Range": 2000,
+    "Dmg": "1DD",
+    "Magazine": 200,
+    "MagazineCost": 1000,
+    "Traits": {
+      "AP": 10,
+      "Auto": 3
+    }
+  },
+  {
+    "Name": "Gatling Laser",
+    "Description": "A relatively low-powered, vehicle-mounted laser weapon, the gatling laser uses several cryogenically cooled barrels fired in succession to deliver a hail of fire. The gatling laser is often used as an air-defence weapon.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 8,
+    "Cost": 125000,
+    "Wgt": 7000,
+    "Range": 4000,
+    "Dmg": "6D",
+    "Magazine": null,
+    "MagazineCost": null,
+    "Traits": {
+      "AP": 5,
+      "Auto": 4
+    }
+  },
+  {
+    "Name": "Heavy Autocannon",
+    "Description": "This is a heavy (60-65 mm) rapid-fire belt-fed weapon capable of engaging light armoured vehicles and aircraft. Heavy autocannon are generally carried in vehicle mounts or aboard maritime vessels. The heavy autocannon may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 6,
+    "Cost": 45000,
+    "Wgt": 1000,
+    "Range": 1000,
+    "Dmg": "1DD",
+    "Magazine": 100,
+    "MagazineCost": 2000,
+    "Traits": {
+      "Auto": 3
+    }
+  },
+  {
+    "Name": "Heavy Cannon",
+    "Description": "This is a main-calibre gun which arms many mid-tech armoured fighting vehicles. The heavy cannon may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 8,
+    "Cost": 600000,
+    "Wgt": 4000,
+    "Range": 3000,
+    "Dmg": "2DD",
+    "Magazine": 10,
+    "MagazineCost": 5000,
+    "Traits": {
+      "Blast": 10
+    }
+  },
+  {
+    "Name": "Heavy Gauss Cannon",
+    "Description": "Pushing the limits of gauss technology, this cannon is capable of laying waste to entire units of even the most heavily armoured infantry. The heavy gauss cannon may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 12,
+    "Cost": 225000,
+    "Wgt": 2000,
+    "Range": 3000,
+    "Dmg": "2DD",
+    "Magazine": 60,
+    "MagazineCost": 800,
+    "Traits": {
+      "AP": 15,
+      "Auto": 2
+    }
+  },
+  {
+    "Name": "Heavy Laser Cannon",
+    "Description": "A much larger version of the laser cannon, this weapon has greater range and a much heavier punch.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 9,
+    "Cost": 250000,
+    "Wgt": 9000,
+    "Range": 25000,
+    "Dmg": "2DD",
+    "Magazine": null,
+    "MagazineCost": null,
+    "Traits": {
+      "AP": 20
+    }
+  },
+  {
+    "Name": "Heavy Machinegun",
+    "Description": "Designed to be mounted upon a vehicle or tripod, the heavy machinegun has proven effective against light vehicles and aircraft but is primarily intended to mow down advancing infantry. The heavy machinegun may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 6,
+    "Cost": 4500,
+    "Wgt": 100,
+    "Range": 1000,
+    "Dmg": "4D",
+    "Magazine": 100,
+    "MagazineCost": 400,
+    "Traits": {
+      "Auto": 3
+    }
+  },
+  {
+    "Name": "Hypervelocity Cannon",
+    "Description": "The hypervelocity cannon uses electromagnetic propulsion, similar to a gauss weapon, and is typically mounted in emplacements or very large vehicles. Despite its range, it can be used against targets in low orbit if it can be elevated far enough. This extended range (100 km) is only useful in direct fire at airborne or orbital targets as the hypervelocity cannon ‘lob’ its projectiles like a howitzer.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 13,
+    "Cost": null,
+    "Wgt": 20000,
+    "Range": 5000,
+    "Dmg": "2DD",
+    "Magazine": 50,
+    "MagazineCost": 5000,
+    "Traits": {
+      "AP": 30,
+      "Scope": true
+    }
+  },
+  {
+    "Name": "Laser Cannon",
+    "Description": "A single barrel laser main gun for a vehicle, the laser cannon is the first truly effective vehicle energy weapon.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 9,
+    "Cost": 100000,
+    "Wgt": 6000,
+    "Range": 2500,
+    "Dmg": "1DD",
+    "Magazine": null,
+    "MagazineCost": null,
+    "Traits": {
+      "AP": 10
+    }
+  },
+  {
+    "Name": "Light Autocannon",
+    "Description": "This is a conventional autocannon, of 20-25mm calibre. It is designed to destroy light vehicles and massed infantry. The light autocannon may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 6,
+    "Cost": 10000,
+    "Wgt": 250,
+    "Range": 1000,
+    "Dmg": "6D",
+    "Magazine": 500,
+    "MagazineCost": 1000,
+    "Traits": {
+      "Auto": 3
+    }
+  },
+  {
+    "Name": "Medium Autocannon",
+    "Description": "This is a medium-calibre (30-45 mm) rapid-fire belt-fed weapon capable of engaging light armoured vehicles and aircraft. Medium autocannon are generally mounted on light armoured vehicles, aircraft, or in bunkers. They are too big and bulky to be used as mobile infantry support weapons, other than on a vehicular or towed mount. The medium autocannon may use the variant ammunition types found in the Ammunition chapter.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 6,
+    "Cost": 25000,
+    "Wgt": 500,
+    "Range": 1000,
+    "Dmg": "8D",
+    "Magazine": 100,
+    "MagazineCost": 1500,
+    "Traits": {
+      "Auto": 3
+    }
+  },
+  {
+    "Name": "Meson Accelerator",
+    "Description": "A battlefield-grade meson accelerator requires a huge power supply and can only be mounted in emplacements or the very largest of vehicles. It is similar in operation to starship- grade meson guns in that the particles it accelerates do not interact with matter until they decay, allowing the weapon to effectively shoot through any obstruction so long as the target’s location is known. Meson accelerators ignore all Armour and radiation shielding.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 15,
+    "Cost": null,
+    "Wgt": 60000,
+    "Range": 150000,
+    "Dmg": "4DD",
+    "Magazine": null,
+    "MagazineCost": null,
+    "Traits": {
+      "AP": null,
+      "Radiation": true
+    }
+  },
+  {
+    "Name": "Orbital Defence Cannon",
+    "Description": "An extremely large hypervelocity cannon, this weapon can engage targets on the ground but, if elevated, can attack its preferred targets, low-orbiting spacecraft. If it does so, it increases its range to 1,000 km.     ",
+    "Category": "RANGED_WEAPON",
+    "TL": 14,
+    "Cost": null,
+    "Wgt": 35000,
+    "Range": 5000,
+    "Dmg": "4DD",
+    "Magazine": 20,
+    "MagazineCost": 10000,
+    "Traits": {
+      "AP": 30,
+      "Track": true,
+      "Scope": true
+    }
+  },
+  {
+    "Name": "Plasma Gun",
+    "Description": "A heavy plasma gun designed for mounting on vehicles, this weapon is generally fitted to advanced grav vehicles and some aircraft. However, it is intended more as a support weapon than main anti-vehicle armament.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 10,
+    "Cost": null,
+    "Wgt": 4000,
+    "Range": 6000,
+    "Dmg": "2DD",
+    "Magazine": null,
+    "MagazineCost": null,
+    "Traits": {
+      "AP": 10
+    }
+  },
+  {
+    "Name": "Rail Gun",
+    "Description": "This is a powerful vehicle-mounted cannon using electromagnetic propulsion to fling a solid projectile in a flat trajectory that damages the target purely using kinetic energy. Time of flight to the target is less than for conventional guns, making compensation for movement easier.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 9,
+    "Cost": 75000,
+    "Wgt": 3000,
+    "Range": 4000,
+    "Dmg": "1DD",
+    "Magazine": 50,
+    "MagazineCost": 2500,
+    "Traits": {
+      "AP": 20
+    }
+  },
+  {
+    "Name": "Vulcan Machinegun",
+    "Description": "This weapon is constructed from six machinegun barrels which rotate through the firing position in order to maintain a very high rate of fire without adverse heating. The vulcan machinegun may use the variant ammunition types found in the Ammunition chapter. Damage uses the Traveller scale.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 7,
+    "Cost": 12000,
+    "Wgt": 250,
+    "Range": 500000,
+    "Dmg": "4D",
+    "Magazine": 1000,
+    "MagazineCost": 1250,
+    "Traits": {
+      "Auto": 6
+    }
+  },
+  {
+    "Name": "Bombardment Rocket Rack",
+    "Description": "This weapon usually appears as a self-contained rack suitable for mounting on the back of a truck or similar vehicle. It contains twelve large rockets with high-explosive warheads. Rockets can be fired one at a time or rippled off in a rolling salvo.  ",
+    "Category": "RANGED_WEAPON",
+    "TL": 6,
+    "Cost": 30000,
+    "Wgt": 2000,
+    "Range": 8000,
+    "Dmg": "5D",
+    "Magazine": 12,
+    "MagazineCost": 8000,
+    "Traits": {
+      "Blast": 15,
+      "Auto": 3
+    }
+  },
+  {
+    "Name": "Heavy Rocket Pod",
+    "Description": "This is a pod containing six large rockets with high-explosive warheads. The pod can be fitted to most vehicles and aircraft and is usually aimed by pointing the craft. Rockets can be fired one at a time or rippled off in a rolling salvo.  ",
+    "Category": "RANGED_WEAPON",
+    "TL": 6,
+    "Cost": 12000,
+    "Wgt": 500,
+    "Range": 2000,
+    "Dmg": "6D",
+    "Magazine": 6,
+    "MagazineCost": 6000,
+    "Traits": {
+      "Blast": 10,
+      "Auto": 3
+    }
+  },
+  {
+    "Name": "Rocket Pod",
+    "Description": "This is a pod containing small rockets with high-explosive warheads. The pod can be fitted to most vehicles and aircraft and is usually aimed by pointing the craft. Rockets can be fired one at a time or rippled off in a rolling salvo.  ",
+    "Category": "RANGED_WEAPON",
+    "TL": 6,
+    "Cost": 8000,
+    "Wgt": 250,
+    "Range": 1500,
+    "Dmg": "4D",
+    "Magazine": 18,
+    "MagazineCost": 8000,
+    "Traits": {
+      "Blast": 5,
+      "Auto": 3
+    }
+  },
+  {
+    "Name": "Tac Launcher",
+    "Description": "A support weapon capable of firing battlefield tactical (Tac) missiles, this launcher provides a cheap an easy way to arm a vehicle with missiles. Tac launchers can use a variety of missiles, as shown below.  ",
+    "Category": "RANGED_WEAPON",
+    "TL": 10,
+    "Cost": 16000,
+    "Wgt": 250,
+    "Range": 10000,
+    "Dmg": "8D",
+    "Magazine": 4,
+    "MagazineCost": 8000,
+    "Traits": {
+      "Track": true,
+      "Scope": true,
+      "Smart": true
+    }
+  },
+  {
+    "Name": "Bolas",
+    "Description": "This is a throwing weapon made from two or three weights fastened together by a cord. It is used to bring down an enemy rather than hurt them. A Traveller hit by a bolas does not sustain any damage. Instead, he must make a Melee (unarmed) check opposed by the Gun Combat (bolas) check of the attacker, as if being grappled. If this check is failed, the Traveller is immobilised. The Traveller can free himself from the bolas by performing a Significant Action.  ",
+    "Category": "RANGED_WEAPON",
+    "TL": 0,
+    "Cost": 5,
+    "Wgt": 1,
+    "Range": 10,
+    "Dmg": "-",
+    "Magazine": 1,
+    "MagazineCost": null,
+    "Traits": {}
+  },
+  {
+    "Name": "Boomerang",
+    "Description": "The boomerang is a shaped piece of wood designed to be thrown and deliver damage to a target. Most boomerangs used for hunting do not return to the thrower, but a returning boomerang can be purchased for Cr10. It inflicts DM-2 on attack rolls but if it misses a target, will return to the thrower in the next combat round. It can be caught with a successful Gun Combat (boomerang) check. The thrower will take damage equal to the Effect if it is negative and drop the boomerang.  ",
+    "Category": "RANGED_WEAPON",
+    "TL": 0,
+    "Cost": 5,
+    "Wgt": 1,
+    "Range": 25,
+    "Dmg": "1D",
+    "Magazine": 1,
+    "MagazineCost": null,
+    "Traits": {}
+  },
+  {
+    "Name": "Monofilament Bolas",
+    "Description": "Unlike the primitive bolas, this weapon does not entangle an enemy but slices through any target with its monofilament cords.   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 12,
+    "Cost": 500,
+    "Wgt": 1,
+    "Range": 10,
+    "Dmg": "3D",
+    "Magazine": 1,
+    "MagazineCost": null,
+    "Traits": {
+      "AP": 10
+    }
+  },
+  {
+    "Name": "Net",
+    "Description": "This is a large net, usually with weights fastened to its extremities. It is thrown over a target with the intention of entangling them. A Traveller hit by a net does not sustain any damage. Instead, he must make a Melee (unarmed) check opposed by the Gun Combat (net) check of the attacker, as if being grappled. If this check is failed, the Traveller is immobilised. The Traveller can free himself from the bolas by making a successful Average (8+) DEX check (1D rounds).   ",
+    "Category": "RANGED_WEAPON",
+    "TL": 1,
+    "Cost": 10,
+    "Wgt": 1,
+    "Range": 5,
+    "Dmg": "-",
+    "Magazine": 1,
+    "MagazineCost": null,
+    "Traits": {}
+  },
+  {
+    "Name": "Shock Whip",
+    "Description": "A shock whip is more an instrument of torture than a useful weapon. It is normally used on a low setting to inflict pain from both the whip’s own action and accompanying shock effect but the charge can be increased to make it an effective, if unusual, weapon. Use of a shock whip grants DM+1 to Intimidate and Persuade checks made while questioning (torturing) a Traveller.   "
+  },
+  {
+    "Name": "Whip",
+    "Description": ""
+  },
+  {
+    "Name": "Breaching Charge",
+    "Description": "",
+    "Category": "GRENADE",
+    "TL": 8,
+    "Cost": 250,
+    "Wgt": 1,
+    "Range": null,
+    "Dmg": "4D",
+    "Traits": "AP 6, Blast"
+  },
+  {
+    "Name": "Complex Chemical Charge",
+    "Description": "When two chemical polymers are combined physically, normally through a timed mechanical or electronic device, they react explosively. There is a D3 round delay between the chemical chain forming and the charge exploding, but the resulting chemical detonation is very powerful and concentrated.  ",
+    "Category": "GRENADE",
+    "TL": 10,
+    "Cost": 500,
+    "Wgt": 1,
+    "Range": null,
+    "Dmg": "4D",
+    "Traits": "AP 15,"
+  },
+  {
+    "Name": "Fusion Block",
+    "Description": "This is a dense and expensive material formed into a cube and fitted with a chemi-pressure trigger. This creates a shaped explosion of fusion energy. This explosion is extremely powerful and does not pause for most physical matter, sublimating it into gas almost instantly.  ",
+    "Category": "GRENADE",
+    "TL": 16,
+    "Cost": 10000,
+    "Wgt": 1,
+    "Range": null,
+    "Dmg": "1DD",
+    "Traits": "Blast 12,"
+  },
+  {
+    "Name": "Neutrino Detonator",
+    "Description": "A complex device about the size of a laptop computer, the neutrino detonator uses a complex formula to create a powerful explosion that sends a wave of overlapping neutrinos through all matter surrounding it. This wave causes breaks in the bonds that hold matter together; something that has little direct effect on inorganic substances, which just return to their former state instantly. Organic matter, however, suffers major cellular damage. This explosion ignores all inorganic substances (walls, doors, armour, and so on), inflicting its damage only on organic materials within its Burst.   ",
+    "Category": "GRENADE",
+    "TL": 17,
+    "Cost": 50000,
+    "Wgt": 1,
+    "Range": null,
+    "Dmg": "8D",
+    "Traits": "Blast 25"
+  },
+  {
+    "Name": "Plastic",
+    "Description": "This generic, multi-purpose plastic explosive is a favourite of military units, terrorists, demolition teams and Travellers across Charted Space.   ",
+    "Category": "GRENADE",
+    "TL": 6,
+    "Cost": 200,
+    "Wgt": 0,
+    "Range": null,
+    "Dmg": "3D",
+    "Traits": "Blast 9"
+  },
+  {
+    "Name": "Pocket Nuke",
+    "Description": "Hideously illegal on many worlds, the pocket nuke is actually the size of a briefcase and so is too large to fit into a grenade launcher. Using multiple pocket nukes will not increase the Damage or Burst of the explosion.   ",
+    "Category": "GRENADE",
+    "TL": 12,
+    "Cost": 250000,
+    "Wgt": 4,
+    "Range": null,
+    "Dmg": "6DD",
+    "Traits": "Blast 1000,"
+  },
+  {
+    "Name": "Tdx",
+    "Description": "An advanced gravity-polarised explosive, TDX explodes only along the horizontal axis.   ",
+    "Category": "GRENADE",
+    "TL": 12,
+    "Cost": 1000,
+    "Wgt": 0,
+    "Range": null,
+    "Dmg": "4D",
+    "Traits": "Blast 15"
+  },
+  {
+    "Name": "Aerosol"
+  },
+  {
+    "Name": "Armour Piercing"
+  },
+  {
+    "Name": "Armour Piercing Discarding Sabot"
+  },
+  {
+    "Name": "Bomblet"
+  },
+  {
+    "Name": "Canister"
+  },
+  {
+    "Name": "Concussion"
+  },
+  {
+    "Name": "Directed Plasma"
+  },
+  {
+    "Name": "Electromagnetic Pulse"
+  },
+  {
+    "Name": "Extended Range"
+  },
+  {
+    "Name": "Flare"
+  },
+  {
+    "Name": "Fragmentation"
+  },
+  {
+    "Name": "Fuel Air"
+  },
+  {
+    "Name": "Guided"
+  },
+  {
+    "Name": "High Explosive Armour Piercing"
+  },
+  {
+    "Name": "Incendiary"
+  },
+  {
+    "Name": "Neurotoxin"
+  },
+  {
+    "Name": "Nuclear"
+  },
+  {
+    "Name": "Plasma"
+  },
+  {
+    "Name": "Smoke"
+  },
+  {
+    "Name": "Solid Shot"
+  },
+  {
+    "Name": "Thermal Smoke"
+  },
+  {
+    "Name": "Auxiliary Grenade Launcher",
+    "Description": "An underslung grenade launcher can be added to any rifle weapon. This grenade launcher has a magazine of one grenade that takes three Minor Actions to reload. Otherwise, it is identical to the grenade launcher on page 124 and cause use any suitable grenade as ammunition.  "
+  },
+  {
+    "Name": "Bandolier"
+  },
+  {
+    "Name": "Bayonet",
+    "Description": ""
+  },
+  {
+    "Name": "Bipod"
+  },
+  {
+    "Name": "Chaindrive Bayonet",
+    "Description": ""
+  },
+  {
+    "Name": "Fof Safety"
+  },
+  {
+    "Name": "Gyrostabiliser"
+  },
+  {
+    "Name": "Heavy Tripod"
+  },
+  {
+    "Name": "High Capacity Magazine"
+  },
+  {
+    "Name": "Holographic Sights"
+  },
+  {
+    "Name": "Intelligent Weapon"
+  },
+  {
+    "Name": "Laser Sight"
+  },
+  {
+    "Name": "Personal Heads Up Display"
+  },
+  {
+    "Name": "Psi Enhanced Targeting"
+  },
+  {
+    "Name": "Scan Jammer"
+  },
+  {
+    "Name": "Scope"
+  },
+  {
+    "Name": "Secure Weapon"
+  },
+  {
+    "Name": "Shoulder Stock"
+  },
+  {
+    "Name": "Smart Tracker"
+  },
+  {
+    "Name": "Suppressor"
+  }
+]

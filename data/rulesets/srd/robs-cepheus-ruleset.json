@@ -1,0 +1,4214 @@
+{
+  "gender": {
+    "FEMALE": "Female",
+    "MALE": "Male",
+    "OTHER": "Other"
+  },
+  "nobleTitle": {
+    "10": {
+      "Title": {
+        "Male": "Lord",
+        "Female": "Lady",
+        "Other": "Lady"
+      }
+    },
+    "11": {
+      "Title": {
+        "Male": "Sir",
+        "Female": "Dame",
+        "Other": "Dame"
+      }
+    },
+    "12": {
+      "Title": {
+        "Male": "Baron",
+        "Female": "Baroness",
+        "Other": "Baroness"
+      }
+    },
+    "13": {
+      "Title": {
+        "Male": "Marquis",
+        "Female": "Marquesa",
+        "Other": "Marquesa"
+      }
+    },
+    "14": {
+      "Title": {
+        "Male": "Count",
+        "Female": "Countess",
+        "Other": "Countess"
+      }
+    },
+    "15": {
+      "Title": {
+        "Male": "Duke",
+        "Female": "Duchess",
+        "Other": "Duchess"
+      }
+    },
+    "16": {
+      "Title": {
+        "Male": "Archduke",
+        "Female": "Archduchess",
+        "Other": "Archduchess"
+      }
+    },
+    "17": {
+      "Title": {
+        "Male": "Crown Prince",
+        "Female": "Crown Princess",
+        "Other": "Crown Princess"
+      }
+    },
+    "18": {
+      "Title": {
+        "Male": "Emperor",
+        "Female": "Empress",
+        "Other": "Empress"
+      }
+    }
+  },
+  "cascadeSkills": {
+    "Aircraft": ["Grav Vehicle", "Rotor Aircraft", "Winged Aircraft"],
+    "Animals": ["Farming", "Riding", "Survival", "Veterinary Medicine"],
+    "Gun Combat": [
+      "Archery",
+      "Energy Pistol",
+      "Energy Rifle",
+      "Shotgun",
+      "Slug Pistol",
+      "Slug Rifle"
+    ],
+    "Gunnery": [
+      "Bay Weapons",
+      "Heavy Weapons",
+      "Screens",
+      "Spinal Mounts",
+      "Turret Weapons"
+    ],
+    "Melee Combat": [
+      "Natural Weapons",
+      "Bludgeoning Weapons",
+      "Piercing Weapons",
+      "Slashing Weapons"
+    ],
+    "Sciences": [
+      "Life Sciences",
+      "Physical Sciences",
+      "Social Sciences",
+      "Space Sciences"
+    ],
+    "Vehicle": [
+      "Aircraft*",
+      "Mole",
+      "Tracked Vehicle",
+      "Watercraft*",
+      "Wheeled Vehicle"
+    ],
+    "Watercraft": ["Motorboats", "Ocean Ships", "Sailing Ships", "Submarine"],
+    "Weapon": ["Gun Combat*", "Melee Combat*"]
+  },
+  "primaryEducationSkillsData": [
+    "Admin",
+    "Advocate",
+    "Animals*",
+    "Carousing",
+    "Comms",
+    "Computer",
+    "Electronics",
+    "Engineering",
+    "Life Sciences",
+    "Linguistics",
+    "Mechanics",
+    "Medicine",
+    "Physical Sciences",
+    "Social Sciences",
+    "Space Sciences"
+  ],
+  "homeWorldSkillsByLawLevel": {
+    "No Law": "Gun Combat*",
+    "Low Law": "Gun Combat*",
+    "Medium Law": "Gun Combat*",
+    "High Law": "Melee Combat*"
+  },
+  "homeWorldSkillsByTradeCode": {
+    "Agricultural": "Animals*",
+    "Asteroid": "Zero-G",
+    "Desert": "Survival",
+    "Fluid Oceans": "Watercraft*",
+    "Garden": "Animals*",
+    "High Technology": "Computer",
+    "High Population": "Streetwise",
+    "Ice-Capped": "Zero-G",
+    "Industrial": "Broker",
+    "Low Technology": "Survival",
+    "Poor": "Animals*",
+    "Rich": "Carousing",
+    "Water World": "Watercraft*",
+    "Vacuum": "Zero-G"
+  },
+  "theDraft": [
+    "Aerospace",
+    "Marine",
+    "Maritime Defense",
+    "Navy",
+    "Scout",
+    "Surface Defense"
+  ],
+  "aging": [
+    {
+      "Roll": "-6",
+      "Effects": "Reduce three physical characteristics by 2, reduce one mental characteristic by 1",
+      "Changes": [
+        {
+          "type": "PHYSICAL",
+          "modifier": -2
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -2
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -2
+        },
+        {
+          "type": "MENTAL",
+          "modifier": -1
+        }
+      ]
+    },
+    {
+      "Roll": "-5",
+      "Effects": "Reduce three physical characteristics by 2.",
+      "Changes": [
+        {
+          "type": "PHYSICAL",
+          "modifier": -2
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -2
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -2
+        }
+      ]
+    },
+    {
+      "Roll": "-4",
+      "Effects": "Reduce two physical characteristics by 2, reduce one physical characteristic by 1",
+      "Changes": [
+        {
+          "type": "PHYSICAL",
+          "modifier": -2
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -2
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -1
+        }
+      ]
+    },
+    {
+      "Roll": "-3",
+      "Effects": "Reduce one physical characteristic by 2, reduce two physical characteristic by 1",
+      "Changes": [
+        {
+          "type": "PHYSICAL",
+          "modifier": -2
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -1
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -1
+        }
+      ]
+    },
+    {
+      "Roll": "-2",
+      "Effects": "Reduce three physical characteristics by 1",
+      "Changes": [
+        {
+          "type": "PHYSICAL",
+          "modifier": -1
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -1
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -1
+        }
+      ]
+    },
+    {
+      "Roll": "-1",
+      "Effects": "Reduce two physical characteristics by 1",
+      "Changes": [
+        {
+          "type": "PHYSICAL",
+          "modifier": -1
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -1
+        }
+      ]
+    },
+    {
+      "Roll": "0",
+      "Effects": "Reduce one physical characteristic by 1",
+      "Changes": [
+        {
+          "type": "PHYSICAL",
+          "modifier": -1
+        }
+      ]
+    },
+    {
+      "Roll": "1",
+      "Effects": "No effect",
+      "Changes": []
+    }
+  ],
+  "careerBasics": {
+    "Athlete": {
+      "Qualifications": "End 8+",
+      "Survival": "Dex 5+",
+      "Commission": "-",
+      "Advancement": "-",
+      "ReEnlistment": "6+"
+    },
+    "Aerospace": {
+      "Qualifications": "End 5+",
+      "Survival": "Dex 5+",
+      "Commission": "Edu 6+",
+      "Advancement": "Edu 7+",
+      "ReEnlistment": "5+"
+    },
+    "Agent": {
+      "Qualifications": "Soc 6+",
+      "Survival": "Int 6+",
+      "Commission": "Edu 7+",
+      "Advancement": "Edu 6+",
+      "ReEnlistment": "6+"
+    },
+    "Barbarian": {
+      "Qualifications": "End 5+",
+      "Survival": "Str 6+",
+      "Commission": "-",
+      "Advancement": "-",
+      "ReEnlistment": "5+"
+    },
+    "Belter": {
+      "Qualifications": "Int 4+",
+      "Survival": "Dex 7+",
+      "Commission": "-",
+      "Advancement": "-",
+      "ReEnlistment": "5+"
+    },
+    "Bureaucrat": {
+      "Qualifications": "Soc 6+",
+      "Survival": "Edu 4+",
+      "Commission": "Soc 5+",
+      "Advancement": "Int 8+",
+      "ReEnlistment": "5+"
+    },
+    "Colonist": {
+      "Qualifications": "End 5+",
+      "Survival": "End 6+",
+      "Commission": "Int 7+",
+      "Advancement": "Edu 6+",
+      "ReEnlistment": "5+"
+    },
+    "Diplomat": {
+      "Qualifications": "Soc 6+",
+      "Survival": "Edu 5+",
+      "Commission": "Int 7+",
+      "Advancement": "Soc 7+",
+      "ReEnlistment": "5+"
+    },
+    "Drifter": {
+      "Qualifications": "Dex 5+",
+      "Survival": "End 5+",
+      "Commission": "-",
+      "Advancement": "-",
+      "ReEnlistment": "5+"
+    },
+    "Entertainer": {
+      "Qualifications": "Soc 8+",
+      "Survival": "Int 4+",
+      "Commission": "-",
+      "Advancement": "-",
+      "ReEnlistment": "6+"
+    },
+    "Hunter": {
+      "Qualifications": "End 5+",
+      "Survival": "Str 8+",
+      "Commission": "-",
+      "Advancement": "-",
+      "ReEnlistment": "6+"
+    },
+    "Marine": {
+      "Qualifications": "Int 6+",
+      "Survival": "End 6+",
+      "Commission": "Edu 6+",
+      "Advancement": "Soc 7+",
+      "ReEnlistment": "6+"
+    },
+    "Maritime Defense": {
+      "Qualifications": "End 5+",
+      "Survival": "End 5+",
+      "Commission": "Int 6+",
+      "Advancement": "Edu 7+",
+      "ReEnlistment": "5+"
+    },
+    "Mercenary": {
+      "Qualifications": "Int 4+",
+      "Survival": "End 6+",
+      "Commission": "Int 7+",
+      "Advancement": "Int 6+",
+      "ReEnlistment": "5+"
+    },
+    "Merchant": {
+      "Qualifications": "Int 4+",
+      "Survival": "Int 5+",
+      "Commission": "Int 5+",
+      "Advancement": "Edu 8+",
+      "ReEnlistment": "4+"
+    },
+    "Navy": {
+      "Qualifications": "Int 6+",
+      "Survival": "Int 5+",
+      "Commission": "Soc 7+",
+      "Advancement": "Edu 6+",
+      "ReEnlistment": "5+"
+    },
+    "Noble": {
+      "Qualifications": "Soc 8+",
+      "Survival": "Soc 4+",
+      "Commission": "Edu 5+",
+      "Advancement": "Int 8+",
+      "ReEnlistment": "6+"
+    },
+    "Physician": {
+      "Qualifications": "Edu 6+",
+      "Survival": "Int 4+",
+      "Commission": "Int 5+",
+      "Advancement": "Edu 8+",
+      "ReEnlistment": "5+"
+    },
+    "Pirate": {
+      "Qualifications": "Dex 5+",
+      "Survival": "Dex 6+",
+      "Commission": "Str 7+",
+      "Advancement": "Int 6+",
+      "ReEnlistment": "5+"
+    },
+    "Rogue": {
+      "Qualifications": "Dex 5+",
+      "Survival": "Dex 4+",
+      "Commission": "Str 6+",
+      "Advancement": "Int 7+",
+      "ReEnlistment": "4+"
+    },
+    "Scientist": {
+      "Qualifications": "Edu 6+",
+      "Survival": "Edu 5+",
+      "Commission": "Int 7+",
+      "Advancement": "Int 6+",
+      "ReEnlistment": "5+"
+    },
+    "Scout": {
+      "Qualifications": "Int 6+",
+      "Survival": "End 7+",
+      "Commission": "-",
+      "Advancement": "-",
+      "ReEnlistment": "6+"
+    },
+    "Surface Defense": {
+      "Qualifications": "End 5+",
+      "Survival": "Edu 5+",
+      "Commission": "End 6+",
+      "Advancement": "Edu 7+",
+      "ReEnlistment": "5+"
+    },
+    "Technician": {
+      "Qualifications": "Edu 6+",
+      "Survival": "Dex 4+",
+      "Commission": "Edu 5+",
+      "Advancement": "Int 8+",
+      "ReEnlistment": "5+"
+    }
+  },
+  "ranksAndSkills": {
+    "Athlete": {
+      "0": "[Athletics]",
+      "1": "-",
+      "2": "-",
+      "3": "-",
+      "4": "-",
+      "5": "-",
+      "6": "-"
+    },
+    "Aerospace": {
+      "0": "Airman [Aircraft*]",
+      "1": "Flight Officer",
+      "2": "Flight Lieutenant",
+      "3": "Squadron Leader [Leadership]",
+      "4": "Wing Commander",
+      "5": "Group Captain",
+      "6": "Air Commodore"
+    },
+    "Agent": {
+      "0": "Agent [Streetwise]",
+      "1": "Special Agent",
+      "2": "Sp Agent in Charge",
+      "3": "Unit Chief",
+      "4": "Section Chief [Admin]",
+      "5": "Assistant Directory",
+      "6": "Director"
+    },
+    "Barbarian": {
+      "0": "[Melee Combat*]",
+      "1": "-",
+      "2": "-",
+      "3": "-",
+      "4": "-",
+      "5": "-",
+      "6": "-"
+    },
+    "Belter": {
+      "0": "[Zero-G]",
+      "1": "-",
+      "2": "-",
+      "3": "-",
+      "4": "-",
+      "5": "-",
+      "6": "-"
+    },
+    "Bureaucrat": {
+      "0": "Assistant [Admin]",
+      "1": "Clerk",
+      "2": "Supervisor",
+      "3": "Manager",
+      "4": "Chief [Advocate]",
+      "5": "Director",
+      "6": "Minister"
+    },
+    "Colonist": {
+      "0": "Citizen [Survival]",
+      "1": "District Leader",
+      "2": "District Delegate",
+      "3": "Council Advisor [Liaison]",
+      "4": "Councilor",
+      "5": "Lieutenant Governor",
+      "6": "Governor"
+    },
+    "Diplomat": {
+      "0": "Attaché [Liaison]",
+      "1": "Third Secretary",
+      "2": "Second Secretary",
+      "3": "First Secretary [Admin]",
+      "4": "Counselor",
+      "5": "Minister",
+      "6": "Ambassador"
+    },
+    "Drifter": {
+      "0": "-",
+      "1": "-",
+      "2": "-",
+      "3": "-",
+      "4": "-",
+      "5": "-",
+      "6": "-"
+    },
+    "Entertainer": {
+      "0": "[Carousing]",
+      "1": "-",
+      "2": "-",
+      "3": "-",
+      "4": "-",
+      "5": "-",
+      "6": "-"
+    },
+    "Hunter": {
+      "0": "[Survival]",
+      "1": "-",
+      "2": "-",
+      "3": "-",
+      "4": "-",
+      "5": "-",
+      "6": "-"
+    },
+    "Marine": {
+      "0": "Trooper [Zero-G]",
+      "1": "Lieutenant",
+      "2": "Captain",
+      "3": "Major [Tactics]",
+      "4": "Lt Colonel",
+      "5": "Colonel",
+      "6": "Brigadier"
+    },
+    "Maritime Defense": {
+      "0": "Seaman [Watercraft*]",
+      "1": "Ensign",
+      "2": "Lieutenant",
+      "3": "Lt Commander [Leadership]",
+      "4": "Commander",
+      "5": "Captain",
+      "6": "Admiral"
+    },
+    "Mercenary": {
+      "0": "Private [Gun Combat*]",
+      "1": "Lieutenant",
+      "2": "Captain",
+      "3": "Major [Tactics]",
+      "4": "Lt Colonel",
+      "5": "Colonel",
+      "6": "Brigadier"
+    },
+    "Merchant": {
+      "0": "Crewman [Steward]",
+      "1": "Deck Cadet",
+      "2": "Fourth Officer",
+      "3": "Third Officer [Piloting]",
+      "4": "Second Officer",
+      "5": "First Officer",
+      "6": "Captain"
+    },
+    "Navy": {
+      "0": "Starman [Zero-G]",
+      "1": "Midshipman",
+      "2": "Lieutenant",
+      "3": "Lt Commander [Tactics]",
+      "4": "Commander",
+      "5": "Captain",
+      "6": "Commodore"
+    },
+    "Noble": {
+      "0": "Courtier [Carousing]",
+      "1": "Knight",
+      "2": "Baron",
+      "3": "Marquis",
+      "4": "Count [Advocate]",
+      "5": "Duke",
+      "6": "Archduke"
+    },
+    "Physician": {
+      "0": "Intern [Medicine]",
+      "1": "Resident",
+      "2": "Senior Resident",
+      "3": "Chief Resident",
+      "4": "Attending Phys. [Admin]",
+      "5": "Service Chief",
+      "6": "Hospital Admin."
+    },
+    "Pirate": {
+      "0": "Crewman [Gunnery*]",
+      "1": "Corporal",
+      "2": "Lieutenant [Piloting]",
+      "3": "Lt Commander",
+      "4": "Commander",
+      "5": "Captain",
+      "6": "Commodore"
+    },
+    "Rogue": {
+      "0": "Independent [Streetwise]",
+      "1": "Associate",
+      "2": "Soldier [Gun Combat*]",
+      "3": "Lieutenant",
+      "4": "Underboss",
+      "5": "Consigliere",
+      "6": "Boss"
+    },
+    "Scientist": {
+      "0": "Instructor [Sciences*]",
+      "1": "Adjunct Professor",
+      "2": "Research Professor",
+      "3": "Assistant Professor [Computer]",
+      "4": "Associate Professor",
+      "5": "Professor",
+      "6": "Distinguished Professor"
+    },
+    "Scout": {
+      "0": "[Piloting]",
+      "1": "-",
+      "2": "-",
+      "3": "-",
+      "4": "-",
+      "5": "-",
+      "6": "-"
+    },
+    "Surface Defense": {
+      "0": "Private [Gun Combat*]",
+      "1": "Lieutenant",
+      "2": "Captain",
+      "3": "Major [Leadership]",
+      "4": "Lt Colonel",
+      "5": "Colonel",
+      "6": "General"
+    },
+    "Technician": {
+      "0": "Technician [Computer]",
+      "1": "Team Lead",
+      "2": "Supervisor",
+      "3": "Manager",
+      "4": "Director [Admin]",
+      "5": "Vice-President",
+      "6": "Executive Officer"
+    }
+  },
+  "materialBenefits": {
+    "Athlete": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "High Passage",
+      "5": "Explorers' Society",
+      "6": "High Passage",
+      "7": "-"
+    },
+    "Aerospace": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "Weapon",
+      "4": "Mid Passage",
+      "5": "Weapon",
+      "6": "High Passage",
+      "7": "+1 Soc"
+    },
+    "Agent": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "Mid Passage",
+      "5": "+1 Soc",
+      "6": "High Passage",
+      "7": "Explorers' Society"
+    },
+    "Barbarian": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "Weapon",
+      "5": "+1 End",
+      "6": "Mid Passage",
+      "7": "-"
+    },
+    "Belter": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "Mid Passage",
+      "5": "1D6  Ship Shares",
+      "6": "High Passage",
+      "7": "-"
+    },
+    "Bureaucrat": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "+1 Int",
+      "4": "Mid Passage",
+      "5": "Mid  Passage",
+      "6": "High Passage",
+      "7": "+1 Soc"
+    },
+    "Colonist": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "Mid Passage",
+      "5": "Mid  Passage",
+      "6": "High Passage",
+      "7": "+1 Soc"
+    },
+    "Diplomat": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "Mid  Passage",
+      "4": "High Passage",
+      "5": "+1 Soc",
+      "6": "High Passage",
+      "7": "Explorers' Society"
+    },
+    "Drifter": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "Weapon",
+      "5": "Mid Passage",
+      "6": "Mid Passage",
+      "7": "-"
+    },
+    "Entertainer": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "+1 Soc",
+      "4": "High Passage",
+      "5": "Explorers' Society",
+      "6": "High Passage",
+      "7": "-"
+    },
+    "Hunter": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "High Passage",
+      "5": "1D6  Ship Shares",
+      "6": "High Passage",
+      "7": "-"
+    },
+    "Marine": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "Weapon",
+      "4": "Mid Passage",
+      "5": "+1 Soc",
+      "6": "High Passage",
+      "7": "Explorers' Society"
+    },
+    "Maritime Defense": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "Weapon",
+      "4": "Mid  Passage",
+      "5": "Weapon",
+      "6": "High Passage",
+      "7": "+1 Soc"
+    },
+    "Mercenary": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "High  Passage",
+      "5": "+1 Soc",
+      "6": "High Passage",
+      "7": "1D6  Ship Shares"
+    },
+    "Merchant": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "Weapon",
+      "4": "High  Passage",
+      "5": "1D6  Ship Shares",
+      "6": "High Passage",
+      "7": "Explorers' Society"
+    },
+    "Navy": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "Weapon",
+      "4": "Mid  Passage",
+      "5": "+1 Soc",
+      "6": "High Passage",
+      "7": "Explorers' Society"
+    },
+    "Noble": {
+      "1": "High Passage",
+      "2": "+1 Edu",
+      "3": "+1 Int",
+      "4": "High  Passage",
+      "5": "Explorers' Society",
+      "6": "High Passage",
+      "7": "1D6 Ship Shares"
+    },
+    "Physician": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "+1 Int",
+      "4": "High  Passage",
+      "5": "Explorers' Society",
+      "6": "High Passage",
+      "7": "+1 Soc"
+    },
+    "Pirate": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "High  Passage",
+      "5": "+1 Soc",
+      "6": "High Passage",
+      "7": "1D6  Ship Shares"
+    },
+    "Rogue": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "Mid  Passage",
+      "5": "Weapon",
+      "6": "High Passage",
+      "7": "+1 Soc"
+    },
+    "Scientist": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "+1 Int",
+      "4": "Mid  Passage",
+      "5": "+1 Soc",
+      "6": "High Passage",
+      "7": "Research Vessel"
+    },
+    "Scout": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "Weapon",
+      "4": "Mid  Passage",
+      "5": "Explorers' Society",
+      "6": "Courier Vessel",
+      "7": "-"
+    },
+    "Surface Defense": {
+      "1": "Low Passage",
+      "2": "+1 Int",
+      "3": "Weapon",
+      "4": "Mid  Passage",
+      "5": "Weapon",
+      "6": "High Passage",
+      "7": "+1 Soc"
+    },
+    "Technician": {
+      "1": "Low Passage",
+      "2": "+1 Edu",
+      "3": "+1 Int",
+      "4": "Mid  Passage",
+      "5": "Mid  Passage",
+      "6": "High Passage",
+      "7": "+1 Soc"
+    }
+  },
+  "cashBenefits": {
+    "Athlete": {
+      "1": 2000,
+      "2": 10000,
+      "3": 20000,
+      "4": 20000,
+      "5": 50000,
+      "6": 100000,
+      "7": 100000
+    },
+    "Aerospace": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 10000,
+      "5": 20000,
+      "6": 50000,
+      "7": 50000
+    },
+    "Agent": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 10000,
+      "5": 20000,
+      "6": 50000,
+      "7": 50000
+    },
+    "Barbarian": {
+      "1": 0,
+      "2": 1000,
+      "3": 2000,
+      "4": 5000,
+      "5": 5000,
+      "6": 10000,
+      "7": 10000
+    },
+    "Belter": {
+      "1": 1000,
+      "2": 5000,
+      "3": 5000,
+      "4": 5000,
+      "5": 10000,
+      "6": 20000,
+      "7": 50000
+    },
+    "Bureaucrat": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 10000,
+      "5": 20000,
+      "6": 50000,
+      "7": 50000
+    },
+    "Colonist": {
+      "1": 1000,
+      "2": 5000,
+      "3": 5000,
+      "4": 5000,
+      "5": 10000,
+      "6": 20000,
+      "7": 50000
+    },
+    "Diplomat": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 20000,
+      "5": 20000,
+      "6": 50000,
+      "7": 100000
+    },
+    "Drifter": {
+      "1": 0,
+      "2": 1000,
+      "3": 2000,
+      "4": 5000,
+      "5": 5000,
+      "6": 10000,
+      "7": 10000
+    },
+    "Entertainer": {
+      "1": 2000,
+      "2": 10000,
+      "3": 20000,
+      "4": 20000,
+      "5": 50000,
+      "6": 100000,
+      "7": 100000
+    },
+    "Hunter": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 20000,
+      "5": 20000,
+      "6": 50000,
+      "7": 100000
+    },
+    "Marine": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 10000,
+      "5": 20000,
+      "6": 50000,
+      "7": 50000
+    },
+    "Maritime Defense": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 10000,
+      "5": 20000,
+      "6": 50000,
+      "7": 50000
+    },
+    "Mercenary": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 20000,
+      "5": 20000,
+      "6": 50000,
+      "7": 100000
+    },
+    "Merchant": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 20000,
+      "5": 20000,
+      "6": 50000,
+      "7": 100000
+    },
+    "Navy": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 10000,
+      "5": 20000,
+      "6": 50000,
+      "7": 50000
+    },
+    "Noble": {
+      "1": 2000,
+      "2": 10000,
+      "3": 20000,
+      "4": 20000,
+      "5": 50000,
+      "6": 100000,
+      "7": 100000
+    },
+    "Physician": {
+      "1": 2000,
+      "2": 10000,
+      "3": 20000,
+      "4": 20000,
+      "5": 50000,
+      "6": 100000,
+      "7": 100000
+    },
+    "Pirate": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 20000,
+      "5": 20000,
+      "6": 50000,
+      "7": 100000
+    },
+    "Rogue": {
+      "1": 1000,
+      "2": 5000,
+      "3": 5000,
+      "4": 5000,
+      "5": 10000,
+      "6": 20000,
+      "7": 50000
+    },
+    "Scientist": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 10000,
+      "5": 20000,
+      "6": 50000,
+      "7": 50000
+    },
+    "Scout": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 10000,
+      "5": 20000,
+      "6": 50000,
+      "7": 50000
+    },
+    "Surface Defense": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 10000,
+      "5": 20000,
+      "6": 50000,
+      "7": 50000
+    },
+    "Technician": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 10000,
+      "5": 20000,
+      "6": 50000,
+      "7": 50000
+    }
+  },
+  "personalDevelopment": {
+    "Athlete": {
+      "1": "+1 Dex",
+      "2": "+1 Int",
+      "3": "+1 Edu",
+      "4": "+1 Soc",
+      "5": "Carousing",
+      "6": "Melee Combat*"
+    },
+    "Aerospace": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "Athletics",
+      "5": "Melee Combat*",
+      "6": "Vehicle*"
+    },
+    "Agent": {
+      "1": "+1 Dex",
+      "2": "+1 End",
+      "3": "+1 Int",
+      "4": "+1 Edu",
+      "5": "Athletics",
+      "6": "Carousing"
+    },
+    "Barbarian": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "+1 Int",
+      "5": "Athletics",
+      "6": "Gun Combat*"
+    },
+    "Belter": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "Zero-G",
+      "5": "Melee Combat*",
+      "6": "Gambling"
+    },
+    "Bureaucrat": {
+      "1": "+1 Dex",
+      "2": "+1 End",
+      "3": "+1 Int",
+      "4": "+1 Edu",
+      "5": "Athletics",
+      "6": "Carousing"
+    },
+    "Colonist": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "+1 Int",
+      "5": "Athletics",
+      "6": "Gun Combat*"
+    },
+    "Diplomat": {
+      "1": "+1 Dex",
+      "2": "+1 End",
+      "3": "+1 Int",
+      "4": "+1 Edu",
+      "5": "Athletics",
+      "6": "Carousing"
+    },
+    "Drifter": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "Melee Combat*",
+      "5": "Bribery",
+      "6": "Gambling"
+    },
+    "Entertainer": {
+      "1": "+1 Dex",
+      "2": "+1 Int",
+      "3": "+1 Edu",
+      "4": "+1 Soc",
+      "5": "Carousing",
+      "6": "Melee Combat*"
+    },
+    "Hunter": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "+1 Int",
+      "5": "Athletics",
+      "6": "Gun Combat*"
+    },
+    "Marine": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "+1 Int",
+      "5": "+1 Edu",
+      "6": "Melee Combat*"
+    },
+    "Maritime Defense": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "Athletics",
+      "5": "Melee Combat*",
+      "6": "Vehicle*"
+    },
+    "Mercenary": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "Zero-G",
+      "5": "Melee Combat*",
+      "6": "Gambling"
+    },
+    "Merchant": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "Zero-G",
+      "5": "Melee Combat*",
+      "6": "Steward"
+    },
+    "Navy": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "+1 Int",
+      "5": "+1 Edu",
+      "6": "Melee Combat*"
+    },
+    "Noble": {
+      "1": "+1 Dex",
+      "2": "+1 Int",
+      "3": "+1 Edu",
+      "4": "+1 Soc",
+      "5": "Carousing",
+      "6": "Melee Combat*"
+    },
+    "Physician": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "+1 Int",
+      "5": "+1 Edu",
+      "6": "Gun Combat*"
+    },
+    "Pirate": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "Melee Combat*",
+      "5": "Bribery",
+      "6": "Gambling"
+    },
+    "Rogue": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "Melee Combat*",
+      "5": "Bribery",
+      "6": "Gambling"
+    },
+    "Scientist": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "+1 Int",
+      "5": "+1 Edu",
+      "6": "Gun Combat*"
+    },
+    "Scout": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "Jack o' Trades",
+      "5": "+1 Edu",
+      "6": "Melee Combat*"
+    },
+    "Surface Defense": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "Athletics",
+      "5": "Melee Combat*",
+      "6": "Vehicle*"
+    },
+    "Technician": {
+      "1": "+1 Str",
+      "2": "+1 Dex",
+      "3": "+1 End",
+      "4": "+1 Int",
+      "5": "+1 Edu",
+      "6": "Gun Combat*"
+    }
+  },
+  "serviceSkills": {
+    "Athlete": {
+      "1": "Athletics",
+      "2": "Admin",
+      "3": "Carousing",
+      "4": "Computer",
+      "5": "Gambling",
+      "6": "Vehicle*"
+    },
+    "Aerospace": {
+      "1": "Electronics",
+      "2": "Gun Combat*",
+      "3": "Gunnery*",
+      "4": "Melee Combat*",
+      "5": "Survival",
+      "6": "Aircraft*"
+    },
+    "Agent": {
+      "1": "Admin",
+      "2": "Computer",
+      "3": "Streetwise",
+      "4": "Bribery",
+      "5": "Leadership",
+      "6": "Vehicle*"
+    },
+    "Barbarian": {
+      "1": "Mechanics",
+      "2": "Gun Combat*",
+      "3": "Melee Combat*",
+      "4": "Recon",
+      "5": "Survival",
+      "6": "Animals*"
+    },
+    "Belter": {
+      "1": "Comms",
+      "2": "Demolitions",
+      "3": "Gun Combat*",
+      "4": "Gunnery*",
+      "5": "Prospecting",
+      "6": "Piloting"
+    },
+    "Bureaucrat": {
+      "1": "Admin",
+      "2": "Computer",
+      "3": "Carousing",
+      "4": "Bribery",
+      "5": "Leadership",
+      "6": "Vehicle*"
+    },
+    "Colonist": {
+      "1": "Mechanics",
+      "2": "Gun Combat*",
+      "3": "Animals*",
+      "4": "Electronics",
+      "5": "Survival",
+      "6": "Vehicle*"
+    },
+    "Diplomat": {
+      "1": "Admin",
+      "2": "Computer",
+      "3": "Carousing",
+      "4": "Bribery",
+      "5": "Liaison",
+      "6": "Vehicle*"
+    },
+    "Drifter": {
+      "1": "Streetwise",
+      "2": "Mechanics",
+      "3": "Gun Combat*",
+      "4": "Melee Combat*",
+      "5": "Recon",
+      "6": "Vehicle*"
+    },
+    "Entertainer": {
+      "1": "Athletics",
+      "2": "Admin",
+      "3": "Carousing",
+      "4": "Bribery",
+      "5": "Gambling",
+      "6": "Vehicle*"
+    },
+    "Hunter": {
+      "1": "Mechanics",
+      "2": "Gun Combat*",
+      "3": "Melee Combat*",
+      "4": "Recon",
+      "5": "Survival",
+      "6": "Vehicle*"
+    },
+    "Marine": {
+      "1": "Comms",
+      "2": "Demolitions",
+      "3": "Gun Combat*",
+      "4": "Gunnery*",
+      "5": "Melee Combat*",
+      "6": "Battle Dress"
+    },
+    "Maritime Defense": {
+      "1": "Mechanics",
+      "2": "Gun Combat*",
+      "3": "Gunnery*",
+      "4": "Melee Combat*",
+      "5": "Survival",
+      "6": "Watercraft*"
+    },
+    "Mercenary": {
+      "1": "Comms",
+      "2": "Mechanics",
+      "3": "Gun Combat*",
+      "4": "Melee Combat*",
+      "5": "Gambling",
+      "6": "Battle Dress"
+    },
+    "Merchant": {
+      "1": "Comms",
+      "2": "Engineering",
+      "3": "Gun Combat*",
+      "4": "Melee Combat*",
+      "5": "Broker",
+      "6": "Vehicle*"
+    },
+    "Navy": {
+      "1": "Comms",
+      "2": "Engineering",
+      "3": "Gun Combat*",
+      "4": "Gunnery*",
+      "5": "Melee Combat*",
+      "6": "Vehicle*"
+    },
+    "Noble": {
+      "1": "Athletics",
+      "2": "Admin",
+      "3": "Carousing",
+      "4": "Leadership",
+      "5": "Gambling",
+      "6": "Vehicle*"
+    },
+    "Physician": {
+      "1": "Admin",
+      "2": "Computer",
+      "3": "Mechanics",
+      "4": "Medicine",
+      "5": "Leadership",
+      "6": "Sciences*"
+    },
+    "Pirate": {
+      "1": "Streetwise",
+      "2": "Electronics",
+      "3": "Gun Combat*",
+      "4": "Melee Combat*",
+      "5": "Recon",
+      "6": "Vehicle*"
+    },
+    "Rogue": {
+      "1": "Streetwise",
+      "2": "Mechanics",
+      "3": "Gun Combat*",
+      "4": "Melee Combat*",
+      "5": "Recon",
+      "6": "Vehicle*"
+    },
+    "Scientist": {
+      "1": "Admin",
+      "2": "Computer",
+      "3": "Electronics",
+      "4": "Medicine",
+      "5": "Bribery",
+      "6": "Sciences*"
+    },
+    "Scout": {
+      "1": "Comms",
+      "2": "Electronics",
+      "3": "Gun Combat*",
+      "4": "Gunnery*",
+      "5": "Recon",
+      "6": "Piloting"
+    },
+    "Surface Defense": {
+      "1": "Mechanics",
+      "2": "Gun Combat*",
+      "3": "Gunnery*",
+      "4": "Melee Combat*",
+      "5": "Recon",
+      "6": "Battle Dress"
+    },
+    "Technician": {
+      "1": "Admin",
+      "2": "Computer",
+      "3": "Mechanics",
+      "4": "Medicine",
+      "5": "Electronics",
+      "6": "Sciences*"
+    }
+  },
+  "specialistSkills": {
+    "Athlete": {
+      "1": "Zero-G",
+      "2": "Athletics",
+      "3": "Athletics",
+      "4": "Computer",
+      "5": "Leadership",
+      "6": "Gambling"
+    },
+    "Aerospace": {
+      "1": "Comms",
+      "2": "Gravitics",
+      "3": "Gun Combat*",
+      "4": "Gunnery*",
+      "5": "Recon",
+      "6": "Piloting"
+    },
+    "Agent": {
+      "1": "Gun Combat*",
+      "2": "Melee Combat*",
+      "3": "Bribery",
+      "4": "Leadership",
+      "5": "Recon",
+      "6": "Survival"
+    },
+    "Barbarian": {
+      "1": "Gun Combat*",
+      "2": "Jack o' Trades",
+      "3": "Melee Combat*",
+      "4": "Recon",
+      "5": "Animals*",
+      "6": "Tactics"
+    },
+    "Belter": {
+      "1": "Zero-G",
+      "2": "Computer",
+      "3": "Electronics",
+      "4": "Prospecting",
+      "5": "Sciences*",
+      "6": "Vehicle*"
+    },
+    "Bureaucrat": {
+      "1": "Admin",
+      "2": "Computer",
+      "3": "Perception",
+      "4": "Leadership",
+      "5": "Steward",
+      "6": "Vehicle*"
+    },
+    "Colonist": {
+      "1": "Athletics",
+      "2": "Carousing",
+      "3": "Jack o' Trades",
+      "4": "Engineering",
+      "5": "Animals*",
+      "6": "Vehicle*"
+    },
+    "Diplomat": {
+      "1": "Carousing",
+      "2": "Linguistics",
+      "3": "Bribery",
+      "4": "Liaison",
+      "5": "Steward",
+      "6": "Vehicle*"
+    },
+    "Drifter": {
+      "1": "Electronics",
+      "2": "Melee Combat*",
+      "3": "Bribery",
+      "4": "Streetwise",
+      "5": "Gambling",
+      "6": "Recon"
+    },
+    "Entertainer": {
+      "1": "Computer",
+      "2": "Carousing",
+      "3": "Bribery",
+      "4": "Liaison",
+      "5": "Gambling",
+      "6": "Recon"
+    },
+    "Hunter": {
+      "1": "Admin",
+      "2": "Comms",
+      "3": "Electronics",
+      "4": "Recon",
+      "5": "Animals*",
+      "6": "Vehicle*"
+    },
+    "Marine": {
+      "1": "Electronics",
+      "2": "Gun Combat*",
+      "3": "Melee Combat*",
+      "4": "Survival",
+      "5": "Recon",
+      "6": "Vehicle*"
+    },
+    "Maritime Defense": {
+      "1": "Comms",
+      "2": "Electronics",
+      "3": "Gun Combat*",
+      "4": "Demolitions",
+      "5": "Recon",
+      "6": "Watercraft*"
+    },
+    "Mercenary": {
+      "1": "Gravitics",
+      "2": "Gun Combat*",
+      "3": "Gunnery*",
+      "4": "Melee Combat*",
+      "5": "Recon",
+      "6": "Vehicle*"
+    },
+    "Merchant": {
+      "1": "Carousing",
+      "2": "Gunnery*",
+      "3": "Jack o' Trades",
+      "4": "Medicine",
+      "5": "Navigation",
+      "6": "Piloting"
+    },
+    "Navy": {
+      "1": "Gravitics",
+      "2": "Jack o' Trades",
+      "3": "Melee Combat*",
+      "4": "Navigation",
+      "5": "Leadership",
+      "6": "Piloting"
+    },
+    "Noble": {
+      "1": "Computer",
+      "2": "Carousing",
+      "3": "Gun Combat*",
+      "4": "Melee Combat*",
+      "5": "Liaison",
+      "6": "Animals*"
+    },
+    "Physician": {
+      "1": "Computer",
+      "2": "Carousing",
+      "3": "Electronics",
+      "4": "Medicine",
+      "5": "Medicine",
+      "6": "Sciences*"
+    },
+    "Pirate": {
+      "1": "Zero-G",
+      "2": "Comms",
+      "3": "Engineering",
+      "4": "Gunnery*",
+      "5": "Navigation",
+      "6": "Piloting"
+    },
+    "Rogue": {
+      "1": "Computer",
+      "2": "Electronics",
+      "3": "Bribery",
+      "4": "Broker",
+      "5": "Recon",
+      "6": "Vehicle*"
+    },
+    "Scientist": {
+      "1": "Navigation",
+      "2": "Admin",
+      "3": "Sciences*",
+      "4": "Sciences*",
+      "5": "Animals*",
+      "6": "Vehicle*"
+    },
+    "Scout": {
+      "1": "Engineering",
+      "2": "Gunnery*",
+      "3": "Demolitions",
+      "4": "Navigation",
+      "5": "Medicine",
+      "6": "Vehicle*"
+    },
+    "Surface Defense": {
+      "1": "Comms",
+      "2": "Demolitions",
+      "3": "Gun Combat*",
+      "4": "Melee Combat*",
+      "5": "Survival",
+      "6": "Vehicle*"
+    },
+    "Technician": {
+      "1": "Computer",
+      "2": "Electronics",
+      "3": "Gravitics",
+      "4": "Linguistics",
+      "5": "Engineering",
+      "6": "Animals*"
+    }
+  },
+  "advEducation": {
+    "Athlete": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Liaison",
+      "4": "Linguistics",
+      "5": "Medicine",
+      "6": "Sciences*"
+    },
+    "Aerospace": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Jack o' Trades",
+      "4": "Medicine",
+      "5": "Leadership",
+      "6": "Tactics"
+    },
+    "Agent": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Liaison",
+      "4": "Linguistics",
+      "5": "Medicine",
+      "6": "Leadership"
+    },
+    "Barbarian": {
+      "1": "Advocate",
+      "2": "Linguistics",
+      "3": "Medicine",
+      "4": "Leadership",
+      "5": "Tactics",
+      "6": "Broker"
+    },
+    "Belter": {
+      "1": "Advocate",
+      "2": "Engineering",
+      "3": "Medicine",
+      "4": "Navigation",
+      "5": "Comms",
+      "6": "Tactics"
+    },
+    "Bureaucrat": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Liaison",
+      "4": "Linguistics",
+      "5": "Medicine",
+      "6": "Admin"
+    },
+    "Colonist": {
+      "1": "Advocate",
+      "2": "Linguistics",
+      "3": "Medicine",
+      "4": "Liaison",
+      "5": "Admin",
+      "6": "Animals*"
+    },
+    "Diplomat": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Liaison",
+      "4": "Linguistics",
+      "5": "Medicine",
+      "6": "Leadership"
+    },
+    "Drifter": {
+      "1": "Computer",
+      "2": "Engineering",
+      "3": "Jack o' Trades",
+      "4": "Medicine",
+      "5": "Liaison",
+      "6": "Tactics"
+    },
+    "Entertainer": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Carousing",
+      "4": "Linguistics",
+      "5": "Medicine",
+      "6": "Sciences*"
+    },
+    "Hunter": {
+      "1": "Advocate",
+      "2": "Linguistics",
+      "3": "Medicine",
+      "4": "Liaison",
+      "5": "Tactics",
+      "6": "Animals*"
+    },
+    "Marine": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Gravitics",
+      "4": "Medicine",
+      "5": "Navigation",
+      "6": "Tactics"
+    },
+    "Maritime Defense": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Jack o' Trades",
+      "4": "Medicine",
+      "5": "Leadership",
+      "6": "Tactics"
+    },
+    "Mercenary": {
+      "1": "Advocate",
+      "2": "Engineering",
+      "3": "Medicine",
+      "4": "Navigation",
+      "5": "Sciences*",
+      "6": "Tactics"
+    },
+    "Merchant": {
+      "1": "Advocate",
+      "2": "Engineering",
+      "3": "Medicine",
+      "4": "Navigation",
+      "5": "Sciences*",
+      "6": "Tactics"
+    },
+    "Navy": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Engineering",
+      "4": "Medicine",
+      "5": "Navigation",
+      "6": "Tactics"
+    },
+    "Noble": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Liaison",
+      "4": "Linguistics",
+      "5": "Medicine",
+      "6": "Sciences*"
+    },
+    "Physician": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Jack o' Trades",
+      "4": "Linguistics",
+      "5": "Medicine",
+      "6": "Sciences*"
+    },
+    "Pirate": {
+      "1": "Computer",
+      "2": "Gravitics",
+      "3": "Jack o' Trades",
+      "4": "Medicine",
+      "5": "Advocate",
+      "6": "Tactics"
+    },
+    "Rogue": {
+      "1": "Computer",
+      "2": "Gravitics",
+      "3": "Jack o' Trades",
+      "4": "Medicine",
+      "5": "Advocate",
+      "6": "Tactics"
+    },
+    "Scientist": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Jack o' Trades",
+      "4": "Linguistics",
+      "5": "Medicine",
+      "6": "Sciences*"
+    },
+    "Scout": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Linguistics",
+      "4": "Medicine",
+      "5": "Navigation",
+      "6": "Tactics"
+    },
+    "Surface Defense": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Jack o' Trades",
+      "4": "Medicine",
+      "5": "Leadership",
+      "6": "Tactics"
+    },
+    "Technician": {
+      "1": "Advocate",
+      "2": "Computer",
+      "3": "Jack o' Trades",
+      "4": "Linguistics",
+      "5": "Medicine",
+      "6": "Sciences*"
+    }
+  },
+  "armor": [
+    {
+      "Name": "Ablat",
+      "Category": "ARMOR",
+      "TL": 9,
+      "AR": 1,
+      "LaserAR": 6,
+      "Cost": 75,
+      "Wgt": 2,
+      "Description": "Ablat is a cheap alternative to reflec, and is fashioned from a material which will ablate (vaporise) when hit by laser fire or other energy weapons. The ablation of the material carries away the energy of the laser, and protects the Traveller. Continued fire against Ablat degrades its effectiveness, but\nthe armour is cheap and easily replaceable. Ablat also has a minimal value against other forms of attack but it cannot be combined with other types of armour. Each laser hit on ablat armour reduces its AR score by one."
+    },
+    {
+      "Name": "Battle Dress",
+      "Category": "ARMOR",
+      "TL": 13,
+      "AR": 22,
+      "Cost": 200000,
+      "Wgt": 100,
+      "Skill": "Battle Dress",
+      "Description": "The standard entry-level battle dress suit, combining mobility with protection and weapons capability. The suit’s built-in Computer/2 usually runs an Expert Tactics (military)/2 program to give tactical advice. The suit also includes a comprehensive communications suite and six hours of air."
+    },
+    {
+      "Name": "Cloth",
+      "Category": "ARMOR",
+      "TL": 12,
+      "AR": 4,
+      "Cost": 750,
+      "Wgt": 2,
+      "Description": "A heavy-duty coverall tailored from ballistic cloth, it sometimes containing light metal or ceramic plates at critical points. The fabric absorbs impact energy, distributing the blow over the body of the target and usually resulting in bruising. Cloth armour can be concealed under clothing but is fairly easy to spot – a Routine (6+) Investigate or Recon check is all that is required to spot the armour. At TL12, a thin type of cloth armour becomes available that is light enough that it can be worn under other types of armour, adding its protection."
+    },
+    {
+      "Name": "Combat Armor",
+      "Category": "ARMOR",
+      "TL": 12,
+      "AR": 17,
+      "Cost": 88000,
+      "Wgt": 16,
+      "Skill": "Zero-G",
+      "Description": "Combat armour is a complete array of metal and synthetic armour, strictly military and not available on the open market. It contains oxygen tanks for six hours and a recycling unit which can more than double this endurance if the user is not unduly exerting himself."
+    },
+    {
+      "Name": "Hostile Env Vacc Suit",
+      "Category": "ARMOR",
+      "TL": 11,
+      "AR": 12,
+      "Cost": 22000,
+      "Wgt": 13,
+      "Skill": "Zero-G",
+      "Description": "Hostile environment suits are designed for conditions where a normal vacc suit would be insufficient, such as deep underwater, worlds with toxic atmosphere, extremes of radiation or temperature. HEV suits provide life support for six hours."
+    },
+    {
+      "Name": "Jack",
+      "Category": "ARMOR",
+      "TL": 1,
+      "AR": 1,
+      "Cost": 50,
+      "Wgt": 1,
+      "Description": "A jacket or body suit of tough natural or synthetic material such as leather, pseudohide or something similar covering the torso and arms. Jack may be armour or simply a tough piece of clothing. It is somewhat better than ordinary clothing or bare skin when defending against blades but fairly useless against high velocity attacks. The leather or hide armour of low-tech troops is usually equivalent to jack."
+    },
+    {
+      "Name": "Mesh",
+      "Category": "ARMOR",
+      "TL": 6,
+      "AR": 2,
+      "Cost": 150,
+      "Wgt": 2,
+      "Description": "A jacket or body suit made of natural or synthetic leather and reinforced with a lining of flexible metal mesh. It is primarily useful against hand weapons."
+    },
+    {
+      "Name": "Reflec",
+      "Category": "ARMOR",
+      "TL": 10,
+      "AR": 0,
+      "LaserAR": 10,
+      "Cost": 1500,
+      "Wgt": 1,
+      "Description": "Reflective material on a plastic base can be tailored into a body suit which is ineffective against most weapons, but superior in defence against laser fire. Reflec is expensive and often difficult to obtain and imposes a Bane on any Stealth checks the Traveller attempts."
+    },
+    {
+      "Name": "Vacc Suit",
+      "Category": "ARMOR",
+      "TL": 12,
+      "AR": 10,
+      "Cost": 20000,
+      "Wgt": 8,
+      "Skill": "Zero-G",
+      "Description": "At lower Tech Levels, a rather bulky suit providing protection from hard vacuum and temperatures encountered in space. The suit also gives some radiation protection and includes a six-hour air supply. At higher Tech Levels, the vacc suit becomes much thinner and easier to use, though its level of protection increases."
+    }
+  ],
+  "communicators": [
+    {
+      "Name": "Commdot",
+      "Category": "COMMUNICATOR",
+      "TL": 10,
+      "Cost": 10,
+      "Wgt": 0,
+      "Range": "",
+      "Skill": "",
+      "Description": "A commdot is a tiny microphone/ speaker and transmitter, ranging in size between a few centimetres and a few millimetres across. A commdot is capable of interfacing with another communications device and relaying messages back and forth. Commdots have a range of only a few metres and are usually used as hands-free communicators but can also be used as improvised bugs or throat microphones."
+    },
+    {
+      "Name": "Mobile Comm",
+      "Category": "COMMUNICATOR",
+      "TL": 10,
+      "Cost": 500,
+      "Wgt": 0,
+      "Range": "",
+      "Skill": "Computer",
+      "Description": "A mobile comm unit is a portable telecommunications device/computer/camera, ranging in size from a bulky handset to a slim watch or pen-like cylinder – in today’s world we call them mobile phones or cell phones. Larger comms have physical controls and screens while smaller units either project data and control displays onto nearby surfaces, have fold-out plastic screens, or connect to cybernetics. Comms have only short-range transmission and reception capabilities but most technologically advanced worlds will have planetwide comm networks allowing the user to send messages and access data anywhere"
+    },
+    {
+      "Name": "Radio Transceiver TL10",
+      "Category": "COMMUNICATOR",
+      "TL": 10,
+      "Cost": 250,
+      "Wgt": 0,
+      "Range": "50km",
+      "Skill": "",
+      "Description": "A transceiver is a stand-alone communications device, what today we would call a two-way radio. Unlike a mobile comm, which relies on the presence of an established communications network, a transceiver can send and receive directly under its own power. Most transceivers are radio or laser-based. Meson communicators are possible but generally not easily portable or available. To reach orbital ranges reliably, a transceiver requires a range of 500 kilometres."
+    },
+    {
+      "Name": "Radio Transceiver TL12",
+      "Category": "COMMUNICATOR",
+      "TL": 12,
+      "Cost": 1000,
+      "Wgt": 1,
+      "Range": "5,000km",
+      "Skill": "Computer",
+      "Description": "A transceiver is a stand-alone communications device, what today we would call a two-way radio. Unlike a mobile comm, which relies on the presence of an established communications network, a transceiver can send and receive directly under its own power. Most transceivers are radio or laser-based. Meson communicators are possible but generally not easily portable or available. To reach orbital ranges reliably, a transceiver requires a range of 500 kilometres."
+    },
+    {
+      "Name": "Radio Transceiver TL13",
+      "Category": "COMMUNICATOR",
+      "TL": 13,
+      "Cost": 250,
+      "Wgt": 0,
+      "Range": "50km",
+      "Skill": "Computer",
+      "Description": "A transceiver is a stand-alone communications device, what today we would call a two-way radio. Unlike a mobile comm, which relies on the presence of an established communications network, a transceiver can send and receive directly under its own power. Most transceivers are radio or laser-based. Meson communicators are possible but generally not easily portable or available. To reach orbital ranges reliably, a transceiver requires a range of 500 kilometres."
+    },
+    {
+      "Name": "Radio Transceiver TL14",
+      "Category": "COMMUNICATOR",
+      "TL": 14,
+      "Cost": 500,
+      "Wgt": 0,
+      "Range": "500km",
+      "Skill": "",
+      "Description": "A transceiver is a stand-alone communications device, what today we would call a two-way radio. Unlike a mobile comm, which relies on the presence of an established communications network, a transceiver can send and receive directly under its own power. Most transceivers are radio or laser-based. Meson communicators are possible but generally not easily portable or available. To reach orbital ranges reliably, a transceiver requires a range of 500 kilometres."
+    },
+    {
+      "Name": "Laser Transceiver TL11",
+      "Category": "COMMUNICATOR",
+      "TL": 11,
+      "Cost": 1500,
+      "Wgt": 0.5,
+      "Range": "500km",
+      "Skill": "Computer",
+      "Description": "A transceiver is a stand-alone communications device, what today we would call a two-way radio. Unlike a mobile comm, which relies on the presence of an established communications network, a transceiver can send and receive directly under its own power. Most transceivers are radio or laser-based. Meson communicators are possible but generally not easily portable or available. To reach orbital ranges reliably, a transceiver requires a range of 500 kilometres."
+    },
+    {
+      "Name": "Laser Transceiver TL13",
+      "Category": "COMMUNICATOR",
+      "TL": 13,
+      "Cost": 500,
+      "Wgt": 0,
+      "Range": "500km",
+      "Skill": "Computer",
+      "Description": "A transceiver is a stand-alone communications device, what today we would call a two-way radio. Unlike a mobile comm, which relies on the presence of an established communications network, a transceiver can send and receive directly under its own power. Most transceivers are radio or laser-based. Meson communicators are possible but generally not easily portable or available. To reach orbital ranges reliably, a transceiver requires a range of 500 kilometres."
+    }
+  ],
+  "computers": [
+    {
+      "TL": 12,
+      "Name": "Portable Computer TL12",
+      "Category": "COMPUTER",
+      "Wgt": 0.5,
+      "Cost": 1000,
+      "Description": "Processing: Computer/3. A portable computer is a computer system with considerable processing power, yet able to be easily carried – in today’s world, this covers laptops and tablets of all sizes. It is more powerful than a computer terminal, and can be used without access to a network."
+    },
+    {
+      "TL": 13,
+      "Name": "Portable Computer TL13",
+      "Category": "COMPUTER",
+      "Wgt": 0.5,
+      "Cost": 1500,
+      "Description": "Processing: Computer/4. A portable computer is a computer system with considerable processing power, yet able to be easily carried – in today’s world, this covers laptops and tablets of all sizes. It is more powerful than a computer terminal, and can be used without access to a network."
+    },
+    {
+      "TL": 14,
+      "Name": "Portable Computer TL13",
+      "Category": "COMPUTER",
+      "Wgt": 0.5,
+      "Cost": 5000,
+      "Description": "Processing: Computer/5. A portable computer is a computer system with considerable processing power, yet able to be easily carried – in today’s world, this covers laptops and tablets of all sizes. It is more powerful than a computer terminal, and can be used without access to a network."
+    }
+  ],
+  "software": [
+    {
+      "Name": "Database",
+      "Category": "SOFTWARE",
+      "Rating": 1,
+      "TL": 7,
+      "Cost": 10000,
+      "Description": "This software package is a collection of several databases that can be searched with an Electronics (computers) check or using an Agent package. It automatically updates itself whenever in range of a suitable server or cloud (typically any system of TL9+) and can thus usually be counted upon to answer any question based upon fact and reference."
+    },
+    {
+      "Name": "Interface",
+      "Category": "SOFTWARE",
+      "Rating": 0,
+      "TL": 7,
+      "Cost": 0,
+      "Description": "An Interface package is usually required for interaction with a computer, as it provides the ability to display data upon a screen, over audio or some other medium. The lack of Interface does not restrict the abilities of a computer only how it can communicate with its users. Interface is installed freely upon most computers upon purchase."
+    },
+    {
+      "Name": "Security-0",
+      "Category": "SOFTWARE",
+      "Rating": 0,
+      "TL": 8,
+      "Cost": 0,
+      "Description": "Intrusion Difficulty: Difficult. The purpose of a Security package is to defend against hackers and other attempts at intrusion, providing an effective firewall that keeps the other packages upon the computer safe from interference. The ability of Security to defend itself is represented by the difficulty of the Electronics (computers) check required to bypass it, which improves with the complexity of the Security package, as shown on the table below. Security/0 is installed freely upon most computers upon purchase."
+    },
+    {
+      "Name": "Security-1",
+      "Category": "SOFTWARE",
+      "Rating": 1,
+      "TL": 10,
+      "Cost": 200,
+      "Description": "Intrusion Difficulty: Very Difficult. The purpose of a Security package is to defend against hackers and other attempts at intrusion, providing an effective firewall that keeps the other packages upon the computer safe from interference. The ability of Security to defend itself is represented by the difficulty of the Electronics (computers) check required to bypass it, which improves with the complexity of the Security package, as shown on the table below. Security/0 is installed freely upon most computers upon purchase."
+    },
+    {
+      "Name": "Security-2",
+      "Category": "SOFTWARE",
+      "Rating": 2,
+      "TL": 11,
+      "Cost": 1000,
+      "Description": "Intrusion Difficulty: Formidable. The purpose of a Security package is to defend against hackers and other attempts at intrusion, providing an effective firewall that keeps the other packages upon the computer safe from interference. The ability of Security to defend itself is represented by the difficulty of the Electronics (computers) check required to bypass it, which improves with the complexity of the Security package, as shown on the table below. Security/0 is installed freely upon most computers upon purchase."
+    },
+    {
+      "Name": "Security-3",
+      "Category": "SOFTWARE",
+      "Rating": 3,
+      "TL": 12,
+      "Cost": 20000,
+      "Description": "Intrusion Difficulty: Impossible. The purpose of a Security package is to defend against hackers and other attempts at intrusion, providing an effective firewall that keeps the other packages upon the computer safe from interference. The ability of Security to defend itself is represented by the difficulty of the Electronics (computers) check required to bypass it, which improves with the complexity of the Security package, as shown on the table below. Security/0 is installed freely upon most computers upon purchase."
+    },
+    {
+      "Name": "Translator-0",
+      "Category": "SOFTWARE",
+      "Rating": 0,
+      "TL": 9,
+      "Cost": 50,
+      "Description": "Translator packages are effectively specialised Expert software that only utilise Language skills. The TL9 version provides a near-real-time translation, but the TL10 version works in absolute real-time and has a much better understanding of the nuances of language. Both can handle all common languages expected to be found in the area of space from which they originated, and can automatically update themselves upon arriving at any TL9 or better world."
+    },
+    {
+      "Name": "Translator-1",
+      "Category": "SOFTWARE",
+      "Rating": 1,
+      "TL": 10,
+      "Cost": 500,
+      "Description": "Translator packages are effectively specialised Expert software that only utilise Language skills. The TL9 version provides a near-real-time translation, but the TL10 version works in absolute real-time and has a much better understanding of the nuances of language. Both can handle all common languages expected to be found in the area of space from which they originated, and can automatically update themselves upon arriving at any TL9 or better world."
+    },
+    {
+      "Name": "Intrusion-1",
+      "Category": "SOFTWARE",
+      "Rating": 1,
+      "TL": 10,
+      "Cost": 1000,
+      "Description": "Intrusion software is designed to break through Security packages, allowing users to gain access to computers that would otherwise be off limits. Because of this, Intrusion software is illegal on many worlds (typically any worlds of Law Level 4+). Intrusion grants a DM equal to its Bandwidth to all checks made to electronically hack into a computer."
+    },
+    {
+      "Name": "Intrusion-2",
+      "Category": "SOFTWARE",
+      "Rating": 2,
+      "TL": 11,
+      "Cost": 10000,
+      "Description": "Intrusion software is designed to break through Security packages, allowing users to gain access to computers that would otherwise be off limits. Because of this, Intrusion software is illegal on many worlds (typically any worlds of Law Level 4+). Intrusion grants a DM equal to its Bandwidth to all checks made to electronically hack into a computer."
+    },
+    {
+      "Name": "Intrusion-3",
+      "Category": "SOFTWARE",
+      "Rating": 3,
+      "TL": 13,
+      "Cost": 100000,
+      "Description": "Intrusion software is designed to break through Security packages, allowing users to gain access to computers that would otherwise be off limits. Because of this, Intrusion software is illegal on many worlds (typically any worlds of Law Level 4+). Intrusion grants a DM equal to its Bandwidth to all checks made to electronically hack into a computer."
+    },
+    {
+      "Name": "Intrusion-4",
+      "Category": "SOFTWARE",
+      "Rating": 4,
+      "TL": 15,
+      "Cost": 1000000,
+      "Description": "Intrusion software is designed to break through Security packages, allowing users to gain access to computers that would otherwise be off limits. Because of this, Intrusion software is illegal on many worlds (typically any worlds of Law Level 4+). Intrusion grants a DM equal to its Bandwidth to all checks made to electronically hack into a computer."
+    },
+    {
+      "Name": "Intelligent Interface-1",
+      "Category": "SOFTWARE",
+      "Rating": 1,
+      "TL": 11,
+      "Cost": 100,
+      "Description": "This Interface package features an artificial intelligence that allows a computer to report data and receive commands as if it were a sentient being. Those familiar with Intelligent Interfaces will quickly recognise its presence, but a more primitive Traveller could be fooled for a while into thinking it is dealing with a living intelligence. Intelligent Interface is required for using an Expert software package."
+    },
+    {
+      "Name": "Expert-1",
+      "Category": "SOFTWARE",
+      "Rating": 1,
+      "TL": 11,
+      "Cost": 1000,
+      "Description": "Expert software packages allow a computer to mimic a specific skill – this skill must be specified when the software package is purchased. A Traveller using an Expert package may make a skill check as if he had the skill at the software’s Bandwidth -1. Only INT and EDU-based checks can be attempted, however. If a Traveller already has the skill, then an Expert package will grant DM+1 to his check. However, the package can only help if the difficulty of the task is within its parameters. Expert/1 allows Difficult (10+) tasks to be attempted, while Expert/2 allows Very Difficult (12+) tasks to be tried. Expert/3 is required for Formidable (14+) tasks."
+    },
+    {
+      "Name": "Expert-2",
+      "Category": "SOFTWARE",
+      "Rating": 2,
+      "TL": 12,
+      "Cost": 10000,
+      "Description": "Expert software packages allow a computer to mimic a specific skill – this skill must be specified when the software package is purchased. A Traveller using an Expert package may make a skill check as if he had the skill at the software’s Bandwidth -1. Only INT and EDU-based checks can be attempted, however. If a Traveller already has the skill, then an Expert package will grant DM+1 to his check. However, the package can only help if the difficulty of the task is within its parameters. Expert/1 allows Difficult (10+) tasks to be attempted, while Expert/2 allows Very Difficult (12+) tasks to be tried. Expert/3 is required for Formidable (14+) tasks."
+    },
+    {
+      "Name": "Expert-3",
+      "Category": "SOFTWARE",
+      "Rating": 3,
+      "TL": 13,
+      "Cost": 100000,
+      "Description": "Expert software packages allow a computer to mimic a specific skill – this skill must be specified when the software package is purchased. A Traveller using an Expert package may make a skill check as if he had the skill at the software’s Bandwidth -1. Only INT and EDU-based checks can be attempted, however. If a Traveller already has the skill, then an Expert package will grant DM+1 to his check. However, the package can only help if the difficulty of the task is within its parameters. Expert/1 allows Difficult (10+) tasks to be attempted, while Expert/2 allows Very Difficult (12+) tasks to be tried. Expert/3 is required for Formidable (14+) tasks."
+    },
+    {
+      "Name": "Agent-0",
+      "Category": "SOFTWARE",
+      "Rating": 0,
+      "TL": 11,
+      "Cost": 500,
+      "Description": "Agent software packages provide computers with a degree of intelligence and can carry out any tasks assigned to them that require the use of the Electronics (computers) skill. For example, an Agent package might be told to hack into an enemy computer system and steal a particular data file. They are effectively specialised combinations of Expert Electronics (computers) and less capable Intellect software packages."
+    },
+    {
+      "Name": "Agent-1",
+      "Category": "SOFTWARE",
+      "Rating": 1,
+      "TL": 12,
+      "Cost": 2000,
+      "Description": "Agent software packages provide computers with a degree of intelligence and can carry out any tasks assigned to them that require the use of the Electronics (computers) skill. For example, an Agent package might be told to hack into an enemy computer system and steal a particular data file. They are effectively specialised combinations of Expert Electronics (computers) and less capable Intellect software packages."
+    },
+    {
+      "Name": "Agent-2",
+      "Category": "SOFTWARE",
+      "Rating": 2,
+      "TL": 13,
+      "Cost": 100000,
+      "Description": "Agent software packages provide computers with a degree of intelligence and can carry out any tasks assigned to them that require the use of the Electronics (computers) skill. For example, an Agent package might be told to hack into an enemy computer system and steal a particular data file. They are effectively specialised combinations of Expert Electronics (computers) and less capable Intellect software packages."
+    },
+    {
+      "Name": "Agent-3",
+      "Category": "SOFTWARE",
+      "Rating": 3,
+      "TL": 14,
+      "Cost": 250000,
+      "Description": "Agent software packages provide computers with a degree of intelligence and can carry out any tasks assigned to them that require the use of the Electronics (computers) skill. For example, an Agent package might be told to hack into an enemy computer system and steal a particular data file. They are effectively specialised combinations of Expert Electronics (computers) and less capable Intellect software packages."
+    },
+    {
+      "Name": "Intellect-1",
+      "Category": "SOFTWARE",
+      "Rating": 1,
+      "TL": 12,
+      "Cost": 2000,
+      "Description": "An Intellect software package is similar to the more primitive Agent but has a far more advanced intelligence, being able to communicate normally with a Traveller. It is capable of using any Expert package and can simultaneously use a number of Expert packages equal to its Bandwidth."
+    },
+    {
+      "Name": "Intellect-2",
+      "Category": "SOFTWARE",
+      "Rating": 2,
+      "TL": 13,
+      "Cost": 50000,
+      "Description": "An Intellect software package is similar to the more primitive Agent but has a far more advanced intelligence, being able to communicate normally with a Traveller. It is capable of using any Expert package and can simultaneously use a number of Expert packages equal to its Bandwidth."
+    },
+    {
+      "Name": "Intellect-3",
+      "Category": "SOFTWARE",
+      "Rating": 3,
+      "TL": 14,
+      "Cost": 200000,
+      "Description": "An Intellect software package is similar to the more primitive Agent but has a far more advanced intelligence, being able to communicate normally with a Traveller. It is capable of using any Expert package and can simultaneously use a number of Expert packages equal to its Bandwidth."
+    }
+  ],
+  "drugs": [
+    {
+      "Name": "Anti-Rad Drug",
+      "Category": "DRUG",
+      "TL": 8,
+      "Cost": 1000,
+      "Description": "Anti-rad drugs must be administered before or immediately (within ten minutes) after radiation exposure. They absorb up to 100 rads per dose. A Traveller may only use anti-rad drugs once per day – taking any more causes permanent END damage of 1D per dose. Costs Cr1000 per dose."
+    },
+    {
+      "Name": "Panacea Drug",
+      "Category": "DRUG",
+      "TL": 8,
+      "Cost": 200,
+      "Description": "These are wide-spectrum medicinal drugs specifically designed not to interact harmfully. They can therefore be used on any wound or illness and are guaranteed not to make things worse. A Traveller using panaceas may make a Medic check as if he had Medic 0 when treating an infection or disease."
+    },
+    {
+      "Name": "Stim Drug",
+      "Category": "DRUG",
+      "TL": 8,
+      "Cost": 50,
+      "Description": "These remove fatigue, though at a cost. A Traveller who uses stims removes Fatigue but also sustains one point of damage. If stims are used repeatedly without natural sleep in between, the user suffers a cumulative additional point of damage every time (so, on the second use, two points of damage are sustained, on the third, three points, and so on). Costs Cr50 per dose."
+    },
+    {
+      "Name": "Combat Drug",
+      "Category": "DRUG",
+      "TL": 10,
+      "Cost": 1000,
+      "Description": "Combat drugs increase reaction times and improve a body’s responses to trauma. A Traveller using combat drugs gains DM+4 to all initiative rolls. He also gains a free reaction every round with no penalty applied, and reduces all damage sustained by –2 points. The drug kicks in around 20 seconds (three rounds) after injection, and lasts for around ten minutes. When the drug wears off, the user is Fatigued."
+    },
+    {
+      "Name": "Fast Drug",
+      "Category": "DRUG",
+      "TL": 10,
+      "Cost": 200,
+      "Description": "Also called Hibernation, this drug puts the Traveller into a state akin to suspended animation, slowing his metabolic rate down to a ratio of 60 to 1 – a subjective day for the Traveller is actually two months. Fast Drug is normally used to prolong life support reserves or as a cheap substitute for a cryoberth."
+    },
+    {
+      "Name": "Metabolic Accelerator Drug",
+      "Category": "DRUG",
+      "TL": 10,
+      "Cost": 500,
+      "Description": "This boosts the Traveller’s reaction time to superhuman levels. To the Traveller, everyone else appears to be moving much slower. A Traveller using a metabolic accelerator in combat gains DM+8 to all initiative rolls. He also gains two free reactions every round with no penalties applied for either. The drug kicks in 45 seconds after ingestion or injection, and lasts for around ten minutes. When the drug wears off, the Traveller’s system crashes. He suffers 2D points of damage and is fatigued."
+    },
+    {
+      "Name": "Slow Drug",
+      "Category": "DRUG",
+      "TL": 11,
+      "Cost": 500,
+      "Description": "This is a variant of the metabolic accelerator. It can only be applied safely in a medical facility where life-support and cryotechnology is available, as it increases the metabolism to around thirty times normal, allowing a patient to undergo a month of healing in a single day. Using this drug outside of a hospital or sickbay is a messy and painful way to commit suicide, as the Traveller will rapidly cook his internal organs and suffer massive brain damage."
+    },
+    {
+      "Name": "Anagathics Drug",
+      "Category": "DRUG",
+      "TL": 11,
+      "Cost": 20000,
+      "Description": "These drugs slow the Traveller’s ageing process. Synthetic anagathics become possible at TL15, but there are some natural spices and other rare compounds that have comparable effects, though all are illegal or heavily controlled on many worlds. One dose must be taken each month to maintain the anti-aging effect."
+    }
+  ],
+  "explosives": [
+    {
+      "Name": "Plastic",
+      "Category": "EXPLOSIVE",
+      "TL": 6,
+      "Dmg": "3D6",
+      "Radius": "2D6 meters",
+      "Cost": 200,
+      "Description": "This generic, multi-purpose plastic explosive is a favorite of military units, terrorists, demolition teams and adventurers across known space."
+    },
+    {
+      "Name": "Pocket Nuke",
+      "Category": "EXPLOSIVE",
+      "TL": 12,
+      "Dmg": "2D6 x 20",
+      "Radius": "15D6 meters",
+      "Cost": 250000,
+      "Wgt": 4,
+      "Description": "Hideously illegal on many worlds, the pocket nuke is actually the size of a briefcase and so is too large to fit into a grenade launcher."
+    },
+    {
+      "Name": "TDX",
+      "Category": "EXPLOSIVE",
+      "TL": 12,
+      "Dmg": "4D6",
+      "Radius": "4D6 meters",
+      "Cost": 1000,
+      "Description": "An advanced gravity-polarized explosive, TDX explodes only along the horizontal axis."
+    }
+  ],
+  "personalDevices": [
+    {
+      "Name": "Magnetic Compass",
+      "Category": "PERSONAL_DEVICE",
+      "TL": 3,
+      "Cost": 10,
+      "Wgt": 0,
+      "Description": "Indicates direction of magnetic north, if any exists."
+    },
+    {
+      "Name": "Wrist Watch",
+      "Category": "PERSONAL_DEVICE",
+      "TL": 4,
+      "Cost": 100,
+      "Wgt": 0,
+      "Description": "Allows the user to tell time. At teck level 9, can be configured to multiple worlds, as well as standard time, and allows the user to configure alarms based on specific times."
+    },
+    {
+      "Name": "Geiger Counter",
+      "Category": "PERSONAL_DEVICE",
+      "TL": 8,
+      "Cost": 400,
+      "Wgt": 0,
+      "Description": "This is a simple handheld device that picks up ambient or projected radiation in the area and registers it to the Traveller as a series of clicks and lights. The TL6 Geiger counter will detect the presence of any source of 30 rads or greater. The more advanced version can determine exactly what element is producing the radiation and the direction it is coming from."
+    },
+    {
+      "Name": "Inertial Locator",
+      "Category": "PERSONAL_DEVICE",
+      "TL": 9,
+      "Cost": 1200,
+      "Wgt": 0,
+      "Description": "Indicates direction and distance traveled from the starting location."
+    },
+    {
+      "Name": "Holographic Projector",
+      "Category": "PERSONAL_DEVICE",
+      "TL": 12,
+      "Cost": 2000,
+      "Wgt": 12,
+      "Description": "A holographic projector is a briefcase sized box that, when activated, creates a three-dimensional image in the space around it, to a range of around three metres. The projected images are obviously not real and most often used for communication purposes. A holographic projector can be connected to any computer, comm unit or transceiver of TL10 or more. TL12: This version can produce realistic images real enough to fool anyone who fails an INT check. TL13: This version can produce true-to-life images."
+    },
+    {
+      "Name": "Densitometer",
+      "Category": "PERSONAL_DEVICE",
+      "TL": 14,
+      "Cost": 20000,
+      "Wgt": 5,
+      "Description": "The remote densitometer uses an object's natural gravity to measure its density, building up a three-dimensional image of the inside and outside of an object.\n"
+    },
+    {
+      "Name": "Bioscanner",
+      "Category": "PERSONAL_DEVICE",
+      "TL": 15,
+      "Cost": 350000,
+      "Wgt": 3.5,
+      "Description": "The bioscanner 'sniffs' for organic molecules and tests chemical samples, analysing the make-up of whatever it is focussed on. It can be used to detect poisons or bacteria, analyse organic matter, search for life signs and classify unfamiliar organisms. The data from a bioscanner can be interpreted using the Comms or the Life Sciences skill."
+    },
+    {
+      "Name": "Neural Activity Sensor",
+      "Category": "PERSONAL_DEVICE",
+      "TL": 15,
+      "Cost": 35000,
+      "Wgt": 10,
+      "Description": "This device consists of a backpack and detachable handheld unit, and can detect neural activity up to 500 meters away. The device can also give a rough estimation of the intelligence level of organisms based on brainwave patterns. The data from a neural activity scanner can be interpreted using the Comms, the Life Sciences or the Social Sciences skills."
+    }
+  ],
+  "sensoryAids": [
+    {
+      "Name": "Torch",
+      "Category": "SENSORY_AID",
+      "TL": 0,
+      "Cost": 1,
+      "Wgt": 0,
+      "Description": "A bundle of flammable materials mounted on a handl or stick. A torch will last about one hour and illuminate a 6-metre radius, producing a thick, heavy smoke as it does so"
+    },
+    {
+      "Name": "Oil Lamp",
+      "Category": "SENSORY_AID",
+      "TL": 2,
+      "Cost": 10,
+      "Wgt": 1,
+      "Description": "A lamp lasts about 6 hours on a half-litre of oil or gas, and will illuminate a 5-metre radius to the equivalent of normal daylight. The fuel poses a fire hazard if spilled. Fuel refills cost Cr1."
+    },
+    {
+      "Name": "Binoculars",
+      "Category": "SENSORY_AID",
+      "TL": 3,
+      "Cost": 75,
+      "Wgt": 1,
+      "Description": "Binoculars magnify the appearance of objects being viewed through them, effectively increasing the visual range of the user, with up to 10 times magnification. The effective fiel of view is reduced, however, as the magnification increases. Price stays the same across tech levels, though the weight may be reduced through the use of lighter components. Wt. 1 kg, Cr 75."
+    },
+    {
+      "Name": "Electric Torch",
+      "Category": "SENSORY_AID",
+      "TL": 5,
+      "Cost": 10,
+      "Wgt": 0,
+      "Description": "The common flashlight. It is battery powered and will last for about 6 hours of continuous use. A torch produces a wide cone of light up to 18 metres long with a radius of 6 metres at the end of the beam. TL7 and above models have adjustable beams allowing them to also produce a tight beam of light up to 36 metres long, with a 1 metre radius, or illuminate a circle of 10 metres radius."
+    },
+    {
+      "Name": "Cold Light Lantern",
+      "Category": "SENSORY_AID",
+      "TL": 6,
+      "Cost": 20,
+      "Wgt": 0.25,
+      "Description": "A fuel cell powered version of the electric torch which will last 3 days with continuous use. Produces a wide cone of light up to 18 metres away with a radius of 6 metres at the end of the beam. Also capable of producing a tight beam of light up to 36 metres with a 1 metre radius or be used to illuminate a 10 metre radius."
+    },
+    {
+      "Name": "Infrared Goggles",
+      "Category": "SENSORY_AID",
+      "TL": 6,
+      "Cost": 500,
+      "Wgt": 0,
+      "Description": "A headset with goggles or an adaptation to the visor of armour allowing a Traveller to see by visible light or thermal imaging. Thermal imaging allows temperature differences to be detected, making warm objects like animals, people and vehicles very obvious unless there is a lot of ‘heat clutter’ in the area. It will not allow the Traveller to find his way around a cave or similar environment where everything is much the same temperature."
+    },
+    {
+      "Name": "Light Intensifier Goggles",
+      "Category": "SENSORY_AID",
+      "TL": 7,
+      "Cost": 500,
+      "Wgt": 1,
+      "Description": "These goggles allow clear, monochrome vision up to 18 metres in anything less than total dark. While some light is required to produce this effect, anything approaching normal daylight conditions severely degrades the clarity of the view and the range. At TL9, light intensifier goggles are combined with IR goggle as one unit."
+    },
+    {
+      "Name": "Light Intensifier Infrared Goggles",
+      "Category": "SENSORY_AID",
+      "TL": 9,
+      "Cost": 1250,
+      "Wgt": 0,
+      "Description": "These goggles allow clear, monochrome vision up to 18 metres in anything less than total dark. While some light is required to produce this effect, anything approaching normal daylight conditions severely degrades the clarity of the view and the range. At TL9, light intensifier goggles are combined with IR goggle as one unit."
+    }
+  ],
+  "shelters": [
+    {
+      "Name": "Tarpaulin",
+      "Category": "SHELTER",
+      "TL": 1,
+      "Cost": 10,
+      "Wgt": 4,
+      "Description": "canvas or waterproof cloth sheet used to create a temporary shelter 2 by 4 meters. Protects against precipitation and can withstand light winds."
+    },
+    {
+      "Name": "Tent",
+      "Category": "SHELTER",
+      "TL": 7,
+      "Cost": 2000,
+      "Wgt": 5,
+      "Description": "Basic shelter for two persons offering protection from precipitation, storms, and temperatures down to 0o Celsius, and is able to withstand light to moderate winds. At TL7, the tent can be pressurised. There is no airlock – the tent is depressurised when opened."
+    },
+    {
+      "Name": "Pre-Fabricated Cabin",
+      "Category": "SHELTER",
+      "TL": 6,
+      "Cost": 2000,
+      "Wgt": 400,
+      "Description": "A basic 6m x 4m x 3m hut with windows and a door but with no heating, lighting or sanitary facilities fitted. The cabin is capable of withstanding light to severe winds, offering shelter from precipitation, storms, and temperatures down to -10C. It requires 8 man-hours to erect or dismantle. A ‘heat and light’ pack is normally purchased with the cabin, costing Cr1000 and slots into ready holders but requires an external power source. There is no plumbing. The prefab cabin is often used as an adjunct to an Advanced Base as a work unit or additional storage space, but can be used as living quarters for up to four people. Dismantled and ready for shipment, the cabin displaces 1 ton of cargo space."
+    }
+  ],
+  "survivalEquipment": [
+    {
+      "Name": "Cold Weather Clothing",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 5,
+      "Cost": 500,
+      "Wgt": 2,
+      "Description": "A set of heavy outer garments designed to protect the Traveller from extremely cold temperatures. Natural materials are used at lower techs. Higher-tech clothing is less bulky and protects the wearer better. The clothing reduces the damage from arctic conditions to 1D every 4 hours (see page 78 of the Traveller Core Rulebook), and the time between damage rolls increases by 2 hours per TL above 0. The clothing is quite clumsy at low Tech Levels but usability improves as it advances."
+    },
+    {
+      "Name": "Filter Mask",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 3,
+      "Cost": 10,
+      "Wgt": 0,
+      "Description": "A filter set that allows an individual to breathe Tainted atmospheres and also protects against the inhalation of heavy smoke or dust."
+    },
+    {
+      "Name": "Swimming Equipment",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 3,
+      "Cost": 200,
+      "Wgt": 2,
+      "Description": "Includes swim fins, face mask and a snorkel. Improves speed and manoeuvrability underwater."
+    },
+    {
+      "Name": "Combination Mask",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 5,
+      "Cost": 150,
+      "Wgt": 0,
+      "Description": "A combination of both filter mask and respirator, which allows breathing of Very Thin and/or Tainted atmospheres."
+    },
+    {
+      "Name": "Oxygen Tanks",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 5,
+      "Cost": 500,
+      "Wgt": 12,
+      "Description": "A twin set of compressed oxygen tanks, allowing independent breathing in smoke, dust, gas, or Exotic atmospheres. Two tanks last 6 hours. A refill of proper atmospheric mixture for any given race costs Cr20."
+    },
+    {
+      "Name": "Respirator",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 6,
+      "Cost": 100,
+      "Wgt": 0,
+      "Description": "This rebreather concentrates inhaled oxygen, allowing a Traveller to breathe in worlds with Thin and Very Thin atmospheres. Respirators take the form of a face mask or mouthpiece initially. More advanced respirators are small enough to fit into the nose, or can even be a lung implant."
+    },
+    {
+      "Name": "Underwater Air Tanks",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 5,
+      "Cost": 800,
+      "Wgt": 12,
+      "Description": "Similar to oxygen tanks but designed for use underwater. Two tanks last 6 hours and a refill of proper atmospheric mixture for any race and expected depth costs Cr20."
+    },
+    {
+      "Name": "Artificial Gill",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 8,
+      "Cost": 4000,
+      "Wgt": 4,
+      "Description": "An artificial gill extracts oxygen from water to allowing the Traveller to breathe for an unlimited time while submerged. It functions only on worlds with Thin, Standard, or Dense atmospheres. Artificial gills are used with a mask of some kind, such as the life-support mask."
+    },
+    {
+      "Name": "Environment Suit",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 8,
+      "Cost": 500,
+      "Wgt": 1,
+      "Description": "Designed to protect the Traveller from extreme cold or heat, the environment suit has hood, gloves and boots, but leaves the face exposed. A mask or rebreather can be attached, but truly hostile situations call for the heavy-duty hostile environment vacc suit (see page 22). The suit is not powered or heated; it merely insulates and reflects heat well."
+    },
+    {
+      "Name": "Rescue Bubble",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 9,
+      "Cost": 600,
+      "Wgt": 2,
+      "Description": "A large (2 metre diameter) plastic bubble. Piezoelectric layers in the bubble wall translate the Traveller’s movements into electricity to recharge the bubble’s own batteries and power its distress beacon, and a small oxygen tank both inflates the bubble and provides two man/hours of life support. Rescue bubbles are found on both space and sea vessels as emergency lifeboats."
+    },
+    {
+      "Name": "Portable Fusion Generator",
+      "Category": "SURVIVAL_EQUIPMENT",
+      "TL": 10,
+      "Cost": 500000,
+      "Wgt": 20,
+      "Description": "This is a light-duty portable fusion generator, capable of recharging weapons and other equipment."
+    }
+  ],
+  "toolKits": [
+    {
+      "Name": "Mechanical Tool Set",
+      "Category": "TOOL_KIT",
+      "TL": 5,
+      "Cost": 1000,
+      "Wgt": 12,
+      "Description": "A set of standard mechanical and plumbing tools including everything necessary to repair and alter mechanical devices; wrenches, pliers and a largish hammer, among other things."
+    },
+    {
+      "Name": "Electronic Tool Set",
+      "Category": "TOOL_KIT",
+      "TL": 7,
+      "Cost": 2000,
+      "Wgt": 2,
+      "Description": "Necessary tools for basic electronic assembly and repair including instruments, soldering gear and so on."
+    },
+    {
+      "Name": "Field Medical Kit",
+      "Category": "TOOL_KIT",
+      "TL": 6,
+      "Cost": 500,
+      "Wgt": 3,
+      "Description": "This is a backpack-sized medical kit for doctors, combat medics and paramedics. The kit contains drugs, surgical supplies, and diagnostic equipment as well as very basic surgical tools. A field surgery kit provides all the necessary equipment required for most basic (or desperate operations)."
+    },
+    {
+      "Name": "Starship Engineering Toolkit",
+      "Category": "TOOL_KIT",
+      "TL": 12,
+      "Cost": 4000,
+      "Wgt": 12,
+      "Description": "A full tool kit for shipboard engineering personnel, including PRIS goggles, iris valve opener, electronic and gravitic test and repair equipment, wrenches, sockets and a large hammer."
+    }
+  ],
+  "meleeWeapons": [
+    {
+      "Name": "Unarmed Strike",
+      "Category": "MELEE_WEAPON",
+      "TL": 0,
+      "Cost": 0,
+      "Wgt": 0,
+      "Range": "melee (close quarters)",
+      "Dmg": "1D6",
+      "Type": "B",
+      "LL": 0,
+      "Description": ""
+    },
+    {
+      "Name": "Club",
+      "Category": "MELEE_WEAPON",
+      "TL": 1,
+      "Cost": 0,
+      "Wgt": 3,
+      "Range": "melee (close quarters)",
+      "Dmg": "2D6",
+      "Type": "B",
+      "LL": 9,
+      "Description": "The first weapon emerging civilisations usually discover. Clubs can range from a length of heavy wood to extending riot batons of advanced polymers, but they remain a popular and practical weapon regardless."
+    },
+    {
+      "Name": "Dagger",
+      "Category": "MELEE_WEAPON",
+      "TL": 1,
+      "Cost": 10,
+      "Wgt": 1,
+      "Range": "melee (close quarters) or ranged (thrown)",
+      "Dmg": "1D6+2",
+      "Type": "P",
+      "LL": 5,
+      "Description": "A small knife weapon, approximately 20-30 centimetres in length."
+    },
+    {
+      "Name": "Spear",
+      "Category": "MELEE_WEAPON",
+      "TL": 1,
+      "Cost": 10,
+      "Wgt": 2,
+      "Range": "melee (extended reach) or ranged (thrown)",
+      "Dmg": "2D6",
+      "Type": "P",
+      "LL": 8,
+      "Description": "A polearm with a pointed tip, usually of metal, a spear can be made from something as basic as a sharpened stick with a fire-hardened end. More advanced versions are based on the same in principle but may have a more durable head, crosspieces to prevent an impaled animal advancing up the shaft, and so forth."
+    },
+    {
+      "Name": "Assault Pike",
+      "Category": "MELEE_WEAPON",
+      "TL": 5,
+      "Cost": 200,
+      "Wgt": 8,
+      "Range": "melee (extended reach)",
+      "Dmg": "4D6",
+      "Type": "P",
+      "LL": 8,
+      "AP": 4,
+      "Description": "One use. Unwieldy when it first appears, the assault pike gets lighter and more manageable at higher Tech Levels. It is little more than a shaped charge placed on the end of a pole, jammed against an armoured target to detonate the charge. In theory, the long shaft allows the Traveller to be sufficiently far away not to be harmed by the explosion."
+    },
+    {
+      "Name": "Long Blade",
+      "Category": "MELEE_WEAPON",
+      "TL": 3,
+      "Cost": 300,
+      "Wgt": 4,
+      "Range": "melee (extended reach)",
+      "Dmg": "3D6+2",
+      "Type": "P/S",
+      "LL": 8,
+      "Description": "This includes most long-bladed hilt weapons, from the European ‘knightly’ long sword to the Japanese katana. Most such swords are primarily used in one hand but can be wielded two-handed at need."
+    },
+    {
+      "Name": "Broadsword",
+      "Category": "MELEE_WEAPON",
+      "TL": 2,
+      "Cost": 500,
+      "Wgt": 8,
+      "Range": "melee (extended reach)",
+      "Dmg": "4D6",
+      "Type": "S",
+      "LL": 8,
+      "Description": "A heavy two-handed sword, capable of doing some serious damage even to a well-armoured, high-technology opponent."
+    },
+    {
+      "Name": "Bayonet",
+      "Category": "MELEE_WEAPON",
+      "TL": 3,
+      "Cost": 20,
+      "Wgt": 1,
+      "Range": "melee (close quarters)",
+      "Dmg": "2D6",
+      "Type": "P",
+      "LL": 5,
+      "Description": "A knife-like weapon similar to a dagger or blade, a bayonet may or may not have a cutting edge; it will always have a stabbing point. When not attached to a rifle, a bayonet is treated as a dagger and will normally be carried in a belt scabbard. When attached to the muzzle of a rifle or similar weapon, it transforms the gun into a polearm. More advanced bayonets may incorporate tools such as wire cutters and bottle openers but the basic function is the same. A fixed bayonet requires the Melee (blade) skill but, at the referee’s option, any military-trained character with the Gun Combat skill will have been taught to fight with the bayonet and can use this skill instead if it is higher."
+    },
+    {
+      "Name": "Blade",
+      "Category": "MELEE_WEAPON",
+      "TL": 2,
+      "Cost": 100,
+      "Wgt": 2,
+      "Range": "melee (extended reach)",
+      "Dmg": "2D6",
+      "Type": "P",
+      "LL": 8,
+      "Description": "A short sword, somewhere between a dagger and a cutlass in length. These blades often feature a large basket hilt."
+    },
+    {
+      "Name": "Cutlass",
+      "Category": "MELEE_WEAPON",
+      "TL": 2,
+      "Cost": 200,
+      "Wgt": 4,
+      "Range": "melee (extended reach)",
+      "Dmg": "3D6",
+      "Type": "S",
+      "LL": 8,
+      "Description": "The standard shipboard blade weapon, often kept near airlocks to repel boarders."
+    },
+    {
+      "Name": "Rapier",
+      "Category": "MELEE_WEAPON",
+      "TL": 3,
+      "Cost": 200,
+      "Wgt": 2,
+      "Range": "melee (extended reach)",
+      "Dmg": "2D6",
+      "Type": "P",
+      "LL": 8,
+      "Description": "A duelling foil, often seen as the sword of a gentleman. Rapiers grant DM+1 when parrying."
+    }
+  ],
+  "rangedWeapons": [
+    {
+      "Name": "Compound Cam Bow",
+      "Description": "This is a short bow made with advanced materials and incorporating a pulley device. The compound cam bow is as powerful as a traditional long bow but is much easier to handle.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 5,
+      "Cost": 250,
+      "Wgt": 1,
+      "Range": 100,
+      "Dmg": "3D-3",
+      "Magazine": 1,
+      "MagazineCost": 5,
+      "Traits": {
+        "AP": 2
+      }
+    },
+    {
+      "Name": "Crossbow",
+      "Description": "A heavy weapon, cocked with a stirrup or windlass device, the crossbow is powerful and simple to use. It is slow-firing, however, taking 3 minor actions to re-load.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 2,
+      "Cost": 200,
+      "Wgt": 3,
+      "Range": 100,
+      "Dmg": "3D-3",
+      "Magazine": 1,
+      "MagazineCost": 5,
+      "Traits": {
+        "AP": 2
+      }
+    },
+    {
+      "Name": "Javelin",
+      "Description": "A short spear designed for throwing, a javelin can be pressed into service as a footman’s spear, but is not ideal outside of its intended role.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 1,
+      "Cost": 15,
+      "Wgt": 1,
+      "Range": 25,
+      "Dmg": "2D",
+      "Magazine": null,
+      "MagazineCost": null,
+      "Traits": {
+        "OneShot": true
+      }
+    },
+    {
+      "Name": "Long Bow",
+      "Description": "A long symmetrical or asymmetric bow, this is a powerful low- tech weapon.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 2,
+      "Cost": 150,
+      "Wgt": 1.5,
+      "Range": 100,
+      "Dmg": "3D-3",
+      "Magazine": 1,
+      "MagazineCost": 5,
+      "Traits": {
+        "AP": 2,
+        "Bulky": true
+      }
+    },
+    {
+      "Name": "Repeating Crossbow",
+      "Description": "This is a weak but quick-firing crossbow, cocked by a lever and fed from a magazine of six bolts.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 3,
+      "Cost": 400,
+      "Wgt": 4,
+      "Range": 75,
+      "Dmg": "2D",
+      "Magazine": 6,
+      "MagazineCost": 30,
+      "Traits": {}
+    },
+    {
+      "Name": "Short Bow",
+      "Description": "A light bow with a weaker pull, the short bow is primarily a hunting weapon but sees use in combat from time to time. Short bows are sometimes used from the back of animals.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 1,
+      "Cost": 50,
+      "Wgt": 1,
+      "Range": 75,
+      "Dmg": "2D-3",
+      "Magazine": 1,
+      "MagazineCost": 5,
+      "Traits": {}
+    },
+    {
+      "Name": "Sling",
+      "Description": "A projectile weapon which propels small stones or metal bullets using rotational energy. Slings are powerful but require a certain amount of skill to use effectively.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 0,
+      "Cost": 10,
+      "Wgt": 0,
+      "Range": 100,
+      "Dmg": "2D",
+      "Magazine": 1,
+      "MagazineCost": 1,
+      "Traits": {}
+    },
+    {
+      "Name": "Antique Pistol",
+      "Description": "A flintlock or other primitive projectile weapon. Unless the weapon is especially well made, it will suffer DM-1 to all attacks. Antique pistols also require a successful Gun Combat (slug) check to reload.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 3,
+      "Cost": 100,
+      "Wgt": 1,
+      "Range": 5,
+      "Dmg": "2D-3",
+      "Magazine": 1,
+      "MagazineCost": 5,
+      "Traits": {}
+    },
+    {
+      "Name": "Assault Pistol",
+      "Description": "An autopistol designed to fire bursts of fully-automatic fire, assault pistols are notoriously inaccurate and suffer DM-2 to all attack rolls when using burst or full auto modes. Travellers are advised to carry as many extra magazines as they can as the assault pistol burns ammunition very quickly.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 6,
+      "Cost": 250,
+      "Wgt": 1,
+      "Range": 10,
+      "Dmg": "3D-3",
+      "Magazine": 15,
+      "MagazineCost": 10,
+      "Traits": {
+        "Auto": 2
+      }
+    },
+    {
+      "Name": "Autopistol",
+      "Description": "Variants of this semi-automatic pistol is the standard sidearm for law enforcement officers and criminals across the Imperium.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 6,
+      "Cost": 200,
+      "Wgt": 1,
+      "Range": 10,
+      "Dmg": "3D-3",
+      "Magazine": 15,
+      "MagazineCost": 10,
+      "Traits": {}
+    },
+    {
+      "Name": "Body Pistol",
+      "Description": "Body pistols are manufactured from plastics and cultured bone, making them very difficult to detect using conventional weapons scanners. Body pistols increase the difficulty of Electronics (sensors) checks to detect them to Very Hard (12+).   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 8,
+      "Cost": 500,
+      "Wgt": 0,
+      "Range": 5,
+      "Dmg": "2D",
+      "Magazine": 6,
+      "MagazineCost": 10,
+      "Traits": {}
+    },
+    {
+      "Name": "Cartridge Pistol",
+      "Description": "A large smoothbore revolver chambered for a non-standard 13 mm light shotgun cartridge, this weapon is often used to deal with vermin but has some combat applications.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 7,
+      "Cost": 300,
+      "Wgt": 1.5,
+      "Range": 20,
+      "Dmg": "4D",
+      "Magazine": 6,
+      "MagazineCost": 10,
+      "Traits": {
+        "Bulky": true
+      }
+    },
+    {
+      "Name": "Coach Pistol",
+      "Description": "Essentially a sawed-off double-barrelled black powder shotgun, the coach pistol is deadly at close range but useless at any real distance. Both barrels can be discharged at once, in which case the damage is increased to 4D. Coach pistols require a successful Gun Combat (slug) check to reload.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 3,
+      "Cost": 200,
+      "Wgt": 2,
+      "Range": 5,
+      "Dmg": "4D-3",
+      "Magazine": 2,
+      "MagazineCost": 10,
+      "Traits": {
+        "Dangerous": true
+      }
+    },
+    {
+      "Name": "Duck",
+      "Description": "A good tool for intimidating an entire mob at once, the duck’s foot pistol has several (normally between four and eight) splayed barrels which are all discharged at once. Its effects can be fairly random, and the energy expended has been known to wreck the pistol. The Duck’s foot pistol can only ever be used on full auto (see Traveller Core Rulebook, page 75) and a target may only be attacked once – any extra shots are wasted.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 3,
+      "Cost": 300,
+      "Wgt": 2,
+      "Range": 5,
+      "Dmg": "3D-3",
+      "Magazine": 24,
+      "MagazineCost": 25,
+      "Traits": {
+        "Auto": 4,
+        "Dangerous": true
+      }
+    },
+    {
+      "Name": "Flechette Pistol",
+      "Description": "This pistol is designed to be an efficient and silent weapon for use by those who do not wish to bring attention to themselves. It uses compressed air to launch a cluster of metal darts.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 9,
+      "Cost": 275,
+      "Wgt": 1,
+      "Range": 10,
+      "Dmg": "3D-2",
+      "Magazine": 20,
+      "MagazineCost": 10,
+      "Traits": {
+        "Silent": true
+      }
+    },
+    {
+      "Name": "Gauss Pistol",
+      "Description": "Gauss pistols use electromagnetic coils to accelerate metallic darts to hypersonic speeds. Gauss weapons are lightweight, efficient and deadly.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 13,
+      "Cost": 500,
+      "Wgt": 1,
+      "Range": 20,
+      "Dmg": "3D",
+      "Magazine": 40,
+      "MagazineCost": 20,
+      "Traits": {
+        "AP": 3,
+        "Auto": 2
+      }
+    },
+    {
+      "Name": "Heavy Revolver",
+      "Description": "A more robust and solidly built version of the standard revolver, a heavy revolver fires a long (Magnum) 10 mm or even 12 mm cartridge.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 6,
+      "Cost": 400,
+      "Wgt": 1.5,
+      "Range": 10,
+      "Dmg": "4D-3",
+      "Magazine": 6,
+      "MagazineCost": 15,
+      "Traits": {
+        "Bulky": true
+      }
+    },
+    {
+      "Name": "Magrail Pistol",
+      "Description": "Using similar technology to gauss weapons, magrail pistols throw ovoid projectiles (sometimes erroneously called discs or shuriken) which hit hard at short ranges but lack penetrative power.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 14,
+      "Cost": 750,
+      "Wgt": 1,
+      "Range": 15,
+      "Dmg": "3D+3",
+      "Magazine": 20,
+      "MagazineCost": 60,
+      "Traits": {
+        "Auto": 4
+      }
+    },
+    {
+      "Name": "Revolver",
+      "Description": "A conventional six-shooter handgun.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 5,
+      "Cost": 150,
+      "Wgt": 1,
+      "Range": 10,
+      "Dmg": "3D-3",
+      "Magazine": 6,
+      "MagazineCost": 5,
+      "Traits": {}
+    },
+    {
+      "Name": "Shot Pistol",
+      "Description": "This is a single shot, break-open smoothbore handgun designed to fire non-standard low-powered 14 mm cartridges, intended to deal with snakes and similar vermin in the wilderness. It is virtually useless beyond a few metres.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 5,
+      "Cost": 60,
+      "Wgt": 0.5,
+      "Range": 2,
+      "Dmg": "3D",
+      "Magazine": 1,
+      "MagazineCost": 5,
+      "Traits": {}
+    },
+    {
+      "Name": "Snub Pistol",
+      "Description": "These lightweight, low-recoil weapons were designed for use aboard spacecraft and in zero gravity.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 8,
+      "Cost": 150,
+      "Wgt": 0,
+      "Range": 5,
+      "Dmg": "3D-3",
+      "Magazine": 6,
+      "MagazineCost": 10,
+      "Traits": {
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Universal Autopistol",
+      "Description": "This is a small-calibre semi-automatic handgun designed to be used by a variety of alien hands and appendages, enabling armed forces to issue a standard sidearm to non-human personnel. The weapon is also known as a staple gun because of its shape and modest effectiveness.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 8,
+      "Cost": 300,
+      "Wgt": 1,
+      "Range": 10,
+      "Dmg": "3D-3",
+      "Magazine": 10,
+      "MagazineCost": 10,
+      "Traits": {}
+    },
+    {
+      "Name": "Zip Gun",
+      "Description": "A Zip Gun is a one-shot weapon cobbled together from whatever materials are available. They are, by definition, unique. Zip guns suffer DM-1 to their attack rolls.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 3,
+      "Cost": 50,
+      "Wgt": 0,
+      "Range": 5,
+      "Dmg": "2D-3",
+      "Magazine": 1,
+      "MagazineCost": 5,
+      "Traits": {
+        "Dangerous": true
+      }
+    },
+    {
+      "Name": "Accelerator Rifle",
+      "Description": "Also known as gyrojet weapons, accelerator rifles are designed for zero-gravity combat. They fire tiny missiles that leave the rifle with minimal velocity and thus minimal recoil, then accelerate to high speed.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 9,
+      "Cost": 900,
+      "Wgt": 2,
+      "Range": 25,
+      "Dmg": "3D",
+      "Magazine": 15,
+      "MagazineCost": 30,
+      "Traits": {
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Advanced Combat Rifle",
+      "Description": "The ultimate evolution of the conventional firearm, advanced combat rifles are the weapon of choice for many military units. Standard equipment includes an electronic battlefield sight, incorporating both light amplification and passive IR, visual magnification, and a laser rangefinder which may also be used as a target painting device. The weapon is also gyroscopically stabilised during firing. A sling is provided, and the muzzle of the rifle includes an integral flash suppressor and adaptor for launching a 40mm RAM shoot-through grenade (see Auxiliary Grenade Launcher on page 142).   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 10,
+      "Cost": 1000,
+      "Wgt": 3,
+      "Range": 450,
+      "Dmg": "3D",
+      "Magazine": 40,
+      "MagazineCost": 15,
+      "Traits": {
+        "Auto": 3,
+        "Scope": true
+      }
+    },
+    {
+      "Name": "Air Rifle",
+      "Description": "These are rifles whose projectile are propelled by compressed air, charged by pumping an internal reservoir to the required pressure. One shot can be fired before the reservoir needs recharging (a process that takes 10 minor actions). These are not toys – weapons of this type are designed to kill, though they are generally more useful for hunting or for avoiding Law Level restrictions. At TL4, air rifles come with a detachable air cylinder to allow multiple shots. These can be refilled for free outside of combat by simply pumping air into them (this can be done manually but takes a few minutes).   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 3,
+      "Cost": 225,
+      "Wgt": 4,
+      "Range": 50,
+      "Dmg": "2D",
+      "Magazine": 1,
+      "MagazineCost": 1,
+      "Traits": {
+        "Silent": true
+      }
+    },
+    {
+      "Name": "Antique Rifle",
+      "Description": "A musket or other primitive rifle. Unless the weapon is especially well made, it will have DM-1 to all attacks. Antique rifles require a successful Gun Combat (slug) check to reload.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 3,
+      "Cost": 150,
+      "Wgt": 6,
+      "Range": 25,
+      "Dmg": "3D-3",
+      "Magazine": 1,
+      "MagazineCost": 10,
+      "Traits": {}
+    },
+    {
+      "Name": "Assault Rifle",
+      "Description": "Assault rifles fire lighter projectiles than rifles, but are capable of a higher rate of fire and are more suitable to short-range encounters.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 7,
+      "Cost": 500,
+      "Wgt": 4,
+      "Range": 200,
+      "Dmg": "3D",
+      "Magazine": 30,
+      "MagazineCost": 15,
+      "Traits": {
+        "Auto": 2
+      }
+    },
+    {
+      "Name": "Assault Shotgun",
+      "Description": "A heavy shotgun fed from a bulky drum magazine, the assault shotgun is capable of automatic fire. It uses the same ammunition as other shotguns and can lay waste to a wide area.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 6,
+      "Cost": 500,
+      "Wgt": 5,
+      "Range": 50,
+      "Dmg": "4D",
+      "Magazine": 24,
+      "MagazineCost": 40,
+      "Traits": {
+        "Auto": 2,
+        "Bulky": true
+      }
+    },
+    {
+      "Name": "Autorifle",
+      "Description": "Automatic rifles have a higher muzzle velocity and are capable of automatic fire. Sometimes called battle rifles.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 6,
+      "Cost": 750,
+      "Wgt": 5,
+      "Range": 300,
+      "Dmg": "3D",
+      "Magazine": 20,
+      "MagazineCost": 10,
+      "Traits": {
+        "Auto": 2
+      }
+    },
+    {
+      "Name": "Big Game Rifle",
+      "Description": "A bolt-action rifle firing heavy ammunition, this weapon is sometimes named after local wildlife (such as elephant gun). Its recoil is massive but the stopping power is impressive.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 5,
+      "Cost": 1250,
+      "Wgt": 9,
+      "Range": 200,
+      "Dmg": "3D+3",
+      "Magazine": 5,
+      "MagazineCost": 50,
+      "Traits": {
+        "VeryBulky": true
+      }
+    },
+    {
+      "Name": "Flechette Submachine Gun",
+      "Description": "This is a scaled-up version of the flechette pistol capable of full-automatic fire. A longer barrel, ‘assault’ foregrip and folding stock make it more of a combat weapon than an assassination tool, and while it lacks stopping power, it sees use in some special operations units.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 9,
+      "Cost": 500,
+      "Wgt": 3,
+      "Range": 20,
+      "Dmg": "3D-2",
+      "Magazine": 40,
+      "MagazineCost": 20,
+      "Traits": {
+        "Auto": 3,
+        "Silent": true
+      }
+    },
+    {
+      "Name": "Gauss Rifle",
+      "Description": "Gauss rifles replace conventional rifles at TL13. Like the smaller gauss pistol, rifles fire high-velocity projectiles using electromagnetic rails.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 12,
+      "Cost": 1500,
+      "Wgt": 4,
+      "Range": 600,
+      "Dmg": "4D",
+      "Magazine": 80,
+      "MagazineCost": 40,
+      "Traits": {
+        "AP": 5,
+        "Auto": 3,
+        "Scope": true
+      }
+    },
+    {
+      "Name": "Gauss Sniper Rifle",
+      "Description": "Utilising gauss technology, this sniper rifle is the ultimate in long-ranged, surgical killing using projectiles. The scope includes light amplification and passive IR, visual magnification, and a laser rangefinder which may also be used as a target painting device.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 12,
+      "Cost": 2500,
+      "Wgt": 4,
+      "Range": 1000,
+      "Dmg": "5D",
+      "Magazine": 12,
+      "MagazineCost": 20,
+      "Traits": {
+        "AP": 6,
+        "Scope": true
+      }
+    },
+    {
+      "Name": "Heavy Advanced",
+      "Description": "COMBAT RIFLE Using larger calibre rounds, the heavy advanced combat rifle is functionally similar to its smaller counterpart and hits harder, but has a lower rate of fire and requires a strong user to handle the recoil. Standard equipment includes an electronic battlefield sight, incorporating both light amplification and passive IR, visual magnification, and a laser rangefinder which may also be used as a target painting device. The weapon is also gyroscopically stabilised during firing. A sling is provided, and the muzzle of the rifle includes an integral flash suppressor and adaptor for launching a 40mm RAM shoot-through grenade (see Auxiliary Grenade Launcher on page 142).   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 10,
+      "Cost": 2000,
+      "Wgt": 5,
+      "Range": 450,
+      "Dmg": "4D",
+      "Magazine": 30,
+      "MagazineCost": 20,
+      "Traits": {
+        "Auto": 2,
+        "Scope": true,
+        "Bulky": true
+      }
+    },
+    {
+      "Name": "Magrail Rifle",
+      "Description": "MagRail rifles follow the similar principles of electromagnetic induction to accelerate their projectiles as gauss weapons, but utilise an ovoid projectile (sometimes erroneously called a disc or shuriken) which hits hard at short ranges but lacks penetrative power.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 14,
+      "Cost": 2500,
+      "Wgt": 4,
+      "Range": 150,
+      "Dmg": "4D+3",
+      "Magazine": 30,
+      "MagazineCost": 100,
+      "Traits": {
+        "Auto": 6
+      }
+    },
+    {
+      "Name": "Rifle",
+      "Description": "A long-range hunting rifle or light infantry weapon.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 5,
+      "Cost": 200,
+      "Wgt": 5,
+      "Range": 250,
+      "Dmg": "3D",
+      "Magazine": 5,
+      "MagazineCost": 10,
+      "Traits": {}
+    },
+    {
+      "Name": "Sawed Off Shotgun",
+      "Description": "Popular more as a threat and (comparative) ease of concealment than a serious combat weapon, a sawed-off shotgun has had its barrels greatly shortened and the stock removed. It has a very short range but the wide spread of shot doubles the attack roll bonus at short range (DM+2).   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 5,
+      "Cost": 200,
+      "Wgt": 2,
+      "Range": 10,
+      "Dmg": "4D",
+      "Magazine": 1,
+      "MagazineCost": 5,
+      "Traits": {
+        "Bulky": true
+      }
+    },
+    {
+      "Name": "Shotgun",
+      "Description": "Shotguns are smoothbore weapons that typically fire ammunition containing multiple small pellets. They are most effective at short range. A shotgun using pellet ammunition ignores Dodge dice modifiers, but Armour gives double protection against pellet attacks.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 4,
+      "Cost": 200,
+      "Wgt": 4,
+      "Range": 50,
+      "Dmg": "4D",
+      "Magazine": 6,
+      "MagazineCost": 10,
+      "Traits": {
+        "Bulky": true
+      }
+    },
+    {
+      "Name": "Sniper Rifle",
+      "Description": "This is a high-tech, high-calibre rifle designed for maximum accuracy and penetration. With its integrated silencer and magnification scope, long-distance targets can be killed quietly and efficiently.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 8,
+      "Cost": 700,
+      "Wgt": 5,
+      "Range": 500,
+      "Dmg": "3D",
+      "Magazine": 4,
+      "MagazineCost": 10,
+      "Traits": {
+        "AP": 5,
+        "Scope": true,
+        "Silent": true
+      }
+    },
+    {
+      "Name": "Spear Gun",
+      "Description": "This is a weapon intended for use underwater. Utilising compressed air, it fires a harpoon or spear, which may be attached to the spear gun by a strong line. A Significant Action is required to reload a spear gun after it has been fired.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 6,
+      "Cost": 50,
+      "Wgt": 2,
+      "Range": 25,
+      "Dmg": "3D",
+      "Magazine": 1,
+      "MagazineCost": 10,
+      "Traits": {
+        "Silent": true
+      }
+    },
+    {
+      "Name": "Submachine Gun",
+      "Description": "A short weapon capable of automatic fire, it puts the power of an assault rifle into a small package. However, it lacks a rifle’s accuracy at range.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 6,
+      "Cost": 400,
+      "Wgt": 3,
+      "Range": 25,
+      "Dmg": "3D",
+      "Magazine": 20,
+      "MagazineCost": 10,
+      "Traits": {
+        "Auto": 3
+      }
+    },
+    {
+      "Name": "Gauntlet Laser",
+      "Description": "Effectively a laser pistol mounted to the back of a shielded gauntlet, this weapon is powered by a backpack-carried energy source fed to it by a cable usually tethered around the arm. Although very similar to a laser pistol, the gauntlet allows the Traveller to retain an open hand while still armed with a potent weapon.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 10,
+      "Cost": 2500,
+      "Wgt": 4,
+      "Range": 20,
+      "Dmg": "3D",
+      "Magazine": 100,
+      "MagazineCost": 1100,
+      "Traits": {
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Hand Flamer",
+      "Description": "Packing a powerful flamethrower safely into a pistol-sized frame, the hand flamer is useful in boarding actions and for other area clearance duties.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 10,
+      "Cost": 1500,
+      "Wgt": 2,
+      "Range": 5,
+      "Dmg": "3D",
+      "Magazine": 5,
+      "MagazineCost": 25,
+      "Traits": {
+        "Blast": 2,
+        "Fire": true
+      }
+    },
+    {
+      "Name": "Laser Pistol",
+      "Description": "The TL9 pistol is bulky, but effective, with no recoil and a large magazine. At TL11, advances in battery technology and miniaturisation mean the pistol is no larger than a conventional firearm, but must still be connected to a battery pack for sustained use.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 9,
+      "Cost": 2000,
+      "Wgt": 3,
+      "Range": 20,
+      "Dmg": "3D",
+      "Magazine": 100,
+      "MagazineCost": 1000,
+      "Traits": {
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Maser Pistol",
+      "Description": "Using maser (within the microwave area of the electromagnetic spectrum) technology, this pistol carries little physical punch but is superb at breaching armour. The power cell carries an indefinite charge so long as it remains undamaged and will recharge itself after an hour of not being fired.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 17,
+      "Cost": 25000,
+      "Wgt": 3,
+      "Range": 20,
+      "Dmg": "3D+3",
+      "Magazine": 12,
+      "MagazineCost": null,
+      "Traits": {
+        "AP": 10,
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Matter Disintegrator",
+      "Description": "This highly advanced weapon causes atoms to release particles in rapid succession, effectively disintegrating its target. At TL19, the matter disintegrator integrates an effectively unlimited power source.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 18,
+      "Cost": null,
+      "Wgt": 1,
+      "Range": 5,
+      "Dmg": "1DD",
+      "Magazine": null,
+      "MagazineCost": 50000,
+      "Traits": {
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Personal Defence Laser",
+      "Description": "A lightweight laser weapon fed by one-use cartridges rather than an external power pack, the personal defence laser (PDL) uses a 25-round magazine inserted in the handgrip. It is capable of fully-automatic fire and is used as a sidearm by some military officers. It is somewhat bulkier than a laser pistol, but remains manageable.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 13,
+      "Cost": 6000,
+      "Wgt": 3,
+      "Range": 25,
+      "Dmg": "3D+3",
+      "Magazine": 25,
+      "MagazineCost": 100,
+      "Traits": {
+        "Auto": 2,
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Stunner",
+      "Description": "A non-lethal weapon designed to inflict a massive shock to the target, incapacitating it.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 8,
+      "Cost": 500,
+      "Wgt": 0.5,
+      "Range": 5,
+      "Dmg": "2D",
+      "Magazine": 100,
+      "MagazineCost": 200,
+      "Traits": {
+        "Stun": true,
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Cryo Rifle",
+      "Description": "Taking the technology of the cryojet (see page 123) and miniaturising it into the frame of a rifle, this weapon becomes the bane of even heavy infantry encased within battle dress. If a target wearing any kind of sealed armour is struck by a cryo rifle, it must make an Average (8+) STR check or be held in place for 1D rounds.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 13,
+      "Cost": 6000,
+      "Wgt": 9,
+      "Range": 10,
+      "Dmg": "4D",
+      "Magazine": 12,
+      "MagazineCost": 150,
+      "Traits": {
+        "Blast": 3
+      }
+    },
+    {
+      "Name": "Flame Rifle",
+      "Description": "An advanced flamethrower, the flame rifle packs everything a firestarter needs into one compact package.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 9,
+      "Cost": 2500,
+      "Wgt": 8,
+      "Range": 10,
+      "Dmg": "4D",
+      "Magazine": 10,
+      "MagazineCost": 50,
+      "Traits": {
+        "Blast": 3,
+        "Fire": true
+      }
+    },
+    {
+      "Name": "Heavy Laser Rifle",
+      "Description": "A large and somewhat unwieldy weapon, the heavy laser rifle is intended for snipers who hunt heavily armoured targets, but it is equally well-suited to targeting light vehicles. The power pack is integrated into the weapon itself, removing the need for a heavy backpack.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 12,
+      "Cost": 14000,
+      "Wgt": 18,
+      "Range": 1200,
+      "Dmg": "6D",
+      "Magazine": 12,
+      "MagazineCost": 500,
+      "Traits": {
+        "Scope": true,
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Laser Carbine",
+      "Description": "Laser carbines are shorter and lighter than laser rifles, and have a correspondingly shorter range.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 9,
+      "Cost": 2500,
+      "Wgt": 4,
+      "Range": 150,
+      "Dmg": "4D",
+      "Magazine": 50,
+      "MagazineCost": 1000,
+      "Traits": {
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Laser Rifle",
+      "Description": "Laser rifles are highly accurate at long range and are powered by heavy backpacks.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 9,
+      "Cost": 3500,
+      "Wgt": 8,
+      "Range": 200,
+      "Dmg": "5D",
+      "Magazine": 100,
+      "MagazineCost": 1500,
+      "Traits": {
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Laser Sniper Rifle",
+      "Description": "A six-shot model designed to be used for mobile sniping. The power pack is integrated into the weapon itself, removing the need for a heavy backpack.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 12,
+      "Cost": 9000,
+      "Wgt": 6,
+      "Range": 600,
+      "Dmg": "6D+3",
+      "Magazine": 6,
+      "MagazineCost": 250,
+      "Traits": {
+        "Scope": true,
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Maser Rifle",
+      "Description": "A maser is a concentrated beam of microwave energy which boils a target from the inside. This makes it far more effective at destroying armoured targets and is far more potent than a laser rifle. The power cell carries an indefinite charge so long as it remains undamaged and will recharge itself after an hour of not being fired.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 16,
+      "Cost": 30000,
+      "Wgt": 8,
+      "Range": 300,
+      "Dmg": "5D+3",
+      "Magazine": 20,
+      "MagazineCost": null,
+      "Traits": {
+        "AP": 10,
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Plasma Rifle",
+      "Description": "TL16 technology allows the bulky reactor and plasma chamber of the PGMP (see page 125) to be made small enough to fit into a rifle frame. The plasma rifle is a high-powered weapon designed to crack battle dress.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 16,
+      "Cost": 100000,
+      "Wgt": 6,
+      "Range": 300,
+      "Dmg": "1DD",
+      "Magazine": null,
+      "MagazineCost": null,
+      "Traits": {}
+    },
+    {
+      "Name": "Solar Beam Rifle",
+      "Description": "Using an ambient solar radiation to create a short-ranged but powerful laser-like beam, this rifle is devastating against any man-sized target, capable of vaporising most targets it hits. The solar beam rifle has a very limited storage capacity, but automatically recharges if exposed to two hours of direct sunlight.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 17,
+      "Cost": 200000,
+      "Wgt": 4,
+      "Range": 500,
+      "Dmg": "1DD",
+      "Magazine": 20,
+      "MagazineCost": null,
+      "Traits": {
+        "AP": 20,
+        "ZeroG": true
+      }
+    },
+    {
+      "Name": "Stagger Laser Rifle",
+      "Description": "This weapon uses an industrial-grade beam splitter to create an automatic fire effect from a single powerful laser pulse. While reducing the energy of each individual shot, it allows a supporting role without massive amounts of energy, reducing the need for over-sized power packs.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 12,
+      "Cost": 10000,
+      "Wgt": 6,
+      "Range": 300,
+      "Dmg": "5D",
+      "Magazine": 50,
+      "MagazineCost": 5000,
+      "Traits": {
+        "Auto": 2,
+        "ZeroG": true
+      }
+    }
+  ],
+  "ammo": [
+    {
+      "Name": "Bow",
+      "Category": "AMMO",
+      "TL": 1,
+      "Cost": 1,
+      "Wgt": 0.025,
+      "Rounds": 1
+    },
+    {
+      "Name": "Crossbow",
+      "Category": "AMMO",
+      "TL": 2,
+      "Cost": 2,
+      "Wgt": 0.02,
+      "Rounds": 1
+    },
+    {
+      "Name": "Revolver",
+      "Category": "AMMO",
+      "TL": 4,
+      "Cost": 5,
+      "Wgt": 0.1,
+      "Rounds": 6
+    },
+    {
+      "Name": "Auto Pistol",
+      "Category": "AMMO",
+      "TL": 5,
+      "Cost": 10,
+      "Wgt": 0.25,
+      "Rounds": 15
+    },
+    {
+      "Name": "Body Pistol",
+      "Category": "AMMO",
+      "TL": 7,
+      "Cost": 20,
+      "Wgt": 0.05,
+      "Rounds": 6
+    },
+    {
+      "Name": "Snub Pistol",
+      "Category": "AMMO",
+      "TL": 8,
+      "Cost": 10,
+      "Wgt": 0.03,
+      "Rounds": 6
+    },
+    {
+      "Name": "Shotgun",
+      "Category": "AMMO",
+      "TL": 5,
+      "Cost": 10,
+      "Wgt": 0.75,
+      "Rounds": 10
+    },
+    {
+      "Name": "Rifle",
+      "Category": "AMMO",
+      "TL": 5,
+      "Cost": 20,
+      "Wgt": 0.5,
+      "Rounds": 10
+    },
+    {
+      "Name": "Carbine",
+      "Category": "AMMO",
+      "TL": 5,
+      "Cost": 10,
+      "Wgt": 0.125,
+      "Rounds": 20
+    },
+    {
+      "Name": "Auto Rifle",
+      "Category": "AMMO",
+      "TL": 6,
+      "Cost": 20,
+      "Wgt": 0.5,
+      "Rounds": 20
+    },
+    {
+      "Name": "Assault Rifle",
+      "Category": "AMMO",
+      "TL": 7,
+      "Cost": 20,
+      "Wgt": 0.33,
+      "Rounds": 30
+    },
+    {
+      "Name": "Accelerator Rifle",
+      "Category": "AMMO",
+      "TL": 9,
+      "Cost": 25,
+      "Wgt": 0.5,
+      "Rounds": 15
+    },
+    {
+      "Name": "Advanced Combat Rifle",
+      "Category": "AMMO",
+      "TL": 10,
+      "Cost": 15,
+      "Wgt": 0.5,
+      "Rounds": 20
+    },
+    {
+      "Name": "Gauss Rifle",
+      "Category": "AMMO",
+      "TL": 12,
+      "Cost": 30,
+      "Wgt": 0.4,
+      "Rounds": 40
+    },
+    {
+      "Name": "Submachinegun",
+      "Category": "AMMO",
+      "TL": 5,
+      "Cost": 20,
+      "Wgt": 0.5,
+      "Rounds": 30
+    },
+    {
+      "Name": "Laser Pistol",
+      "Category": "AMMO",
+      "TL": 12,
+      "Cost": 100,
+      "Wgt": 0.5,
+      "Rounds": 25
+    },
+    {
+      "Name": "Laser Carbine",
+      "Category": "AMMO",
+      "TL": 8,
+      "Cost": 200,
+      "Wgt": 3,
+      "Rounds": 50
+    },
+    {
+      "Name": "Laser Rifle",
+      "Category": "AMMO",
+      "TL": 9,
+      "Cost": 300,
+      "Wgt": 4,
+      "Rounds": 100
+    },
+    {
+      "Name": "Grenade Launcher",
+      "Category": "AMMO",
+      "TL": 7,
+      "Cost": 180,
+      "Wgt": 0.5,
+      "Rounds": 6
+    },
+    {
+      "Name": "Rocket Launcher",
+      "Category": "AMMO",
+      "TL": 7,
+      "Cost": 300,
+      "Wgt": 1,
+      "Rounds": 1
+    },
+    {
+      "Name": "RAM Grenade Launcher",
+      "Category": "AMMO",
+      "TL": 8,
+      "Cost": 180,
+      "Wgt": 0.5,
+      "Rounds": 6
+    },
+    {
+      "Name": "PGMP",
+      "Category": "AMMO",
+      "TL": 12,
+      "Cost": 2500,
+      "Wgt": 6,
+      "Rounds": 40
+    },
+    {
+      "Name": "FGMP",
+      "Category": "AMMO",
+      "TL": 14,
+      "Cost": 65000,
+      "Wgt": 9,
+      "Rounds": 40
+    }
+  ],
+  "accessories": [
+    {
+      "Name": "Shoulder Stocks",
+      "Category": "ACCESSORY",
+      "TL": 5,
+      "Cost": 75,
+      "Wgt": 1
+    },
+    {
+      "Name": "Folding Stocks",
+      "Category": "ACCESSORY",
+      "TL": 6,
+      "Cost": 100,
+      "Wgt": 0.5
+    },
+    {
+      "Name": "Telescopic Sights",
+      "Category": "ACCESSORY",
+      "TL": 6,
+      "Cost": 200,
+      "Wgt": 0.8
+    },
+    {
+      "Name": "Grenade Launcher",
+      "Category": "ACCESSORY",
+      "TL": 8,
+      "Cost": 1000,
+      "Wgt": 0
+    },
+    {
+      "Name": "Laser Sights",
+      "Category": "ACCESSORY",
+      "TL": 8,
+      "Cost": 100,
+      "Wgt": 1.5
+    },
+    {
+      "Name": "Silencer",
+      "Category": "ACCESSORY",
+      "TL": 8,
+      "Cost": 250,
+      "Wgt": 0
+    },
+    {
+      "Name": "Gyrostabilizer",
+      "Category": "ACCESSORY",
+      "TL": 9,
+      "Cost": 300,
+      "Wgt": 0
+    },
+    {
+      "Name": "Laser Telescopic Sights",
+      "Category": "ACCESSORY",
+      "TL": 9,
+      "Cost": 3000,
+      "Wgt": 1.8
+    },
+    {
+      "Name": "Secure Weapon",
+      "Category": "ACCESSORY",
+      "TL": 10,
+      "Cost": 100,
+      "Wgt": 0
+    },
+    {
+      "Name": "Intelligent Weapon",
+      "Category": "ACCESSORY",
+      "TL": 11,
+      "Cost": 1000,
+      "Wgt": 0
+    }
+  ],
+  "grenades": [
+    {
+      "Name": "Aerosol",
+      "Description": "Aerosol grenades create a fine mist that diffuses any lasers that are fired into or through it, but the mist does not block normal vision. Any laser attack tracing a line of sight into or through the mist has its damage reduced by -10. Laser communications are completely blocked by the mist. Aerosol clouds dissipate after 1D x 3 rounds, though heavy winds and rain can drastically reduce this time.  ",
+      "Category": "GRENADE",
+      "TL": 9,
+      "Cost": 15,
+      "Wgt": 0.5,
+      "Range": 20,
+      "Dmg": "-",
+      "Traits": "Blast 9"
+    },
+    {
+      "Name": "Baton",
+      "Description": "Only available for use with grenade launchers, baton rounds allow the Traveller to deliver a non-lethal attack. Grenade launchers equipped with baton rounds are often known as Thud Guns.  ",
+      "Category": "GRENADE",
+      "TL": 7,
+      "Cost": 10,
+      "Wgt": 0.5,
+      "Range": null,
+      "Dmg": "2D",
+      "Traits": "Stun"
+    },
+    {
+      "Name": "Electromagnetic Pulse",
+      "Description": "This grenade unleashes a burst of electromagnetic radiation that does not harm living tissue but causes unshielded electronics to shut down for 1D minutes. Unshielded electronics of more than two TLs lower than that of the grenade will be permanently fried, while all electronics of more than two TLs higher will be completely immune.  ",
+      "Category": "GRENADE",
+      "TL": 9,
+      "Cost": 100,
+      "Wgt": 0.5,
+      "Range": 20,
+      "Dmg": "-",
+      "Traits": "Blast"
+    },
+    {
+      "Name": "Frag",
+      "Description": "Fragmentation grenades explode in a blast of shrapnel designed to kill or cripple anyone close by.  ",
+      "Category": "GRENADE",
+      "TL": 6,
+      "Cost": 30,
+      "Wgt": 0.5,
+      "Range": 20,
+      "Dmg": "5D",
+      "Traits": "Blast 9"
+    },
+    {
+      "Name": "Incendiary",
+      "Description": "Incendiary grenades ignite their targets upon impact with a fuel mixture that continues to burn.  ",
+      "Category": "GRENADE",
+      "TL": 8,
+      "Cost": 75,
+      "Wgt": 0.5,
+      "Range": 20,
+      "Dmg": "2D",
+      "Traits": "Blast 3, Fire"
+    },
+    {
+      "Name": "Neurotoxin",
+      "Description": "This grenade creates a cloud of gas that, if inhaled, will likely prove deadly. Any living target within the cloud that does not have a respirator or sealed suit will be attacked as if by a poison with a Very Difficult (12+) END check, Damage 1D INT and Interval of 1D seconds. Gas clouds dissipate after 1D x 3 rounds, though heavy winds and rain can drastically reduce this time.   ",
+      "Category": "GRENADE",
+      "TL": 9,
+      "Cost": 250,
+      "Wgt": 0.5,
+      "Range": 20,
+      "Dmg": "Special",
+      "Traits": "Blast 9"
+    },
+    {
+      "Name": "Plasma",
+      "Description": "A development of the frag grenade, the plasma grenade unleashes a microsecond burst of pure energy to vaporise its targets.  ",
+      "Category": "GRENADE",
+      "TL": 16,
+      "Cost": 500,
+      "Wgt": 0.5,
+      "Range": 20,
+      "Dmg": "8D",
+      "Traits": "Blast 6"
+    },
+    {
+      "Name": "Smoke",
+      "Description": "Smoke grenades creates a thick cloud that disrupts vision. This imposes DM-2 to all attacks on targets within the cloud. IR vision completely bypasses this cloud of smoke. Smoke clouds dissipate after 1D x 3 rounds, though heavy winds and rain can drastically reduce this time.   ",
+      "Category": "GRENADE",
+      "TL": 6,
+      "Cost": 15,
+      "Wgt": 0.5,
+      "Range": 20,
+      "Dmg": "-",
+      "Traits": "Blast 9"
+    },
+    {
+      "Name": "Stun",
+      "Description": "Stun grenades release a powerful pulse of energy, usually in the form or light and/or sound that incapacitates targets rather than killing them.   ",
+      "Category": "GRENADE",
+      "TL": 7,
+      "Cost": 30,
+      "Wgt": 0.5,
+      "Range": 20,
+      "Dmg": "3D",
+      "Traits": "Blast 9, Stun"
+    },
+    {
+      "Name": "Thermal Smoke",
+      "Description": "This acts as a smoke grenade but also throws out hot particles that block IR vision as well. This imposes DM-2 to all attacks on targets within the cloud. Smoke clouds dissipate after 1D x 3 rounds, though heavy winds and rain can drastically reduce this time.   ",
+      "Category": "GRENADE",
+      "TL": 7,
+      "Cost": 30,
+      "Wgt": 0.5,
+      "Range": 20,
+      "Dmg": "-",
+      "Traits": "Blast 9"
+    },
+    {
+      "Name": "Tranq Gas",
+      "Description": "This grenade creates a cloud of gas that, if inhaled, will likely render an enemy unconscious. Any living target within the cloud that does not have a respirator or sealed suit will be attacked as if by a poison with a Difficult (10+) END check, Damage unconscious and Interval of 1D seconds. Gas clouds dissipate after 1D x 3 rounds, though heavy winds and rain can drastically reduce this time.   ",
+      "Category": "GRENADE",
+      "TL": 8,
+      "Cost": 75,
+      "Wgt": 0.5,
+      "Range": 20,
+      "Dmg": "Special",
+      "Traits": "Blast 9"
+    }
+  ],
+  "heavyWeapons": [
+    {
+      "Name": "Anti Materiel Rifle",
+      "Description": "The anti-materiel rifle is a single-shot super-heavy rifle firing long cartridges at high velocity. It designed to destroy light vehicles and will make a real mess of armoured infantry.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 7,
+      "Cost": 3000,
+      "Wgt": 15,
+      "Range": 1000,
+      "Dmg": "5D",
+      "Magazine": 1,
+      "MagazineCost": 100,
+      "Traits": {
+        "AP": 5,
+        "Scope": true,
+        "VeryBulky": true
+      }
+    },
+    {
+      "Name": "Cryojet",
+      "Description": "In one way the opposite of a flamethrower, the cryojet projects a stream of cryogenically chilled liquid which can do massive damage to living tissue. However, its primary use is to freeze the joints of sealed armour, temporarily incapacitating the target. If a target wearing any kind of sealed armour is struck by a cryojet, it must make an Average (8+) STR check or be held in place for 1D rounds.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 11,
+      "Cost": 4000,
+      "Wgt": 14,
+      "Range": 10,
+      "Dmg": "4D",
+      "Magazine": 16,
+      "MagazineCost": 200,
+      "Traits": {
+        "Blast": 5,
+        "Bulky": true
+      }
+    },
+    {
+      "Name": "Disposable Plasma Launcher",
+      "Description": "This is a self-contained, disposable weapon launching an 80 mm rocket-propelled directed plasma warhead. The plasma launcher is a deadly weapon able to destroy even high- technology armoured vehicles. It is a favoured import with mid-tech forces that need a deterrent against higher-tech foes.  ",
+      "Category": "RANGED_WEAPON",
+      "TL": 12,
+      "Cost": 8000,
+      "Wgt": 8,
+      "Range": 300,
+      "Dmg": "2DD",
+      "Magazine": null,
+      "MagazineCost": null,
+      "Traits": {
+        "Smart": true,
+        "OneShot": true
+      }
+    },
+    {
+      "Name": "Fgmp",
+      "Description": "The ultimate personal firearm, the Fusion Gun, Man Portable is more like a piece of artillery. It includes a gravity suspension system to reduce its inertia, and fires what amounts to a directed nuclear explosion. Those without radiation protection who are nearby when a FGMP is fired will suffer a potentially lethal dose of radiation.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 14,
+      "Cost": 100000,
+      "Wgt": 12,
+      "Range": 450,
+      "Dmg": "2DD",
+      "Magazine": null,
+      "MagazineCost": null,
+      "Traits": {
+        "Radiation": true,
+        "VeryBulky": true
+      }
+    },
+    {
+      "Name": "Flamethrower",
+      "Description": "A relatively crude device, the flamethrower consists of a fuel tank, compressor and a nozzle that can project a torrent of fire some distance. Changing magazines (fuel tanks) takes 2D rounds, and if a Traveller carrying a flamethrower is hit by any attack with an Effect of 4 or greater, the weapon will explode, destroying itself and immediately inflicting damage on the Traveller as if he had been hit by it. Flamethrowers of TL8 or greater are not prone to explode in this fashion.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 4,
+      "Cost": 800,
+      "Wgt": 20,
+      "Range": 5,
+      "Dmg": "3D",
+      "Magazine": 30,
+      "MagazineCost": 60,
+      "Traits": {
+        "Blast": 3,
+        "Bulky": true,
+        "Fire": true
+      }
+    },
+    {
+      "Name": "Grenade Launcher",
+      "Description": "Grenade launchers are used to fire grenades over long distances. They may be equipped with any type of grenade.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 7,
+      "Cost": 400,
+      "Wgt": 6,
+      "Range": 100,
+      "Dmg": "Grenade",
+      "Magazine": 6,
+      "MagazineCost": 0,
+      "Traits": {
+        "Bulky": true
+      }
+    },
+    {
+      "Name": "Machinegun",
+      "Description": "A larger and less portable version of the autorifle, the machinegun may be relatively low tech but it is capable of sawing even armoured targets in half. The machinegun may use the variant ammunition types found in the Ammunition chapter.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 6,
+      "Cost": 1500,
+      "Wgt": 12,
+      "Range": 500,
+      "Dmg": "3D",
+      "Magazine": 60,
+      "MagazineCost": 100,
+      "Traits": {
+        "Auto": 4
+      }
+    },
+    {
+      "Name": "Pgmp",
+      "Description": "The Plasma Gun, Man Portable is the standard assault weapon of the marines. It is so heavy and bulky that it can only be used easily by a trooper in Battle Dress. It is powered by a built-in micro-fusion generator, and fires a high-energy plasma stream. More advanced plasma guns adjust the weapon’s optimum range and plasma temperature.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 12,
+      "Cost": 20000,
+      "Wgt": 10,
+      "Range": 250,
+      "Dmg": "1DD",
+      "Magazine": null,
+      "MagazineCost": null,
+      "Traits": {
+        "VeryBulky": true
+      }
+    },
+    {
+      "Name": "Plasma Jet",
+      "Description": "A crude use of plasma technology, the plasma jet is also the ultimate expression of primitive flamethrowers. Powered by a micro-fusion generator carried in a backpack, this weapon unleashes a short-ranged, barely controlled torrent of plasma capable of annihilating anything close by.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 12,
+      "Cost": 16000,
+      "Wgt": 10,
+      "Range": 25,
+      "Dmg": "1DD",
+      "Magazine": null,
+      "MagazineCost": null,
+      "Traits": {
+        "Blast": 5,
+        "VeryBulky": true
+      }
+    },
+    {
+      "Name": "Rapid Fire Machinegun",
+      "Description": "",
+      "Category": "RANGED_WEAPON",
+      "TL": 7,
+      "Cost": 3000,
+      "Wgt": 12,
+      "Range": 500,
+      "Dmg": "3D",
+      "Magazine": 60,
+      "MagazineCost": 100,
+      "Traits": {
+        "Auto": 4
+      }
+    },
+    {
+      "Name": "Rocket Launcher",
+      "Description": "The poor man’s FGMP. Anyone standing behind a rocket launcher when it is fired will be caught in its back blast and suffer 3D damage from the burning gasses. It takes three minor actions to reload a rocket launcher.   ",
+      "Category": "RANGED_WEAPON",
+      "TL": 6,
+      "Cost": 2000,
+      "Wgt": 8,
+      "Range": 120,
+      "Dmg": "4D",
+      "Magazine": 1,
+      "MagazineCost": 300,
+      "Traits": {
+        "Blast": 6
+      }
+    }
+  ]
+}

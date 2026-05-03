@@ -1,0 +1,2690 @@
+11/56475 ANTIQUE PISTOL
+A flintlock or other primitive projectile weapon. Unless the
+weapon is especially well made, it will suffer DM-1 to all
+attacks. Antique pistols also require a successful Gun Combat
+(slug) check to reload.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Antique Pistol 3 5 2D-3 1 Cr100 1 Cr5 -
+
+
+11/22034 ASSAULT PISTOL
+An autopistol designed to fire bursts of fully-automatic fire,
+assault pistols are notoriously inaccurate and suffer DM-2 to
+all attack rolls when using burst or full auto modes. Travellers
+are advised to carry as many extra magazines as they can as
+the assault pistol burns ammunition very quickly.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Assault Pistol 6 10 3D-3 1 Cr250 15 Cr10 Auto 2
+
+
+11/48996 AUTOPISTOL
+Variants of this semi-automatic pistol is the standard sidearm
+for law enforcement officers and criminals across the
+Imperium.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Autopistol 6 10 3D-3 1 Cr200 15 Cr10 -
+
+
+
+108
+
+110
+11/48023 BODY PISTOL
+Body pistols are manufactured from plastics and cultured
+bone, making them very difficult to detect using conventional
+weapons scanners. Body pistols increase the difficulty of
+Electronics (sensors) checks to detect them to Very Hard
+(12+).
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Body Pistol 8 5 2D - Cr500 6 Cr10 -
+
+
+
+11/18199 CARTRIDGE PISTOL
+A large smoothbore revolver chambered for a non-standard 13
+mm light shotgun cartridge, this weapon is often used to deal
+with vermin but has some combat applications.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Cartridge Pistol 7 20 4D 1.5 Cr300 6 Cr10 Bulky
+
+
+
+11/15657 COACH PISTOL
+Essentially a sawed-off double-barrelled black powder
+shotgun, the coach pistol is deadly at close range but useless
+at any real distance. Both barrels can be discharged at once,
+in which case the damage is increased to 4D. Coach pistols
+require a successful Gun Combat (slug) check to reload.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Coach Pistol 3 5 4D-3 2 Cr200 2 Cr10 Dangerous
+
+
+
+11/57290 DUCK’S FOOT PISTOL
+A good tool for intimidating an entire mob at once, the duck’s
+foot pistol has several (normally between four and eight)
+splayed barrels which are all discharged at once. Its effects
+can be fairly random, and the energy expended has been
+known to wreck the pistol. The Duck’s foot pistol can only ever
+be used on full auto (see Traveller Core Rulebook, page 75)
+and a target may only be attacked once – any extra shots are
+wasted.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Duck’s Foot Pistol 3 5 3D-3 2 Cr300 24 Cr25 Auto 4, Dangerous
+
+
+11/43870 FLECHETTE PISTOL
+This pistol is designed to be an efficient and silent weapon for
+use by those who do not wish to bring attention to themselves.
+It uses compressed air to launch a cluster of metal darts.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Flechette Pistol 9 10 3D-2 1 Cr275 20 Cr10 Silent
+
+
+
+
+
+
+
+
+
+
+
+109
+
+111
+11/92428 GAUSS PISTOL
+Gauss pistols use electromagnetic coils to accelerate metallic
+darts to hypersonic speeds. Gauss weapons are lightweight,
+efficient and deadly.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Gauss Pistol 13 20 3D 1 Cr500 40 Cr20 AP 3, Auto 2
+
+
+
+11/30638 HEAVY REVOLVER
+A more robust and solidly built version of the standard
+revolver, a heavy revolver fires a long (Magnum) 10 mm or
+even 12 mm cartridge.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Heavy Revolver 6 10 4D-3 1.5 Cr400 6 Cr15 Bulky
+
+
+11/80124 MAGRAIL PISTOL
+Using similar technology to gauss weapons, magrail pistols
+throw ovoid projectiles (sometimes erroneously called discs or
+shuriken) which hit hard at short ranges but lack penetrative
+power.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Magrail Pistol 14 15 3D+3 1 Cr750 20 Cr60 Auto 4
+
+
+11/53380 REVOLVER
+A conventional six-shooter handgun.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Revolver 5 10 3D-3 1 Cr150 6 Cr5 -
+
+
+
+11/95040 SHOT PISTOL
+This is a single shot, break-open smoothbore handgun
+designed to fire non-standard low-powered 14 mm cartridges,
+intended to deal with snakes and similar vermin in the
+wilderness. It is virtually useless beyond a few metres.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Shot Pistol 5 2 3D 0.5 Cr60 1 Cr5 -
+
+
+
+11/77981 SNUB PISTOL
+These lightweight, low-recoil weapons were designed for use
+aboard spacecraft and in zero gravity.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Snub Pistol 8 5 3D-3 - Cr150 6 Cr10 Zero-G
+
+
+
+
+
+
+
+
+
+
+
+
+110
+
+112
+11/93740 UNIVERSAL AUTOPISTOL
+This is a small-calibre semi-automatic handgun designed to
+be used by a variety of alien hands and appendages, enabling
+armed forces to issue a standard sidearm to non-human
+personnel. The weapon is also known as a staple gun because
+of its shape and modest effectiveness.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Universal Autopistol 8 10 3D-3 1 Cr300 10 Cr10 -
+
+
+
+11/87040 ZIP GUN
+A Zip Gun is a one-shot weapon cobbled together from
+whatever materials are available. They are, by definition,
+unique. Zip guns suffer DM-1 to their attack rolls.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Zip Gun 3 5 2D-3 - Cr50 1 Cr5 Dangerous
+
+
+
+SECTION 2: SLUG RIFLES
+
+
+All the weapons described in this section require the Gun Combat (slug) skill to use effectively.
+
+
+
+
+11/16837 ACCELERATOR RIFLE
+Also known as gyrojet weapons, accelerator rifles are designed
+for zero-gravity combat. They fire tiny missiles that leave
+the rifle with minimal velocity and thus minimal recoil, then
+accelerate to high speed.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Accelerator Rifle 9 25 3D 2 Cr900 15 Cr30 Zero-G
+
+
+
+11/41590 ADVANCED COMBAT RIFLE
+The ultimate evolution of the conventional firearm, advanced
+combat rifles are the weapon of choice for many military units.
+Standard equipment includes an electronic battlefield sight,
+incorporating both light amplification and passive IR, visual
+magnification, and a laser rangefinder which may also be used
+as a target painting device. The weapon is also gyroscopically
+stabilised during firing. A sling is provided, and the muzzle of
+the rifle includes an integral flash suppressor and adaptor for
+launching a 40mm RAM shoot-through grenade (see Auxiliary
+Grenade Launcher on page 142).
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Advanced Combat Rifle 10 450 3D 3 Cr1000 40 Cr15 Auto 3, Scope
+
+
+
+
+
+
+
+
+
+
+111
+
+113
+11/85574 AIR RIFLE
+These are rifles whose projectile are propelled by compressed
+air, charged by pumping an internal reservoir to the required
+pressure. One shot can be fired before the reservoir needs
+recharging (a process that takes 10 minor actions). These are
+not toys – weapons of this type are designed to kill, though
+they are generally more useful for hunting or for avoiding Law
+Level restrictions. At TL4, air rifles come with a detachable air
+cylinder to allow multiple shots. These can be refilled for free
+outside of combat by simply pumping air into them (this can
+be done manually but takes a few minutes).
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Air Rifle 3 50 2D 4 Cr225 1 Cr1 Silent
+Air Rifle 4 75 3D-2 5 Cr350 1 Cr1 Silent
+
+
+
+11/56178 ANTIQUE RIFLE
+A musket or other primitive rifle. Unless the weapon is
+especially well made, it will have DM-1 to all attacks. Antique
+rifles require a successful Gun Combat (slug) check to reload.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Antique Rifle 3 25 3D-3 6 Cr150 1 Cr10 -
+
+
+11/99527 ASSAULT RIFLE
+Assault rifles fire lighter projectiles than rifles, but are capable
+of a higher rate of fire and are more suitable to short-range
+encounters.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Assault Rifle 7 200 3D 4 Cr500 30 Cr15 Auto 2
+
+
+
+11/71012 ASSAULT SHOTGUN
+A heavy shotgun fed from a bulky drum magazine, the
+assault shotgun is capable of automatic fire. It uses the same
+ammunition as other shotguns and can lay waste to a wide
+area.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Assault Shotgun 6 50 4D 5 Cr500 24 Cr40 Auto 2, Bulky
+
+
+11/62809 AUTORIFLE
+Automatic rifles have a higher muzzle velocity and are capable
+of automatic fire. Sometimes called battle rifles.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Autorifle 6 300 3D 5 Cr750 20 Cr10 Auto 2
+
+
+
+
+
+
+
+
+
+
+
+
+
+112
+
+114
+11/37999 BIG GAME RIFLE
+A bolt-action rifle firing heavy ammunition, this weapon is
+sometimes named after local wildlife (such as elephant gun).
+Its recoil is massive but the stopping power is impressive.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Big Game Rifle 5 200 3D+3 9 Cr1250 5 Cr50 Very Bulky
+
+
+
+11/25187 FLECHETTE SUBMACHINE GUN
+This is a scaled-up version of the flechette pistol capable
+of full-automatic fire. A longer barrel, ‘assault’ foregrip and
+folding stock make it more of a combat weapon than an
+assassination tool, and while it lacks stopping power, it sees
+use in some special operations units.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Flechette Submachine Gun 9 20 3D-2 3 Cr500 40 Cr20 Auto 3, Silent
+
+
+
+11/59040 GAUSS RIFLE
+Gauss rifles replace conventional rifles at TL13. Like the
+smaller gauss pistol, rifles fire high-velocity projectiles using
+electromagnetic rails.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Gauss Rifle 12 600 4D 4 Cr1500 80 Cr40 AP 5, Auto 3, Scope
+
+
+
+11/35524 GAUSS SNIPER RIFLE
+Utilising gauss technology, this sniper rifle is the ultimate
+in long-ranged, surgical killing using projectiles. The
+scope includes light amplification and passive IR, visual
+magnification, and a laser rangefinder which may also be used
+as a target painting device.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Gauss Sniper Rifle 12 1000 5D 4 Cr2500 12 Cr20 AP 6, Scope
+
+
+
+11/56502 HEAVY ADVANCED
+COMBAT RIFLE
+Using larger calibre rounds, the heavy advanced combat
+rifle is functionally similar to its smaller counterpart and
+hits harder, but has a lower rate of fire and requires a strong
+user to handle the recoil. Standard equipment includes
+an electronic battlefield sight, incorporating both light
+amplification and passive IR, visual magnification, and a
+laser rangefinder which may also be used as a target painting
+device. The weapon is also gyroscopically stabilised during
+firing. A sling is provided, and the muzzle of the rifle includes
+an integral flash suppressor and adaptor for launching a
+40mm RAM shoot-through grenade (see Auxiliary Grenade
+Launcher on page 142).
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Heavy Advanced Combat Rifle 10 450 4D 5 Cr2000 30 Cr20 Auto 2, Bulky, Scope
+
+
+
+
+
+113
+
+115
+11/51807 MAGRAIL RIFLE
+MagRail rifles follow the similar principles of electromagnetic
+induction to accelerate their projectiles as gauss weapons,
+but utilise an ovoid projectile (sometimes erroneously called
+a disc or shuriken) which hits hard at short ranges but lacks
+penetrative power.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Magrail Rifle 14 150 4D+3 4 Cr2500 30 Cr100 Auto 6
+
+
+
+11/22075 RIFLE
+A long-range hunting rifle or light infantry weapon.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Rifle 5 250 3D 5 Cr200 5 Cr10 -
+
+
+11/99104 SAWED-OFF SHOTGUN
+Popular more as a threat and (comparative) ease of
+concealment than a serious combat weapon, a sawed-off
+shotgun has had its barrels greatly shortened and the stock
+removed. It has a very short range but the wide spread of shot
+doubles the attack roll bonus at short range (DM+2).
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Sawed-off Shotgun 5 10 4D 2 Cr200 1 Cr5 Bulky
+
+
+
+11/88851 SHOTGUN
+Shotguns are smoothbore weapons that typically fire
+ammunition containing multiple small pellets. They are most
+effective at short range. A shotgun using pellet ammunition
+ignores Dodge dice modifiers, but Armour gives double
+protection against pellet attacks.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Shotgun 4 50 4D 4 Cr200 6 Cr10 Bulky
+
+
+
+11/95926 SNIPER RIFLE
+This is a high-tech, high-calibre rifle designed for maximum
+accuracy and penetration. With its integrated silencer and
+magnification scope, long-distance targets can be killed
+quietly and efficiently.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Sniper Rifle 8 500 3D 5 Cr700 4 Cr10 AP 5, Scope, Silent
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+114
+
+116
+11/58990 SPEAR GUN
+This is a weapon intended for use underwater. Utilising
+compressed air, it fires a harpoon or spear, which may be
+attached to the spear gun by a strong line. A Significant
+Action is required to reload a spear gun after it has been fired.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Spear Gun 6 25 3D 2 Cr50 1 Cr10 Silent
+
+
+11/57614 SUBMACHINE GUN
+A short weapon capable of automatic fire, it puts the power of
+an assault rifle into a small package. However, it lacks a rifle’s
+accuracy at range.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Submachine Gun 6 25 3D 3 Cr400 20 Cr10 Auto 3
+
+
+
+
+
+SECTION 3: ENERGY PISTOLS
+
+
+All the weapons described in this section require the Gun Combat (energy) skill to use effectively.
+
+
+
+01/21495 GAUNTLET LASER
+Effectively a laser pistol mounted to the back of a shielded
+gauntlet, this weapon is powered by a backpack-carried energy
+source fed to it by a cable usually tethered around the arm.
+Although very similar to a laser pistol, the gauntlet allows the
+Traveller to retain an open hand while still armed with a potent
+weapon.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Gauntlet Laser 10 20 3D 4 Cr2500 100 Cr1100 Zero-G
+
+
+
+01/57025 HAND FLAMER
+Packing a powerful flamethrower safely into a pistol-sized
+frame, the hand flamer is useful in boarding actions and for
+other area clearance duties.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Hand Flamer 10 5 3D 2 Cr1500 5 Cr25 Blast 2, Fire
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+115
+
+117
+11/14649 LASER PISTOL
+The TL9 pistol is bulky, but effective, with no recoil and a
+large magazine. At TL11, advances in battery technology
+and miniaturisation mean the pistol is no larger than a
+conventional firearm, but must still be connected to a battery
+pack for sustained use.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Laser Pistol 9 20 3D 3 Cr2000 100 Cr1000 Zero-G
+Laser Pistol 11 30 3D+3 2 Cr3000 100 Cr3000 Zero-G
+
+
+
+11/92387 MASER PISTOL
+Using maser (within the microwave area of the
+electromagnetic spectrum) technology, this pistol carries
+little physical punch but is superb at breaching armour. The
+power cell carries an indefinite charge so long as it remains
+undamaged and will recharge itself after an hour of not being
+fired.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Maser Pistol 17 20 3D+3 3 Cr25000 12 - AP 10, Zero-G
+
+
+
+11/46753 MATTER DISINTEGRATOR
+This highly advanced weapon causes atoms to release
+particles in rapid succession, effectively disintegrating
+its target. At TL19, the matter disintegrator integrates an
+effectively unlimited power source.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Matter Disintegrator 18 5 1DD 1 MCr2.5 - Cr50000 Zero-G
+Matter Disintegrator 19 10 2DD 1 MCr4 - - Zero-G
+
+
+11/83150 PERSONAL DEFENCE LASER
+A lightweight laser weapon fed by one-use cartridges rather
+than an external power pack, the personal defence laser
+(PDL) uses a 25-round magazine inserted in the handgrip.
+It is capable of fully-automatic fire and is used as a sidearm
+by some military officers. It is somewhat bulkier than a laser
+pistol, but remains manageable.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Personal Defence Laser 13 25 3D+3 3 Cr6000 25 Cr100 Auto 2, Zero-G
+
+
+11/69820 STUNNER
+A non-lethal weapon designed to inflict a massive shock to the
+target, incapacitating it.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Stunner 8 5 2D 0.5 Cr500 100 Cr200 Stun, Zero-G
+Stunner 10 5 2D+3 0.5 Cr750 100 Cr200 Stun, Zero-G
+Stunner 12 10 3D 0.5 Cr1000 100 Cr200 Stun, Zero-G
+
+
+
+
+
+
+
+116
+
+118
+SECTION 4: ENERGY RIFLES
+
+All the weapons described in this section require the Gun Combat (energy) skill to use effectively.
+
+
+
+11/67175 CRYO RIFLE
+Taking the technology of the cryojet (see page 123) and
+miniaturising it into the frame of a rifle, this weapon becomes
+the bane of even heavy infantry encased within battle dress. If
+a target wearing any kind of sealed armour is struck by a cryo
+rifle, it must make an Average (8+) STR check or be held in
+place for 1D rounds.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Cryo rifle 13 10 4D 9 Cr6000 12 Cr150 Blast 3
+
+
+11/17596 FLAME RIFLE
+An advanced flamethrower, the flame rifle packs everything a
+firestarter needs into one compact package.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Flame Rifle 9 10 4D 8 Cr2500 10 Cr50 Blast 3, Fire
+
+
+
+11/10869 HEAVY LASER RIFLE
+A large and somewhat unwieldy weapon, the heavy laser rifle
+is intended for snipers who hunt heavily armoured targets, but
+it is equally well-suited to targeting light vehicles. The power
+pack is integrated into the weapon itself, removing the need
+for a heavy backpack.
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Heavy Laser Rifle 12 1200 6D 18 Cr14000 12 Cr500 Scope, Zero-G
+
+
+11/91143 LASER CARBINE
+Laser carbines are shorter and lighter than laser rifles, and
+have a correspondingly shorter range.
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Laser Carbine 9 150 4D 4 Cr2500 50 Cr1000 Zero-G
+Laser Carbine 11 200 4D+3 3 Cr4000 50 Cr3000 Zero-G
+
+
+
+11/61223 LASER RIFLE
+Laser rifles are highly accurate at long range and are powered
+by heavy backpacks.
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Laser Rifle 9 200 5D 8 Cr3500 100 Cr1500 Zero-G
+Laser Rifle 11 400 5D+3 5 Cr8000 100 Cr3500 Zero-G
+
+
+
+
+
+
+117
+
+119
+11/40735 LASER SNIPER RIFLE
+A six-shot model designed to be used for mobile sniping. The
+power pack is integrated into the weapon itself, removing the
+need for a heavy backpack.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Laser Sniper Rifle 12 600 6D+3 6 Cr9000 6 Cr250 Scope, Zero-G
+
+
+
+11/82454 MASER RIFLE
+A maser is a concentrated beam of microwave energy which
+boils a target from the inside. This makes it far more effective
+at destroying armoured targets and is far more potent than a
+laser rifle. The power cell carries an indefinite charge so long
+as it remains undamaged and will recharge itself after an hour
+of not being fired.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Maser Rifle 16 300 5D+3 8 Cr30000 20 - AP 10, Zero-G
+
+
+
+11/16126 PLASMA RIFLE
+TL16 technology allows the bulky reactor and plasma chamber
+of the PGMP (see page 125) to be made small enough to fit
+into a rifle frame. The plasma rifle is a high-powered weapon
+designed to crack battle dress.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Plasma Rifle 16 300 1DD 6 Cr100000 Unlimited - -
+
+
+
+11/66597 SOLAR BEAM RIFLE
+Using an ambient solar radiation to create a short-ranged
+but powerful laser-like beam, this rifle is devastating against
+any man-sized target, capable of vaporising most targets it
+hits. The solar beam rifle has a very limited storage capacity,
+but automatically recharges if exposed to two hours of direct
+sunlight.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Solar Beam Rifle 17 500 1DD 4 Cr200000 20 - AP 20, Zero-G
+
+
+
+11/64885 STAGGER LASER RIFLE
+This weapon uses an industrial-grade beam splitter to create
+an automatic fire effect from a single powerful laser pulse.
+While reducing the energy of each individual shot, it allows a
+supporting role without massive amounts of energy, reducing
+the need for over-sized power packs.
+
+
+Weapon TL Range Damage Kg Cost Magazine Power Pack Cost Traits
+Stagger Laser Rifle 12 300 5D 6 Cr10000 50 Cr5000 Auto 2, Zero-G
+Stagger Laser Rifle 14 350 5D+3 5 Cr15000 100 Cr6000 Auto 3, Zero-G
+
+
+
+
+
+
+
+
+118
+
+120
+SECTION 5: GRENADE WEAPONS
+
+Thrown grenades use the Athletics (dexterity) skill, while those that are launched use the Heavy Weapons (man portable) skill.
+
+
+
+11/39454 AEROSOL
+Aerosol grenades create a fine mist that diffuses any lasers that are fired into or through it, but the
+mist does not block normal vision. Any laser attack tracing a line of sight into or through the mist has
+its damage reduced by -10. Laser communications are completely blocked by the mist. Aerosol clouds
+dissipate after 1D x 3 rounds, though heavy winds and rain can drastically reduce this time.
+
+Weapon TL Range Damage Kg Cost Traits
+Aerosol 9 20 - 0.5 Cr15 Blast 9
+
+
+11/26271 BATON
+Only available for use with grenade launchers, baton rounds allow the Traveller to deliver a non-lethal
+attack. Grenade launchers equipped with baton rounds are often known as Thud Guns.
+
+Weapon TL Range Damage Kg Cost Traits
+Baton 7 - 2D 0.5 Cr10 Stun
+
+
+11/68615 ELECTROMAGNETIC PULSE
+This grenade unleashes a burst of electromagnetic radiation that does not harm living tissue but
+causes unshielded electronics to shut down for 1D minutes. Unshielded electronics of more than two
+TLs lower than that of the grenade will be permanently fried, while all electronics of more than two
+TLs higher will be completely immune.
+
+Weapon TL Range Damage Kg Cost Traits
+Electromagnetic 9 20 - 0.5 Cr100 Blast
+Pulse 6
+
+
+11/48303 FRAG
+Fragmentation grenades explode in a blast of shrapnel designed to kill or cripple anyone close by.
+
+Weapon TL Range Damage Kg Cost Traits
+Frag 6 20 5D 0.5 Cr30 Blast 9
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+119
+
+121
+11/54002 INCENDIARY
+Incendiary grenades ignite their targets upon impact with a fuel mixture that continues to burn.
+
+Weapon TL Range Damage Kg Cost Traits
+Incendiary 8 20 2D 0.5 Cr75 Blast 3, Fire
+
+
+
+11/75121 NEUROTOXIN
+This grenade creates a cloud of gas that, if inhaled, will likely prove deadly. Any living target within
+the cloud that does not have a respirator or sealed suit will be attacked as if by a poison with a
+Very Difficult (12+) END check, Damage 1D INT and Interval of 1D seconds. Gas clouds dissipate
+after 1D x 3 rounds, though heavy winds and rain can drastically reduce this time.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Neurotoxin 9 20 Special 0.5 Cr250 Blast 9
+
+
+
+11/38319 PLASMA
+A development of the frag grenade, the plasma grenade unleashes a microsecond burst of pure
+energy to vaporise its targets.
+
+Weapon TL Range Damage Kg Cost Traits
+Plasma 16 20 8D 0.5 Cr500 Blast 6
+
+
+
+11/80370 SMOKE
+Smoke grenades creates a thick cloud that disrupts vision. This imposes DM-2 to all attacks
+on targets within the cloud. IR vision completely bypasses this cloud of smoke. Smoke clouds
+dissipate after 1D x 3 rounds, though heavy winds and rain can drastically reduce this time.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Smoke 6 20 - 0.5 Cr15 Blast 9
+
+
+
+11/57045 STUN
+Stun grenades release a powerful pulse of energy, usually in the form or light and/or sound that
+incapacitates targets rather than killing them.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Stun 7 20 3D 0.5 Cr30 Blast 9, Stun
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+120
+
+122
+11/52322 THERMAL SMOKE
+This acts as a smoke grenade but also throws out hot particles that block IR vision as well.
+This imposes DM-2 to all attacks on targets within the cloud. Smoke clouds dissipate after
+1D x 3 rounds, though heavy winds and rain can drastically reduce this time.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Thermal 7 20 - 0.5 Cr30 Blast 9
+Smoke
+
+
+
+
+
+11/73357 TRANQ GAS
+This grenade creates a cloud of gas that, if inhaled, will likely render an enemy
+unconscious. Any living target within the cloud that does not have a respirator or
+sealed suit will be attacked as if by a poison with a Difficult (10+) END check, Damage
+unconscious and Interval of 1D seconds. Gas clouds dissipate after 1D x 3 rounds, though
+heavy winds and rain can drastically reduce this time.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Tranq 8 20 Special 0.5 Cr75 Blast 9
+Gas
+
+
+
+
+
+SECTION 6: ARCHAIC WEAPONS
+
+
+All the weapons described in this section require the Gun Combat (archaic) skill to use effectively.
+
+
+
+11/45092 COMPOUND CAM BOW
+This is a short bow made with advanced materials and
+incorporating a pulley device. The compound cam bow is
+as powerful as a traditional long bow but is much easier to
+handle.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Compound Cam Bow 5 100 3D-3 1 Cr250 1 Cr5 AP 2
+
+
+
+11/16404 CROSSBOW
+A heavy weapon, cocked with a stirrup or windlass device,
+the crossbow is powerful and simple to use. It is slow-firing,
+however, taking 3 minor actions to re-load.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Crossbow 2 100 3D-3 3 Cr200 1 Cr5 AP 2
+
+
+
+
+
+
+
+
+
+
+
+
+121
+
+123
+11/44577 JAVELIN
+A short spear designed for throwing, a javelin can be pressed
+into service as a footman’s spear, but is not ideal outside of its
+intended role.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Javelin 1 25 2D 1 Cr15 - - One Shot
+
+
+11/42480 LONG BOW
+A long symmetrical or asymmetric bow, this is a powerful low-
+tech weapon.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Long Bow 2 100 3D-3 1.5 Cr150 1 Cr5 AP 2, Bulky
+
+
+11/28607 REPEATING CROSSBOW
+This is a weak but quick-firing crossbow, cocked by a lever and
+fed from a magazine of six bolts.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Repeating Crossbow 3 75 2D 4 Cr400 6 Cr30 -
+
+
+11/39955 SHORT BOW
+A light bow with a weaker pull, the short bow is primarily a
+hunting weapon but sees use in combat from time to time.
+Short bows are sometimes used from the back of animals.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Short Bow 1 75 2D-3 1 Cr50 1 Cr5 -
+
+
+11/21720 SLING
+A projectile weapon which propels small stones or metal
+bullets using rotational energy. Slings are powerful but require
+a certain amount of skill to use effectively.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Sling 0 100 2D - Cr10 1 Cr1 -
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+122
+
+124
+THECENTRAL SUPPLY COLLECTION
+
+12 HEAVY WEAPONRY
+
+
+Sometimes, a big mission can only be accomplished with a big gun. The
+weapons here are for those Travellers who possess both the skill and
+confidence. Illegal on many worlds, there is little better to face the dangers of
+a hostile wilderness, pirate haven, or war zone. With just one of these weapons
+and a great deal of distance, you can see how a real man fights.
+
+
+SECTION 1: MAN PORTABLE WEAPONRY
+
+
+All the weapons described in this section require the Heavy Weapons (man portable) skill to use effectively.
+
+
+12/18810 ANTI-MATERIEL RIFLE
+The anti-materiel rifle is a single-shot super-heavy rifle firing
+long cartridges at high velocity. It designed to destroy light
+vehicles and will make a real mess of armoured infantry.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Anti-Materiel Rifle 7 1000 5D 15 Cr3000 1 Cr100 AP 5, Scope, Very Bulky
+
+
+12/19224 CRYOJET
+In one way the opposite of a flamethrower, the cryojet projects
+a stream of cryogenically chilled liquid which can do massive
+damage to living tissue. However, its primary use is to freeze
+the joints of sealed armour, temporarily incapacitating the
+target. If a target wearing any kind of sealed armour is struck
+by a cryojet, it must make an Average (8+) STR check or be
+held in place for 1D rounds.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Cryojet 11 10 4D 14 Cr4000 16 Cr200 Blast 5, Bulky
+
+
+12/86400 DISPOSABLE PLASMA LAUNCHER
+This is a self-contained, disposable weapon launching an 80
+mm rocket-propelled directed plasma warhead. The plasma
+launcher is a deadly weapon able to destroy even high-
+technology armoured vehicles. It is a favoured import with
+mid-tech forces that need a deterrent against higher-tech foes.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Disposable Plasma Launcher 12 300 2DD 8 Cr8000 - - One Shot, Smart
+
+
+
+
+123
+
+125
+12/78741 FGMP
+The ultimate personal firearm, the Fusion Gun, Man
+Portable is more like a piece of artillery. It includes a gravity
+suspension system to reduce its inertia, and fires what
+amounts to a directed nuclear explosion. Those without
+radiation protection who are nearby when a FGMP is fired will
+suffer a potentially lethal dose of radiation.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+FGMP 14 450 2DD 12 Cr100000 - - Radiation, Very Bulky
+FGMP 15 450 2DD 12 Cr400000 - - Bulky, Radiation
+FGMP 16 450 2DD 15 MCr0.5 - - Radiation
+
+
+12/80885 FLAMETHROWER
+A relatively crude device, the flamethrower consists of a fuel
+tank, compressor and a nozzle that can project a torrent of
+fire some distance. Changing magazines (fuel tanks) takes 2D
+rounds, and if a Traveller carrying a flamethrower is hit by any
+attack with an Effect of 4 or greater, the weapon will explode,
+destroying itself and immediately inflicting damage on the
+Traveller as if he had been hit by it. Flamethrowers of TL8 or
+greater are not prone to explode in this fashion.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Flamethrower 4 5 3D 20 Cr800 30 Cr60 Blast 3, Bulky, Fire
+Flamethrower 6 5 4D 15 Cr1500 40 Cr80 Blast 5, Bulky, Fire
+Flamethrower 8 10 4D 10 Cr2000 50 Cr100 Blast 5, Fire
+
+
+
+12/83963 GRENADE LAUNCHER
+Grenade launchers are used to fire grenades over long
+distances. They may be equipped with any type of grenade.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Grenade Launcher 7 100 Grenade 6 Cr400 6 0 Bulky
+
+
+
+12/86432 MACHINEGUN
+A larger and less portable version of the autorifle, the
+machinegun may be relatively low tech but it is capable of
+sawing even armoured targets in half. The machinegun may
+use the variant ammunition types found in the Ammunition
+chapter.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Machinegun 6 500 3D 12 Cr1500 60 Cr100 Auto 4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+124
+
+126
+12/50286 PGMP
+The Plasma Gun, Man Portable is the standard assault weapon
+of the marines. It is so heavy and bulky that it can only be
+used easily by a trooper in Battle Dress. It is powered by a
+built-in micro-fusion generator, and fires a high-energy plasma
+stream. More advanced plasma guns adjust the weapon’s
+optimum range and plasma temperature.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+PGMP 12 250 1DD 10 Cr20000 - - Very Bulky
+PGMP 13 450 1DD 10 Cr65000 - - Bulky
+PGMP 14 450 1DD 10 Cr100000 - -
+
+
+12/95756 PLASMA JET
+A crude use of plasma technology, the plasma jet is also the
+ultimate expression of primitive flamethrowers. Powered by
+a micro-fusion generator carried in a backpack, this weapon
+unleashes a short-ranged, barely controlled torrent of plasma
+capable of annihilating anything close by.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Plasma Jet 12 25 1DD 10 Cr16000 - - Blast 5, Very Bulky
+Plasma Jet 14 50 1DD 10 Cr80000 - - Blast 10, Bulky
+
+
+12/67931 RAM GRENADE LAUNCHER
+Rocket Assisted Multi-Purpose grenade launchers have a
+longer range and are capable of firing up to three grenades in
+a single attack. They may be equipped with any normal type of
+grenade.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+RAM Grenade Launcher 8 250 As grenade 2 Cr800 6 As grenades Auto 3, Bulky
+
+
+12/80435 RAPID-FIRE MACHINEGUN
+This is a light machinegun tuned to develop an incredibly high
+rate of fire. The Auto score of this weapon may be doubled,
+but the weapon must be left to cool for 2 rounds after this has
+been done. The rapid-fire machinegun may use the variant
+ammunition types found in the Ammunition chapter.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Rapid-Fire Machinegun 7 500 3D 12 Cr3000 60 Cr100 Auto 4 (8)
+
+
+12/81566 ROCKET LAUNCHER
+The poor man’s FGMP. Anyone standing behind a rocket
+launcher when it is fired will be caught in its back blast and
+suffer 3D damage from the burning gasses. It takes three
+minor actions to reload a rocket launcher.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Rocket Launcher 6 120 4D 8 Cr2000 1 Cr300 Blast 6
+Rocket Launcher 7 150 4D+3 8 Cr2000 1 Cr400 Blast 6, Smart
+Rocket Launcher 8 200 5D 8 Cr2000 2 Cr600 Blast 6, Scope, Smart
+Rocket Launcher 9 250 5D+6 8 Cr2000 2 Cr800 Blast 6, Scope, Smart
+
+
+
+
+
+125
+
+127
+SECTION 2: ARTILLERY
+
+All the weapons described in this section require the Heavy Weapons (artillery) skill to use effectively. All ranges are listed in
+kilometres. Any range listed in parentheses is the minimum range the weapon can fire at – it may not attack any targets closer
+than this.
+
+
+
+12/76372 DEMOLITION GUN
+This is a short-barrelled petard weapon designed to deliver an
+extremely large explosive charge over a short distance. The
+demolition gun is normally mounted aboard engineering or
+assault support vehicles, to demolish fortifications and flatten
+obstructions.
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Demolition Gun 6 0.1 1DD 5 Cr30000 1 Cr500 AP 10, Artillery, Blast 10
+
+
+12/39171 BLACK POWDER MORTAR
+A primitive short-barrelled smoothbore weapon, the black
+powder mortar is little more than a very short cannon placed
+upon a high-angle mount. They are sometimes called
+‘grasshopper guns’ due to their tendency to jump about when
+firing.
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Black Powder Mortar 3 0.5 6D 0.5 Cr2000 1 Cr50 Artillery, Blast 6
+
+
+12/19153 BOMBARDMENT GUN
+A fairly practical weapon as these things go, this super heavy
+gun is designed for bombardment of static or slow-moving
+targets. It is normally fielded as a railway gun, aboard a
+maritime vessel or as a coastal defence weapon.
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Bombardment Gun 5 30 2DD 220 MCr0.5 1 Cr1500 Artillery, Blast 20
+
+
+12/54613 HEAVY BOMBARDMENT GUN
+This huge artillery piece most likely to be encountered as
+a coastal defence piece or aboard a maritime naval ship.
+Weapons of this type are occasionally used to launch
+sub-calibre rockets or missiles in the hope of creating a
+rudimentary aerospace defence capability but these are rarely
+successful. They are extremely slow to reload, with most
+models requiring 1D hours between firing shells.
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Heavy Bombardment Gun 5 40 3DD 500 MCr0.75 1 Cr2500 Artillery, Blast 20
+
+
+
+
+
+
+
+
+
+
+126
+
+128
+12/99653 HEAVY GUN
+A standard artillery piece on many worlds, this gun is
+usually mounted on a vehicle. Some versions can handle
+small nuclear warheads but this is not usual. This weapon
+is theoretically capable of firing over open sights but it is
+somewhat ineffective in this role. The heavy gun may use the
+variant ammunition types found in the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Heavy Gun 8 12 1DD 12 Cr120000 1 Cr400 AP 8, Artillery, Blast 10
+
+
+12/67776 INFANTRY MORTAR
+A light man-portable support weapon capable of launching
+small explosive bombs (or other munitions, including smoke).
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Infantry 5 1 2D 12 Cr3500 1 Cr50 Artillery, Mortar Blast 5
+
+12/75847 LIGHT HOWITZER
+A short-barrelled artillery piece crewed by up to six personnel
+and usually moved by animal power or towed by a vehicle, the
+light howitzer can deliver shells to far off targets. It can also
+fire over open sights but there are far better weapons for this
+role. The light howitzer may use the variant ammunition types
+found in the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Light Howitzer 5 6 8D 2 Cr50000 1 Cr150 Artillery, Blast 10
+
+
+12/41828 LIGHT GUN
+A long-barrelled artillery piece, this gun has a higher muzzle
+velocity than the equivalent howitzer and can hit targets
+further away. It is also more capable in the direct fire role. The
+light gun may use the variant ammunition types found in the
+Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Light Gun 6 9 8D 2 Cr75000 1 Cr200 AP 5, Artillery, Blast 10
+
+
+
+12/76403 SIEGE GUN
+An updated version of the largest artillery piece ever built on
+old Terra, this 800 mm siege gun must be moved in parts and
+assembled in its firing position, making it unwieldy and prone
+to counter-battery fire by lesser, but more practical, pieces.
+Its awesome warhead can be delivered to a target many
+kilometres away and a direct hit from its five ton shell would
+flatten a tank or even a maritime vessel with ease – before
+detonating. It is extremely slow to reload, requiring 1D hours
+between firing shells.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Siege Gun 7 50 4DD 1200 MCr19 1 Cr5000 AP 10, Artillery, Blast 50
+
+
+
+
+
+
+
+127
+
+129
+12/92705 MASS DRIVER
+An advanced tube-based artillery piece using electromagnetic
+acceleration to hurl its payload, a mass driver will normally
+be mounted on a vehicle. It requires a crew of at least eight,
+including power technicians as well as gunners, and is
+effective in the direct-fire role. The mass driver may use the
+variant ammunition types found in the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Mass Driver 12 40 1DD 7 MCr0.5 1 Cr750 Artillery, Blast 10
+
+
+SECTION 3: VEHICLE WEAPONS
+
+All the weapons described in this section require the Heavy Weapons (vehicle) skill to use effectively. All ranges are listed in
+kilometres.
+
+
+
+12/45134 AEROSPACE DEFENCE LASER
+A powerful laser weapon designed for emplaced or mobile
+aerospace defence, the ADL consumes immense power but
+delivers impressive damage. It is intended primarily to engage
+missiles and small craft but can attack at starships, aircraft
+and grav vehicles equally well.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Aerospace Defence Laser 12 120 8D 12 MCr4 - - Track
+
+
+
+12/84966 BLACK POWDER CANNON
+This is a simple smoothbore black-powder cannon capable
+of delivering shot out to a kilometre or so without any real
+degree of accuracy. Roundshot is the most commonly used
+ammunition, though canister shot is also popular. The black
+powder cannon typically requires a crew of six or so plus
+beasts of burden to move it around. It may use canister rounds
+(see page 139).
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Black Powder Cannon 3 0.5 7D 0.5 Cr3000 1 Cr50 -
+
+
+
+12/47160 SUPPORT MORTAR
+A heavy mortar mounted on a wheeled carriage rather than
+being carried by infantry, the support mortar flings a bomb in
+the 120 mm range over a respectable distance.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Support Mortar 7 3 9D 0.25 Cr11000 1 Cr100 Artillery, Blast 6
+
+
+
+
+
+
+
+
+
+
+
+
+128
+
+130
+12/20856 CANNON
+A large calibre gun used to arm the heavy tanks and armoured
+vehicles of mid-Tech Level armies. The cannon may use the
+variant ammunition types found in the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Cannon 8 2 1DD 2.5 Cr400000 30 Cr5000 Blast 10
+
+
+12/23107 FIELD GUN
+A rifled muzzle-loading cannon mounted on a horse-drawn
+carriage and requiring a crew of six or more men, the field gun
+is more accurate at range than a smoothbore cannon. Field
+guns may use canister rounds (see page 139).
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Field Gun 4 1 8D 0.5 Cr5000 1 Cr75 -
+
+
+12/41038 FUSION GUN
+One of the most powerful ground-based weapons ever made,
+the fusion gun can blast through just about any material.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Fusion Gun-X 13 3 3DD 4 MCr2 - - AP 10, Blast 15, Radiation
+Fusion Gun-Y 14 5 3DD 4 MCr3 - - AP 20, Blast 20, Radiation
+Fusion Gun-Z 15 10 3DD 4 MCr8 - - AP 30, Blast 30, Radiation
+
+
+12/84941 GAUSS CANNON
+This weapon uses advanced electromagnetic (‘gauss’)
+propulsion to accelerate a metal dart to tremendous speed.
+The projectile is a lump of dense metal which damages the
+target using kinetic energy and the gauss cannon is capable
+of firing them rapidly. The gauss cannon may use the variant
+ammunition types found in the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Gauss Cannon 12 2 1DD 1 Cr100000 200 Cr1000 AP 10, Auto 3
+
+
+12/18744 GATLING LASER
+A relatively low-powered, vehicle-mounted laser weapon, the
+gatling laser uses several cryogenically cooled barrels fired in
+succession to deliver a hail of fire. The gatling laser is often
+used as an air-defence weapon.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Gatling Laser 8 4 6D 7 Cr125000 - - AP 5, Auto 4
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+129
+
+131
+12/33397 HEAVY AUTOCANNON
+This is a heavy (60-65 mm) rapid-fire belt-fed weapon capable
+of engaging light armoured vehicles and aircraft. Heavy
+autocannon are generally carried in vehicle mounts or aboard
+maritime vessels. The heavy autocannon may use the variant
+ammunition types found in the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Heavy Autocannon 6 1 1DD 1 Cr45000 100 Cr2000 Auto 3
+
+
+12/67762 HEAVY CANNON
+This is a main-calibre gun which arms many mid-tech
+armoured fighting vehicles. The heavy cannon may use the
+variant ammunition types found in the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Heavy Cannon 8 3 2DD 4 Cr600000 10 Cr5000 Blast 10
+
+
+12/87488 HEAVY GAUSS CANNON
+Pushing the limits of gauss technology, this cannon is capable
+of laying waste to entire units of even the most heavily
+armoured infantry. The heavy gauss cannon may use the
+variant ammunition types found in the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Heavy Gauss Cannon 12 3 2DD 2 Cr225000 60 Cr800 AP 15, Auto 2
+
+
+
+12/48987 HEAVY LASER CANNON
+A much larger version of the laser cannon, this weapon has
+greater range and a much heavier punch.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Heavy Laser Cannon 9 25 2DD 9 Cr250000 - - AP 20
+
+
+12/57312 HEAVY MACHINEGUN
+Designed to be mounted upon a vehicle
+or tripod, the heavy machinegun has proven effective against
+light vehicles and aircraft but is primarily intended to mow
+down advancing infantry. The heavy machinegun may use the
+variant ammunition types found in the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Heavy Machinegun 6 1 4D 0.1 Cr4500 100 Cr400 Auto 3
+
+
+
+12/73927 HYPERVELOCITY CANNON
+The hypervelocity cannon uses electromagnetic propulsion,
+similar to a gauss weapon, and is typically mounted in
+emplacements or very large vehicles. Despite its range, it can
+be used against targets in low orbit if it can be elevated far
+enough. This extended range (100 km) is only useful in direct
+fire at airborne or orbital targets as the hypervelocity cannon
+‘lob’ its projectiles like a howitzer.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Hypervelocity Cannon 13 5 2DD 20 MCr28 50 Cr5000 AP 30, Scope
+
+
+130
+
+132
+12/57727 LASER CANNON
+A single barrel laser main gun for a vehicle, the laser cannon
+is the first truly effective vehicle energy weapon.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Laser Cannon 9 2.5 1DD 6 Cr100000 - - AP 10
+
+
+12/98410 LIGHT AUTOCANNON
+This is a conventional autocannon, of 20-25mm calibre. It is
+designed to destroy light vehicles and massed infantry. The
+light autocannon may use the variant ammunition types found
+in the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Light Autocannon 6 1 6D 0.25 Cr10000 500 Cr1000 Auto 3
+
+
+12/74785 MEDIUM AUTOCANNON
+This is a medium-calibre (30-45 mm) rapid-fire belt-fed
+weapon capable of engaging light armoured vehicles and
+aircraft. Medium autocannon are generally mounted on light
+armoured vehicles, aircraft, or in bunkers. They are too big
+and bulky to be used as mobile infantry support weapons,
+other than on a vehicular or towed mount. The medium
+autocannon may use the variant ammunition types found in
+the Ammunition chapter.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Medium Autocannon 6 1 8D 0.5 Cr25000 100 Cr1500 Auto 3
+
+
+12/19306 MESON ACCELERATOR
+A battlefield-grade meson accelerator requires a huge power
+supply and can only be mounted in emplacements or the
+very largest of vehicles. It is similar in operation to starship-
+grade meson guns in that the particles it accelerates do not
+interact with matter until they decay, allowing the weapon
+to effectively shoot through any obstruction so long as the
+target’s location is known. Meson accelerators ignore all
+Armour and radiation shielding.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Meson Accelerator 15 150 4DD 60 MCr20 - - AP Special, Radiation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+131
+
+133
+12/77038 ORBITAL DEFENCE CANNON
+An extremely large hypervelocity cannon, this weapon can
+engage targets on the ground but, if elevated, can attack
+its preferred targets, low-orbiting spacecraft. If it does so, it
+increases its range to 1,000 km.
+
+
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Orbital Defence Cannon 14 5 4DD 35 MCr40 20 Cr10000 AP 30, Scope, Track
+
+
+
+12/65818 PLASMA GUN
+A heavy plasma gun designed for mounting on vehicles, this
+weapon is generally fitted to advanced grav vehicles and some
+aircraft. However, it is intended more as a support weapon
+than main anti-vehicle armament.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Plasma Gun-A 10 6 2DD 4 MCr0.5 - - AP 10
+Plasma Gun-B 11 8 2DD 4 MCr1 - - AP 20
+Plasma Gun-C 12 10 2DD 4 MCr1.5 - - AP 30
+
+
+12/39192 RAIL GUN
+This is a powerful vehicle-mounted cannon using
+electromagnetic propulsion to fling a solid projectile in a flat
+trajectory that damages the target purely using kinetic energy.
+Time of flight to the target is less than for conventional guns,
+making compensation for movement easier.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Rail Gun 9 4 1DD 3 Cr75000 50 Cr2500 AP 20
+
+
+12/59349 VULCAN MACHINEGUN
+This weapon is constructed from six machinegun barrels
+which rotate through the firing position in order to maintain
+a very high rate of fire without adverse heating. The vulcan
+machinegun may use the variant ammunition types found in
+the Ammunition chapter. Damage uses the Traveller scale.
+
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Vulcan Machinegun 7 500 4D 0.25 Cr12000 1000 Cr1250 Auto 6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+132
+
+134
+SECTION 4: ROCKETS AND MISSILES
+
+All the weapons described in this section require the Heavy Weapons (vehicle) skill to use effectively. All ranges are listed in
+kilometres.
+
+
+
+12/43301 BOMBARDMENT ROCKET RACK
+This weapon usually appears as a self-contained rack suitable
+for mounting on the back of a truck or similar vehicle. It
+contains twelve large rockets with high-explosive warheads.
+Rockets can be fired one at a time or rippled off in a rolling
+salvo.
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Bombardment Rocket Rack 6 8 5D 2 Cr30000 12 Cr8000 Auto 3, Blast 15
+
+
+12/97815 HEAVY ROCKET POD
+This is a pod containing six large rockets with high-explosive
+warheads. The pod can be fitted to most vehicles and aircraft
+and is usually aimed by pointing the craft. Rockets can be
+fired one at a time or rippled off in a rolling salvo.
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Heavy Rocket Pod 6 2 6D 0.5 Cr12000 6 Cr6000 Auto 3, Blast 10
+
+
+12/94484 ROCKET POD
+This is a pod containing small rockets with high-explosive
+warheads. The pod can be fitted to most vehicles and aircraft
+and is usually aimed by pointing the craft. Rockets can be
+fired one at a time or rippled off in a rolling salvo.
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Rocket Pod 6 1.5 4D 0.25 Cr8000 18 Cr8000 Auto 3, Blast 5
+
+
+12/65609 TAC LAUNCHER
+A support weapon capable of firing battlefield tactical (Tac)
+missiles, this launcher provides a cheap an easy way to arm
+a vehicle with missiles. Tac launchers can use a variety of
+missiles, as shown below.
+
+Weapon TL Range Damage Tons Cost Magazine Magazine Cost Traits
+Tac Launcher 10 10 8D 0.25 Cr16000 4 Cr8000 Scope, Smart, Track
+Tac Launcher (Anti-personnel) 10 6 4D 0.25 Cr12000 4 Cr4000 Blast 10, Scope, Smart
+Tac Launcher (Armour-piercing) 10 6 8D 0.25 Cr15000 4 Cr6000 AP 10, Scope, Smart
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+133
+
+135
+THECENTRAL SUPPLY COLLECTION
+
+FOR THE DISCERNING
+13 WEAPONS SPECIALIST
+
+
+There are weapons in the galaxy that defy proper classification, standardised training
+and even common sense. They are used by professionals who require a precise tool
+to get a specific job done, or by want-to-be professionals looking to make a name for
+themselves by using distinctive weaponry. Either way, there are many Travellers who will
+look at individuals using these weapons as being a little eccentric. Those who have a
+passion for explosives are often viewed in a similar way, though their weapons of choice
+tend to be rooted in necessity rather than fantasy.
+
+With the exception of explosives, the weapons in this chapter are exceptions to the
+normal weapon skills such as Gun Combat or Melee in that they each require their own
+speciality. For example, a shock whip requires Melee (shock whip) to use effectively
+without the normal DM-3 unskilled penalty.
+
+
+SECTION 1: GUN COMBAT WEAPONS
+
+All the weapons described in this section require the Gun Combat skill to use effectively, though each requires its own
+speciality.
+
+
+13/18520 BOLAS
+This is a throwing weapon made from two or three weights
+fastened together by a cord. It is used to bring down an
+enemy rather than hurt them. A Traveller hit by a bolas does
+not sustain any damage. Instead, he must make a Melee
+(unarmed) check opposed by the Gun Combat (bolas) check of
+the attacker, as if being grappled. If this check is failed, the
+Traveller is immobilised. The Traveller can free himself from
+the bolas by performing a Significant Action.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Bolas 0 10 - 1 Cr5 1 - -
+
+
+13/86377 BOOMERANG
+The boomerang is a shaped piece of wood designed to be
+thrown and deliver damage to a target. Most boomerangs
+used for hunting do not return to the thrower, but a returning
+boomerang can be purchased for Cr10. It inflicts DM-2 on
+attack rolls but if it misses a target, will return to the thrower
+in the next combat round. It can be caught with a successful
+Gun Combat (boomerang) check. The thrower will take damage
+equal to the Effect if it is negative and drop the boomerang.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Boomerang 0 25 1D 1 Cr5 1 - -
+
+
+
+134
+
+136
+13/65558 MONOFILAMENT BOLAS
+Unlike the primitive bolas, this weapon does not entangle an
+enemy but slices through any target with its monofilament
+cords.
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Monofilament Bolas 12 10 3D 1 Cr500 1 - AP 10
+
+
+13/80912 NET
+This is a large net, usually with weights fastened to its
+extremities. It is thrown over a target with the intention of
+entangling them. A Traveller hit by a net does not sustain any
+damage. Instead, he must make a Melee (unarmed) check
+opposed by the Gun Combat (net) check of the attacker,
+as if being grappled. If this check is failed, the Traveller is
+immobilised. The Traveller can free himself from the bolas by
+making a successful Average (8+) DEX check (1D rounds).
+
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Net 1 5 - 1 Cr10 1 - -
+
+
+
+SECTION 2: MELEE WEAPONS
+
+
+All the weapons described in this section require the Melee skill to use effectively, though each requires its own speciality.
+
+
+
+13/94642 SHOCK WHIP
+A shock whip is more an instrument of torture than a useful
+weapon. It is normally used on a low setting to inflict pain
+from both the whip’s own action and accompanying shock
+effect but the charge can be increased to make it an effective,
+if unusual, weapon. Use of a shock whip grants DM+1 to
+Intimidate and Persuade checks made while questioning
+(torturing) a Traveller.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Shock Whip 9 Melee 2D 1 Cr450 Stun
+
+
+13/94130 WHIP
+This is a long whip that takes some practice and skill to use
+effectively. It may be used either to inflict damage or entangle
+an opponent at a distance of up to 5 metres. If the latter is
+desired, a successful attack will inflict no damage but instead
+force an immediate grapple (see page 74 of the Traveller Core
+Rulebook) between the attacker and target.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Whip 1 Melee D3 1 Cr15 -
+
+
+
+
+
+
+
+
+
+
+135
+
+137
+SECTION 3: EXPLOSIVES
+
+
+The Explosives skill is used with all explosives. The damage caused by an explosive is always multiplied by the Effect of
+the Explosives check used to set it.
+
+Doubling the quantity of an explosive will increase its damage by 1D and Burst by +1. Continually doubling the amount of
+explosives used on top of this will have a cumulative effect.
+
+
+
+13/91593 BREACHING CHARGE
+This is a small pre-packed shaped charge for cutting or
+breaching. Charges are self-adhesive and can be set on a timer
+or command detonated. When a breaching charge explodes, it
+concentrates its force so while the blast radius is very small,
+the destructive effect is greatly enhanced.
+
+Weapon TL Range Damage Kg Cost Traits
+Breaching 8 - 4D 1 Cr250 AP 6, Blast
+Charge 1
+
+
+13/56471 COMPLEX CHEMICAL CHARGE
+When two chemical polymers are combined physically,
+normally through a timed mechanical or electronic device,
+they react explosively. There is a D3 round delay between
+the chemical chain forming and the charge exploding, but
+the resulting chemical detonation is very powerful and
+concentrated.
+
+Weapon TL Range Damage Kg Cost Traits
+Complex 10 - 4D 1 Cr500 AP 15,
+Chemical Blast 9
+Charge
+
+
+13/63917 FUSION BLOCK
+This is a dense and expensive material formed into a cube
+and fitted with a chemi-pressure trigger. This creates a
+shaped explosion of fusion energy. This explosion is extremely
+powerful and does not pause for most physical matter,
+sublimating it into gas almost instantly.
+
+Weapon TL Range Damage Kg Cost Traits
+Fusion 16 - 1DD 1 Cr10000 Blast 12,
+Block Radiation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+136
+
+138
+13/59785 NEUTRINO DETONATOR
+A complex device about the size of a laptop computer,
+the neutrino detonator uses a complex formula to create a
+powerful explosion that sends a wave of overlapping neutrinos
+through all matter surrounding it. This wave causes breaks in
+the bonds that hold matter together; something that has little
+direct effect on inorganic substances, which just return to
+their former state instantly. Organic matter, however, suffers
+major cellular damage. This explosion ignores all inorganic
+substances (walls, doors, armour, and so on), inflicting its
+damage only on organic materials within its Burst.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Neutrino 17 - 8D 1 Cr50000 Blast 25
+Detonator
+
+
+13/53375 PLASTIC
+This generic, multi-purpose plastic explosive is a favourite
+of military units, terrorists, demolition teams and Travellers
+across Charted Space.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Plastic 6 - 3D - Cr200 Blast 9
+
+
+13/48643 POCKET NUKE
+Hideously illegal on many worlds, the pocket nuke is actually
+the size of a briefcase and so is too large to fit into a grenade
+launcher. Using multiple pocket nukes will not increase the
+Damage or Burst of the explosion.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Pocket 12 - 6DD 4 Cr250000 Blast 1000,
+Nuke Radiation
+
+
+13/11138 TDX
+An advanced gravity-polarised explosive, TDX explodes only
+along the horizontal axis.
+
+
+Weapon TL Range Damage Kg Cost Traits
+TDX 12 - 4D - Cr1000 Blast 15
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+137
+
+139
+THECENTRAL SUPPLY COLLECTION
+
+14 AMMUNITION
+
+
+The weapons specialist knows that a bullet is never just a bullet. One advantage slug
+throwers have over energy weapons is that their ammunition can be customised, often
+heavily, to achieve specific desired outcomes (which normally result in a dead enemy).
+As the size of the shell increases, generally so do the number of options available, with
+large artillery pieces being capable of firing an amazing array of warheads.
+
+The rules and options provided here should be treated as a toolkit which can be
+modified to suit a specific universe, world or even individual arms manufacturer. As
+always, the referee is the final arbiter of what is possible and he is well within his rights
+to rule that certain types of ammunition are not available for certain guns.
+
+Every type of ammunition in this chapter includes a table describing the kinds of
+weapon it is likely to be available for. The referee can use this as a guideline when
+making this decision.
+
+Any modifiers to the ammunition’s damage, cost, range or other characteristics will also
+be noted here. A blank line in the table means there is no change from the weapon’s
+normal operation.
+
+AMMUNITION SPECIFIC WEAPONS
+
+A weapon must have a listed magazine cost in order to be able to use the ammunition in this chapter. In addition, the
+following weapons may also not use this ammunition.
+
+Air Rifle Antique Pistol and Rifle Archaic Weapons Coach Pistol
+Duck’s Foot Pistol Energy Weapons Flechette Weapons Magrail Weapons
+Shot Pistol
+
+In addition, heavy weapons may not use the ammunition in this chapter, unless otherwise stated in their description.
+
+
+
+HIGH DAMAGE WEAPONS
+
+If a weapon has its Damage score increased to 10D or higher, it becomes a Destructive weapon with Damage 1DD. It cannot
+be increased beyond this.
+
+
+
+
+
+
+
+
+
+
+
+138
+
+140
+14/82689 AEROSOL
+Aerosol rounds disperse a fine mist that diffuses any lasers that are fired into or through it, but the mist does not block normal
+vision. Any laser attack tracing a line of sight into or through the mist has its damage reduced by -10. Laser communications
+are completely blocked by the mist.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Aerosol 7 - - x3 Burst 12 - - - 
+
+14/60427 ARMOUR PIERCING
+These rounds are pointed projectiles of dense or very hard material designed to punch through armour. AP ammunition
+provides a weapon with an AP trait equal to the number of damage dice it rolls (Destructive weapons multiply this by ten). If
+the weapon already has the AP trait, this is added to the final AP score.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Armour Piercing 4 - - x4 AP X    
+
+14/92021 ARMOUR PIERCING DISCARDING SABOT (APDS)
+Representing several variations on the theme of a rod penetrator launched with a sabot and featuring increasingly long
+acronyms, APDS is an anti-armour round representative of various efforts to get through armour. APDS ammunition provides
+a weapon with an AP trait equal to triple the number of damage dice it rolls (Destructive weapons multiply this by ten). If the
+weapon already has the AP trait, this is added to the final AP score.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+APDS 5 +10% - x5 AP X -  - 
+
+14/14933 BOMBLET
+Bomblet rounds are warheads that break apart above the target to scatter small bomblets over a wide area. Only Artillery
+weapons may use bomblet rounds and any AP trait will be lost when they are used. Damage uses the Traveller scale.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Bomblet 7 - 3D x4 Blast 20 - - - 
+
+14/75879 CANISTER
+Also called beehive, grapeshot and flechette, canister rounds are used for close-range defence against enemy infantry
+and effectively turns the weapon into a giant shotgun. Artillery weapons may not use canister rounds. Damage uses the
+Traveller scale.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Canister 3 20 4D x2 Blast 20 - - - 
+
+14/79088 CONCUSSION
+Often used in training exercises and as a distraction in close assaults, concussion rounds are non-lethal shells that burst with
+a loud noise and bright flash. They are intended to stun opponents rather than kill them. Damage uses the Traveller scale.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Concussion 7 - 4D x1 Stun - - - 
+
+14/68274 DIRECTED PLASMA
+Directed plasma rounds are an advanced version of shaped charge weapons, intended to destroy hard targets. Directed plasma
+rounds for pistols and rifles become available at TL16.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Directed Plasma 15 - +1D x10 AP x3, Blast 0    
+
+
+
+
+
+
+
+
+139
+
+141
+14/62016 ELECTROMAGNETIC PULSE
+This round unleashes a massive burst of electromagnetic radiation that does not harm living tissue but causes unshielded
+electronics to shut down for 1D minutes. Unshielded electronics of more than two TLs lower than that of the round will be
+permanently fried, while all electronics of more than two TLs higher will be completely immune.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Electromagnetic Pulse 9 - None x10 Blast 20 - - - 
+
+14/27891 EXTENDED RANGE
+Extended range rounds use more efficient propellant or even a rocket boost to increase their velocity and therefore effective
+range. Artillery weapons may combine extended range ammunition with other types simply by adding their cost multipliers
+together.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Extended Range 7 +25% -1D x3 -   - 
+
+
+14/44757 FLARE
+This is an illuminating round designed to shed light over a wide area. The round is fired into the air and then descends on
+a parachute (it therefore can only be used on worlds of Atmosphere 3+). Everything within the Burst area is illuminated as
+normal daylight. Thermal and light-intensification equipment is designed to cut out to protect the Traveller’s sight, so these
+rounds cannot be used to blind the enemy, though they will make advanced sighting gear less useful and thus level the playing
+field for those without it. The illumination will last for 1D + the planet’s Atmosphere rounds.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Flare 4 - None x1 Blast 100 - - - 
+
+14/37777 FRAGMENTATION
+This is an anti-personnel warhead, throwing out shards of shrapnel across a very wide area. Damage uses the Traveller scale. If
+the weapon does not have a Burst trait, fragmentation rounds will give it Burst 10.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Fragmentation 6 - 4D x1 Blast x2 - - - 
+
+14/81494 FUEL-AIR
+A fuel-air round dispenses a cloud of highly flammable droplets which are ignited as they mix with air (this round will only
+function on worlds that have an oxygen component to their atmosphere). The resulting airborne explosion has been compared
+to a nuclear detonation. If the weapon does not have a Burst trait, fuel-air rounds will give it Burst 10.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Fuel-air 7 - 1DD x8 Blast x3 - - - 
+
+14/32516 GUIDED
+Some warheads can be either guided by the operator or fitted with a self-homing capability. Guided rounds become available
+for rifles and pistols at TL10.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Guided 7 - - x6 Smart   - 
+
+
+14/76354 HIGH EXPLOSIVE ARMOUR PIERCING (HEAP)
+High Explosive Armour Piercing rounds use shaped charge warheads or similar technologies to penetrate thick levels of armour
+before detonating inside the target. HEAP ammunition provides a weapon with an AP trait equal to double the number of
+damage dice it rolls (before the bonus dice is added for HEAP ammunition) (Destructive weapons multiply this by ten).
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+HEAP 5 -25% +1D x8 AP Special - - - 
+
+
+
+
+
+140
+
+142
+14/97120 INCENDIARY
+Incendiary warheads are designed to set fire to things, causing flammable material close by to catch fire. The round’s Burst
+trait will be equal to the number of damage dice of the weapon, multiplied by 10 if the weapon is Vehicle scale.
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Incendiary 8 - - x3 Blast X, Fire    
+
+14/79698 NEUROTOXIN
+This round creates a cloud of gas that, if inhaled, will likely prove deadly. Any living target within the cloud that does not have a
+respirator or sealed suit will be attacked as if by a poison with a Very Difficult (12+) END check, Damage 1D INT and Interval of
+1D seconds. Gas clouds dissipate after 1D x 3 rounds, though heavy winds and rain can drastically reduce this time.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Neurotoxin 5 - Special x10 Blast 12 - - - 
+
+14/42887 NUCLEAR
+Highly illegal on most worlds, these warheads create a small nuclear explosion wherever they land, laying waste to everything
+nearby.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Nuclear 6 - 6DD x20 Blast 500, Radiation - - - 
+
+
+14/72029 PLASMA
+Plasma warheads are an advanced form of high explosive, designed to eliminate both soft and armoured targets, depending on
+what weapon they are fired from. Plasma rounds for pistols and rifles become available at TL16.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Plasma 15 - +1D x10 AP x2, Blast x2    
+
+
+14/14619 SMOKE
+Smoke rounds create a thick cloud that disrupts vision. This imposes DM-2 to all attacks on targets within the cloud. IR vision
+completely bypasses this cloud of smoke. Smoke clouds dissipate after 1D x 3 rounds, though heavy winds and rain can
+drastically reduce this time.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Smoke 4 - None x1 Blast 12 - - - 
+
+14/50708 SOLID SHOT
+A basic anti-armour round, solid shot is essentially a pointed projectile of dense or hard material. Solid shot provides a weapon
+with an AP trait equal to half the number of damage dice it rolls, rounding up (Destructive weapons multiply this by ten). If
+the weapon already has the AP trait, this is added to the final AP score.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Solid Shot 5 -25% - x2 AP X    
+
+14/37488 THERMAL SMOKE
+This acts as a smoke grenade but also throws out hot particles that block IR vision as well. This imposes DM-2 to all attacks
+on targets within the cloud. Smoke clouds dissipate after 1D x 3 rounds, though heavy winds and rain can drastically reduce
+this time.
+
+
+Weapon TL Range Damage Cost Traits Pistol Rifle Shotgun Heavy
+Thermal Smoke 7 - - x2 Blast 12 - - - 
+
+
+
+
+
+
+
+
+141
+
+143
+THECENTRAL SUPPLY COLLECTION
+
+15 SIGHTING AIDS AND ACCESSORIES
+
+
+
+
+The customisation of weapons is as old as the first weaponsmith who first started
+engraving runes onto the shaft of a spear in the belief that the gods would aid their
+strength to whoever used it. Most custom weapons are about as effective but the canny
+arms expert knows certain additions can greatly enhance the capabilities of a well-cared
+for weapon.
+
+Unless otherwise stated or allowed by the referee, a weapon may only have one sight or
+scope.
+
+
+
+
+15/13860 AUXILIARY GRENADE LAUNCHER
+An underslung grenade launcher can be added to any rifle
+weapon. This grenade launcher has a magazine of one grenade
+that takes three Minor Actions to reload. Otherwise, it is
+identical to the grenade launcher on page 124 and cause use
+any suitable grenade as ammunition.
+
+Weapon TL Range Damage Kg Cost Magazine Magazine Cost Traits
+Auxiliary Grenade 7 100 As grenade 1 Cr1000 1 As grenades -
+Launcher
+
+15/85428 BANDOLIER
+This is a set of cartridge loops mounted on a leather or fabric
+strap or sling. A bandolier can hold 7 individual shotgun
+cartridges, 20 pistol rounds or 14 rifle rounds. A different
+bandolier must be purchased for each ammunition type.
+
+Item TL Kg Cost
+Bandolier 3 - Cr10
+
+
+15/99287 BAYONET
+A knife-like weapon similar to a dagger or blade, a bayonet
+may or may not have a cutting edge; it will always have a
+stabbing point. When not attached to a rifle, a bayonet is
+treated as a dagger and will normally be carried in a belt
+scabbard. When attached to the muzzle of a rifle or similar
+weapon, it transforms the gun into a polearm. More advanced
+bayonets may incorporate tools such as wire cutters and bottle
+openers but the basic function is the same. A fixed bayonet
+requires the Melee (blade) skill but, at the referee’s option,
+any military-trained character with the Gun Combat skill will
+have been taught to fight with the bayonet and can use this
+skill instead if it is higher.
+
+Weapon TL Range Damage Kg Cost Traits
+Bayonet 3 Melee 2D 1 Cr20 -
+
+
+
+142
+
+144
+15/47922 BIPOD
+A weapon can be given a bipod support frame to stabilise and
+support it, making it much easier to handle. It takes 2 Minor
+Actions to set up a bipod. When a weapon is fired from a
+bipod, Bulky and Very Bulky traits are ignored.
+
+
+Item TL Kg Cost
+Bipod 4 1 Cr50
+
+
+
+15/16755 CHAINDRIVE BAYONET
+It took a creative but insane mind to come up with the
+idea of marrying a chainsaw to a bayonet, but the addition
+of a chaindrive bayonet to a rifle certainly makes for an
+intimidating look.
+
+
+Weapon TL Range Damage Kg Cost Traits
+Chaindrive 9 Melee 4D 3 Cr1000 AP 4,
+Bayonet Bulky
+
+
+15/20816 FOF SAFETY
+This is an integrated Friend-or-Foe scanner which can be
+added to any firearm. The scanner itself is built directly
+into the firing mechanism of any trigger-activated weapon.
+A transmitting tag is then worn by other personnel, emitting
+a signal to any FOF safeties it is coded for up to 50 metres
+away. If the scanner tries to target an object within 1 metre
+of a transmitting tag, the gun will not fire. To better eliminate
+friendly fire incidents and other disloyal behaviour, many
+corporate or mercenary militaries use these devices as
+standard. Two transmitter tags are included in the purchase
+of the FOF safety and additional transmitter tags can be
+purchased for Cr25 each.
+
+
+Item TL Kg Cost
+FOF Safety 9 - Cr250
+
+
+15/66385 GYROSTABILISER
+Stabilisers can be added to a Bulky weapon, reducing its
+recoil and removing the Bulky trait. Gyrostabilisers cannot be
+added to Destructive weapons.
+
+
+Item TL Kg Cost
+Gyrostabiliser 9 1 Cr500
+
+
+15/27438 HEAVY TRIPOD
+This is a collapsible mount, allowing Travellers to use weapons
+usually intended for vehicles in the field, though mobility will
+be restricted when carrying such weapons on foot. Weapons
+commonly used in this fashion include tac launchers and light
+autocannon. Any weapon of up to 0.25 tons may be mounted
+and used upon a tripod. It normally takes 1D minutes to set
+up a tripod and make the weapon ready for firing.
+
+
+Item TL Kg Cost
+Heavy Tripod 4 5 Cr100
+
+
+
+
+143
+
+145
+15/24217 HIGH-CAPACITY MAGAZINE
+The ability for a weapon to hold more ammunition before
+requiring a change in magazine is always beneficial, especially
+on high rate-of-fire automatic weapons. High-capacity
+magazines, while bulky in use, are designed to solve this
+problem. Multiply the mass and cost of a weapon’s standard
+magazine to purchase a high-capacity version. This will double
+the magazine’s capacity of the weapon. The referee may rule
+that some weapons (such as many shotguns) cannot use high-
+capacity magazines.
+
+
+Item TL Kg Cost
+High-capacity Magazine 4 x2 x3
+
+
+15/79728 HOLOGRAPHIC SIGHTS
+Holographic sights project an aim point for the Traveller, and
+automatically compensate for wind, gravity and other adverse
+conditions. They grant the Scope trait plus DM+1 to all attack
+rolls made against targets 50 metres or more away.
+
+
+Item TL Kg Cost
+Holographic Sights 10 0.5 Cr2000
+
+
+
+15/75783 INTELLIGENT WEAPON
+This adds Computer/0 to any weapon. At TL13 it adds
+Computer/1 instead.
+
+
+Item TL Kg Cost
+Intelligent Weapon 11 - Cr1000
+Intelligent Weapon 13 - Cr5000
+
+
+15/10167 LASER SIGHT
+Integrated optics and laser sights grant DM+1 to any attack
+made at ranges of less than 50 metres. At TL10, X-ray lasers
+and improved display technology removes the tell-tale ‘red dot’
+of a vislight laser.
+
+
+Item TL Kg Cost
+Laser Sight 8 - Cr200
+Laser Sight 10 - Cr200
+
+
+15/27408 PERSONAL HEADS-UP DISPLAY
+A Personal HUD projects an aiming point onto an image of
+the target, automatically correcting for wind, gravity and other
+factors. Various display devices are available, ranging from
+a helmet visor to a pair of designer shades. A P-HUD grants
+DM+1 on all attacks at all ranges, for any ranged weapon it is
+keyed to. Modules that allow additional weapons to be used
+on the same P-HUD system cost Cr250 each and require an
+hour or so to fit and calibrate. There is no real limit on how
+many weapons can be calibrated to one P-HUD. At TL11, the
+P-HUD incorporates a holographic projector and no obvious
+visual device need be worn.
+
+
+Item TL Kg Cost
+P-HUD 9 0.5 Cr1500
+P-HUD 11 - Cr2500
+
+
+144
+
+146
+15/72226 PSI-ENHANCED TARGETING
+Using a linked wire network worn around the temples or
+integrated into headgear, a psionic Traveller can use his
+mental abilities to home in on a target. Truer than the
+images seen by organic eyes, the targeting system feeds
+telepathically-enhanced firing angles and timing directly to the
+Traveller’s brain. No other targeting aids or sights may be used
+in conjunction with this device, but the Traveller may add his
+PSI modifier to any shooting attack that does not use the Auto
+trait.
+
+
+Item TL Kg Cost
+Psi-enhanced Targeting 16 0.5 Cr3000
+
+
+15/42152 SCAN JAMMER
+A highly illegal addition to a weapon, frequently used by spies,
+agents and assassins, the scan jammer emits a localised
+sensor jamming field causing nearby scanning receivers to
+flicker and fail. All Electronics (sensors) checks made to
+discover the weapon suffer DM-4.
+
+
+Item TL Kg Cost
+Scan Jammer 8 - Cr2500
+
+
+
+15/25554 SCOPE
+A high-quality telescopic scope for attachment to a rifle or
+heavy weapon, allowing accurate shots to be made at extreme
+ranges. Any hand-held rifle or heavy weapon equipped with
+this gains the Scope trait. At TL7, image enhancement and
+light intensification are added, allowing the scope to be used
+in low-light environments without penalty.
+
+
+Item TL Kg Cost
+Scope 5 - Cr50
+Scope 7 - Cr50
+
+
+15/17209 SECURE WEAPON
+A secure weapon requires authentication in some fashion
+(scanning the user’s DNA or iris patterns, entering a password,
+transmission of an unlocking code from a comm, etc.) before
+it can be fired.
+
+
+Item TL Kg Cost
+Secure Weapon 10 - Cr250
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+145
+
+147
+15/23675 SHOULDER STOCK
+A shoulder stock may be attached temporarily to a pistol
+weapon, resulting in a crude carbine arrangement and greater
+accuracy at slightly longer ranges. The overall length of
+the pistol is increased by the length of the stock, and the
+pistol cannot be holstered while it is attached. Attaching the
+stock (or detaching it) requires 1D rounds. A shoulder stock
+increases the effective and long range of a pistol by +25%,
+but does not increase its extreme range.
+
+
+Item TL Kg Cost
+Shoulder Stock 4 1 Cr75
+
+
+
+15/46873 SMART TRACKER
+This is a display option that may be added to any intelligent
+weapon (see page 144), increasing the accuracy of a firearm.
+The smart tracker allows the Traveller to ‘tag’ any target he has
+successfully hit with the weapon by spending a Minor Action
+in the same round the weapon has scores a hit. Any tagged
+target fired upon by the weapon in the following round will
+gain DM+2 to hit. A target must be tagged each round for the
+bonus to continue.
+
+
+Item TL Kg Cost
+Smart Tracker 11 - Cr500
+
+
+15/54091 SUPPRESSOR
+A suppressor can be added to any non-automatic, non-
+heavy slug thrower, masking the sound produced by firing. A
+suppressor adds the Silent trait to a weapon.
+
+
+Item TL Kg Cost
+Suppressor 8 - Cr250
+
+
+
+15/50176 X-RAY OUTLINING AID
+Adding a special outlining element to an existing sighted
+scope, the Traveller can see exactly where his target lies
+behind an obscuring object. So long as the object is not made
+of metal, shielded or more than a metre thick, the target may
+not hide (though it will still gain its usual Armour bonus – see
+page 74 of the Traveller Core Rulebook for details). The TL11
+version is more powerful and can function through up to 3
+metres of material.
+
+
+Item TL Kg Cost
+X-Ray Outlining Aid 9 - Cr300
+X-Ray Outlining Aid 11 - Cr500
