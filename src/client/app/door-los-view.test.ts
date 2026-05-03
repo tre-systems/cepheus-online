@@ -6,6 +6,7 @@ import { asBoardId, asPieceId } from '../../shared/ids'
 import type { BoardState, PieceState } from '../../shared/state'
 import {
   deriveDoorToggleViewModels,
+  deriveLosOverlaySegments,
   derivePieceRectTargets,
   deriveVisiblePieceIds
 } from './door-los-view'
@@ -133,5 +134,26 @@ describe('door LOS view helpers', () => {
     expect(targets[1]?.rect.width).toBe(40)
     expect(targets[1]?.rect.height).toBe(40)
     expect(visible.map((id) => id).join(',')).toBe('alpha,bravo')
+  })
+
+  it('derives LOS overlay segments using current door state', () => {
+    const overlays = deriveLosOverlaySegments(
+      [
+        { type: 'wall', id: 'bulkhead', x1: 0, y1: 10, x2: 100, y2: 10 },
+        blockingDoor()
+      ],
+      board().doors
+    )
+
+    expect(overlays[0]?.label).toBe('Wall bulkhead')
+    expect(overlays[0]?.blocked).toBe(true)
+    expect(overlays[1]?.label).toBe('Closed door door-closed')
+    expect(overlays[1]?.blocked).toBe(true)
+
+    const openOverlays = deriveLosOverlaySegments([blockingDoor()], {
+      'door-closed': { id: 'door-closed', open: true }
+    })
+    expect(openOverlays[0]?.label).toBe('Open door door-closed')
+    expect(openOverlays[0]?.blocked).toBe(false)
   })
 })

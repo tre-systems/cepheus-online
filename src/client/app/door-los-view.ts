@@ -20,6 +20,18 @@ export interface PieceRectTarget extends MapVisibilityTarget {
   id: PieceId
 }
 
+export interface LosOverlaySegmentViewModel {
+  id: string
+  type: MapOccluder['type']
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  open: boolean
+  blocked: boolean
+  label: string
+}
+
 export const deriveDoorToggleViewModels = (
   board: Pick<BoardState, 'doors'> | null | undefined
 ): DoorToggleViewModel[] =>
@@ -63,3 +75,33 @@ export const deriveVisiblePieceIds = (
     doorStates
   ).map((target) => target.id)
 }
+
+export const deriveLosOverlaySegments = (
+  occluders: readonly MapOccluder[],
+  doorStates: MapDoorStateLookup = {}
+): LosOverlaySegmentViewModel[] =>
+  occluders.map((occluder) => {
+    const currentDoorState = doorStates[occluder.id]
+    const open =
+      occluder.type === 'door'
+        ? typeof currentDoorState === 'boolean'
+          ? currentDoorState
+          : (currentDoorState?.open ?? occluder.open)
+        : false
+    const blocked = occluder.type === 'wall' || !open
+
+    return {
+      id: occluder.id,
+      type: occluder.type,
+      x1: occluder.x1,
+      y1: occluder.y1,
+      x2: occluder.x2,
+      y2: occluder.y2,
+      open,
+      blocked,
+      label:
+        occluder.type === 'wall'
+          ? `Wall ${occluder.id}`
+          : `${open ? 'Open' : 'Closed'} door ${occluder.id}`
+    }
+  })
