@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".tmp/client",
+    "rootDir": "src/client",
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["src/client/app/app.ts", "src/client/dice.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

@@ -47,6 +47,30 @@ The first map-building flow should be:
 
 The app must never depend on checked-in copies of the published assets.
 
+## Local Metadata Boundary
+
+Local importers should pass product assets through a small metadata boundary
+before they become board data. `src/shared/mapAssets.ts` owns the dependency-free
+shape for local asset references, observed dimensions, calibrated grid scale,
+and future LOS sidecars. It intentionally models `Geomorphs/` and `Counters/`
+as local roots plus relative paths, not as repository fixtures or copied image
+bytes.
+
+Validation should happen before a local importer creates board or piece
+commands:
+
+- root is `Geomorphs` or `Counters`
+- path is relative and cannot escape the selected root
+- asset kind matches the local root
+- width, height, and grid scale are positive finite numbers
+- known geomorph dimensions are classified as standard, edge, or corner
+
+These helpers are pure shared code. They do not read the filesystem, inspect
+image pixels, upload to R2, or persist product paths. Browser and server
+adapters can use the validated metadata to build previews, upload reviewed
+assets, or attach a reviewed LOS sidecar while keeping published assets out of
+git.
+
 ## Board Camera
 
 Board pan and zoom are client-only inspection controls. They change the local

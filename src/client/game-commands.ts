@@ -12,7 +12,12 @@ import {
   type UserId
 } from '../shared/ids'
 import type { ClientMessage, ServerMessage } from '../shared/protocol'
-import type { GameState } from '../shared/state'
+import type {
+  CharacterEquipmentItem,
+  CharacterSheetPatch,
+  CharacterState,
+  GameState
+} from '../shared/state'
 
 export interface ClientIdentity {
   gameId: GameId
@@ -40,6 +45,10 @@ type UpdateCharacterSheetCommand = Extract<
   Command,
   { type: 'UpdateCharacterSheet' }
 >
+type CharacterSheetPatchInput = CharacterSheetPatch & {
+  skillsText?: string
+  equipmentText?: string
+}
 type CreatePieceCommand = Extract<Command, { type: 'CreatePiece' }>
 type CreatePieceDimensions = {
   width: number
@@ -114,6 +123,103 @@ export const buildCreateCharacterCommand = ({
   characterType: 'PLAYER',
   name: 'Scout'
 })
+
+export const normalizeCharacterSkillList = (
+  value: string | readonly string[]
+): string[] => {
+  const rawSkills =
+    typeof value === 'string' ? value.split(/[\n,]/) : Array.from(value)
+  const skills: string[] = []
+  const seen = new Set<string>()
+
+  for (const rawSkill of rawSkills) {
+    const skill = rawSkill.trim()
+    const key = skill.toLowerCase()
+    if (!skill || seen.has(key)) continue
+    skills.push(skill)
+    seen.add(key)
+  }
+
+  return skills
+}
+
+export const normalizeCharacterEquipmentText = (
+  value: string
+): CharacterEquipmentItem[] => {
+  const equipment: CharacterEquipmentItem[] = []
+
+  for (const line of value.split('\n')) {
+    const [rawName = '', rawQuantity = '1', ...rawNotes] = line
+      .split('|')
+      .map((part) => part.trim())
+    const name = rawName.trim()
+    if (!name) continue
+
+    const quantity = Number.parseInt(rawQuantity, 10)
+    equipment.push({
+      name,
+      quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
+      notes: rawNotes.join(' | ').trim()
+    })
+  }
+
+  return equipment
+}
+
+const hasCharacterSheetPatch = (patch: CharacterSheetPatch): boolean =>
+  patch.notes !== undefined ||
+  patch.age !== undefined ||
+  patch.characteristics !== undefined ||
+  patch.skills !== undefined ||
+  patch.equipment !== undefined ||
+  patch.credits !== undefined
+
+const normalizeCharacterSheetPatch = (
+  patch: CharacterSheetPatchInput
+): CharacterSheetPatch => {
+  const normalized: CharacterSheetPatch = {}
+
+  if (patch.notes !== undefined) normalized.notes = patch.notes
+  if (patch.age !== undefined) normalized.age = patch.age
+  if (patch.characteristics !== undefined) {
+    normalized.characteristics = { ...patch.characteristics }
+  }
+  if (patch.skillsText !== undefined) {
+    normalized.skills = normalizeCharacterSkillList(patch.skillsText)
+  } else if (patch.skills !== undefined) {
+    normalized.skills = normalizeCharacterSkillList(patch.skills)
+  }
+  if (patch.equipmentText !== undefined) {
+    normalized.equipment = normalizeCharacterEquipmentText(patch.equipmentText)
+  } else if (patch.equipment !== undefined) {
+    normalized.equipment = patch.equipment.map((item) => ({ ...item }))
+  }
+  if (patch.credits !== undefined) normalized.credits = patch.credits
+
+  return normalized
+}
+
+export const buildCharacterSheetPatchCommand = ({
+  identity,
+  character,
+  patch
+}: ClientCommandOptions & {
+  character: Pick<CharacterState, 'id'> | null
+  patch: CharacterSheetPatchInput
+}): UpdateCharacterSheetCommand | null => {
+  if (!character) return null
+
+  const normalizedPatch = normalizeCharacterSheetPatch(patch)
+  if (!hasCharacterSheetPatch(normalizedPatch)) return null
+
+  return {
+    type: 'UpdateCharacterSheet',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId: character.id,
+    ...normalizedPatch
+  }
+}
 
 export const buildDefaultCharacterSheetUpdateCommand = ({
   identity,

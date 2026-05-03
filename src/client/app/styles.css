@@ -232,6 +232,7 @@ h1 {
 
 .play-surface {
   display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
   min-height: 0;
 }
 
@@ -668,6 +669,7 @@ h1 {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  cursor: grab;
 }
 
 .board-hud {
@@ -714,17 +716,19 @@ h1 {
 
 .camera-controls {
   position: absolute;
-  right: 8px;
+  left: 50%;
+  right: auto;
   bottom: max(8px, env(safe-area-inset-bottom));
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(3, 36px);
-  gap: 5px;
+  grid-template-columns: 44px 72px 44px;
+  gap: 6px;
+  transform: translateX(-50%);
 }
 
 .camera-button {
-  width: 36px;
-  min-height: 34px;
+  width: 44px;
+  min-height: 44px;
   padding: 0;
   border-color: rgba(72, 255, 173, 0.52);
   border-radius: 5px;
@@ -736,6 +740,7 @@ h1 {
 }
 
 .camera-reset {
+  width: 72px;
   font-size: 11px;
 }
 
@@ -937,6 +942,27 @@ h1 {
   font-weight: 800;
 }
 
+.sheet-section-title {
+  margin: 2px 0 -2px;
+  color: var(--accent-2);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.sheet-note-preview {
+  max-height: 140px;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid rgba(244, 255, 248, 0.16);
+  padding: 8px 9px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
 .sheet-actions {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1035,6 +1061,13 @@ h1 {
   align-items: center;
   border-bottom: 1px solid rgba(244, 255, 248, 0.16);
   padding-bottom: 6px;
+}
+
+.item-note {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .item-name {
@@ -1306,6 +1339,22 @@ h1 {
     width: 46px;
   }
 
+  .camera-controls {
+    left: auto;
+    right: 12px;
+    grid-template-columns: 42px 68px 42px;
+    transform: none;
+  }
+
+  .camera-button {
+    width: 42px;
+    min-height: 40px;
+  }
+
+  .camera-reset {
+    width: 68px;
+  }
+
   .dice-overlay,
   .character-sheet {
     left: 68px;
@@ -1327,7 +1376,22 @@ h1 {
   }
 
   .board-select {
-    width: 36px;
+    width: 38px;
+    min-height: 34px;
+  }
+
+  .camera-controls {
+    bottom: max(10px, env(safe-area-inset-bottom));
+    grid-template-columns: 46px 76px 46px;
+  }
+
+  .camera-button {
+    width: 46px;
+    min-height: 46px;
+  }
+
+  .camera-reset {
+    width: 76px;
   }
 
   .dice-overlay,

@@ -12,10 +12,13 @@ import type { GameState } from '../shared/state'
 import {
   applyServerMessage,
   buildBootstrapCommands,
+  buildCharacterSheetPatchCommand,
   buildCreatePieceCommand,
   buildDefaultCharacterSheetUpdateCommand,
   buildMovePieceCommand,
   buildSequencedCommand,
+  normalizeCharacterEquipmentText,
+  normalizeCharacterSkillList,
   resolveClientIdentity
 } from './game-commands'
 
@@ -217,6 +220,78 @@ describe('client command helpers', () => {
     assert.equal(command.width, 80)
     assert.equal(command.height, 60)
     assert.equal(command.scale, 1.5)
+  })
+
+  it('normalizes character sheet skill text before sending patches', () => {
+    assert.deepEqual(
+      normalizeCharacterSkillList('Pilot 1\n Gun Combat 0, pilot 1\n'),
+      ['Pilot 1', 'Gun Combat 0']
+    )
+  })
+
+  it('normalizes character equipment text into protocol-safe items', () => {
+    assert.deepEqual(
+      normalizeCharacterEquipmentText(
+        'Vacc suit | 1 | Emergency suit\n\nMedkit | many | ship locker'
+      ),
+      [
+        {
+          name: 'Vacc suit',
+          quantity: 1,
+          notes: 'Emergency suit'
+        },
+        {
+          name: 'Medkit',
+          quantity: 1,
+          notes: 'ship locker'
+        }
+      ]
+    )
+  })
+
+  it('builds character sheet patch commands only for linked characters', () => {
+    const command = buildCharacterSheetPatchCommand({
+      requestId: 'sheet-1',
+      identity,
+      character: stateWithCharacter.characters[characterId],
+      patch: {
+        notes: 'Scout service terms',
+        skillsText: 'Pilot 1\nPilot 1\nVacc Suit 0',
+        equipmentText: 'Vacc suit | 1 | Emergency suit'
+      }
+    })
+
+    assert.equal(command?.type, 'UpdateCharacterSheet')
+    assert.equal(command?.characterId, characterId)
+    assert.deepEqual(command?.skills, ['Pilot 1', 'Vacc Suit 0'])
+    assert.deepEqual(command?.equipment, [
+      {
+        name: 'Vacc suit',
+        quantity: 1,
+        notes: 'Emergency suit'
+      }
+    ])
+
+    const unlinkedCommand = buildCharacterSheetPatchCommand({
+      requestId: 'sheet-2',
+      identity,
+      character: null,
+      patch: {
+        notes: 'No target'
+      }
+    })
+    assert.equal(unlinkedCommand, null)
+  })
+
+  it('does not build empty character sheet patch commands', () => {
+    const command = buildCharacterSheetPatchCommand({
+      requestId: 'sheet-empty',
+      identity,
+      character: stateWithCharacter.characters[characterId],
+      patch: {}
+    })
+
+    assert.equal(command, null)
   })
 
   it('replaces authoritative state on accepted messages', () => {
