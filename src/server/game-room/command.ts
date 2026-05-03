@@ -137,6 +137,9 @@ export const deriveEventsForCommand = (
       if (!state.value.characters[command.characterId]) {
         return err(commandError('missing_entity', 'Character does not exist'))
       }
+      if (command.notes !== undefined && typeof command.notes !== 'string') {
+        return err(commandError('invalid_command', 'notes must be a string'))
+      }
       if (command.age !== undefined) {
         const age = requireFiniteOrNull(command.age, 'age')
         if (!age.ok) return age
@@ -179,6 +182,7 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterSheetUpdated',
           characterId: command.characterId,
+          ...(command.notes === undefined ? {} : {notes: command.notes}),
           ...(command.age === undefined ? {} : {age: command.age}),
           ...(command.characteristics === undefined
             ? {}

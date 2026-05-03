@@ -211,6 +211,7 @@ describe('room publication flow', () => {
       gameId,
       actorId,
       characterId,
+      notes: 'Scout service term notes',
       age: 34,
       characteristics: {
         str: 7,
@@ -236,6 +237,7 @@ describe('room publication flow', () => {
     assert.equal(secondUpdate.ok, true)
     if (!secondUpdate.ok) return
     const character = secondUpdate.value.state.characters[characterId]
+    assert.equal(character?.notes, 'Scout service term notes')
     assert.equal(character?.age, 34)
     assert.equal(character?.characteristics.str, 7)
     assert.equal(character?.characteristics.dex, null)
@@ -244,6 +246,33 @@ describe('room publication flow', () => {
       {name: 'Vacc suit', quantity: 1, notes: ''}
     ])
     assert.equal(character?.credits, 900)
+  })
+
+  it('rejects non-string character sheet notes during publication', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+
+    const rejected = await publish(storage, {
+      type: 'UpdateCharacterSheet',
+      gameId,
+      actorId,
+      characterId,
+      notes: 123
+    } as unknown as Command)
+
+    assert.equal(rejected.ok, false)
+    if (rejected.ok) return
+    assert.equal(rejected.error.code, 'invalid_command')
+    assert.equal(rejected.error.message, 'notes must be a string')
   })
 
   it('validates piece character links during publication', async () => {

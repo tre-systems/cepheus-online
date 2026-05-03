@@ -85,6 +85,7 @@ describe('game state projection', () => {
       envelope(3, {
         type: 'CharacterSheetUpdated',
         characterId,
+        notes: 'Scout service term notes',
         age: 34,
         characteristics: {
           str: 7,
@@ -112,6 +113,7 @@ describe('game state projection', () => {
     ])
 
     const character = state?.characters[characterId]
+    assert.equal(character?.notes, 'Scout service term notes')
     assert.equal(character?.age, 34)
     assert.deepEqual(character?.characteristics, {
       str: 7,

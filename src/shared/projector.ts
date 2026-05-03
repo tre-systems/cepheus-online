@@ -70,6 +70,7 @@ export const projectGameState = (
         const character = state.characters[event.characterId]
         if (!character) break
 
+        if (event.notes !== undefined) character.notes = event.notes
         if (event.age !== undefined) character.age = event.age
         if (event.characteristics !== undefined) {
           character.characteristics = {

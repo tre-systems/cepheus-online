@@ -16,6 +16,7 @@ export interface CharacterEquipmentItem {
 }
 
 export interface CharacterSheetPatch {
+  notes?: string
   age?: number | null
   characteristics?: Partial<CharacterCharacteristics>
   skills?: string[]

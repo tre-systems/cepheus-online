@@ -256,7 +256,8 @@ body::before {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -290,18 +291,27 @@ button:disabled {
   opacity: 0.55;
 }
 
-input {
+input,
+textarea {
   width: 100%;
-  min-height: 46px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: rgba(0, 0, 0, 0.46);
   color: var(--text);
-  padding: 0 11px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-input:focus {
+input {
+  min-height: 46px;
+  padding: 0 11px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(72, 255, 173, 0.14);
   outline: none;
@@ -1104,6 +1114,23 @@ h1 {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.sheet-notes-form {
+  display: grid;
+  gap: 8px;
+}
+
+.sheet-notes-form textarea {
+  min-height: 128px;
+  padding: 10px 11px;
+  line-height: 1.35;
+}
+
+.sheet-notes-form button {
+  min-height: 38px;
+  justify-self: end;
+  padding: 0 16px;
 }
 
 .item-list {
@@ -2303,8 +2330,32 @@ const renderItemsTab = (body, character) => {
   body.append(list);
 };
 
-const renderNotesTab = (body, character) => {
-  body.append(emptySheetText(character?.notes || "No notes"));
+const renderNotesTab = (body, piece, character) => {
+  if (!piece?.characterId || !character) {
+    body.append(emptySheetText(character?.notes || "No notes"));
+    return;
+  }
+
+  const form = document.createElement("div");
+  form.className = "sheet-notes-form";
+  const textarea = document.createElement("textarea");
+  textarea.value = character.notes || "";
+  textarea.placeholder = "No notes";
+  textarea.spellcheck = true;
+  const save = document.createElement("button");
+  save.type = "button";
+  save.textContent = "Save";
+  save.addEventListener("click", () => {
+    sendCommand({
+      type: "UpdateCharacterSheet",
+      gameId: roomId,
+      actorId,
+      characterId: piece.characterId,
+      notes: textarea.value
+    }).catch((error) => setError(error.message));
+  });
+  form.append(textarea, save);
+  body.append(form);
 };
 
 const renderSheet = () => {
@@ -2326,7 +2377,7 @@ const renderSheet = () => {
 
   if (activeSheetTab === "action") renderActionTab(body, piece, character);
   else if (activeSheetTab === "items") renderItemsTab(body, character);
-  else if (activeSheetTab === "notes") renderNotesTab(body, character);
+  else if (activeSheetTab === "notes") renderNotesTab(body, piece, character);
   else renderDetailsTab(body, piece, character);
   els.sheetBody.replaceChildren(body);
 };

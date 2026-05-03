@@ -262,6 +262,13 @@ const parseCharacterSheetPatch = (
 ): Result<CharacterSheetPatch, CommandError> => {
   const patch: CharacterSheetPatch = {}
 
+  if (raw.notes !== undefined) {
+    if (!isString(raw.notes)) {
+      return err(invalidCommand('notes must be a string'))
+    }
+    patch.notes = raw.notes
+  }
+
   if (raw.age !== undefined) {
     const age = parseNullableNumber(raw.age, 'age')
     if (!age.ok) return age

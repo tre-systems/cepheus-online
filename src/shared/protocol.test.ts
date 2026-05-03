@@ -144,6 +144,7 @@ describe('protocol validation', () => {
         gameId: 'game-1',
         actorId: 'user-1',
         characterId: 'char-1',
+        notes: 'Ship shares: 2\nMortgage due monthly',
         age: 34,
         characteristics: {
           str: 7,
@@ -167,6 +168,7 @@ describe('protocol validation', () => {
     const {command} = result.value
     assert.equal(command.type, 'UpdateCharacterSheet')
     if (command.type !== 'UpdateCharacterSheet') return
+    assert.equal(command.notes, 'Ship shares: 2\nMortgage due monthly')
     assert.equal(command.age, 34)
     assert.deepEqual(command.characteristics, {str: 7, dex: null})
     assert.deepEqual(command.skills, ['Pilot 1', 'Gun Combat 0'])
@@ -174,6 +176,25 @@ describe('protocol validation', () => {
       {name: 'Vacc suit', quantity: 1, notes: ''}
     ])
     assert.equal(command.credits, 1200)
+  })
+
+  it('rejects non-string character sheet notes', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-sheet-notes',
+      command: {
+        type: 'UpdateCharacterSheet',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        notes: 123
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'notes must be a string')
   })
 
   it('accepts optional board image URLs and asset references', () => {
