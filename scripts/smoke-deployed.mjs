@@ -210,7 +210,9 @@ await step('health endpoints', async () => {
 await step('shell assets', async () => {
   const assets = [
     ['/', 'text/html', 'Cepheus Online'],
-    ['/client.js', 'text/javascript', 'new WebSocket'],
+    ['/client.js', 'text/javascript', 'import "/client/app/app.js"'],
+    ['/client/app/app.js', 'text/javascript', 'new WebSocket'],
+    ['/client/dice.js', 'text/javascript', 'DICE_PIP_SLOTS'],
     ['/styles.css', 'text/css', '.app-shell']
   ]
 
