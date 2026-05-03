@@ -83,9 +83,10 @@ movement ranges, visibility transitions, and permission matrices.
 Docs are part of the implementation. Update the relevant owner doc when a
 decision changes:
 
-- `docs/architecture.md` for system shape
-- `docs/conflict-model.md` for sync and conflict rules
-- `docs/discord.md` for auth and Discord integration
-- `docs/patterns.md` for implementation patterns
-- `docs/testing-strategy.md` for verification strategy
-- `docs/security-baseline.md` for access and abuse controls
+- `docs/architecture/overview.md` for system shape
+- `docs/architecture/conflict-model.md` for sync and conflict rules
+- `docs/integrations/discord.md` for auth and Discord integration
+- `docs/architecture/patterns.md` for implementation patterns
+- `docs/engineering/testing-strategy.md` for verification strategy
+- `docs/engineering/security-baseline.md` for access and abuse controls
+- `docs/adr/` for accepted architectural decisions

@@ -29,13 +29,13 @@ renderer assets, AI logic, combat systems, or competitive matchmaking.
 - `src/shared/prng.ts`: deterministic seeded PRNG and per-event RNG derivation.
 - `src/shared/util.ts`: small collection helpers that keep shared rules code
   data-oriented.
-- `docs/patterns.md`: Cepheus-specific adaptation of Delta-V's engine,
+- `docs/architecture/patterns.md`: Cepheus-specific adaptation of Delta-V's engine,
   protocol, client, and testing patterns.
-- `docs/development-standards.md`: dependency, boundary, naming, and testing
+- `docs/engineering/development-standards.md`: dependency, boundary, naming, and testing
   standards for this rewrite.
-- `docs/security-baseline.md`: first-pass security posture for Discord auth,
+- `docs/engineering/security-baseline.md`: first-pass security posture for Discord auth,
   room access, hidden referee data, and Cloudflare cost controls.
-- `docs/testing-strategy.md`: staged test strategy for the current skeleton and
+- `docs/engineering/testing-strategy.md`: staged test strategy for the current skeleton and
   later Cloudflare/browser work.
 
 ## Adapted Rather Than Copied

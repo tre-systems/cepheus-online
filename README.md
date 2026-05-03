@@ -40,7 +40,7 @@ The target stack is:
 - Browser client with plain TypeScript, Canvas, CSS, and a tiny local reactive
   layer.
 
-See [docs/architecture.md](docs/architecture.md).
+See [docs/architecture/overview.md](docs/architecture/overview.md).
 
 ## Delta-V Influence
 
@@ -48,8 +48,8 @@ The rewrite borrows proven patterns from `~/Source/delta-v`: event-sourced room
 state, server-authoritative command processing, deterministic injected RNG,
 viewer-aware filtering, a tiny reactive UI layer, and strict source boundaries.
 
-See [docs/delta-v-transfer.md](docs/delta-v-transfer.md) and
-[docs/patterns.md](docs/patterns.md).
+See [docs/provenance/delta-v-transfer.md](docs/provenance/delta-v-transfer.md)
+and [docs/architecture/patterns.md](docs/architecture/patterns.md).
 
 ## Runtime Dependency Policy
 
@@ -66,10 +66,11 @@ See the [documentation index](docs/README.md).
 
 The most important starting points are:
 
-- [Product vision](docs/product-vision.md)
-- [Architecture](docs/architecture.md)
-- [Migration plan](docs/migration-plan.md)
-- [Discussion record](docs/discussion-record.md)
+- [Product vision](docs/product/vision.md)
+- [Architecture](docs/architecture/overview.md)
+- [Migration plan](docs/product/migration-plan.md)
+- [Architecture Decision Records](docs/adr/README.md)
+- [Discussion record](docs/provenance/discussion-record.md)
 
 ## Salvaged Assets
 
@@ -81,7 +82,7 @@ The old app had useful domain work. This repo currently salvages:
 - `src/shared/types/schema.ts`
 - legacy review notes in `legacy/`
 
-See [docs/data-salvage.md](docs/data-salvage.md).
+See [docs/provenance/data-salvage.md](docs/provenance/data-salvage.md).
 See [data/README.md](data/README.md) for the current data layout.
 
 ## Rules Source
@@ -90,4 +91,4 @@ The upstream SRD source is:
 
 [orffen/cepheus-srd](https://github.com/orffen/cepheus-srd)
 
-See [docs/srd-source.md](docs/srd-source.md).
+See [docs/integrations/srd-source.md](docs/integrations/srd-source.md).

@@ -82,4 +82,4 @@ Cloudflare bindings and persistence. `src/client` owns DOM, Canvas, CSS,
 browser storage, and WebSocket client behavior.
 
 See [patterns.md](patterns.md) and
-[development-standards.md](development-standards.md).
+[development standards](../engineering/development-standards.md).

@@ -1,47 +1,49 @@
 # Documentation
 
-This directory is the planning and engineering record for the rewrite. The docs
-are intentionally split by ownership so future changes have one obvious place
-to land.
+This directory is the planning and engineering record for the rewrite. Docs are
+grouped by purpose so each future change has an obvious home.
 
 ## Start Here
 
-- [Product vision](product-vision.md): what the application is trying to be.
-- [Architecture](architecture.md): target stack, runtime model, and source
-  boundaries.
-- [Migration plan](migration-plan.md): staged implementation path from skeleton
-  to playable vertical slice.
+- [Product vision](product/vision.md): what the application is trying to be.
+- [Architecture overview](architecture/overview.md): target stack, runtime
+  model, and source boundaries.
+- [Migration plan](product/migration-plan.md): staged implementation path from
+  skeleton to playable vertical slice.
+- [Architecture Decision Records](adr/README.md): accepted technical decisions
+  and open decision points.
 
-## Core Design
+## Product
 
-- [Conflict model](conflict-model.md): server-ordered events, CRDT boundaries,
-  and why whole-game CRDT/OT is not the default.
-- [Discord integration](discord.md): OAuth, sessions, bot integration, guild
-  role mapping, and voice/video boundaries.
-- [Security baseline](security-baseline.md): authority, hidden data, access,
-  rate limits, and retention concerns.
+- [Product vision](product/vision.md)
+- [Migration plan](product/migration-plan.md)
 
-## Engineering Standards
+## Architecture
 
-- [Patterns](patterns.md): event stream, publication pipeline, client state,
-  protocol, DOM, and reactive patterns.
-- [Development standards](development-standards.md): dependency policy, source
-  boundaries, naming, validation, and test conventions.
-- [Testing strategy](testing-strategy.md): unit, protocol, Durable Object, and
-  browser test plan.
+- [Architecture overview](architecture/overview.md)
+- [Conflict model](architecture/conflict-model.md)
+- [Patterns](architecture/patterns.md)
+- [Architecture Decision Records](adr/README.md)
 
-## Source Material And Provenance
+## Engineering
 
-- [Discussion record](discussion-record.md): durable record of the initial
-  planning conversation, including AWS/DataStore, review findings, video
-  signals, Discord, CRDTs, and dependency stance.
-- [Delta-V transfer](delta-v-transfer.md): what was reviewed and transferred
-  from `~/Source/delta-v`.
-- [Data salvage](data-salvage.md): what was copied from `cepheus-amplify` and
-  what was intentionally left behind.
-- [SRD source](srd-source.md): upstream SRD repository, license notes, and
-  import strategy.
-- [Decisions](decisions.md): compact list of current and open decisions.
+- [Development standards](engineering/development-standards.md)
+- [Security baseline](engineering/security-baseline.md)
+- [Testing strategy](engineering/testing-strategy.md)
+
+## Integrations
+
+- [Discord integration](integrations/discord.md)
+- [SRD source](integrations/srd-source.md)
+
+## Provenance
+
+- [Discussion record](provenance/discussion-record.md): durable record of the
+  initial planning conversation.
+- [Delta-V transfer](provenance/delta-v-transfer.md): what was reviewed and
+  transferred from `~/Source/delta-v`.
+- [Data salvage](provenance/data-salvage.md): what was copied from
+  `cepheus-amplify` and what was intentionally left behind.
 
 ## Historical Material
 

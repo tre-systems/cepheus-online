@@ -2,7 +2,7 @@
 
 This repository is seeded from selected parts of `cepheus-amplify`.
 
-See [`../data/README.md`](../data/README.md) for the current data folder
+See [`../../data/README.md`](../../data/README.md) for the current data folder
 layout and the intended normalization target.
 
 ## Copied
