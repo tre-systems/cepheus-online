@@ -9,8 +9,9 @@ repository.
 - `Geomorphs/` is a local-only source folder and is ignored by git.
 - `Counters/` is a local-only source folder and is ignored by git.
 - Published product images and PDFs stay out of source control.
-- Runtime board images should be user-provided assets, eventually uploaded to
-  R2 and referenced by asset id.
+- Runtime board images should be user-provided assets. Local development may
+  bridge browser-selected files into the event stream as `data:` URLs, but
+  production should upload the images to R2 and reference them by asset id.
 - Runtime piece counters use the same policy. The event stream stores only an
   image asset reference, not bundled product art.
 - Derived per-game map metadata should be stored as game data, not as bundled
@@ -39,16 +40,19 @@ The first map-building flow should be:
 2. The browser decodes them with Canvas APIs and creates local previews.
 3. Referee arranges tiles on a board grid.
 4. The app stores board composition as asset references plus transforms.
-5. Production uploads the selected images to R2; local dev may use object URLs.
+5. Local development may encode selected files as `data:` URLs for immediate
+   board/piece creation.
+6. Production uploads the selected images to R2 and stores asset ids instead of
+   embedding image bytes in events.
 
 The app must never depend on checked-in copies of the published assets.
 
 ## Piece Counters
 
 Pieces can carry an optional `imageAssetId`. The current browser renderer treats
-URL-like references as image sources for Canvas pieces and rail avatars. This is
-enough for local object URLs and future R2 URLs while keeping the published
-counter source folder outside git.
+URL-like references and `data:image/` references as image sources for Canvas
+pieces and rail avatars. This is enough for local file-input previews and future
+R2 URLs while keeping the published counter source folder outside git.
 
 ## Occlusion Model
 

@@ -27,10 +27,20 @@ describe('Worker static client', () => {
     assert.equal(body.includes('data-sheet-tab="notes"'), true)
     assert.equal(body.includes('id="pieceNameInput"'), true)
     assert.equal(body.includes('id="pieceImageInput"'), true)
+    assert.equal(body.includes('id="pieceImageFileInput"'), true)
+    assert.equal(
+      body.includes('name="pieceImageFile" type="file" accept="image/*"'),
+      true
+    )
     assert.equal(body.includes('id="pieceSheetInput"'), true)
     assert.equal(body.includes('id="createPieceButton"'), true)
     assert.equal(body.includes('id="boardNameInput"'), true)
     assert.equal(body.includes('id="boardImageInput"'), true)
+    assert.equal(body.includes('id="boardImageFileInput"'), true)
+    assert.equal(
+      body.includes('name="boardImageFile" type="file" accept="image/*"'),
+      true
+    )
     assert.equal(body.includes('id="createBoardButton"'), true)
     assert.equal(body.includes('id="diceLog"'), false)
     assert.equal(body.includes('viewport-fit=cover'), true)
@@ -67,8 +77,40 @@ describe('Worker static client', () => {
     assert.equal(body.includes('const canSelectBoards = viewerRole.toLowerCase() === "referee"'), true)
     assert.equal(body.includes('SetPieceVisibility'), true)
     assert.equal(body.includes('roll.revealAt'), true)
-    assert.equal(body.includes('imageAssetId: els.pieceImageInput.value.trim() || null'), true)
-    assert.equal(body.includes('url: els.boardImageInput.value.trim() || null'), true)
+    assert.equal(
+      body.includes(
+        'pieceImageFileInput: document.getElementById("pieceImageFileInput")'
+      ),
+      true
+    )
+    assert.equal(
+      body.includes(
+        'boardImageFileInput: document.getElementById("boardImageFileInput")'
+      ),
+      true
+    )
+    assert.equal(body.includes('readSelectedImageFileAsDataUrl'), true)
+    assert.equal(body.includes('new FileReader()'), true)
+    assert.equal(body.includes('reader.readAsDataURL(file)'), true)
+    assert.equal(body.includes('file.type.startsWith("image/")'), true)
+    assert.equal(
+      body.includes(
+        'const imageAssetId = await readSelectedImageFileAsDataUrl(els.pieceImageFileInput) || els.pieceImageInput.value.trim() || null'
+      ),
+      true
+    )
+    assert.equal(
+      body.includes(
+        'const imageUrl = await readSelectedImageFileAsDataUrl(els.boardImageFileInput) || els.boardImageInput.value.trim() || null'
+      ),
+      true
+    )
+    assert.equal(body.includes('imageAssetId:'), true)
+    assert.equal(body.includes('imageAssetId,'), true)
+    assert.equal(body.includes('url: imageUrl'), true)
+    assert.equal(body.includes('els.pieceImageFileInput.value = ""'), true)
+    assert.equal(body.includes('els.boardImageFileInput.value = ""'), true)
+    assert.equal(body.includes('data:image/'), true)
     assert.equal(body.includes('drawImage(image'), true)
     assert.equal(body.includes('renderRail'), true)
     assert.equal(body.includes('setSheetOpen'), true)

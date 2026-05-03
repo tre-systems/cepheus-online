@@ -96,6 +96,10 @@ const CLIENT_HTML = `<!doctype html>
             <span>Image URL</span>
             <input id="pieceImageInput" name="pieceImage" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
           </label>
+          <label class="piece-image-file-field">
+            <span>Image file</span>
+            <input id="pieceImageFileInput" name="pieceImageFile" type="file" accept="image/*">
+          </label>
           <label class="piece-sheet-field">
             <input id="pieceSheetInput" name="pieceSheet" type="checkbox" checked>
             <span>Create sheet</span>
@@ -110,6 +114,10 @@ const CLIENT_HTML = `<!doctype html>
           <label>
             <span>Image URL</span>
             <input id="boardImageInput" name="boardImage" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
+          </label>
+          <label>
+            <span>Image file</span>
+            <input id="boardImageFileInput" name="boardImageFile" type="file" accept="image/*">
           </label>
           <label>
             <span>Width</span>
@@ -1300,9 +1308,11 @@ const els = {
   createBoard: document.getElementById("createBoardButton"),
   pieceNameInput: document.getElementById("pieceNameInput"),
   pieceImageInput: document.getElementById("pieceImageInput"),
+  pieceImageFileInput: document.getElementById("pieceImageFileInput"),
   pieceSheetInput: document.getElementById("pieceSheetInput"),
   boardNameInput: document.getElementById("boardNameInput"),
   boardImageInput: document.getElementById("boardImageInput"),
+  boardImageFileInput: document.getElementById("boardImageFileInput"),
   boardWidthInput: document.getElementById("boardWidthInput"),
   boardHeightInput: document.getElementById("boardHeightInput"),
   boardScaleInput: document.getElementById("boardScaleInput"),
@@ -1497,6 +1507,27 @@ const parsePositiveIntegerInput = (input, fallback) => {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 };
 
+const readSelectedImageFileAsDataUrl = (input) => new Promise((resolve, reject) => {
+  const file = input.files?.[0];
+  if (!file) {
+    resolve(null);
+    return;
+  }
+  if (!file.type.startsWith("image/")) {
+    reject(new Error("Selected file must be an image"));
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    resolve(typeof reader.result === "string" ? reader.result : null);
+  });
+  reader.addEventListener("error", () => {
+    reject(new Error("Could not read selected image"));
+  });
+  reader.readAsDataURL(file);
+});
+
 const createManualCharacterCommand = (characterId, name) => ({
   type: "CreateCharacter",
   gameId: roomId,
@@ -1544,6 +1575,7 @@ const createCustomBoard = async () => {
   const height = parsePositiveIntegerInput(els.boardHeightInput, 800);
   const scale = parsePositiveIntegerInput(els.boardScaleInput, 50);
   const boardId = uniqueBoardId(name);
+  const imageUrl = await readSelectedImageFileAsDataUrl(els.boardImageFileInput) || els.boardImageInput.value.trim() || null;
   await sendCommand({
     type: "CreateBoard",
     gameId: roomId,
@@ -1551,13 +1583,14 @@ const createCustomBoard = async () => {
     boardId,
     name,
     imageAssetId: null,
-    url: els.boardImageInput.value.trim() || null,
+    url: imageUrl,
     width,
     height,
     scale
   });
   els.boardNameInput.value = "";
   els.boardImageInput.value = "";
+  els.boardImageFileInput.value = "";
   els.roomDialog.close();
   render();
 };
@@ -1581,6 +1614,7 @@ const createCustomPiece = async () => {
   const y = Math.max(0, Math.min(board.height - 50, 140 + Math.floor(pieceIndex / 8) * 58));
   const pieceId = uniquePieceId(name);
   const characterId = els.pieceSheetInput.checked ? uniqueCharacterId(name) : null;
+  const imageAssetId = await readSelectedImageFileAsDataUrl(els.pieceImageFileInput) || els.pieceImageInput.value.trim() || null;
   if (characterId) {
     await sendCommand(createManualCharacterCommand(characterId, name));
     await sendCommand(updateManualCharacterSheetCommand(characterId));
@@ -1593,13 +1627,14 @@ const createCustomPiece = async () => {
     boardId: board.id,
     name,
     characterId,
-    imageAssetId: els.pieceImageInput.value.trim() || null,
+    imageAssetId,
     x,
     y
   });
   selectedPieceId = pieceId;
   els.pieceNameInput.value = "";
   els.pieceImageInput.value = "";
+  els.pieceImageFileInput.value = "";
   els.roomDialog.close();
   render();
 };
