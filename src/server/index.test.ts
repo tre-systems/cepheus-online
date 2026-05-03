@@ -88,6 +88,9 @@ describe('Worker static client', () => {
     assert.equal(body.includes('boardId: board.id'), true)
     assert.equal(body.includes('const canSelectBoards = viewerRole.toLowerCase() === "referee"'), true)
     assert.equal(body.includes('SetPieceVisibility'), true)
+    assert.equal(body.includes('SetPieceFreedom'), true)
+    assert.equal(body.includes('freedomActions'), true)
+    assert.equal(body.includes('sheetRow("Move", piece.freedom)'), true)
     assert.equal(body.includes('roll.revealAt'), true)
     assert.equal(
       body.includes(

@@ -2204,6 +2204,28 @@ const visibilityActions = (piece) => {
   return actions;
 };
 
+const freedomActions = (piece) => {
+  const actions = document.createElement("div");
+  actions.className = "sheet-actions";
+  for (const freedom of ["LOCKED", "UNLOCKED", "SHARE"]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = freedom === "LOCKED" ? "Lock" : freedom.toLowerCase();
+    button.className = piece.freedom === freedom ? "active" : "";
+    button.addEventListener("click", () => {
+      sendCommand({
+        type: "SetPieceFreedom",
+        gameId: roomId,
+        actorId,
+        pieceId: piece.id,
+        freedom
+      }).catch((error) => setError(error.message));
+    });
+    actions.append(button);
+  }
+  return actions;
+};
+
 const renderDetailsTab = (body, piece, character) => {
   body.append(
     sheetRow("Type", character?.type || "PLAYER"),
@@ -2211,6 +2233,8 @@ const renderDetailsTab = (body, piece, character) => {
     sheetRow("Position", Math.round(piece.x) + ", " + Math.round(piece.y)),
     sheetRow("Visibility", piece.visibility),
     visibilityActions(piece),
+    sheetRow("Move", piece.freedom),
+    freedomActions(piece),
     statStrip(character),
     skillChips(characterSkills(character))
   );
