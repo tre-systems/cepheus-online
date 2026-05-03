@@ -42,6 +42,17 @@ import {
   fetchRoomState,
   postRoomCommand
 } from './room-api.js'
+import {
+  characterSheetEmptyLabels,
+  characterSheetTitle,
+  characteristicRows,
+  characterSkills as deriveCharacterSkills,
+  equipmentDisplayItems,
+  equipmentFromText as parseEquipmentText,
+  equipmentText as formatEquipmentText,
+  skillsFromText,
+  skillRollReason
+} from './character-sheet-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
 
 const DEFAULT_GAME_ID = 'demo-room'
@@ -717,26 +728,15 @@ const sendCharacterSheetPatch = (target, patch) => {
 }
 
 const statStrip = (character) => {
-  const values = character?.characteristics || {}
-  const fallback = { str: 7, dex: 8, end: 8, int: 7, edu: 9, soc: 6 }
   const stats = document.createElement('div')
   stats.className = 'stat-strip'
-  for (const [label, key] of [
-    ['Str', 'str'],
-    ['Dex', 'dex'],
-    ['End', 'end'],
-    ['Int', 'int'],
-    ['Edu', 'edu'],
-    ['Soc', 'soc']
-  ]) {
+  for (const { label, value } of characteristicRows(character)) {
     const stat = document.createElement('div')
     stat.className = 'stat'
     const name = document.createElement('b')
     name.textContent = label
     const number = document.createElement('span')
-    number.textContent = String(
-      values[key] ?? values[key.toUpperCase()] ?? fallback[key]
-    )
+    number.textContent = value
     stat.append(name, number)
     stats.append(stat)
   }
@@ -773,22 +773,14 @@ const editableDetailsForm = (piece, character) => {
   const statFields = document.createElement('div')
   statFields.className = 'sheet-stat-edit'
   const inputs = {}
-  const values = character.characteristics || {}
-  for (const [label, key] of [
-    ['Str', 'str'],
-    ['Dex', 'dex'],
-    ['End', 'end'],
-    ['Int', 'int'],
-    ['Edu', 'edu'],
-    ['Soc', 'soc']
-  ]) {
+  for (const { label, key, inputValue } of characteristicRows(character)) {
     const field = document.createElement('label')
     field.textContent = label
     const input = document.createElement('input')
     input.name = key
     input.inputMode = 'numeric'
     input.autocomplete = 'off'
-    input.value = values[key] == null ? '' : String(values[key])
+    input.value = inputValue
     inputs[key] = input
     field.append(input)
     statFields.append(field)
@@ -814,22 +806,6 @@ const editableDetailsForm = (piece, character) => {
   form.append(line, statFields)
   return form
 }
-
-const characterSkills = (character) => {
-  if (character && Array.isArray(character.skills)) {
-    return character.skills
-      .filter((skill) => typeof skill === 'string' && skill.trim())
-      .map((skill) => skill.trim())
-  }
-  if (character) return []
-  return ['Vacc Suit-0', 'Gun Combat-0', 'Mechanic-0', 'Recon-0']
-}
-
-const skillListFromText = (value) =>
-  value
-    .split(/[\n,]/)
-    .map((skill) => skill.trim())
-    .filter(Boolean)
 
 const skillChips = (skills) => {
   const chips = document.createElement('div')
@@ -905,7 +881,7 @@ const skillEditor = (piece, character, skills) => {
     sendCharacterSheetPatch(
       { characterId: piece.characterId },
       {
-        skills: skillListFromText(textarea.value)
+        skills: skillsFromText(textarea.value)
       }
     ).catch((error) => setError(error.message))
   })
@@ -924,7 +900,7 @@ const renderDetailsTab = (body, piece, character) => {
       visibilityActions(piece),
       sheetRow('Move', piece.freedom),
       freedomActions(piece),
-      emptySheetText('No linked character sheet')
+      emptySheetText(characterSheetEmptyLabels.noLinkedCharacterSheet)
     )
     return
   }
@@ -943,20 +919,19 @@ const renderDetailsTab = (body, piece, character) => {
     sheetSectionTitle('Edit'),
     editableDetailsForm(piece, character),
     sheetSectionTitle('Skills'),
-    skillChips(characterSkills(character))
+    skillChips(deriveCharacterSkills(character))
   )
 }
 
 const renderActionTab = (body, piece, character) => {
-  const skills = characterSkills(character)
+  const skills = deriveCharacterSkills(character)
   if (skills.length === 0) {
-    body.append(emptySheetText('No trained skills'))
+    body.append(emptySheetText(characterSheetEmptyLabels.noTrainedSkills))
     return
   }
 
   const actions = document.createElement('div')
   actions.className = 'sheet-skill-actions'
-  const name = character?.name || piece.name
   body.append(sheetSectionTitle('Roll'))
   for (const skill of skills) {
     const button = document.createElement('button')
@@ -968,7 +943,7 @@ const renderActionTab = (body, piece, character) => {
         gameId: roomId,
         actorId,
         expression: '2d6',
-        reason: name + ': ' + skill
+        reason: skillRollReason(piece, character, skill)
       }).catch((error) => setError(error.message))
     })
     actions.append(button)
@@ -977,38 +952,6 @@ const renderActionTab = (body, piece, character) => {
   if (editor) body.append(actions, sheetSectionTitle('Edit Skills'), editor)
   else body.append(actions)
 }
-
-const itemName = (item) => item?.Name || item?.name || 'Item'
-
-const itemQuantity = (item) => item?.Quantity ?? item?.quantity ?? 1
-
-const itemCarried = (item) => item?.Carried ?? item?.carried
-
-const itemNotes = (item) => item?.notes || item?.Notes || ''
-
-const equipmentText = (equipment) =>
-  equipment
-    .map((item) =>
-      [itemName(item), itemQuantity(item), itemNotes(item)].join(' | ')
-    )
-    .join('\n')
-
-const equipmentFromText = (value) =>
-  value
-    .split('\n')
-    .map((line) => {
-      const [name = '', quantity = '1', ...notes] = line
-        .split('|')
-        .map((part) => part.trim())
-      if (!name) return null
-      const parsedQuantity = Number.parseInt(quantity, 10)
-      return {
-        name,
-        quantity: Number.isFinite(parsedQuantity) ? parsedQuantity : 1,
-        notes: notes.join(' | ')
-      }
-    })
-    .filter(Boolean)
 
 const itemsEditor = (character, equipment) => {
   if (!character) return null
@@ -1028,7 +971,7 @@ const itemsEditor = (character, equipment) => {
   const equipmentLabel = document.createElement('label')
   equipmentLabel.textContent = 'Equipment'
   const textarea = document.createElement('textarea')
-  textarea.value = equipmentText(equipment)
+  textarea.value = formatEquipmentText(equipment)
   textarea.placeholder = 'Laser Pistol | 1 | 3D6\nMesh | 1 | AR 5'
   textarea.spellcheck = false
   equipmentLabel.append(textarea)
@@ -1041,7 +984,7 @@ const itemsEditor = (character, equipment) => {
       { characterId: character.id },
       {
         credits: nullableNumberFromInput(creditsInput) ?? 0,
-        equipment: equipmentFromText(textarea.value)
+        equipment: parseEquipmentText(textarea.value)
       }
     ).catch((error) => setError(error.message))
   })
@@ -1062,7 +1005,7 @@ const renderItemsTab = (body, character) => {
     ? character.equipment
     : []
   if (equipment.length === 0) {
-    body.append(emptySheetText('No equipment listed'))
+    body.append(emptySheetText(characterSheetEmptyLabels.noEquipmentListed))
     const editor = itemsEditor(character, equipment)
     if (editor) body.append(sheetSectionTitle('Edit Items'), editor)
     return
@@ -1071,25 +1014,20 @@ const renderItemsTab = (body, character) => {
   const list = document.createElement('div')
   list.className = 'item-list'
   body.append(sheetSectionTitle('Equipment'))
-  for (const item of equipment) {
+  for (const item of equipmentDisplayItems(equipment)) {
     const row = document.createElement('div')
     row.className = 'item-row'
     const name = document.createElement('span')
     name.className = 'item-name'
-    name.textContent = itemName(item)
+    name.textContent = item.name
     const meta = document.createElement('span')
     meta.className = 'item-meta'
-    const carried = itemCarried(item)
-    const notes = itemNotes(item)
-    meta.textContent =
-      'x' +
-      itemQuantity(item) +
-      (carried === undefined ? '' : carried ? ' carried' : ' stowed')
+    meta.textContent = item.meta
     row.append(name, meta)
-    if (notes) {
+    if (item.notes) {
       const note = document.createElement('span')
       note.className = 'item-note'
-      note.textContent = notes
+      note.textContent = item.notes
       row.append(note)
     }
     list.append(row)
@@ -1103,7 +1041,7 @@ const renderNotesTab = (body, piece, character) => {
   if (!piece?.characterId || !character) {
     body.append(
       sheetSectionTitle('Notes'),
-      emptySheetText(character?.notes || 'No notes')
+      emptySheetText(character?.notes || characterSheetEmptyLabels.noNotes)
     )
     return
   }
@@ -1137,7 +1075,7 @@ const renderNotesTab = (body, piece, character) => {
 const renderSheet = () => {
   const piece = selectedPiece()
   const character = selectedCharacter(piece)
-  els.sheetName.textContent = character?.name || piece?.name || 'No piece'
+  els.sheetName.textContent = characterSheetTitle(piece, character)
   for (const tab of els.sheetTabs) {
     tab.classList.toggle('active', tab.dataset.sheetTab === activeSheetTab)
   }
@@ -1145,7 +1083,7 @@ const renderSheet = () => {
   const body = document.createElement('div')
   body.className = 'sheet-grid'
   if (!piece) {
-    body.append(sheetRow('Status', 'No active token'))
+    body.append(sheetRow('Status', characterSheetEmptyLabels.noActiveToken))
     body.append(sheetRow('Board', selectedBoard()?.name || 'None'))
     els.sheetBody.replaceChildren(body)
     return

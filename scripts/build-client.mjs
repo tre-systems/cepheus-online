@@ -64,6 +64,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/character-sheet-view.js',
+    source: join(compiledClientRoot, 'client', 'app', 'character-sheet-view.js'),
+    exportName: 'CLIENT_CHARACTER_SHEET_VIEW_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/dice-overlay.js',
     source: join(compiledClientRoot, 'client', 'app', 'dice-overlay.js'),
     exportName: 'CLIENT_DICE_OVERLAY_JS',

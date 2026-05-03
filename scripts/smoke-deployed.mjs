@@ -23,6 +23,7 @@ const CLIENT_MODULES = new Map([
         '/client/app/board-geometry.js',
         '/client/app/board-view.js',
         '/client/app/bootstrap-flow.js',
+        '/client/app/character-sheet-view.js',
         '/client/app/dice-overlay.js',
         '/client/app/image-assets.js',
         '/client/app/room-api.js'
@@ -32,6 +33,10 @@ const CLIENT_MODULES = new Map([
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
   ['/client/app/bootstrap-flow.js', { markers: ['nextBootstrapCommand'] }],
+  [
+    '/client/app/character-sheet-view.js',
+    { markers: ['characteristicRows', 'equipmentDisplayItems'] }
+  ],
   [
     '/client/app/dice-overlay.js',
     {

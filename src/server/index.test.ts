@@ -16,6 +16,7 @@ const clientModules = new Map<
         '/client/app/board-geometry.js',
         '/client/app/board-view.js',
         '/client/app/bootstrap-flow.js',
+        '/client/app/character-sheet-view.js',
         '/client/app/dice-overlay.js',
         '/client/app/image-assets.js',
         '/client/app/room-api.js'
@@ -25,6 +26,10 @@ const clientModules = new Map<
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
   ['/client/app/bootstrap-flow.js', { markers: ['nextBootstrapCommand'] }],
+  [
+    '/client/app/character-sheet-view.js',
+    { markers: ['characteristicRows', 'equipmentDisplayItems'] }
+  ],
   [
     '/client/app/dice-overlay.js',
     {
@@ -263,6 +268,22 @@ describe('Worker static client', () => {
     assert.equal(body.includes('appendFaceValue'), true)
     assert.equal(body.includes('buildDie'), true)
     assert.equal(body.includes('animateRoll'), true)
+  })
+
+  it('serves the character sheet view helper module', async () => {
+    const response = await fetchStaticClient(
+      '/client/app/character-sheet-view.js'
+    )
+    const body = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.equal(
+      response.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(body.includes('characteristicRows'), true)
+    assert.equal(body.includes('equipmentDisplayItems'), true)
+    assert.equal(body.includes('skillsFromText'), true)
   })
 
   it('serves cubical dice styling', async () => {

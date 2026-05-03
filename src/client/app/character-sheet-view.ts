@@ -98,6 +98,12 @@ export const characterSkills = (
   return ['Vacc Suit-0', 'Gun Combat-0', 'Mechanic-0', 'Recon-0']
 }
 
+export const skillsFromText = (value: string): string[] =>
+  value
+    .split(/[\n,]/)
+    .map((skill) => skill.trim())
+    .filter(Boolean)
+
 export const skillRollReason = (
   piece: Pick<PieceState, 'name'>,
   character: Pick<CharacterState, 'name'> | null | undefined,
