@@ -224,6 +224,28 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/shared/character-creation/career-rules.js',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'career-rules.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_CAREER_RULES_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/character-creation/skills.js',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'skills.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_SKILLS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/shared/ids',
     source: join(compiledClientRoot, 'shared', 'ids.js'),
     exportName: 'SHARED_IDS_JS',

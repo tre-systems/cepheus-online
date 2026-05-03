@@ -55,10 +55,20 @@ const clientModules = new Map<
     {
       markers: ['planCreatePlayableCharacterCommands'],
       imports: [
+        '/shared/character-creation/career-rules.js',
+        '/shared/character-creation/skills.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-flow.js'
       ]
     }
+  ],
+  [
+    '/shared/character-creation/career-rules.js',
+    { markers: ['evaluateCareerCheck', 'parseCareerCheck'] }
+  ],
+  [
+    '/shared/character-creation/skills.js',
+    { markers: ['normalizeCareerSkill', 'tallyCareerSkills'] }
   ],
   [
     '/client/app/character-creation-flow.js',

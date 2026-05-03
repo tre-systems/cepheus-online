@@ -7,11 +7,20 @@ import type {
   CharacterType,
   GameState
 } from '../../shared/state'
+import {
+  evaluateCareerCheck,
+  parseCareerCheck
+} from '../../shared/character-creation/career-rules.js'
+import {
+  normalizeCareerSkill,
+  tallyCareerSkills
+} from '../../shared/character-creation/skills.js'
 import type { ClientIdentity } from '../game-commands.js'
 import { uniqueCharacterId, uniquePieceId } from './bootstrap-flow.js'
 import {
   createCharacterCreationFlow,
-  deriveCharacterCreationCommands
+  deriveCharacterSheetPatch,
+  validateCurrentCharacterCreationStep
 } from './character-creation-flow.js'
 
 export interface CreateCharacterCommandPlanInput {
@@ -28,6 +37,19 @@ export interface CreateCharacterCommandPlanInput {
   notes: string
   createLinkedPiece: boolean
   existingPieceCount: number
+  career?: string
+  drafted?: boolean
+  creationOutcome?: PlayableCreationOutcome
+}
+
+export interface GenerateCharacterInput {
+  identity: ClientIdentity
+  state: GameState | null
+  board: BoardState | null
+  name: string
+  createLinkedPiece: boolean
+  existingPieceCount: number
+  rng?: () => number
 }
 
 export type CreateCharacterCommandPlan =
@@ -42,6 +64,340 @@ export type CreateCharacterCommandPlan =
       error: string
       focus: 'name' | 'skills' | null
     }
+
+export interface GeneratedCharacterSummary {
+  name: string
+  career: string
+  age: number
+  characteristics: CharacterCharacteristics
+  skills: string[]
+  credits: number
+  notes: string
+  qualificationRoll: number
+  survivalRoll: number
+  survivalPassed: boolean
+  commissionRoll: number | null
+  commissionPassed: boolean | null
+  advancementRoll: number | null
+  advancementPassed: boolean | null
+}
+
+export type GenerateCharacterCommandPlan =
+  | (Extract<CreateCharacterCommandPlan, { ok: true }> & {
+      generated: GeneratedCharacterSummary
+    })
+  | Extract<CreateCharacterCommandPlan, { ok: false }>
+
+interface PlayableCreationOutcome {
+  survivalPassed: boolean
+  canCommission: boolean
+  commissionPassed: boolean | null
+  canAdvance: boolean
+  advancementPassed: boolean | null
+}
+
+interface CareerDefinition {
+  name: string
+  qualification: string
+  survival: string
+  commission: string
+  advancement: string
+  serviceSkills: readonly string[]
+  specialistSkills: readonly string[]
+  personalDevelopment: readonly string[]
+  advancedEducation: readonly string[]
+}
+
+const GENERATED_NAMES = [
+  'Mae',
+  'Fred',
+  'Zoop',
+  'Erit',
+  'Kade',
+  'Nia',
+  'Rook',
+  'Vera',
+  'Sable',
+  'Tamsin',
+  'Juno',
+  'Mara'
+] as const
+
+const CAREERS: readonly CareerDefinition[] = [
+  {
+    name: 'Scout',
+    qualification: 'Int 5+',
+    survival: 'End 7+',
+    commission: '-',
+    advancement: '-',
+    serviceSkills: [
+      'Comms',
+      'Engineering',
+      'Gun Combat*',
+      'Melee Combat*',
+      'Survival',
+      'Vehicle*'
+    ],
+    specialistSkills: [
+      'Piloting',
+      'Navigation',
+      'Recon',
+      'Engineering',
+      'Sciences*',
+      "Jack o' Trades"
+    ],
+    personalDevelopment: [
+      '+1 Str',
+      '+1 Dex',
+      '+1 End',
+      '+1 Int',
+      '+1 Edu',
+      'Gun Combat*'
+    ],
+    advancedEducation: [
+      'Advocate',
+      'Computer',
+      'Medicine',
+      'Navigation',
+      'Sciences*',
+      'Tactics'
+    ]
+  },
+  {
+    name: 'Merchant',
+    qualification: 'Int 4+',
+    survival: 'Int 5+',
+    commission: 'Int 5+',
+    advancement: 'Edu 8+',
+    serviceSkills: [
+      'Comms',
+      'Engineering',
+      'Gun Combat*',
+      'Melee Combat*',
+      'Broker',
+      'Vehicle*'
+    ],
+    specialistSkills: [
+      'Carousing',
+      'Gunnery*',
+      "Jack o' Trades",
+      'Medicine',
+      'Navigation',
+      'Piloting'
+    ],
+    personalDevelopment: [
+      '+1 Str',
+      '+1 Dex',
+      '+1 End',
+      'Zero-G',
+      'Melee Combat*',
+      'Steward'
+    ],
+    advancedEducation: [
+      'Advocate',
+      'Engineering',
+      'Medicine',
+      'Navigation',
+      'Sciences*',
+      'Tactics'
+    ]
+  },
+  {
+    name: 'Marine',
+    qualification: 'Int 6+',
+    survival: 'End 6+',
+    commission: 'Edu 6+',
+    advancement: 'Soc 7+',
+    serviceSkills: [
+      'Comms',
+      'Demolitions',
+      'Gun Combat*',
+      'Gunnery*',
+      'Melee Combat*',
+      'Battle Dress'
+    ],
+    specialistSkills: [
+      'Electronics',
+      'Gun Combat*',
+      'Melee Combat*',
+      'Survival',
+      'Recon',
+      'Vehicle*'
+    ],
+    personalDevelopment: [
+      '+1 Str',
+      '+1 Dex',
+      '+1 End',
+      '+1 Int',
+      '+1 Edu',
+      'Melee Combat*'
+    ],
+    advancedEducation: [
+      'Advocate',
+      'Computer',
+      'Gravitics',
+      'Medicine',
+      'Navigation',
+      'Tactics'
+    ]
+  },
+  {
+    name: 'Navy',
+    qualification: 'Int 6+',
+    survival: 'Int 5+',
+    commission: 'Soc 7+',
+    advancement: 'Edu 6+',
+    serviceSkills: [
+      'Comms',
+      'Engineering',
+      'Gun Combat*',
+      'Gunnery*',
+      'Melee Combat*',
+      'Vehicle*'
+    ],
+    specialistSkills: [
+      'Gravitics',
+      "Jack o' Trades",
+      'Melee Combat*',
+      'Navigation',
+      'Leadership',
+      'Piloting'
+    ],
+    personalDevelopment: [
+      '+1 Str',
+      '+1 Dex',
+      '+1 End',
+      '+1 Int',
+      '+1 Edu',
+      'Melee Combat*'
+    ],
+    advancedEducation: [
+      'Advocate',
+      'Computer',
+      'Engineering',
+      'Medicine',
+      'Navigation',
+      'Tactics'
+    ]
+  },
+  {
+    name: 'Belter',
+    qualification: 'Int 4+',
+    survival: 'Dex 7+',
+    commission: '-',
+    advancement: '-',
+    serviceSkills: [
+      'Comms',
+      'Demolitions',
+      'Gun Combat*',
+      'Gunnery*',
+      'Prospecting',
+      'Piloting'
+    ],
+    specialistSkills: [
+      'Zero-G',
+      'Computer',
+      'Electronics',
+      'Prospecting',
+      'Sciences*',
+      'Vehicle*'
+    ],
+    personalDevelopment: [
+      '+1 Str',
+      '+1 Dex',
+      '+1 End',
+      'Zero-G',
+      'Melee Combat*',
+      'Gambling'
+    ],
+    advancedEducation: [
+      'Advocate',
+      'Engineering',
+      'Medicine',
+      'Navigation',
+      'Comms',
+      'Tactics'
+    ]
+  },
+  {
+    name: 'Agent',
+    qualification: 'Soc 6+',
+    survival: 'Int 6+',
+    commission: 'Edu 7+',
+    advancement: 'Edu 6+',
+    serviceSkills: [
+      'Admin',
+      'Computer',
+      'Streetwise',
+      'Bribery',
+      'Leadership',
+      'Vehicle*'
+    ],
+    specialistSkills: [
+      'Gun Combat*',
+      'Melee Combat*',
+      'Bribery',
+      'Leadership',
+      'Recon',
+      'Survival'
+    ],
+    personalDevelopment: [
+      '+1 Dex',
+      '+1 End',
+      '+1 Int',
+      '+1 Edu',
+      'Athletics',
+      'Carousing'
+    ],
+    advancedEducation: [
+      'Advocate',
+      'Computer',
+      'Liaison',
+      'Linguistics',
+      'Medicine',
+      'Leadership'
+    ]
+  },
+  {
+    name: 'Drifter',
+    qualification: 'Dex 5+',
+    survival: 'End 5+',
+    commission: '-',
+    advancement: '-',
+    serviceSkills: [
+      'Streetwise',
+      'Mechanics',
+      'Gun Combat*',
+      'Melee Combat*',
+      'Recon',
+      'Vehicle*'
+    ],
+    specialistSkills: [
+      'Electronics',
+      'Melee Combat*',
+      'Bribery',
+      'Streetwise',
+      'Gambling',
+      'Recon'
+    ],
+    personalDevelopment: [
+      '+1 Str',
+      '+1 Dex',
+      '+1 End',
+      'Melee Combat*',
+      'Bribery',
+      'Gambling'
+    ],
+    advancedEducation: [
+      'Computer',
+      'Engineering',
+      "Jack o' Trades",
+      'Medicine',
+      'Liaison',
+      'Tactics'
+    ]
+  }
+]
 
 const sequenceCommandAt = <T extends Command>(
   command: T,
@@ -60,69 +416,402 @@ const sequenceCommandAt = <T extends Command>(
 
 const playableCreationCommands = (
   identity: ClientIdentity,
-  characterId: CharacterId
-): Command[] => [
-  {
-    type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId,
-    creationEvent: { type: 'COMPLETE_BASIC_TRAINING' }
-  },
-  {
-    type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId,
-    creationEvent: {
-      type: 'SURVIVAL_PASSED',
-      canCommission: false,
-      canAdvance: true
-    }
-  },
-  {
-    type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId,
-    creationEvent: { type: 'COMPLETE_ADVANCEMENT' }
-  },
-  {
-    type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId,
-    creationEvent: { type: 'COMPLETE_SKILLS' }
-  },
-  {
-    type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId,
-    creationEvent: { type: 'COMPLETE_AGING' }
-  },
-  {
-    type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId,
-    creationEvent: { type: 'LEAVE_CAREER' }
-  },
-  {
-    type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId,
-    creationEvent: { type: 'FINISH_MUSTERING' }
-  },
-  {
-    type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId,
-    creationEvent: { type: 'CREATION_COMPLETE' }
+  characterId: CharacterId,
+  outcome: PlayableCreationOutcome = {
+    survivalPassed: true,
+    canCommission: false,
+    commissionPassed: null,
+    canAdvance: true,
+    advancementPassed: true
   }
-]
+): Command[] => {
+  const advance = (
+    creationEvent: Extract<
+      Command,
+      { type: 'AdvanceCharacterCreation' }
+    >['creationEvent']
+  ): Command => ({
+    type: 'AdvanceCharacterCreation',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId,
+    creationEvent
+  })
+
+  const commands = [advance({ type: 'COMPLETE_BASIC_TRAINING' })]
+
+  if (!outcome.survivalPassed) {
+    return [
+      ...commands,
+      advance({ type: 'SURVIVAL_FAILED' }),
+      advance({ type: 'MISHAP_RESOLVED' }),
+      advance({ type: 'FINISH_MUSTERING' }),
+      advance({ type: 'CREATION_COMPLETE' })
+    ]
+  }
+
+  commands.push(
+    advance({
+      type: 'SURVIVAL_PASSED',
+      canCommission: outcome.canCommission,
+      canAdvance: outcome.canAdvance
+    })
+  )
+
+  if (outcome.canCommission) {
+    commands.push(
+      advance({
+        type: outcome.commissionPassed
+          ? 'COMPLETE_COMMISSION'
+          : 'SKIP_COMMISSION'
+      })
+    )
+  } else if (outcome.canAdvance) {
+    commands.push(
+      advance({
+        type: outcome.advancementPassed
+          ? 'COMPLETE_ADVANCEMENT'
+          : 'SKIP_ADVANCEMENT'
+      })
+    )
+  }
+
+  commands.push(
+    advance({ type: 'COMPLETE_SKILLS' }),
+    advance({ type: 'COMPLETE_AGING' }),
+    advance({ type: 'LEAVE_CAREER' }),
+    advance({ type: 'FINISH_MUSTERING' }),
+    advance({ type: 'CREATION_COMPLETE' })
+  )
+
+  return commands
+}
+
+const initialCreationCommands = ({
+  identity,
+  state,
+  characterId,
+  characterType,
+  name,
+  age,
+  career,
+  drafted,
+  characteristics,
+  skills,
+  equipment,
+  credits,
+  notes
+}: {
+  identity: ClientIdentity
+  state: GameState
+  characterId: CharacterId
+  characterType: CharacterType
+  name: string
+  age: number | null
+  career: string
+  drafted: boolean
+  characteristics: CharacterCharacteristics
+  skills: string[]
+  equipment: CharacterEquipmentItem[]
+  credits: number
+  notes: string
+}): Command[] => {
+  const flow = {
+    ...createCharacterCreationFlow(characterId, {
+      name,
+      characterType,
+      age,
+      characteristics,
+      skills,
+      equipment,
+      credits,
+      notes
+    }),
+    step: 'review' as const
+  }
+
+  return [
+    {
+      type: 'CreateCharacter',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId,
+      characterType,
+      name
+    },
+    {
+      type: 'StartCharacterCreation',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId
+    },
+    {
+      type: 'AdvanceCharacterCreation',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId,
+      creationEvent: { type: 'SET_CHARACTERISTICS' }
+    },
+    {
+      type: 'AdvanceCharacterCreation',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId,
+      creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+    },
+    {
+      type: 'StartCharacterCareerTerm',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId,
+      career,
+      drafted
+    },
+    {
+      type: 'AdvanceCharacterCreation',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId,
+      creationEvent: { type: 'SELECT_CAREER', isNewCareer: true, drafted }
+    },
+    {
+      type: 'UpdateCharacterSheet',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId,
+      age: flow.draft.age,
+      ...deriveCharacterSheetPatch(flow.draft)
+    }
+  ].map((command, index) => sequenceCommandAt(command as Command, state, index))
+}
+
+const randomInt = (rng: () => number, maxExclusive: number): number =>
+  Math.floor(rng() * maxExclusive)
+
+const rollDie = (rng: () => number): number => randomInt(rng, 6) + 1
+
+const roll2d6 = (rng: () => number): number => rollDie(rng) + rollDie(rng)
+
+const selectFrom = <T>(rng: () => number, values: readonly T[]): T =>
+  values[randomInt(rng, values.length)]
+
+const shuffledCareers = (rng: () => number): CareerDefinition[] => {
+  const careers = [...CAREERS]
+  for (let index = careers.length - 1; index > 0; index--) {
+    const swapIndex = randomInt(rng, index + 1)
+    const current = careers[index]
+    careers[index] = careers[swapIndex]
+    careers[swapIndex] = current
+  }
+  return careers
+}
+
+const normalizeGeneratedSkill = (skill: string, level = 0): string | null => {
+  return normalizeCareerSkill(skill, level)
+}
+
+const addSkill = (skills: string[], skill: string, level = 0) => {
+  const normalized = normalizeGeneratedSkill(skill, level)
+  if (normalized) skills.push(normalized)
+}
+
+const applyPersonalDevelopment = (
+  characteristics: CharacterCharacteristics,
+  entry: string
+): string | null => {
+  const characteristic = /^\+1 (Str|Dex|End|Int|Edu|Soc)$/i.exec(entry)
+  if (!characteristic) return null
+
+  const key = characteristic[1].toLowerCase() as keyof CharacterCharacteristics
+  characteristics[key] = (characteristics[key] ?? 0) + 1
+  return `${characteristic[1]} +1`
+}
+
+const chooseQualifiedCareer = ({
+  rng,
+  characteristics,
+  notes
+}: {
+  rng: () => number
+  characteristics: CharacterCharacteristics
+  notes: string[]
+}): {
+  career: CareerDefinition
+  qualificationRoll: number
+  drafted: boolean
+} => {
+  for (const career of shuffledCareers(rng)) {
+    const qualificationRoll = roll2d6(rng)
+    const outcome = evaluateCareerCheck({
+      check: career.qualification,
+      characteristics,
+      roll: qualificationRoll
+    })
+    if (!outcome) continue
+    notes.push(
+      `${career.name} qualification: ${qualificationRoll} + ${outcome.modifier} = ${outcome.total} vs ${career.qualification} (${outcome.success ? 'passed' : 'failed'})`
+    )
+    if (outcome.success) {
+      return { career, qualificationRoll, drafted: false }
+    }
+  }
+
+  const drifter =
+    CAREERS.find((career) => career.name === 'Drifter') ?? CAREERS[0]
+  const qualificationRoll = roll2d6(rng)
+  notes.push(
+    'No preferred career qualification succeeded; drafted into Drifter.'
+  )
+  return { career: drifter, qualificationRoll, drafted: true }
+}
+
+const resolveCareerRoll = ({
+  check,
+  characteristics,
+  roll
+}: {
+  check: string
+  characteristics: CharacterCharacteristics
+  roll: number
+}) =>
+  evaluateCareerCheck({
+    check,
+    characteristics,
+    roll
+  })
+
+const generatedCharacterDetails = ({
+  state,
+  name,
+  rng
+}: {
+  state: GameState
+  name: string
+  rng: () => number
+}): GeneratedCharacterSummary & {
+  creationOutcome: PlayableCreationOutcome
+  drafted: boolean
+} => {
+  const notes: string[] = ['Generated by the Cepheus Online quick generator.']
+  const characteristics: CharacterCharacteristics = {
+    str: roll2d6(rng),
+    dex: roll2d6(rng),
+    end: roll2d6(rng),
+    int: roll2d6(rng),
+    edu: roll2d6(rng),
+    soc: roll2d6(rng)
+  }
+  notes.push(
+    `Characteristics: Str ${characteristics.str}, Dex ${characteristics.dex}, End ${characteristics.end}, Int ${characteristics.int}, Edu ${characteristics.edu}, Soc ${characteristics.soc}.`
+  )
+
+  const { career, qualificationRoll, drafted } = chooseQualifiedCareer({
+    rng,
+    characteristics,
+    notes
+  })
+  const skills: string[] = []
+  for (const skill of career.serviceSkills) addSkill(skills, skill, 0)
+
+  const trainingTables = [
+    career.personalDevelopment,
+    career.serviceSkills,
+    career.specialistSkills,
+    career.advancedEducation
+  ]
+  const trainingTable = selectFrom(rng, trainingTables)
+  const trainingEntry = selectFrom(rng, trainingTable)
+  const characteristicGain = applyPersonalDevelopment(
+    characteristics,
+    trainingEntry
+  )
+  if (characteristicGain) {
+    notes.push(`Training: ${characteristicGain}.`)
+  } else {
+    addSkill(skills, trainingEntry, 1)
+    notes.push(`Training: ${trainingEntry.replace('*', '')}.`)
+  }
+
+  const survivalRoll = roll2d6(rng)
+  const survival = resolveCareerRoll({
+    check: career.survival,
+    characteristics,
+    roll: survivalRoll
+  })
+  const survivalPassed = survival?.success ?? true
+  notes.push(
+    `${career.name} survival: ${survivalRoll} + ${survival?.modifier ?? 0} = ${survival?.total ?? survivalRoll} vs ${career.survival} (${survivalPassed ? 'passed' : 'mishap'}).`
+  )
+
+  const canCommission =
+    survivalPassed && parseCareerCheck(career.commission) !== null
+  const commissionRoll = canCommission ? roll2d6(rng) : null
+  const commission =
+    commissionRoll === null
+      ? null
+      : resolveCareerRoll({
+          check: career.commission,
+          characteristics,
+          roll: commissionRoll
+        })
+  const commissionPassed = commission?.success ?? null
+  if (commissionRoll !== null && commission) {
+    notes.push(
+      `${career.name} commission: ${commissionRoll} + ${commission.modifier} = ${commission.total} vs ${career.commission} (${commissionPassed ? 'passed' : 'not commissioned'}).`
+    )
+  }
+
+  const canAdvance =
+    survivalPassed &&
+    !canCommission &&
+    parseCareerCheck(career.advancement) !== null
+  const advancementRoll = canAdvance ? roll2d6(rng) : null
+  const advancement =
+    advancementRoll === null
+      ? null
+      : resolveCareerRoll({
+          check: career.advancement,
+          characteristics,
+          roll: advancementRoll
+        })
+  const advancementPassed = advancement?.success ?? null
+  if (advancementRoll !== null && advancement) {
+    notes.push(
+      `${career.name} advancement: ${advancementRoll} + ${advancement.modifier} = ${advancement.total} vs ${career.advancement} (${advancementPassed ? 'advanced' : 'held rank'}).`
+    )
+  }
+
+  const cashRoll = rollDie(rng)
+  const credits = cashRoll * 1000
+  notes.push(`Mustering out cash: ${cashRoll}000 credits.`)
+
+  return {
+    name:
+      name.trim() ||
+      `${selectFrom(rng, GENERATED_NAMES)} ${Object.keys(state.characters).length + 1}`,
+    career: career.name,
+    age: 22,
+    characteristics,
+    skills: tallyCareerSkills(skills),
+    credits,
+    notes: notes.join('\n'),
+    qualificationRoll,
+    survivalRoll,
+    survivalPassed,
+    commissionRoll,
+    commissionPassed,
+    advancementRoll,
+    advancementPassed,
+    creationOutcome: {
+      survivalPassed,
+      canCommission,
+      commissionPassed,
+      canAdvance,
+      advancementPassed
+    },
+    drafted
+  }
+}
 
 export const planCreatePlayableCharacterCommands = ({
   identity,
@@ -137,7 +826,10 @@ export const planCreatePlayableCharacterCommands = ({
   credits,
   notes,
   createLinkedPiece,
-  existingPieceCount
+  existingPieceCount,
+  career,
+  drafted = false,
+  creationOutcome
 }: CreateCharacterCommandPlanInput): CreateCharacterCommandPlan => {
   if (!state) {
     return {
@@ -164,33 +856,51 @@ export const planCreatePlayableCharacterCommands = ({
   }
 
   const characterId = uniqueCharacterId(state, trimmedName)
-  const initialCommands = deriveCharacterCreationCommands(
-    {
-      ...createCharacterCreationFlow(characterId, {
-        name: trimmedName,
-        characterType,
-        age,
-        characteristics,
-        skills,
-        equipment,
-        credits,
-        notes
-      }),
-      step: 'review'
-    },
-    { identity, state }
-  )
-  if (initialCommands.length === 0) {
+  const validation = validateCurrentCharacterCreationStep({
+    ...createCharacterCreationFlow(characterId, {
+      name: trimmedName,
+      characterType,
+      age,
+      characteristics,
+      skills,
+      equipment,
+      credits,
+      notes
+    }),
+    step: 'review'
+  })
+  if (!validation.ok) {
     return {
       ok: false,
-      error: 'Character details are incomplete',
+      error: validation.errors.join(', ') || 'Character details are incomplete',
       focus: null
     }
   }
 
-  const finishCommands = playableCreationCommands(identity, characterId).map(
-    (command, index) =>
-      sequenceCommandAt(command, state, initialCommands.length + index)
+  const initialCommands = initialCreationCommands({
+    identity,
+    state,
+    characterId,
+    characterType,
+    name: trimmedName,
+    age,
+    career: career ?? 'Scout',
+    drafted,
+    characteristics,
+    skills,
+    equipment,
+    credits,
+    notes
+  }).map((command) =>
+    command.type === 'UpdateCharacterSheet' ? { ...command, age } : command
+  )
+
+  const finishCommands = playableCreationCommands(
+    identity,
+    characterId,
+    creationOutcome
+  ).map((command, index) =>
+    sequenceCommandAt(command, state, initialCommands.length + index)
   )
 
   const pieceId =
@@ -234,5 +944,50 @@ export const planCreatePlayableCharacterCommands = ({
     commands: [...initialCommands, ...finishCommands, ...pieceCommand],
     characterId,
     pieceId
+  }
+}
+
+export const planGeneratePlayableCharacterCommands = ({
+  identity,
+  state,
+  board,
+  name,
+  createLinkedPiece,
+  existingPieceCount,
+  rng = Math.random
+}: GenerateCharacterInput): GenerateCharacterCommandPlan => {
+  if (!state) {
+    return {
+      ok: false,
+      error: 'Open or create a room before generating a character',
+      focus: null
+    }
+  }
+
+  const generated = generatedCharacterDetails({ state, name, rng })
+  const plan = planCreatePlayableCharacterCommands({
+    identity,
+    state,
+    board,
+    name: generated.name,
+    characterType: 'PLAYER',
+    age: generated.age,
+    characteristics: generated.characteristics,
+    skills: generated.skills,
+    equipment: [],
+    credits: generated.credits,
+    notes: generated.notes,
+    createLinkedPiece,
+    existingPieceCount,
+    career: generated.career,
+    drafted: generated.drafted,
+    creationOutcome: generated.creationOutcome
+  })
+
+  if (!plan.ok) return plan
+
+  return {
+    ...plan,
+    generated
   }
 }

@@ -12,7 +12,10 @@ import {
 } from './board-view.js'
 import { createBoardController } from './board-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
-import { planCreatePlayableCharacterCommands } from './character-command-plan.js'
+import {
+  planCreatePlayableCharacterCommands,
+  planGeneratePlayableCharacterCommands
+} from './character-command-plan.js'
 import {
   cssUrl,
   readImageDimensions,
@@ -62,6 +65,7 @@ const els = {
   bootstrap: document.getElementById('bootstrapButton'),
   refresh: document.getElementById('refreshButton'),
   createCharacter: document.getElementById('createCharacterButton'),
+  generateCharacter: document.getElementById('generateCharacterButton'),
   createPiece: document.getElementById('createPieceButton'),
   createBoard: document.getElementById('createBoardButton'),
   characterNameInput: document.getElementById('characterNameInput'),
@@ -341,6 +345,46 @@ const createCustomCharacter = async () => {
     equipment: [],
     credits: parseNonNegativeIntegerInput(els.characterCreditsInput, 0),
     notes: '',
+    createLinkedPiece: els.characterTokenInput.checked,
+    existingPieceCount: boardPieces().length
+  })
+  if (!plan.ok) {
+    setError(plan.error)
+    if (plan.focus === 'name') els.characterNameInput.focus()
+    if (plan.focus === 'skills') els.characterSkillsInput.focus()
+    return
+  }
+
+  for (const command of plan.commands) {
+    await postCommand(command)
+  }
+  if (plan.pieceId) selectedPieceId = plan.pieceId
+  els.characterNameInput.value = ''
+  els.roomDialog.close()
+  characterSheetController.setOpen(true)
+  render()
+}
+
+const generateCharacter = async () => {
+  setError('')
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-generated-character')
+    )
+  }
+  if (els.characterTokenInput.checked && !selectedBoard()) {
+    await postCommand(
+      createBoardCommand({ roomId, actorId }),
+      requestId('create-board-for-generated-character')
+    )
+  }
+
+  const plan = planGeneratePlayableCharacterCommands({
+    identity: clientIdentity(),
+    state,
+    board: selectedBoard(),
+    name: els.characterNameInput.value,
     createLinkedPiece: els.characterTokenInput.checked,
     existingPieceCount: boardPieces().length
   })
@@ -739,6 +783,10 @@ els.refresh.addEventListener('click', () => {
 
 els.createCharacter.addEventListener('click', () => {
   createCustomCharacter().catch((error) => setError(error.message))
+})
+
+els.generateCharacter.addEventListener('click', () => {
+  generateCharacter().catch((error) => setError(error.message))
 })
 
 els.createPiece.addEventListener('click', () => {
