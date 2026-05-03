@@ -13,7 +13,7 @@ export interface DurableObjectState {
   waitUntil?(promise: Promise<unknown>): void
 }
 
-export interface DurableObjectId {}
+export type DurableObjectId = Record<string, never>
 
 export interface DurableObjectStub {
   fetch(request: Request): Promise<Response>

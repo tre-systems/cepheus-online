@@ -80,7 +80,7 @@ const serializeMessage = (message: ServerMessage): string =>
 export class GameRoomDO {
   constructor(
     private readonly state: DurableObjectState,
-    private readonly env: Env
+    _env: Env
   ) {}
 
   private getWebSockets(): WebSocket[] {

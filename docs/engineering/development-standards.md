@@ -1,5 +1,9 @@
 # Development Standards
 
+This document owns dependency, boundary, and architecture standards. Day-to-day
+code style, naming, CQRS/event-sourcing conventions, and formatting rules live
+in [Coding Standards](coding-standards.md).
+
 ## Dependency Policy
 
 The default runtime dependency budget is zero. A dependency needs a clear

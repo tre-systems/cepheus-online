@@ -1,7 +1,5 @@
 const hasProperty = (value: unknown, property: string): boolean =>
-  typeof value === 'object' &&
-  value !== null &&
-  Object.prototype.hasOwnProperty.call(value, property)
+  typeof value === 'object' && value !== null && Object.hasOwn(value, property)
 
 const fail = (message: string): never => {
   throw new Error(message)

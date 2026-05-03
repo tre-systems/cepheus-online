@@ -1,69 +1,91 @@
 import {describe, it} from 'node:test'
 import {expect} from '../../test/expect'
+import type {SchemaDefinition} from '../types/schema'
+import {isObjectSchema} from '../types/schema'
 
 import combatStateSchema from './combatStateSchema'
 
-type Schema = any
+const getProperties = (
+  schema: SchemaDefinition
+): Record<string, SchemaDefinition | boolean> => {
+  if (!isObjectSchema(schema) || schema.properties === undefined) {
+    throw new Error('Expected object schema with properties')
+  }
+
+  return schema.properties
+}
+
+const getProperty = (
+  schema: SchemaDefinition,
+  property: string
+): SchemaDefinition => {
+  const value = getProperties(schema)[property]
+  if (value === undefined || typeof value === 'boolean') {
+    throw new Error(`Expected schema property ${property}`)
+  }
+
+  return value
+}
 
 describe('combatStateSchema', () => {
   describe('for non-animal characters', () => {
-    const schema: Schema = combatStateSchema({character: {type: 'PLAYER'}})
+    const schema = combatStateSchema({character: {type: 'PLAYER'}})
 
     it('should have correct title', () => {
       expect(schema.title).toBe('Combat State')
     })
 
     it('should have standard characteristics for humanoid', () => {
-      const chars = schema.properties?.characteristics
-      expect(chars.properties).toHaveProperty('str')
-      expect(chars.properties).toHaveProperty('dex')
-      expect(chars.properties).toHaveProperty('end')
-      expect(chars.properties).toHaveProperty('int')
-      expect(chars.properties).toHaveProperty('edu')
-      expect(chars.properties).toHaveProperty('soc')
+      const chars = getProperties(getProperty(schema, 'characteristics'))
+      expect(chars).toHaveProperty('str')
+      expect(chars).toHaveProperty('dex')
+      expect(chars).toHaveProperty('end')
+      expect(chars).toHaveProperty('int')
+      expect(chars).toHaveProperty('edu')
+      expect(chars).toHaveProperty('soc')
     })
 
     it('should not have animal-specific characteristics', () => {
-      const chars = schema.properties?.characteristics
-      expect(chars.properties).not.toHaveProperty('instinct')
-      expect(chars.properties).not.toHaveProperty('pack')
+      const chars = getProperties(getProperty(schema, 'characteristics'))
+      expect(chars).not.toHaveProperty('instinct')
+      expect(chars).not.toHaveProperty('pack')
     })
   })
 
   describe('for animal characters', () => {
-    const schema: Schema = combatStateSchema({character: {type: 'ANIMAL'}})
+    const schema = combatStateSchema({character: {type: 'ANIMAL'}})
 
     it('should have animal-specific characteristics', () => {
-      const chars = schema.properties?.characteristics
-      expect(chars.properties).toHaveProperty('str')
-      expect(chars.properties).toHaveProperty('dex')
-      expect(chars.properties).toHaveProperty('end')
-      expect(chars.properties).toHaveProperty('int')
-      expect(chars.properties).toHaveProperty('instinct')
-      expect(chars.properties).toHaveProperty('pack')
+      const chars = getProperties(getProperty(schema, 'characteristics'))
+      expect(chars).toHaveProperty('str')
+      expect(chars).toHaveProperty('dex')
+      expect(chars).toHaveProperty('end')
+      expect(chars).toHaveProperty('int')
+      expect(chars).toHaveProperty('instinct')
+      expect(chars).toHaveProperty('pack')
     })
 
     it('should not have humanoid-specific characteristics', () => {
-      const chars = schema.properties?.characteristics
-      expect(chars.properties).not.toHaveProperty('edu')
-      expect(chars.properties).not.toHaveProperty('soc')
+      const chars = getProperties(getProperty(schema, 'characteristics'))
+      expect(chars).not.toHaveProperty('edu')
+      expect(chars).not.toHaveProperty('soc')
     })
   })
 
   describe('common combat properties', () => {
-    const schema: Schema = combatStateSchema({character: {type: 'PLAYER'}})
+    const schema = combatStateSchema({character: {type: 'PLAYER'}})
 
     it('should have visibility and awareness properties', () => {
-      expect(schema.properties).toHaveProperty('visible')
-      expect(schema.properties).toHaveProperty('aware')
+      expect(getProperties(schema)).toHaveProperty('visible')
+      expect(getProperties(schema)).toHaveProperty('aware')
     })
 
     it('should have targeting property', () => {
-      expect(schema.properties).toHaveProperty('target')
+      expect(getProperties(schema)).toHaveProperty('target')
     })
 
     it('should have stance with enum values', () => {
-      const stance = schema.properties?.stance
+      const stance = getProperty(schema, 'stance')
       expect(stance.enum).toContain('STANDING')
       expect(stance.enum).toContain('PRONE')
       expect(stance.enum).toContain('CROUCHED')
@@ -78,14 +100,14 @@ describe('combatStateSchema', () => {
         'parry'
       ]
       statusProps.forEach(prop => {
-        expect(schema.properties).toHaveProperty(prop)
+        expect(getProperties(schema)).toHaveProperty(prop)
       })
     })
 
     it('should have combat modifier properties', () => {
       const modifierProps = ['aim', 'cover', 'weapon', 'armor', 'AR', 'group']
       modifierProps.forEach(prop => {
-        expect(schema.properties).toHaveProperty(prop)
+        expect(getProperties(schema)).toHaveProperty(prop)
       })
     })
   })

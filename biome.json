@@ -1,0 +1,106 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.14/schema.json",
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "asNeeded",
+      "trailingCommas": "none",
+      "arrowParentheses": "always"
+    }
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        "useConst": "error",
+        "useTemplate": "error",
+        "useExponentiationOperator": "error",
+        "noNonNullAssertion": "error",
+        "useNodejsImportProtocol": "error"
+      },
+      "complexity": {
+        "noUselessSwitchCase": "error",
+        "noUselessTypeConstraint": "error"
+      },
+      "suspicious": {
+        "noVar": "error",
+        "noDoubleEquals": "error",
+        "noFallthroughSwitchClause": "error",
+        "noGlobalAssign": "error",
+        "noShadowRestrictedNames": "error"
+      },
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/server/**/*.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUndeclaredVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/shared/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "../client": "shared/ must not import from client/",
+                  "../../client": "shared/ must not import from client/",
+                  "../server": "shared/ must not import from server/",
+                  "../../server": "shared/ must not import from server/"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/client/**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "../server": "client/ must not import from server/",
+                  "../../server": "client/ must not import from server/",
+                  "../../../server": "client/ must not import from server/"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "files": {
+    "includes": [
+      "AGENTS.md",
+      "CONTRIBUTING.md",
+      "README.md",
+      "docs/**/*.md",
+      "src/**/*.ts",
+      "scripts/**/*.mjs",
+      "*.json",
+      "*.mjs"
+    ],
+    "ignoreUnknown": true
+  }
+}

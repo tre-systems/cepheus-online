@@ -28,6 +28,7 @@ grouped by purpose so each future change has an obvious home.
 ## Engineering
 
 - [Development standards](engineering/development-standards.md)
+- [Coding standards](engineering/coding-standards.md)
 - [Security baseline](engineering/security-baseline.md)
 - [Testing strategy](engineering/testing-strategy.md)
 

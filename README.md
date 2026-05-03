@@ -72,8 +72,11 @@ See the [documentation index](docs/README.md).
 
 The most important starting points are:
 
+- [Contributing](CONTRIBUTING.md)
+- [Agent guide](AGENTS.md)
 - [Product vision](docs/product/vision.md)
 - [Architecture](docs/architecture/overview.md)
+- [Coding standards](docs/engineering/coding-standards.md)
 - [Migration plan](docs/product/migration-plan.md)
 - [Architecture Decision Records](docs/adr/README.md)
 - [Discussion record](docs/provenance/discussion-record.md)
