@@ -5,20 +5,27 @@ the new app proves one vertical slice at a time.
 
 ## Phase 1: Foundation
 
-- Define shared ids, commands, events, and projections.
-- Build a minimal Worker and one Durable Object room.
+- Define shared ids, commands, events, and projections. Done for the playable
+  room spine.
+- Build a minimal Worker and one Durable Object room. Done for HTTP commands,
+  state recovery, and WebSocket dice broadcasts.
 - Add Discord OAuth proof of concept.
-- Add static client shell with plain CSS.
-- Add Canvas board with image background and movable pieces.
+- Add static client shell with plain CSS. Done for the mobile-first PWA shell.
+- Add Canvas board with image background and movable pieces. Done for local
+  board images, piece images/counters, camera controls, visibility, and movement
+  freedom.
 
 Success criteria: two browser tabs can join the same game, move a piece, roll
 dice, refresh, and recover from the event stream.
 
 ## Phase 2: Character Basics
 
-- Port entity schemas into hand-built forms.
-- Add character create/edit events.
-- Add equipment add/update/remove events.
+- Port entity schemas into hand-built forms. In progress with the dependency-free
+  character sheet tabs.
+- Add character create/edit events. Basic create/edit events are in place for
+  notes, age, characteristics, skills, credits, and simple equipment.
+- Add equipment add/update/remove events. Not started as item-level events;
+  current UI replaces the simple equipment list through `UpdateCharacterSheet`.
 - Add ledger append/export.
 - Add notes as server-ordered blocks.
 

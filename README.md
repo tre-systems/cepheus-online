@@ -21,13 +21,19 @@ whole-object optimistic sync model.
 
 ## Current Status
 
-This repository is just being seeded. It contains:
+This repository now has the first playable spine in place. It contains:
 
 - design docs under `docs/`
 - salvaged rules data under `data/`
 - salvaged entity schemas under `src/shared/schemas/`
-- a small shared TypeScript skeleton under `src/shared/`
-- small zero-dependency client helpers under `src/client/`
+- shared TypeScript commands, events, protocol validation, projections, dice,
+  and viewer filtering under `src/shared/`
+- Cloudflare Worker routes and a Durable Object room skeleton under
+  `src/server/`
+- a dependency-free browser shell served by the Worker with Canvas board play,
+  local asset import, synced dice reveals, mobile-first PWA metadata, and
+  editable basic character sheets
+- small zero-dependency client command helpers under `src/client/`
 
 ## Architecture Direction
 
