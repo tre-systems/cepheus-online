@@ -30,6 +30,11 @@ const CLIENT_HTML = `<!doctype html>
 
         <div class="board-frame">
           <canvas id="boardCanvas" width="1200" height="800"></canvas>
+          <div class="camera-controls" aria-label="Board camera controls">
+            <button id="zoomOutButton" class="camera-button" type="button" title="Zoom out" aria-label="Zoom out">-</button>
+            <button id="zoomResetButton" class="camera-button camera-reset" type="button" title="Reset view" aria-label="Reset board view">1x</button>
+            <button id="zoomInButton" class="camera-button" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+          </div>
           <div class="board-hud">
             <div>
               <h1>Cepheus Online</h1>
@@ -865,6 +870,33 @@ h1 {
   font-weight: 700;
 }
 
+.camera-controls {
+  position: absolute;
+  right: 8px;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(3, 36px);
+  gap: 5px;
+}
+
+.camera-button {
+  width: 36px;
+  min-height: 34px;
+  padding: 0;
+  border-color: rgba(72, 255, 173, 0.52);
+  border-radius: 5px;
+  background: rgba(5, 17, 13, 0.9);
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 900;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.34);
+}
+
+.camera-reset {
+  font-size: 11px;
+}
+
 .dice-overlay {
   position: absolute;
   left: 56px;
@@ -1351,6 +1383,9 @@ const els = {
   error: document.getElementById("errorText"),
   boardStatus: document.getElementById("boardStatus"),
   boardSelect: document.getElementById("boardSelect"),
+  zoomOut: document.getElementById("zoomOutButton"),
+  zoomReset: document.getElementById("zoomResetButton"),
+  zoomIn: document.getElementById("zoomInButton"),
   canvas: document.getElementById("boardCanvas"),
   diceStage: document.getElementById("diceStage"),
   diceOverlay: document.getElementById("diceOverlay"),
@@ -1380,6 +1415,8 @@ let selectedPieceId = null;
 let sheetOpen = false;
 let activeSheetTab = "details";
 let drag = null;
+let boardCamera = {zoom: 1, panX: 0, panY: 0};
+let cameraBoardId = null;
 let requestCounter = 0;
 let diceHideTimer = null;
 const boardImageCache = new Map();
@@ -1879,15 +1916,83 @@ const loadBoardImage = (board) => loadImage(boardImageUrl(board), boardImageCach
 
 const loadPieceImage = (piece) => loadImage(pieceImageUrl(piece), pieceImageCache);
 
-const canvasPoint = (event) => {
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+const resetBoardCamera = () => {
+  boardCamera = {zoom: 1, panX: 0, panY: 0};
+};
+
+const ensureBoardCamera = (board) => {
+  if (!board || cameraBoardId === board.id) return;
+  cameraBoardId = board.id;
+  resetBoardCamera();
+};
+
+const canvasCssSize = () => {
   const rect = els.canvas.getBoundingClientRect();
-  const board = selectedBoard();
-  const width = board?.width || 1200;
-  const height = board?.height || 800;
   return {
-    x: ((event.clientX - rect.left) / rect.width) * width,
-    y: ((event.clientY - rect.top) / rect.height) * height
+    width: Math.max(1, Math.floor(rect.width)),
+    height: Math.max(1, Math.floor(rect.height))
   };
+};
+
+const boardTransform = (board, cssWidth, cssHeight) => {
+  const baseScale = Math.min(cssWidth / board.width, cssHeight / board.height);
+  const scale = baseScale * boardCamera.zoom;
+  return {
+    scale,
+    x: (cssWidth - board.width * scale) / 2 + boardCamera.panX,
+    y: (cssHeight - board.height * scale) / 2 + boardCamera.panY
+  };
+};
+
+const screenPoint = (event) => {
+  const rect = els.canvas.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  };
+};
+
+const screenToBoard = (screen, board, transform) => ({
+  x: (screen.x - transform.x) / transform.scale,
+  y: (screen.y - transform.y) / transform.scale
+});
+
+const canvasPoint = (event) => {
+  const board = selectedBoard();
+  if (!board) return {x: 0, y: 0};
+  const size = canvasCssSize();
+  return screenToBoard(screenPoint(event), board, boardTransform(board, size.width, size.height));
+};
+
+const clampPiecePosition = (piece, x, y) => {
+  const board = selectedBoard();
+  if (!board) return {x, y};
+  return {
+    x: clamp(x, 0, Math.max(0, board.width - piece.width * piece.scale)),
+    y: clamp(y, 0, Math.max(0, board.height - piece.height * piece.scale))
+  };
+};
+
+const setCameraZoom = (nextZoom, anchorScreen = null) => {
+  const board = selectedBoard();
+  if (!board) return;
+  const size = canvasCssSize();
+  const beforeTransform = boardTransform(board, size.width, size.height);
+  const anchor = anchorScreen || {x: size.width / 2, y: size.height / 2};
+  const boardAnchor = screenToBoard(anchor, board, beforeTransform);
+  boardCamera.zoom = clamp(nextZoom, 0.5, 5);
+  const afterTransform = boardTransform(board, size.width, size.height);
+  boardCamera.panX += anchor.x - (afterTransform.x + boardAnchor.x * afterTransform.scale);
+  boardCamera.panY += anchor.y - (afterTransform.y + boardAnchor.y * afterTransform.scale);
+  render();
+};
+
+const releaseCanvasPointer = (pointerId) => {
+  if (els.canvas.hasPointerCapture(pointerId)) {
+    els.canvas.releasePointerCapture(pointerId);
+  }
 };
 
 const hitPiece = (point) => {
@@ -2165,33 +2270,38 @@ const renderBoardControls = () => {
   els.boardSelect.title = canSelectBoards
     ? board?.name || "Board"
     : "Board selection is referee-only";
+  els.zoomOut.disabled = !board;
+  els.zoomReset.disabled = !board;
+  els.zoomIn.disabled = !board;
+  els.zoomReset.textContent = Math.round(boardCamera.zoom * 100) + "%";
 };
 
-const drawGrid = (board, scaleX, scaleY) => {
+const drawGrid = (board) => {
   const grid = Math.max(25, board.scale || 50);
   ctx.strokeStyle = "rgba(238, 244, 241, 0.08)";
   ctx.lineWidth = 1;
   for (let x = 0; x <= board.width; x += grid) {
     ctx.beginPath();
-    ctx.moveTo(x * scaleX, 0);
-    ctx.lineTo(x * scaleX, board.height * scaleY);
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, board.height);
     ctx.stroke();
   }
   for (let y = 0; y <= board.height; y += grid) {
     ctx.beginPath();
-    ctx.moveTo(0, y * scaleY);
-    ctx.lineTo(board.width * scaleX, y * scaleY);
+    ctx.moveTo(0, y);
+    ctx.lineTo(board.width, y);
     ctx.stroke();
   }
 };
 
 const render = () => {
   const board = selectedBoard();
+  if (board) ensureBoardCamera(board);
   renderBoardControls();
-  const rect = els.canvas.getBoundingClientRect();
+  const size = canvasCssSize();
   const dpr = window.devicePixelRatio || 1;
-  const cssWidth = Math.max(1, Math.floor(rect.width));
-  const cssHeight = Math.max(1, Math.floor(rect.height));
+  const cssWidth = size.width;
+  const cssHeight = size.height;
   if (els.canvas.width !== cssWidth * dpr || els.canvas.height !== cssHeight * dpr) {
     els.canvas.width = cssWidth * dpr;
     els.canvas.height = cssHeight * dpr;
@@ -2209,28 +2319,32 @@ const render = () => {
     return;
   }
 
-  const scaleX = cssWidth / board.width;
-  const scaleY = cssHeight / board.height;
+  const transform = boardTransform(board, cssWidth, cssHeight);
   ctx.fillStyle = "#253130";
   ctx.fillRect(0, 0, cssWidth, cssHeight);
+  ctx.save();
+  ctx.translate(transform.x, transform.y);
+  ctx.scale(transform.scale, transform.scale);
+  ctx.fillStyle = "#06100d";
+  ctx.fillRect(0, 0, board.width, board.height);
   const boardImage = loadBoardImage(board);
   if (boardImage) {
-    ctx.drawImage(boardImage, 0, 0, cssWidth, cssHeight);
+    ctx.drawImage(boardImage, 0, 0, board.width, board.height);
   }
-  drawGrid(board, scaleX, scaleY);
+  drawGrid(board);
 
   for (const piece of boardPieces()) {
     const isSelected = piece.id === selectedPieceId;
-    const drawX = (drag && drag.pieceId === piece.id ? drag.x : piece.x) * scaleX;
-    const drawY = (drag && drag.pieceId === piece.id ? drag.y : piece.y) * scaleY;
-    const drawW = piece.width * piece.scale * scaleX;
-    const drawH = piece.height * piece.scale * scaleY;
+    const drawX = drag && drag.kind === "piece" && drag.pieceId === piece.id ? drag.x : piece.x;
+    const drawY = drag && drag.kind === "piece" && drag.pieceId === piece.id ? drag.y : piece.y;
+    const drawW = piece.width * piece.scale;
+    const drawH = piece.height * piece.scale;
     const image = loadPieceImage(piece);
     ctx.fillStyle = piece.visibility === "PREVIEW" ? "#f2b84b" : "#5fd0a2";
     ctx.strokeStyle = isSelected ? "#ffffff" : "#0b1211";
-    ctx.lineWidth = isSelected ? 3 : 2;
+    ctx.lineWidth = (isSelected ? 3 : 2) / transform.scale;
     ctx.beginPath();
-    ctx.roundRect(drawX, drawY, drawW, drawH, 10);
+    ctx.roundRect(drawX, drawY, drawW, drawH, Math.min(10, drawW / 3, drawH / 3));
     ctx.fill();
     if (image) {
       ctx.save();
@@ -2245,6 +2359,7 @@ const render = () => {
       ctx.fillText(piece.name, drawX + 8, drawY + 22);
     }
   }
+  ctx.restore();
 
   renderRail();
 };
@@ -2329,35 +2444,62 @@ const animateRoll = (roll) => {
 };
 
 els.canvas.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0) return;
+  const screen = screenPoint(event);
   const point = canvasPoint(event);
   const piece = hitPiece(point);
   selectedPieceId = piece?.id || null;
   if (piece) {
     drag = {
+      kind: "piece",
       pieceId: piece.id,
       offsetX: point.x - piece.x,
       offsetY: point.y - piece.y,
       x: piece.x,
       y: piece.y
     };
-    els.canvas.setPointerCapture(event.pointerId);
+  } else {
+    drag = {
+      kind: "pan",
+      pointerX: screen.x,
+      pointerY: screen.y,
+      panX: boardCamera.panX,
+      panY: boardCamera.panY
+    };
   }
+  els.canvas.setPointerCapture(event.pointerId);
   render();
 });
 
 els.canvas.addEventListener("pointermove", (event) => {
   if (!drag) return;
+  if (drag.kind === "pan") {
+    const screen = screenPoint(event);
+    boardCamera.panX = drag.panX + screen.x - drag.pointerX;
+    boardCamera.panY = drag.panY + screen.y - drag.pointerY;
+    render();
+    return;
+  }
   const point = canvasPoint(event);
-  drag.x = Math.max(0, point.x - drag.offsetX);
-  drag.y = Math.max(0, point.y - drag.offsetY);
+  const next = clampPiecePosition(
+    state?.pieces?.[drag.pieceId] || {width: 0, height: 0, scale: 1},
+    point.x - drag.offsetX,
+    point.y - drag.offsetY
+  );
+  drag.x = next.x;
+  drag.y = next.y;
   render();
 });
 
 els.canvas.addEventListener("pointerup", async (event) => {
-  if (!drag || !state) return;
+  if (!drag) return;
   const completed = drag;
   drag = null;
-  els.canvas.releasePointerCapture(event.pointerId);
+  releaseCanvasPointer(event.pointerId);
+  if (completed.kind !== "piece" || !state) {
+    render();
+    return;
+  }
   try {
     await sendCommand({
       type: "MovePiece",
@@ -2374,6 +2516,18 @@ els.canvas.addEventListener("pointerup", async (event) => {
     render();
   }
 });
+
+els.canvas.addEventListener("pointercancel", (event) => {
+  drag = null;
+  releaseCanvasPointer(event.pointerId);
+  render();
+});
+
+els.canvas.addEventListener("wheel", (event) => {
+  event.preventDefault();
+  const zoomFactor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+  setCameraZoom(boardCamera.zoom * zoomFactor, screenPoint(event));
+}, {passive: false});
 
 els.roomForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -2455,6 +2609,19 @@ els.boardSelect.addEventListener("change", () => {
     setError(error.message);
     render();
   });
+});
+
+els.zoomOut.addEventListener("click", () => {
+  setCameraZoom(boardCamera.zoom / 1.25);
+});
+
+els.zoomReset.addEventListener("click", () => {
+  resetBoardCamera();
+  render();
+});
+
+els.zoomIn.addEventListener("click", () => {
+  setCameraZoom(boardCamera.zoom * 1.25);
 });
 
 els.roll.addEventListener("click", () => {

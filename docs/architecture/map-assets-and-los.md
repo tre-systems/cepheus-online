@@ -47,6 +47,22 @@ The first map-building flow should be:
 
 The app must never depend on checked-in copies of the published assets.
 
+## Board Camera
+
+Board pan and zoom are client-only inspection controls. They change the local
+Canvas view of the selected board so a player or referee can inspect map detail,
+but they must not create commands, events, or persisted server state. Board
+composition, selected board, piece positions, and door state remain the shared
+game data.
+
+Test notes:
+
+- Zooming in and out keeps the board image, grid, and pieces aligned.
+- Panning changes only the local viewport; another tab keeps its own view.
+- Moving a piece after pan or zoom still writes board coordinates, not screen
+  coordinates.
+- Refreshing a tab may reset the local camera without changing game state.
+
 ## Piece Counters
 
 Pieces can carry an optional `imageAssetId`. The current browser renderer treats
