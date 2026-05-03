@@ -395,6 +395,7 @@ h1 {
   --die-tilt-x: -22deg;
   --die-tilt-y: -34deg;
   --die-tilt-z: 1deg;
+  --die-drift: 1;
   width: var(--die-size);
   height: var(--die-size);
   position: relative;
@@ -414,7 +415,7 @@ h1 {
 }
 
 .die.rolling {
-  animation: tumble 1650ms cubic-bezier(0.18, 0.86, 0.22, 1);
+  animation: tumble 2200ms cubic-bezier(0.16, 0.82, 0.2, 1);
 }
 
 .face {
@@ -1083,16 +1084,22 @@ h1 {
 
 @keyframes tumble {
   0% {
-    transform: rotateX(var(--die-tilt-x)) rotateY(var(--die-tilt-y)) rotateZ(var(--die-tilt-z)) translateY(-10px) scale(0.96);
+    transform: translate3d(calc(var(--die-drift) * -22px), -18px, 0) rotateX(calc(var(--die-tilt-x) - 120deg)) rotateY(calc(var(--die-tilt-y) + 50deg)) rotateZ(calc(var(--die-tilt-z) - 35deg)) scale(0.92);
+  }
+  16% {
+    transform: translate3d(calc(var(--die-drift) * 20px), -30px, 0) rotateX(calc(var(--die-tilt-x) + 430deg)) rotateY(calc(var(--die-tilt-y) - 320deg)) rotateZ(calc(var(--die-tilt-z) + 185deg)) scale(1.06);
   }
   34% {
-    transform: rotateX(calc(var(--die-tilt-x) - 24deg)) rotateY(calc(var(--die-tilt-y) - 34deg)) rotateZ(calc(var(--die-tilt-z) + 36deg)) translateY(4px) scale(1.04);
+    transform: translate3d(calc(var(--die-drift) * -18px), 4px, 0) rotateX(calc(var(--die-tilt-x) + 890deg)) rotateY(calc(var(--die-tilt-y) - 690deg)) rotateZ(calc(var(--die-tilt-z) + 390deg)) scale(1.03);
   }
-  64% {
-    transform: rotateX(calc(var(--die-tilt-x) + 18deg)) rotateY(calc(var(--die-tilt-y) + 22deg)) rotateZ(calc(var(--die-tilt-z) - 18deg)) translateY(-3px) scale(1.02);
+  52% {
+    transform: translate3d(calc(var(--die-drift) * 22px), -18px, 0) rotateX(calc(var(--die-tilt-x) + 1320deg)) rotateY(calc(var(--die-tilt-y) - 1040deg)) rotateZ(calc(var(--die-tilt-z) + 570deg)) scale(1.06);
   }
-  82% {
-    transform: rotateX(calc(var(--die-tilt-x) - 6deg)) rotateY(calc(var(--die-tilt-y) - 8deg)) rotateZ(calc(var(--die-tilt-z) + 5deg)) translateY(1px) scale(1);
+  70% {
+    transform: translate3d(calc(var(--die-drift) * -10px), 3px, 0) rotateX(calc(var(--die-tilt-x) + 1740deg)) rotateY(calc(var(--die-tilt-y) - 1410deg)) rotateZ(calc(var(--die-tilt-z) + 740deg)) scale(1.02);
+  }
+  86% {
+    transform: translate3d(calc(var(--die-drift) * 5px), -5px, 0) rotateX(calc(var(--die-tilt-x) + 185deg)) rotateY(calc(var(--die-tilt-y) - 150deg)) rotateZ(calc(var(--die-tilt-z) + 62deg)) scale(1.01);
   }
   100% {
     transform: rotateX(var(--die-tilt-x)) rotateY(var(--die-tilt-y)) rotateZ(var(--die-tilt-z)) translateY(0) scale(1);
@@ -1103,8 +1110,8 @@ h1 {
 
 const CLIENT_JS = `const DEFAULT_GAME_ID = "demo-room";
 const DEFAULT_ACTOR_ID = "local-user";
-const DICE_ROLL_ANIMATION_MS = 1650;
-const DICE_OVERLAY_VISIBLE_MS = 5400;
+const DICE_ROLL_ANIMATION_MS = 2200;
+const DICE_OVERLAY_VISIBLE_MS = 6200;
 
 const qs = new URLSearchParams(location.search);
 if ("serviceWorker" in navigator) {
@@ -1614,6 +1621,7 @@ const buildDie = (value, index) => {
   die.style.setProperty("--die-tilt-x", index % 2 === 0 ? "-22deg" : "-18deg");
   die.style.setProperty("--die-tilt-y", index % 2 === 0 ? "-34deg" : "-24deg");
   die.style.setProperty("--die-tilt-z", index % 2 === 0 ? "1deg" : "-4deg");
+  die.style.setProperty("--die-drift", index % 2 === 0 ? "1" : "-1");
   const faces = [
     ["front", value],
     ["back", 7 - base],
