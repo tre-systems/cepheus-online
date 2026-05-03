@@ -69,5 +69,6 @@ describe('dice expressions', () => {
 
     assert.equal(state?.diceLog.length, 1)
     assert.equal(state?.diceLog[0]?.total, 7)
+    assert.equal(state?.diceLog[0]?.revealAt, '2026-05-03T00:00:03.500Z')
   })
 })

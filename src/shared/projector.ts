@@ -1,6 +1,9 @@
 import type {EventEnvelope} from './events'
 import type {GameState} from './state'
 
+const diceRevealAt = (createdAt: string): string =>
+  new Date(Date.parse(createdAt) + 2500).toISOString()
+
 export const projectGameState = (
   events: readonly EventEnvelope[],
   initialState: GameState | null = null
@@ -109,6 +112,7 @@ export const projectGameState = (
           id: envelope.id,
           actorId: envelope.actorId,
           createdAt: envelope.createdAt,
+          revealAt: diceRevealAt(envelope.createdAt),
           expression: event.expression,
           reason: event.reason,
           rolls: event.rolls,

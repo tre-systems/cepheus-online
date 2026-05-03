@@ -63,6 +63,7 @@ export interface DiceRollState {
   id: string
   actorId: UserId | null
   createdAt: string
+  revealAt: string
   expression: string
   reason: string
   rolls: number[]

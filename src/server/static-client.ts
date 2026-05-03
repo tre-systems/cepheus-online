@@ -94,10 +94,34 @@ const CLIENT_HTML = `<!doctype html>
             <span>Image URL</span>
             <input id="pieceImageInput" name="pieceImage" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
           </label>
+          <div class="board-create-title">
+            <span>New board</span>
+          </div>
+          <label>
+            <span>Name</span>
+            <input id="boardNameInput" name="boardName" autocomplete="off" spellcheck="false" placeholder="Geomorph deck">
+          </label>
+          <label>
+            <span>Image URL</span>
+            <input id="boardImageInput" name="boardImage" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
+          </label>
+          <label>
+            <span>Width</span>
+            <input id="boardWidthInput" name="boardWidth" inputmode="numeric" autocomplete="off" value="1200">
+          </label>
+          <label>
+            <span>Height</span>
+            <input id="boardHeightInput" name="boardHeight" inputmode="numeric" autocomplete="off" value="800">
+          </label>
+          <label>
+            <span>Grid</span>
+            <input id="boardScaleInput" name="boardScale" inputmode="numeric" autocomplete="off" value="50">
+          </label>
           <div class="dialog-actions">
             <button id="bootstrapButton" type="button">Bootstrap</button>
             <button id="refreshButton" type="button">Refresh</button>
             <button id="createPieceButton" type="button">Create piece</button>
+            <button id="createBoardButton" type="button">Create board</button>
             <button id="roomCancelButton" type="button">Close</button>
             <button type="submit">Open</button>
           </div>
@@ -935,6 +959,26 @@ h1 {
   font-weight: 800;
 }
 
+.sheet-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.sheet-actions button {
+  min-height: 30px;
+  padding: 0 5px;
+  border-radius: 0;
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.sheet-actions button.active {
+  background: var(--accent);
+  color: #020504;
+}
+
 .stat-strip {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -993,7 +1037,8 @@ h1 {
 
 .room-form label,
 .dice-expression,
-.piece-create-title {
+.piece-create-title,
+.board-create-title {
   display: grid;
   gap: 5px;
   min-width: 0;
@@ -1001,14 +1046,16 @@ h1 {
 
 .room-form span,
 .dice-expression span,
-.piece-create-title span {
+.piece-create-title span,
+.board-create-title span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 760;
   text-transform: uppercase;
 }
 
-.piece-create-title {
+.piece-create-title,
+.board-create-title {
   grid-column: 1 / -1;
   padding-top: 4px;
   border-top: 1px solid rgba(72, 255, 173, 0.18);
@@ -1148,8 +1195,14 @@ const els = {
   bootstrap: document.getElementById("bootstrapButton"),
   refresh: document.getElementById("refreshButton"),
   createPiece: document.getElementById("createPieceButton"),
+  createBoard: document.getElementById("createBoardButton"),
   pieceNameInput: document.getElementById("pieceNameInput"),
   pieceImageInput: document.getElementById("pieceImageInput"),
+  boardNameInput: document.getElementById("boardNameInput"),
+  boardImageInput: document.getElementById("boardImageInput"),
+  boardWidthInput: document.getElementById("boardWidthInput"),
+  boardHeightInput: document.getElementById("boardHeightInput"),
+  boardScaleInput: document.getElementById("boardScaleInput"),
   roll: document.getElementById("rollButton"),
   diceExpression: document.getElementById("diceExpression"),
   error: document.getElementById("errorText"),
@@ -1175,6 +1228,7 @@ let socket = null;
 let socketOpen = false;
 let firstStateApplied = false;
 let latestDiceId = null;
+const viewerRole = qs.get("viewer") || "referee";
 let selectedPieceId = null;
 let sheetOpen = false;
 let drag = null;
@@ -1197,8 +1251,8 @@ const setError = (text) => {
 const requestId = (prefix) => prefix + "-" + Date.now().toString(36) + "-" + (++requestCounter).toString(36);
 
 const roomPath = () => "/rooms/" + encodeURIComponent(roomId);
-const viewerQuery = () => "?viewer=player&user=" + encodeURIComponent(actorId);
-const pieceIdFromName = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "piece";
+const viewerQuery = () => "?viewer=" + encodeURIComponent(viewerRole) + "&user=" + encodeURIComponent(actorId);
+const idFromName = (name, fallback) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || fallback;
 
 const commandMessage = (id, command) => ({
   type: "command",
@@ -1264,8 +1318,19 @@ const createPieceCommand = (boardId) => ({
   y: 180
 });
 
+const uniqueBoardId = (name) => {
+  const base = idFromName(name, "board");
+  let index = Object.keys(state?.boards || {}).length + 1;
+  let boardId = base + "-" + index;
+  while (state?.boards?.[boardId]) {
+    index += 1;
+    boardId = base + "-" + index;
+  }
+  return boardId;
+};
+
 const uniquePieceId = (name) => {
-  const base = pieceIdFromName(name);
+  const base = idFromName(name, "piece");
   let index = Object.keys(state?.pieces || {}).length + 1;
   let pieceId = base + "-" + index;
   while (state?.pieces?.[pieceId]) {
@@ -1273,6 +1338,40 @@ const uniquePieceId = (name) => {
     pieceId = base + "-" + index;
   }
   return pieceId;
+};
+
+const parsePositiveIntegerInput = (input, fallback) => {
+  const value = Number.parseInt(input.value, 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+};
+
+const createCustomBoard = async () => {
+  setError("");
+  if (!state) {
+    await postCommand(createGameCommand(), requestId("create-game-for-board"));
+  }
+
+  const name = els.boardNameInput.value.trim() || "Board " + (Object.keys(state?.boards || {}).length + 1);
+  const width = parsePositiveIntegerInput(els.boardWidthInput, 1200);
+  const height = parsePositiveIntegerInput(els.boardHeightInput, 800);
+  const scale = parsePositiveIntegerInput(els.boardScaleInput, 50);
+  const boardId = uniqueBoardId(name);
+  await sendCommand({
+    type: "CreateBoard",
+    gameId: roomId,
+    actorId,
+    boardId,
+    name,
+    imageAssetId: null,
+    url: els.boardImageInput.value.trim() || null,
+    width,
+    height,
+    scale
+  });
+  els.boardNameInput.value = "";
+  els.boardImageInput.value = "";
+  els.roomDialog.close();
+  render();
 };
 
 const createCustomPiece = async () => {
@@ -1533,10 +1632,30 @@ const renderSheet = () => {
     chips.append(chip);
   }
 
+  const visibilityActions = document.createElement("div");
+  visibilityActions.className = "sheet-actions";
+  for (const visibility of ["HIDDEN", "PREVIEW", "VISIBLE"]) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = visibility === "HIDDEN" ? "Hide" : visibility.toLowerCase();
+    button.className = piece.visibility === visibility ? "active" : "";
+    button.addEventListener("click", () => {
+      sendCommand({
+        type: "SetPieceVisibility",
+        gameId: roomId,
+        actorId,
+        pieceId: piece.id,
+        visibility
+      }).catch((error) => setError(error.message));
+    });
+    visibilityActions.append(button);
+  }
+
   body.append(
     sheetRow("Type", "PLAYER"),
     sheetRow("Position", Math.round(piece.x) + ", " + Math.round(piece.y)),
     sheetRow("Visibility", piece.visibility),
+    visibilityActions,
     stats,
     chips
   );
@@ -1727,9 +1846,16 @@ const buildDie = (value, index) => {
 const animateRoll = (roll) => {
   if (diceHideTimer) window.clearTimeout(diceHideTimer);
   els.diceOverlay.classList.add("visible");
+  const revealAt = Date.parse(roll.revealAt || "");
+  const timeUntilReveal = Number.isFinite(revealAt) ? revealAt - Date.now() : DICE_ROLL_ANIMATION_MS;
+  const rollDuration = Math.max(500, Math.min(DICE_ROLL_ANIMATION_MS, timeUntilReveal));
   const row = document.createElement("div");
   row.className = "dice-row";
-  roll.rolls.forEach((value, index) => row.append(buildDie(value, index)));
+  roll.rolls.forEach((value, index) => {
+    const die = buildDie(value, index);
+    die.style.animationDuration = rollDuration + "ms";
+    row.append(die);
+  });
   const total = document.createElement("div");
   total.className = "roll-total";
   total.textContent = "Rolling...";
@@ -1738,10 +1864,10 @@ const animateRoll = (roll) => {
   setTimeout(() => {
     total.textContent = String(roll.total);
     for (const die of row.querySelectorAll(".die")) die.classList.remove("rolling");
-  }, DICE_ROLL_ANIMATION_MS);
+  }, rollDuration);
   diceHideTimer = window.setTimeout(() => {
     els.diceOverlay.classList.remove("visible");
-  }, DICE_OVERLAY_VISIBLE_MS);
+  }, Math.max(DICE_OVERLAY_VISIBLE_MS, rollDuration + 3600));
 };
 
 els.canvas.addEventListener("pointerdown", (event) => {
@@ -1836,6 +1962,10 @@ els.refresh.addEventListener("click", () => {
 
 els.createPiece.addEventListener("click", () => {
   createCustomPiece().catch((error) => setError(error.message));
+});
+
+els.createBoard.addEventListener("click", () => {
+  createCustomBoard().catch((error) => setError(error.message));
 });
 
 els.roll.addEventListener("click", () => {
