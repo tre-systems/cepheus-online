@@ -414,7 +414,7 @@ h1 {
 }
 
 .die.rolling {
-  animation: tumble 980ms cubic-bezier(0.18, 0.86, 0.22, 1);
+  animation: tumble 1650ms cubic-bezier(0.18, 0.86, 0.22, 1);
 }
 
 .face {
@@ -1103,6 +1103,8 @@ h1 {
 
 const CLIENT_JS = `const DEFAULT_GAME_ID = "demo-room";
 const DEFAULT_ACTOR_ID = "local-user";
+const DICE_ROLL_ANIMATION_MS = 1650;
+const DICE_OVERLAY_VISIBLE_MS = 5400;
 
 const qs = new URLSearchParams(location.search);
 if ("serviceWorker" in navigator) {
@@ -1644,10 +1646,10 @@ const animateRoll = (roll) => {
   setTimeout(() => {
     total.textContent = String(roll.total);
     for (const die of row.querySelectorAll(".die")) die.classList.remove("rolling");
-  }, 900);
+  }, DICE_ROLL_ANIMATION_MS);
   diceHideTimer = window.setTimeout(() => {
     els.diceOverlay.classList.remove("visible");
-  }, 4200);
+  }, DICE_OVERLAY_VISIBLE_MS);
 };
 
 els.canvas.addEventListener("pointerdown", (event) => {
