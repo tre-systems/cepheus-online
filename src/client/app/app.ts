@@ -43,6 +43,10 @@ import {
   postRoomCommand
 } from './room-api.js'
 import {
+  applyServerMessage as applyClientServerMessage,
+  buildSequencedCommand
+} from '../game-commands.js'
+import {
   characterSheetEmptyLabels,
   characterSheetTitle,
   characteristicRows,
@@ -220,67 +224,11 @@ els.pwaInstallDismissButton?.addEventListener('click', () => {
 const requestId = (prefix) =>
   prefix + '-' + Date.now().toString(36) + '-' + (++requestCounter).toString(36)
 
-const sequenceCommand = (command) => {
-  if (
-    !state ||
-    command.expectedSeq !== undefined ||
-    command.type === 'CreateGame'
-  ) {
-    return command
-  }
-
-  return {
-    ...command,
-    expectedSeq: state.eventSeq
-  }
-}
-
-const applyServerMessage = (message) => {
-  switch (message.type) {
-    case 'roomState':
-    case 'commandAccepted':
-      return {
-        nextState: message.state,
-        shouldApplyState: true,
-        error: '',
-        shouldReload: false
-      }
-    case 'commandRejected':
-      return {
-        nextState: state,
-        shouldApplyState: false,
-        error: message.error.message,
-        shouldReload: message.error.code === 'stale_command'
-      }
-    case 'error':
-      return {
-        nextState: state,
-        shouldApplyState: false,
-        error: message.error.message,
-        shouldReload: false
-      }
-    case 'pong':
-      return {
-        nextState: state,
-        shouldApplyState: false,
-        error: '',
-        shouldReload: false
-      }
-    default:
-      return {
-        nextState: state,
-        shouldApplyState: false,
-        error: 'Unhandled server message ' + message.type,
-        shouldReload: false
-      }
-  }
-}
-
 const handleServerMessage = (message) => {
-  const application = applyServerMessage(message)
-  setError(application.error)
+  const application = applyClientServerMessage(state, message)
+  setError(application.error || '')
   if (application.shouldApplyState) {
-    applyState(application.nextState)
+    applyState(application.state)
   }
   if (application.shouldReload) {
     fetchState().catch((err) => setError(err.message))
@@ -288,7 +236,7 @@ const handleServerMessage = (message) => {
 }
 
 const postCommand = async (command, id = requestId(command.type)) => {
-  const sequencedCommand = sequenceCommand(command)
+  const sequencedCommand = buildSequencedCommand(command, state)
   const response = await postRoomCommand({
     roomId,
     requestId: id,

@@ -27,7 +27,8 @@ const CLIENT_MODULES = new Map([
         '/client/app/dice-overlay.js',
         '/client/app/door-los-view.js',
         '/client/app/image-assets.js',
-        '/client/app/room-api.js'
+        '/client/app/room-api.js',
+        '/client/game-commands.js'
       ]
     }
   ],
@@ -54,7 +55,15 @@ const CLIENT_MODULES = new Map([
   ],
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
+  [
+    '/client/game-commands.js',
+    {
+      markers: ['buildSequencedCommand', 'applyServerMessage'],
+      imports: ['/shared/ids']
+    }
+  ],
   ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }],
+  ['/shared/ids', { markers: ['asGameId', 'asUserId'] }],
   [
     '/shared/mapAssets.js',
     {

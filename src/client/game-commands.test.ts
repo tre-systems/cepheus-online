@@ -398,6 +398,7 @@ describe('client command helpers', () => {
     })
 
     assert.equal(result.state, state)
+    assert.equal(result.shouldApplyState, true)
     assert.equal(result.shouldReload, false)
     assert.equal(result.error, null)
   })
@@ -414,6 +415,7 @@ describe('client command helpers', () => {
     })
 
     assert.equal(result.state, state)
+    assert.equal(result.shouldApplyState, false)
     assert.equal(result.shouldReload, true)
     assert.equal(result.error, 'Expected sequence 7, current sequence is 8')
   })

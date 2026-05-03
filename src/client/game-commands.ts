@@ -33,6 +33,7 @@ export interface ClientCommandOptions {
 
 export interface ClientMessageApplication {
   state: GameState | null
+  shouldApplyState: boolean
   shouldReload: boolean
   error: string | null
 }
@@ -477,6 +478,7 @@ export const applyServerMessage = (
     case 'roomState':
       return {
         state: message.state,
+        shouldApplyState: true,
         shouldReload: false,
         error: null
       }
@@ -484,6 +486,7 @@ export const applyServerMessage = (
     case 'commandAccepted':
       return {
         state: message.state,
+        shouldApplyState: true,
         shouldReload: false,
         error: null
       }
@@ -491,6 +494,7 @@ export const applyServerMessage = (
     case 'commandRejected':
       return {
         state: currentState,
+        shouldApplyState: false,
         shouldReload: message.error.code === 'stale_command',
         error: message.error.message
       }
@@ -498,6 +502,7 @@ export const applyServerMessage = (
     case 'error':
       return {
         state: currentState,
+        shouldApplyState: false,
         shouldReload: false,
         error: message.error.message
       }
@@ -505,6 +510,7 @@ export const applyServerMessage = (
     case 'pong':
       return {
         state: currentState,
+        shouldApplyState: false,
         shouldReload: false,
         error: null
       }
@@ -513,6 +519,7 @@ export const applyServerMessage = (
       const exhaustive: never = message
       return {
         state: currentState,
+        shouldApplyState: false,
         shouldReload: false,
         error: `Unhandled message ${(exhaustive as { type: string }).type}`
       }

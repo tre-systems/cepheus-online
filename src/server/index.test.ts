@@ -20,7 +20,8 @@ const clientModules = new Map<
         '/client/app/dice-overlay.js',
         '/client/app/door-los-view.js',
         '/client/app/image-assets.js',
-        '/client/app/room-api.js'
+        '/client/app/room-api.js',
+        '/client/game-commands.js'
       ]
     }
   ],
@@ -47,7 +48,15 @@ const clientModules = new Map<
   ],
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
+  [
+    '/client/game-commands.js',
+    {
+      markers: ['buildSequencedCommand', 'applyServerMessage'],
+      imports: ['/shared/ids']
+    }
+  ],
   ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }],
+  ['/shared/ids', { markers: ['asGameId', 'asUserId'] }],
   [
     '/shared/mapAssets.js',
     {
@@ -271,6 +280,19 @@ describe('Worker static client', () => {
     )
     assert.equal(body.includes('DICE_PIP_SLOTS'), true)
     assert.equal(body.includes('deriveDieFaces'), true)
+  })
+
+  it('serves the client command helper module', async () => {
+    const response = await fetchStaticClient('/client/game-commands.js')
+    const body = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.equal(
+      response.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(body.includes('buildSequencedCommand'), true)
+    assert.equal(body.includes('applyServerMessage'), true)
   })
 
   it('serves the browser dice overlay helper module', async () => {

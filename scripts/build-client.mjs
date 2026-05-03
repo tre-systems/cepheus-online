@@ -94,6 +94,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/game-commands.js',
+    source: join(compiledClientRoot, 'client', 'game-commands.js'),
+    exportName: 'CLIENT_GAME_COMMANDS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/dice.js',
     source: join(compiledClientRoot, 'client', 'dice.js'),
     exportName: 'CLIENT_DICE_JS',
@@ -103,6 +109,18 @@ const assets = [
     pathname: '/shared/mapAssets.js',
     source: join(compiledClientRoot, 'shared', 'mapAssets.js'),
     exportName: 'SHARED_MAP_ASSETS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/ids',
+    source: join(compiledClientRoot, 'shared', 'ids.js'),
+    exportName: 'SHARED_IDS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/ids.js',
+    source: join(compiledClientRoot, 'shared', 'ids.js'),
+    exportName: 'SHARED_IDS_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {
