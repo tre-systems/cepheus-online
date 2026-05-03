@@ -6,7 +6,9 @@ import type {
   PieceId,
   UserId
 } from './ids'
+import type { CareerCreationEvent, CareerTermStart } from './characterCreation'
 import type {
+  CharacterCreationProjection,
   CharacterSheetPatch,
   CharacterType,
   PieceFreedom,
@@ -41,6 +43,24 @@ export type GameEvent =
       type: 'CharacterSheetUpdated'
       characterId: CharacterId
     } & CharacterSheetPatch)
+  | {
+      type: 'CharacterCreationStarted'
+      characterId: CharacterId
+      creation: CharacterCreationProjection
+    }
+  | {
+      type: 'CharacterCreationTransitioned'
+      characterId: CharacterId
+      creationEvent: CareerCreationEvent
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | ({
+      type: 'CharacterCareerTermStarted'
+      characterId: CharacterId
+      career: string
+      drafted: boolean
+    } & CareerTermStart)
   | {
       type: 'BoardCreated'
       boardId: BoardId

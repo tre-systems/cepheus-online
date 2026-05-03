@@ -1,4 +1,10 @@
 import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
+import type {
+  AgingChange,
+  CareerCreationState,
+  CareerRank,
+  CareerTerm
+} from './characterCreation'
 
 export type CharacterType = 'PLAYER' | 'NPC' | 'ANIMAL' | 'ROBOT'
 
@@ -22,6 +28,16 @@ export interface CharacterSheetPatch {
   skills?: string[]
   equipment?: CharacterEquipmentItem[]
   credits?: number
+}
+
+export interface CharacterCreationProjection {
+  state: CareerCreationState
+  terms: CareerTerm[]
+  careers: CareerRank[]
+  canEnterDraft: boolean
+  failedToQualify: boolean
+  characteristicChanges: AgingChange[]
+  creationComplete: boolean
 }
 
 export interface GameState {
@@ -55,6 +71,7 @@ export interface CharacterState {
   skills: string[]
   equipment: CharacterEquipmentItem[]
   credits: number
+  creation: CharacterCreationProjection | null
 }
 
 export interface BoardState {

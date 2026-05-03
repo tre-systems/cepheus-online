@@ -1,4 +1,5 @@
 import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
+import type { CareerCreationEvent } from './characterCreation'
 import { err, ok, type Result } from './result'
 import type { Command } from './commands'
 import type { GameState } from './state'
@@ -345,6 +346,81 @@ const parseBoolean = (
   return ok(raw)
 }
 
+const parseOptionalBoolean = (
+  raw: unknown,
+  label: string
+): Result<boolean | undefined, CommandError> => {
+  if (raw === undefined) return ok(undefined)
+
+  return parseBoolean(raw, label)
+}
+
+const parseCareerCreationEvent = (
+  raw: unknown
+): Result<CareerCreationEvent, CommandError> => {
+  if (!isObject(raw) || !isString(raw.type)) {
+    return err(invalidCommand('creationEvent must be an object with a type'))
+  }
+
+  switch (raw.type) {
+    case 'SET_CHARACTERISTICS':
+    case 'COMPLETE_HOMEWORLD':
+    case 'COMPLETE_BASIC_TRAINING':
+    case 'SURVIVAL_FAILED':
+    case 'COMPLETE_COMMISSION':
+    case 'SKIP_COMMISSION':
+    case 'COMPLETE_ADVANCEMENT':
+    case 'SKIP_ADVANCEMENT':
+    case 'COMPLETE_SKILLS':
+    case 'COMPLETE_AGING':
+    case 'REENLIST':
+    case 'LEAVE_CAREER':
+    case 'REENLIST_BLOCKED':
+    case 'FORCED_REENLIST':
+    case 'CONTINUE_CAREER':
+    case 'FINISH_MUSTERING':
+    case 'CREATION_COMPLETE':
+    case 'DEATH_CONFIRMED':
+    case 'MISHAP_RESOLVED':
+    case 'RESET':
+      return ok({ type: raw.type })
+
+    case 'SELECT_CAREER': {
+      const isNewCareer = parseBoolean(raw.isNewCareer, 'isNewCareer')
+      if (!isNewCareer.ok) return isNewCareer
+      const drafted = parseOptionalBoolean(raw.drafted, 'drafted')
+      if (!drafted.ok) return drafted
+
+      return ok({
+        type: 'SELECT_CAREER',
+        isNewCareer: isNewCareer.value,
+        ...(drafted.value === undefined ? {} : { drafted: drafted.value })
+      })
+    }
+
+    case 'SURVIVAL_PASSED': {
+      const canCommission = parseBoolean(
+        raw.canCommission,
+        'canCommission'
+      )
+      if (!canCommission.ok) return canCommission
+      const canAdvance = parseBoolean(raw.canAdvance, 'canAdvance')
+      if (!canAdvance.ok) return canAdvance
+
+      return ok({
+        type: 'SURVIVAL_PASSED',
+        canCommission: canCommission.value,
+        canAdvance: canAdvance.value
+      })
+    }
+
+    default:
+      return err(
+        invalidCommand(`Unsupported character creation event ${raw.type}`)
+      )
+  }
+}
+
 const parseBaseCommand = (
   raw: Record<string, unknown>
 ): Result<
@@ -420,6 +496,48 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
         ...base.value,
         characterId: characterId.value,
         ...sheetPatch.value
+      })
+    }
+
+    case 'StartCharacterCreation': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'StartCharacterCreation',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'AdvanceCharacterCreation': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const creationEvent = parseCareerCreationEvent(raw.creationEvent)
+      if (!creationEvent.ok) return creationEvent
+
+      return ok({
+        type: 'AdvanceCharacterCreation',
+        ...base.value,
+        characterId: characterId.value,
+        creationEvent: creationEvent.value
+      })
+    }
+
+    case 'StartCharacterCareerTerm': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const career = parseString(raw.career, 'career')
+      if (!career.ok) return career
+      const drafted = parseOptionalBoolean(raw.drafted, 'drafted')
+      if (!drafted.ok) return drafted
+
+      return ok({
+        type: 'StartCharacterCareerTerm',
+        ...base.value,
+        characterId: characterId.value,
+        career: career.value,
+        ...(drafted.value === undefined ? {} : { drafted: drafted.value })
       })
     }
 

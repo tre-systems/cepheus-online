@@ -45,6 +45,7 @@ const character = (
   skills: [],
   equipment: [],
   credits: 0,
+  creation: null,
   ...overrides
 })
 

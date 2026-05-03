@@ -1,4 +1,5 @@
 import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
+import type { CareerCreationEvent } from './characterCreation'
 import type {
   CharacterSheetPatch,
   CharacterType,
@@ -31,6 +32,30 @@ export type Command =
       expectedSeq?: number
       characterId: CharacterId
     } & CharacterSheetPatch)
+  | {
+      type: 'StartCharacterCreation'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+    }
+  | {
+      type: 'AdvanceCharacterCreation'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+      creationEvent: CareerCreationEvent
+    }
+  | {
+      type: 'StartCharacterCareerTerm'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+      career: string
+      drafted?: boolean
+    }
   | {
       type: 'CreateBoard'
       gameId: GameId

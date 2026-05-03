@@ -1,4 +1,10 @@
 import type { Command } from '../../shared/commands'
+import {
+  canTransitionCareerCreationState,
+  createCareerCreationState,
+  startCareerTerm,
+  transitionCareerCreationState
+} from '../../shared/characterCreation'
 import { rollDiceExpression } from '../../shared/dice'
 import type { GameEvent } from '../../shared/events'
 import { deriveEventRng } from '../../shared/prng'
@@ -194,6 +200,120 @@ export const deriveEventsForCommand = (
             ? {}
             : { equipment: command.equipment }),
           ...(command.credits === undefined ? {} : { credits: command.credits })
+        }
+      ])
+    }
+
+    case 'StartCharacterCreation': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (character.creation) {
+        return err(
+          commandError(
+            'duplicate_entity',
+            'Character creation has already started'
+          )
+        )
+      }
+
+      return ok([
+        {
+          type: 'CharacterCreationStarted',
+          characterId: command.characterId,
+          creation: {
+            state: createCareerCreationState(),
+            terms: [],
+            careers: [],
+            canEnterDraft: true,
+            failedToQualify: false,
+            characteristicChanges: [],
+            creationComplete: false
+          }
+        }
+      ])
+    }
+
+    case 'AdvanceCharacterCreation': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!character.creation) {
+        return err(
+          commandError(
+            'missing_entity',
+            'Character creation has not been started'
+          )
+        )
+      }
+      if (
+        !canTransitionCareerCreationState(
+          character.creation.state,
+          command.creationEvent
+        )
+      ) {
+        return err(
+          commandError(
+            'invalid_command',
+            `${command.creationEvent.type} is not valid from ${character.creation.state.status}`
+          )
+        )
+      }
+
+      const nextState = transitionCareerCreationState(
+        character.creation.state,
+        command.creationEvent
+      )
+
+      return ok([
+        {
+          type: 'CharacterCreationTransitioned',
+          characterId: command.characterId,
+          creationEvent: command.creationEvent,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'StartCharacterCareerTerm': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!character.creation) {
+        return err(
+          commandError(
+            'missing_entity',
+            'Character creation has not been started'
+          )
+        )
+      }
+      const career = requireNonEmptyString(command.career, 'career')
+      if (!career.ok) return career
+
+      const result = startCareerTerm({
+        career: career.value,
+        terms: character.creation.terms,
+        careers: character.creation.careers,
+        drafted: command.drafted ?? false
+      })
+
+      return ok([
+        {
+          type: 'CharacterCareerTermStarted',
+          characterId: command.characterId,
+          career: career.value,
+          drafted: command.drafted ?? false,
+          ...result
         }
       ])
     }

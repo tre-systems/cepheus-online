@@ -122,6 +122,7 @@ const character = (
   skills: ['Recon-0', 'Vacc Suit-0'],
   equipment: [{ name: 'Laser Pistol', quantity: 1, notes: '3D6' }],
   credits: 1200,
+  creation: null,
   ...overrides
 })
 

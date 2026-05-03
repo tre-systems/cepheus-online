@@ -157,6 +157,7 @@ describe('game state projection', () => {
     ])
 
     const character = state?.characters[characterId]
+    assert.equal(character?.creation, null)
     assert.equal(character?.notes, 'Scout service term notes')
     assert.equal(character?.age, 34)
     assert.deepEqual(character?.characteristics, {
@@ -172,6 +173,133 @@ describe('game state projection', () => {
       { name: 'Vacc suit', quantity: 1, notes: '' }
     ])
     assert.equal(character?.credits, 900)
+  })
+
+  it('projects character creation lifecycle events into character creation state', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'CHARACTERISTICS',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: { type: 'SET_CHARACTERISTICS' },
+        state: {
+          status: 'HOMEWORLD',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(5, {
+        type: 'CharacterCareerTermStarted',
+        characterId,
+        career: 'Scout',
+        drafted: false,
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false
+      }),
+      envelope(6, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: { type: 'CREATION_COMPLETE' },
+        state: {
+          status: 'PLAYABLE',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: true
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'PLAYABLE')
+    assert.equal(creation?.creationComplete, true)
+    assert.deepEqual(creation?.terms.map((term) => term.career), ['Scout'])
+    assert.deepEqual(creation?.careers, [{ name: 'Scout', rank: 0 }])
+    assert.equal(state?.eventSeq, 6)
+  })
+
+  it('ignores character creation events for missing characters', () => {
+    const missingCharacterId = asCharacterId('missing-character')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreationStarted',
+        characterId: missingCharacterId,
+        creation: {
+          state: {
+            status: 'CHARACTERISTICS',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false
+        }
+      })
+    ])
+
+    assert.deepEqual(state?.characters, {})
+    assert.equal(state?.eventSeq, 1)
   })
 
   it('replaces manual character sheet skills without changing other fields', () => {

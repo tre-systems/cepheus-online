@@ -195,6 +195,24 @@ describe('protocol validation', () => {
         notes: 'Ready'
       },
       {
+        type: 'StartCharacterCreation',
+        ...base,
+        characterId: 'char-1'
+      },
+      {
+        type: 'AdvanceCharacterCreation',
+        ...base,
+        characterId: 'char-1',
+        creationEvent: { type: 'SET_CHARACTERISTICS' }
+      },
+      {
+        type: 'StartCharacterCareerTerm',
+        ...base,
+        characterId: 'char-1',
+        career: 'Scout',
+        drafted: false
+      },
+      {
         type: 'CreateBoard',
         ...base,
         boardId: 'board-1',
@@ -257,6 +275,60 @@ describe('protocol validation', () => {
       if (!decoded.ok) continue
       assert.equal(decoded.value.expectedSeq, 7)
     }
+  })
+
+  it('accepts character creation event commands', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-creation',
+      command: {
+        type: 'AdvanceCharacterCreation',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        creationEvent: {
+          type: 'SURVIVAL_PASSED',
+          canCommission: true,
+          canAdvance: false
+        }
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    const { command } = result.value
+    assert.equal(command.type, 'AdvanceCharacterCreation')
+    if (command.type !== 'AdvanceCharacterCreation') return
+    assert.deepEqual(command.creationEvent, {
+      type: 'SURVIVAL_PASSED',
+      canCommission: true,
+      canAdvance: false
+    })
+  })
+
+  it('rejects malformed character creation event commands', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-creation',
+      command: {
+        type: 'AdvanceCharacterCreation',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        creationEvent: {
+          type: 'SURVIVAL_PASSED',
+          canCommission: 'yes',
+          canAdvance: false
+        }
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'canCommission must be a boolean')
   })
 
   it('accepts door state commands for board occluders', () => {

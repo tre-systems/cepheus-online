@@ -162,6 +162,148 @@ describe('room publication flow', () => {
     assert.equal((await readEventStream(storage, gameId)).length, 2)
   })
 
+  it('publishes and projects character creation events', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+
+    const started = await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 2
+    })
+
+    assert.equal(started.ok, true)
+    if (!started.ok) return
+    assert.equal(
+      started.value.state.characters[characterId]?.creation?.state.status,
+      'CHARACTERISTICS'
+    )
+
+    const advanced = await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 3,
+      creationEvent: { type: 'SET_CHARACTERISTICS' }
+    })
+
+    assert.equal(advanced.ok, true)
+    if (!advanced.ok) return
+    assert.equal(
+      advanced.value.state.characters[characterId]?.creation?.state.status,
+      'HOMEWORLD'
+    )
+
+    const term = await publish(storage, {
+      type: 'StartCharacterCareerTerm',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 4,
+      career: 'Scout'
+    })
+
+    assert.equal(term.ok, true)
+    if (!term.ok) return
+    const creation = term.value.state.characters[characterId]?.creation
+    assert.deepEqual(creation?.terms.map((entry) => entry.career), ['Scout'])
+    assert.deepEqual(creation?.careers, [{ name: 'Scout', rank: 0 }])
+    assert.equal(term.value.state.eventSeq, 5)
+  })
+
+  it('rejects stale expected sequence numbers on character creation commands', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+
+    const stale = await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 1
+    })
+
+    assert.equal(stale.ok, false)
+    if (stale.ok) return
+    assert.equal(stale.error.code, 'stale_command')
+    assert.equal((await readEventStream(storage, gameId)).length, 2)
+  })
+
+  it('rejects character creation commands for missing characters', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+
+    const rejected = await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId: asCharacterId('missing-character')
+    })
+
+    assert.equal(rejected.ok, false)
+    if (rejected.ok) return
+    assert.equal(rejected.error.code, 'missing_entity')
+    assert.equal((await readEventStream(storage, gameId)).length, 1)
+  })
+
+  it('rejects invalid character creation transitions without mutating storage', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    const rejected = await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+    })
+
+    assert.equal(rejected.ok, false)
+    if (rejected.ok) return
+    assert.equal(rejected.error.code, 'invalid_command')
+    assert.equal(
+      rejected.error.message,
+      'COMPLETE_HOMEWORLD is not valid from CHARACTERISTICS'
+    )
+    assert.equal((await readEventStream(storage, gameId)).length, 3)
+  })
+
   it('publishes and projects custom piece dimensions', async () => {
     const storage = createMemoryStorage()
     const pieceId = asPieceId('door-1')

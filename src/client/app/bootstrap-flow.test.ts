@@ -56,7 +56,8 @@ const scout = (skills: string[] = []): CharacterState => ({
   },
   skills,
   equipment: [],
-  credits: 0
+  credits: 0,
+  creation: null
 })
 
 const piece = (id: string, boardId = 'main-board'): PieceState => ({

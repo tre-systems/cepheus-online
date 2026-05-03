@@ -58,7 +58,8 @@ export const projectGameState = (
           characteristics: defaultCharacteristics(),
           skills: [],
           equipment: [],
-          credits: 0
+          credits: 0,
+          creation: null
         }
         state.eventSeq = envelope.seq
         break
@@ -84,6 +85,52 @@ export const projectGameState = (
         }
         if (event.credits !== undefined) character.credits = event.credits
 
+        state.eventSeq = envelope.seq
+        break
+      }
+
+      case 'CharacterCreationStarted': {
+        if (!state) {
+          throw new Error('CharacterCreationStarted before GameCreated')
+        }
+        const character = state.characters[event.characterId]
+        if (!character) break
+
+        character.creation = structuredClone(event.creation)
+        state.eventSeq = envelope.seq
+        break
+      }
+
+      case 'CharacterCreationTransitioned': {
+        if (!state) {
+          throw new Error('CharacterCreationTransitioned before GameCreated')
+        }
+        const character = state.characters[event.characterId]
+        if (!character?.creation) break
+
+        character.creation = {
+          ...character.creation,
+          state: structuredClone(event.state),
+          creationComplete: event.creationComplete
+        }
+        state.eventSeq = envelope.seq
+        break
+      }
+
+      case 'CharacterCareerTermStarted': {
+        if (!state) {
+          throw new Error('CharacterCareerTermStarted before GameCreated')
+        }
+        const character = state.characters[event.characterId]
+        if (!character?.creation) break
+
+        character.creation = {
+          ...character.creation,
+          terms: event.terms.map((term) => structuredClone(term)),
+          careers: event.careers.map((career) => ({ ...career })),
+          canEnterDraft: event.canEnterDraft,
+          failedToQualify: event.failedToQualify
+        }
         state.eventSeq = envelope.seq
         break
       }

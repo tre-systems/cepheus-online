@@ -97,7 +97,8 @@ const stateWithCharacter = {
           notes: 'Standard shipboard emergency suit'
         }
       ],
-      credits: 1000
+      credits: 1000,
+      creation: null
     }
   }
 } satisfies GameState

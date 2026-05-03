@@ -46,13 +46,16 @@ layout and the intended normalization target.
   selection, and mustering-out benefit resolution as pure shared helpers.
 - Added pure term lifecycle helpers for term creation, reenlistment resolution,
   anagathics use/payment, aging roll modifiers, and creation/mustering gates.
+- Added the first event-backed character creation persistence slice: explicit
+  room commands/events now start creation, advance the creation state machine,
+  and record career term starts in the server-ordered event stream.
 
 ## Next Salvage Candidates
 
 Do not copy these blindly. Extract the domain logic and tests:
 
 - deeper character creation rules: career event tables, mishaps, retirement
-  benefit tables, promotion rank effects, and final event-sourced persistence
+  benefit tables, promotion rank effects, and final playable sheet projection
 - dice and combat calculations
 - initiative ordering
 - equipment ledger behavior
