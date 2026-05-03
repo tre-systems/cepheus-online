@@ -62,20 +62,14 @@ or notes, not a UI framework.
 
 ## Documentation
 
+See the [documentation index](docs/README.md).
+
+The most important starting points are:
+
 - [Product vision](docs/product-vision.md)
 - [Architecture](docs/architecture.md)
-- [Conflict model](docs/conflict-model.md)
-- [Discord integration](docs/discord.md)
-- [Delta-V transfer](docs/delta-v-transfer.md)
-- [Patterns](docs/patterns.md)
-- [Development standards](docs/development-standards.md)
-- [Discussion record](docs/discussion-record.md)
-- [Security baseline](docs/security-baseline.md)
-- [Testing strategy](docs/testing-strategy.md)
-- [SRD source](docs/srd-source.md)
-- [Data salvage](docs/data-salvage.md)
 - [Migration plan](docs/migration-plan.md)
-- [Decisions](docs/decisions.md)
+- [Discussion record](docs/discussion-record.md)
 
 ## Salvaged Assets
 
@@ -88,6 +82,7 @@ The old app had useful domain work. This repo currently salvages:
 - legacy review notes in `legacy/`
 
 See [docs/data-salvage.md](docs/data-salvage.md).
+See [data/README.md](data/README.md) for the current data layout.
 
 ## Rules Source
 
