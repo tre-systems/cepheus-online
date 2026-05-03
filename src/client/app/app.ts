@@ -40,6 +40,10 @@ import {
   buildSetDoorOpenCommand
 } from '../game-commands.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
+import {
+  createCharacterCreationFlow,
+  deriveCharacterCreationCommands
+} from './character-creation-flow.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
 import { createPwaInstallController } from './pwa-install.js'
@@ -236,32 +240,23 @@ const selectedPieceImageDataUrl = async () => {
   })
 }
 
-const createManualCharacterCommand = (characterId, name) => ({
-  type: 'CreateCharacter',
-  gameId: roomId,
-  actorId,
-  characterId,
-  characterType: 'PLAYER',
-  name
-})
-
-const updateManualCharacterSheetCommand = (characterId) => ({
-  type: 'UpdateCharacterSheet',
-  gameId: roomId,
-  actorId,
-  characterId,
-  age: 30,
-  characteristics: {
-    str: 7,
-    dex: 7,
-    end: 7,
-    int: 7,
-    edu: 7,
-    soc: 7
-  },
-  skills: ['Athletics-0', 'Gun Combat-0'],
-  equipment: [],
-  credits: 0
+const createDefaultCharacterCreationFlow = (characterId, name) => ({
+  ...createCharacterCreationFlow(characterId, {
+    name,
+    age: 30,
+    characteristics: {
+      str: 7,
+      dex: 7,
+      end: 7,
+      int: 7,
+      edu: 7,
+      soc: 7
+    },
+    skills: ['Athletics-0', 'Gun Combat-0'],
+    equipment: [],
+    credits: 0
+  }),
+  step: 'review'
 })
 
 const currentBoardList = () => boardList(state)
@@ -342,8 +337,19 @@ const createCustomPiece = async () => {
     : null
   const imageAssetId = await selectedPieceImageDataUrl()
   if (characterId) {
-    await sendCommand(createManualCharacterCommand(characterId, name))
-    await sendCommand(updateManualCharacterSheetCommand(characterId))
+    const commands = deriveCharacterCreationCommands(
+      createDefaultCharacterCreationFlow(characterId, name),
+      {
+        identity: clientIdentity(),
+        state
+      }
+    )
+    if (commands.length === 0) {
+      throw new Error('Character creation needs the current room state')
+    }
+    for (const command of commands) {
+      await postCommand(command)
+    }
   }
   await sendCommand({
     type: 'CreatePiece',
@@ -378,7 +384,7 @@ const createCustomPiece = async () => {
 
 const bootstrapScene = async () => {
   setError('')
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 10; i++) {
     const command = nextBootstrapCommand({ roomId, actorId, state })
     if (!command) break
     await postCommand(command, 'bootstrap-' + i)

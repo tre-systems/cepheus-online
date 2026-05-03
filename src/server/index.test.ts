@@ -16,6 +16,7 @@ const clientModules = new Map<
         '/client/app/board-view.js',
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
+        '/client/app/character-creation-flow.js',
         '/client/app/character-sheet-controller.js',
         '/client/app/dice-overlay.js',
         '/client/app/door-los-view.js',
@@ -43,6 +44,13 @@ const clientModules = new Map<
     }
   ],
   ['/client/app/bootstrap-flow.js', { markers: ['nextBootstrapCommand'] }],
+  [
+    '/client/app/character-creation-flow.js',
+    {
+      markers: ['deriveCharacterCreationCommands'],
+      imports: ['/client/game-commands.js']
+    }
+  ],
   [
     '/client/app/character-sheet-controller.js',
     {

@@ -88,6 +88,60 @@ export const updateScoutSheetCommand = ({
   credits: 1200
 })
 
+export const startScoutCreationCommand = ({
+  roomId,
+  actorId
+}: BootstrapCommandContext): Command => ({
+  type: 'StartCharacterCreation',
+  gameId: roomId,
+  actorId,
+  characterId: scoutCharacterId
+})
+
+export const setScoutCharacteristicsCreationCommand = ({
+  roomId,
+  actorId
+}: BootstrapCommandContext): Command => ({
+  type: 'AdvanceCharacterCreation',
+  gameId: roomId,
+  actorId,
+  characterId: scoutCharacterId,
+  creationEvent: { type: 'SET_CHARACTERISTICS' }
+})
+
+export const completeScoutHomeworldCreationCommand = ({
+  roomId,
+  actorId
+}: BootstrapCommandContext): Command => ({
+  type: 'AdvanceCharacterCreation',
+  gameId: roomId,
+  actorId,
+  characterId: scoutCharacterId,
+  creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+})
+
+export const startScoutCareerTermCommand = ({
+  roomId,
+  actorId
+}: BootstrapCommandContext): Command => ({
+  type: 'StartCharacterCareerTerm',
+  gameId: roomId,
+  actorId,
+  characterId: scoutCharacterId,
+  career: 'Scout'
+})
+
+export const selectScoutCareerCreationCommand = ({
+  roomId,
+  actorId
+}: BootstrapCommandContext): Command => ({
+  type: 'AdvanceCharacterCreation',
+  gameId: roomId,
+  actorId,
+  characterId: scoutCharacterId,
+  creationEvent: { type: 'SELECT_CAREER', isNewCareer: true }
+})
+
 export const createPieceCommand = (
   { roomId, actorId }: BootstrapCommandContext,
   boardId: BoardId
@@ -181,6 +235,19 @@ export const nextBootstrapCommand = ({
   if (boardIds.length === 0) return createBoardCommand(commandContext)
   const scout = state.characters[scoutCharacterId]
   if (!scout) return createCharacterCommand(commandContext)
+  if (!scout.creation) return startScoutCreationCommand(commandContext)
+  if (scout.creation.state.status === 'CHARACTERISTICS') {
+    return setScoutCharacteristicsCreationCommand(commandContext)
+  }
+  if (scout.creation.state.status === 'HOMEWORLD') {
+    return completeScoutHomeworldCreationCommand(commandContext)
+  }
+  if (scout.creation.terms.length === 0) {
+    return startScoutCareerTermCommand(commandContext)
+  }
+  if (scout.creation.state.status === 'CAREER_SELECTION') {
+    return selectScoutCareerCreationCommand(commandContext)
+  }
   if ((scout.skills || []).length === 0) {
     return updateScoutSheetCommand(commandContext)
   }

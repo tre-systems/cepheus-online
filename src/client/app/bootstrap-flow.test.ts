@@ -10,6 +10,7 @@ import type {
 } from '../../shared/ids'
 import type {
   BoardState,
+  CharacterCreationProjection,
   CharacterState,
   GameState,
   PieceState
@@ -38,7 +39,29 @@ const board = (id: string): BoardState => ({
   doors: {}
 })
 
-const scout = (skills: string[] = []): CharacterState => ({
+const creation = (
+  overrides: Partial<CharacterCreationProjection> = {}
+): CharacterCreationProjection => ({
+  state: {
+    status: 'CHARACTERISTICS',
+    context: {
+      canCommission: false,
+      canAdvance: false
+    }
+  },
+  terms: [],
+  careers: [],
+  canEnterDraft: true,
+  failedToQualify: false,
+  characteristicChanges: [],
+  creationComplete: false,
+  ...overrides
+})
+
+const scout = (
+  skills: string[] = [],
+  creationState: CharacterCreationProjection | null = null
+): CharacterState => ({
   id: 'scout' as CharacterId,
   ownerId: null,
   type: 'PLAYER',
@@ -57,7 +80,7 @@ const scout = (skills: string[] = []): CharacterState => ({
   skills,
   equipment: [],
   credits: 0,
-  creation: null
+  creation: creationState
 })
 
 const piece = (id: string, boardId = 'main-board'): PieceState => ({
@@ -140,6 +163,140 @@ describe('bootstrap flow helpers', () => {
           characters: characters({ scout: scout() })
         })
       })?.type,
+      'StartCharacterCreation'
+    )
+
+    assert.equal(
+      nextBootstrapCommand({
+        roomId,
+        actorId,
+        state: gameState({
+          boards: boards('main-board'),
+          characters: characters({ scout: scout([], creation()) })
+        })
+      })?.type,
+      'AdvanceCharacterCreation'
+    )
+
+    assert.deepEqual(
+      nextBootstrapCommand({
+        roomId,
+        actorId,
+        state: gameState({
+          boards: boards('main-board'),
+          characters: characters({
+            scout: scout(
+              [],
+              creation({
+                state: {
+                  status: 'HOMEWORLD',
+                  context: { canCommission: false, canAdvance: false }
+                }
+              })
+            )
+          })
+        })
+      }),
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId: roomId,
+        actorId,
+        characterId: 'scout' as CharacterId,
+        creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+      }
+    )
+
+    assert.equal(
+      nextBootstrapCommand({
+        roomId,
+        actorId,
+        state: gameState({
+          boards: boards('main-board'),
+          characters: characters({
+            scout: scout(
+              [],
+              creation({
+                state: {
+                  status: 'CAREER_SELECTION',
+                  context: { canCommission: false, canAdvance: false }
+                }
+              })
+            )
+          })
+        })
+      })?.type,
+      'StartCharacterCareerTerm'
+    )
+
+    assert.equal(
+      nextBootstrapCommand({
+        roomId,
+        actorId,
+        state: gameState({
+          boards: boards('main-board'),
+          characters: characters({
+            scout: scout(
+              [],
+              creation({
+                state: {
+                  status: 'CAREER_SELECTION',
+                  context: { canCommission: false, canAdvance: false }
+                },
+                terms: [
+                  {
+                    career: 'Scout',
+                    skills: [],
+                    skillsAndTraining: [],
+                    benefits: [],
+                    complete: false,
+                    canReenlist: true,
+                    completedBasicTraining: false,
+                    musteringOut: false,
+                    anagathics: false
+                  }
+                ],
+                careers: [{ name: 'Scout', rank: 0 }]
+              })
+            )
+          })
+        })
+      })?.type,
+      'AdvanceCharacterCreation'
+    )
+
+    assert.equal(
+      nextBootstrapCommand({
+        roomId,
+        actorId,
+        state: gameState({
+          boards: boards('main-board'),
+          characters: characters({
+            scout: scout(
+              [],
+              creation({
+                state: {
+                  status: 'BASIC_TRAINING',
+                  context: { canCommission: false, canAdvance: false }
+                },
+                terms: [
+                  {
+                    career: 'Scout',
+                    skills: [],
+                    skillsAndTraining: [],
+                    benefits: [],
+                    complete: false,
+                    canReenlist: true,
+                    completedBasicTraining: false,
+                    musteringOut: false,
+                    anagathics: false
+                  }
+                ],
+                careers: [{ name: 'Scout', rank: 0 }]
+              })
+            )
+          })
+        })
+      })?.type,
       'UpdateCharacterSheet'
     )
 
@@ -149,7 +306,31 @@ describe('bootstrap flow helpers', () => {
       state: gameState({
         boards: boards('main-board', 'side'),
         selectedBoardId: 'side' as BoardId,
-        characters: characters({ scout: scout(['Recon-0']) })
+        characters: characters({
+          scout: scout(
+            ['Recon-0'],
+            creation({
+              state: {
+                status: 'BASIC_TRAINING',
+                context: { canCommission: false, canAdvance: false }
+              },
+              terms: [
+                {
+                  career: 'Scout',
+                  skills: [],
+                  skillsAndTraining: [],
+                  benefits: [],
+                  complete: false,
+                  canReenlist: true,
+                  completedBasicTraining: false,
+                  musteringOut: false,
+                  anagathics: false
+                }
+              ],
+              careers: [{ name: 'Scout', rank: 0 }]
+            })
+          )
+        })
       })
     })
     assert.equal(createPiece?.type, 'CreatePiece')
@@ -162,7 +343,31 @@ describe('bootstrap flow helpers', () => {
         actorId,
         state: gameState({
           boards: boards('main-board'),
-          characters: characters({ scout: scout(['Recon-0']) }),
+          characters: characters({
+            scout: scout(
+              ['Recon-0'],
+              creation({
+                state: {
+                  status: 'BASIC_TRAINING',
+                  context: { canCommission: false, canAdvance: false }
+                },
+                terms: [
+                  {
+                    career: 'Scout',
+                    skills: [],
+                    skillsAndTraining: [],
+                    benefits: [],
+                    complete: false,
+                    canReenlist: true,
+                    completedBasicTraining: false,
+                    musteringOut: false,
+                    anagathics: false
+                  }
+                ],
+                careers: [{ name: 'Scout', rank: 0 }]
+              })
+            )
+          }),
           pieces: pieces('scout-1')
         })
       }),
@@ -177,7 +382,31 @@ describe('bootstrap flow helpers', () => {
       state: gameState({
         boards: boards('main-board', 'side'),
         selectedBoardId: 'missing' as BoardId,
-        characters: characters({ scout: scout(['Recon-0']) })
+        characters: characters({
+          scout: scout(
+            ['Recon-0'],
+            creation({
+              state: {
+                status: 'BASIC_TRAINING',
+                context: { canCommission: false, canAdvance: false }
+              },
+              terms: [
+                {
+                  career: 'Scout',
+                  skills: [],
+                  skillsAndTraining: [],
+                  benefits: [],
+                  complete: false,
+                  canReenlist: true,
+                  completedBasicTraining: false,
+                  musteringOut: false,
+                  anagathics: false
+                }
+              ],
+              careers: [{ name: 'Scout', rank: 0 }]
+            })
+          )
+        })
       })
     })
 
