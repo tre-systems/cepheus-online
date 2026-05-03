@@ -319,7 +319,7 @@ h1 {
 }
 
 .dice-stage {
-  min-height: 166px;
+  min-height: 182px;
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
@@ -327,7 +327,8 @@ h1 {
   background:
     radial-gradient(circle at 50% 0%, rgba(72, 255, 173, 0.16), transparent 58%),
     var(--panel-2);
-  perspective: 900px;
+  perspective: 760px;
+  perspective-origin: 50% 42%;
   overflow: hidden;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
@@ -341,18 +342,19 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 16px;
+  gap: 22px;
   flex-wrap: wrap;
-  padding: 16px;
+  padding: 20px 16px 18px;
+  transform-style: preserve-3d;
 }
 
 .die {
-  width: 56px;
-  height: 56px;
+  --die-size: 64px;
+  width: var(--die-size);
+  height: var(--die-size);
   position: relative;
   transform-style: preserve-3d;
-  transform: rotateX(-24deg) rotateY(34deg);
-  filter: drop-shadow(0 18px 20px rgba(0, 0, 0, 0.45));
+  transform: rotateX(-23deg) rotateY(-34deg) rotateZ(1deg);
 }
 
 .die.rolling {
@@ -364,40 +366,106 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  border: 2px solid #07100d;
+  border: 1px solid rgba(1, 8, 6, 0.96);
   border-radius: 10px;
   background:
-    linear-gradient(145deg, #ffffff, #d9f4e6);
+    linear-gradient(145deg, #ffffff 0%, #eefbf3 42%, #cdebdc 100%);
   color: #020504;
+  overflow: hidden;
   font-weight: 900;
-  font-size: 24px;
+  font-size: 23px;
   box-shadow:
-    inset 0 0 18px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    inset 0 0 20px rgba(4, 18, 13, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 14px 24px rgba(0, 0, 0, 0.2);
+  backface-visibility: hidden;
+}
+
+.face::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(4, 18, 13, 0.1);
+  border-radius: 7px;
+  pointer-events: none;
 }
 
 .face.front {
-  transform: translateZ(28px);
+  transform: translateZ(32px);
 }
 
 .face.back {
-  transform: rotateY(180deg) translateZ(28px);
+  background: linear-gradient(145deg, #d4efd9 0%, #9ecdb0 100%);
+  transform: rotateY(180deg) translateZ(32px);
 }
 
 .face.right {
-  transform: rotateY(90deg) translateZ(28px);
+  background: linear-gradient(90deg, #b6ddc4 0%, #7eaf95 100%);
+  transform: rotateY(90deg) translateZ(32px);
 }
 
 .face.left {
-  transform: rotateY(-90deg) translateZ(28px);
+  background: linear-gradient(270deg, #b6ddc4 0%, #7eaf95 100%);
+  transform: rotateY(-90deg) translateZ(32px);
 }
 
 .face.top {
-  transform: rotateX(90deg) translateZ(28px);
+  background: linear-gradient(145deg, #ffffff 0%, #dff7e9 100%);
+  transform: rotateX(90deg) translateZ(32px);
 }
 
 .face.bottom {
-  transform: rotateX(-90deg) translateZ(28px);
+  background: linear-gradient(145deg, #afd7be 0%, #78a98d 100%);
+  transform: rotateX(-90deg) translateZ(32px);
+}
+
+.pip {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #020504;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.16),
+    0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.pip-top-left {
+  top: 15px;
+  left: 15px;
+}
+
+.pip-top-right {
+  top: 15px;
+  right: 15px;
+}
+
+.pip-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pip-middle-left {
+  top: 50%;
+  left: 15px;
+  transform: translateY(-50%);
+}
+
+.pip-middle-right {
+  top: 50%;
+  right: 15px;
+  transform: translateY(-50%);
+}
+
+.pip-bottom-left {
+  bottom: 15px;
+  left: 15px;
+}
+
+.pip-bottom-right {
+  right: 15px;
+  bottom: 15px;
 }
 
 .roll-total {
@@ -439,13 +507,13 @@ h1 {
 
 @keyframes tumble {
   0% {
-    transform: rotateX(-24deg) rotateY(34deg) rotateZ(0deg) translateY(-8px);
+    transform: rotateX(-23deg) rotateY(-34deg) rotateZ(1deg) translateY(-8px);
   }
   50% {
-    transform: rotateX(360deg) rotateY(270deg) rotateZ(120deg) translateY(2px);
+    transform: rotateX(356deg) rotateY(-256deg) rotateZ(118deg) translateY(2px);
   }
   100% {
-    transform: rotateX(-24deg) rotateY(34deg) rotateZ(0deg) translateY(0);
+    transform: rotateX(-23deg) rotateY(-34deg) rotateZ(1deg) translateY(0);
   }
 }
 
@@ -823,21 +891,50 @@ const renderDiceLog = () => {
   }));
 };
 
+const PIP_SLOTS = {
+  1: ["center"],
+  2: ["top-left", "bottom-right"],
+  3: ["top-left", "center", "bottom-right"],
+  4: ["top-left", "top-right", "bottom-left", "bottom-right"],
+  5: ["top-left", "top-right", "center", "bottom-left", "bottom-right"],
+  6: ["top-left", "top-right", "middle-left", "middle-right", "bottom-left", "bottom-right"]
+};
+
+const d6Face = (value) => ((((Math.trunc(value) || 1) - 1) % 6) + 6) % 6 + 1;
+
+const appendFaceValue = (face, value) => {
+  const slots = PIP_SLOTS[value];
+  if (!slots) {
+    face.classList.add("numeric");
+    face.textContent = String(value);
+    return;
+  }
+
+  for (const slot of slots) {
+    const pip = document.createElement("span");
+    pip.className = "pip pip-" + slot;
+    face.append(pip);
+  }
+};
+
 const buildDie = (value) => {
+  const base = d6Face(value);
   const die = document.createElement("div");
   die.className = "die rolling";
+  die.setAttribute("aria-label", "Die result " + value);
   const faces = [
     ["front", value],
-    ["back", 7 - value],
-    ["right", Math.max(1, ((value + 1) % 6) + 1)],
-    ["left", Math.max(1, ((value + 3) % 6) + 1)],
-    ["top", Math.max(1, ((value + 4) % 6) + 1)],
-    ["bottom", Math.max(1, ((value + 2) % 6) + 1)]
+    ["back", 7 - base],
+    ["right", d6Face(base + 1)],
+    ["left", d6Face(base + 3)],
+    ["top", d6Face(base + 4)],
+    ["bottom", d6Face(base + 2)]
   ];
   for (const [name, label] of faces) {
     const face = document.createElement("div");
     face.className = "face " + name;
-    face.textContent = String(label);
+    face.setAttribute("aria-hidden", "true");
+    appendFaceValue(face, label);
     die.append(face);
   }
   return die;

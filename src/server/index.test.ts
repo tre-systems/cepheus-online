@@ -34,6 +34,22 @@ describe('Worker static client', () => {
     )
     assert.equal(body.includes('new WebSocket'), true)
     assert.equal(body.includes('serviceWorker'), true)
+    assert.equal(body.includes('PIP_SLOTS'), true)
+  })
+
+  it('serves cubical dice styling', async () => {
+    const response = await worker.fetch(
+      new Request('https://cepheus.test/styles.css'),
+      {} as Env
+    )
+    const body = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('content-type'), 'text/css; charset=utf-8')
+    assert.equal(body.includes('transform-style: preserve-3d'), true)
+    assert.equal(body.includes('.pip-top-left'), true)
+    assert.equal(body.includes('translateZ(32px)'), true)
+    assert.equal(body.includes('.face.right'), true)
   })
 
   it('serves PWA manifest, icon, and service worker assets', async () => {
