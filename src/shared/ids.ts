@@ -32,3 +32,6 @@ export const asBoardId = (value: string): BoardId =>
 
 export const asPieceId = (value: string): PieceId =>
   asNonEmptyString<'PieceId'>(value, 'Piece id')
+
+export const asEventId = (value: string): EventId =>
+  asNonEmptyString<'EventId'>(value, 'Event id')

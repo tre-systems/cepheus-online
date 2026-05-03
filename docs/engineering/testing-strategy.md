@@ -1,7 +1,13 @@
 # Testing Strategy
 
-The current repo only has a TypeScript check. The test plan should grow in
-layers as implementation begins.
+The current repo has a TypeScript check and a Node-based unit test gate. The
+test plan should continue to grow in layers as implementation expands.
+
+## Current Gate
+
+- `npm run check`: TypeScript compile check for `src/**/*.ts`.
+- `npm test`: compiles source and co-located `*.test.ts` files to a temporary
+  CommonJS build and runs Node's built-in test runner.
 
 ## First Gate
 

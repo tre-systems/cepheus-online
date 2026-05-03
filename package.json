@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "check": "tsc --noEmit",
+    "test": "node scripts/run-tests.mjs",
     "list:salvage": "find data src/shared/schemas docs legacy -maxdepth 3 -type f | sort"
   },
   "dependencies": {},

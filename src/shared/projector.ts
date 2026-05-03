@@ -2,9 +2,11 @@ import type {EventEnvelope} from './events'
 import type {GameState} from './state'
 
 export const projectGameState = (
-  events: readonly EventEnvelope[]
+  events: readonly EventEnvelope[],
+  initialState: GameState | null = null
 ): GameState | null => {
-  let state: GameState | null = null
+  let state: GameState | null =
+    initialState === null ? null : structuredClone(initialState)
 
   for (const envelope of events) {
     const event = envelope.event

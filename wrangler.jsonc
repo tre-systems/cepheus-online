@@ -1,0 +1,19 @@
+{
+  "name": "cepheus-online",
+  "main": "src/server/index.ts",
+  "compatibility_date": "2026-05-03",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "GAME_ROOM",
+        "class_name": "GameRoomDO"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["GameRoomDO"]
+    }
+  ]
+}
