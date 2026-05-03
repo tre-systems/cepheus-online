@@ -3,6 +3,26 @@
 This is not a line-by-line port. The old app should remain as a reference while
 the new app proves one vertical slice at a time.
 
+## Near-Term Queue
+
+The current implementation queue should keep tightening the playable vertical
+slice before widening into rules depth:
+
+1. Complete the `app.ts` extraction so client modules stay small, testable, and
+   separated by feature.
+2. Improve the character sheet UX, then add the guided character creation flow
+   on top of the event-backed sheet model.
+3. Expand board and map support with asset selection, placement workflows, and
+   line-of-sight/visibility behavior that remains referee-controlled.
+4. Improve dice presentation so rolls are easier to read at the table while the
+   authoritative event stream stays unchanged.
+5. Harden CQRS and event-sourcing edges: stale command handling, projection
+   recovery, viewer-aware filtering, and focused regression tests.
+6. Finish the Discord/session path needed for invites, identity continuity, and
+   room access.
+7. Add deployment smoke coverage that proves the hosted Worker, Durable Object,
+   static client, and WebSocket path still form one working slice.
+
 ## Phase 1: Foundation
 
 - Define shared ids, commands, events, and projections. Done for the playable

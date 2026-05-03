@@ -1,14 +1,6 @@
 // @ts-nocheck
 
 import {
-  DEFAULT_BOARD_CAMERA,
-  deriveBoardTransform,
-  deriveCameraZoom,
-  findHitPiece,
-  screenToBoard as screenPointToBoard,
-  clampPiecePosition as clampPiecePositionToBoard
-} from './board-geometry.js'
-import {
   boardList,
   boardOptionLabel,
   boardSelectTitle,
@@ -16,12 +8,11 @@ import {
   selectedBoard as selectSelectedBoard,
   selectedBoardId as selectSelectedBoardId,
   selectedBoardPieces,
-  pieceImageUrl,
-  boardImageUrl
+  pieceImageUrl
 } from './board-view.js'
+import { createBoardController } from './board-controller.js'
 import {
   cssUrl,
-  loadBrowserImage,
   readImageDimensions,
   readSelectedCroppedImageFileAsDataUrl,
   readSelectedImageFileAsDataUrl
@@ -44,47 +35,21 @@ import {
 } from './room-api.js'
 import {
   applyServerMessage as applyClientServerMessage,
-  buildMovePieceCommand,
   buildRollDiceCommand,
   buildSequencedCommand,
   buildSetDoorOpenCommand
 } from '../game-commands.js'
-import {
-  characterSheetEmptyLabels,
-  characterSheetTitle,
-  characteristicRows,
-  characterSkills as deriveCharacterSkills,
-  equipmentDisplayItems,
-  equipmentFromText as parseEquipmentText,
-  equipmentText as formatEquipmentText,
-  skillsFromText,
-  skillRollReason
-} from './character-sheet-view.js'
+import { createCharacterSheetController } from './character-sheet-controller.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
+import { createPwaInstallController } from './pwa-install.js'
+import { registerClientServiceWorker } from './service-worker.js'
 
 const DEFAULT_GAME_ID = 'demo-room'
 const DEFAULT_ACTOR_ID = 'local-user'
-const INSTALL_DISMISSED_KEY = 'cepheus-online-pwa-install-dismissed'
-const INSTALL_ACCEPTED_KEY = 'cepheus-online-pwa-install-accepted'
-const DRAG_START_SLOP_PX = 6
 
 const qs = new URLSearchParams(location.search)
-if ('serviceWorker' in navigator) {
-  let hadServiceWorkerController = navigator.serviceWorker.controller !== null
-  let isReloadingForServiceWorker = false
-  navigator.serviceWorker.register('/sw.js').catch(() => {})
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadServiceWorkerController) {
-      hadServiceWorkerController = true
-      return
-    }
-
-    if (isReloadingForServiceWorker) return
-    isReloadingForServiceWorker = true
-    location.reload()
-  })
-}
+registerClientServiceWorker()
 
 const els = {
   status: document.getElementById('connectionStatus'),
@@ -139,7 +104,6 @@ const els = {
   roomCancel: document.getElementById('roomCancelButton')
 }
 
-const ctx = els.canvas.getContext('2d')
 let roomId = qs.get('game') || DEFAULT_GAME_ID
 let actorId = qs.get('user') || DEFAULT_ACTOR_ID
 let state = null
@@ -149,16 +113,9 @@ let latestDiceId = null
 const viewerRole = qs.get('viewer') || 'referee'
 const canSelectBoards = viewerRole.toLowerCase() === 'referee'
 let selectedPieceId = null
-let sheetOpen = false
-let activeSheetTab = 'details'
-let drag = null
-let boardCamera = { ...DEFAULT_BOARD_CAMERA }
-let cameraBoardId = null
+let boardController = null
 let requestCounter = 0
 let diceHideTimer = null
-const boardImageCache = new Map()
-const pieceImageCache = new Map()
-let deferredInstallPrompt = null
 
 els.roomInput.value = roomId
 els.userInput.value = actorId
@@ -171,57 +128,12 @@ const setError = (text) => {
   els.error.textContent = text || ''
 }
 
-const isStandaloneDisplay = () =>
-  matchMedia('(display-mode: standalone)').matches ||
-  navigator.standalone === true
-
-const hideInstallPrompt = () => {
-  if (els.pwaInstallPrompt) els.pwaInstallPrompt.hidden = true
-}
-
-const refreshInstallPrompt = () => {
-  if (
-    !els.pwaInstallPrompt ||
-    !els.pwaInstallButton ||
-    !deferredInstallPrompt ||
-    isStandaloneDisplay() ||
-    localStorage.getItem(INSTALL_DISMISSED_KEY) === '1' ||
-    localStorage.getItem(INSTALL_ACCEPTED_KEY) === '1'
-  ) {
-    hideInstallPrompt()
-    return
+createPwaInstallController({
+  elements: {
+    prompt: els.pwaInstallPrompt,
+    installButton: els.pwaInstallButton,
+    dismissButton: els.pwaInstallDismissButton
   }
-
-  els.pwaInstallPrompt.hidden = false
-}
-
-window.addEventListener('beforeinstallprompt', (event) => {
-  event.preventDefault()
-  deferredInstallPrompt = event
-  refreshInstallPrompt()
-})
-
-window.addEventListener('appinstalled', () => {
-  localStorage.setItem(INSTALL_ACCEPTED_KEY, '1')
-  deferredInstallPrompt = null
-  hideInstallPrompt()
-})
-
-els.pwaInstallButton?.addEventListener('click', async () => {
-  if (!deferredInstallPrompt) return
-  const promptEvent = deferredInstallPrompt
-  deferredInstallPrompt = null
-  hideInstallPrompt()
-  await promptEvent.prompt()
-  const choice = await promptEvent.userChoice
-  if (choice.outcome === 'accepted') {
-    localStorage.setItem(INSTALL_ACCEPTED_KEY, '1')
-  }
-})
-
-els.pwaInstallDismissButton?.addEventListener('click', () => {
-  localStorage.setItem(INSTALL_DISMISSED_KEY, '1')
-  hideInstallPrompt()
 })
 
 const requestId = (prefix) =>
@@ -530,294 +442,8 @@ const boardPieces = () => {
   return selectedBoardPieces(state)
 }
 
-const loadImage = (url, cache) => {
-  return loadBrowserImage(url, cache, render)
-}
-
-const loadBoardImage = (board) =>
-  loadImage(boardImageUrl(board), boardImageCache)
-
-const loadPieceImage = (piece) =>
-  loadImage(pieceImageUrl(piece), pieceImageCache)
-
-const resetBoardCamera = () => {
-  boardCamera = { ...DEFAULT_BOARD_CAMERA }
-}
-
-const ensureBoardCamera = (board) => {
-  if (!board || cameraBoardId === board.id) return
-  cameraBoardId = board.id
-  resetBoardCamera()
-}
-
-const canvasCssSize = () => {
-  const rect = els.canvas.getBoundingClientRect()
-  return {
-    width: Math.max(1, Math.floor(rect.width)),
-    height: Math.max(1, Math.floor(rect.height))
-  }
-}
-
-const boardTransform = (board, cssWidth, cssHeight) => {
-  return deriveBoardTransform(board, boardCamera, cssWidth, cssHeight)
-}
-
-const screenPoint = (event) => {
-  const rect = els.canvas.getBoundingClientRect()
-  return {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top
-  }
-}
-
-const screenToBoard = (screen, _board, transform) =>
-  screenPointToBoard(screen, transform)
-
-const canvasPoint = (event) => {
-  const board = selectedBoard()
-  if (!board) return { x: 0, y: 0 }
-  const size = canvasCssSize()
-  return screenToBoard(
-    screenPoint(event),
-    board,
-    boardTransform(board, size.width, size.height)
-  )
-}
-
-const clampPiecePosition = (piece, x, y) => {
-  const board = selectedBoard()
-  if (!board) return { x, y }
-  return clampPiecePositionToBoard(board, piece, x, y)
-}
-
-const setCameraZoom = (nextZoom, anchorScreen = null) => {
-  const board = selectedBoard()
-  if (!board) return
-  const size = canvasCssSize()
-  boardCamera = deriveCameraZoom({
-    board,
-    camera: boardCamera,
-    cssWidth: size.width,
-    cssHeight: size.height,
-    nextZoom,
-    anchorScreen
-  })
-  render()
-}
-
-const releaseCanvasPointer = (pointerId) => {
-  if (els.canvas.hasPointerCapture(pointerId)) {
-    els.canvas.releasePointerCapture(pointerId)
-  }
-}
-
-const hitPiece = (point, transform = null, pointerType = 'mouse') => {
-  return findHitPiece(point, boardPieces(), transform, pointerType)
-}
-
 const selectedPiece = () => {
-  const pieces = boardPieces()
-  return (
-    pieces.find((piece) => piece.id === selectedPieceId) || pieces[0] || null
-  )
-}
-
-const selectedCharacter = (piece) => {
-  if (!piece?.characterId) return null
-  return state?.characters?.[piece.characterId] || null
-}
-
-const setSheetOpen = (open) => {
-  sheetOpen = open
-  els.sheet.classList.toggle('open', sheetOpen)
-}
-
-const sheetRow = (label, value) => {
-  const row = document.createElement('div')
-  row.className = 'sheet-row'
-  const labelEl = document.createElement('span')
-  labelEl.className = 'sheet-label'
-  labelEl.textContent = label
-  const valueEl = document.createElement('span')
-  valueEl.className = 'sheet-value'
-  valueEl.textContent = value
-  row.append(labelEl, valueEl)
-  return row
-}
-
-const emptySheetText = (text) => {
-  const empty = document.createElement('p')
-  empty.className = 'sheet-empty'
-  empty.textContent = text
-  return empty
-}
-
-const sheetSectionTitle = (text) => {
-  const title = document.createElement('h3')
-  title.className = 'sheet-section-title'
-  title.textContent = text
-  return title
-}
-
-const sheetNotePreview = (text) => {
-  const preview = document.createElement('p')
-  preview.className = 'sheet-note-preview'
-  preview.textContent = text || 'No notes'
-  return preview
-}
-
-const characterSheetPatchTargetId = (target) =>
-  typeof target === 'string'
-    ? target
-    : target?.characterId || target?.id || null
-
-const sendCharacterSheetPatch = (target, patch) => {
-  const characterId = characterSheetPatchTargetId(target)
-  if (!characterId || !patch || Object.keys(patch).length === 0)
-    return Promise.resolve()
-  return sendCommand({
-    type: 'UpdateCharacterSheet',
-    gameId: roomId,
-    actorId,
-    characterId,
-    ...patch
-  })
-}
-
-const statStrip = (character) => {
-  const stats = document.createElement('div')
-  stats.className = 'stat-strip'
-  for (const { label, value } of characteristicRows(character)) {
-    const stat = document.createElement('div')
-    stat.className = 'stat'
-    const name = document.createElement('b')
-    name.textContent = label
-    const number = document.createElement('span')
-    number.textContent = value
-    stat.append(name, number)
-    stats.append(stat)
-  }
-  return stats
-}
-
-const nullableNumberFromInput = (input) => {
-  const value = input.value.trim()
-  if (!value) return null
-  const number = Number.parseInt(value, 10)
-  return Number.isFinite(number) ? number : null
-}
-
-const editableDetailsForm = (piece, character) => {
-  if (!piece?.characterId || !character) return statStrip(character)
-
-  const form = document.createElement('div')
-  form.className = 'sheet-edit-form'
-  const line = document.createElement('div')
-  line.className = 'sheet-edit-line'
-  const ageLabel = document.createElement('label')
-  ageLabel.textContent = 'Age'
-  const ageInput = document.createElement('input')
-  ageInput.name = 'age'
-  ageInput.inputMode = 'numeric'
-  ageInput.autocomplete = 'off'
-  ageInput.value = character.age == null ? '' : String(character.age)
-  ageLabel.append(ageInput)
-  const save = document.createElement('button')
-  save.type = 'button'
-  save.textContent = 'Save'
-  line.append(ageLabel, save)
-
-  const statFields = document.createElement('div')
-  statFields.className = 'sheet-stat-edit'
-  const inputs = {}
-  for (const { label, key, inputValue } of characteristicRows(character)) {
-    const field = document.createElement('label')
-    field.textContent = label
-    const input = document.createElement('input')
-    input.name = key
-    input.inputMode = 'numeric'
-    input.autocomplete = 'off'
-    input.value = inputValue
-    inputs[key] = input
-    field.append(input)
-    statFields.append(field)
-  }
-
-  save.addEventListener('click', () => {
-    sendCharacterSheetPatch(
-      { characterId: piece.characterId },
-      {
-        age: nullableNumberFromInput(ageInput),
-        characteristics: {
-          str: nullableNumberFromInput(inputs.str),
-          dex: nullableNumberFromInput(inputs.dex),
-          end: nullableNumberFromInput(inputs.end),
-          int: nullableNumberFromInput(inputs.int),
-          edu: nullableNumberFromInput(inputs.edu),
-          soc: nullableNumberFromInput(inputs.soc)
-        }
-      }
-    ).catch((error) => setError(error.message))
-  })
-
-  form.append(line, statFields)
-  return form
-}
-
-const skillChips = (skills) => {
-  const chips = document.createElement('div')
-  chips.className = 'chip-list'
-  for (const label of skills) {
-    const chip = document.createElement('span')
-    chip.textContent = label
-    chips.append(chip)
-  }
-  return chips
-}
-
-const visibilityActions = (piece) => {
-  const actions = document.createElement('div')
-  actions.className = 'sheet-actions'
-  for (const visibility of ['HIDDEN', 'PREVIEW', 'VISIBLE']) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.textContent =
-      visibility === 'HIDDEN' ? 'Hide' : visibility.toLowerCase()
-    button.className = piece.visibility === visibility ? 'active' : ''
-    button.addEventListener('click', () => {
-      sendCommand({
-        type: 'SetPieceVisibility',
-        gameId: roomId,
-        actorId,
-        pieceId: piece.id,
-        visibility
-      }).catch((error) => setError(error.message))
-    })
-    actions.append(button)
-  }
-  return actions
-}
-
-const freedomActions = (piece) => {
-  const actions = document.createElement('div')
-  actions.className = 'sheet-actions'
-  for (const freedom of ['LOCKED', 'UNLOCKED', 'SHARE']) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.textContent = freedom === 'LOCKED' ? 'Lock' : freedom.toLowerCase()
-    button.className = piece.freedom === freedom ? 'active' : ''
-    button.addEventListener('click', () => {
-      sendCommand({
-        type: 'SetPieceFreedom',
-        gameId: roomId,
-        actorId,
-        pieceId: piece.id,
-        freedom
-      }).catch((error) => setError(error.message))
-    })
-    actions.append(button)
-  }
-  return actions
+  return boardController?.selectedPiece() || null
 }
 
 const boardDoorActions = (board) => {
@@ -849,243 +475,53 @@ const boardDoorActions = (board) => {
   return actions
 }
 
-const skillEditor = (piece, character, skills) => {
-  if (!piece?.characterId || !character) return null
+const characterSheetController = createCharacterSheetController({
+  elements: {
+    sheet: els.sheet,
+    sheetName: els.sheetName,
+    sheetBody: els.sheetBody,
+    sheetTabs: els.sheetTabs
+  },
+  getSelectedPiece: selectedPiece,
+  getSelectedBoard: selectedBoard,
+  getCharacterState: () => state,
+  getBoardDoorActions: () => ({ actions: boardDoorActions(selectedBoard()) }),
+  sendPatch: (characterId, patch) =>
+    sendCommand({
+      type: 'UpdateCharacterSheet',
+      gameId: roomId,
+      actorId,
+      characterId,
+      ...patch
+    }),
+  setVisibility: (piece, visibility) =>
+    sendCommand({
+      type: 'SetPieceVisibility',
+      gameId: roomId,
+      actorId,
+      pieceId: piece.id,
+      visibility
+    }),
+  setFreedom: (piece, freedom) =>
+    sendCommand({
+      type: 'SetPieceFreedom',
+      gameId: roomId,
+      actorId,
+      pieceId: piece.id,
+      freedom
+    }),
+  rollSkill: (_piece, _character, _skill, reason) =>
+    sendCommand(
+      buildRollDiceCommand({
+        identity: clientIdentity(),
+        expression: '2d6',
+        reason
+      })
+    ),
+  reportError: (message) => setError(message)
+})
 
-  const form = document.createElement('div')
-  form.className = 'sheet-skill-editor'
-  const label = document.createElement('label')
-  label.textContent = 'Skills'
-  const textarea = document.createElement('textarea')
-  textarea.value = skills.join('\n')
-  textarea.placeholder = 'Vacc Suit-0\\nGun Combat-0'
-  textarea.spellcheck = false
-  const save = document.createElement('button')
-  save.type = 'button'
-  save.textContent = 'Save skills'
-  save.addEventListener('click', () => {
-    sendCharacterSheetPatch(
-      { characterId: piece.characterId },
-      {
-        skills: skillsFromText(textarea.value)
-      }
-    ).catch((error) => setError(error.message))
-  })
-  label.append(textarea)
-  form.append(label, save)
-  return form
-}
-
-const renderDetailsTab = (body, piece, character) => {
-  const doorActions = boardDoorActions(selectedBoard())
-  if (!character) {
-    body.append(
-      sheetSectionTitle('Token'),
-      sheetRow('Name', piece.name),
-      sheetRow('Position', Math.round(piece.x) + ', ' + Math.round(piece.y)),
-      sheetRow('Visibility', piece.visibility),
-      visibilityActions(piece),
-      sheetRow('Move', piece.freedom),
-      freedomActions(piece),
-      emptySheetText(characterSheetEmptyLabels.noLinkedCharacterSheet)
-    )
-    if (doorActions) body.append(sheetSectionTitle('Doors'), doorActions)
-    return
-  }
-
-  body.append(
-    sheetSectionTitle('Profile'),
-    sheetRow('Type', character?.type || 'PLAYER'),
-    sheetRow('Age', character?.age == null ? '-' : String(character.age)),
-    statStrip(character),
-    sheetSectionTitle('Token'),
-    sheetRow('Position', Math.round(piece.x) + ', ' + Math.round(piece.y)),
-    sheetRow('Visibility', piece.visibility),
-    visibilityActions(piece),
-    sheetRow('Move', piece.freedom),
-    freedomActions(piece),
-    sheetSectionTitle('Edit'),
-    editableDetailsForm(piece, character),
-    sheetSectionTitle('Skills'),
-    skillChips(deriveCharacterSkills(character))
-  )
-  if (doorActions) body.append(sheetSectionTitle('Doors'), doorActions)
-}
-
-const renderActionTab = (body, piece, character) => {
-  const skills = deriveCharacterSkills(character)
-  if (skills.length === 0) {
-    body.append(emptySheetText(characterSheetEmptyLabels.noTrainedSkills))
-    return
-  }
-
-  const actions = document.createElement('div')
-  actions.className = 'sheet-skill-actions'
-  body.append(sheetSectionTitle('Roll'))
-  for (const skill of skills) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.textContent = skill
-    button.addEventListener('click', () => {
-      sendCommand(
-        buildRollDiceCommand({
-          identity: clientIdentity(),
-          expression: '2d6',
-          reason: skillRollReason(piece, character, skill)
-        })
-      ).catch((error) => setError(error.message))
-    })
-    actions.append(button)
-  }
-  const editor = skillEditor(piece, character, skills)
-  if (editor) body.append(actions, sheetSectionTitle('Edit Skills'), editor)
-  else body.append(actions)
-}
-
-const itemsEditor = (character, equipment) => {
-  if (!character) return null
-
-  const form = document.createElement('div')
-  form.className = 'sheet-items-editor'
-  const creditsLabel = document.createElement('label')
-  creditsLabel.textContent = 'Credits'
-  const creditsInput = document.createElement('input')
-  creditsInput.name = 'credits'
-  creditsInput.inputMode = 'numeric'
-  creditsInput.autocomplete = 'off'
-  creditsInput.value =
-    character.credits == null ? '0' : String(character.credits)
-  creditsLabel.append(creditsInput)
-
-  const equipmentLabel = document.createElement('label')
-  equipmentLabel.textContent = 'Equipment'
-  const textarea = document.createElement('textarea')
-  textarea.value = formatEquipmentText(equipment)
-  textarea.placeholder = 'Laser Pistol | 1 | 3D6\nMesh | 1 | AR 5'
-  textarea.spellcheck = false
-  equipmentLabel.append(textarea)
-
-  const save = document.createElement('button')
-  save.type = 'button'
-  save.textContent = 'Save items'
-  save.addEventListener('click', () => {
-    sendCharacterSheetPatch(
-      { characterId: character.id },
-      {
-        credits: nullableNumberFromInput(creditsInput) ?? 0,
-        equipment: parseEquipmentText(textarea.value)
-      }
-    ).catch((error) => setError(error.message))
-  })
-
-  form.append(creditsLabel, equipmentLabel, save)
-  return form
-}
-
-const renderItemsTab = (body, character) => {
-  body.append(
-    sheetSectionTitle('Resources'),
-    sheetRow(
-      'Credits',
-      character?.credits == null ? '-' : String(character.credits)
-    )
-  )
-  const equipment = Array.isArray(character?.equipment)
-    ? character.equipment
-    : []
-  if (equipment.length === 0) {
-    body.append(emptySheetText(characterSheetEmptyLabels.noEquipmentListed))
-    const editor = itemsEditor(character, equipment)
-    if (editor) body.append(sheetSectionTitle('Edit Items'), editor)
-    return
-  }
-
-  const list = document.createElement('div')
-  list.className = 'item-list'
-  body.append(sheetSectionTitle('Equipment'))
-  for (const item of equipmentDisplayItems(equipment)) {
-    const row = document.createElement('div')
-    row.className = 'item-row'
-    const name = document.createElement('span')
-    name.className = 'item-name'
-    name.textContent = item.name
-    const meta = document.createElement('span')
-    meta.className = 'item-meta'
-    meta.textContent = item.meta
-    row.append(name, meta)
-    if (item.notes) {
-      const note = document.createElement('span')
-      note.className = 'item-note'
-      note.textContent = item.notes
-      row.append(note)
-    }
-    list.append(row)
-  }
-  const editor = itemsEditor(character, equipment)
-  if (editor) body.append(list, sheetSectionTitle('Edit Items'), editor)
-  else body.append(list)
-}
-
-const renderNotesTab = (body, piece, character) => {
-  if (!piece?.characterId || !character) {
-    body.append(
-      sheetSectionTitle('Notes'),
-      emptySheetText(character?.notes || characterSheetEmptyLabels.noNotes)
-    )
-    return
-  }
-
-  const form = document.createElement('div')
-  form.className = 'sheet-notes-form'
-  const textarea = document.createElement('textarea')
-  textarea.value = character.notes || ''
-  textarea.placeholder = 'No notes'
-  textarea.spellcheck = true
-  const save = document.createElement('button')
-  save.type = 'button'
-  save.textContent = 'Save'
-  save.addEventListener('click', () => {
-    sendCharacterSheetPatch(
-      { characterId: piece.characterId },
-      {
-        notes: textarea.value
-      }
-    ).catch((error) => setError(error.message))
-  })
-  form.append(textarea, save)
-  body.append(
-    sheetSectionTitle('Current Notes'),
-    sheetNotePreview(character.notes),
-    sheetSectionTitle('Edit Notes'),
-    form
-  )
-}
-
-const renderSheet = () => {
-  const piece = selectedPiece()
-  const character = selectedCharacter(piece)
-  els.sheetName.textContent = characterSheetTitle(piece, character)
-  for (const tab of els.sheetTabs) {
-    tab.classList.toggle('active', tab.dataset.sheetTab === activeSheetTab)
-  }
-
-  const body = document.createElement('div')
-  body.className = 'sheet-grid'
-  if (!piece) {
-    body.append(sheetRow('Status', characterSheetEmptyLabels.noActiveToken))
-    body.append(sheetRow('Board', selectedBoard()?.name || 'None'))
-    const doorActions = boardDoorActions(selectedBoard())
-    if (doorActions) body.append(sheetSectionTitle('Doors'), doorActions)
-    els.sheetBody.replaceChildren(body)
-    return
-  }
-
-  if (activeSheetTab === 'action') renderActionTab(body, piece, character)
-  else if (activeSheetTab === 'items') renderItemsTab(body, character)
-  else if (activeSheetTab === 'notes') renderNotesTab(body, piece, character)
-  else renderDetailsTab(body, piece, character)
-  els.sheetBody.replaceChildren(body)
-}
+const renderSheet = () => characterSheetController.render()
 
 const renderRail = () => {
   const pieces = boardPieces()
@@ -1129,7 +565,7 @@ const renderRail = () => {
       button.append(score, avatar)
       button.addEventListener('click', () => {
         selectedPieceId = piece.id
-        setSheetOpen(true)
+        characterSheetController.setOpen(true)
         render()
       })
       return button
@@ -1156,134 +592,13 @@ const renderBoardControls = () => {
   els.zoomOut.disabled = !board
   els.zoomReset.disabled = !board
   els.zoomIn.disabled = !board
-  els.zoomReset.textContent = Math.round(boardCamera.zoom * 100) + '%'
-}
-
-const drawGrid = (board) => {
-  const grid = Math.max(25, board.scale || 50)
-  ctx.strokeStyle = 'rgba(238, 244, 241, 0.08)'
-  ctx.lineWidth = 1
-  for (let x = 0; x <= board.width; x += grid) {
-    ctx.beginPath()
-    ctx.moveTo(x, 0)
-    ctx.lineTo(x, board.height)
-    ctx.stroke()
-  }
-  for (let y = 0; y <= board.height; y += grid) {
-    ctx.beginPath()
-    ctx.moveTo(0, y)
-    ctx.lineTo(board.width, y)
-    ctx.stroke()
-  }
+  els.zoomReset.textContent =
+    Math.round((boardController?.currentZoom() || 1) * 100) + '%'
 }
 
 const render = () => {
-  const board = selectedBoard()
-  if (board) ensureBoardCamera(board)
   renderBoardControls()
-  const size = canvasCssSize()
-  const dpr = window.devicePixelRatio || 1
-  const cssWidth = size.width
-  const cssHeight = size.height
-  if (
-    els.canvas.width !== cssWidth * dpr ||
-    els.canvas.height !== cssHeight * dpr
-  ) {
-    els.canvas.width = cssWidth * dpr
-    els.canvas.height = cssHeight * dpr
-  }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  ctx.clearRect(0, 0, cssWidth, cssHeight)
-
-  if (!board) {
-    ctx.fillStyle = '#253130'
-    ctx.fillRect(0, 0, cssWidth, cssHeight)
-    ctx.fillStyle = '#a6b4af'
-    ctx.font = '16px system-ui'
-    ctx.fillText('Open or bootstrap a room from the menu', 24, 34)
-    renderRail()
-    return
-  }
-
-  const transform = boardTransform(board, cssWidth, cssHeight)
-  ctx.fillStyle = '#253130'
-  ctx.fillRect(0, 0, cssWidth, cssHeight)
-  ctx.save()
-  ctx.translate(transform.x, transform.y)
-  ctx.scale(transform.scale, transform.scale)
-  ctx.fillStyle = '#06100d'
-  ctx.fillRect(0, 0, board.width, board.height)
-  const boardImage = loadBoardImage(board)
-  if (boardImage) {
-    ctx.drawImage(boardImage, 0, 0, board.width, board.height)
-  }
-  drawGrid(board)
-
-  for (const piece of boardPieces()) {
-    const isSelected = piece.id === selectedPieceId
-    const drawX =
-      drag && drag.kind === 'piece' && drag.pieceId === piece.id
-        ? drag.x
-        : piece.x
-    const drawY =
-      drag && drag.kind === 'piece' && drag.pieceId === piece.id
-        ? drag.y
-        : piece.y
-    const drawW = piece.width * piece.scale
-    const drawH = piece.height * piece.scale
-    const radius = Math.min(10, drawW / 3, drawH / 3)
-    const image = loadPieceImage(piece)
-    if (isSelected) {
-      ctx.save()
-      ctx.shadowColor = 'rgba(72, 255, 173, 0.88)'
-      ctx.shadowBlur = 18 / transform.scale
-      ctx.strokeStyle = 'rgba(72, 255, 173, 0.95)'
-      ctx.lineWidth = 8 / transform.scale
-      ctx.beginPath()
-      ctx.roundRect(drawX - 4, drawY - 4, drawW + 8, drawH + 8, radius + 4)
-      ctx.stroke()
-      ctx.restore()
-    }
-    ctx.fillStyle = piece.visibility === 'PREVIEW' ? '#f2b84b' : '#5fd0a2'
-    ctx.strokeStyle = isSelected ? '#f7fff9' : '#0b1211'
-    ctx.lineWidth = (isSelected ? 3 : 2) / transform.scale
-    ctx.beginPath()
-    ctx.roundRect(drawX, drawY, drawW, drawH, radius)
-    ctx.fill()
-    if (image) {
-      ctx.save()
-      ctx.clip()
-      ctx.drawImage(image, drawX, drawY, drawW, drawH)
-      ctx.restore()
-    }
-    ctx.stroke()
-    if (isSelected) {
-      const corner = Math.min(drawW, drawH, 12)
-      ctx.strokeStyle = '#48ffad'
-      ctx.lineWidth = 2 / transform.scale
-      ctx.beginPath()
-      ctx.moveTo(drawX, drawY + corner)
-      ctx.lineTo(drawX, drawY)
-      ctx.lineTo(drawX + corner, drawY)
-      ctx.moveTo(drawX + drawW - corner, drawY)
-      ctx.lineTo(drawX + drawW, drawY)
-      ctx.lineTo(drawX + drawW, drawY + corner)
-      ctx.moveTo(drawX + drawW, drawY + drawH - corner)
-      ctx.lineTo(drawX + drawW, drawY + drawH)
-      ctx.lineTo(drawX + drawW - corner, drawY + drawH)
-      ctx.moveTo(drawX + corner, drawY + drawH)
-      ctx.lineTo(drawX, drawY + drawH)
-      ctx.lineTo(drawX, drawY + drawH - corner)
-      ctx.stroke()
-    }
-    if (!image) {
-      ctx.fillStyle = '#07100d'
-      ctx.font = '700 13px system-ui'
-      ctx.fillText(piece.name, drawX + 8, drawY + 22)
-    }
-  }
-  ctx.restore()
-
+  boardController?.render()
   renderRail()
 }
 
@@ -1296,127 +611,19 @@ const animateRoll = (roll) => {
   })
 }
 
-els.canvas.addEventListener('pointerdown', (event) => {
-  if (event.button !== 0) return
-  event.preventDefault()
-  const screen = screenPoint(event)
-  const board = selectedBoard()
-  const size = canvasCssSize()
-  const transform = board
-    ? boardTransform(board, size.width, size.height)
-    : null
-  const point = board ? screenToBoard(screen, board, transform) : { x: 0, y: 0 }
-  const piece = hitPiece(point, transform, event.pointerType)
-  selectedPieceId = piece?.id || null
-  if (piece) {
-    drag = {
-      kind: 'piece',
-      pieceId: piece.id,
-      offsetX: point.x - piece.x,
-      offsetY: point.y - piece.y,
-      startPointerX: screen.x,
-      startPointerY: screen.y,
-      moved: false,
-      x: piece.x,
-      y: piece.y,
-      startX: piece.x,
-      startY: piece.y
-    }
-  } else {
-    drag = {
-      kind: 'pan',
-      pointerX: screen.x,
-      pointerY: screen.y,
-      startPointerX: screen.x,
-      startPointerY: screen.y,
-      moved: false,
-      panX: boardCamera.panX,
-      panY: boardCamera.panY
-    }
-  }
-  els.canvas.setPointerCapture(event.pointerId)
-  render()
-})
-
-els.canvas.addEventListener('pointermove', (event) => {
-  if (!drag) return
-  event.preventDefault()
-  const screen = screenPoint(event)
-  if (!drag.moved) {
-    drag.moved =
-      Math.hypot(
-        screen.x - drag.startPointerX,
-        screen.y - drag.startPointerY
-      ) >= DRAG_START_SLOP_PX
-  }
-  if (drag.kind === 'pan') {
-    boardCamera.panX = drag.panX + screen.x - drag.pointerX
-    boardCamera.panY = drag.panY + screen.y - drag.pointerY
-    render()
-    return
-  }
-  const point = canvasPoint(event)
-  const next = clampPiecePosition(
-    state?.pieces?.[drag.pieceId] || { width: 0, height: 0, scale: 1 },
-    point.x - drag.offsetX,
-    point.y - drag.offsetY
-  )
-  drag.x = next.x
-  drag.y = next.y
-  render()
-})
-
-els.canvas.addEventListener('pointerup', async (event) => {
-  if (!drag) return
-  event.preventDefault()
-  const completed = drag
-  drag = null
-  releaseCanvasPointer(event.pointerId)
-  if (completed.kind !== 'piece' || !state || !completed.moved) {
-    render()
-    return
-  }
-  const x = Math.round(completed.x)
-  const y = Math.round(completed.y)
-  if (
-    x === Math.round(completed.startX) &&
-    y === Math.round(completed.startY)
-  ) {
-    render()
-    return
-  }
-  try {
-    await sendCommand(
-      buildMovePieceCommand({
-        identity: clientIdentity(),
-        state,
-        pieceId: completed.pieceId,
-        x,
-        y
-      })
-    )
-  } catch (error) {
-    setError(error.message)
-  } finally {
-    render()
-  }
-})
-
-els.canvas.addEventListener('pointercancel', (event) => {
-  drag = null
-  releaseCanvasPointer(event.pointerId)
-  render()
-})
-
-els.canvas.addEventListener(
-  'wheel',
-  (event) => {
-    event.preventDefault()
-    const zoomFactor = event.deltaY < 0 ? 1.12 : 1 / 1.12
-    setCameraZoom(boardCamera.zoom * zoomFactor, screenPoint(event))
+boardController = createBoardController({
+  canvas: els.canvas,
+  context: els.canvas.getContext('2d'),
+  getState: () => state,
+  getIdentity: clientIdentity,
+  getSelectedPieceId: () => selectedPieceId,
+  setSelectedPieceId: (pieceId) => {
+    selectedPieceId = pieceId
   },
-  { passive: false }
-)
+  sendCommand,
+  setError,
+  requestRender: render
+})
 
 els.roomForm.addEventListener('submit', (event) => {
   event.preventDefault()
@@ -1429,7 +636,8 @@ els.roomForm.addEventListener('submit', (event) => {
   firstStateApplied = false
   latestDiceId = null
   selectedPieceId = null
-  setSheetOpen(false)
+  boardController?.clearDrag()
+  characterSheetController.setOpen(false)
   els.roomDialog.close()
   connectSocket()
   fetchState().catch((error) => setError(error.message))
@@ -1445,18 +653,17 @@ els.roomCancel.addEventListener('click', () => {
 
 els.sheetButton.addEventListener('click', () => {
   if (!selectedPieceId && selectedPiece()) selectedPieceId = selectedPiece().id
-  setSheetOpen(!sheetOpen)
+  characterSheetController.toggleOpen()
   render()
 })
 
 els.sheetClose.addEventListener('click', () => {
-  setSheetOpen(false)
+  characterSheetController.setOpen(false)
 })
 
 for (const tab of els.sheetTabs) {
   tab.addEventListener('click', () => {
-    activeSheetTab = tab.dataset.sheetTab || 'details'
-    renderSheet()
+    characterSheetController.selectTab(tab.dataset.sheetTab)
   })
 }
 
@@ -1489,7 +696,7 @@ els.boardSelect.addEventListener('change', () => {
   if (!boardId || boardId === currentSelectedBoardId() || !canSelectBoards)
     return
   selectedPieceId = null
-  drag = null
+  boardController?.clearDrag()
   sendCommand({
     type: 'SelectBoard',
     gameId: roomId,
@@ -1502,16 +709,16 @@ els.boardSelect.addEventListener('change', () => {
 })
 
 els.zoomOut.addEventListener('click', () => {
-  setCameraZoom(boardCamera.zoom / 1.25)
+  boardController?.setCameraZoom(boardController.currentZoom() / 1.25)
 })
 
 els.zoomReset.addEventListener('click', () => {
-  resetBoardCamera()
+  boardController?.resetCamera()
   render()
 })
 
 els.zoomIn.addEventListener('click', () => {
-  setCameraZoom(boardCamera.zoom * 1.25)
+  boardController?.setCameraZoom(boardController.currentZoom() * 1.25)
 })
 
 els.roll.addEventListener('click', () => {

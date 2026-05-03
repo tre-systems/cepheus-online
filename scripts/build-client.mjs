@@ -58,14 +58,36 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/board-controller.js',
+    source: join(compiledClientRoot, 'client', 'app', 'board-controller.js'),
+    exportName: 'CLIENT_BOARD_CONTROLLER_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/bootstrap-flow.js',
     source: join(compiledClientRoot, 'client', 'app', 'bootstrap-flow.js'),
     exportName: 'CLIENT_BOOTSTRAP_FLOW_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/character-sheet-controller.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'character-sheet-controller.js'
+    ),
+    exportName: 'CLIENT_CHARACTER_SHEET_CONTROLLER_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/character-sheet-view.js',
-    source: join(compiledClientRoot, 'client', 'app', 'character-sheet-view.js'),
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'character-sheet-view.js'
+    ),
     exportName: 'CLIENT_CHARACTER_SHEET_VIEW_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
@@ -88,9 +110,21 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/pwa-install.js',
+    source: join(compiledClientRoot, 'client', 'app', 'pwa-install.js'),
+    exportName: 'CLIENT_PWA_INSTALL_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/room-api.js',
     source: join(compiledClientRoot, 'client', 'app', 'room-api.js'),
     exportName: 'CLIENT_ROOM_API_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/client/app/service-worker.js',
+    source: join(compiledClientRoot, 'client', 'app', 'service-worker.js'),
+    exportName: 'CLIENT_SERVICE_WORKER_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {

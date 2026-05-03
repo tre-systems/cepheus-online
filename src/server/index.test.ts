@@ -11,23 +11,44 @@ const clientModules = new Map<
   [
     '/client/app/app.js',
     {
-      markers: ['new WebSocket', 'serviceWorker'],
+      markers: ['new WebSocket', 'registerClientServiceWorker'],
       imports: [
-        '/client/app/board-geometry.js',
         '/client/app/board-view.js',
+        '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
-        '/client/app/character-sheet-view.js',
+        '/client/app/character-sheet-controller.js',
         '/client/app/dice-overlay.js',
         '/client/app/door-los-view.js',
         '/client/app/image-assets.js',
+        '/client/app/pwa-install.js',
         '/client/app/room-api.js',
+        '/client/app/service-worker.js',
         '/client/game-commands.js'
       ]
     }
   ],
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
+  [
+    '/client/app/board-controller.js',
+    {
+      markers: ['createBoardController'],
+      imports: [
+        '/client/app/board-geometry.js',
+        '/client/game-commands.js',
+        '/client/app/board-view.js',
+        '/client/app/image-assets.js'
+      ]
+    }
+  ],
   ['/client/app/bootstrap-flow.js', { markers: ['nextBootstrapCommand'] }],
+  [
+    '/client/app/character-sheet-controller.js',
+    {
+      markers: ['createCharacterSheetController'],
+      imports: ['/client/app/character-sheet-view.js']
+    }
+  ],
   [
     '/client/app/character-sheet-view.js',
     { markers: ['characteristicRows', 'equipmentDisplayItems'] }
@@ -47,7 +68,12 @@ const clientModules = new Map<
     }
   ],
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
+  ['/client/app/pwa-install.js', { markers: ['createPwaInstallController'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
+  [
+    '/client/app/service-worker.js',
+    { markers: ['registerClientServiceWorker'] }
+  ],
   [
     '/client/game-commands.js',
     {
