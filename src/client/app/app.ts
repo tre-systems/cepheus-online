@@ -12,6 +12,7 @@ import {
 } from './board-view.js'
 import { createBoardController } from './board-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
+import { planCreatePlayableCharacterCommands } from './character-command-plan.js'
 import {
   cssUrl,
   readImageDimensions,
@@ -19,6 +20,7 @@ import {
   readSelectedImageFileAsDataUrl
 } from './image-assets.js'
 import {
+  createBoardCommand,
   createGameCommand,
   nextBootstrapCommand,
   parseNonNegativeIntegerValue,
@@ -59,8 +61,20 @@ const els = {
   userInput: document.getElementById('userInput'),
   bootstrap: document.getElementById('bootstrapButton'),
   refresh: document.getElementById('refreshButton'),
+  createCharacter: document.getElementById('createCharacterButton'),
   createPiece: document.getElementById('createPieceButton'),
   createBoard: document.getElementById('createBoardButton'),
+  characterNameInput: document.getElementById('characterNameInput'),
+  characterAgeInput: document.getElementById('characterAgeInput'),
+  characterStrInput: document.getElementById('characterStrInput'),
+  characterDexInput: document.getElementById('characterDexInput'),
+  characterEndInput: document.getElementById('characterEndInput'),
+  characterIntInput: document.getElementById('characterIntInput'),
+  characterEduInput: document.getElementById('characterEduInput'),
+  characterSocInput: document.getElementById('characterSocInput'),
+  characterSkillsInput: document.getElementById('characterSkillsInput'),
+  characterCreditsInput: document.getElementById('characterCreditsInput'),
+  characterTokenInput: document.getElementById('characterTokenInput'),
   pieceNameInput: document.getElementById('pieceNameInput'),
   pieceImageInput: document.getElementById('pieceImageInput'),
   pieceImageFileInput: document.getElementById('pieceImageFileInput'),
@@ -191,6 +205,19 @@ const parseNonNegativeIntegerInput = (input, fallback) => {
   return parseNonNegativeIntegerValue(input.value, fallback)
 }
 
+const nullableIntegerInput = (input) => {
+  const text = input.value.trim()
+  if (!text) return null
+  const value = Number.parseInt(text, 10)
+  return Number.isFinite(value) ? value : null
+}
+
+const characterSkillsFromInput = () =>
+  els.characterSkillsInput.value
+    .split(/[\n,]/)
+    .map((skill) => skill.trim())
+    .filter(Boolean)
+
 const applyBoardFileDimensions = async () => {
   const file = els.boardImageFileInput.files?.[0]
   if (!file) return
@@ -276,6 +303,61 @@ const createCustomBoard = async () => {
   els.boardImageInput.value = ''
   els.boardImageFileInput.value = ''
   els.roomDialog.close()
+  render()
+}
+
+const createCustomCharacter = async () => {
+  setError('')
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-character')
+    )
+  }
+  if (els.characterTokenInput.checked && !selectedBoard()) {
+    await postCommand(
+      createBoardCommand({ roomId, actorId }),
+      requestId('create-board-for-character')
+    )
+  }
+
+  const board = selectedBoard()
+  const plan = planCreatePlayableCharacterCommands({
+    identity: clientIdentity(),
+    state,
+    board,
+    name: els.characterNameInput.value,
+    characterType: 'PLAYER',
+    age: nullableIntegerInput(els.characterAgeInput),
+    characteristics: {
+      str: nullableIntegerInput(els.characterStrInput),
+      dex: nullableIntegerInput(els.characterDexInput),
+      end: nullableIntegerInput(els.characterEndInput),
+      int: nullableIntegerInput(els.characterIntInput),
+      edu: nullableIntegerInput(els.characterEduInput),
+      soc: nullableIntegerInput(els.characterSocInput)
+    },
+    skills: characterSkillsFromInput(),
+    equipment: [],
+    credits: parseNonNegativeIntegerInput(els.characterCreditsInput, 0),
+    notes: '',
+    createLinkedPiece: els.characterTokenInput.checked,
+    existingPieceCount: boardPieces().length
+  })
+  if (!plan.ok) {
+    setError(plan.error)
+    if (plan.focus === 'name') els.characterNameInput.focus()
+    if (plan.focus === 'skills') els.characterSkillsInput.focus()
+    return
+  }
+
+  for (const command of plan.commands) {
+    await postCommand(command)
+  }
+  if (plan.pieceId) selectedPieceId = plan.pieceId
+  els.characterNameInput.value = ''
+  els.roomDialog.close()
+  characterSheetController.setOpen(true)
   render()
 }
 
@@ -653,6 +735,10 @@ els.bootstrap.addEventListener('click', () => {
 
 els.refresh.addEventListener('click', () => {
   fetchState().catch((error) => setError(error.message))
+})
+
+els.createCharacter.addEventListener('click', () => {
+  createCustomCharacter().catch((error) => setError(error.message))
 })
 
 els.createPiece.addEventListener('click', () => {

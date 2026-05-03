@@ -81,6 +81,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/character-command-plan.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'character-command-plan.js'
+    ),
+    exportName: 'CLIENT_CHARACTER_COMMAND_PLAN_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/character-sheet-controller.js',
     source: join(
       compiledClientRoot,

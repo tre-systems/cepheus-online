@@ -1217,6 +1217,7 @@ h1 {
 
 .room-form label,
 .dice-expression,
+.character-create-title,
 .piece-create-title,
 .board-create-title {
   display: grid;
@@ -1226,6 +1227,7 @@ h1 {
 
 .room-form span,
 .dice-expression span,
+.character-create-title span,
 .piece-create-title span,
 .board-create-title span {
   color: var(--muted);
@@ -1235,14 +1237,42 @@ h1 {
 }
 
 .piece-create-title,
+.character-create-title,
 .board-create-title {
   grid-column: 1 / -1;
   padding-top: 4px;
   border-top: 1px solid rgba(72, 255, 173, 0.18);
 }
 
+.character-stat-fields,
 .piece-sheet-field {
   align-self: end;
+}
+
+.character-stat-fields {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.character-stat-fields label,
+.character-skills-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.character-skills-field {
+  grid-column: 1 / -1;
+}
+
+.room-form textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.piece-sheet-field {
   grid-template-columns: auto 1fr;
   align-items: center;
 }
@@ -1280,6 +1310,12 @@ h1 {
   width: 18px;
   min-height: 18px;
   accent-color: var(--accent);
+}
+
+@media (max-width: 520px) {
+  .character-stat-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .dialog-title,

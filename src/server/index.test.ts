@@ -17,6 +17,7 @@ const clientModules = new Map<
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
+        '/client/app/character-command-plan.js',
         '/client/app/character-sheet-controller.js',
         '/client/app/dice-overlay.js',
         '/client/app/door-los-view.js',
@@ -48,6 +49,16 @@ const clientModules = new Map<
   [
     '/client/app/character-creation-actions.js',
     { markers: ['deriveCharacterCreationActionPlan'] }
+  ],
+  [
+    '/client/app/character-command-plan.js',
+    {
+      markers: ['planCreatePlayableCharacterCommands'],
+      imports: [
+        '/client/app/bootstrap-flow.js',
+        '/client/app/character-creation-flow.js'
+      ]
+    }
   ],
   [
     '/client/app/character-creation-flow.js',

@@ -107,6 +107,56 @@
             <span>Dice</span>
             <input id="diceExpression" value="2d6" autocomplete="off" spellcheck="false">
           </label>
+          <div class="character-create-title">
+            <span>New character</span>
+          </div>
+          <label>
+            <span>Name</span>
+            <input id="characterNameInput" name="characterName" autocomplete="off" spellcheck="false" placeholder="Mae">
+          </label>
+          <label>
+            <span>Age</span>
+            <input id="characterAgeInput" name="characterAge" inputmode="numeric" autocomplete="off" value="30">
+          </label>
+          <div class="character-stat-fields">
+            <label>
+              <span>Str</span>
+              <input id="characterStrInput" name="characterStr" inputmode="numeric" autocomplete="off" value="7">
+            </label>
+            <label>
+              <span>Dex</span>
+              <input id="characterDexInput" name="characterDex" inputmode="numeric" autocomplete="off" value="7">
+            </label>
+            <label>
+              <span>End</span>
+              <input id="characterEndInput" name="characterEnd" inputmode="numeric" autocomplete="off" value="7">
+            </label>
+            <label>
+              <span>Int</span>
+              <input id="characterIntInput" name="characterInt" inputmode="numeric" autocomplete="off" value="7">
+            </label>
+            <label>
+              <span>Edu</span>
+              <input id="characterEduInput" name="characterEdu" inputmode="numeric" autocomplete="off" value="7">
+            </label>
+            <label>
+              <span>Soc</span>
+              <input id="characterSocInput" name="characterSoc" inputmode="numeric" autocomplete="off" value="7">
+            </label>
+          </div>
+          <label class="character-skills-field">
+            <span>Skills</span>
+            <textarea id="characterSkillsInput" name="characterSkills" autocomplete="off" spellcheck="false">Gun Combat-0
+Vacc Suit-0</textarea>
+          </label>
+          <label>
+            <span>Credits</span>
+            <input id="characterCreditsInput" name="characterCredits" inputmode="numeric" autocomplete="off" value="1200">
+          </label>
+          <label class="piece-sheet-field">
+            <input id="characterTokenInput" name="characterToken" type="checkbox" checked>
+            <span>Create token</span>
+          </label>
           <div class="piece-create-title">
             <span>New piece</span>
           </div>
@@ -192,6 +242,7 @@
           <div class="dialog-actions">
             <button id="bootstrapButton" type="button">Bootstrap</button>
             <button id="refreshButton" type="button">Refresh</button>
+            <button id="createCharacterButton" type="button">Create character</button>
             <button id="createPieceButton" type="button">Create piece</button>
             <button id="createBoardButton" type="button">Create board</button>
             <button id="roomCancelButton" type="button">Close</button>
