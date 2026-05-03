@@ -238,6 +238,10 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
       if (!boardId.ok) return boardId
       const name = parseString(raw.name, 'name')
       if (!name.ok) return name
+      const imageAssetId = parseOptionalString(raw.imageAssetId, 'imageAssetId')
+      if (!imageAssetId.ok) return imageAssetId
+      const url = parseOptionalString(raw.url, 'url')
+      if (!url.ok) return url
       const width = parseNumber(raw.width, 'width')
       if (!width.ok) return width
       const height = parseNumber(raw.height, 'height')
@@ -250,6 +254,8 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
         ...base.value,
         boardId: boardId.value,
         name: name.value,
+        imageAssetId: imageAssetId.value,
+        url: url.value,
         width: width.value,
         height: height.value,
         scale: scale.value

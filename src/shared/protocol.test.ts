@@ -54,6 +54,35 @@ describe('protocol validation', () => {
     )
   })
 
+  it('accepts optional board image URLs and asset references', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-3',
+      command: {
+        type: 'CreateBoard',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        boardId: 'main-board',
+        name: 'Downport',
+        imageAssetId: 'board-image-1',
+        url: '/assets/boards/downport.png',
+        width: 1200,
+        height: 800,
+        scale: 50
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    const {command} = result.value
+    assert.equal(command.type, 'CreateBoard')
+    if (command.type !== 'CreateBoard') return
+    assert.equal(command.imageAssetId, 'board-image-1')
+    assert.equal(command.url, '/assets/boards/downport.png')
+  })
+
   it('rejects unknown message types before command handling', () => {
     const result = decodeClientMessage({
       type: 'mutateEverything'

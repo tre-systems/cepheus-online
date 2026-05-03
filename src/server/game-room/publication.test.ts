@@ -65,6 +65,8 @@ describe('room publication flow', () => {
       actorId,
       boardId: asBoardId('board-1'),
       name: 'Downport',
+      imageAssetId: 'board-image-1',
+      url: '/assets/boards/downport.png',
       width: 1000,
       height: 800,
       scale: 50
@@ -74,6 +76,14 @@ describe('room publication flow', () => {
     const projected = await getProjectedGameState(storage, gameId)
     assert.equal(projected?.eventSeq, 2)
     assert.equal(projected?.boards[asBoardId('board-1')]?.name, 'Downport')
+    assert.equal(
+      projected?.boards[asBoardId('board-1')]?.imageAssetId,
+      'board-image-1'
+    )
+    assert.equal(
+      projected?.boards[asBoardId('board-1')]?.url,
+      '/assets/boards/downport.png'
+    )
   })
 
   it('rejects stale expected sequence numbers before mutating storage', async () => {

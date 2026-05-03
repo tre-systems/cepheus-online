@@ -28,6 +28,8 @@ export type GameEvent =
       type: 'BoardCreated'
       boardId: BoardId
       name: string
+      imageAssetId: string | null
+      url: string | null
       width: number
       height: number
       scale: number

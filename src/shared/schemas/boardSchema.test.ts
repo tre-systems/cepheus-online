@@ -28,6 +28,12 @@ describe('boardSchema', () => {
     expect(url.type).toContain('null')
   })
 
+  it('should have image asset property that accepts null', () => {
+    const imageAssetId = boardSchema.properties.imageAssetId
+    expect(imageAssetId.title).toBe('Board Image')
+    expect(imageAssetId.type).toContain('null')
+  })
+
   it('should have scale property with range 10-100', () => {
     const scale = boardSchema.properties.scale
     expect(scale.title).toBe('Scale (px/m)')

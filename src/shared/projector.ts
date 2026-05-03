@@ -51,8 +51,8 @@ export const projectGameState = (
         state.boards[event.boardId] = {
           id: event.boardId,
           name: event.name,
-          imageAssetId: null,
-          url: null,
+          imageAssetId: event.imageAssetId,
+          url: event.url,
           width: event.width,
           height: event.height,
           scale: event.scale

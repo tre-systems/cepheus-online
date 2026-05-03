@@ -83,9 +83,21 @@ const CLIENT_HTML = `<!doctype html>
             <span>Dice</span>
             <input id="diceExpression" value="2d6" autocomplete="off" spellcheck="false">
           </label>
+          <div class="piece-create-title">
+            <span>New piece</span>
+          </div>
+          <label class="piece-name-field">
+            <span>Name</span>
+            <input id="pieceNameInput" name="pieceName" autocomplete="off" spellcheck="false" placeholder="Marine">
+          </label>
+          <label class="piece-image-field">
+            <span>Image URL</span>
+            <input id="pieceImageInput" name="pieceImage" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
+          </label>
           <div class="dialog-actions">
             <button id="bootstrapButton" type="button">Bootstrap</button>
             <button id="refreshButton" type="button">Refresh</button>
+            <button id="createPieceButton" type="button">Create piece</button>
             <button id="roomCancelButton" type="button">Close</button>
             <button type="submit">Open</button>
           </div>
@@ -980,18 +992,26 @@ h1 {
 }
 
 .room-form label,
-.dice-expression {
+.dice-expression,
+.piece-create-title {
   display: grid;
   gap: 5px;
   min-width: 0;
 }
 
 .room-form span,
-.dice-expression span {
+.dice-expression span,
+.piece-create-title span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 760;
   text-transform: uppercase;
+}
+
+.piece-create-title {
+  grid-column: 1 / -1;
+  padding-top: 4px;
+  border-top: 1px solid rgba(72, 255, 173, 0.18);
 }
 
 .dialog-title,
@@ -1127,6 +1147,9 @@ const els = {
   userInput: document.getElementById("userInput"),
   bootstrap: document.getElementById("bootstrapButton"),
   refresh: document.getElementById("refreshButton"),
+  createPiece: document.getElementById("createPieceButton"),
+  pieceNameInput: document.getElementById("pieceNameInput"),
+  pieceImageInput: document.getElementById("pieceImageInput"),
   roll: document.getElementById("rollButton"),
   diceExpression: document.getElementById("diceExpression"),
   error: document.getElementById("errorText"),
@@ -1157,6 +1180,7 @@ let sheetOpen = false;
 let drag = null;
 let requestCounter = 0;
 let diceHideTimer = null;
+const boardImageCache = new Map();
 const pieceImageCache = new Map();
 
 els.roomInput.value = roomId;
@@ -1174,6 +1198,7 @@ const requestId = (prefix) => prefix + "-" + Date.now().toString(36) + "-" + (++
 
 const roomPath = () => "/rooms/" + encodeURIComponent(roomId);
 const viewerQuery = () => "?viewer=player&user=" + encodeURIComponent(actorId);
+const pieceIdFromName = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "piece";
 
 const commandMessage = (id, command) => ({
   type: "command",
@@ -1238,6 +1263,53 @@ const createPieceCommand = (boardId) => ({
   x: 220,
   y: 180
 });
+
+const uniquePieceId = (name) => {
+  const base = pieceIdFromName(name);
+  let index = Object.keys(state?.pieces || {}).length + 1;
+  let pieceId = base + "-" + index;
+  while (state?.pieces?.[pieceId]) {
+    index += 1;
+    pieceId = base + "-" + index;
+  }
+  return pieceId;
+};
+
+const createCustomPiece = async () => {
+  const board = selectedBoard();
+  if (!state || !board) {
+    setError("Bootstrap a board before creating a piece");
+    return;
+  }
+
+  const name = els.pieceNameInput.value.trim();
+  if (!name) {
+    setError("Piece name is required");
+    els.pieceNameInput.focus();
+    return;
+  }
+
+  const pieceIndex = boardPieces().length;
+  const x = Math.max(0, Math.min(board.width - 50, 160 + (pieceIndex % 8) * 58));
+  const y = Math.max(0, Math.min(board.height - 50, 140 + Math.floor(pieceIndex / 8) * 58));
+  const pieceId = uniquePieceId(name);
+  await sendCommand({
+    type: "CreatePiece",
+    gameId: roomId,
+    actorId,
+    pieceId,
+    boardId: board.id,
+    name,
+    imageAssetId: els.pieceImageInput.value.trim() || null,
+    x,
+    y
+  });
+  selectedPieceId = pieceId;
+  els.pieceNameInput.value = "";
+  els.pieceImageInput.value = "";
+  els.roomDialog.close();
+  render();
+};
 
 const nextBootstrapCommand = () => {
   if (!state) return createGameCommand();
@@ -1335,27 +1407,30 @@ const boardPieces = () => {
   return Object.values(state.pieces).filter((piece) => piece.boardId === board.id);
 };
 
-const pieceImageUrl = (piece) => {
-  const imageAssetId = piece.imageAssetId || "";
+const browserImageUrl = (value) => {
+  const imageRef = value || "";
   if (
-    imageAssetId.startsWith("/") ||
-    imageAssetId.startsWith("http://") ||
-    imageAssetId.startsWith("https://") ||
-    imageAssetId.startsWith("blob:") ||
-    imageAssetId.startsWith("data:image/")
+    imageRef.startsWith("/") ||
+    imageRef.startsWith("http://") ||
+    imageRef.startsWith("https://") ||
+    imageRef.startsWith("blob:") ||
+    imageRef.startsWith("data:image/")
   ) {
-    return imageAssetId;
+    return imageRef;
   }
   return null;
 };
 
+const pieceImageUrl = (piece) => browserImageUrl(piece.imageAssetId);
+
+const boardImageUrl = (board) => browserImageUrl(board.url) || browserImageUrl(board.imageAssetId);
+
 const cssUrl = (url) => "url(" + JSON.stringify(url) + ")";
 
-const loadPieceImage = (piece) => {
-  const url = pieceImageUrl(piece);
+const loadImage = (url, cache) => {
   if (!url) return null;
 
-  const cached = pieceImageCache.get(url);
+  const cached = cache.get(url);
   if (cached) {
     return cached.loaded && !cached.failed ? cached.image : null;
   }
@@ -1363,18 +1438,22 @@ const loadPieceImage = (piece) => {
   const image = new Image();
   image.decoding = "async";
   image.onload = () => {
-    const cachedState = pieceImageCache.get(url);
+    const cachedState = cache.get(url);
     if (cachedState) cachedState.loaded = true;
     render();
   };
   image.onerror = () => {
-    const cachedState = pieceImageCache.get(url);
+    const cachedState = cache.get(url);
     if (cachedState) cachedState.failed = true;
   };
-  pieceImageCache.set(url, {image, loaded: false, failed: false});
+  cache.set(url, {image, loaded: false, failed: false});
   image.src = url;
   return null;
 };
+
+const loadBoardImage = (board) => loadImage(boardImageUrl(board), boardImageCache);
+
+const loadPieceImage = (piece) => loadImage(pieceImageUrl(piece), pieceImageCache);
 
 const canvasPoint = (event) => {
   const rect = els.canvas.getBoundingClientRect();
@@ -1557,6 +1636,10 @@ const render = () => {
   const scaleY = cssHeight / board.height;
   ctx.fillStyle = "#253130";
   ctx.fillRect(0, 0, cssWidth, cssHeight);
+  const boardImage = loadBoardImage(board);
+  if (boardImage) {
+    ctx.drawImage(boardImage, 0, 0, cssWidth, cssHeight);
+  }
   drawGrid(board, scaleX, scaleY);
 
   for (const piece of boardPieces()) {
@@ -1749,6 +1832,10 @@ els.bootstrap.addEventListener("click", () => {
 
 els.refresh.addEventListener("click", () => {
   fetchState().catch((error) => setError(error.message));
+});
+
+els.createPiece.addEventListener("click", () => {
+  createCustomPiece().catch((error) => setError(error.message));
 });
 
 els.roll.addEventListener("click", () => {

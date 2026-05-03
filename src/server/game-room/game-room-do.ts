@@ -182,7 +182,6 @@ export class GameRoomDO {
           state: filtered,
           eventSeq: filtered.eventSeq
         })
-        continue
       }
 
       this.send(socket, {

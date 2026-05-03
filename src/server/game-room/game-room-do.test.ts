@@ -1,17 +1,47 @@
 import * as assert from 'node:assert/strict'
 import {describe, it} from 'node:test'
 
+import type {DurableObjectState} from '../cloudflare'
 import type {Env} from '../env'
 import {GameRoomDO} from './game-room-do'
 import {createMemoryStorage} from './test-support'
 
-const createRoom = () =>
+type TestSocket = WebSocket & {
+  sent: string[]
+}
+
+const createSocket = (): TestSocket => {
+  const socket = {
+    sent: [] as string[],
+    send(message: string) {
+      socket.sent.push(message)
+    }
+  }
+
+  return socket as unknown as TestSocket
+}
+
+const parseMessages = (socket: TestSocket) =>
+  socket.sent.map((message) => JSON.parse(message))
+
+const createRoom = (
+  webSockets: TestSocket[] = [],
+  tags = new Map<WebSocket, string[]>()
+) =>
   new GameRoomDO(
     {
-      storage: createMemoryStorage()
-    },
+      storage: createMemoryStorage(),
+      getWebSockets: () => webSockets,
+      getTags: (socket) => tags.get(socket) ?? []
+    } satisfies DurableObjectState,
     {} as Env
   )
+
+const roomSocketTags = (viewer: string, user: string) => [
+  'game:game-1',
+  `viewer:${viewer}`,
+  `user:${user}`
+]
 
 const postCommand = (room: GameRoomDO, body: unknown) =>
   room.fetch(
@@ -154,5 +184,74 @@ describe('GameRoomDO HTTP skeleton', () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(message.state.pieces, {})
+  })
+
+  it('broadcasts HTTP dice rolls to connected sockets', async () => {
+    const referee = createSocket()
+    const player = createSocket()
+    const tags = new Map<WebSocket, string[]>([
+      [referee, roomSocketTags('referee', 'user-1')],
+      [player, roomSocketTags('player', 'user-2')]
+    ])
+    const room = createRoom([referee, player], tags)
+    await postCommand(room, createGameBody())
+    referee.sent.length = 0
+    player.sent.length = 0
+
+    const response = await postCommand(
+      room,
+      commandBody('roll-dice', {
+        type: 'RollDice',
+        expression: '2d6',
+        reason: 'Table roll'
+      })
+    )
+
+    assert.equal(response.status, 200)
+    for (const message of [...parseMessages(referee), ...parseMessages(player)]) {
+      assert.equal(message.type, 'roomState')
+      assert.equal(message.eventSeq, 2)
+      assert.equal(message.state.diceLog.length, 1)
+      assert.equal(message.state.diceLog[0].reason, 'Table roll')
+    }
+  })
+
+  it('broadcasts WebSocket dice rolls to the sender and peers', async () => {
+    const sender = createSocket()
+    const peer = createSocket()
+    const tags = new Map<WebSocket, string[]>([
+      [sender, roomSocketTags('player', 'user-1')],
+      [peer, roomSocketTags('player', 'user-2')]
+    ])
+    const room = createRoom([sender, peer], tags)
+    await postCommand(room, createGameBody())
+    sender.sent.length = 0
+    peer.sent.length = 0
+
+    await room.webSocketMessage(
+      sender,
+      JSON.stringify(
+        commandBody('roll-dice', {
+          type: 'RollDice',
+          expression: '2d6',
+          reason: 'Table roll'
+        })
+      )
+    )
+
+    const senderMessages = parseMessages(sender)
+    const peerMessages = parseMessages(peer)
+    assert.deepEqual(
+      senderMessages.map((message) => message.type),
+      ['commandAccepted', 'roomState']
+    )
+    assert.deepEqual(
+      peerMessages.map((message) => message.type),
+      ['roomState']
+    )
+    assert.equal(senderMessages[1].eventSeq, 2)
+    assert.equal(senderMessages[1].state.diceLog.length, 1)
+    assert.equal(peerMessages[0].eventSeq, 2)
+    assert.equal(peerMessages[0].state.diceLog.length, 1)
   })
 })

@@ -127,6 +127,8 @@ export const deriveEventsForCommand = (
           type: 'BoardCreated',
           boardId: command.boardId,
           name: command.name,
+          imageAssetId: command.imageAssetId ?? null,
+          url: command.url ?? null,
           width: command.width,
           height: command.height,
           scale: command.scale

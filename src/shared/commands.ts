@@ -23,6 +23,8 @@ export type Command =
       actorId: UserId
       boardId: BoardId
       name: string
+      imageAssetId?: string | null
+      url?: string | null
       width: number
       height: number
       scale: number

@@ -6,6 +6,7 @@ interface BoardSchema {
   required: readonly string[]
   properties: {
     name: StringProperty
+    imageAssetId: StringProperty
     url: StringProperty
     scale: NumberProperty
     width: NumberProperty
@@ -35,6 +36,10 @@ const boardSchema = Object.freeze({
     },
     url: {
       title: 'Url',
+      type: ['string', 'null']
+    },
+    imageAssetId: {
+      title: 'Board Image',
       type: ['string', 'null']
     },
     scale: {
