@@ -1,5 +1,6 @@
 import type {
   BoardState,
+  CharacterEquipmentItem,
   CharacterSheetPatch,
   CharacterState,
   GameState,
@@ -13,8 +14,6 @@ import {
   characteristicRows,
   characterSkills as deriveCharacterSkills,
   equipmentDisplayItems,
-  equipmentFromText as parseEquipmentText,
-  equipmentText as formatEquipmentText,
   selectedCharacter as selectCharacter,
   skillsFromText,
   skillRollReason
@@ -409,30 +408,72 @@ export const createCharacterSheetController = ({
       character.credits == null ? '0' : String(character.credits)
     creditsLabel.append(creditsInput)
 
-    const equipmentLabel = documentApi.createElement('label')
-    equipmentLabel.textContent = 'Equipment'
-    const textarea = documentApi.createElement('textarea')
-    textarea.value = formatEquipmentText(equipment)
-    textarea.placeholder = 'Laser Pistol | 1 | 3D6\nMesh | 1 | AR 5'
-    textarea.spellcheck = false
-    equipmentLabel.append(textarea)
+    const equipmentRows = documentApi.createElement('div')
+    equipmentRows.className = 'sheet-equipment-rows'
+    const rowInputs: Array<{
+      name: HTMLInputElement
+      quantity: HTMLInputElement
+      notes: HTMLInputElement
+    }> = []
+
+    const appendEquipmentRow = (item?: Partial<CharacterEquipmentItem>) => {
+      const row = documentApi.createElement('div')
+      row.className = 'sheet-equipment-row'
+      const name = documentApi.createElement('input')
+      name.name = 'equipmentName'
+      name.autocomplete = 'off'
+      name.placeholder = 'Item'
+      name.value = item?.name || ''
+      const quantity = documentApi.createElement('input')
+      quantity.name = 'equipmentQuantity'
+      quantity.inputMode = 'numeric'
+      quantity.autocomplete = 'off'
+      quantity.placeholder = 'Qty'
+      quantity.value =
+        item?.quantity == null ? '1' : String(Math.max(1, item.quantity))
+      const notes = documentApi.createElement('input')
+      notes.name = 'equipmentNotes'
+      notes.autocomplete = 'off'
+      notes.placeholder = 'Notes'
+      notes.value = item?.notes || ''
+      rowInputs.push({ name, quantity, notes })
+      row.append(name, quantity, notes)
+      equipmentRows.append(row)
+    }
+
+    for (const item of equipment) appendEquipmentRow(item)
+    if (equipment.length === 0) appendEquipmentRow()
+
+    const addItem = documentApi.createElement('button')
+    addItem.type = 'button'
+    addItem.textContent = 'Add item'
+    addItem.addEventListener('click', () => {
+      appendEquipmentRow()
+    })
 
     const save = documentApi.createElement('button')
     save.type = 'button'
     save.textContent = 'Save items'
     save.addEventListener('click', () => {
+      const nextEquipment = rowInputs
+        .map(({ name, quantity, notes }) => ({
+          name: name.value.trim(),
+          quantity: nullableNumberFromInput(quantity) ?? 1,
+          notes: notes.value.trim()
+        }))
+        .filter((item) => item.name.length > 0)
       handleAsyncError(
         sendCharacterSheetPatch(
           { characterId: character.id },
           {
             credits: nullableNumberFromInput(creditsInput) ?? 0,
-            equipment: parseEquipmentText(textarea.value)
+            equipment: nextEquipment
           }
         )
       )
     })
 
-    form.append(creditsLabel, equipmentLabel, save)
+    form.append(creditsLabel, equipmentRows, addItem, save)
     return form
   }
 

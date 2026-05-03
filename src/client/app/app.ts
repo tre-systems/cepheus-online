@@ -43,6 +43,7 @@ import { createCharacterSheetController } from './character-sheet-controller.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
 import { createPwaInstallController } from './pwa-install.js'
+import { createRoomMenuController } from './room-menu-controller.js'
 import { registerClientServiceWorker } from './service-worker.js'
 
 const DEFAULT_GAME_ID = 'demo-room'
@@ -116,9 +117,6 @@ let selectedPieceId = null
 let boardController = null
 let requestCounter = 0
 let diceHideTimer = null
-
-els.roomInput.value = roomId
-els.userInput.value = actorId
 
 const setStatus = (text) => {
   els.status.textContent = text
@@ -625,30 +623,30 @@ boardController = createBoardController({
   requestRender: render
 })
 
-els.roomForm.addEventListener('submit', (event) => {
-  event.preventDefault()
-  roomId = els.roomInput.value.trim() || DEFAULT_GAME_ID
-  actorId = els.userInput.value.trim() || DEFAULT_ACTOR_ID
-  const nextUrl = new URL(location.href)
-  nextUrl.searchParams.set('game', roomId)
-  nextUrl.searchParams.set('user', actorId)
-  history.replaceState(null, '', nextUrl)
-  firstStateApplied = false
-  latestDiceId = null
-  selectedPieceId = null
-  boardController?.clearDrag()
-  characterSheetController.setOpen(false)
-  els.roomDialog.close()
-  connectSocket()
-  fetchState().catch((error) => setError(error.message))
-})
-
-els.menu.addEventListener('click', () => {
-  els.roomDialog.showModal()
-})
-
-els.roomCancel.addEventListener('click', () => {
-  els.roomDialog.close()
+createRoomMenuController({
+  elements: {
+    roomForm: els.roomForm,
+    roomInput: els.roomInput,
+    userInput: els.userInput,
+    menuButton: els.menu,
+    roomDialog: els.roomDialog,
+    roomCancelButton: els.roomCancel
+  },
+  initialRoomId: roomId,
+  initialActorId: actorId,
+  defaultRoomId: DEFAULT_GAME_ID,
+  defaultActorId: DEFAULT_ACTOR_ID,
+  onOpenRoom: (identity) => {
+    roomId = identity.roomId
+    actorId = identity.actorId
+    firstStateApplied = false
+    latestDiceId = null
+    selectedPieceId = null
+    boardController?.clearDrag()
+    characterSheetController.setOpen(false)
+    connectSocket()
+    fetchState().catch((error) => setError(error.message))
+  }
 })
 
 els.sheetButton.addEventListener('click', () => {

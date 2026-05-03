@@ -179,6 +179,8 @@ const createHarness = (options: {
   detailTab.dataset.sheetTab = 'details'
   const actionTab = new TestElement('button')
   actionTab.dataset.sheetTab = 'action'
+  const itemsTab = new TestElement('button')
+  itemsTab.dataset.sheetTab = 'items'
   const patches: { target: string; patch: CharacterSheetPatch }[] = []
   const visibility: PieceVisibility[] = []
   const freedom: PieceFreedom[] = []
@@ -190,7 +192,11 @@ const createHarness = (options: {
       sheet: asElement(sheet),
       sheetName: asElement(sheetName),
       sheetBody: asElement(sheetBody),
-      sheetTabs: [asElement(detailTab), asElement(actionTab)]
+      sheetTabs: [
+        asElement(detailTab),
+        asElement(actionTab),
+        asElement(itemsTab)
+      ]
     },
     document: documentApi as unknown as Document,
     getSelectedPiece: () => options.selectedPiece,
@@ -220,7 +226,7 @@ const createHarness = (options: {
 
   return {
     controller,
-    elements: { sheet, sheetName, sheetBody, detailTab, actionTab },
+    elements: { sheet, sheetName, sheetBody, detailTab, actionTab, itemsTab },
     calls: { patches, visibility, freedom, rolls, errors }
   }
 }
@@ -290,6 +296,45 @@ describe('character sheet controller', () => {
 
     assert.deepEqual(harness.calls.visibility, ['PREVIEW'])
     assert.deepEqual(harness.calls.freedom, ['LOCKED'])
+  })
+
+  it('edits items with row controls instead of textarea text', () => {
+    const scout = character()
+    const harness = createHarness({
+      selectedPiece: piece(),
+      state: gameState({ [characterId]: scout })
+    })
+
+    harness.controller.selectTab('items')
+
+    assert.equal(harness.elements.itemsTab.classList.contains('active'), true)
+    findByText(harness.elements.sheetBody, 'Laser Pistol')
+    const inputs = findAll(
+      harness.elements.sheetBody,
+      (candidate) => candidate.tagName === 'input'
+    )
+    const nameInput = inputs.find((input) => input.name === 'equipmentName')
+    const quantityInput = inputs.find(
+      (input) => input.name === 'equipmentQuantity'
+    )
+    const notesInput = inputs.find((input) => input.name === 'equipmentNotes')
+    if (!nameInput || !quantityInput || !notesInput) {
+      throw new Error('Expected equipment row inputs')
+    }
+    nameInput.value = 'Cutlass'
+    quantityInput.value = '2'
+    notesInput.value = 'Ceremonial'
+    findByText(harness.elements.sheetBody, 'Save items').click()
+
+    assert.deepEqual(harness.calls.patches, [
+      {
+        target: characterId,
+        patch: {
+          credits: 1200,
+          equipment: [{ name: 'Cutlass', quantity: 2, notes: 'Ceremonial' }]
+        }
+      }
+    ])
   })
 
   it('parses nullable numeric form values', () => {

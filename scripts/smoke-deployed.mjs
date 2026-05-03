@@ -29,6 +29,7 @@ const CLIENT_MODULES = new Map([
         '/client/app/image-assets.js',
         '/client/app/pwa-install.js',
         '/client/app/room-api.js',
+        '/client/app/room-menu-controller.js',
         '/client/app/service-worker.js',
         '/client/game-commands.js'
       ]
@@ -77,6 +78,10 @@ const CLIENT_MODULES = new Map([
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
   ['/client/app/pwa-install.js', { markers: ['createPwaInstallController'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
+  [
+    '/client/app/room-menu-controller.js',
+    { markers: ['createRoomMenuController'] }
+  ],
   [
     '/client/app/service-worker.js',
     { markers: ['registerClientServiceWorker'] }

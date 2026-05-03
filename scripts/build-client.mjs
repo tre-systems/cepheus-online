@@ -122,6 +122,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/room-menu-controller.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'room-menu-controller.js'
+    ),
+    exportName: 'CLIENT_ROOM_MENU_CONTROLLER_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/service-worker.js',
     source: join(compiledClientRoot, 'client', 'app', 'service-worker.js'),
     exportName: 'CLIENT_SERVICE_WORKER_JS',
