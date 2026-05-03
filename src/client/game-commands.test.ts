@@ -8,7 +8,7 @@ import {
   asPieceId,
   asUserId
 } from '../shared/ids'
-import type { GameState } from '../shared/state'
+import type { CharacterCreationProjection, GameState } from '../shared/state'
 import {
   applyServerMessage,
   buildBootstrapCommands,
@@ -102,6 +102,83 @@ const stateWithCharacter = {
     }
   }
 } satisfies GameState
+
+const creation = (
+  status: CharacterCreationProjection['state']['status'],
+  options: {
+    terms?: CharacterCreationProjection['terms']
+    careers?: CharacterCreationProjection['careers']
+    creationComplete?: boolean
+  } = {}
+): CharacterCreationProjection => ({
+  state: {
+    status,
+    context: {
+      canCommission: false,
+      canAdvance: false
+    }
+  },
+  terms: options.terms ?? [],
+  careers: options.careers ?? [],
+  canEnterDraft: true,
+  failedToQualify: false,
+  characteristicChanges: [],
+  creationComplete: options.creationComplete ?? false
+})
+
+const scoutWithCreation = (
+  characterCreation: CharacterCreationProjection,
+  skills: string[] = []
+) =>
+  ({
+    ...stateWithCharacter,
+    characters: {
+      [characterId]: {
+        ...stateWithCharacter.characters[characterId],
+        skills,
+        creation: characterCreation
+      }
+    }
+  }) satisfies GameState
+
+const scoutAfterCareerTerm = scoutWithCreation(
+  creation('CAREER_SELECTION', {
+    terms: [
+      {
+        career: 'Scout',
+        skills: [],
+        skillsAndTraining: [],
+        benefits: [],
+        complete: false,
+        canReenlist: false,
+        completedBasicTraining: false,
+        musteringOut: false,
+        anagathics: false
+      }
+    ],
+    careers: [{ name: 'Scout', rank: 0 }]
+  })
+)
+
+const scoutWithSheet = scoutWithCreation(
+  creation('BASIC_TRAINING', {
+    terms: [
+      {
+        career: 'Scout',
+        skills: [],
+        skillsAndTraining: [],
+        benefits: [],
+        complete: false,
+        canReenlist: false,
+        completedBasicTraining: false,
+        musteringOut: false,
+        anagathics: false
+      }
+    ],
+    careers: [{ name: 'Scout', rank: 0 }]
+  }),
+  ['Vacc Suit-0']
+)
 
 describe('client command helpers', () => {
   it('resolves deterministic demo identity from query params', () => {
@@ -200,12 +277,89 @@ describe('client command helpers', () => {
     assert.equal(commands[0]?.type, 'CreateGame')
   })
 
-  it('bootstraps a default character and sheet before the default piece', () => {
+  it('bootstraps a default character before creation lifecycle steps', () => {
     const commands = buildBootstrapCommands(identity, stateWithBoard)
 
-    assert.equal(commands.length, 2)
+    assert.equal(commands.length, 1)
     assert.equal(commands[0]?.type, 'CreateCharacter')
-    assert.equal(commands[1]?.type, 'UpdateCharacterSheet')
+    assert.equal(commands[0]?.expectedSeq, stateWithBoard.eventSeq)
+  })
+
+  it('bootstraps the default character creation lifecycle one command at a time', () => {
+    const startCommands = buildBootstrapCommands(identity, stateWithCharacter)
+    assert.equal(startCommands.length, 1)
+    assert.equal(startCommands[0]?.type, 'StartCharacterCreation')
+    assert.equal(startCommands[0]?.expectedSeq, stateWithCharacter.eventSeq)
+
+    const characteristicsCommands = buildBootstrapCommands(
+      identity,
+      scoutWithCreation(creation('CHARACTERISTICS'))
+    )
+    assert.equal(characteristicsCommands.length, 1)
+    assert.equal(characteristicsCommands[0]?.type, 'AdvanceCharacterCreation')
+    if (characteristicsCommands[0]?.type !== 'AdvanceCharacterCreation') return
+    assert.equal(
+      characteristicsCommands[0].creationEvent.type,
+      'SET_CHARACTERISTICS'
+    )
+
+    const homeworldCommands = buildBootstrapCommands(
+      identity,
+      scoutWithCreation(creation('HOMEWORLD'))
+    )
+    assert.equal(homeworldCommands.length, 1)
+    assert.equal(homeworldCommands[0]?.type, 'AdvanceCharacterCreation')
+    if (homeworldCommands[0]?.type !== 'AdvanceCharacterCreation') return
+    assert.equal(homeworldCommands[0].creationEvent.type, 'COMPLETE_HOMEWORLD')
+
+    const termCommands = buildBootstrapCommands(
+      identity,
+      scoutWithCreation(creation('CAREER_SELECTION'))
+    )
+    assert.equal(termCommands.length, 1)
+    assert.equal(termCommands[0]?.type, 'StartCharacterCareerTerm')
+    if (termCommands[0]?.type !== 'StartCharacterCareerTerm') return
+    assert.equal(termCommands[0].career, 'Scout')
+
+    const careerCommands = buildBootstrapCommands(
+      identity,
+      scoutAfterCareerTerm
+    )
+    assert.equal(careerCommands.length, 1)
+    assert.equal(careerCommands[0]?.type, 'AdvanceCharacterCreation')
+    if (careerCommands[0]?.type !== 'AdvanceCharacterCreation') return
+    assert.deepEqual(careerCommands[0].creationEvent, {
+      type: 'SELECT_CAREER',
+      isNewCareer: true
+    })
+  })
+
+  it('bootstraps the default character sheet after creation reaches a playable path', () => {
+    const commands = buildBootstrapCommands(
+      identity,
+      scoutWithCreation(
+        creation('BASIC_TRAINING', {
+          terms: [
+            {
+              career: 'Scout',
+              skills: [],
+              skillsAndTraining: [],
+              benefits: [],
+              complete: false,
+              canReenlist: false,
+              completedBasicTraining: false,
+              musteringOut: false,
+              anagathics: false
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(commands.length, 1)
+    assert.equal(commands[0]?.type, 'UpdateCharacterSheet')
+    assert.equal(commands[0]?.expectedSeq, stateWithBoard.eventSeq)
 
     const sheetCommand = buildDefaultCharacterSheetUpdateCommand({
       requestId: 'test-sheet',
@@ -217,15 +371,15 @@ describe('client command helpers', () => {
     assert.deepEqual(sheetCommand?.characteristics, {
       str: 7,
       dex: 8,
-      end: 7,
-      int: 9,
-      edu: 8,
+      end: 8,
+      int: 7,
+      edu: 9,
       soc: 6
     })
   })
 
   it('binds the default piece to the default character', () => {
-    const commands = buildBootstrapCommands(identity, stateWithCharacter)
+    const commands = buildBootstrapCommands(identity, scoutWithSheet)
 
     assert.equal(commands.length, 1)
     assert.equal(commands[0]?.type, 'CreatePiece')

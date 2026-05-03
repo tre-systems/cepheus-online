@@ -48,6 +48,14 @@ type UpdateCharacterSheetCommand = Extract<
   Command,
   { type: 'UpdateCharacterSheet' }
 >
+type AdvanceCharacterCreationCommand = Extract<
+  Command,
+  { type: 'AdvanceCharacterCreation' }
+>
+type StartCharacterCareerTermCommand = Extract<
+  Command,
+  { type: 'StartCharacterCareerTerm' }
+>
 type CharacterSheetPatchInput = CharacterSheetPatch & {
   skillsText?: string
   equipmentText?: string
@@ -310,7 +318,7 @@ export const buildDefaultCharacterSheetUpdateCommand = ({
   characterId = DEFAULT_CHARACTER_ID
 }: ClientCommandOptions & {
   characterId?: CharacterId
-}): UpdateCharacterSheetCommand | null => ({
+}): UpdateCharacterSheetCommand => ({
   type: 'UpdateCharacterSheet',
   gameId: identity.gameId,
   actorId: identity.actorId,
@@ -319,20 +327,95 @@ export const buildDefaultCharacterSheetUpdateCommand = ({
   characteristics: {
     str: 7,
     dex: 8,
-    end: 7,
-    int: 9,
-    edu: 8,
+    end: 8,
+    int: 7,
+    edu: 9,
     soc: 6
   },
-  skills: ['Pilot 1', 'Gun Combat 0', 'Vacc Suit 0'],
+  skills: ['Vacc Suit-0', 'Gun Combat-0', 'Mechanic-0', 'Recon-0'],
   equipment: [
+    { name: 'Vacc Suit', quantity: 1, notes: 'Carried' },
     {
-      name: 'Vacc suit',
+      name: 'Laser Carbine',
       quantity: 1,
-      notes: 'Standard shipboard emergency suit'
+      notes: 'Carried'
+    },
+    {
+      name: 'Medkit',
+      quantity: 1,
+      notes: 'Stowed'
     }
   ],
-  credits: 1000
+  credits: 1200
+})
+
+export const buildStartCharacterCreationCommand = ({
+  identity,
+  characterId = DEFAULT_CHARACTER_ID
+}: ClientCommandOptions & {
+  characterId?: CharacterId
+}): Command => ({
+  type: 'StartCharacterCreation',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId
+})
+
+export const buildSetCharacterCharacteristicsCreationCommand = ({
+  identity,
+  characterId = DEFAULT_CHARACTER_ID
+}: ClientCommandOptions & {
+  characterId?: CharacterId
+}): AdvanceCharacterCreationCommand => ({
+  type: 'AdvanceCharacterCreation',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId,
+  creationEvent: { type: 'SET_CHARACTERISTICS' }
+})
+
+export const buildCompleteCharacterHomeworldCreationCommand = ({
+  identity,
+  characterId = DEFAULT_CHARACTER_ID
+}: ClientCommandOptions & {
+  characterId?: CharacterId
+}): AdvanceCharacterCreationCommand => ({
+  type: 'AdvanceCharacterCreation',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId,
+  creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+})
+
+export const buildStartCharacterCareerTermCommand = ({
+  identity,
+  characterId = DEFAULT_CHARACTER_ID,
+  career = 'Scout'
+}: ClientCommandOptions & {
+  characterId?: CharacterId
+  career?: string
+}): StartCharacterCareerTermCommand => ({
+  type: 'StartCharacterCareerTerm',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId,
+  career
+})
+
+export const buildSelectCharacterCareerCreationCommand = ({
+  identity,
+  characterId = DEFAULT_CHARACTER_ID
+}: ClientCommandOptions & {
+  characterId?: CharacterId
+}): AdvanceCharacterCreationCommand => ({
+  type: 'AdvanceCharacterCreation',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId,
+  creationEvent: {
+    type: 'SELECT_CAREER',
+    isNewCareer: true
+  }
 })
 
 export const buildCreatePieceCommand = ({
@@ -432,20 +515,97 @@ export const buildBootstrapCommands = (
   }
 
   if (Object.keys(state.boards).length === 0) {
-    return [buildCreateBoardCommand({ requestId: 'bootstrap-board', identity })]
+    return [
+      buildSequencedCommand(
+        buildCreateBoardCommand({ requestId: 'bootstrap-board', identity }),
+        state
+      )
+    ]
   }
 
-  if (Object.keys(state.characters).length === 0) {
+  const scout = state.characters[DEFAULT_CHARACTER_ID]
+  if (!scout) {
     return [
-      buildCreateCharacterCommand({
-        requestId: 'bootstrap-character',
-        identity
-      }),
-      buildDefaultCharacterSheetUpdateCommand({
-        requestId: 'bootstrap-character-sheet',
-        identity
-      })
-    ].filter((command): command is Command => command !== null)
+      buildSequencedCommand(
+        buildCreateCharacterCommand({
+          requestId: 'bootstrap-character',
+          identity
+        }),
+        state
+      )
+    ]
+  }
+
+  if (!scout.creation) {
+    return [
+      buildSequencedCommand(
+        buildStartCharacterCreationCommand({
+          requestId: 'bootstrap-character-creation',
+          identity
+        }),
+        state
+      )
+    ]
+  }
+
+  if (scout.creation.state.status === 'CHARACTERISTICS') {
+    return [
+      buildSequencedCommand(
+        buildSetCharacterCharacteristicsCreationCommand({
+          requestId: 'bootstrap-characteristics',
+          identity
+        }),
+        state
+      )
+    ]
+  }
+
+  if (scout.creation.state.status === 'HOMEWORLD') {
+    return [
+      buildSequencedCommand(
+        buildCompleteCharacterHomeworldCreationCommand({
+          requestId: 'bootstrap-homeworld',
+          identity
+        }),
+        state
+      )
+    ]
+  }
+
+  if (scout.creation.terms.length === 0) {
+    return [
+      buildSequencedCommand(
+        buildStartCharacterCareerTermCommand({
+          requestId: 'bootstrap-career-term',
+          identity
+        }),
+        state
+      )
+    ]
+  }
+
+  if (scout.creation.state.status === 'CAREER_SELECTION') {
+    return [
+      buildSequencedCommand(
+        buildSelectCharacterCareerCreationCommand({
+          requestId: 'bootstrap-career-selection',
+          identity
+        }),
+        state
+      )
+    ]
+  }
+
+  if ((scout.skills || []).length === 0) {
+    return [
+      buildSequencedCommand(
+        buildDefaultCharacterSheetUpdateCommand({
+          requestId: 'bootstrap-character-sheet',
+          identity
+        }),
+        state
+      )
+    ]
   }
 
   if (Object.keys(state.pieces).length === 0) {
@@ -458,12 +618,15 @@ export const buildBootstrapCommands = (
     ) as CharacterId
 
     return [
-      buildCreatePieceCommand({
-        requestId: 'bootstrap-piece',
-        identity,
-        boardId,
-        characterId
-      })
+      buildSequencedCommand(
+        buildCreatePieceCommand({
+          requestId: 'bootstrap-piece',
+          identity,
+          boardId,
+          characterId
+        }),
+        state
+      )
     ]
   }
 
