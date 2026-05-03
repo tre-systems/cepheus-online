@@ -41,19 +41,25 @@ const assets = [
   },
   {
     pathname: '/client/app/app.js',
-    source: join(compiledClientRoot, 'app', 'app.js'),
+    source: join(compiledClientRoot, 'client', 'app', 'app.js'),
     exportName: 'CLIENT_APP_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {
     pathname: '/client/app/board-geometry.js',
-    source: join(compiledClientRoot, 'app', 'board-geometry.js'),
+    source: join(compiledClientRoot, 'client', 'app', 'board-geometry.js'),
     exportName: 'CLIENT_BOARD_GEOMETRY_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/room-api.js',
+    source: join(compiledClientRoot, 'client', 'app', 'room-api.js'),
+    exportName: 'CLIENT_ROOM_API_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/dice.js',
-    source: join(compiledClientRoot, 'dice.js'),
+    source: join(compiledClientRoot, 'client', 'dice.js'),
     exportName: 'CLIENT_DICE_JS',
     contentType: 'text/javascript; charset=utf-8'
   },

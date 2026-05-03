@@ -18,6 +18,7 @@ import {
   buildDefaultCharacterSheetUpdateCommand,
   buildMovePieceCommand,
   buildSequencedCommand,
+  buildSetDoorOpenCommand,
   formatCharacterEquipmentText,
   normalizeCharacterEquipmentText,
   normalizeCharacterSkillList,
@@ -123,6 +124,39 @@ describe('client command helpers', () => {
     assert.equal(command.type, 'MovePiece')
     if (command.type !== 'MovePiece') return
     assert.equal(command.expectedSeq, 7)
+  })
+
+  it('builds open door commands with authoritative sequence and actor', () => {
+    const command = buildSetDoorOpenCommand({
+      identity,
+      state,
+      boardId,
+      doorId: 'iris-1',
+      open: true
+    })
+
+    assert.equal(command.type, 'SetDoorOpen')
+    assert.equal(command.gameId, identity.gameId)
+    assert.equal(command.actorId, identity.actorId)
+    assert.equal(command.expectedSeq, 7)
+    assert.equal(command.boardId, boardId)
+    assert.equal(command.doorId, 'iris-1')
+    assert.equal(command.open, true)
+  })
+
+  it('builds closed door commands with authoritative sequence and actor', () => {
+    const command = buildSetDoorOpenCommand({
+      identity,
+      state,
+      boardId,
+      doorId: 'iris-1',
+      open: false
+    })
+
+    assert.equal(command.type, 'SetDoorOpen')
+    assert.equal(command.actorId, identity.actorId)
+    assert.equal(command.expectedSeq, 7)
+    assert.equal(command.open, false)
   })
 
   it('adds the current authoritative sequence before dispatching commands', () => {

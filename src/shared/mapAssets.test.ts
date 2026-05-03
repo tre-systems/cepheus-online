@@ -3,7 +3,10 @@ import { expect } from '../test/expect'
 
 import {
   deriveGeomorphTileKind,
+  doMapSegmentsIntersect,
   filterBlockingMapOccluders,
+  findBlockingMapOccluderForSegment,
+  hasMapLineOfSight,
   validateLocalMapAssetMetadata,
   validateMapLosSidecar
 } from './mapAssets'
@@ -220,5 +223,119 @@ describe('filterBlockingMapOccluders', () => {
     expect(blocking.length).toBe(2)
     expect(blocking[0]?.id).toBe('wall-1')
     expect(blocking[1]?.id).toBe('door-closed')
+  })
+
+  it('uses board door state when supplied', () => {
+    const blocking = filterBlockingMapOccluders(
+      [
+        {
+          type: 'door',
+          id: 'door-1',
+          x1: 50,
+          y1: 0,
+          x2: 50,
+          y2: 100,
+          open: false
+        }
+      ],
+      {
+        'door-1': { id: 'door-1', open: true }
+      }
+    )
+
+    expect(blocking.length).toBe(0)
+  })
+})
+
+describe('doMapSegmentsIntersect', () => {
+  it('detects crossing and non-crossing segments deterministically', () => {
+    expect(
+      doMapSegmentsIntersect(
+        { x1: 0, y1: 0, x2: 100, y2: 100 },
+        { x1: 0, y1: 100, x2: 100, y2: 0 }
+      )
+    ).toBe(true)
+
+    expect(
+      doMapSegmentsIntersect(
+        { x1: 0, y1: 0, x2: 100, y2: 0 },
+        { x1: 0, y1: 10, x2: 100, y2: 10 }
+      )
+    ).toBe(false)
+  })
+})
+
+describe('hasMapLineOfSight', () => {
+  it('blocks visibility when a wall intersects the sight segment', () => {
+    const wall = {
+      type: 'wall' as const,
+      id: 'wall-1',
+      x1: 50,
+      y1: 0,
+      x2: 50,
+      y2: 100
+    }
+
+    expect(hasMapLineOfSight({ x: 0, y: 50 }, { x: 100, y: 50 }, [wall])).toBe(
+      false
+    )
+    expect(
+      findBlockingMapOccluderForSegment({ x1: 0, y1: 50, x2: 100, y2: 50 }, [
+        wall
+      ])?.id
+    ).toBe('wall-1')
+  })
+
+  it('respects closed and open door state keyed by door id', () => {
+    const door = {
+      type: 'door' as const,
+      id: 'door-1',
+      x1: 50,
+      y1: 0,
+      x2: 50,
+      y2: 100,
+      open: false
+    }
+
+    expect(hasMapLineOfSight({ x: 0, y: 50 }, { x: 100, y: 50 }, [door])).toBe(
+      false
+    )
+    expect(
+      hasMapLineOfSight({ x: 0, y: 50 }, { x: 100, y: 50 }, [door], {
+        'door-1': { id: 'door-1', open: true }
+      })
+    ).toBe(true)
+    expect(
+      hasMapLineOfSight({ x: 0, y: 50 }, { x: 100, y: 50 }, [door], {
+        'door-1': false
+      })
+    ).toBe(false)
+  })
+
+  it('ignores open doors and occluders outside the sight segment', () => {
+    const openDoor = {
+      type: 'door' as const,
+      id: 'door-open',
+      x1: 50,
+      y1: 0,
+      x2: 50,
+      y2: 100,
+      open: true
+    }
+    const offRayWall = {
+      type: 'wall' as const,
+      id: 'wall-off-ray',
+      x1: 0,
+      y1: 90,
+      x2: 100,
+      y2: 90
+    }
+
+    expect(
+      hasMapLineOfSight({ x: 0, y: 50 }, { x: 100, y: 50 }, [
+        openDoor,
+        offRayWall
+      ])
+    ).toBe(true)
   })
 })

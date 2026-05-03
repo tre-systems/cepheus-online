@@ -14,6 +14,12 @@ import {
   screenToBoard as screenPointToBoard,
   clampPiecePosition as clampPiecePositionToBoard
 } from './board-geometry.js'
+import {
+  buildRoomPath,
+  buildViewerQuery,
+  fetchRoomState,
+  postRoomCommand
+} from './room-api.js'
 
 const DEFAULT_GAME_ID = 'demo-room'
 const DEFAULT_ACTOR_ID = 'local-user'
@@ -179,23 +185,11 @@ els.pwaInstallDismissButton?.addEventListener('click', () => {
 const requestId = (prefix) =>
   prefix + '-' + Date.now().toString(36) + '-' + (++requestCounter).toString(36)
 
-const roomPath = () => '/rooms/' + encodeURIComponent(roomId)
-const viewerQuery = () =>
-  '?viewer=' +
-  encodeURIComponent(viewerRole) +
-  '&user=' +
-  encodeURIComponent(actorId)
 const idFromName = (name, fallback) =>
   name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '') || fallback
-
-const commandMessage = (id, command) => ({
-  type: 'command',
-  requestId: id,
-  command
-})
 
 const sequenceCommand = (command) => {
   if (
@@ -266,15 +260,16 @@ const handleServerMessage = (message) => {
 
 const postCommand = async (command, id = requestId(command.type)) => {
   const sequencedCommand = sequenceCommand(command)
-  const response = await fetch(roomPath() + '/command', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(commandMessage(id, sequencedCommand))
+  const response = await postRoomCommand({
+    roomId,
+    requestId: id,
+    command: sequencedCommand
   })
-  const message = await response.json()
-  handleServerMessage(message)
-  if (!response.ok) throw new Error(message.error?.message || 'Command failed')
-  return message
+  handleServerMessage(response.message)
+  if (!response.ok) {
+    throw new Error(response.message.error?.message || 'Command failed')
+  }
+  return response.message
 }
 
 const dispatchCommand = async (command) => {
@@ -285,8 +280,7 @@ const dispatchCommand = async (command) => {
 const sendCommand = dispatchCommand
 
 const fetchState = async () => {
-  const response = await fetch(roomPath() + '/state' + viewerQuery())
-  const message = await response.json()
+  const message = await fetchRoomState({ roomId, viewerRole, actorId })
   handleServerMessage(message)
 }
 
@@ -712,7 +706,12 @@ const connectSocket = () => {
   if (socket) socket.close()
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
   socket = new WebSocket(
-    protocol + '//' + location.host + roomPath() + '/ws' + viewerQuery()
+    protocol +
+      '//' +
+      location.host +
+      buildRoomPath(roomId) +
+      '/ws' +
+      buildViewerQuery(viewerRole, actorId)
   )
   setStatus('Connecting')
 

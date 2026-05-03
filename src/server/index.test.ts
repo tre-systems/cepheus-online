@@ -279,6 +279,23 @@ describe('Worker static client', () => {
     assert.equal(body.includes('findHitPiece'), true)
   })
 
+  it('serves the dependency-free room API helper module', async () => {
+    const response = await worker.fetch(
+      new Request('https://cepheus.test/client/app/room-api.js'),
+      {} as Env
+    )
+    const body = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.equal(
+      response.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(body.includes('buildRoomPath'), true)
+    assert.equal(body.includes('fetchRoomState'), true)
+    assert.equal(body.includes('postRoomCommand'), true)
+  })
+
   it('serves the dependency-free dice helper module', async () => {
     const response = await worker.fetch(
       new Request('https://cepheus.test/client/dice.js'),

@@ -3,7 +3,7 @@
   "compilerOptions": {
     "noEmit": false,
     "outDir": ".tmp/client",
-    "rootDir": "src/client",
+    "rootDir": "src",
     "declaration": false,
     "sourceMap": false
   },

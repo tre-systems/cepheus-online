@@ -192,6 +192,32 @@ describe('GameRoomDO HTTP skeleton', () => {
     assert.equal(message.state.selectedBoardId, 'upper-deck')
   })
 
+  it('records board door state through HTTP commands', async () => {
+    const room = createRoom()
+    await postCommand(room, createGameBody())
+    await postCommand(room, createBoardBody())
+
+    const response = await postCommand(
+      room,
+      commandBody('open-door', {
+        type: 'SetDoorOpen',
+        boardId: 'main-board',
+        doorId: 'iris-1',
+        open: true,
+        expectedSeq: 2
+      })
+    )
+    const message = await response.json()
+
+    assert.equal(response.status, 200)
+    assert.equal(message.type, 'commandAccepted')
+    assert.equal(message.eventSeq, 3)
+    assert.deepEqual(message.state.boards['main-board'].doors['iris-1'], {
+      id: 'iris-1',
+      open: true
+    })
+  })
+
   it('filters hidden pieces out of player projections', async () => {
     const room = createRoom()
     await postCommand(room, createGameBody())

@@ -77,7 +77,9 @@ Validation keeps sidecars tied to a non-empty asset reference, positive board
 dimensions and grid scale, unique occluder ids, in-bounds non-zero segments, and
 explicit door open state. Runtime visibility code should call
 `filterBlockingMapOccluders` before ray tests so walls and closed doors block
-line of sight while open doors do not.
+line of sight while open doors do not. When projected board door state is
+available, it is keyed by sidecar door id and overrides the sidecar's reviewed
+default open value.
 
 ## Board Camera
 
@@ -157,6 +159,12 @@ The client can compute vision from the reviewed occluder sidecar:
 - narrow phase: ray/segment intersection for visibility checks
 - reveal polygon: cast toward segment endpoints with small angular offsets
 - per-piece visibility: use the piece center and configured sight radius
+
+`src/shared/mapAssets.ts` owns the dependency-free primitives for the narrow
+phase: `doMapSegmentsIntersect`, `findBlockingMapOccluderForSegment`, and
+`hasMapLineOfSight`. These helpers are deterministic and pure; callers pass the
+reviewed occluders plus the latest board door state when they need runtime LOS
+against open or closed doors.
 
 The server remains authoritative for door open/closed state and piece position.
 The client can render visibility cheaply from the latest projected state.

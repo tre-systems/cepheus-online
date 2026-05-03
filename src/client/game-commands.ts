@@ -52,6 +52,7 @@ type CharacterSheetPatchInput = CharacterSheetPatch & {
   equipmentText?: string
 }
 type CreatePieceCommand = Extract<Command, { type: 'CreatePiece' }>
+type SetDoorOpenCommand = Extract<Command, { type: 'SetDoorOpen' }>
 type CreatePieceDimensions = {
   width: number
   height: number
@@ -380,6 +381,28 @@ export const buildMovePieceCommand = ({
   pieceId,
   x,
   y,
+  expectedSeq: state.eventSeq
+})
+
+export const buildSetDoorOpenCommand = ({
+  identity,
+  state,
+  boardId,
+  doorId,
+  open
+}: {
+  identity: ClientIdentity
+  state: Pick<GameState, 'eventSeq'>
+  boardId: BoardId
+  doorId: string
+  open: boolean
+}): SetDoorOpenCommand => ({
+  type: 'SetDoorOpen',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  boardId,
+  doorId,
+  open,
   expectedSeq: state.eventSeq
 })
 

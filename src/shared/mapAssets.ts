@@ -49,6 +49,25 @@ export interface MapLosSidecar {
   occluders: MapOccluder[]
 }
 
+export interface MapPoint {
+  x: number
+  y: number
+}
+
+export interface MapSegment {
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+}
+
+export type MapDoorStateLookup = Readonly<
+  Record<
+    string,
+    { readonly id?: string; readonly open: boolean } | boolean | undefined
+  >
+>
+
 const isLocalMapAssetRoot = (value: unknown): value is LocalMapAssetRoot =>
   LOCAL_MAP_ASSET_ROOTS.includes(value as LocalMapAssetRoot)
 
@@ -281,7 +300,90 @@ export const validateMapLosSidecar = (
   } as MapLosSidecar)
 }
 
+const orientation = (a: MapPoint, b: MapPoint, c: MapPoint): -1 | 0 | 1 => {
+  const cross = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y)
+
+  if (cross === 0) return 0
+
+  return cross > 0 ? 1 : -1
+}
+
+const isPointOnSegment = (
+  point: MapPoint,
+  segmentStart: MapPoint,
+  segmentEnd: MapPoint
+): boolean =>
+  point.x >= Math.min(segmentStart.x, segmentEnd.x) &&
+  point.x <= Math.max(segmentStart.x, segmentEnd.x) &&
+  point.y >= Math.min(segmentStart.y, segmentEnd.y) &&
+  point.y <= Math.max(segmentStart.y, segmentEnd.y)
+
+export const doMapSegmentsIntersect = (
+  first: MapSegment,
+  second: MapSegment
+): boolean => {
+  const firstStart = { x: first.x1, y: first.y1 }
+  const firstEnd = { x: first.x2, y: first.y2 }
+  const secondStart = { x: second.x1, y: second.y1 }
+  const secondEnd = { x: second.x2, y: second.y2 }
+
+  const o1 = orientation(firstStart, firstEnd, secondStart)
+  const o2 = orientation(firstStart, firstEnd, secondEnd)
+  const o3 = orientation(secondStart, secondEnd, firstStart)
+  const o4 = orientation(secondStart, secondEnd, firstEnd)
+
+  if (o1 !== o2 && o3 !== o4) return true
+
+  return (
+    (o1 === 0 && isPointOnSegment(secondStart, firstStart, firstEnd)) ||
+    (o2 === 0 && isPointOnSegment(secondEnd, firstStart, firstEnd)) ||
+    (o3 === 0 && isPointOnSegment(firstStart, secondStart, secondEnd)) ||
+    (o4 === 0 && isPointOnSegment(firstEnd, secondStart, secondEnd))
+  )
+}
+
+export const isMapDoorOpen = (
+  door: Extract<MapOccluder, { type: 'door' }>,
+  doorStates: MapDoorStateLookup = {}
+): boolean => {
+  const boardState = doorStates[door.id]
+
+  if (typeof boardState === 'boolean') return boardState
+  if (boardState !== undefined) return boardState.open
+
+  return door.open
+}
+
+export const isBlockingMapOccluder = (
+  occluder: MapOccluder,
+  doorStates: MapDoorStateLookup = {}
+): boolean => occluder.type === 'wall' || !isMapDoorOpen(occluder, doorStates)
+
 export const filterBlockingMapOccluders = (
-  occluders: readonly MapOccluder[]
+  occluders: readonly MapOccluder[],
+  doorStates: MapDoorStateLookup = {}
 ): MapOccluder[] =>
-  occluders.filter((occluder) => occluder.type === 'wall' || !occluder.open)
+  occluders.filter((occluder) => isBlockingMapOccluder(occluder, doorStates))
+
+export const findBlockingMapOccluderForSegment = (
+  segment: MapSegment,
+  occluders: readonly MapOccluder[],
+  doorStates: MapDoorStateLookup = {}
+): MapOccluder | null =>
+  occluders.find(
+    (occluder) =>
+      isBlockingMapOccluder(occluder, doorStates) &&
+      doMapSegmentsIntersect(segment, occluder)
+  ) ?? null
+
+export const hasMapLineOfSight = (
+  from: MapPoint,
+  to: MapPoint,
+  occluders: readonly MapOccluder[],
+  doorStates: MapDoorStateLookup = {}
+): boolean =>
+  findBlockingMapOccluderForSegment(
+    { x1: from.x, y1: from.y, x2: to.x, y2: to.y },
+    occluders,
+    doorStates
+  ) === null
