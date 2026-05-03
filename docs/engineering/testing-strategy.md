@@ -9,7 +9,8 @@ test plan should continue to grow in layers as implementation expands.
 - `npm test`: compiles source and co-located `*.test.ts` files to a temporary
   CommonJS build and runs Node's built-in test runner.
 - Current tests cover shared protocol/dice/projection behavior, Durable Object
-  HTTP flow, Worker static fallback, and dependency-free client command helpers.
+  HTTP flow, Worker static fallback including PWA assets, and dependency-free
+  client command helpers.
 
 ## First Gate
 

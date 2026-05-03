@@ -15,6 +15,9 @@ describe('Worker static client', () => {
     assert.equal(response.status, 200)
     assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8')
     assert.equal(body.includes('<canvas id="boardCanvas"'), true)
+    assert.equal(body.includes('viewport-fit=cover'), true)
+    assert.equal(body.includes('manifest.webmanifest'), true)
+    assert.equal(body.includes('apple-mobile-web-app-capable'), true)
   })
 
   it('serves the dependency-free browser module', async () => {
@@ -30,5 +33,30 @@ describe('Worker static client', () => {
       'text/javascript; charset=utf-8'
     )
     assert.equal(body.includes('new WebSocket'), true)
+    assert.equal(body.includes('serviceWorker'), true)
+  })
+
+  it('serves PWA manifest, icon, and service worker assets', async () => {
+    const manifestResponse = await worker.fetch(
+      new Request('https://cepheus.test/manifest.webmanifest'),
+      {} as Env
+    )
+    const manifest = await manifestResponse.json()
+    const iconResponse = await worker.fetch(
+      new Request('https://cepheus.test/icon.svg'),
+      {} as Env
+    )
+    const swResponse = await worker.fetch(
+      new Request('https://cepheus.test/sw.js'),
+      {} as Env
+    )
+    const sw = await swResponse.text()
+
+    assert.equal(manifestResponse.status, 200)
+    assert.equal(manifest.display, 'standalone')
+    assert.equal(manifest.theme_color, '#020504')
+    assert.equal(iconResponse.headers.get('content-type'), 'image/svg+xml')
+    assert.equal(sw.includes('cepheus-online-shell-v1'), true)
+    assert.equal(sw.includes('/rooms/'), true)
   })
 })

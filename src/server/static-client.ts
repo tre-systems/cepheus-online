@@ -2,8 +2,13 @@ const CLIENT_HTML = `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#020504">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Cepheus Online</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
@@ -58,16 +63,21 @@ const CLIENT_HTML = `<!doctype html>
 
 const CLIENT_CSS = `:root {
   color-scheme: dark;
-  --bg: #111516;
-  --panel: #1c2323;
-  --panel-2: #222b2a;
-  --line: #33413f;
-  --text: #eef4f1;
-  --muted: #a6b4af;
-  --accent: #5fd0a2;
-  --accent-2: #f2b84b;
-  --danger: #ff8f7a;
-  --board: #253130;
+  --bg: #020504;
+  --bg-2: #07100d;
+  --panel: rgba(4, 13, 10, 0.86);
+  --panel-solid: #07120f;
+  --panel-2: #0c1915;
+  --line: rgba(133, 255, 202, 0.24);
+  --line-bright: rgba(173, 255, 221, 0.52);
+  --text: #f4fff8;
+  --muted: #8bb7a6;
+  --accent: #48ffad;
+  --accent-soft: rgba(72, 255, 173, 0.18);
+  --accent-2: #f7fff9;
+  --danger: #ff776b;
+  --board: #06100d;
+  --shadow: rgba(0, 0, 0, 0.52);
 }
 
 * {
@@ -80,12 +90,41 @@ body {
   margin: 0;
 }
 
-body {
+html {
   background: var(--bg);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(72, 255, 173, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(72, 255, 173, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 50% -18%, rgba(72, 255, 173, 0.18), transparent 46%),
+    linear-gradient(180deg, #020504 0%, #050b09 52%, #010302 100%);
+  background-size: 22px 22px, 22px 22px, auto, auto;
   color: var(--text);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.035) 0,
+      rgba(255, 255, 255, 0.035) 1px,
+      transparent 1px,
+      transparent 5px
+    );
+  mix-blend-mode: screen;
+  opacity: 0.2;
 }
 
 button,
@@ -94,17 +133,28 @@ input {
 }
 
 button {
-  min-height: 38px;
-  border: 1px solid #3f514d;
-  border-radius: 6px;
-  background: #293432;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background:
+    linear-gradient(180deg, rgba(244, 255, 248, 0.09), rgba(72, 255, 173, 0.04)),
+    #07120f;
   color: var(--text);
   cursor: pointer;
   padding: 0 14px;
+  font-weight: 750;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 10px 26px rgba(0, 0, 0, 0.22);
 }
 
-button:hover {
+button:hover,
+button:focus-visible {
   border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px rgba(72, 255, 173, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  outline: none;
 }
 
 button:disabled {
@@ -114,46 +164,59 @@ button:disabled {
 
 input {
   width: 100%;
-  min-height: 38px;
+  min-height: 46px;
   border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #121817;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.46);
   color: var(--text);
-  padding: 0 10px;
+  padding: 0 11px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(72, 255, 173, 0.14);
+  outline: none;
 }
 
 .app-shell {
-  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
   display: grid;
   grid-template-rows: auto auto 1fr;
 }
 
 .topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 18px;
+  display: grid;
+  gap: 14px;
+  padding: max(14px, env(safe-area-inset-top)) 14px 12px;
   border-bottom: 1px solid var(--line);
-  background: #171d1d;
+  background:
+    linear-gradient(180deg, rgba(244, 255, 248, 0.08), transparent),
+    rgba(3, 9, 7, 0.9);
+  backdrop-filter: blur(18px);
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 210px;
 }
 
 .brand-mark {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line-bright);
   border-radius: 8px;
   display: grid;
   place-items: center;
-  background: var(--accent);
-  color: #06110d;
-  font-weight: 800;
+  background:
+    linear-gradient(135deg, rgba(72, 255, 173, 0.95), rgba(244, 255, 248, 0.78));
+  color: #02100a;
+  font-weight: 900;
+  letter-spacing: 0;
+  box-shadow: 0 0 24px rgba(72, 255, 173, 0.26);
 }
 
 h1,
@@ -163,88 +226,110 @@ p {
 
 h1 {
   font-size: 18px;
-  line-height: 1.1;
+  line-height: 1.05;
+  letter-spacing: 0;
 }
 
 #connectionStatus,
 .room-form span,
 .dice-expression span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+#connectionStatus {
+  margin-top: 4px;
 }
 
 .room-form {
   display: grid;
-  grid-template-columns: minmax(130px, 180px) minmax(130px, 180px) auto;
+  grid-template-columns: 1fr 1fr auto;
   align-items: end;
-  gap: 10px;
+  gap: 8px;
 }
 
 .room-form label,
 .dice-expression {
   display: grid;
-  gap: 4px;
+  gap: 5px;
+  min-width: 0;
 }
 
 .tool-row {
-  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr minmax(84px, 112px) 76px 82px;
   align-items: end;
-  gap: 10px;
-  padding: 12px 18px;
+  gap: 8px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  background: rgba(5, 13, 10, 0.92);
+  backdrop-filter: blur(18px);
 }
 
 .dice-expression {
-  width: 110px;
+  width: auto;
 }
 
 .error-text {
-  min-height: 20px;
+  grid-column: 1 / -1;
+  min-height: 18px;
   color: var(--danger);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .play-surface {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 290px;
   min-height: 0;
 }
 
 .canvas-wrap {
   min-width: 0;
   min-height: 0;
-  padding: 18px;
-  background: #121716;
+  padding: 12px;
 }
 
 #boardCanvas {
   display: block;
   width: 100%;
-  height: min(72vh, calc(100vh - 170px));
-  min-height: 420px;
+  height: clamp(360px, 58dvh, 680px);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--board);
+  box-shadow:
+    0 22px 60px var(--shadow),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 0 80px rgba(72, 255, 173, 0.08);
   touch-action: none;
 }
 
 .side-panel {
-  border-left: 1px solid var(--line);
-  background: var(--panel);
-  padding: 18px;
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(244, 255, 248, 0.05), transparent),
+    var(--panel);
+  padding: 12px 12px calc(14px + env(safe-area-inset-bottom));
   overflow: auto;
 }
 
 .dice-stage {
-  min-height: 190px;
+  min-height: 166px;
   display: grid;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel-2);
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(72, 255, 173, 0.16), transparent 58%),
+    var(--panel-2);
   perspective: 900px;
   overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
 .dice-empty {
@@ -256,17 +341,18 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 18px;
+  gap: 16px;
   flex-wrap: wrap;
-  padding: 18px;
+  padding: 16px;
 }
 
 .die {
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   position: relative;
   transform-style: preserve-3d;
   transform: rotateX(-24deg) rotateY(34deg);
+  filter: drop-shadow(0 18px 20px rgba(0, 0, 0, 0.45));
 }
 
 .die.rolling {
@@ -278,50 +364,54 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  border: 2px solid #0b1211;
+  border: 2px solid #07100d;
   border-radius: 10px;
-  background: #f1f6ef;
-  color: #111516;
-  font-weight: 800;
-  font-size: 25px;
-  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.18);
+  background:
+    linear-gradient(145deg, #ffffff, #d9f4e6);
+  color: #020504;
+  font-weight: 900;
+  font-size: 24px;
+  box-shadow:
+    inset 0 0 18px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .face.front {
-  transform: translateZ(29px);
+  transform: translateZ(28px);
 }
 
 .face.back {
-  transform: rotateY(180deg) translateZ(29px);
+  transform: rotateY(180deg) translateZ(28px);
 }
 
 .face.right {
-  transform: rotateY(90deg) translateZ(29px);
+  transform: rotateY(90deg) translateZ(28px);
 }
 
 .face.left {
-  transform: rotateY(-90deg) translateZ(29px);
+  transform: rotateY(-90deg) translateZ(28px);
 }
 
 .face.top {
-  transform: rotateX(90deg) translateZ(29px);
+  transform: rotateX(90deg) translateZ(28px);
 }
 
 .face.bottom {
-  transform: rotateX(-90deg) translateZ(29px);
+  transform: rotateX(-90deg) translateZ(28px);
 }
 
 .roll-total {
   width: 100%;
   text-align: center;
   color: var(--accent-2);
-  font-weight: 800;
-  font-size: 28px;
+  font-weight: 900;
+  font-size: 30px;
+  text-shadow: 0 0 18px rgba(72, 255, 173, 0.42);
 }
 
 .dice-log {
   list-style: none;
-  margin: 16px 0 0;
+  margin: 0;
   padding: 0;
   display: grid;
   gap: 8px;
@@ -330,7 +420,9 @@ h1 {
 .dice-log li {
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #171e1d;
+  background:
+    linear-gradient(90deg, rgba(72, 255, 173, 0.11), transparent 62%),
+    rgba(4, 10, 8, 0.86);
   padding: 10px;
 }
 
@@ -357,28 +449,65 @@ h1 {
   }
 }
 
-@media (max-width: 760px) {
-  .topbar,
-  .tool-row {
-    align-items: stretch;
-    flex-direction: column;
+@media (max-width: 520px) {
+  .topbar {
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .room-form {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .room-form button {
+    grid-column: 1 / -1;
+  }
+
+  .tool-row {
+    grid-template-columns: 1fr 92px 72px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  #refreshButton {
+    grid-column: 1 / -1;
+  }
+
+  .canvas-wrap,
+  .side-panel {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+
+@media (min-width: 840px) {
+  .topbar {
+    grid-template-columns: minmax(220px, 1fr) auto;
+    align-items: center;
+    padding: 14px 18px;
+  }
+
+  .room-form {
+    min-width: 510px;
   }
 
   .play-surface {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 310px;
   }
 
-  .side-panel {
-    border-left: 0;
-    border-top: 1px solid var(--line);
+  .canvas-wrap {
+    padding: 18px;
   }
 
   #boardCanvas {
-    min-height: 340px;
+    height: min(72vh, calc(100vh - 170px));
+    min-height: 430px;
+  }
+
+  .side-panel {
+    border-top: 0;
+    border-left: 1px solid var(--line);
+    padding: 18px;
   }
 }`
 
@@ -386,6 +515,10 @@ const CLIENT_JS = `const DEFAULT_GAME_ID = "demo-room";
 const DEFAULT_ACTOR_ID = "local-user";
 
 const qs = new URLSearchParams(location.search);
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
 const els = {
   status: document.getElementById("connectionStatus"),
   roomForm: document.getElementById("roomForm"),
@@ -810,6 +943,70 @@ window.addEventListener("resize", render);
 connectSocket();
 fetchState().catch((error) => setError(error.message));`
 
+const CLIENT_MANIFEST = JSON.stringify(
+  {
+    name: 'Cepheus Online',
+    short_name: 'Cepheus',
+    description: 'A lightweight sci-fi tabletop for Cepheus Engine games.',
+    start_url: '/?source=pwa',
+    scope: '/',
+    display: 'standalone',
+    orientation: 'any',
+    background_color: '#020504',
+    theme_color: '#020504',
+    icons: [
+      {
+        src: '/icon.svg',
+        sizes: 'any',
+        type: 'image/svg+xml',
+        purpose: 'any maskable'
+      }
+    ]
+  },
+  null,
+  2
+)
+
+const CLIENT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#020504"/>
+  <path d="M82 134h348v244H82z" fill="#06120f" stroke="#48ffad" stroke-width="14"/>
+  <path d="M112 178h288M112 226h210M112 274h252M112 322h154" stroke="#f4fff8" stroke-width="18" stroke-linecap="round" opacity=".9"/>
+  <circle cx="374" cy="322" r="38" fill="#48ffad"/>
+  <path d="M356 322h36M374 304v36" stroke="#020504" stroke-width="12" stroke-linecap="round"/>
+</svg>`
+
+const CLIENT_SW = `const CACHE_NAME = "cepheus-online-shell-v1";
+const SHELL_ASSETS = ["/", "/styles.css", "/client.js", "/manifest.webmanifest", "/icon.svg"];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS)));
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+    )
+  );
+  self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith("/rooms/")) return;
+
+  event.respondWith(
+    caches.match(event.request).then((cached) =>
+      cached || fetch(event.request).then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return response;
+      })
+    )
+  );
+});`
+
 const textResponse = (body: string, contentType: string): Response =>
   new Response(body, {
     headers: {
@@ -826,6 +1023,12 @@ export const serveStaticClient = (pathname: string): Response | null => {
       return textResponse(CLIENT_CSS, 'text/css; charset=utf-8')
     case '/client.js':
       return textResponse(CLIENT_JS, 'text/javascript; charset=utf-8')
+    case '/manifest.webmanifest':
+      return textResponse(CLIENT_MANIFEST, 'application/manifest+json')
+    case '/icon.svg':
+      return textResponse(CLIENT_ICON, 'image/svg+xml')
+    case '/sw.js':
+      return textResponse(CLIENT_SW, 'text/javascript; charset=utf-8')
     default:
       return null
   }
