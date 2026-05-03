@@ -1,0 +1,101 @@
+import {
+  deriveDicePipSlots,
+  deriveDiceRollTiming,
+  deriveDieFaces,
+  deriveDieTilt,
+  type DicePipSlot
+} from '../dice.js'
+
+export type DiceFaceValueContent =
+  | { kind: 'pips'; slots: readonly DicePipSlot[] }
+  | { kind: 'numeric'; label: string }
+
+export interface BrowserDiceRoll {
+  revealAt?: string | null
+  rolls: readonly number[]
+  total: number
+}
+
+export interface AnimateRollOptions {
+  roll: BrowserDiceRoll
+  overlay: HTMLElement
+  stage: HTMLElement
+  hideTimer: number | null
+}
+
+export const deriveFaceValueContent = (value: number): DiceFaceValueContent => {
+  const slots = deriveDicePipSlots(value)
+
+  return slots
+    ? { kind: 'pips', slots }
+    : { kind: 'numeric', label: String(value) }
+}
+
+export const appendFaceValue = (face: HTMLElement, value: number): void => {
+  const content = deriveFaceValueContent(value)
+  if (content.kind === 'numeric') {
+    face.classList.add('numeric')
+    face.textContent = content.label
+    return
+  }
+
+  for (const slot of content.slots) {
+    const pip = document.createElement('span')
+    pip.className = `pip pip-${slot}`
+    face.append(pip)
+  }
+}
+
+export const buildDie = (value: number, index: number): HTMLElement => {
+  const die = document.createElement('div')
+  die.className = 'die rolling'
+  die.setAttribute('aria-label', `Die result ${value}`)
+  const tilt = deriveDieTilt(index)
+  die.style.setProperty('--die-tilt-x', tilt.x)
+  die.style.setProperty('--die-tilt-y', tilt.y)
+  die.style.setProperty('--die-tilt-z', tilt.z)
+  for (const { name, value: label } of deriveDieFaces(value)) {
+    const face = document.createElement('div')
+    face.className = `face ${name}`
+    face.setAttribute('aria-hidden', 'true')
+    appendFaceValue(face, label)
+    die.append(face)
+  }
+  return die
+}
+
+export const animateRoll = ({
+  roll,
+  overlay,
+  stage,
+  hideTimer
+}: AnimateRollOptions): number => {
+  if (hideTimer) window.clearTimeout(hideTimer)
+  overlay.classList.add('visible')
+  const timing = deriveDiceRollTiming({
+    revealAt: roll.revealAt,
+    nowMs: Date.now()
+  })
+  const row = document.createElement('div')
+  row.className = 'dice-row'
+  roll.rolls.forEach((value, index) => {
+    const die = buildDie(value, index)
+    die.style.animationDuration = `${timing.rollDurationMs}ms`
+    row.append(die)
+  })
+  const total = document.createElement('div')
+  total.className = 'roll-total'
+  total.textContent = 'Rolling...'
+  row.append(total)
+  stage.replaceChildren(row)
+  setTimeout(() => {
+    total.textContent = String(roll.total)
+    for (const die of Array.from(row.querySelectorAll('.die'))) {
+      die.classList.remove('rolling')
+    }
+  }, timing.rollDurationMs)
+
+  return window.setTimeout(() => {
+    overlay.classList.remove('visible')
+  }, timing.visibleDurationMs)
+}

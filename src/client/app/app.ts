@@ -1,12 +1,6 @@
 // @ts-nocheck
 
 import {
-  deriveDicePipSlots,
-  deriveDiceRollTiming,
-  deriveDieFaces,
-  deriveDieTilt
-} from '../dice.js'
-import {
   DEFAULT_BOARD_CAMERA,
   deriveBoardTransform,
   deriveCameraZoom,
@@ -48,6 +42,7 @@ import {
   fetchRoomState,
   postRoomCommand
 } from './room-api.js'
+import { animateRoll as animateDiceRoll } from './dice-overlay.js'
 
 const DEFAULT_GAME_ID = 'demo-room'
 const DEFAULT_ACTOR_ID = 'local-user'
@@ -1363,66 +1358,13 @@ const render = () => {
   renderRail()
 }
 
-const appendFaceValue = (face, value) => {
-  const slots = deriveDicePipSlots(value)
-  if (!slots) {
-    face.classList.add('numeric')
-    face.textContent = String(value)
-    return
-  }
-
-  for (const slot of slots) {
-    const pip = document.createElement('span')
-    pip.className = 'pip pip-' + slot
-    face.append(pip)
-  }
-}
-
-const buildDie = (value, index) => {
-  const die = document.createElement('div')
-  die.className = 'die rolling'
-  die.setAttribute('aria-label', 'Die result ' + value)
-  const tilt = deriveDieTilt(index)
-  die.style.setProperty('--die-tilt-x', tilt.x)
-  die.style.setProperty('--die-tilt-y', tilt.y)
-  die.style.setProperty('--die-tilt-z', tilt.z)
-  for (const { name, value: label } of deriveDieFaces(value)) {
-    const face = document.createElement('div')
-    face.className = 'face ' + name
-    face.setAttribute('aria-hidden', 'true')
-    appendFaceValue(face, label)
-    die.append(face)
-  }
-  return die
-}
-
 const animateRoll = (roll) => {
-  if (diceHideTimer) window.clearTimeout(diceHideTimer)
-  els.diceOverlay.classList.add('visible')
-  const timing = deriveDiceRollTiming({
-    revealAt: roll.revealAt,
-    nowMs: Date.now()
+  diceHideTimer = animateDiceRoll({
+    roll,
+    overlay: els.diceOverlay,
+    stage: els.diceStage,
+    hideTimer: diceHideTimer
   })
-  const row = document.createElement('div')
-  row.className = 'dice-row'
-  roll.rolls.forEach((value, index) => {
-    const die = buildDie(value, index)
-    die.style.animationDuration = timing.rollDurationMs + 'ms'
-    row.append(die)
-  })
-  const total = document.createElement('div')
-  total.className = 'roll-total'
-  total.textContent = 'Rolling...'
-  row.append(total)
-  els.diceStage.replaceChildren(row)
-  setTimeout(() => {
-    total.textContent = String(roll.total)
-    for (const die of row.querySelectorAll('.die'))
-      die.classList.remove('rolling')
-  }, timing.rollDurationMs)
-  diceHideTimer = window.setTimeout(() => {
-    els.diceOverlay.classList.remove('visible')
-  }, timing.visibleDurationMs)
 }
 
 els.canvas.addEventListener('pointerdown', (event) => {

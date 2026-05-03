@@ -13,10 +13,10 @@ const clientModules = new Map<
     {
       markers: ['new WebSocket', 'serviceWorker'],
       imports: [
-        '/client/dice.js',
         '/client/app/board-geometry.js',
         '/client/app/board-view.js',
         '/client/app/bootstrap-flow.js',
+        '/client/app/dice-overlay.js',
         '/client/app/image-assets.js',
         '/client/app/room-api.js'
       ]
@@ -25,6 +25,13 @@ const clientModules = new Map<
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
   ['/client/app/bootstrap-flow.js', { markers: ['nextBootstrapCommand'] }],
+  [
+    '/client/app/dice-overlay.js',
+    {
+      markers: ['appendFaceValue', 'buildDie', 'animateRoll'],
+      imports: ['/client/dice.js']
+    }
+  ],
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
   ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }]
@@ -242,6 +249,20 @@ describe('Worker static client', () => {
     )
     assert.equal(body.includes('DICE_PIP_SLOTS'), true)
     assert.equal(body.includes('deriveDieFaces'), true)
+  })
+
+  it('serves the browser dice overlay helper module', async () => {
+    const response = await fetchStaticClient('/client/app/dice-overlay.js')
+    const body = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.equal(
+      response.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(body.includes('appendFaceValue'), true)
+    assert.equal(body.includes('buildDie'), true)
+    assert.equal(body.includes('animateRoll'), true)
   })
 
   it('serves cubical dice styling', async () => {
