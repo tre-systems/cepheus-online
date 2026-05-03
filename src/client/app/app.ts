@@ -4,10 +4,24 @@ const DEFAULT_GAME_ID = "demo-room";
 const DEFAULT_ACTOR_ID = "local-user";
 const DICE_ROLL_ANIMATION_MS = 2200;
 const DICE_OVERLAY_VISIBLE_MS = 6200;
+const INSTALL_DISMISSED_KEY = "cepheus-online-pwa-install-dismissed";
+const INSTALL_ACCEPTED_KEY = "cepheus-online-pwa-install-accepted";
 
 const qs = new URLSearchParams(location.search);
 if ("serviceWorker" in navigator) {
+  let hadServiceWorkerController = navigator.serviceWorker.controller !== null;
+  let isReloadingForServiceWorker = false;
   navigator.serviceWorker.register("/sw.js").catch(() => {});
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadServiceWorkerController) {
+      hadServiceWorkerController = true;
+      return;
+    }
+
+    if (isReloadingForServiceWorker) return;
+    isReloadingForServiceWorker = true;
+    location.reload();
+  });
 }
 
 const els = {
@@ -48,6 +62,9 @@ const els = {
   canvas: document.getElementById("boardCanvas"),
   diceStage: document.getElementById("diceStage"),
   diceOverlay: document.getElementById("diceOverlay"),
+  pwaInstallPrompt: document.getElementById("pwaInstallPrompt"),
+  pwaInstallButton: document.getElementById("pwaInstallButton"),
+  pwaInstallDismissButton: document.getElementById("pwaInstallDismissButton"),
   initiativeRail: document.getElementById("initiativeRail"),
   sheet: document.getElementById("characterSheet"),
   sheetButton: document.getElementById("sheetButton"),
@@ -80,6 +97,7 @@ let requestCounter = 0;
 let diceHideTimer = null;
 const boardImageCache = new Map();
 const pieceImageCache = new Map();
+let deferredInstallPrompt = null;
 
 els.roomInput.value = roomId;
 els.userInput.value = actorId;
@@ -91,6 +109,59 @@ const setStatus = (text) => {
 const setError = (text) => {
   els.error.textContent = text || "";
 };
+
+const isStandaloneDisplay = () =>
+  matchMedia("(display-mode: standalone)").matches ||
+  navigator.standalone === true;
+
+const hideInstallPrompt = () => {
+  if (els.pwaInstallPrompt) els.pwaInstallPrompt.hidden = true;
+};
+
+const refreshInstallPrompt = () => {
+  if (
+    !els.pwaInstallPrompt ||
+    !els.pwaInstallButton ||
+    !deferredInstallPrompt ||
+    isStandaloneDisplay() ||
+    localStorage.getItem(INSTALL_DISMISSED_KEY) === "1" ||
+    localStorage.getItem(INSTALL_ACCEPTED_KEY) === "1"
+  ) {
+    hideInstallPrompt();
+    return;
+  }
+
+  els.pwaInstallPrompt.hidden = false;
+};
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  refreshInstallPrompt();
+});
+
+window.addEventListener("appinstalled", () => {
+  localStorage.setItem(INSTALL_ACCEPTED_KEY, "1");
+  deferredInstallPrompt = null;
+  hideInstallPrompt();
+});
+
+els.pwaInstallButton?.addEventListener("click", async () => {
+  if (!deferredInstallPrompt) return;
+  const promptEvent = deferredInstallPrompt;
+  deferredInstallPrompt = null;
+  hideInstallPrompt();
+  await promptEvent.prompt();
+  const choice = await promptEvent.userChoice;
+  if (choice.outcome === "accepted") {
+    localStorage.setItem(INSTALL_ACCEPTED_KEY, "1");
+  }
+});
+
+els.pwaInstallDismissButton?.addEventListener("click", () => {
+  localStorage.setItem(INSTALL_DISMISSED_KEY, "1");
+  hideInstallPrompt();
+});
 
 const requestId = (prefix) => prefix + "-" + Date.now().toString(36) + "-" + (++requestCounter).toString(36);
 

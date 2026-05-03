@@ -98,6 +98,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/server/static-client-assets.generated.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noTemplateCurlyInString": "off"
+          }
+        }
+      }
     }
   ],
   "files": {

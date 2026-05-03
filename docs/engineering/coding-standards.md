@@ -125,6 +125,11 @@ The Worker-served shell source lives under `src/client/app`. Run
 `npm run build:client` after editing it so the generated server asset module
 stays current.
 
+PWA behavior belongs in the shell layer. Keep the service worker conservative:
+cache static shell assets, use network-first navigation with an offline shell
+fallback, and never intercept room commands, state reads, health checks, or API
+routes.
+
 Client state has three classes:
 
 - authoritative `GameState` from the server

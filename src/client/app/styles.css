@@ -775,6 +775,56 @@ h1 {
     inset 0 0 42px rgba(72, 255, 173, 0.08);
 }
 
+.pwa-install-prompt {
+  position: fixed;
+  z-index: 15;
+  left: max(10px, env(safe-area-inset-left));
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(72, 255, 173, 0.4);
+  border-radius: 8px;
+  padding: 10px;
+  background:
+    linear-gradient(180deg, rgba(244, 255, 248, 0.08), rgba(72, 255, 173, 0.04)),
+    rgba(2, 9, 7, 0.96);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+.pwa-install-prompt[hidden] {
+  display: none;
+}
+
+.pwa-install-prompt strong,
+.pwa-install-prompt span {
+  display: block;
+}
+
+.pwa-install-prompt strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.pwa-install-prompt span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.pwa-install-prompt button {
+  min-height: 38px;
+}
+
+.pwa-install-dismiss {
+  width: 38px;
+  padding: 0;
+}
+
 .character-sheet {
   position: absolute;
   top: max(8px, env(safe-area-inset-top));

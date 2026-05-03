@@ -56,8 +56,11 @@ describe('Worker static client', () => {
     assert.equal(body.includes('id="createBoardButton"'), true)
     assert.equal(body.includes('id="diceLog"'), false)
     assert.equal(body.includes('viewport-fit=cover'), true)
-    assert.equal(body.includes('manifest.webmanifest'), true)
+    assert.equal(body.includes('site.webmanifest'), true)
+    assert.equal(body.includes('mobile-web-app-capable'), true)
     assert.equal(body.includes('apple-mobile-web-app-capable'), true)
+    assert.equal(body.includes('apple-touch-icon'), true)
+    assert.equal(body.includes('id="pwaInstallPrompt"'), true)
   })
 
   it('serves the dependency-free browser module', async () => {
@@ -74,6 +77,10 @@ describe('Worker static client', () => {
     )
     assert.equal(body.includes('new WebSocket'), true)
     assert.equal(body.includes('serviceWorker'), true)
+    assert.equal(body.includes('controllerchange'), true)
+    assert.equal(body.includes('beforeinstallprompt'), true)
+    assert.equal(body.includes('appinstalled'), true)
+    assert.equal(body.includes('INSTALL_DISMISSED_KEY'), true)
     assert.equal(body.includes('PIP_SLOTS'), true)
     assert.equal(body.includes('pieceImageCache'), true)
     assert.equal(body.includes('createCustomPiece'), true)
@@ -273,6 +280,7 @@ describe('Worker static client', () => {
     assert.equal(body.includes('.sheet-stat-edit'), true)
     assert.equal(body.includes('textarea:focus'), true)
     assert.equal(body.includes('.dice-overlay.visible'), true)
+    assert.equal(body.includes('.pwa-install-prompt'), true)
     assert.equal(body.includes('translateX(calc(-100%'), false)
     assert.equal(body.includes('100dvh'), true)
   })
@@ -283,8 +291,24 @@ describe('Worker static client', () => {
       {} as Env
     )
     const manifest = await manifestResponse.json()
+    const siteManifestResponse = await worker.fetch(
+      new Request('https://cepheus.test/site.webmanifest'),
+      {} as Env
+    )
+    const legacyManifestResponse = await worker.fetch(
+      new Request('https://cepheus.test/manifest.json'),
+      {} as Env
+    )
     const iconResponse = await worker.fetch(
       new Request('https://cepheus.test/icon.svg'),
+      {} as Env
+    )
+    const faviconResponse = await worker.fetch(
+      new Request('https://cepheus.test/favicon.ico'),
+      {} as Env
+    )
+    const touchIconResponse = await worker.fetch(
+      new Request('https://cepheus.test/apple-touch-icon.svg'),
       {} as Env
     )
     const swResponse = await worker.fetch(
@@ -295,10 +319,26 @@ describe('Worker static client', () => {
 
     assert.equal(manifestResponse.status, 200)
     assert.equal(manifest.display, 'standalone')
+    assert.deepEqual(manifest.display_override, [
+      'window-controls-overlay',
+      'standalone',
+      'browser'
+    ])
     assert.equal(manifest.theme_color, '#020504')
+    assert.deepEqual(manifest.categories, ['games', 'entertainment'])
+    assert.equal(manifest.launch_handler.client_mode, 'navigate-existing')
+    assert.equal(siteManifestResponse.status, 200)
+    assert.equal(legacyManifestResponse.status, 200)
     assert.equal(iconResponse.headers.get('content-type'), 'image/svg+xml')
-    assert.equal(sw.includes('cepheus-online-shell-v2'), true)
+    assert.equal(faviconResponse.headers.get('content-type'), 'image/svg+xml')
+    assert.equal(touchIconResponse.headers.get('content-type'), 'image/svg+xml')
+    assert.equal(sw.includes('cepheus-online-__BUILD_HASH__'), false)
+    assert.equal(sw.includes('cepheus-online-'), true)
+    assert.equal(sw.includes('SW_UPDATED'), true)
+    assert.equal(sw.includes('event.request.mode === "navigate"'), true)
     assert.equal(sw.includes('fetch(event.request)'), true)
     assert.equal(sw.includes('/rooms/'), true)
+    assert.equal(sw.includes('/api/'), true)
+    assert.equal(sw.includes('/health'), true)
   })
 })

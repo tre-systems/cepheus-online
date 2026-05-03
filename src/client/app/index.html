@@ -2,13 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="description" content="A mobile-first sci-fi tabletop for Cepheus Engine games.">
     <meta name="theme-color" content="#020504">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cepheus">
+    <meta name="format-detection" content="telephone=no">
+    <meta property="og:title" content="Cepheus Online">
+    <meta property="og:description" content="A mobile-first sci-fi tabletop for Cepheus Engine games.">
+    <meta property="og:type" content="website">
     <title>Cepheus Online</title>
-    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="manifest" href="/site.webmanifest">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
@@ -50,6 +58,15 @@
         <div class="dice-stage" id="diceStage">
           <div class="dice-empty">No rolls yet</div>
         </div>
+      </div>
+
+      <div id="pwaInstallPrompt" class="pwa-install-prompt" role="status" aria-live="polite" hidden>
+        <div>
+          <strong>Install Cepheus</strong>
+          <span>Use the tabletop full screen from your home screen.</span>
+        </div>
+        <button id="pwaInstallButton" type="button">Install</button>
+        <button id="pwaInstallDismissButton" class="pwa-install-dismiss" type="button" aria-label="Dismiss install prompt">×</button>
       </div>
 
       <aside class="character-sheet" id="characterSheet" aria-label="Character sheet">

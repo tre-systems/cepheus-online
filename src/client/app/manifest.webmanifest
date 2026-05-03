@@ -2,9 +2,11 @@
   "name": "Cepheus Online",
   "short_name": "Cepheus",
   "description": "A lightweight sci-fi tabletop for Cepheus Engine games.",
-  "start_url": "/?source=pwa",
+  "id": "/",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
   "orientation": "any",
   "background_color": "#020504",
   "theme_color": "#020504",
@@ -14,6 +16,26 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "shortcuts": [
+    {
+      "name": "Open demo room",
+      "short_name": "Demo",
+      "description": "Open the local demo tabletop room.",
+      "url": "/?game=demo-room",
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml",
+          "purpose": "any maskable"
+        }
+      ]
     }
   ]
 }

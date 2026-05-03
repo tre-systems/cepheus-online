@@ -70,6 +70,11 @@ Worker-served assets with `npm run build:client`. The Worker serves the
 generated asset module from `src/server` without importing client source at
 runtime.
 
+The app is a PWA. The shell owns install metadata, a web app manifest, service
+worker registration, controller-change reload, and an install prompt. The
+service worker may cache only app-shell assets and navigations; room state,
+commands, health checks, and future API routes must always go to the network.
+
 WebGL can be introduced later for a specific board mode, not as the default.
 
 ## State Boundaries
