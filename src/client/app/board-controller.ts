@@ -24,8 +24,29 @@ import {
   type BrowserImageCacheEntry,
   loadBrowserImage
 } from './image-assets.js'
+import type { LosOverlaySegmentViewModel } from './door-los-view.js'
 
 const DRAG_START_SLOP_PX = 6
+
+export interface LosOverlayCanvasStyle {
+  wallStroke: string
+  closedDoorStroke: string
+  openDoorStroke: string
+  wallLineWidth: number
+  doorLineWidth: number
+  dashLength: number
+  gapLength: number
+}
+
+export const DEFAULT_LOS_OVERLAY_CANVAS_STYLE: LosOverlayCanvasStyle = {
+  wallStroke: 'rgba(255, 255, 255, 0.72)',
+  closedDoorStroke: 'rgba(255, 119, 107, 0.9)',
+  openDoorStroke: 'rgba(72, 255, 173, 0.76)',
+  wallLineWidth: 3,
+  doorLineWidth: 4,
+  dashLength: 10,
+  gapLength: 7
+}
 
 type BoardDrag =
   | {
@@ -100,6 +121,52 @@ export const buildCompletedPieceDragMoveCommand = ({
     x,
     y
   })
+}
+
+export const drawLosOverlaySegments = (
+  ctx: Pick<
+    CanvasRenderingContext2D,
+    | 'beginPath'
+    | 'lineTo'
+    | 'moveTo'
+    | 'restore'
+    | 'save'
+    | 'setLineDash'
+    | 'stroke'
+    | 'strokeStyle'
+    | 'lineWidth'
+    | 'lineCap'
+  >,
+  segments: readonly LosOverlaySegmentViewModel[],
+  transform: Pick<BoardTransform, 'scale'>,
+  style: LosOverlayCanvasStyle = DEFAULT_LOS_OVERLAY_CANVAS_STYLE
+) => {
+  if (segments.length === 0) return
+
+  ctx.save()
+  ctx.lineCap = 'round'
+  for (const segment of segments) {
+    ctx.strokeStyle =
+      segment.type === 'wall'
+        ? style.wallStroke
+        : segment.open
+          ? style.openDoorStroke
+          : style.closedDoorStroke
+    ctx.lineWidth =
+      (segment.type === 'wall' ? style.wallLineWidth : style.doorLineWidth) /
+      transform.scale
+    ctx.setLineDash(
+      segment.type === 'door' && segment.open
+        ? [style.dashLength / transform.scale, style.gapLength / transform.scale]
+        : []
+    )
+    ctx.beginPath()
+    ctx.moveTo(segment.x1, segment.y1)
+    ctx.lineTo(segment.x2, segment.y2)
+    ctx.stroke()
+  }
+  ctx.setLineDash([])
+  ctx.restore()
 }
 
 export const createBoardController = ({

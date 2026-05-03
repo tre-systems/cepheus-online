@@ -92,6 +92,28 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/character-creation-flow.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'character-creation-flow.js'
+    ),
+    exportName: 'CLIENT_CHARACTER_CREATION_FLOW_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/client/app/character-creation-view.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'character-creation-view.js'
+    ),
+    exportName: 'CLIENT_CHARACTER_CREATION_VIEW_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/dice-overlay.js',
     source: join(compiledClientRoot, 'client', 'app', 'dice-overlay.js'),
     exportName: 'CLIENT_DICE_OVERLAY_JS',
@@ -107,6 +129,23 @@ const assets = [
     pathname: '/client/app/image-assets.js',
     source: join(compiledClientRoot, 'client', 'app', 'image-assets.js'),
     exportName: 'CLIENT_IMAGE_ASSETS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/client/app/map-asset-library.js',
+    source: join(compiledClientRoot, 'client', 'app', 'map-asset-library.js'),
+    exportName: 'CLIENT_MAP_ASSET_LIBRARY_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/client/app/map-asset-picker-view.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'map-asset-picker-view.js'
+    ),
+    exportName: 'CLIENT_MAP_ASSET_PICKER_VIEW_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {

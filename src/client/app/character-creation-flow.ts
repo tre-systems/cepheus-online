@@ -8,7 +8,7 @@ import type {
   CharacterType,
   GameState
 } from '../../shared/state'
-import { buildSequencedCommand, type ClientIdentity } from '../game-commands'
+import { buildSequencedCommand, type ClientIdentity } from '../game-commands.js'
 
 export type CharacterCreationStep =
   | 'basics'

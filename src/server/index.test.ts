@@ -356,6 +356,61 @@ describe('Worker static client', () => {
     assert.equal(body.includes('skillsFromText'), true)
   })
 
+  it('serves the character creation helper modules', async () => {
+    const flowResponse = await fetchStaticClient(
+      '/client/app/character-creation-flow.js'
+    )
+    const flowBody = await flowResponse.text()
+    const viewResponse = await fetchStaticClient(
+      '/client/app/character-creation-view.js'
+    )
+    const viewBody = await viewResponse.text()
+
+    assert.equal(flowResponse.status, 200)
+    assert.equal(
+      flowResponse.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(flowBody.includes('createCharacterCreationFlow'), true)
+    assert.equal(flowBody.includes('deriveCharacterCreationCommands'), true)
+    assert.equal(viewResponse.status, 200)
+    assert.equal(
+      viewResponse.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(
+      viewBody.includes('deriveCharacterCreationFieldViewModels'),
+      true
+    )
+    assert.equal(viewBody.includes('parseCharacterCreationDraftPatch'), true)
+  })
+
+  it('serves the map asset picker helper modules', async () => {
+    const libraryResponse = await fetchStaticClient(
+      '/client/app/map-asset-library.js'
+    )
+    const libraryBody = await libraryResponse.text()
+    const pickerResponse = await fetchStaticClient(
+      '/client/app/map-asset-picker-view.js'
+    )
+    const pickerBody = await pickerResponse.text()
+
+    assert.equal(libraryResponse.status, 200)
+    assert.equal(
+      libraryResponse.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(libraryBody.includes('validateMapAssetCandidates'), true)
+    assert.equal(libraryBody.includes('deriveMapAssetLabel'), true)
+    assert.equal(pickerResponse.status, 200)
+    assert.equal(
+      pickerResponse.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(pickerBody.includes('deriveMapAssetPickerViewModel'), true)
+    assert.equal(pickerBody.includes('deriveCounterPieceCommandDefaults'), true)
+  })
+
   it('serves the door LOS view and shared map helper modules', async () => {
     const doorResponse = await fetchStaticClient('/client/app/door-los-view.js')
     const doorBody = await doorResponse.text()

@@ -7,6 +7,13 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["src/client/app/app.ts", "src/client/dice.ts"],
+  "include": [
+    "src/client/app/app.ts",
+    "src/client/app/character-creation-flow.ts",
+    "src/client/app/character-creation-view.ts",
+    "src/client/app/map-asset-library.ts",
+    "src/client/app/map-asset-picker-view.ts",
+    "src/client/dice.ts"
+  ],
   "exclude": ["src/**/*.test.ts"]
 }

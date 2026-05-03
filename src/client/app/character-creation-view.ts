@@ -1,0 +1,405 @@
+import type {
+  CharacterCreationDraftPatch,
+  CharacterCreationFlow,
+  CharacterCreationStep,
+  CharacterCreationValidation
+} from './character-creation-flow.js'
+import { validateCurrentCharacterCreationStep } from './character-creation-flow.js'
+import type {
+  CharacterEquipmentItem,
+  CharacteristicKey
+} from '../../shared/state'
+
+export type CharacterCreationFieldKind =
+  | 'number'
+  | 'select'
+  | 'text'
+  | 'textarea'
+
+export interface CharacterCreationFieldViewModel {
+  key: string
+  label: string
+  kind: CharacterCreationFieldKind
+  step: CharacterCreationStep
+  value: string
+  required: boolean
+  errors: string[]
+}
+
+export interface CharacterCreationCtaLabels {
+  primary: string
+  secondary: string | null
+}
+
+export interface CharacterCreationValidationSummary {
+  ok: boolean
+  step: CharacterCreationStep
+  errors: string[]
+  errorCount: number
+  message: string
+}
+
+export interface CharacterCreationReviewItem {
+  label: string
+  value: string
+}
+
+export interface CharacterCreationReviewSection {
+  key: CharacterCreationStep
+  label: string
+  items: CharacterCreationReviewItem[]
+}
+
+export interface CharacterCreationReviewSummary {
+  title: string
+  subtitle: string
+  sections: CharacterCreationReviewSection[]
+}
+
+export type CharacterCreationFormValues = Partial<
+  Record<string, string | number | null | undefined>
+>
+
+const characteristicDefinitions: {
+  key: CharacteristicKey
+  label: string
+}[] = [
+  { key: 'str', label: 'Str' },
+  { key: 'dex', label: 'Dex' },
+  { key: 'end', label: 'End' },
+  { key: 'int', label: 'Int' },
+  { key: 'edu', label: 'Edu' },
+  { key: 'soc', label: 'Soc' }
+]
+
+export const characterCreationStepLabels: Record<
+  CharacterCreationStep,
+  string
+> = {
+  basics: 'Basics',
+  characteristics: 'Characteristics',
+  skills: 'Skills',
+  equipment: 'Equipment',
+  review: 'Review'
+}
+
+export const characterCreationPrimaryCtaLabels: Record<
+  CharacterCreationStep,
+  string
+> = {
+  basics: 'Continue to characteristics',
+  characteristics: 'Continue to skills',
+  skills: 'Continue to equipment',
+  equipment: 'Review character',
+  review: 'Create character'
+}
+
+export const deriveCharacterCreationCtaLabels = (
+  step: CharacterCreationStep
+): CharacterCreationCtaLabels => ({
+  primary: characterCreationPrimaryCtaLabels[step],
+  secondary: step === 'basics' ? null : 'Back'
+})
+
+const valueText = (value: string | number | null | undefined): string => {
+  if (value === null || value === undefined) return ''
+  return String(value)
+}
+
+const parseOptionalNumber = (
+  value: string | number | null | undefined
+): number | null | undefined => {
+  if (value === undefined) return undefined
+  if (value === null) return null
+
+  const text = String(value).trim()
+  if (!text) return null
+
+  const parsed = Number(text)
+  return Number.isFinite(parsed) ? parsed : Number.NaN
+}
+
+const parseNumberWithDefault = (
+  value: string | number | null | undefined,
+  fallback: number
+): number | undefined => {
+  if (value === undefined) return undefined
+  if (value === null) return fallback
+
+  const text = String(value).trim()
+  if (!text) return fallback
+
+  const parsed = Number(text)
+  return Number.isFinite(parsed) ? parsed : Number.NaN
+}
+
+const splitListText = (value: string): string[] =>
+  value
+    .split(/[\n,]/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+const parseEquipmentText = (value: string): CharacterEquipmentItem[] =>
+  value
+    .split('\n')
+    .map((line) => {
+      const [name = '', quantity = '1', ...notes] = line
+        .split('|')
+        .map((part) => part.trim())
+      if (!name) return null
+
+      const parsedQuantity = Number.parseInt(quantity, 10)
+      return {
+        name,
+        quantity: Number.isFinite(parsedQuantity) ? parsedQuantity : 1,
+        notes: notes.join(' | ')
+      }
+    })
+    .filter((item): item is CharacterEquipmentItem => item !== null)
+
+const validationForStep = (
+  flow: CharacterCreationFlow,
+  step: CharacterCreationStep = flow.step
+): CharacterCreationValidation =>
+  validateCurrentCharacterCreationStep({
+    ...flow,
+    step
+  })
+
+const fieldErrors = (
+  errors: readonly string[],
+  key: string,
+  characteristicKey?: CharacteristicKey
+): string[] =>
+  errors.filter((error) => {
+    if (key === 'name') return error.startsWith('Name ')
+    if (key === 'age') return error.startsWith('Age ')
+    if (key === 'skills') return error.startsWith('At least one skill')
+    if (key === 'credits') return error.startsWith('Credits ')
+    if (key === 'equipment') return error.startsWith('Equipment ')
+    if (characteristicKey) {
+      return error.startsWith(`${characteristicKey.toUpperCase()} `)
+    }
+    return false
+  })
+
+export const deriveCharacterCreationValidationSummary = (
+  flow: CharacterCreationFlow,
+  step: CharacterCreationStep = flow.step
+): CharacterCreationValidationSummary => {
+  const validation = validationForStep(flow, step)
+  const errorCount = validation.errors.length
+
+  return {
+    ok: validation.ok,
+    step: validation.step,
+    errors: [...validation.errors],
+    errorCount,
+    message: validation.ok
+      ? 'Ready to continue'
+      : `${errorCount} ${errorCount === 1 ? 'issue' : 'issues'} to fix`
+  }
+}
+
+export const deriveCharacterCreationFieldViewModels = (
+  flow: CharacterCreationFlow,
+  step: CharacterCreationStep = flow.step
+): CharacterCreationFieldViewModel[] => {
+  const validation = validationForStep(flow, step)
+  const { draft } = flow
+
+  switch (step) {
+    case 'basics':
+      return [
+        {
+          key: 'name',
+          label: 'Name',
+          kind: 'text',
+          step,
+          value: draft.name,
+          required: true,
+          errors: fieldErrors(validation.errors, 'name')
+        },
+        {
+          key: 'age',
+          label: 'Age',
+          kind: 'number',
+          step,
+          value: valueText(draft.age),
+          required: false,
+          errors: fieldErrors(validation.errors, 'age')
+        },
+        {
+          key: 'characterType',
+          label: 'Type',
+          kind: 'select',
+          step,
+          value: draft.characterType,
+          required: true,
+          errors: []
+        }
+      ]
+    case 'characteristics':
+      return characteristicDefinitions.map(({ key, label }) => ({
+        key,
+        label,
+        kind: 'number',
+        step,
+        value: valueText(draft.characteristics[key]),
+        required: true,
+        errors: fieldErrors(validation.errors, key, key)
+      }))
+    case 'skills':
+      return [
+        {
+          key: 'skills',
+          label: 'Skills',
+          kind: 'textarea',
+          step,
+          value: draft.skills.join('\n'),
+          required: true,
+          errors: fieldErrors(validation.errors, 'skills')
+        }
+      ]
+    case 'equipment':
+      return [
+        {
+          key: 'equipment',
+          label: 'Equipment',
+          kind: 'textarea',
+          step,
+          value: equipmentText(draft.equipment),
+          required: false,
+          errors: fieldErrors(validation.errors, 'equipment')
+        },
+        {
+          key: 'credits',
+          label: 'Credits',
+          kind: 'number',
+          step,
+          value: valueText(draft.credits),
+          required: false,
+          errors: fieldErrors(validation.errors, 'credits')
+        },
+        {
+          key: 'notes',
+          label: 'Notes',
+          kind: 'textarea',
+          step,
+          value: draft.notes,
+          required: false,
+          errors: []
+        }
+      ]
+    case 'review':
+      return []
+    default: {
+      const exhaustive: never = step
+      return exhaustive
+    }
+  }
+}
+
+export const parseCharacterCreationDraftPatch = (
+  values: CharacterCreationFormValues
+): CharacterCreationDraftPatch => {
+  const patch: CharacterCreationDraftPatch = {}
+
+  if (values.name !== undefined) patch.name = valueText(values.name)
+  if (values.characterType !== undefined) {
+    const characterType = valueText(values.characterType)
+    if (
+      characterType === 'PLAYER' ||
+      characterType === 'NPC' ||
+      characterType === 'ANIMAL' ||
+      characterType === 'ROBOT'
+    ) {
+      patch.characterType = characterType
+    }
+  }
+  if (values.age !== undefined) patch.age = parseOptionalNumber(values.age)
+  if (values.credits !== undefined) {
+    patch.credits = parseNumberWithDefault(values.credits, 0)
+  }
+  if (values.notes !== undefined) patch.notes = valueText(values.notes)
+  if (values.skills !== undefined) {
+    patch.skills = splitListText(valueText(values.skills))
+  }
+  if (values.equipment !== undefined) {
+    patch.equipment = parseEquipmentText(valueText(values.equipment))
+  }
+
+  const characteristics: CharacterCreationDraftPatch['characteristics'] = {}
+  for (const { key } of characteristicDefinitions) {
+    const value = Object.hasOwn(values, key)
+      ? values[key]
+      : values[`characteristics.${key}`]
+    if (value !== undefined) characteristics[key] = parseOptionalNumber(value)
+  }
+  if (Object.keys(characteristics).length > 0) {
+    patch.characteristics = characteristics
+  }
+
+  return patch
+}
+
+export const equipmentText = (
+  equipment: readonly CharacterEquipmentItem[]
+): string =>
+  equipment
+    .map((item) => [item.name, item.quantity, item.notes].join(' | '))
+    .join('\n')
+
+const itemValue = (value: string | number | null): string =>
+  value === null || value === '' ? 'Not set' : String(value)
+
+export const deriveCharacterCreationReviewSummary = (
+  flow: CharacterCreationFlow
+): CharacterCreationReviewSummary => {
+  const { draft } = flow
+  const skills = draft.skills.length > 0 ? draft.skills.join(', ') : 'Not set'
+  const equipment =
+    draft.equipment.length > 0
+      ? draft.equipment
+          .map((item) => `${item.name} x${item.quantity}`)
+          .join(', ')
+      : 'None'
+
+  return {
+    title: draft.name.trim() || 'Unnamed character',
+    subtitle: draft.characterType,
+    sections: [
+      {
+        key: 'basics',
+        label: characterCreationStepLabels.basics,
+        items: [
+          { label: 'Name', value: itemValue(draft.name.trim()) },
+          { label: 'Type', value: draft.characterType },
+          { label: 'Age', value: itemValue(draft.age) }
+        ]
+      },
+      {
+        key: 'characteristics',
+        label: characterCreationStepLabels.characteristics,
+        items: characteristicDefinitions.map(({ key, label }) => ({
+          label,
+          value: itemValue(draft.characteristics[key])
+        }))
+      },
+      {
+        key: 'skills',
+        label: characterCreationStepLabels.skills,
+        items: [{ label: 'Skills', value: skills }]
+      },
+      {
+        key: 'equipment',
+        label: characterCreationStepLabels.equipment,
+        items: [
+          { label: 'Equipment', value: equipment },
+          { label: 'Credits', value: itemValue(draft.credits) },
+          { label: 'Notes', value: itemValue(draft.notes.trim()) }
+        ]
+      }
+    ]
+  }
+}
