@@ -33,15 +33,16 @@ It points to the canonical owner docs rather than repeating their full content.
   protocol validation, dice, ids, schemas, and future rules.
 - `src/server/` is the Cloudflare Worker and Durable Object side: HTTP routes,
   persistence, command publication, read projections, and WebSocket handling.
-- `src/client/` is the browser client source. The current playable shell is
-  still being extracted from `src/server/static-client.ts`; new browser code
-  should move toward `src/client`.
+- `src/client/` is the browser client source. The current playable shell lives
+  in `src/client/app/` and is embedded into server assets by
+  `npm run build:client`.
 - `docs/` owns durable decisions and operating guidance.
 
 ## Common Commands
 
 ```bash
 npm run format
+npm run build:client
 npm run lint
 npm run check
 npm test
@@ -51,6 +52,7 @@ npm run verify
 Use the narrowest check that proves the change:
 
 - docs only: `npm run lint` is usually enough for Markdown/JSON formatting.
+- client shell changes: `npm run build:client && npm run check && npm test`.
 - shared/protocol/server changes: `npm run check && npm test`.
 - formatting-only changes: `npm run format`, then review the diff.
 - release-level confidence: `npm run verify`.

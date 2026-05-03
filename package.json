@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:client": "node scripts/build-client.mjs",
     "check": "tsc --noEmit",
     "format": "biome format --write .",
     "format:check": "biome format .",
@@ -11,7 +12,7 @@
     "lint:fix": "biome lint --write .",
     "prepare": "husky",
     "test": "node scripts/run-tests.mjs",
-    "verify": "npm run lint && npm run check && npm test",
+    "verify": "npm run build:client && npm run lint && npm run check && npm test",
     "list:salvage": "find data src/shared/schemas docs legacy -maxdepth 3 -type f | sort"
   },
   "devDependencies": {

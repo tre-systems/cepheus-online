@@ -11,6 +11,8 @@ the new app proves one vertical slice at a time.
   state recovery, and WebSocket dice broadcasts.
 - Add Discord OAuth proof of concept.
 - Add static client shell with plain CSS. Done for the mobile-first PWA shell.
+- Extract the static client source out of `src/server`. Done; source now lives
+  in `src/client/app` and is embedded by `npm run build:client`.
 - Add Canvas board with image background and movable pieces. Done for local
   board images, piece images/counters, camera controls, visibility, and movement
   freedom.

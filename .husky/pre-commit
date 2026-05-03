@@ -1,2 +1,3 @@
+npm run build:client
 npm run lint
 npm run check

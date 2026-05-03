@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#020504">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Cepheus Online</title>
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="play-surface" aria-label="Tactical board">
+        <aside class="combat-rail" aria-label="Characters and table controls">
+          <div class="rail-status" aria-label="Table status">
+            <span class="status-pip" aria-hidden="true"></span>
+            <span id="railStatusText">LIVE</span>
+          </div>
+          <select id="boardSelect" class="board-select" title="Board" aria-label="Selected board"></select>
+          <div id="initiativeRail" class="initiative-rail"></div>
+          <div class="rail-tools" aria-label="Table tools">
+            <button id="rollButton" class="rail-button" type="button" title="Roll dice" aria-label="Roll dice">2D</button>
+            <button id="sheetButton" class="rail-button" type="button" title="Character sheet" aria-label="Character sheet">PC</button>
+            <button id="menuButton" class="rail-button" type="button" title="Room menu" aria-label="Room menu">...</button>
+          </div>
+        </aside>
+
+        <div class="board-frame">
+          <canvas id="boardCanvas" width="1200" height="800"></canvas>
+          <div class="camera-controls" aria-label="Board camera controls">
+            <button id="zoomOutButton" class="camera-button" type="button" title="Zoom out" aria-label="Zoom out">-</button>
+            <button id="zoomResetButton" class="camera-button camera-reset" type="button" title="Reset view" aria-label="Reset board view">1x</button>
+            <button id="zoomInButton" class="camera-button" type="button" title="Zoom in" aria-label="Zoom in">+</button>
+          </div>
+          <div class="board-hud">
+            <div>
+              <h1>Cepheus Online</h1>
+              <p id="connectionStatus">Offline</p>
+              <p id="boardStatus">No board</p>
+            </div>
+            <p id="errorText" class="error-text" role="status"></p>
+          </div>
+        </div>
+      </section>
+
+      <div class="dice-overlay" id="diceOverlay" aria-live="polite">
+        <div class="dice-stage" id="diceStage">
+          <div class="dice-empty">No rolls yet</div>
+        </div>
+      </div>
+
+      <aside class="character-sheet" id="characterSheet" aria-label="Character sheet">
+        <header class="sheet-header">
+          <div>
+            <p class="sheet-kicker">Selected</p>
+            <h2 id="sheetName">No piece</h2>
+          </div>
+          <button id="sheetCloseButton" type="button" aria-label="Close character sheet">Close</button>
+        </header>
+        <nav class="sheet-tabs" aria-label="Character sheet sections">
+          <button class="sheet-tab active" type="button" data-sheet-tab="details">Details</button>
+          <button class="sheet-tab" type="button" data-sheet-tab="action">Action</button>
+          <button class="sheet-tab" type="button" data-sheet-tab="items">Items</button>
+          <button class="sheet-tab" type="button" data-sheet-tab="notes">Notes</button>
+        </nav>
+        <div class="sheet-body" id="sheetBody"></div>
+      </aside>
+
+      <dialog class="room-dialog" id="roomDialog">
+        <form id="roomForm" class="room-form" method="dialog">
+          <div class="dialog-title">
+            <span class="brand-mark small">CO</span>
+            <div>
+              <h2>Room</h2>
+              <p>Local development controls</p>
+            </div>
+          </div>
+          <label>
+            <span>Room</span>
+            <input id="roomInput" name="room" autocomplete="off" spellcheck="false">
+          </label>
+          <label>
+            <span>Traveller</span>
+            <input id="userInput" name="user" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="dice-expression">
+            <span>Dice</span>
+            <input id="diceExpression" value="2d6" autocomplete="off" spellcheck="false">
+          </label>
+          <div class="piece-create-title">
+            <span>New piece</span>
+          </div>
+          <label class="piece-name-field">
+            <span>Name</span>
+            <input id="pieceNameInput" name="pieceName" autocomplete="off" spellcheck="false" placeholder="Marine">
+          </label>
+          <label class="piece-image-field">
+            <span>Image URL</span>
+            <input id="pieceImageInput" name="pieceImage" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
+          </label>
+          <label class="piece-image-file-field">
+            <span>Image file</span>
+            <input id="pieceImageFileInput" name="pieceImageFile" type="file" accept="image/*">
+          </label>
+          <div class="piece-crop-fields">
+            <label class="piece-crop-toggle">
+              <input id="pieceCropInput" name="pieceCrop" type="checkbox">
+              <span>Crop</span>
+            </label>
+            <label>
+              <span>X</span>
+              <input id="pieceCropXInput" name="pieceCropX" inputmode="numeric" autocomplete="off" value="0">
+            </label>
+            <label>
+              <span>Y</span>
+              <input id="pieceCropYInput" name="pieceCropY" inputmode="numeric" autocomplete="off" value="0">
+            </label>
+            <label>
+              <span>W</span>
+              <input id="pieceCropWidthInput" name="pieceCropWidth" inputmode="numeric" autocomplete="off" value="150">
+            </label>
+            <label>
+              <span>H</span>
+              <input id="pieceCropHeightInput" name="pieceCropHeight" inputmode="numeric" autocomplete="off" value="150">
+            </label>
+          </div>
+          <div class="piece-size-fields">
+            <label>
+              <span>Width</span>
+              <input id="pieceWidthInput" name="pieceWidth" inputmode="numeric" autocomplete="off" value="50">
+            </label>
+            <label>
+              <span>Height</span>
+              <input id="pieceHeightInput" name="pieceHeight" inputmode="numeric" autocomplete="off" value="50">
+            </label>
+            <label>
+              <span>Scale</span>
+              <input id="pieceScaleInput" name="pieceScale" inputmode="decimal" autocomplete="off" value="1">
+            </label>
+          </div>
+          <label class="piece-sheet-field">
+            <input id="pieceSheetInput" name="pieceSheet" type="checkbox" checked>
+            <span>Create sheet</span>
+          </label>
+          <div class="board-create-title">
+            <span>New board</span>
+          </div>
+          <label>
+            <span>Name</span>
+            <input id="boardNameInput" name="boardName" autocomplete="off" spellcheck="false" placeholder="Geomorph deck">
+          </label>
+          <label>
+            <span>Image URL</span>
+            <input id="boardImageInput" name="boardImage" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
+          </label>
+          <label>
+            <span>Image file</span>
+            <input id="boardImageFileInput" name="boardImageFile" type="file" accept="image/*">
+          </label>
+          <label>
+            <span>Width</span>
+            <input id="boardWidthInput" name="boardWidth" inputmode="numeric" autocomplete="off" value="1200">
+          </label>
+          <label>
+            <span>Height</span>
+            <input id="boardHeightInput" name="boardHeight" inputmode="numeric" autocomplete="off" value="800">
+          </label>
+          <label>
+            <span>Grid</span>
+            <input id="boardScaleInput" name="boardScale" inputmode="numeric" autocomplete="off" value="50">
+          </label>
+          <div class="dialog-actions">
+            <button id="bootstrapButton" type="button">Bootstrap</button>
+            <button id="refreshButton" type="button">Refresh</button>
+            <button id="createPieceButton" type="button">Create piece</button>
+            <button id="createBoardButton" type="button">Create board</button>
+            <button id="roomCancelButton" type="button">Close</button>
+            <button type="submit">Open</button>
+          </div>
+        </form>
+      </dialog>
+    </main>
+    <script type="module" src="/client.js"></script>
+  </body>
+</html>

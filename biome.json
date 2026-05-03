@@ -88,6 +88,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/client/app/app.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useTemplate": "off"
+          }
+        }
+      }
     }
   ],
   "files": {

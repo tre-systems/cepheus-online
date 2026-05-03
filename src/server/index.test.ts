@@ -201,7 +201,7 @@ describe('Worker static client', () => {
     assert.equal(body.includes('renderRail'), true)
     assert.equal(body.includes('let boardCamera = {zoom: 1, panX: 0, panY: 0}'), true)
     assert.equal(body.includes('const boardTransform = (board, cssWidth, cssHeight)'), true)
-    assert.equal(body.includes('const screenToBoard = (screen, board, transform)'), true)
+    assert.equal(body.includes('const screenToBoard = (screen, _board, transform)'), true)
     assert.equal(body.includes('ctx.scale(transform.scale, transform.scale)'), true)
     assert.equal(body.includes('setCameraZoom(boardCamera.zoom * zoomFactor, screenPoint(event))'), true)
     assert.equal(body.includes('kind: "pan"'), true)

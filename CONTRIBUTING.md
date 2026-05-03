@@ -16,6 +16,7 @@ npm run prepare
 
 ```bash
 npm run format
+npm run build:client
 npm run lint
 npm run check
 npm test
@@ -23,16 +24,18 @@ npm run verify
 ```
 
 - `format` writes Biome formatting changes.
+- `build:client` embeds `src/client/app` into generated Worker-served assets.
 - `lint` runs Biome checks.
 - `check` runs TypeScript without emitting.
 - `test` compiles tests to `build/test` and runs Node's test runner.
-- `verify` runs lint, typecheck, and tests.
+- `verify` rebuilds client assets, then runs lint, typecheck, and tests.
 
 ## Hooks
 
 The pre-commit hook runs:
 
 ```bash
+npm run build:client
 npm run lint
 npm run check
 ```

@@ -24,8 +24,10 @@ src/client/  browser DOM, Canvas, CSS, WebSocket client, and local UI state
 - `src/shared/schemas/`: salvaged entity JSON schema definitions.
 - `src/server/index.ts`: Worker entrypoint, health route, room routing, and
   static browser fallback.
-- `src/server/static-client.ts`: dependency-free browser shell, mobile-first
-  PWA metadata, icon, service worker, Canvas board, and dice UI assets.
+- `src/client/app/`: dependency-free browser shell, mobile-first PWA metadata,
+  icon, service worker, Canvas board, and dice UI source assets.
+- `src/server/static-client.ts`: static client asset response helper backed by
+  generated assets from `npm run build:client`.
 - `src/server/game-room/`: `GameRoomDO`, chunked event storage, checkpoints,
   projection reload, and publication flow.
 - `src/client/game-commands.ts`: dependency-free command builders and message

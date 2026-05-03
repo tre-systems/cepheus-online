@@ -121,8 +121,9 @@ corrupt persisted state or programmer errors.
 
 ## Client Code
 
-The current Worker-served shell is still embedded in `src/server/static-client.ts`.
-New client work should move toward real browser modules in `src/client`.
+The Worker-served shell source lives under `src/client/app`. Run
+`npm run build:client` after editing it so the generated server asset module
+stays current.
 
 Client state has three classes:
 

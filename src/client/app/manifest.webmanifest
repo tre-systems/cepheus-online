@@ -1,0 +1,19 @@
+{
+  "name": "Cepheus Online",
+  "short_name": "Cepheus",
+  "description": "A lightweight sci-fi tabletop for Cepheus Engine games.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#020504",
+  "theme_color": "#020504",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

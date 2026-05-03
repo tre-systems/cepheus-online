@@ -65,6 +65,11 @@ The browser client should prefer:
 - browser WebSocket and Fetch
 - no runtime UI framework by default
 
+The current shell source is in `src/client/app` and is embedded into
+Worker-served assets with `npm run build:client`. The Worker serves the
+generated asset module from `src/server` without importing client source at
+runtime.
+
 WebGL can be introduced later for a specific board mode, not as the default.
 
 ## State Boundaries
