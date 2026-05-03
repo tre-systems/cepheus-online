@@ -4,6 +4,8 @@ const DEFAULT_GAME_ID = "demo-room";
 const DEFAULT_ACTOR_ID = "local-user";
 const DICE_ROLL_ANIMATION_MS = 2200;
 const DICE_OVERLAY_VISIBLE_MS = 6200;
+const DICE_REVEAL_MIN_MS = 500;
+const DICE_REVEALED_HOLD_MS = 3600;
 const INSTALL_DISMISSED_KEY = "cepheus-online-pwa-install-dismissed";
 const INSTALL_ACCEPTED_KEY = "cepheus-online-pwa-install-accepted";
 
@@ -82,7 +84,6 @@ let roomId = qs.get("game") || DEFAULT_GAME_ID;
 let actorId = qs.get("user") || DEFAULT_ACTOR_ID;
 let state = null;
 let socket = null;
-let socketOpen = false;
 let firstStateApplied = false;
 let latestDiceId = null;
 const viewerRole = qs.get("viewer") || "referee";
@@ -175,31 +176,93 @@ const commandMessage = (id, command) => ({
   command
 });
 
+const sequenceCommand = (command) => {
+  if (!state || command.expectedSeq !== undefined || command.type === "CreateGame") {
+    return command;
+  }
+
+  return {
+    ...command,
+    expectedSeq: state.eventSeq
+  };
+};
+
+const applyServerMessage = (message) => {
+  switch (message.type) {
+    case "roomState":
+    case "commandAccepted":
+      return {
+        nextState: message.state,
+        shouldApplyState: true,
+        error: "",
+        shouldReload: false
+      };
+    case "commandRejected":
+      return {
+        nextState: state,
+        shouldApplyState: false,
+        error: message.error.message,
+        shouldReload: message.error.code === "stale_command"
+      };
+    case "error":
+      return {
+        nextState: state,
+        shouldApplyState: false,
+        error: message.error.message,
+        shouldReload: false
+      };
+    case "pong":
+      return {
+        nextState: state,
+        shouldApplyState: false,
+        error: "",
+        shouldReload: false
+      };
+    default:
+      return {
+        nextState: state,
+        shouldApplyState: false,
+        error: "Unhandled server message " + message.type,
+        shouldReload: false
+      };
+  }
+};
+
+const handleServerMessage = (message) => {
+  const application = applyServerMessage(message);
+  setError(application.error);
+  if (application.shouldApplyState) {
+    applyState(application.nextState);
+  }
+  if (application.shouldReload) {
+    fetchState().catch((err) => setError(err.message));
+  }
+};
+
 const postCommand = async (command, id = requestId(command.type)) => {
+  const sequencedCommand = sequenceCommand(command);
   const response = await fetch(roomPath() + "/command", {
     method: "POST",
     headers: {"content-type": "application/json"},
-    body: JSON.stringify(commandMessage(id, command))
+    body: JSON.stringify(commandMessage(id, sequencedCommand))
   });
   const message = await response.json();
-  applyMessage(message);
+  handleServerMessage(message);
   if (!response.ok) throw new Error(message.error?.message || "Command failed");
   return message;
 };
 
-const sendCommand = async (command) => {
+const dispatchCommand = async (command) => {
   const id = requestId(command.type);
-  if (socket && socketOpen) {
-    socket.send(JSON.stringify(commandMessage(id, command)));
-    return;
-  }
   await postCommand(command, id);
 };
+
+const sendCommand = dispatchCommand;
 
 const fetchState = async () => {
   const response = await fetch(roomPath() + "/state" + viewerQuery());
   const message = await response.json();
-  applyMessage(message);
+  handleServerMessage(message);
 };
 
 const createGameCommand = () => ({
@@ -589,52 +652,27 @@ const connectSocket = () => {
   if (socket) socket.close();
   const protocol = location.protocol === "https:" ? "wss:" : "ws:";
   socket = new WebSocket(protocol + "//" + location.host + roomPath() + "/ws" + viewerQuery());
-  socketOpen = false;
   setStatus("Connecting");
 
   socket.addEventListener("open", () => {
-    socketOpen = true;
     setStatus("Live");
   });
 
   socket.addEventListener("close", () => {
-    socketOpen = false;
     setStatus("HTTP fallback");
   });
 
   socket.addEventListener("error", () => {
-    socketOpen = false;
     setStatus("HTTP fallback");
   });
 
   socket.addEventListener("message", (event) => {
     try {
-      applyMessage(JSON.parse(event.data));
+      handleServerMessage(JSON.parse(event.data));
     } catch {
       setError("Received an invalid server message");
     }
   });
-};
-
-const applyMessage = (message) => {
-  switch (message.type) {
-    case "roomState":
-    case "commandAccepted":
-      setError("");
-      applyState(message.state);
-      break;
-    case "commandRejected":
-      setError(message.error.message);
-      if (message.error.code === "stale_command") fetchState().catch((err) => setError(err.message));
-      break;
-    case "error":
-      setError(message.error.message);
-      break;
-    case "pong":
-      break;
-    default:
-      setError("Unhandled server message " + message.type);
-  }
 };
 
 const applyState = (nextState) => {
@@ -1362,7 +1400,7 @@ const render = () => {
   renderRail();
 };
 
-const PIP_SLOTS = {
+const DICE_PIP_SLOTS = {
   1: ["center"],
   2: ["top-left", "bottom-right"],
   3: ["top-left", "center", "bottom-right"],
@@ -1371,10 +1409,44 @@ const PIP_SLOTS = {
   6: ["top-left", "top-right", "middle-left", "middle-right", "bottom-left", "bottom-right"]
 };
 
-const d6Face = (value) => ((((Math.trunc(value) || 1) - 1) % 6) + 6) % 6 + 1;
+const deriveD6Face = (value) => ((((Math.trunc(value) || 1) - 1) % 6) + 6) % 6 + 1;
+
+const deriveDicePipSlots = (value) => DICE_PIP_SLOTS[value] || null;
+
+const deriveDieFaces = (value) => {
+  const base = deriveD6Face(value);
+  return [
+    ["front", value],
+    ["back", 7 - base],
+    ["right", deriveD6Face(base + 1)],
+    ["left", deriveD6Face(base + 3)],
+    ["top", deriveD6Face(base + 4)],
+    ["bottom", deriveD6Face(base + 2)]
+  ];
+};
+
+const deriveDieTilt = (index) =>
+  index % 2 === 0
+    ? {x: "-22deg", y: "-34deg", z: "1deg"}
+    : {x: "-18deg", y: "-24deg", z: "-4deg"};
+
+const deriveDiceRollTiming = (revealAt, nowMs) => {
+  const revealAtMs = Date.parse(revealAt || "");
+  const timeUntilReveal = Number.isFinite(revealAtMs)
+    ? revealAtMs - nowMs
+    : DICE_ROLL_ANIMATION_MS;
+  const rollDurationMs = Math.max(
+    DICE_REVEAL_MIN_MS,
+    Math.min(DICE_ROLL_ANIMATION_MS, timeUntilReveal)
+  );
+  return {
+    rollDurationMs,
+    visibleDurationMs: Math.max(DICE_OVERLAY_VISIBLE_MS, rollDurationMs + DICE_REVEALED_HOLD_MS)
+  };
+};
 
 const appendFaceValue = (face, value) => {
-  const slots = PIP_SLOTS[value];
+  const slots = deriveDicePipSlots(value);
   if (!slots) {
     face.classList.add("numeric");
     face.textContent = String(value);
@@ -1389,22 +1461,14 @@ const appendFaceValue = (face, value) => {
 };
 
 const buildDie = (value, index) => {
-  const base = d6Face(value);
   const die = document.createElement("div");
   die.className = "die rolling";
   die.setAttribute("aria-label", "Die result " + value);
-  die.style.setProperty("--die-tilt-x", index % 2 === 0 ? "-22deg" : "-18deg");
-  die.style.setProperty("--die-tilt-y", index % 2 === 0 ? "-34deg" : "-24deg");
-  die.style.setProperty("--die-tilt-z", index % 2 === 0 ? "1deg" : "-4deg");
-  const faces = [
-    ["front", value],
-    ["back", 7 - base],
-    ["right", d6Face(base + 1)],
-    ["left", d6Face(base + 3)],
-    ["top", d6Face(base + 4)],
-    ["bottom", d6Face(base + 2)]
-  ];
-  for (const [name, label] of faces) {
+  const tilt = deriveDieTilt(index);
+  die.style.setProperty("--die-tilt-x", tilt.x);
+  die.style.setProperty("--die-tilt-y", tilt.y);
+  die.style.setProperty("--die-tilt-z", tilt.z);
+  for (const [name, label] of deriveDieFaces(value)) {
     const face = document.createElement("div");
     face.className = "face " + name;
     face.setAttribute("aria-hidden", "true");
@@ -1417,14 +1481,12 @@ const buildDie = (value, index) => {
 const animateRoll = (roll) => {
   if (diceHideTimer) window.clearTimeout(diceHideTimer);
   els.diceOverlay.classList.add("visible");
-  const revealAt = Date.parse(roll.revealAt || "");
-  const timeUntilReveal = Number.isFinite(revealAt) ? revealAt - Date.now() : DICE_ROLL_ANIMATION_MS;
-  const rollDuration = Math.max(500, Math.min(DICE_ROLL_ANIMATION_MS, timeUntilReveal));
+  const timing = deriveDiceRollTiming(roll.revealAt, Date.now());
   const row = document.createElement("div");
   row.className = "dice-row";
   roll.rolls.forEach((value, index) => {
     const die = buildDie(value, index);
-    die.style.animationDuration = rollDuration + "ms";
+    die.style.animationDuration = timing.rollDurationMs + "ms";
     row.append(die);
   });
   const total = document.createElement("div");
@@ -1435,10 +1497,10 @@ const animateRoll = (roll) => {
   setTimeout(() => {
     total.textContent = String(roll.total);
     for (const die of row.querySelectorAll(".die")) die.classList.remove("rolling");
-  }, rollDuration);
+  }, timing.rollDurationMs);
   diceHideTimer = window.setTimeout(() => {
     els.diceOverlay.classList.remove("visible");
-  }, Math.max(DICE_OVERLAY_VISIBLE_MS, rollDuration + 3600));
+  }, timing.visibleDurationMs);
 };
 
 els.canvas.addEventListener("pointerdown", (event) => {

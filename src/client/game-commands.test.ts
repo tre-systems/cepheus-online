@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict'
-import {describe, it} from 'node:test'
+import { describe, it } from 'node:test'
 
 import {
   asBoardId,
@@ -8,13 +8,14 @@ import {
   asPieceId,
   asUserId
 } from '../shared/ids'
-import type {GameState} from '../shared/state'
+import type { GameState } from '../shared/state'
 import {
   applyServerMessage,
   buildBootstrapCommands,
   buildCreatePieceCommand,
   buildDefaultCharacterSheetUpdateCommand,
   buildMovePieceCommand,
+  buildSequencedCommand,
   resolveClientIdentity
 } from './game-commands'
 
@@ -117,6 +118,39 @@ describe('client command helpers', () => {
     assert.equal(command.expectedSeq, 7)
   })
 
+  it('adds the current authoritative sequence before dispatching commands', () => {
+    const command = buildSequencedCommand(
+      {
+        type: 'RollDice',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        expression: '2d6',
+        reason: 'Table roll'
+      },
+      state
+    )
+
+    assert.equal(command.type, 'RollDice')
+    if (command.type !== 'RollDice') return
+    assert.equal(command.expectedSeq, 7)
+  })
+
+  it('does not sequence initial game creation without a projection', () => {
+    const command = buildSequencedCommand(
+      {
+        type: 'CreateGame',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        slug: 'game-1',
+        name: 'Spinward Test'
+      },
+      null
+    )
+
+    assert.equal(command.type, 'CreateGame')
+    assert.equal(command.expectedSeq, undefined)
+  })
+
   it('bootstraps only the next missing room primitive', () => {
     const commands = buildBootstrapCommands(identity, null)
 
@@ -156,7 +190,7 @@ describe('client command helpers', () => {
     if (commands[0]?.type !== 'CreatePiece') return
     assert.equal(commands[0].boardId, boardId)
     assert.equal(commands[0].characterId, characterId)
-    const commandWithDimensions = commands[0] as typeof commands[0] & {
+    const commandWithDimensions = commands[0] as (typeof commands)[0] & {
       width?: number
       height?: number
       scale?: number

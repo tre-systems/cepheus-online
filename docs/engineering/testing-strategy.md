@@ -12,6 +12,10 @@ test plan should continue to grow in layers as implementation expands.
   versioning, chunk-boundary storage, import boundaries, stale `expectedSeq`
   rejection, Durable Object HTTP flow, Worker static fallback including PWA
   assets, and dependency-free client command helpers.
+- `npm run smoke:deployed`: dependency-free production smoke for a deployed
+  Worker URL. It creates a disposable room and verifies health, shell/PWA
+  assets, room commands, stale command rejection, viewer filtering, and
+  WebSocket broadcasts.
 
 ## First Gate
 

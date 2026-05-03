@@ -68,6 +68,12 @@ const assets = [
     contentType: 'image/svg+xml'
   },
   {
+    pathname: '/icon-maskable.svg',
+    source: 'icon-maskable.svg',
+    exportName: 'CLIENT_MASKABLE_ICON',
+    contentType: 'image/svg+xml'
+  },
+  {
     pathname: '/favicon.ico',
     source: 'icon.svg',
     exportName: 'CLIENT_ICON',

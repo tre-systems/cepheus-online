@@ -1,4 +1,4 @@
-import type {Command} from '../shared/commands'
+import type { Command } from '../shared/commands'
 import {
   asBoardId,
   asCharacterId,
@@ -11,8 +11,8 @@ import {
   type PieceId,
   type UserId
 } from '../shared/ids'
-import type {ClientMessage, ServerMessage} from '../shared/protocol'
-import type {GameState} from '../shared/state'
+import type { ClientMessage, ServerMessage } from '../shared/protocol'
+import type { GameState } from '../shared/state'
 
 export interface ClientIdentity {
   gameId: GameId
@@ -38,9 +38,9 @@ export const DEFAULT_PIECE_ID = asPieceId('scout-1')
 
 type UpdateCharacterSheetCommand = Extract<
   Command,
-  {type: 'UpdateCharacterSheet'}
+  { type: 'UpdateCharacterSheet' }
 >
-type CreatePieceCommand = Extract<Command, {type: 'CreatePiece'}>
+type CreatePieceCommand = Extract<Command, { type: 'CreatePiece' }>
 type CreatePieceDimensions = {
   width: number
   height: number
@@ -59,11 +59,24 @@ export const resolveClientIdentity = (
 export const buildCommandMessage = (
   requestId: string,
   command: Command
-): Extract<ClientMessage, {type: 'command'}> => ({
+): Extract<ClientMessage, { type: 'command' }> => ({
   type: 'command',
   requestId,
   command
 })
+
+export const buildSequencedCommand = (
+  command: Command,
+  state: Pick<GameState, 'eventSeq'> | null
+): Command => {
+  if (!state || command.expectedSeq !== undefined) return command
+  if (command.type === 'CreateGame') return command
+
+  return {
+    ...command,
+    expectedSeq: state.eventSeq
+  }
+}
 
 export const buildCreateGameCommand = ({
   identity
@@ -203,11 +216,11 @@ export const buildBootstrapCommands = (
   state: GameState | null
 ): Command[] => {
   if (!state) {
-    return [buildCreateGameCommand({requestId: 'bootstrap-game', identity})]
+    return [buildCreateGameCommand({ requestId: 'bootstrap-game', identity })]
   }
 
   if (Object.keys(state.boards).length === 0) {
-    return [buildCreateBoardCommand({requestId: 'bootstrap-board', identity})]
+    return [buildCreateBoardCommand({ requestId: 'bootstrap-board', identity })]
   }
 
   if (Object.keys(state.characters).length === 0) {
@@ -226,9 +239,11 @@ export const buildBootstrapCommands = (
   if (Object.keys(state.pieces).length === 0) {
     const boardId = (state.selectedBoardId ??
       Object.keys(state.boards)[0]) as BoardId
-    const characterId = (state.characters[DEFAULT_CHARACTER_ID]
-      ? DEFAULT_CHARACTER_ID
-      : Object.keys(state.characters)[0]) as CharacterId
+    const characterId = (
+      state.characters[DEFAULT_CHARACTER_ID]
+        ? DEFAULT_CHARACTER_ID
+        : Object.keys(state.characters)[0]
+    ) as CharacterId
 
     return [
       buildCreatePieceCommand({
@@ -288,7 +303,7 @@ export const applyServerMessage = (
       return {
         state: currentState,
         shouldReload: false,
-        error: `Unhandled message ${(exhaustive as {type: string}).type}`
+        error: `Unhandled message ${(exhaustive as { type: string }).type}`
       }
     }
   }

@@ -7,6 +7,7 @@ const PRECACHE_URLS = [
   "/styles.css",
   `/styles.css?v=${BUILD_HASH}`,
   "/icon.svg",
+  "/icon-maskable.svg",
   "/favicon.svg",
   "/site.webmanifest",
   "/manifest.webmanifest",

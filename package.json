@@ -13,6 +13,7 @@
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "prepare": "husky",
+    "smoke:deployed": "node scripts/smoke-deployed.mjs",
     "test": "node scripts/run-tests.mjs",
     "verify": "npm run build:client && npm run lint && npm run check && npm test",
     "list:salvage": "find data src/shared/schemas docs legacy -maxdepth 3 -type f | sort"

@@ -76,12 +76,13 @@ describe('Worker static client', () => {
       'text/javascript; charset=utf-8'
     )
     assert.equal(body.includes('new WebSocket'), true)
+    assert.equal(body.includes('socket.send(JSON.stringify(commandMessage'), false)
     assert.equal(body.includes('serviceWorker'), true)
     assert.equal(body.includes('controllerchange'), true)
     assert.equal(body.includes('beforeinstallprompt'), true)
     assert.equal(body.includes('appinstalled'), true)
     assert.equal(body.includes('INSTALL_DISMISSED_KEY'), true)
-    assert.equal(body.includes('PIP_SLOTS'), true)
+    assert.equal(body.includes('DICE_PIP_SLOTS'), true)
     assert.equal(body.includes('pieceImageCache'), true)
     assert.equal(body.includes('createCustomPiece'), true)
     assert.equal(body.includes('createCustomBoard'), true)
@@ -303,6 +304,10 @@ describe('Worker static client', () => {
       new Request('https://cepheus.test/icon.svg'),
       {} as Env
     )
+    const maskableIconResponse = await worker.fetch(
+      new Request('https://cepheus.test/icon-maskable.svg'),
+      {} as Env
+    )
     const faviconResponse = await worker.fetch(
       new Request('https://cepheus.test/favicon.ico'),
       {} as Env
@@ -327,9 +332,20 @@ describe('Worker static client', () => {
     assert.equal(manifest.theme_color, '#020504')
     assert.deepEqual(manifest.categories, ['games', 'entertainment'])
     assert.equal(manifest.launch_handler.client_mode, 'navigate-existing')
+    assert.equal(
+      manifest.icons.some(
+        (icon: {src?: string; purpose?: string}) =>
+          icon.src === '/icon-maskable.svg' && icon.purpose === 'maskable'
+      ),
+      true
+    )
     assert.equal(siteManifestResponse.status, 200)
     assert.equal(legacyManifestResponse.status, 200)
     assert.equal(iconResponse.headers.get('content-type'), 'image/svg+xml')
+    assert.equal(
+      maskableIconResponse.headers.get('content-type'),
+      'image/svg+xml'
+    )
     assert.equal(faviconResponse.headers.get('content-type'), 'image/svg+xml')
     assert.equal(touchIconResponse.headers.get('content-type'), 'image/svg+xml')
     assert.equal(sw.includes('cepheus-online-__BUILD_HASH__'), false)
