@@ -56,6 +56,7 @@ const clientModules = new Map<
       markers: ['planCreatePlayableCharacterCommands'],
       imports: [
         '/shared/character-creation/career-rules.js',
+        '/shared/character-creation/cepheus-srd-ruleset.js',
         '/shared/character-creation/skills.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-flow.js'
@@ -65,6 +66,10 @@ const clientModules = new Map<
   [
     '/shared/character-creation/career-rules.js',
     { markers: ['evaluateCareerCheck', 'parseCareerCheck'] }
+  ],
+  [
+    '/shared/character-creation/cepheus-srd-ruleset.js',
+    { markers: ['CEPHEUS_SRD_CAREERS', 'Scout', 'Merchant'] }
   ],
   [
     '/shared/character-creation/skills.js',

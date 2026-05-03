@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import type { BoardId, GameId, PieceId, UserId } from '../../shared/ids'
 import type { BoardState, GameState, PieceState } from '../../shared/state'
 import {
+  generateCharacterPreview,
   planCreatePlayableCharacterCommands,
   planGeneratePlayableCharacterCommands
 } from './character-command-plan'
@@ -241,5 +242,30 @@ describe('character command planner', () => {
     if (termCommand?.type !== 'StartCharacterCareerTerm') return
     assert.equal(termCommand.career, plan.generated.career)
     assert.equal(plan.commands.at(-1)?.type, 'CreatePiece')
+  })
+
+  it('can accept a previously rolled character preview without rerolling', () => {
+    const generated = generateCharacterPreview({
+      state: state(),
+      name: 'Preview Scout',
+      rng: () => 0.5
+    })
+    const plan = planGeneratePlayableCharacterCommands(
+      validInput({
+        name: 'Ignored Name',
+        generated,
+        rng: () => {
+          throw new Error('preview should not be rerolled')
+        }
+      })
+    )
+
+    assert.equal(plan.ok, true)
+    if (!plan.ok) return
+    assert.equal(plan.generated.name, 'Preview Scout')
+    const createCommand = plan.commands[0]
+    assert.equal(createCommand?.type, 'CreateCharacter')
+    if (createCommand?.type !== 'CreateCharacter') return
+    assert.equal(createCommand.name, 'Preview Scout')
   })
 })

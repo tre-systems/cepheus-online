@@ -13,6 +13,7 @@ import {
 import { createBoardController } from './board-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
+  generateCharacterPreview,
   planCreatePlayableCharacterCommands,
   planGeneratePlayableCharacterCommands
 } from './character-command-plan.js'
@@ -65,7 +66,13 @@ const els = {
   bootstrap: document.getElementById('bootstrapButton'),
   refresh: document.getElementById('refreshButton'),
   createCharacter: document.getElementById('createCharacterButton'),
+  acceptGeneratedCharacter: document.getElementById(
+    'acceptGeneratedCharacterButton'
+  ),
   generateCharacter: document.getElementById('generateCharacterButton'),
+  generatedCharacterPreview: document.getElementById(
+    'generatedCharacterPreview'
+  ),
   createPiece: document.getElementById('createPieceButton'),
   createBoard: document.getElementById('createBoardButton'),
   characterNameInput: document.getElementById('characterNameInput'),
@@ -135,6 +142,7 @@ let selectedPieceId = null
 let boardController = null
 let requestCounter = 0
 let diceHideTimer = null
+let pendingGeneratedCharacter = null
 
 const setStatus = (text) => {
   els.status.textContent = text
@@ -221,6 +229,44 @@ const characterSkillsFromInput = () =>
     .split(/[\n,]/)
     .map((skill) => skill.trim())
     .filter(Boolean)
+
+const generatedCharacteristicText = (characteristics) =>
+  ['str', 'dex', 'end', 'int', 'edu', 'soc']
+    .map((key) => `${key.toUpperCase()} ${characteristics[key] ?? '-'}`)
+    .join('  ')
+
+const renderGeneratedCharacterPreview = () => {
+  if (!pendingGeneratedCharacter) {
+    els.generatedCharacterPreview.hidden = true
+    els.generatedCharacterPreview.replaceChildren()
+    els.acceptGeneratedCharacter.disabled = true
+    return
+  }
+
+  const generated = pendingGeneratedCharacter
+  const title = document.createElement('strong')
+  title.textContent = `${generated.name} - ${generated.career}`
+  const characteristics = document.createElement('p')
+  characteristics.textContent = generatedCharacteristicText(
+    generated.characteristics
+  )
+  const outcome = document.createElement('p')
+  outcome.textContent = [
+    generated.survivalPassed ? 'Survived' : 'Mishap survived',
+    `${generated.credits} credits`,
+    generated.drafted ? 'Drafted' : 'Qualified'
+  ].join(' / ')
+  const skills = document.createElement('p')
+  skills.textContent = generated.skills.join(', ')
+  els.generatedCharacterPreview.replaceChildren(
+    title,
+    characteristics,
+    outcome,
+    skills
+  )
+  els.generatedCharacterPreview.hidden = false
+  els.acceptGeneratedCharacter.disabled = false
+}
 
 const applyBoardFileDimensions = async () => {
   const file = els.boardImageFileInput.files?.[0]
@@ -360,13 +406,25 @@ const createCustomCharacter = async () => {
   }
   if (plan.pieceId) selectedPieceId = plan.pieceId
   els.characterNameInput.value = ''
+  pendingGeneratedCharacter = null
+  renderGeneratedCharacterPreview()
   els.roomDialog.close()
   characterSheetController.setOpen(true)
   render()
 }
 
-const generateCharacter = async () => {
+const rollGeneratedCharacter = () => {
   setError('')
+  pendingGeneratedCharacter = generateCharacterPreview({
+    state,
+    name: els.characterNameInput.value
+  })
+  renderGeneratedCharacterPreview()
+}
+
+const acceptGeneratedCharacter = async () => {
+  setError('')
+  if (!pendingGeneratedCharacter) rollGeneratedCharacter()
   if (!state) {
     await postCommand(
       createGameCommand({ roomId, actorId }),
@@ -384,7 +442,7 @@ const generateCharacter = async () => {
     identity: clientIdentity(),
     state,
     board: selectedBoard(),
-    name: els.characterNameInput.value,
+    generated: pendingGeneratedCharacter,
     createLinkedPiece: els.characterTokenInput.checked,
     existingPieceCount: boardPieces().length
   })
@@ -400,6 +458,8 @@ const generateCharacter = async () => {
   }
   if (plan.pieceId) selectedPieceId = plan.pieceId
   els.characterNameInput.value = ''
+  pendingGeneratedCharacter = null
+  renderGeneratedCharacterPreview()
   els.roomDialog.close()
   characterSheetController.setOpen(true)
   render()
@@ -786,7 +846,11 @@ els.createCharacter.addEventListener('click', () => {
 })
 
 els.generateCharacter.addEventListener('click', () => {
-  generateCharacter().catch((error) => setError(error.message))
+  rollGeneratedCharacter()
+})
+
+els.acceptGeneratedCharacter.addEventListener('click', () => {
+  acceptGeneratedCharacter().catch((error) => setError(error.message))
 })
 
 els.createPiece.addEventListener('click', () => {

@@ -235,6 +235,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/shared/character-creation/cepheus-srd-ruleset.js',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'cepheus-srd-ruleset.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_CEPHEUS_SRD_RULESET_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/shared/character-creation/skills.js',
     source: join(
       compiledClientRoot,

@@ -12,6 +12,10 @@ import {
   parseCareerCheck
 } from '../../shared/character-creation/career-rules.js'
 import {
+  CEPHEUS_SRD_CAREERS,
+  type CepheusCareerDefinition
+} from '../../shared/character-creation/cepheus-srd-ruleset.js'
+import {
   normalizeCareerSkill,
   tallyCareerSkills
 } from '../../shared/character-creation/skills.js'
@@ -46,7 +50,8 @@ export interface GenerateCharacterInput {
   identity: ClientIdentity
   state: GameState | null
   board: BoardState | null
-  name: string
+  name?: string
+  generated?: GeneratedCharacterSummary
   createLinkedPiece: boolean
   existingPieceCount: number
   rng?: () => number
@@ -80,6 +85,14 @@ export interface GeneratedCharacterSummary {
   commissionPassed: boolean | null
   advancementRoll: number | null
   advancementPassed: boolean | null
+  drafted: boolean
+  creationOutcome: PlayableCreationOutcome
+}
+
+export interface GenerateCharacterPreviewInput {
+  state: Pick<GameState, 'characters'> | null
+  name?: string
+  rng?: () => number
 }
 
 export type GenerateCharacterCommandPlan =
@@ -88,24 +101,12 @@ export type GenerateCharacterCommandPlan =
     })
   | Extract<CreateCharacterCommandPlan, { ok: false }>
 
-interface PlayableCreationOutcome {
+export interface PlayableCreationOutcome {
   survivalPassed: boolean
   canCommission: boolean
   commissionPassed: boolean | null
   canAdvance: boolean
   advancementPassed: boolean | null
-}
-
-interface CareerDefinition {
-  name: string
-  qualification: string
-  survival: string
-  commission: string
-  advancement: string
-  serviceSkills: readonly string[]
-  specialistSkills: readonly string[]
-  personalDevelopment: readonly string[]
-  advancedEducation: readonly string[]
 }
 
 const GENERATED_NAMES = [
@@ -122,282 +123,6 @@ const GENERATED_NAMES = [
   'Juno',
   'Mara'
 ] as const
-
-const CAREERS: readonly CareerDefinition[] = [
-  {
-    name: 'Scout',
-    qualification: 'Int 5+',
-    survival: 'End 7+',
-    commission: '-',
-    advancement: '-',
-    serviceSkills: [
-      'Comms',
-      'Engineering',
-      'Gun Combat*',
-      'Melee Combat*',
-      'Survival',
-      'Vehicle*'
-    ],
-    specialistSkills: [
-      'Piloting',
-      'Navigation',
-      'Recon',
-      'Engineering',
-      'Sciences*',
-      "Jack o' Trades"
-    ],
-    personalDevelopment: [
-      '+1 Str',
-      '+1 Dex',
-      '+1 End',
-      '+1 Int',
-      '+1 Edu',
-      'Gun Combat*'
-    ],
-    advancedEducation: [
-      'Advocate',
-      'Computer',
-      'Medicine',
-      'Navigation',
-      'Sciences*',
-      'Tactics'
-    ]
-  },
-  {
-    name: 'Merchant',
-    qualification: 'Int 4+',
-    survival: 'Int 5+',
-    commission: 'Int 5+',
-    advancement: 'Edu 8+',
-    serviceSkills: [
-      'Comms',
-      'Engineering',
-      'Gun Combat*',
-      'Melee Combat*',
-      'Broker',
-      'Vehicle*'
-    ],
-    specialistSkills: [
-      'Carousing',
-      'Gunnery*',
-      "Jack o' Trades",
-      'Medicine',
-      'Navigation',
-      'Piloting'
-    ],
-    personalDevelopment: [
-      '+1 Str',
-      '+1 Dex',
-      '+1 End',
-      'Zero-G',
-      'Melee Combat*',
-      'Steward'
-    ],
-    advancedEducation: [
-      'Advocate',
-      'Engineering',
-      'Medicine',
-      'Navigation',
-      'Sciences*',
-      'Tactics'
-    ]
-  },
-  {
-    name: 'Marine',
-    qualification: 'Int 6+',
-    survival: 'End 6+',
-    commission: 'Edu 6+',
-    advancement: 'Soc 7+',
-    serviceSkills: [
-      'Comms',
-      'Demolitions',
-      'Gun Combat*',
-      'Gunnery*',
-      'Melee Combat*',
-      'Battle Dress'
-    ],
-    specialistSkills: [
-      'Electronics',
-      'Gun Combat*',
-      'Melee Combat*',
-      'Survival',
-      'Recon',
-      'Vehicle*'
-    ],
-    personalDevelopment: [
-      '+1 Str',
-      '+1 Dex',
-      '+1 End',
-      '+1 Int',
-      '+1 Edu',
-      'Melee Combat*'
-    ],
-    advancedEducation: [
-      'Advocate',
-      'Computer',
-      'Gravitics',
-      'Medicine',
-      'Navigation',
-      'Tactics'
-    ]
-  },
-  {
-    name: 'Navy',
-    qualification: 'Int 6+',
-    survival: 'Int 5+',
-    commission: 'Soc 7+',
-    advancement: 'Edu 6+',
-    serviceSkills: [
-      'Comms',
-      'Engineering',
-      'Gun Combat*',
-      'Gunnery*',
-      'Melee Combat*',
-      'Vehicle*'
-    ],
-    specialistSkills: [
-      'Gravitics',
-      "Jack o' Trades",
-      'Melee Combat*',
-      'Navigation',
-      'Leadership',
-      'Piloting'
-    ],
-    personalDevelopment: [
-      '+1 Str',
-      '+1 Dex',
-      '+1 End',
-      '+1 Int',
-      '+1 Edu',
-      'Melee Combat*'
-    ],
-    advancedEducation: [
-      'Advocate',
-      'Computer',
-      'Engineering',
-      'Medicine',
-      'Navigation',
-      'Tactics'
-    ]
-  },
-  {
-    name: 'Belter',
-    qualification: 'Int 4+',
-    survival: 'Dex 7+',
-    commission: '-',
-    advancement: '-',
-    serviceSkills: [
-      'Comms',
-      'Demolitions',
-      'Gun Combat*',
-      'Gunnery*',
-      'Prospecting',
-      'Piloting'
-    ],
-    specialistSkills: [
-      'Zero-G',
-      'Computer',
-      'Electronics',
-      'Prospecting',
-      'Sciences*',
-      'Vehicle*'
-    ],
-    personalDevelopment: [
-      '+1 Str',
-      '+1 Dex',
-      '+1 End',
-      'Zero-G',
-      'Melee Combat*',
-      'Gambling'
-    ],
-    advancedEducation: [
-      'Advocate',
-      'Engineering',
-      'Medicine',
-      'Navigation',
-      'Comms',
-      'Tactics'
-    ]
-  },
-  {
-    name: 'Agent',
-    qualification: 'Soc 6+',
-    survival: 'Int 6+',
-    commission: 'Edu 7+',
-    advancement: 'Edu 6+',
-    serviceSkills: [
-      'Admin',
-      'Computer',
-      'Streetwise',
-      'Bribery',
-      'Leadership',
-      'Vehicle*'
-    ],
-    specialistSkills: [
-      'Gun Combat*',
-      'Melee Combat*',
-      'Bribery',
-      'Leadership',
-      'Recon',
-      'Survival'
-    ],
-    personalDevelopment: [
-      '+1 Dex',
-      '+1 End',
-      '+1 Int',
-      '+1 Edu',
-      'Athletics',
-      'Carousing'
-    ],
-    advancedEducation: [
-      'Advocate',
-      'Computer',
-      'Liaison',
-      'Linguistics',
-      'Medicine',
-      'Leadership'
-    ]
-  },
-  {
-    name: 'Drifter',
-    qualification: 'Dex 5+',
-    survival: 'End 5+',
-    commission: '-',
-    advancement: '-',
-    serviceSkills: [
-      'Streetwise',
-      'Mechanics',
-      'Gun Combat*',
-      'Melee Combat*',
-      'Recon',
-      'Vehicle*'
-    ],
-    specialistSkills: [
-      'Electronics',
-      'Melee Combat*',
-      'Bribery',
-      'Streetwise',
-      'Gambling',
-      'Recon'
-    ],
-    personalDevelopment: [
-      '+1 Str',
-      '+1 Dex',
-      '+1 End',
-      'Melee Combat*',
-      'Bribery',
-      'Gambling'
-    ],
-    advancedEducation: [
-      'Computer',
-      'Engineering',
-      "Jack o' Trades",
-      'Medicine',
-      'Liaison',
-      'Tactics'
-    ]
-  }
-]
 
 const sequenceCommandAt = <T extends Command>(
   command: T,
@@ -595,8 +320,8 @@ const roll2d6 = (rng: () => number): number => rollDie(rng) + rollDie(rng)
 const selectFrom = <T>(rng: () => number, values: readonly T[]): T =>
   values[randomInt(rng, values.length)]
 
-const shuffledCareers = (rng: () => number): CareerDefinition[] => {
-  const careers = [...CAREERS]
+const shuffledCareers = (rng: () => number): CepheusCareerDefinition[] => {
+  const careers = [...CEPHEUS_SRD_CAREERS]
   for (let index = careers.length - 1; index > 0; index--) {
     const swapIndex = randomInt(rng, index + 1)
     const current = careers[index]
@@ -636,7 +361,7 @@ const chooseQualifiedCareer = ({
   characteristics: CharacterCharacteristics
   notes: string[]
 }): {
-  career: CareerDefinition
+  career: CepheusCareerDefinition
   qualificationRoll: number
   drafted: boolean
 } => {
@@ -657,7 +382,8 @@ const chooseQualifiedCareer = ({
   }
 
   const drifter =
-    CAREERS.find((career) => career.name === 'Drifter') ?? CAREERS[0]
+    CEPHEUS_SRD_CAREERS.find((career) => career.name === 'Drifter') ??
+    CEPHEUS_SRD_CAREERS[0]
   const qualificationRoll = roll2d6(rng)
   notes.push(
     'No preferred career qualification succeeded; drafted into Drifter.'
@@ -680,19 +406,14 @@ const resolveCareerRoll = ({
     roll
   })
 
-const generatedCharacterDetails = ({
+export const generateCharacterPreview = ({
   state,
   name,
-  rng
-}: {
-  state: GameState
-  name: string
-  rng: () => number
-}): GeneratedCharacterSummary & {
-  creationOutcome: PlayableCreationOutcome
-  drafted: boolean
-} => {
-  const notes: string[] = ['Generated by the Cepheus Online quick generator.']
+  rng = Math.random
+}: GenerateCharacterPreviewInput): GeneratedCharacterSummary => {
+  const notes: string[] = [
+    'Generated by the Cepheus Online character generator.'
+  ]
   const characteristics: CharacterCharacteristics = {
     str: roll2d6(rng),
     dex: roll2d6(rng),
@@ -787,8 +508,8 @@ const generatedCharacterDetails = ({
 
   return {
     name:
-      name.trim() ||
-      `${selectFrom(rng, GENERATED_NAMES)} ${Object.keys(state.characters).length + 1}`,
+      (name ?? '').trim() ||
+      `${selectFrom(rng, GENERATED_NAMES)} ${Object.keys(state?.characters ?? {}).length + 1}`,
     career: career.name,
     age: 22,
     characteristics,
@@ -952,6 +673,7 @@ export const planGeneratePlayableCharacterCommands = ({
   state,
   board,
   name,
+  generated,
   createLinkedPiece,
   existingPieceCount,
   rng = Math.random
@@ -964,30 +686,30 @@ export const planGeneratePlayableCharacterCommands = ({
     }
   }
 
-  const generated = generatedCharacterDetails({ state, name, rng })
+  const preview = generated ?? generateCharacterPreview({ state, name, rng })
   const plan = planCreatePlayableCharacterCommands({
     identity,
     state,
     board,
-    name: generated.name,
+    name: preview.name,
     characterType: 'PLAYER',
-    age: generated.age,
-    characteristics: generated.characteristics,
-    skills: generated.skills,
+    age: preview.age,
+    characteristics: preview.characteristics,
+    skills: preview.skills,
     equipment: [],
-    credits: generated.credits,
-    notes: generated.notes,
+    credits: preview.credits,
+    notes: preview.notes,
     createLinkedPiece,
     existingPieceCount,
-    career: generated.career,
-    drafted: generated.drafted,
-    creationOutcome: generated.creationOutcome
+    career: preview.career,
+    drafted: preview.drafted,
+    creationOutcome: preview.creationOutcome
   })
 
   if (!plan.ok) return plan
 
   return {
     ...plan,
-    generated
+    generated: preview
   }
 }
