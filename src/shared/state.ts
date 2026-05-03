@@ -3,7 +3,7 @@ import type {BoardId, CharacterId, GameId, PieceId, UserId} from './ids'
 export type CharacterType = 'PLAYER' | 'NPC' | 'ANIMAL' | 'ROBOT'
 
 export type PieceVisibility = 'HIDDEN' | 'PREVIEW' | 'VISIBLE'
-export type PieceFreedom = 'LOCKED' | 'UNLOCKED'
+export type PieceFreedom = 'LOCKED' | 'UNLOCKED' | 'SHARE'
 
 export interface GameState {
   id: GameId

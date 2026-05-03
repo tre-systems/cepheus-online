@@ -48,7 +48,7 @@ Referees need:
 - quick character visibility and active-state controls
 - fast board creation from image, URL, or dropped asset
 - piece visibility states: hidden, preview, visible
-- piece freedom states: locked, player movable, referee only
+- piece freedom states: locked, owner/referee movable, shared player movable
 - initiative and turn controls
 - damage/combat tools that remain overrideable
 - compact campaign notes and scene prep

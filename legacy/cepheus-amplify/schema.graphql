@@ -1,0 +1,374 @@
+type LedgerEntry {
+  reference: String
+  createdAt: AWSDateTime
+  credits: Float
+}
+
+type Initiative @model @key(name: "byGame", fields: ["gameID"]) @auth(rules: [{allow: private}, {allow: groups, groups: ["Admin"], operations: [read, create, update, delete]}]) {
+  id: ID!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  owner: String
+  characterID: ID
+  pieceID: ID
+  gameID: ID
+  boardID: ID
+  roundStart: Boolean
+}
+
+type AnimalData {
+  size: Float
+  subType: String
+  type: String
+  terrain: String
+  locomotion: String
+  speed: Float
+}
+
+type Ruleset @model @auth(rules: [{allow: private}, {allow: groups, groups: ["Admin"], operations: [read, create, update, delete]}, {allow: owner, operations: [create, update, delete]}]) {
+  id: ID!
+  owner: String
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  data: AWSJSON
+  games: [Game] @connection(keyName: "byRuleset", fields: ["id"])
+  name: String
+}
+
+type Item {
+  Name: String
+  Category: String
+  TL: Int
+  Cost: Float
+  Wgt: Float
+  RoF: String
+  Range: String
+  Dmg: String
+  Type: String
+  Recoil: Boolean
+  LL: Int
+  Description: String
+  Rating: Int
+  AR: Int
+  LaserAR: Int
+  Skill: String
+  Radius: String
+  Rounds: Int
+  Quantity: Int
+  Carried: Boolean
+  id: ID!
+  Location: String
+  Traits: AWSJSON
+  Magazine: Int
+  MagazineCost: Float
+}
+
+type Modifier {
+  label: String
+  dm: Int
+}
+
+type Player @model @key(name: "byOwner", fields: ["owner"], queryField: "playerByOwner") @auth(rules: [{allow: private, operations: [create, read]}, {allow: owner, operations: [create, update, delete]}, {allow: groups, groups: ["Admin"], operations: [read, create, update, delete]}, {allow: groups, groupsField: "gameID", operations: [read, create, update, delete]}]) @key(name: "byGame", fields: ["gameID"], queryField: "playerByGameID") {
+  id: ID!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  owner: String
+  gameID: ID
+}
+
+type Piece @model @key(name: "byBoard", fields: ["boardID"]) @key(name: "byGame", fields: ["gameID"]) @key(name: "byCharacter", fields: ["characterID"]) @auth(rules: [{allow: private, operations: [create, read, update]}, {allow: owner, operations: [create, delete]}, {allow: groups, groups: ["Admin"], operations: [read, create, update, delete]}, {allow: groups, groupsField: "gameID", operations: [read, create, update, delete]}]) {
+  id: ID!
+  x: Float
+  y: Float
+  z: Float
+  image: String
+  boardID: ID
+  gameID: ID
+  width: Float
+  height: Float
+  characterID: ID
+  owner: String
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  scale: Float
+  targets: [ID]
+  selectedBy: [String]
+  visibility: String
+  freedom: String
+  combatState: CombatState
+  name: String
+}
+
+type Presence @model @key(name: "byGame", fields: ["gameID"]) @auth(rules: [{allow: private, operations: [create, read]}, {allow: owner, operations: [create, update, delete]}, {allow: groups, groups: ["Admin"], operations: [read, create, update, delete]}, {allow: groups, groupsField: "gameID", operations: [read, create, update, delete]}]) {
+  id: ID!
+  owner: String
+  time: Float
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  left: Boolean
+  gameID: ID
+}
+
+type DieRollResult {
+  action: String
+  check: String
+  rawScore: Int
+  score: Int
+  dm: Int
+  d6: Int
+  details: AWSJSON
+  modifiers: [Modifier]
+  createdAt: AWSDateTime
+}
+
+type Board @model @key(name: "byGame", fields: ["gameID"]) @auth(rules: [{allow: private, operations: [create, read]}, {allow: owner, operations: [create, update, delete]}, {allow: groups, groups: ["Admin"], operations: [read, create, update, delete]}, {allow: groups, groupsField: "gameID", operations: [read, create, update, delete]}]) {
+  id: ID!
+  image: String
+  width: Int
+  height: Int
+  scale: Float
+  gameID: ID
+  pieces: [Piece] @connection(keyName: "byBoard", fields: ["id"])
+  owner: String
+  name: String
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  boardInitiativeId: ID
+  initiative: Initiative @connection
+  url: String
+}
+
+type CombatState {
+  stance: String
+  aim: Int
+  grappled: Boolean
+  fatigued: Boolean
+  cover: Int
+  characteristics: Characteristics
+  unconscious: Boolean
+  armor: ID
+  AR: String
+  group: String
+  target: ID
+  aware: Boolean
+  dodge: Boolean
+  parry: Boolean
+  reactions: Int
+  weapon: ID
+  modifiers: [Modifier]
+  lastDieRollResult: DieRollResult
+}
+
+type AgeingEffect {
+  characteristic: String
+  modifier: Int
+}
+
+type CharacteristicChange {
+  type: String
+  modifier: Int
+}
+
+type Promotion {
+  skill: String
+  bonusSkill: String
+  rank: String
+  roll: Int
+}
+
+type Game @model @key(name: "byOwner", fields: ["owner"], queryField: "gameByOwner") @key(name: "bySlug", fields: ["slug"], queryField: "gameBySlug") @auth(rules: [{allow: private, operations: [create, read]}, {allow: groups, groups: ["Admin"], operations: [read, create, update, delete]}, {allow: owner, operations: [create, update, delete]}]) @key(name: "byRuleset", fields: ["rulesetID"]) {
+  id: ID!
+  name: String
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  characters: [Character] @connection(keyName: "byGame", fields: ["id"])
+  worlds: [World] @connection(keyName: "byGame", fields: ["id"])
+  dieRolls: [DieRoll] @connection(keyName: "byGame", fields: ["id"])
+  boards: [Board] @connection(keyName: "byGame", fields: ["id"])
+  presences: [Presence] @connection(keyName: "byGame", fields: ["id"])
+  pieces: [Piece] @connection(keyName: "byGame", fields: ["id"])
+  slug: String
+  owner: String
+  players: [Player] @connection(keyName: "byGame", fields: ["id"])
+  allowSpectators: Boolean
+  allowCharacterDelete: Boolean
+  maxCharactersPerPlayer: Int
+  gameSelectedBoardId: ID
+  selectedBoard: Board @connection
+  allowCharacterImport: Boolean
+  restrictMovement: Boolean
+  rulesetID: ID
+  initiatives: [Initiative] @connection(keyName: "byGame", fields: ["id"])
+}
+
+type Career {
+  name: String
+  rank: Int
+}
+
+type Term {
+  career: String
+  skills: [String]
+  survival: Int
+  mishap: Int
+  commission: Promotion
+  advancement: Promotion
+  draft: Int
+  reEnlistment: Int
+  benefits: [String]
+  skillsAndTraining: [String]
+  complete: Boolean
+  canReenlist: Boolean
+  completedBasicTraining: Boolean
+  musteringOut: Boolean
+  rank: String
+  ageingEffects: [AgeingEffect]
+  anagathics: Boolean
+  anagathicsCost: Int
+}
+
+type HomeWorld {
+  name: String
+  lawLevel: String
+  tradeCodes: String
+}
+
+type Characteristics {
+  str: Int
+  dex: Int
+  end: Int
+  int: Int
+  edu: Int
+  soc: Int
+  psi: Int
+  instinct: Int
+  pack: Int
+}
+
+type Character @model @key(name: "byGame", fields: ["gameID"]) @auth(rules: [{allow: owner, operations: [update, delete, create]}, {allow: groups, groups: ["Admin"], operations: [read, create, update, delete]}, {allow: groups, groupsField: "gameID", operations: [read, create, update, delete]}, {allow: private, operations: [read, create]}]) {
+  id: ID!
+  name: String
+  age: Int
+  gender: String
+  characteristics: Characteristics
+  skills: [String]
+  createdAt: AWSDateTime
+  homeWorld: HomeWorld
+  terms: [Term]
+  careers: [Career]
+  backgroundSkills: [String]
+  updatedAt: AWSDateTime
+  image: String
+  cascadeSkills: [String]
+  gameID: ID
+  owner: String
+  canEnterDraft: Boolean
+  credits: Float
+  failedToQualify: Boolean
+  creationComplete: Boolean
+  characteristicChanges: [CharacteristicChange]
+  displayTitle: Boolean
+  materialBenefits: [String]
+  dieRolls: [DieRoll] @connection(keyName: "byCharacter", fields: ["id"])
+  lastDieRollResult: DieRollResult
+  pieces: [Piece] @connection(keyName: "byCharacter", fields: ["id"])
+  equipment: [Item]
+  startingCredits: Float
+  notes: String
+  animalData: AnimalData
+  type: String
+  description: String
+  traits: String
+  price: Float
+  hull: Int
+  structure: Int
+  initiative: Int
+  haste: Boolean
+  delay: Boolean
+  reactions: Int
+  active: Boolean
+  initialPurchaseComplete: Boolean
+  ledger: [LedgerEntry]
+
+  status: CharacterStatus
+}
+
+enum CharacterStatus {
+  CHARACTERISTICS
+  HOMEWORLD
+  CAREER_SELECTION
+  BASIC_TRAINING
+  SURVIVAL
+  MISHAP
+  COMMISSION
+  ADVANCEMENT
+  SKILLS_TRAINING
+  AGING
+  REENLISTMENT
+  MUSTERING_OUT
+  ACTIVE
+  PLAYABLE
+  DECEASED
+}
+
+type DieRoll @model @auth(rules: [{allow: private}]) @key(name: "byGame", fields: ["gameID"]) @key(name: "byCharacter", fields: ["characterID"]) {
+  id: ID!
+  createdAt: AWSDateTime
+  owner: String
+  updatedAt: AWSDateTime
+  gameID: ID
+  characterID: ID
+  result: DieRollResult
+  pieceID: ID
+}
+
+type World @model @auth(rules: [{allow: private, operations: [create, read]}, {allow: owner, operations: [create, update, delete]}, {allow: groups, groups: ["Admin"], operations: [read, create, update, delete]}, {allow: groups, groupsField: "gameID", operations: [read, create, update, delete]}]) @key(name: "byGame", fields: ["gameID"]) {
+  id: ID!
+  name: String
+  size: Int
+  hydrographics: Int
+  population: Int
+  primaryStarport: String
+  government: Int
+  lawLevel: Int
+  techLevel: Int
+  tradeCodes: String
+  atmosphere: Int
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  gameID: ID
+}
+
+input InviteUsersInput {
+  gameID: ID!
+  invites: [String!]!
+}
+
+input Record {
+  messageId: ID
+  body: String!
+}
+
+input TemplateData {
+  gameID: ID!
+  username: String!
+  title: String!
+  heading: String!
+  content: String!
+  assetsBucket: String!
+  gameName: String!
+}
+
+input EmailInput {
+  gameID: ID!
+  Template: String!
+  TemplateData: TemplateData!
+  emailAddress: String
+}
+
+type Mutation @aws_iam @aws_cognito_user_pools {
+  inviteUsers(input: InviteUsersInput!): AWSJSON! @function(name: "inviteUsers-${env}")
+  sendEmail(Records: [Record!]!): AWSJSON! @function(name: "sendEmail-${env}")
+  queueEmail(input: EmailInput!): AWSJSON!
+  emailNotification(input: AWSJSON!): AWSJSON! @function(name: "emailNotification-${env}")
+}

@@ -5,6 +5,8 @@ The upstream Cepheus Engine SRD source is:
 [orffen/cepheus-srd](https://github.com/orffen/cepheus-srd)
 
 The default branch is currently `mdbook`.
+The latest release observed during the 2026-05-03 readiness review was `v9.1`,
+published 2025-07-06.
 
 Useful upstream files include:
 
@@ -12,8 +14,10 @@ Useful upstream files include:
 - `src/book1/equipment.md`
 - `src/book1/personal-combat.md`
 - `src/book1/skills.md`
-- `src/book2/*`
-- `src/book3/*`
+- `src/book2/ship-design-and-construction.md`
+- `src/book2/space-combat.md`
+- `src/book3/worlds.md`
+- `src/book3/environments-and-hazards.md`
 - `src/vds/*`
 - `src/tools/*.js`
 

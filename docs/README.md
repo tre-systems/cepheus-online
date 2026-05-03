@@ -40,6 +40,8 @@ grouped by purpose so each future change has an obvious home.
 
 - [Discussion record](provenance/discussion-record.md): durable record of the
   initial planning conversation.
+- [Readiness review](provenance/readiness-review.md): comparison against
+  `cepheus-amplify`, `delta-v`, and upstream SRD source.
 - [Delta-V transfer](provenance/delta-v-transfer.md): what was reviewed and
   transferred from `~/Source/delta-v`.
 - [Data salvage](provenance/data-salvage.md): what was copied from

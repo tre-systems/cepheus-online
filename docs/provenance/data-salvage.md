@@ -13,6 +13,10 @@ layout and the intended normalization target.
 - `src/data/ruleset/cepheus-engine-srd.json` -> `data/ruleset/`
 - `data/rulesets/**` -> `data/rulesets/`
 - `docs/project-review.md` -> `legacy/cepheus-amplify-project-review.md`
+- `amplify/backend/api/cepheus/schema.graphql` ->
+  `legacy/cepheus-amplify/schema.graphql`
+- selected pure-domain extraction candidates ->
+  `legacy/cepheus-amplify/extract-candidates/`
 
 ## Intentionally Not Copied
 
@@ -43,3 +47,6 @@ Do not copy these blindly. Extract the domain logic and tests:
 - equipment ledger behavior
 - board measurement and range calculations
 - import/export character format
+
+See [readiness-review.md](readiness-review.md) for the reviewed extraction
+backlog.

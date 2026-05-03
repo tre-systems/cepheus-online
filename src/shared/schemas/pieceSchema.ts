@@ -17,7 +17,8 @@ export const visibility = Object.freeze({
 
 export const freedom = Object.freeze({
   LOCKED: 'LOCKED',
-  UNLOCKED: 'UNLOCKED'
+  UNLOCKED: 'UNLOCKED',
+  SHARE: 'SHARE'
 } as const)
 
 const pieceSchema = Object.freeze({

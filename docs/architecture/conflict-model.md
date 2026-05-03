@@ -15,6 +15,7 @@ Examples:
 
 - `MovePiece`
 - `SetPieceVisibility`
+- `SetPieceFreedom`
 - `RollDice`
 - `ApplyDamage`
 - `AdvanceInitiative`
