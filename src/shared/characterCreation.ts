@@ -84,6 +84,65 @@ export interface SurvivalPromotionOptions {
   canAdvance: boolean
 }
 
+export interface CareerSkill {
+  name: string
+  level: number
+}
+
+export interface CascadeSkillResolution {
+  pendingCascadeSkills: string[]
+  backgroundSkills: string[]
+  careerSkills: string[]
+  termSkills: string[]
+}
+
+export type AgingChangeType = 'PHYSICAL' | 'MENTAL'
+
+export interface AgingChange {
+  type: AgingChangeType
+  modifier: number
+}
+
+export interface AgingEffect {
+  Roll: string | number
+  Effects: string
+  Changes?: AgingChange[]
+}
+
+export interface AgingResolution {
+  age: number
+  message: string
+  characteristicChanges: AgingChange[]
+}
+
+export type PromotionOutcome = 'pass' | 'fail' | 'skip' | 'na'
+export type ReenlistmentOutcome = 'forced' | 'allowed' | 'blocked' | 'retire'
+export type ReenlistmentDecision = 'reenlist' | 'leave' | 'na'
+export type TermOutcomeResult = 'MISHAP' | 'MUSTERING_OUT' | 'NEXT_TERM'
+
+export interface TermOutcome {
+  id: string
+  survival: 'pass' | 'fail'
+  commission: PromotionOutcome
+  advancement: PromotionOutcome
+  reenlistment: ReenlistmentOutcome
+  decision: ReenlistmentDecision
+  result: TermOutcomeResult
+}
+
+export interface BenefitTables {
+  materialBenefits: Record<string, Record<string, string>>
+  cashBenefits: Record<string, Record<string, string | number>>
+}
+
+export type BenefitKind = 'cash' | 'material'
+
+export interface CareerBenefit {
+  kind: BenefitKind
+  value: string
+  credits: number
+}
+
 export const CAREER_CREATION_STATUSES = [
   'CHARACTERISTICS',
   'HOMEWORLD',
@@ -327,3 +386,333 @@ export const deriveSurvivalPromotionOptions = (
   canCommission: currentRank === 0 && careerBasics.Commission !== '-',
   canAdvance: currentRank > 0 && careerBasics.Advancement !== '-'
 })
+
+export const isCascadeCareerSkill = (skill: string): boolean =>
+  skill.includes('*')
+
+export const formatCareerSkill = ({ name, level }: CareerSkill): string =>
+  `${name}-${level}`
+
+export const parseCareerSkill = (skill: string): CareerSkill | null => {
+  const trimmed = skill.trim()
+  if (!trimmed) return null
+
+  const parsed = /^(.*?)-(-?\d+)$/.exec(trimmed)
+  if (!parsed) return { name: trimmed, level: 0 }
+
+  const name = parsed[1].trim()
+  if (!name) return null
+
+  return {
+    name,
+    level: Number(parsed[2])
+  }
+}
+
+export const careerSkillWithLevel = (
+  skill: string,
+  level: number
+): string => skill.trim().replace('*', `-${level}`)
+
+export const normalizeCareerSkill = (
+  skill: string,
+  defaultLevel = 1
+): string | null => {
+  const trimmed = skill.trim()
+  if (!trimmed) return null
+
+  if (isCascadeCareerSkill(trimmed)) {
+    return careerSkillWithLevel(trimmed, defaultLevel)
+  }
+
+  const parsed = parseCareerSkill(trimmed)
+  if (!parsed) return null
+
+  return formatCareerSkill({
+    name: parsed.name,
+    level: /-(-?\d+)$/.test(trimmed) ? parsed.level : defaultLevel
+  })
+}
+
+export const tallyCareerSkills = (skills: readonly string[]): string[] => {
+  const totals = new Map<string, number>()
+
+  for (const skill of skills) {
+    if (isCascadeCareerSkill(skill)) continue
+    const parsed = parseCareerSkill(skill)
+    if (!parsed) continue
+    totals.set(parsed.name, (totals.get(parsed.name) ?? 0) + parsed.level)
+  }
+
+  return [...totals.entries()]
+    .sort(([leftName, leftLevel], [rightName, rightLevel]) => {
+      if (rightLevel !== leftLevel) return rightLevel - leftLevel
+      return leftName.localeCompare(rightName)
+    })
+    .map(([name, level]) => formatCareerSkill({ name, level }))
+}
+
+export const resolveCascadeCareerSkill = ({
+  pendingCascadeSkills,
+  backgroundSkills = [],
+  careerSkills = [],
+  termSkills = [],
+  cascadeSkill,
+  selection,
+  basicTraining = false
+}: {
+  pendingCascadeSkills: readonly string[]
+  backgroundSkills?: readonly string[]
+  careerSkills?: readonly string[]
+  termSkills?: readonly string[]
+  cascadeSkill: string
+  selection: string
+  basicTraining?: boolean
+}): CascadeSkillResolution => {
+  const remaining = pendingCascadeSkills.filter((skill) => skill !== cascadeSkill)
+  const parsed = parseCareerSkill(cascadeSkill)
+  const level = parsed?.level ?? 0
+
+  if (isCascadeCareerSkill(selection)) {
+    return {
+      pendingCascadeSkills: [...remaining, careerSkillWithLevel(selection, level)],
+      backgroundSkills: [...backgroundSkills],
+      careerSkills: [...careerSkills],
+      termSkills: [...termSkills]
+    }
+  }
+
+  const resolvedSkill = formatCareerSkill({
+    name: selection.trim(),
+    level
+  })
+
+  return {
+    pendingCascadeSkills: remaining,
+    backgroundSkills: basicTraining
+      ? [...backgroundSkills, resolvedSkill]
+      : [...backgroundSkills],
+    careerSkills: basicTraining
+      ? [...careerSkills]
+      : [...careerSkills, resolvedSkill],
+    termSkills: [...termSkills, resolvedSkill]
+  }
+}
+
+export const enumerateTermOutcomes = ({
+  canCommission = false,
+  canAdvance = false,
+  canReenlist = true,
+  mustRetire = false
+}: {
+  canCommission?: boolean
+  canAdvance?: boolean
+  canReenlist?: boolean
+  mustRetire?: boolean
+} = {}): TermOutcome[] => {
+  const outcomes: TermOutcome[] = [
+    {
+      id: 'survival-fail',
+      survival: 'fail',
+      commission: 'na',
+      advancement: 'na',
+      reenlistment: 'blocked',
+      decision: 'na',
+      result: 'MISHAP'
+    }
+  ]
+
+  const promotionPaths: Array<{
+    commission: PromotionOutcome
+    advancement: PromotionOutcome
+  }> = []
+
+  if (canCommission) {
+    for (const commission of ['pass', 'fail', 'skip'] as const) {
+      promotionPaths.push({ commission, advancement: 'na' })
+    }
+  }
+
+  if (canAdvance) {
+    for (const advancement of ['pass', 'fail', 'skip'] as const) {
+      promotionPaths.push({ commission: 'na', advancement })
+    }
+  }
+
+  if (promotionPaths.length === 0) {
+    promotionPaths.push({ commission: 'na', advancement: 'na' })
+  }
+
+  const reenlistmentPaths: Array<{
+    reenlistment: ReenlistmentOutcome
+    decision: ReenlistmentDecision
+    result: TermOutcomeResult
+  }> = []
+
+  if (mustRetire) {
+    reenlistmentPaths.push({
+      reenlistment: 'retire',
+      decision: 'leave',
+      result: 'MUSTERING_OUT'
+    })
+  } else if (!canReenlist) {
+    reenlistmentPaths.push({
+      reenlistment: 'blocked',
+      decision: 'na',
+      result: 'MUSTERING_OUT'
+    })
+  } else {
+    reenlistmentPaths.push(
+      {
+        reenlistment: 'forced',
+        decision: 'na',
+        result: 'NEXT_TERM'
+      },
+      {
+        reenlistment: 'allowed',
+        decision: 'reenlist',
+        result: 'NEXT_TERM'
+      },
+      {
+        reenlistment: 'allowed',
+        decision: 'leave',
+        result: 'MUSTERING_OUT'
+      },
+      {
+        reenlistment: 'blocked',
+        decision: 'na',
+        result: 'MUSTERING_OUT'
+      }
+    )
+  }
+
+  for (const promotion of promotionPaths) {
+    for (const reenlistment of reenlistmentPaths) {
+      outcomes.push({
+        id: [
+          'survival-pass',
+          `commission-${promotion.commission}`,
+          `advancement-${promotion.advancement}`,
+          `reenlist-${reenlistment.reenlistment}`,
+          `decision-${reenlistment.decision}`
+        ].join('__'),
+        survival: 'pass',
+        commission: promotion.commission,
+        advancement: promotion.advancement,
+        reenlistment: reenlistment.reenlistment,
+        decision: reenlistment.decision,
+        result: reenlistment.result
+      })
+    }
+  }
+
+  return outcomes
+}
+
+export const deriveCareerBenefitCount = ({
+  termsInCareer,
+  currentRank
+}: {
+  termsInCareer: number
+  currentRank: number
+}): number => termsInCareer + Math.max(0, currentRank - 3)
+
+export const deriveRemainingCareerBenefits = ({
+  termsInCareer,
+  currentRank,
+  benefitsReceived
+}: {
+  termsInCareer: number
+  currentRank: number
+  benefitsReceived: number
+}): number =>
+  Math.max(
+    0,
+    deriveCareerBenefitCount({ termsInCareer, currentRank }) - benefitsReceived
+  )
+
+export const resolveCareerBenefit = ({
+  tables,
+  career,
+  roll,
+  kind
+}: {
+  tables: BenefitTables
+  career: string
+  roll: number
+  kind: BenefitKind
+}): CareerBenefit => {
+  const key = String(roll)
+  if (kind === 'cash') {
+    const rawCash = tables.cashBenefits[career]?.[key] ?? 0
+    const credits =
+      typeof rawCash === 'number' ? rawCash : Number.parseInt(rawCash, 10)
+    const resolvedCredits = Number.isFinite(credits) ? credits : 0
+    return {
+      kind: 'cash',
+      value: String(resolvedCredits),
+      credits: resolvedCredits
+    }
+  }
+
+  const value = tables.materialBenefits[career]?.[key] ?? 'Unknown Benefit'
+  return {
+    kind: 'material',
+    value,
+    credits: 0
+  }
+}
+
+export const selectAgingEffect = (
+  table: readonly AgingEffect[],
+  roll: number
+): AgingEffect | null => {
+  if (roll === 0 || table.length === 0) return null
+
+  const rolls = table.map((effect) => Number(effect.Roll))
+  const minRoll = Math.min(...rolls)
+  const maxRoll = Math.max(...rolls)
+  const clampedRoll = Math.max(minRoll, Math.min(maxRoll, roll))
+
+  return (
+    table.find((effect) => Number(effect.Roll) === clampedRoll) ?? null
+  )
+}
+
+export const resolveAging = ({
+  currentAge,
+  table,
+  roll,
+  years = 4
+}: {
+  currentAge: number | null | undefined
+  table: readonly AgingEffect[]
+  roll: number
+  years?: number
+}): AgingResolution => {
+  const age = (currentAge ?? 18) + years
+  const effect = selectAgingEffect(table, roll)
+  const changes = effect?.Changes ?? []
+
+  if (roll === 0) {
+    return {
+      age,
+      message: `Character aged to ${age}.`,
+      characteristicChanges: []
+    }
+  }
+
+  if (changes.length === 0) {
+    return {
+      age,
+      message: 'No aging effects.',
+      characteristicChanges: []
+    }
+  }
+
+  return {
+    age,
+    message: effect?.Effects ?? 'No aging effects.',
+    characteristicChanges: changes.map((change) => ({ ...change }))
+  }
+}

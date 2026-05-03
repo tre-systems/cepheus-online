@@ -5,14 +5,27 @@ import type { CharacterCharacteristics } from './state'
 import {
   availableCareerNames,
   canTransitionCareerCreationState,
+  careerSkillWithLevel,
   characteristicModifier,
   createCareerCreationState,
   deriveBasicTrainingPlan,
+  deriveCareerBenefitCount,
   deriveCareerQualificationDm,
+  deriveRemainingCareerBenefits,
   deriveSurvivalPromotionOptions,
+  enumerateTermOutcomes,
   evaluateCareerCheck,
+  formatCareerSkill,
   isCareerCreationStatus,
+  isCascadeCareerSkill,
+  normalizeCareerSkill,
   parseCareerCheck,
+  parseCareerSkill,
+  resolveAging,
+  resolveCareerBenefit,
+  resolveCascadeCareerSkill,
+  selectAgingEffect,
+  tallyCareerSkills,
   transitionCareerCreationState,
   type CareerBasicsTable,
   type CareerSkillTable
@@ -275,6 +288,241 @@ describe('career ruleset helpers', () => {
     assert.deepEqual(deriveSurvivalPromotionOptions(careerBasics.Scout, 1), {
       canCommission: false,
       canAdvance: false
+    })
+  })
+})
+
+describe('career skill helpers', () => {
+  it('parses, formats, normalizes, and tallies career skills', () => {
+    assert.deepEqual(parseCareerSkill('Gun Combat-1'), {
+      name: 'Gun Combat',
+      level: 1
+    })
+    assert.deepEqual(parseCareerSkill('Jack-of-all-Trades-0'), {
+      name: 'Jack-of-all-Trades',
+      level: 0
+    })
+    assert.deepEqual(parseCareerSkill('Pilot'), { name: 'Pilot', level: 0 })
+    assert.equal(parseCareerSkill(''), null)
+    assert.equal(formatCareerSkill({ name: 'Pilot', level: 2 }), 'Pilot-2')
+    assert.equal(isCascadeCareerSkill('Gun Combat*'), true)
+    assert.equal(careerSkillWithLevel('Gun Combat*', 0), 'Gun Combat-0')
+    assert.equal(normalizeCareerSkill('Pilot', 1), 'Pilot-1')
+    assert.equal(normalizeCareerSkill('Pilot-2', 1), 'Pilot-2')
+    assert.equal(normalizeCareerSkill('Gun Combat*', 0), 'Gun Combat-0')
+    assert.equal(normalizeCareerSkill('  '), null)
+
+    assert.deepEqual(
+      tallyCareerSkills([
+        'Pilot-1',
+        'Gun Combat-0',
+        'Pilot-1',
+        'Animals*',
+        'Jack-of-all-Trades-0'
+      ]),
+      ['Pilot-2', 'Gun Combat-0', 'Jack-of-all-Trades-0']
+    )
+  })
+
+  it('resolves cascade selections into background, career, or nested queues', () => {
+    assert.deepEqual(
+      resolveCascadeCareerSkill({
+        pendingCascadeSkills: ['Gun Combat-1', 'Animals-0'],
+        careerSkills: ['Pilot-1'],
+        termSkills: ['Pilot-1'],
+        cascadeSkill: 'Gun Combat-1',
+        selection: 'Slug Pistol'
+      }),
+      {
+        pendingCascadeSkills: ['Animals-0'],
+        backgroundSkills: [],
+        careerSkills: ['Pilot-1', 'Slug Pistol-1'],
+        termSkills: ['Pilot-1', 'Slug Pistol-1']
+      }
+    )
+
+    assert.deepEqual(
+      resolveCascadeCareerSkill({
+        pendingCascadeSkills: ['Animals-0'],
+        backgroundSkills: ['Streetwise-0'],
+        cascadeSkill: 'Animals-0',
+        selection: 'Riding',
+        basicTraining: true
+      }),
+      {
+        pendingCascadeSkills: [],
+        backgroundSkills: ['Streetwise-0', 'Riding-0'],
+        careerSkills: [],
+        termSkills: ['Riding-0']
+      }
+    )
+
+    assert.deepEqual(
+      resolveCascadeCareerSkill({
+        pendingCascadeSkills: ['Science-1'],
+        cascadeSkill: 'Science-1',
+        selection: 'Life Sciences*'
+      }).pendingCascadeSkills,
+      ['Life Sciences-1']
+    )
+  })
+})
+
+describe('career term outcome helpers', () => {
+  it('enumerates survival, promotion, and reenlistment outcomes', () => {
+    const outcomes = enumerateTermOutcomes({
+      canCommission: true,
+      canAdvance: false,
+      canReenlist: true
+    })
+
+    assert.equal(outcomes.length, 13)
+    assert.deepEqual(outcomes[0], {
+      id: 'survival-fail',
+      survival: 'fail',
+      commission: 'na',
+      advancement: 'na',
+      reenlistment: 'blocked',
+      decision: 'na',
+      result: 'MISHAP'
+    })
+    assert.equal(
+      outcomes.some(
+        (outcome) =>
+          outcome.id ===
+          'survival-pass__commission-pass__advancement-na__reenlist-forced__decision-na'
+      ),
+      true
+    )
+  })
+
+  it('collapses reenlistment choices when blocked or forced to retire', () => {
+    assert.deepEqual(
+      enumerateTermOutcomes({ canReenlist: false }).map(
+        (outcome) => outcome.result
+      ),
+      ['MISHAP', 'MUSTERING_OUT']
+    )
+    assert.deepEqual(
+      enumerateTermOutcomes({ mustRetire: true }).map(
+        (outcome) => outcome.reenlistment
+      ),
+      ['blocked', 'retire']
+    )
+  })
+})
+
+describe('mustering-out and aging helpers', () => {
+  const benefitTables = {
+    materialBenefits: {
+      Scout: {
+        '1': 'Low Passage',
+        '2': '+1 Edu',
+        '6': 'Courier Vessel'
+      }
+    },
+    cashBenefits: {
+      Scout: {
+        '1': 20000,
+        '2': '30000',
+        '6': '50000'
+      }
+    }
+  }
+
+  const agingTable = [
+    {
+      Roll: -2,
+      Effects: 'Reduce one physical characteristic by 1.',
+      Changes: [{ type: 'PHYSICAL' as const, modifier: -1 }]
+    },
+    {
+      Roll: -1,
+      Effects: 'Reduce one physical characteristic by 1.',
+      Changes: [{ type: 'PHYSICAL' as const, modifier: -1 }]
+    },
+    {
+      Roll: 1,
+      Effects: 'No effect.'
+    }
+  ]
+
+  it('derives benefit counts and resolves cash or material rolls', () => {
+    assert.equal(
+      deriveCareerBenefitCount({ termsInCareer: 3, currentRank: 5 }),
+      5
+    )
+    assert.equal(
+      deriveRemainingCareerBenefits({
+        termsInCareer: 3,
+        currentRank: 5,
+        benefitsReceived: 2
+      }),
+      3
+    )
+    assert.equal(
+      deriveRemainingCareerBenefits({
+        termsInCareer: 1,
+        currentRank: 0,
+        benefitsReceived: 4
+      }),
+      0
+    )
+
+    assert.deepEqual(
+      resolveCareerBenefit({
+        tables: benefitTables,
+        career: 'Scout',
+        roll: 6,
+        kind: 'material'
+      }),
+      {
+        kind: 'material',
+        value: 'Courier Vessel',
+        credits: 0
+      }
+    )
+    assert.deepEqual(
+      resolveCareerBenefit({
+        tables: benefitTables,
+        career: 'Scout',
+        roll: 2,
+        kind: 'cash'
+      }),
+      {
+        kind: 'cash',
+        value: '30000',
+        credits: 30000
+      }
+    )
+  })
+
+  it('selects and resolves clamped aging effects without mutating rules data', () => {
+    assert.equal(selectAgingEffect(agingTable, 0), null)
+    assert.equal(selectAgingEffect(agingTable, -8)?.Roll, -2)
+    assert.equal(selectAgingEffect(agingTable, 8)?.Roll, 1)
+
+    const resolved = resolveAging({
+      currentAge: 34,
+      table: agingTable,
+      roll: -8
+    })
+
+    assert.deepEqual(resolved, {
+      age: 38,
+      message: 'Reduce one physical characteristic by 1.',
+      characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+    })
+
+    resolved.characteristicChanges[0].modifier = -9
+    assert.deepEqual(agingTable[0].Changes, [
+      { type: 'PHYSICAL', modifier: -1 }
+    ])
+
+    assert.deepEqual(resolveAging({ currentAge: null, table: agingTable, roll: 0 }), {
+      age: 22,
+      message: 'Character aged to 22.',
+      characteristicChanges: []
     })
   })
 })

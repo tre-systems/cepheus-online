@@ -39,13 +39,16 @@ layout and the intended normalization target.
 - Reimplemented the legacy character creation status machine and first career
   rules helpers as pure shared code in `src/shared/characterCreation.ts`,
   without XState, React, Zustand, Amplify, or Material UI.
+- Extracted the next layer of character creation primitives for skill
+  normalization/cascade resolution, term outcome enumeration, aging effect
+  selection, and mustering-out benefit resolution as pure shared helpers.
 
 ## Next Salvage Candidates
 
 Do not copy these blindly. Extract the domain logic and tests:
 
-- deeper character creation rules: terms, aging, benefits, events, mishaps,
-  cascade skills, and career completion
+- deeper character creation rules: full term records, career event tables,
+  mishaps, retirement/anagathics costs, and career completion
 - dice and combat calculations
 - initiative ordering
 - equipment ledger behavior
