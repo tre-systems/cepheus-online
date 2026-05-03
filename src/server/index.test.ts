@@ -16,11 +16,11 @@ const clientModules = new Map<
         '/client/app/board-view.js',
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
-        '/client/app/character-creation-flow.js',
         '/client/app/character-sheet-controller.js',
         '/client/app/dice-overlay.js',
         '/client/app/door-los-view.js',
         '/client/app/image-assets.js',
+        '/client/app/piece-command-plan.js',
         '/client/app/pwa-install.js',
         '/client/app/room-api.js',
         '/client/app/room-menu-controller.js',
@@ -77,6 +77,16 @@ const clientModules = new Map<
     }
   ],
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
+  [
+    '/client/app/piece-command-plan.js',
+    {
+      markers: ['planCreatePieceCommands'],
+      imports: [
+        '/client/app/bootstrap-flow.js',
+        '/client/app/character-creation-flow.js'
+      ]
+    }
+  ],
   ['/client/app/pwa-install.js', { markers: ['createPwaInstallController'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
   [

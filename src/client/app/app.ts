@@ -23,9 +23,7 @@ import {
   parseNonNegativeIntegerValue,
   parsePositiveIntegerValue,
   parsePositiveNumberValue,
-  uniqueBoardId,
-  uniqueCharacterId,
-  uniquePieceId
+  uniqueBoardId
 } from './bootstrap-flow.js'
 import {
   buildRoomPath,
@@ -40,12 +38,9 @@ import {
   buildSetDoorOpenCommand
 } from '../game-commands.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
-import {
-  createCharacterCreationFlow,
-  deriveCharacterCreationCommands
-} from './character-creation-flow.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
+import { planCreatePieceCommands } from './piece-command-plan.js'
 import { createPwaInstallController } from './pwa-install.js'
 import { createRoomMenuController } from './room-menu-controller.js'
 import { registerClientServiceWorker } from './service-worker.js'
@@ -240,25 +235,6 @@ const selectedPieceImageDataUrl = async () => {
   })
 }
 
-const createDefaultCharacterCreationFlow = (characterId, name) => ({
-  ...createCharacterCreationFlow(characterId, {
-    name,
-    age: 30,
-    characteristics: {
-      str: 7,
-      dex: 7,
-      end: 7,
-      int: 7,
-      edu: 7,
-      soc: 7
-    },
-    skills: ['Athletics-0', 'Gun Combat-0'],
-    equipment: [],
-    credits: 0
-  }),
-  step: 'review'
-})
-
 const currentBoardList = () => boardList(state)
 
 const currentSelectedBoardId = () => selectSelectedBoardId(state)
@@ -319,54 +295,28 @@ const createCustomPiece = async () => {
   const width = parsePositiveIntegerInput(els.pieceWidthInput, 50)
   const height = parsePositiveIntegerInput(els.pieceHeightInput, 50)
   const scale = parsePositiveNumberInput(els.pieceScaleInput, 1)
-  const pieceIndex = boardPieces().length
-  const x = Math.max(
-    0,
-    Math.min(board.width - width * scale, 160 + (pieceIndex % 8) * 58)
-  )
-  const y = Math.max(
-    0,
-    Math.min(
-      board.height - height * scale,
-      140 + Math.floor(pieceIndex / 8) * 58
-    )
-  )
-  const pieceId = uniquePieceId(state, name)
-  const characterId = els.pieceSheetInput.checked
-    ? uniqueCharacterId(state, name)
-    : null
   const imageAssetId = await selectedPieceImageDataUrl()
-  if (characterId) {
-    const commands = deriveCharacterCreationCommands(
-      createDefaultCharacterCreationFlow(characterId, name),
-      {
-        identity: clientIdentity(),
-        state
-      }
-    )
-    if (commands.length === 0) {
-      throw new Error('Character creation needs the current room state')
-    }
-    for (const command of commands) {
-      await postCommand(command)
-    }
-  }
-  await sendCommand({
-    type: 'CreatePiece',
-    gameId: roomId,
-    actorId,
-    pieceId,
-    boardId: board.id,
+  const plan = planCreatePieceCommands({
+    identity: clientIdentity(),
+    state,
+    board,
     name,
-    characterId,
     imageAssetId,
-    x,
-    y,
     width,
     height,
-    scale
+    scale,
+    existingPieceCount: boardPieces().length,
+    withCharacterSheet: els.pieceSheetInput.checked
   })
-  selectedPieceId = pieceId
+  if (!plan.ok) {
+    setError(plan.error)
+    if (plan.focus === 'name') els.pieceNameInput.focus()
+    return
+  }
+  for (const command of plan.commands) {
+    await postCommand(command)
+  }
+  selectedPieceId = plan.pieceId
   els.pieceNameInput.value = ''
   els.pieceImageInput.value = ''
   els.pieceImageFileInput.value = ''

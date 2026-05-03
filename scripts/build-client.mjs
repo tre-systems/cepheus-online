@@ -149,6 +149,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/piece-command-plan.js',
+    source: join(compiledClientRoot, 'client', 'app', 'piece-command-plan.js'),
+    exportName: 'CLIENT_PIECE_COMMAND_PLAN_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/pwa-install.js',
     source: join(compiledClientRoot, 'client', 'app', 'pwa-install.js'),
     exportName: 'CLIENT_PWA_INSTALL_JS',
