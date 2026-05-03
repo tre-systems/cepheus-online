@@ -44,7 +44,10 @@ import {
 } from './room-api.js'
 import {
   applyServerMessage as applyClientServerMessage,
-  buildSequencedCommand
+  buildMovePieceCommand,
+  buildRollDiceCommand,
+  buildSequencedCommand,
+  buildSetDoorOpenCommand
 } from '../game-commands.js'
 import {
   characterSheetEmptyLabels,
@@ -223,6 +226,11 @@ els.pwaInstallDismissButton?.addEventListener('click', () => {
 
 const requestId = (prefix) =>
   prefix + '-' + Date.now().toString(36) + '-' + (++requestCounter).toString(36)
+
+const clientIdentity = () => ({
+  gameId: roomId,
+  actorId
+})
 
 const handleServerMessage = (message) => {
   const application = applyClientServerMessage(state, message)
@@ -825,14 +833,16 @@ const boardDoorActions = (board) => {
     button.className = door.open ? 'active' : ''
     button.title = `${door.label}: ${door.stateLabel}`
     button.addEventListener('click', () => {
-      sendCommand({
-        type: 'SetDoorOpen',
-        gameId: roomId,
-        actorId,
-        boardId: board.id,
-        doorId: door.id,
-        open: door.nextOpen
-      }).catch((error) => setError(error.message))
+      if (!state) return
+      sendCommand(
+        buildSetDoorOpenCommand({
+          identity: clientIdentity(),
+          state,
+          boardId: board.id,
+          doorId: door.id,
+          open: door.nextOpen
+        })
+      ).catch((error) => setError(error.message))
     })
     actions.append(button)
   }
@@ -917,13 +927,13 @@ const renderActionTab = (body, piece, character) => {
     button.type = 'button'
     button.textContent = skill
     button.addEventListener('click', () => {
-      sendCommand({
-        type: 'RollDice',
-        gameId: roomId,
-        actorId,
-        expression: '2d6',
-        reason: skillRollReason(piece, character, skill)
-      }).catch((error) => setError(error.message))
+      sendCommand(
+        buildRollDiceCommand({
+          identity: clientIdentity(),
+          expression: '2d6',
+          reason: skillRollReason(piece, character, skill)
+        })
+      ).catch((error) => setError(error.message))
     })
     actions.append(button)
   }
@@ -1376,15 +1386,15 @@ els.canvas.addEventListener('pointerup', async (event) => {
     return
   }
   try {
-    await sendCommand({
-      type: 'MovePiece',
-      gameId: roomId,
-      actorId,
-      pieceId: completed.pieceId,
-      x,
-      y,
-      expectedSeq: state.eventSeq
-    })
+    await sendCommand(
+      buildMovePieceCommand({
+        identity: clientIdentity(),
+        state,
+        pieceId: completed.pieceId,
+        x,
+        y
+      })
+    )
   } catch (error) {
     setError(error.message)
   } finally {
@@ -1505,13 +1515,13 @@ els.zoomIn.addEventListener('click', () => {
 })
 
 els.roll.addEventListener('click', () => {
-  sendCommand({
-    type: 'RollDice',
-    gameId: roomId,
-    actorId,
-    expression: els.diceExpression.value.trim() || '2d6',
-    reason: 'Table roll'
-  }).catch((error) => setError(error.message))
+  sendCommand(
+    buildRollDiceCommand({
+      identity: clientIdentity(),
+      expression: els.diceExpression.value.trim() || '2d6',
+      reason: 'Table roll'
+    })
+  ).catch((error) => setError(error.message))
 })
 
 window.addEventListener('resize', render)
