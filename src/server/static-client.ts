@@ -96,6 +96,10 @@ const CLIENT_HTML = `<!doctype html>
             <span>Image URL</span>
             <input id="pieceImageInput" name="pieceImage" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
           </label>
+          <label class="piece-sheet-field">
+            <input id="pieceSheetInput" name="pieceSheet" type="checkbox" checked>
+            <span>Create sheet</span>
+          </label>
           <div class="board-create-title">
             <span>New board</span>
           </div>
@@ -1139,6 +1143,18 @@ h1 {
   border-top: 1px solid rgba(72, 255, 173, 0.18);
 }
 
+.piece-sheet-field {
+  align-self: end;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.piece-sheet-field input {
+  width: 18px;
+  min-height: 18px;
+  accent-color: var(--accent);
+}
+
 .dialog-title,
 .dialog-actions {
   grid-column: 1 / -1;
@@ -1284,6 +1300,7 @@ const els = {
   createBoard: document.getElementById("createBoardButton"),
   pieceNameInput: document.getElementById("pieceNameInput"),
   pieceImageInput: document.getElementById("pieceImageInput"),
+  pieceSheetInput: document.getElementById("pieceSheetInput"),
   boardNameInput: document.getElementById("boardNameInput"),
   boardImageInput: document.getElementById("boardImageInput"),
   boardWidthInput: document.getElementById("boardWidthInput"),
@@ -1464,10 +1481,49 @@ const uniquePieceId = (name) => {
   return pieceId;
 };
 
+const uniqueCharacterId = (name) => {
+  const base = idFromName(name, "character");
+  let index = Object.keys(state?.characters || {}).length + 1;
+  let characterId = base + "-" + index;
+  while (state?.characters?.[characterId]) {
+    index += 1;
+    characterId = base + "-" + index;
+  }
+  return characterId;
+};
+
 const parsePositiveIntegerInput = (input, fallback) => {
   const value = Number.parseInt(input.value, 10);
   return Number.isFinite(value) && value > 0 ? value : fallback;
 };
+
+const createManualCharacterCommand = (characterId, name) => ({
+  type: "CreateCharacter",
+  gameId: roomId,
+  actorId,
+  characterId,
+  characterType: "PLAYER",
+  name
+});
+
+const updateManualCharacterSheetCommand = (characterId) => ({
+  type: "UpdateCharacterSheet",
+  gameId: roomId,
+  actorId,
+  characterId,
+  age: 30,
+  characteristics: {
+    str: 7,
+    dex: 7,
+    end: 7,
+    int: 7,
+    edu: 7,
+    soc: 7
+  },
+  skills: ["Athletics-0", "Gun Combat-0"],
+  equipment: [],
+  credits: 0
+});
 
 const boardList = () => Object.values(state?.boards || {});
 
@@ -1524,6 +1580,11 @@ const createCustomPiece = async () => {
   const x = Math.max(0, Math.min(board.width - 50, 160 + (pieceIndex % 8) * 58));
   const y = Math.max(0, Math.min(board.height - 50, 140 + Math.floor(pieceIndex / 8) * 58));
   const pieceId = uniquePieceId(name);
+  const characterId = els.pieceSheetInput.checked ? uniqueCharacterId(name) : null;
+  if (characterId) {
+    await sendCommand(createManualCharacterCommand(characterId, name));
+    await sendCommand(updateManualCharacterSheetCommand(characterId));
+  }
   await sendCommand({
     type: "CreatePiece",
     gameId: roomId,
@@ -1531,6 +1592,7 @@ const createCustomPiece = async () => {
     pieceId,
     boardId: board.id,
     name,
+    characterId,
     imageAssetId: els.pieceImageInput.value.trim() || null,
     x,
     y
