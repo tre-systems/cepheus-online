@@ -15,6 +15,11 @@ describe('Worker static client', () => {
     assert.equal(response.status, 200)
     assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8')
     assert.equal(body.includes('<canvas id="boardCanvas"'), true)
+    assert.equal(body.includes('class="combat-rail"'), true)
+    assert.equal(body.includes('id="characterSheet"'), true)
+    assert.equal(body.includes('id="diceOverlay"'), true)
+    assert.equal(body.includes('id="roomDialog"'), true)
+    assert.equal(body.includes('id="diceLog"'), false)
     assert.equal(body.includes('viewport-fit=cover'), true)
     assert.equal(body.includes('manifest.webmanifest'), true)
     assert.equal(body.includes('apple-mobile-web-app-capable'), true)
@@ -35,6 +40,8 @@ describe('Worker static client', () => {
     assert.equal(body.includes('new WebSocket'), true)
     assert.equal(body.includes('serviceWorker'), true)
     assert.equal(body.includes('PIP_SLOTS'), true)
+    assert.equal(body.includes('renderRail'), true)
+    assert.equal(body.includes('setSheetOpen'), true)
   })
 
   it('serves cubical dice styling', async () => {
@@ -50,6 +57,10 @@ describe('Worker static client', () => {
     assert.equal(body.includes('.pip-top-left'), true)
     assert.equal(body.includes('translateZ(32px)'), true)
     assert.equal(body.includes('.face.right'), true)
+    assert.equal(body.includes('.combat-rail'), true)
+    assert.equal(body.includes('.character-sheet.open'), true)
+    assert.equal(body.includes('.dice-overlay.visible'), true)
+    assert.equal(body.includes('100dvh'), true)
   })
 
   it('serves PWA manifest, icon, and service worker assets', async () => {

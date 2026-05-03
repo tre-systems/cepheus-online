@@ -13,15 +13,59 @@ const CLIENT_HTML = `<!doctype html>
   </head>
   <body>
     <main class="app-shell">
-      <header class="topbar">
-        <div class="brand">
-          <span class="brand-mark">CO</span>
-          <div>
-            <h1>Cepheus Online</h1>
-            <p id="connectionStatus">Offline</p>
+      <section class="play-surface" aria-label="Tactical board">
+        <aside class="combat-rail" aria-label="Characters and table controls">
+          <div class="brand-mark">CO</div>
+          <div id="initiativeRail" class="initiative-rail"></div>
+          <button id="sheetButton" class="rail-button" type="button" title="Character sheet" aria-label="Character sheet">S</button>
+          <button id="rollButton" class="rail-button" type="button" title="Roll dice" aria-label="Roll dice">D</button>
+          <button id="menuButton" class="rail-button" type="button" title="Room menu" aria-label="Room menu">M</button>
+        </aside>
+
+        <div class="board-frame">
+          <canvas id="boardCanvas" width="1200" height="800"></canvas>
+          <div class="board-hud">
+            <div>
+              <h1>Cepheus Online</h1>
+              <p id="connectionStatus">Offline</p>
+            </div>
+            <p id="errorText" class="error-text" role="status"></p>
           </div>
         </div>
-        <form id="roomForm" class="room-form">
+      </section>
+
+      <div class="dice-overlay" id="diceOverlay" aria-live="polite">
+        <div class="dice-stage" id="diceStage">
+          <div class="dice-empty">No rolls yet</div>
+        </div>
+      </div>
+
+      <aside class="character-sheet" id="characterSheet" aria-label="Character sheet">
+        <header class="sheet-header">
+          <div>
+            <p class="sheet-kicker">Selected</p>
+            <h2 id="sheetName">No piece</h2>
+          </div>
+          <button id="sheetCloseButton" type="button" aria-label="Close character sheet">Close</button>
+        </header>
+        <nav class="sheet-tabs" aria-label="Character sheet sections">
+          <button class="sheet-tab active" type="button">Details</button>
+          <button class="sheet-tab" type="button">Action</button>
+          <button class="sheet-tab" type="button">Items</button>
+          <button class="sheet-tab" type="button">Notes</button>
+        </nav>
+        <div class="sheet-body" id="sheetBody"></div>
+      </aside>
+
+      <dialog class="room-dialog" id="roomDialog">
+        <form id="roomForm" class="room-form" method="dialog">
+          <div class="dialog-title">
+            <span class="brand-mark small">CO</span>
+            <div>
+              <h2>Room</h2>
+              <p>Local development controls</p>
+            </div>
+          </div>
           <label>
             <span>Room</span>
             <input id="roomInput" name="room" autocomplete="off" spellcheck="false">
@@ -30,32 +74,18 @@ const CLIENT_HTML = `<!doctype html>
             <span>Traveller</span>
             <input id="userInput" name="user" autocomplete="off" spellcheck="false">
           </label>
-          <button type="submit">Open</button>
-        </form>
-      </header>
-
-      <section class="tool-row">
-        <button id="bootstrapButton" type="button">Bootstrap Scene</button>
-        <label class="dice-expression">
-          <span>Dice</span>
-          <input id="diceExpression" value="2d6" autocomplete="off" spellcheck="false">
-        </label>
-        <button id="rollButton" type="button">Roll</button>
-        <button id="refreshButton" type="button">Refresh</button>
-        <p id="errorText" class="error-text" role="status"></p>
-      </section>
-
-      <section class="play-surface">
-        <div class="canvas-wrap">
-          <canvas id="boardCanvas" width="1200" height="800"></canvas>
-        </div>
-        <aside class="side-panel">
-          <div class="dice-stage" id="diceStage" aria-live="polite">
-            <div class="dice-empty">No rolls yet</div>
+          <label class="dice-expression">
+            <span>Dice</span>
+            <input id="diceExpression" value="2d6" autocomplete="off" spellcheck="false">
+          </label>
+          <div class="dialog-actions">
+            <button id="bootstrapButton" type="button">Bootstrap</button>
+            <button id="refreshButton" type="button">Refresh</button>
+            <button id="roomCancelButton" type="button">Close</button>
+            <button type="submit">Open</button>
           </div>
-          <ol id="diceLog" class="dice-log"></ol>
-        </aside>
-      </section>
+        </form>
+      </dialog>
     </main>
     <script type="module" src="/client.js"></script>
   </body>
@@ -107,6 +137,8 @@ body {
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
   overflow-x: hidden;
+  overflow: hidden;
+  touch-action: none;
 }
 
 body::before {
@@ -505,6 +537,455 @@ h1 {
   font-size: 12px;
 }
 
+.app-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  min-height: 100dvh;
+  display: block;
+  overflow: hidden;
+  background: #010302;
+}
+
+.play-surface {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.combat-rail {
+  position: relative;
+  z-index: 6;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  gap: 7px;
+  padding: max(9px, env(safe-area-inset-top)) 5px max(9px, env(safe-area-inset-bottom));
+  border-right: 1px solid rgba(72, 255, 173, 0.36);
+  background:
+    linear-gradient(90deg, rgba(72, 255, 173, 0.1), transparent),
+    rgba(0, 0, 0, 0.92);
+  box-shadow: 10px 0 28px rgba(0, 0, 0, 0.48);
+}
+
+.combat-rail .brand-mark {
+  width: 38px;
+  height: 38px;
+  margin: 0 auto;
+  font-size: 14px;
+}
+
+.initiative-rail {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.initiative-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.rail-piece {
+  display: grid;
+  grid-template-columns: 14px 34px;
+  align-items: center;
+  gap: 3px;
+  width: 50px;
+  min-height: 44px;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 3px;
+  padding: 2px 1px;
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.rail-piece.selected {
+  border-left-color: var(--accent);
+  background: rgba(72, 255, 173, 0.22);
+}
+
+.rail-score {
+  color: var(--accent-2);
+  font-size: 14px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.rail-avatar {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(244, 255, 248, 0.72);
+  background:
+    radial-gradient(circle at 50% 28%, rgba(244, 255, 248, 0.95), rgba(72, 255, 173, 0.74) 30%, #08120f 68%);
+  color: #020504;
+  font-size: 15px;
+  font-weight: 900;
+  overflow: hidden;
+}
+
+.rail-button {
+  width: 44px;
+  min-height: 44px;
+  margin: 0 auto;
+  padding: 0;
+  border-color: rgba(72, 255, 173, 0.52);
+  background: rgba(5, 17, 13, 0.92);
+  color: var(--accent);
+  font-weight: 900;
+  box-shadow: none;
+}
+
+.board-frame {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(72, 255, 173, 0.08), transparent 45%),
+    #010302;
+}
+
+#boardCanvas {
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.board-hud {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  left: 8px;
+  right: 8px;
+  z-index: 4;
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.board-hud h1 {
+  color: rgba(244, 255, 248, 0.92);
+  font-size: 15px;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
+}
+
+.board-hud #connectionStatus {
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.board-hud .error-text {
+  max-width: min(54vw, 320px);
+  min-height: 0;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 119, 107, 0.4);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.68);
+  font-weight: 700;
+}
+
+.dice-overlay {
+  position: absolute;
+  left: 66px;
+  right: 8px;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.dice-overlay.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dice-overlay .dice-stage {
+  width: min(360px, 100%);
+  min-height: 154px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(72, 255, 173, 0.22), transparent 62%),
+    rgba(2, 8, 6, 0.92);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.character-sheet {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: 66px;
+  z-index: 10;
+  width: min(334px, calc(100vw - 74px));
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  border: 1px solid rgba(72, 255, 173, 0.8);
+  background: rgba(0, 0, 0, 0.94);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.9),
+    0 20px 50px rgba(0, 0, 0, 0.62),
+    0 0 28px rgba(72, 255, 173, 0.12);
+  transform: translateX(calc(-100% - 72px));
+  transition: transform 180ms ease;
+  overflow: hidden;
+}
+
+.character-sheet.open {
+  transform: translateX(0);
+}
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 10px 6px;
+}
+
+.sheet-kicker {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sheet-header h2 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.sheet-header button {
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.sheet-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-tab {
+  min-height: 36px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+.sheet-tab.active {
+  border-bottom-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+.sheet-body {
+  min-height: 0;
+  padding: 10px;
+  overflow: auto;
+}
+
+.sheet-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.sheet-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  border-bottom: 1px solid rgba(244, 255, 248, 0.22);
+  padding-bottom: 7px;
+}
+
+.sheet-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sheet-value {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.stat {
+  border: 1px solid rgba(72, 255, 173, 0.42);
+  padding: 5px 3px;
+  text-align: center;
+}
+
+.stat b {
+  display: block;
+  color: var(--accent);
+  font-size: 10px;
+}
+
+.stat span {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chip-list span {
+  border: 1px solid rgba(72, 255, 173, 0.55);
+  padding: 3px 5px;
+  color: var(--accent-2);
+  font-size: 10px;
+}
+
+.room-dialog {
+  width: min(520px, calc(100vw - 20px));
+  border: 1px solid rgba(72, 255, 173, 0.74);
+  border-radius: 10px;
+  background: rgba(2, 8, 6, 0.96);
+  color: var(--text);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.72);
+}
+
+.room-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.58);
+}
+
+.room-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.room-form label,
+.dice-expression {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.room-form span,
+.dice-expression span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.dialog-title,
+.dialog-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dialog-title h2 {
+  margin: 0;
+  color: var(--accent);
+}
+
+.dialog-title p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.brand-mark.small {
+  width: 34px;
+  height: 34px;
+  font-size: 12px;
+}
+
+.dialog-actions {
+  justify-content: end;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 840px) {
+  .play-surface {
+    grid-template-columns: 70px minmax(0, 1fr);
+  }
+
+  .combat-rail {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .rail-piece {
+    width: 54px;
+    grid-template-columns: 16px 36px;
+  }
+
+  .rail-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .dice-overlay,
+  .character-sheet {
+    left: 82px;
+  }
+}
+
+@media (max-width: 520px) {
+  .play-surface {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .combat-rail {
+    gap: 6px;
+  }
+
+  .rail-button {
+    width: 40px;
+    min-height: 40px;
+  }
+
+  .dice-overlay,
+  .character-sheet {
+    left: 60px;
+  }
+
+  .room-form {
+    grid-template-columns: 1fr;
+  }
+}
+
 @keyframes tumble {
   0% {
     transform: rotateX(-23deg) rotateY(-34deg) rotateZ(1deg) translateY(-8px);
@@ -517,67 +998,7 @@ h1 {
   }
 }
 
-@media (max-width: 520px) {
-  .topbar {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-
-  .room-form {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .room-form button {
-    grid-column: 1 / -1;
-  }
-
-  .tool-row {
-    grid-template-columns: 1fr 92px 72px;
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-
-  #refreshButton {
-    grid-column: 1 / -1;
-  }
-
-  .canvas-wrap,
-  .side-panel {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-}
-
-@media (min-width: 840px) {
-  .topbar {
-    grid-template-columns: minmax(220px, 1fr) auto;
-    align-items: center;
-    padding: 14px 18px;
-  }
-
-  .room-form {
-    min-width: 510px;
-  }
-
-  .play-surface {
-    grid-template-columns: minmax(0, 1fr) 310px;
-  }
-
-  .canvas-wrap {
-    padding: 18px;
-  }
-
-  #boardCanvas {
-    height: min(72vh, calc(100vh - 170px));
-    min-height: 430px;
-  }
-
-  .side-panel {
-    border-top: 0;
-    border-left: 1px solid var(--line);
-    padding: 18px;
-  }
-}`
+`
 
 const CLIENT_JS = `const DEFAULT_GAME_ID = "demo-room";
 const DEFAULT_ACTOR_ID = "local-user";
@@ -599,7 +1020,16 @@ const els = {
   error: document.getElementById("errorText"),
   canvas: document.getElementById("boardCanvas"),
   diceStage: document.getElementById("diceStage"),
-  diceLog: document.getElementById("diceLog")
+  diceOverlay: document.getElementById("diceOverlay"),
+  initiativeRail: document.getElementById("initiativeRail"),
+  sheet: document.getElementById("characterSheet"),
+  sheetButton: document.getElementById("sheetButton"),
+  sheetClose: document.getElementById("sheetCloseButton"),
+  sheetName: document.getElementById("sheetName"),
+  sheetBody: document.getElementById("sheetBody"),
+  menu: document.getElementById("menuButton"),
+  roomDialog: document.getElementById("roomDialog"),
+  roomCancel: document.getElementById("roomCancelButton")
 };
 
 const ctx = els.canvas.getContext("2d");
@@ -611,8 +1041,10 @@ let socketOpen = false;
 let firstStateApplied = false;
 let latestDiceId = null;
 let selectedPieceId = null;
+let sheetOpen = false;
 let drag = null;
 let requestCounter = 0;
+let diceHideTimer = null;
 
 els.roomInput.value = roomId;
 els.userInput.value = actorId;
@@ -810,6 +1242,114 @@ const hitPiece = (point) => {
   ) || null;
 };
 
+const selectedPiece = () => {
+  const pieces = boardPieces();
+  return pieces.find((piece) => piece.id === selectedPieceId) || pieces[0] || null;
+};
+
+const setSheetOpen = (open) => {
+  sheetOpen = open;
+  els.sheet.classList.toggle("open", sheetOpen);
+};
+
+const sheetRow = (label, value) => {
+  const row = document.createElement("div");
+  row.className = "sheet-row";
+  const labelEl = document.createElement("span");
+  labelEl.className = "sheet-label";
+  labelEl.textContent = label;
+  const valueEl = document.createElement("span");
+  valueEl.className = "sheet-value";
+  valueEl.textContent = value;
+  row.append(labelEl, valueEl);
+  return row;
+};
+
+const renderSheet = () => {
+  const piece = selectedPiece();
+  els.sheetName.textContent = piece?.name || "No piece";
+
+  const body = document.createElement("div");
+  body.className = "sheet-grid";
+  if (!piece) {
+    body.append(sheetRow("Status", "No active token"));
+    body.append(sheetRow("Board", selectedBoard()?.name || "None"));
+    els.sheetBody.replaceChildren(body);
+    return;
+  }
+
+  const stats = document.createElement("div");
+  stats.className = "stat-strip";
+  for (const [label, value] of [["Str", 7], ["Dex", 8], ["End", 8], ["Int", 7], ["Edu", 9], ["Soc", 6]]) {
+    const stat = document.createElement("div");
+    stat.className = "stat";
+    const name = document.createElement("b");
+    name.textContent = label;
+    const number = document.createElement("span");
+    number.textContent = String(value);
+    stat.append(name, number);
+    stats.append(stat);
+  }
+
+  const chips = document.createElement("div");
+  chips.className = "chip-list";
+  for (const label of ["Vacc Suit-0", "Gun Combat-0", "Mechanic-0", "Recon-0"]) {
+    const chip = document.createElement("span");
+    chip.textContent = label;
+    chips.append(chip);
+  }
+
+  body.append(
+    sheetRow("Type", "PLAYER"),
+    sheetRow("Position", Math.round(piece.x) + ", " + Math.round(piece.y)),
+    sheetRow("Visibility", piece.visibility),
+    stats,
+    chips
+  );
+  els.sheetBody.replaceChildren(body);
+};
+
+const renderRail = () => {
+  const pieces = boardPieces();
+  if (pieces.length === 0) {
+    const empty = document.createElement("button");
+    empty.className = "rail-piece";
+    empty.type = "button";
+    empty.disabled = true;
+    const score = document.createElement("span");
+    score.className = "rail-score";
+    score.textContent = "-";
+    const avatar = document.createElement("span");
+    avatar.className = "rail-avatar";
+    avatar.textContent = "+";
+    empty.append(score, avatar);
+    els.initiativeRail.replaceChildren(empty);
+    renderSheet();
+    return;
+  }
+
+  els.initiativeRail.replaceChildren(...pieces.map((piece, index) => {
+    const button = document.createElement("button");
+    button.className = "rail-piece" + (piece.id === selectedPieceId ? " selected" : "");
+    button.type = "button";
+    button.title = piece.name;
+    const score = document.createElement("span");
+    score.className = "rail-score";
+    score.textContent = String(Math.max(1, 7 - index));
+    const avatar = document.createElement("span");
+    avatar.className = "rail-avatar";
+    avatar.textContent = (piece.name || "?").slice(0, 1).toUpperCase();
+    button.append(score, avatar);
+    button.addEventListener("click", () => {
+      selectedPieceId = piece.id;
+      setSheetOpen(true);
+      render();
+    });
+    return button;
+  }));
+  renderSheet();
+};
+
 const drawGrid = (board, scaleX, scaleY) => {
   const grid = Math.max(25, board.scale || 50);
   ctx.strokeStyle = "rgba(238, 244, 241, 0.08)";
@@ -846,8 +1386,8 @@ const render = () => {
     ctx.fillRect(0, 0, cssWidth, cssHeight);
     ctx.fillStyle = "#a6b4af";
     ctx.font = "16px system-ui";
-    ctx.fillText("Open or bootstrap a room", 24, 34);
-    renderDiceLog();
+    ctx.fillText("Open or bootstrap a room from the menu", 24, 34);
+    renderRail();
     return;
   }
 
@@ -875,20 +1415,7 @@ const render = () => {
     ctx.fillText(piece.name, drawX + 8, drawY + 22);
   }
 
-  renderDiceLog();
-};
-
-const renderDiceLog = () => {
-  const rolls = [...(state?.diceLog || [])].slice(-8).reverse();
-  els.diceLog.replaceChildren(...rolls.map((roll) => {
-    const li = document.createElement("li");
-    const title = document.createElement("strong");
-    title.textContent = roll.expression + " = " + roll.total;
-    const meta = document.createElement("span");
-    meta.textContent = roll.reason + " · " + roll.rolls.join(", ");
-    li.append(title, meta);
-    return li;
-  }));
+  renderRail();
 };
 
 const PIP_SLOTS = {
@@ -941,6 +1468,8 @@ const buildDie = (value) => {
 };
 
 const animateRoll = (roll) => {
+  if (diceHideTimer) window.clearTimeout(diceHideTimer);
+  els.diceOverlay.classList.add("visible");
   const row = document.createElement("div");
   row.className = "dice-row";
   for (const value of roll.rolls) row.append(buildDie(value));
@@ -953,6 +1482,9 @@ const animateRoll = (roll) => {
     total.textContent = String(roll.total);
     for (const die of row.querySelectorAll(".die")) die.classList.remove("rolling");
   }, 900);
+  diceHideTimer = window.setTimeout(() => {
+    els.diceOverlay.classList.remove("visible");
+  }, 4200);
 };
 
 els.canvas.addEventListener("pointerdown", (event) => {
@@ -1013,8 +1545,28 @@ els.roomForm.addEventListener("submit", (event) => {
   firstStateApplied = false;
   latestDiceId = null;
   selectedPieceId = null;
+  setSheetOpen(false);
+  els.roomDialog.close();
   connectSocket();
   fetchState().catch((error) => setError(error.message));
+});
+
+els.menu.addEventListener("click", () => {
+  els.roomDialog.showModal();
+});
+
+els.roomCancel.addEventListener("click", () => {
+  els.roomDialog.close();
+});
+
+els.sheetButton.addEventListener("click", () => {
+  if (!selectedPieceId && selectedPiece()) selectedPieceId = selectedPiece().id;
+  setSheetOpen(!sheetOpen);
+  render();
+});
+
+els.sheetClose.addEventListener("click", () => {
+  setSheetOpen(false);
 });
 
 els.bootstrap.addEventListener("click", () => {
