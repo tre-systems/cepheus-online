@@ -161,5 +161,47 @@ describe('game state projection', () => {
     ])
 
     assert.equal(state?.pieces[pieceId]?.characterId, characterId)
+    assert.equal(state?.pieces[pieceId]?.width, 50)
+    assert.equal(state?.pieces[pieceId]?.height, 50)
+    assert.equal(state?.pieces[pieceId]?.scale, 1)
+  })
+
+  it('projects custom piece dimensions', () => {
+    const pieceId = asPieceId('door-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'BoardCreated',
+        boardId: asBoardId('board-1'),
+        name: 'Downport',
+        imageAssetId: null,
+        url: null,
+        width: 1000,
+        height: 800,
+        scale: 50
+      }),
+      envelope(3, {
+        type: 'PieceCreated',
+        pieceId,
+        boardId: asBoardId('board-1'),
+        characterId: null,
+        name: 'Airlock',
+        imageAssetId: null,
+        x: 10,
+        y: 20,
+        width: 50,
+        height: 100,
+        scale: 1.5
+      })
+    ])
+
+    assert.equal(state?.pieces[pieceId]?.width, 50)
+    assert.equal(state?.pieces[pieceId]?.height, 100)
+    assert.equal(state?.pieces[pieceId]?.scale, 1.5)
   })
 })

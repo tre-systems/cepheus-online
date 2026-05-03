@@ -144,6 +144,20 @@ const parseNumber = (
   return ok(raw)
 }
 
+const parseOptionalFinitePositiveNumber = (
+  raw: unknown,
+  label: string
+): Result<number | undefined, CommandError> => {
+  if (raw === undefined) return ok(undefined)
+  const value = parseNumber(raw, label)
+  if (!value.ok) return value
+  if (value.value <= 0) {
+    return err(invalidCommand(`${label} must be positive`))
+  }
+
+  return ok(value.value)
+}
+
 const parseNullableNumber = (
   raw: unknown,
   label: string
@@ -455,6 +469,12 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
       if (!x.ok) return x
       const y = parseNumber(raw.y, 'y')
       if (!y.ok) return y
+      const width = parseOptionalFinitePositiveNumber(raw.width, 'width')
+      if (!width.ok) return width
+      const height = parseOptionalFinitePositiveNumber(raw.height, 'height')
+      if (!height.ok) return height
+      const scale = parseOptionalFinitePositiveNumber(raw.scale, 'scale')
+      if (!scale.ok) return scale
 
       return ok({
         type: 'CreatePiece',
@@ -465,7 +485,10 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
         name: name.value,
         imageAssetId: imageAssetId.value,
         x: x.value,
-        y: y.value
+        y: y.value,
+        ...(width.value === undefined ? {} : {width: width.value}),
+        ...(height.value === undefined ? {} : {height: height.value}),
+        ...(scale.value === undefined ? {} : {scale: scale.value})
       })
     }
 

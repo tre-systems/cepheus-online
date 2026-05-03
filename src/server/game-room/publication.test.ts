@@ -134,6 +134,65 @@ describe('room publication flow', () => {
     assert.equal((await readEventStream(storage, gameId)).length, 3)
   })
 
+  it('publishes and projects custom piece dimensions', async () => {
+    const storage = createMemoryStorage()
+    const pieceId = asPieceId('door-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, createBoardCommand())
+
+    const created = await publish(storage, {
+      type: 'CreatePiece',
+      gameId,
+      actorId,
+      pieceId,
+      boardId: asBoardId('board-1'),
+      name: 'Airlock',
+      x: 10,
+      y: 10,
+      width: 50,
+      height: 100,
+      scale: 1.5
+    })
+
+    assert.equal(created.ok, true)
+    if (!created.ok) return
+    assert.equal(created.value.state.pieces[pieceId]?.width, 50)
+    assert.equal(created.value.state.pieces[pieceId]?.height, 100)
+    assert.equal(created.value.state.pieces[pieceId]?.scale, 1.5)
+    const storedEvent = (await readEventStream(storage, gameId))[2]?.event
+    assert.equal(storedEvent?.type, 'PieceCreated')
+    if (storedEvent?.type !== 'PieceCreated') return
+    assert.equal(storedEvent.width, 50)
+    assert.equal(storedEvent.height, 100)
+    assert.equal(storedEvent.scale, 1.5)
+  })
+
+  it('rejects invalid custom piece dimensions without mutating storage', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+    await publish(storage, createBoardCommand())
+
+    const rejected = await publish(storage, {
+      type: 'CreatePiece',
+      gameId,
+      actorId,
+      pieceId: asPieceId('door-1'),
+      boardId: asBoardId('board-1'),
+      name: 'Airlock',
+      x: 10,
+      y: 10,
+      width: 50,
+      height: 0,
+      scale: 1
+    })
+
+    assert.equal(rejected.ok, false)
+    if (rejected.ok) return
+    assert.equal(rejected.error.code, 'invalid_command')
+    assert.equal(rejected.error.message, 'height must be positive')
+    assert.equal((await readEventStream(storage, gameId)).length, 2)
+  })
+
   it('updates manual character sheet fields and preserves omitted fields', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')

@@ -100,6 +100,20 @@ const CLIENT_HTML = `<!doctype html>
             <span>Image file</span>
             <input id="pieceImageFileInput" name="pieceImageFile" type="file" accept="image/*">
           </label>
+          <div class="piece-size-fields">
+            <label>
+              <span>Width</span>
+              <input id="pieceWidthInput" name="pieceWidth" inputmode="numeric" autocomplete="off" value="50">
+            </label>
+            <label>
+              <span>Height</span>
+              <input id="pieceHeightInput" name="pieceHeight" inputmode="numeric" autocomplete="off" value="50">
+            </label>
+            <label>
+              <span>Scale</span>
+              <input id="pieceScaleInput" name="pieceScale" inputmode="decimal" autocomplete="off" value="1">
+            </label>
+          </div>
           <label class="piece-sheet-field">
             <input id="pieceSheetInput" name="pieceSheet" type="checkbox" checked>
             <span>Create sheet</span>
@@ -1157,6 +1171,19 @@ h1 {
   align-items: center;
 }
 
+.piece-size-fields {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.piece-size-fields label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
 .piece-sheet-field input {
   width: 18px;
   min-height: 18px;
@@ -1309,6 +1336,9 @@ const els = {
   pieceNameInput: document.getElementById("pieceNameInput"),
   pieceImageInput: document.getElementById("pieceImageInput"),
   pieceImageFileInput: document.getElementById("pieceImageFileInput"),
+  pieceWidthInput: document.getElementById("pieceWidthInput"),
+  pieceHeightInput: document.getElementById("pieceHeightInput"),
+  pieceScaleInput: document.getElementById("pieceScaleInput"),
   pieceSheetInput: document.getElementById("pieceSheetInput"),
   boardNameInput: document.getElementById("boardNameInput"),
   boardImageInput: document.getElementById("boardImageInput"),
@@ -1507,6 +1537,11 @@ const parsePositiveIntegerInput = (input, fallback) => {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 };
 
+const parsePositiveNumberInput = (input, fallback) => {
+  const value = Number.parseFloat(input.value);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+};
+
 const readSelectedImageFileAsDataUrl = (input) => new Promise((resolve, reject) => {
   const file = input.files?.[0];
   if (!file) {
@@ -1554,6 +1589,29 @@ const applyBoardFileDimensions = async () => {
   const dimensions = await readImageDimensions(file);
   els.boardWidthInput.value = String(dimensions.width);
   els.boardHeightInput.value = String(dimensions.height);
+};
+
+const applyPieceFileDimensions = async () => {
+  const file = els.pieceImageFileInput.files?.[0];
+  if (!file) return;
+  const dimensions = await readImageDimensions(file);
+  const shortAxis = Math.min(dimensions.width, dimensions.height);
+  const longAxis = Math.max(dimensions.width, dimensions.height);
+  if (shortAxis > 301 || longAxis / shortAxis > 2.2) return;
+
+  const aspectRatio = dimensions.width / dimensions.height;
+  if (aspectRatio > 1.45) {
+    els.pieceWidthInput.value = "100";
+    els.pieceHeightInput.value = "50";
+    return;
+  }
+  if (aspectRatio < 0.69) {
+    els.pieceWidthInput.value = "50";
+    els.pieceHeightInput.value = "100";
+    return;
+  }
+  els.pieceWidthInput.value = "50";
+  els.pieceHeightInput.value = "50";
 };
 
 const createManualCharacterCommand = (characterId, name) => ({
@@ -1637,9 +1695,12 @@ const createCustomPiece = async () => {
     return;
   }
 
+  const width = parsePositiveIntegerInput(els.pieceWidthInput, 50);
+  const height = parsePositiveIntegerInput(els.pieceHeightInput, 50);
+  const scale = parsePositiveNumberInput(els.pieceScaleInput, 1);
   const pieceIndex = boardPieces().length;
-  const x = Math.max(0, Math.min(board.width - 50, 160 + (pieceIndex % 8) * 58));
-  const y = Math.max(0, Math.min(board.height - 50, 140 + Math.floor(pieceIndex / 8) * 58));
+  const x = Math.max(0, Math.min(board.width - width * scale, 160 + (pieceIndex % 8) * 58));
+  const y = Math.max(0, Math.min(board.height - height * scale, 140 + Math.floor(pieceIndex / 8) * 58));
   const pieceId = uniquePieceId(name);
   const characterId = els.pieceSheetInput.checked ? uniqueCharacterId(name) : null;
   const imageAssetId = await readSelectedImageFileAsDataUrl(els.pieceImageFileInput) || els.pieceImageInput.value.trim() || null;
@@ -1657,12 +1718,18 @@ const createCustomPiece = async () => {
     characterId,
     imageAssetId,
     x,
-    y
+    y,
+    width,
+    height,
+    scale
   });
   selectedPieceId = pieceId;
   els.pieceNameInput.value = "";
   els.pieceImageInput.value = "";
   els.pieceImageFileInput.value = "";
+  els.pieceWidthInput.value = "50";
+  els.pieceHeightInput.value = "50";
+  els.pieceScaleInput.value = "1";
   els.roomDialog.close();
   render();
 };
@@ -2360,6 +2427,10 @@ els.refresh.addEventListener("click", () => {
 
 els.createPiece.addEventListener("click", () => {
   createCustomPiece().catch((error) => setError(error.message));
+});
+
+els.pieceImageFileInput.addEventListener("change", () => {
+  applyPieceFileDimensions().catch((error) => setError(error.message));
 });
 
 els.createBoard.addEventListener("click", () => {

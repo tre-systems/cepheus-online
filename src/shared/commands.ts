@@ -57,6 +57,9 @@ export type Command =
       imageAssetId?: string | null
       x: number
       y: number
+      width?: number
+      height?: number
+      scale?: number
     }
   | {
       type: 'MovePiece'

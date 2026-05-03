@@ -256,6 +256,18 @@ export const deriveEventsForCommand = (
       if (!x.ok) return x
       const y = requireFiniteCoordinate(command.y, 'y')
       if (!y.ok) return y
+      if (command.width !== undefined) {
+        const width = requireFinitePositive(command.width, 'width')
+        if (!width.ok) return width
+      }
+      if (command.height !== undefined) {
+        const height = requireFinitePositive(command.height, 'height')
+        if (!height.ok) return height
+      }
+      if (command.scale !== undefined) {
+        const scale = requireFinitePositive(command.scale, 'scale')
+        if (!scale.ok) return scale
+      }
 
       return ok([
         {
@@ -266,7 +278,10 @@ export const deriveEventsForCommand = (
           name: command.name,
           imageAssetId: command.imageAssetId ?? null,
           x: command.x,
-          y: command.y
+          y: command.y,
+          ...(command.width === undefined ? {} : {width: command.width}),
+          ...(command.height === undefined ? {} : {height: command.height}),
+          ...(command.scale === undefined ? {} : {scale: command.scale})
         }
       ])
     }

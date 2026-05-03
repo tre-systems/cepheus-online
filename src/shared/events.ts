@@ -56,6 +56,9 @@ export type GameEvent =
       imageAssetId: string | null
       x: number
       y: number
+      width?: number
+      height?: number
+      scale?: number
     }
   | {
       type: 'PieceMoved'

@@ -120,9 +120,9 @@ export const projectGameState = (
           x: event.x,
           y: event.y,
           z: 0,
-          width: 50,
-          height: 50,
-          scale: 1,
+          width: event.width ?? 50,
+          height: event.height ?? 50,
+          scale: event.scale ?? 1,
           visibility: 'PREVIEW',
           freedom: 'LOCKED'
         }

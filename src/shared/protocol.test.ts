@@ -81,6 +81,60 @@ describe('protocol validation', () => {
     assert.equal(command.characterId, 'enemy-character-1')
   })
 
+  it('accepts optional custom piece dimensions', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-2c',
+      command: {
+        type: 'CreatePiece',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        pieceId: 'door-1',
+        boardId: 'main-board',
+        name: 'Door',
+        x: 100,
+        y: 150,
+        width: 50,
+        height: 100,
+        scale: 1.5
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    const {command} = result.value
+    assert.equal(command.type, 'CreatePiece')
+    if (command.type !== 'CreatePiece') return
+    assert.equal(command.width, 50)
+    assert.equal(command.height, 100)
+    assert.equal(command.scale, 1.5)
+  })
+
+  it('rejects non-positive custom piece dimensions', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-2d',
+      command: {
+        type: 'CreatePiece',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        pieceId: 'door-1',
+        boardId: 'main-board',
+        name: 'Door',
+        x: 100,
+        y: 150,
+        width: 0
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'width must be positive')
+  })
+
   it('accepts partial manual character sheet updates', () => {
     const result = decodeClientMessage({
       type: 'command',

@@ -40,6 +40,14 @@ type UpdateCharacterSheetCommand = Extract<
   Command,
   {type: 'UpdateCharacterSheet'}
 >
+type CreatePieceCommand = Extract<Command, {type: 'CreatePiece'}>
+type CreatePieceDimensions = {
+  width: number
+  height: number
+  scale: number
+}
+type CreatePieceCommandWithDimensions = CreatePieceCommand &
+  Partial<CreatePieceDimensions>
 
 export const resolveClientIdentity = (
   searchParams: URLSearchParams
@@ -128,12 +136,15 @@ export const buildCreatePieceCommand = ({
   identity,
   boardId = DEFAULT_BOARD_ID,
   characterId = null,
-  imageAssetId = null
+  imageAssetId = null,
+  width = 50,
+  height = 50,
+  scale = 1
 }: ClientCommandOptions & {
   boardId?: BoardId
   characterId?: CharacterId | null
   imageAssetId?: string | null
-}): Command => ({
+} & Partial<CreatePieceDimensions>): CreatePieceCommandWithDimensions => ({
   type: 'CreatePiece',
   gameId: identity.gameId,
   actorId: identity.actorId,
@@ -143,7 +154,10 @@ export const buildCreatePieceCommand = ({
   name: 'Scout',
   imageAssetId,
   x: 220,
-  y: 180
+  y: 180,
+  width,
+  height,
+  scale
 })
 
 export const buildMovePieceCommand = ({

@@ -12,6 +12,7 @@ import type {GameState} from '../shared/state'
 import {
   applyServerMessage,
   buildBootstrapCommands,
+  buildCreatePieceCommand,
   buildDefaultCharacterSheetUpdateCommand,
   buildMovePieceCommand,
   resolveClientIdentity
@@ -155,6 +156,33 @@ describe('client command helpers', () => {
     if (commands[0]?.type !== 'CreatePiece') return
     assert.equal(commands[0].boardId, boardId)
     assert.equal(commands[0].characterId, characterId)
+    const commandWithDimensions = commands[0] as typeof commands[0] & {
+      width?: number
+      height?: number
+      scale?: number
+    }
+    assert.equal(commandWithDimensions.width, 50)
+    assert.equal(commandWithDimensions.height, 50)
+    assert.equal(commandWithDimensions.scale, 1)
+  })
+
+  it('builds create piece commands with custom dimensions', () => {
+    const command = buildCreatePieceCommand({
+      requestId: 'piece-1',
+      identity,
+      boardId,
+      characterId,
+      width: 80,
+      height: 60,
+      scale: 1.5
+    })
+
+    assert.equal(command.type, 'CreatePiece')
+    assert.equal(command.boardId, boardId)
+    assert.equal(command.characterId, characterId)
+    assert.equal(command.width, 80)
+    assert.equal(command.height, 60)
+    assert.equal(command.scale, 1.5)
   })
 
   it('replaces authoritative state on accepted messages', () => {
