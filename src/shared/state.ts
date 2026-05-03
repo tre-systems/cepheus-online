@@ -47,6 +47,7 @@ export interface PieceState {
   id: PieceId
   boardId: BoardId
   characterId: CharacterId | null
+  imageAssetId: string | null
   name: string
   x: number
   y: number

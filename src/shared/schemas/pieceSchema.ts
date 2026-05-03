@@ -47,6 +47,14 @@ const pieceSchema = Object.freeze({
       enum: [...pieceEnum],
       enumNames: pieceEnum.map(i => i.charAt(0).toUpperCase() + i.slice(1))
     },
+    imageAssetId: {
+      title: 'Counter Image',
+      type: ['string', 'null'],
+      default: null,
+      errorMessage: {
+        type: 'Must be an asset id or image URL.'
+      }
+    },
     scale: {
       type: 'number',
       title: 'Scale',

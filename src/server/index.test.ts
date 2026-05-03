@@ -40,6 +40,8 @@ describe('Worker static client', () => {
     assert.equal(body.includes('new WebSocket'), true)
     assert.equal(body.includes('serviceWorker'), true)
     assert.equal(body.includes('PIP_SLOTS'), true)
+    assert.equal(body.includes('pieceImageCache'), true)
+    assert.equal(body.includes('drawImage(image'), true)
     assert.equal(body.includes('renderRail'), true)
     assert.equal(body.includes('setSheetOpen'), true)
   })

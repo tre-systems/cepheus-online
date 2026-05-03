@@ -37,6 +37,7 @@ export type GameEvent =
       pieceId: PieceId
       boardId: BoardId
       name: string
+      imageAssetId: string | null
       x: number
       y: number
     }

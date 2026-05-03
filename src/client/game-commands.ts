@@ -72,14 +72,19 @@ export const buildCreateBoardCommand = ({
 
 export const buildCreatePieceCommand = ({
   identity,
-  boardId = asBoardId('main-board')
-}: ClientCommandOptions & {boardId?: BoardId}): Command => ({
+  boardId = asBoardId('main-board'),
+  imageAssetId = null
+}: ClientCommandOptions & {
+  boardId?: BoardId
+  imageAssetId?: string | null
+}): Command => ({
   type: 'CreatePiece',
   gameId: identity.gameId,
   actorId: identity.actorId,
   pieceId: asPieceId('scout-1'),
   boardId,
   name: 'Scout',
+  imageAssetId,
   x: 220,
   y: 180
 })

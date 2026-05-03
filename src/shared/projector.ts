@@ -67,6 +67,7 @@ export const projectGameState = (
           id: event.pieceId,
           boardId: event.boardId,
           characterId: null,
+          imageAssetId: event.imageAssetId,
           name: event.name,
           x: event.x,
           y: event.y,

@@ -4,6 +4,7 @@ build/
 coverage/
 .wrangler/
 Geomorphs/
+Counters/
 .DS_Store
 *.log
 *.local

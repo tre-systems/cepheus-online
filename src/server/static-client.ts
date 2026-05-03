@@ -1089,6 +1089,7 @@ let sheetOpen = false;
 let drag = null;
 let requestCounter = 0;
 let diceHideTimer = null;
+const pieceImageCache = new Map();
 
 els.roomInput.value = roomId;
 els.userInput.value = actorId;
@@ -1165,6 +1166,7 @@ const createPieceCommand = (boardId) => ({
   pieceId: "scout-1",
   boardId,
   name: "Scout",
+  imageAssetId: null,
   x: 220,
   y: 180
 });
@@ -1263,6 +1265,47 @@ const boardPieces = () => {
   const board = selectedBoard();
   if (!state || !board) return [];
   return Object.values(state.pieces).filter((piece) => piece.boardId === board.id);
+};
+
+const pieceImageUrl = (piece) => {
+  const imageAssetId = piece.imageAssetId || "";
+  if (
+    imageAssetId.startsWith("/") ||
+    imageAssetId.startsWith("http://") ||
+    imageAssetId.startsWith("https://") ||
+    imageAssetId.startsWith("blob:") ||
+    imageAssetId.startsWith("data:image/")
+  ) {
+    return imageAssetId;
+  }
+  return null;
+};
+
+const cssUrl = (url) => "url(" + JSON.stringify(url) + ")";
+
+const loadPieceImage = (piece) => {
+  const url = pieceImageUrl(piece);
+  if (!url) return null;
+
+  const cached = pieceImageCache.get(url);
+  if (cached) {
+    return cached.loaded && !cached.failed ? cached.image : null;
+  }
+
+  const image = new Image();
+  image.decoding = "async";
+  image.onload = () => {
+    const cachedState = pieceImageCache.get(url);
+    if (cachedState) cachedState.loaded = true;
+    render();
+  };
+  image.onerror = () => {
+    const cachedState = pieceImageCache.get(url);
+    if (cachedState) cachedState.failed = true;
+  };
+  pieceImageCache.set(url, {image, loaded: false, failed: false});
+  image.src = url;
+  return null;
 };
 
 const canvasPoint = (event) => {
@@ -1382,7 +1425,14 @@ const renderRail = () => {
     score.textContent = String(Math.max(1, 7 - index));
     const avatar = document.createElement("span");
     avatar.className = "rail-avatar";
-    avatar.textContent = (piece.name || "?").slice(0, 1).toUpperCase();
+    const imageUrl = pieceImageUrl(piece);
+    if (imageUrl) {
+      avatar.style.backgroundImage = cssUrl(imageUrl);
+      avatar.style.backgroundSize = "cover";
+      avatar.style.backgroundPosition = "center";
+    } else {
+      avatar.textContent = (piece.name || "?").slice(0, 1).toUpperCase();
+    }
     button.append(score, avatar);
     button.addEventListener("click", () => {
       selectedPieceId = piece.id;
@@ -1447,16 +1497,25 @@ const render = () => {
     const drawY = (drag && drag.pieceId === piece.id ? drag.y : piece.y) * scaleY;
     const drawW = piece.width * piece.scale * scaleX;
     const drawH = piece.height * piece.scale * scaleY;
+    const image = loadPieceImage(piece);
     ctx.fillStyle = piece.visibility === "PREVIEW" ? "#f2b84b" : "#5fd0a2";
     ctx.strokeStyle = isSelected ? "#ffffff" : "#0b1211";
     ctx.lineWidth = isSelected ? 3 : 2;
     ctx.beginPath();
     ctx.roundRect(drawX, drawY, drawW, drawH, 10);
     ctx.fill();
+    if (image) {
+      ctx.save();
+      ctx.clip();
+      ctx.drawImage(image, drawX, drawY, drawW, drawH);
+      ctx.restore();
+    }
     ctx.stroke();
-    ctx.fillStyle = "#07100d";
-    ctx.font = "700 13px system-ui";
-    ctx.fillText(piece.name, drawX + 8, drawY + 22);
+    if (!image) {
+      ctx.fillStyle = "#07100d";
+      ctx.font = "700 13px system-ui";
+      ctx.fillText(piece.name, drawX + 8, drawY + 22);
+    }
   }
 
   renderRail();

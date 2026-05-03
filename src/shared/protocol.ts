@@ -103,6 +103,19 @@ const parseString = (
   return ok(value)
 }
 
+const parseOptionalString = (
+  raw: unknown,
+  label: string
+): Result<string | null, CommandError> => {
+  if (raw === undefined || raw === null) return ok(null)
+  if (!isString(raw)) return err(invalidCommand(`${label} must be a string`))
+
+  const value = raw.trim()
+  if (!value) return ok(null)
+
+  return ok(value)
+}
+
 const parseNumber = (
   raw: unknown,
   label: string
@@ -250,6 +263,8 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
       if (!boardId.ok) return boardId
       const name = parseString(raw.name, 'name')
       if (!name.ok) return name
+      const imageAssetId = parseOptionalString(raw.imageAssetId, 'imageAssetId')
+      if (!imageAssetId.ok) return imageAssetId
       const x = parseNumber(raw.x, 'x')
       if (!x.ok) return x
       const y = parseNumber(raw.y, 'y')
@@ -261,6 +276,7 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
         pieceId: pieceId.value,
         boardId: boardId.value,
         name: name.value,
+        imageAssetId: imageAssetId.value,
         x: x.value,
         y: y.value
       })

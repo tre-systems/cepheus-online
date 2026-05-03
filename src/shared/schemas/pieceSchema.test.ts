@@ -33,6 +33,12 @@ describe('pieceSchema', () => {
     expect(type.enum).toContain('miniature')
   })
 
+  it('should have nullable image asset property', () => {
+    const imageAssetId = pieceSchema.properties.imageAssetId
+    expect(imageAssetId.title).toBe('Counter Image')
+    expect(imageAssetId.type).toContain('null')
+  })
+
   it('should have scale property with valid range', () => {
     const scale = pieceSchema.properties.scale
     expect(scale.title).toBe('Scale')

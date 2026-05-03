@@ -55,6 +55,7 @@ const createPieceBody = () =>
     pieceId: 'scout-1',
     boardId: 'main-board',
     name: 'Scout',
+    imageAssetId: '/assets/counters/TroopsBlackOnGreen.png',
     x: 100,
     y: 150
   })
@@ -124,6 +125,10 @@ describe('GameRoomDO HTTP skeleton', () => {
     assert.equal(message.eventSeq, 4)
     assert.equal(message.state.pieces['scout-1'].x, 300)
     assert.equal(message.state.pieces['scout-1'].y, 260)
+    assert.equal(
+      message.state.pieces['scout-1'].imageAssetId,
+      '/assets/counters/TroopsBlackOnGreen.png'
+    )
   })
 
   it('filters hidden pieces out of player projections', async () => {

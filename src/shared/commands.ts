@@ -34,6 +34,7 @@ export type Command =
       pieceId: PieceId
       boardId: BoardId
       name: string
+      imageAssetId?: string | null
       x: number
       y: number
     }

@@ -154,6 +154,7 @@ export const deriveEventsForCommand = (
           pieceId: command.pieceId,
           boardId: command.boardId,
           name: command.name,
+          imageAssetId: command.imageAssetId ?? null,
           x: command.x,
           y: command.y
         }
