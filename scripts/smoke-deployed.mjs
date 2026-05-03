@@ -25,6 +25,7 @@ const CLIENT_MODULES = new Map([
         '/client/app/bootstrap-flow.js',
         '/client/app/character-sheet-view.js',
         '/client/app/dice-overlay.js',
+        '/client/app/door-los-view.js',
         '/client/app/image-assets.js',
         '/client/app/room-api.js'
       ]
@@ -44,9 +45,25 @@ const CLIENT_MODULES = new Map([
       imports: ['/client/dice.js']
     }
   ],
+  [
+    '/client/app/door-los-view.js',
+    {
+      markers: ['deriveDoorToggleViewModels', 'deriveVisiblePieceIds'],
+      imports: ['/shared/mapAssets.js']
+    }
+  ],
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
-  ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }]
+  ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }],
+  [
+    '/shared/mapAssets.js',
+    {
+      markers: ['filterVisibleMapTargets', 'validateMapLosSidecar'],
+      imports: ['/shared/result', '/shared/util']
+    }
+  ],
+  ['/shared/result', { markers: ['ok', 'err'] }],
+  ['/shared/util', { markers: ['isObject', 'clamp'] }]
 ])
 
 const usage = `Cepheus deployed Worker smoke

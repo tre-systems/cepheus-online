@@ -53,6 +53,7 @@ import {
   skillsFromText,
   skillRollReason
 } from './character-sheet-view.js'
+import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
 
 const DEFAULT_GAME_ID = 'demo-room'
@@ -863,6 +864,33 @@ const freedomActions = (piece) => {
   return actions
 }
 
+const boardDoorActions = (board) => {
+  const doors = deriveDoorToggleViewModels(board)
+  if (doors.length === 0) return null
+
+  const actions = document.createElement('div')
+  actions.className = 'sheet-actions'
+  for (const door of doors) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = door.toggleLabel
+    button.className = door.open ? 'active' : ''
+    button.title = `${door.label}: ${door.stateLabel}`
+    button.addEventListener('click', () => {
+      sendCommand({
+        type: 'SetDoorOpen',
+        gameId: roomId,
+        actorId,
+        boardId: board.id,
+        doorId: door.id,
+        open: door.nextOpen
+      }).catch((error) => setError(error.message))
+    })
+    actions.append(button)
+  }
+  return actions
+}
+
 const skillEditor = (piece, character, skills) => {
   if (!piece?.characterId || !character) return null
 
@@ -891,6 +919,7 @@ const skillEditor = (piece, character, skills) => {
 }
 
 const renderDetailsTab = (body, piece, character) => {
+  const doorActions = boardDoorActions(selectedBoard())
   if (!character) {
     body.append(
       sheetSectionTitle('Token'),
@@ -902,6 +931,7 @@ const renderDetailsTab = (body, piece, character) => {
       freedomActions(piece),
       emptySheetText(characterSheetEmptyLabels.noLinkedCharacterSheet)
     )
+    if (doorActions) body.append(sheetSectionTitle('Doors'), doorActions)
     return
   }
 
@@ -921,6 +951,7 @@ const renderDetailsTab = (body, piece, character) => {
     sheetSectionTitle('Skills'),
     skillChips(deriveCharacterSkills(character))
   )
+  if (doorActions) body.append(sheetSectionTitle('Doors'), doorActions)
 }
 
 const renderActionTab = (body, piece, character) => {
@@ -1085,6 +1116,8 @@ const renderSheet = () => {
   if (!piece) {
     body.append(sheetRow('Status', characterSheetEmptyLabels.noActiveToken))
     body.append(sheetRow('Board', selectedBoard()?.name || 'None'))
+    const doorActions = boardDoorActions(selectedBoard())
+    if (doorActions) body.append(sheetSectionTitle('Doors'), doorActions)
     els.sheetBody.replaceChildren(body)
     return
   }

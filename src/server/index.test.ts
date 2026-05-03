@@ -18,6 +18,7 @@ const clientModules = new Map<
         '/client/app/bootstrap-flow.js',
         '/client/app/character-sheet-view.js',
         '/client/app/dice-overlay.js',
+        '/client/app/door-los-view.js',
         '/client/app/image-assets.js',
         '/client/app/room-api.js'
       ]
@@ -37,9 +38,25 @@ const clientModules = new Map<
       imports: ['/client/dice.js']
     }
   ],
+  [
+    '/client/app/door-los-view.js',
+    {
+      markers: ['deriveDoorToggleViewModels', 'deriveVisiblePieceIds'],
+      imports: ['/shared/mapAssets.js']
+    }
+  ],
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
-  ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }]
+  ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }],
+  [
+    '/shared/mapAssets.js',
+    {
+      markers: ['filterVisibleMapTargets', 'validateMapLosSidecar'],
+      imports: ['/shared/result', '/shared/util']
+    }
+  ],
+  ['/shared/result', { markers: ['ok', 'err'] }],
+  ['/shared/util', { markers: ['isObject', 'clamp'] }]
 ])
 
 const fetchStaticClient = async (pathname: string): Promise<Response> =>
@@ -284,6 +301,27 @@ describe('Worker static client', () => {
     assert.equal(body.includes('characteristicRows'), true)
     assert.equal(body.includes('equipmentDisplayItems'), true)
     assert.equal(body.includes('skillsFromText'), true)
+  })
+
+  it('serves the door LOS view and shared map helper modules', async () => {
+    const doorResponse = await fetchStaticClient('/client/app/door-los-view.js')
+    const doorBody = await doorResponse.text()
+    const mapResponse = await fetchStaticClient('/shared/mapAssets.js')
+    const mapBody = await mapResponse.text()
+
+    assert.equal(doorResponse.status, 200)
+    assert.equal(
+      doorResponse.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(doorBody.includes('deriveDoorToggleViewModels'), true)
+    assert.equal(doorBody.includes('deriveVisiblePieceIds'), true)
+    assert.equal(mapResponse.status, 200)
+    assert.equal(
+      mapResponse.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(mapBody.includes('filterVisibleMapTargets'), true)
   })
 
   it('serves cubical dice styling', async () => {

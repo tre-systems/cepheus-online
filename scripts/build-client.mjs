@@ -76,6 +76,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/door-los-view.js',
+    source: join(compiledClientRoot, 'client', 'app', 'door-los-view.js'),
+    exportName: 'CLIENT_DOOR_LOS_VIEW_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/image-assets.js',
     source: join(compiledClientRoot, 'client', 'app', 'image-assets.js'),
     exportName: 'CLIENT_IMAGE_ASSETS_JS',
@@ -91,6 +97,36 @@ const assets = [
     pathname: '/client/dice.js',
     source: join(compiledClientRoot, 'client', 'dice.js'),
     exportName: 'CLIENT_DICE_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/mapAssets.js',
+    source: join(compiledClientRoot, 'shared', 'mapAssets.js'),
+    exportName: 'SHARED_MAP_ASSETS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/result.js',
+    source: join(compiledClientRoot, 'shared', 'result.js'),
+    exportName: 'SHARED_RESULT_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/result',
+    source: join(compiledClientRoot, 'shared', 'result.js'),
+    exportName: 'SHARED_RESULT_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/util.js',
+    source: join(compiledClientRoot, 'shared', 'util.js'),
+    exportName: 'SHARED_UTIL_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/util',
+    source: join(compiledClientRoot, 'shared', 'util.js'),
+    exportName: 'SHARED_UTIL_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {
