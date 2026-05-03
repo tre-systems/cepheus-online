@@ -4,6 +4,7 @@ build/
 coverage/
 .tmp/
 .wrangler/
+.vscode/
 Geomorphs/
 Counters/
 .DS_Store
