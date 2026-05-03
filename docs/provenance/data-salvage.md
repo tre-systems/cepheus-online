@@ -37,8 +37,10 @@ layout and the intended normalization target.
   constants into the schema file.
 - Rehomed schema type imports away from old path aliases.
 - Reimplemented the legacy character creation status machine and first career
-  rules helpers as pure shared code in `src/shared/characterCreation.ts`,
-  without XState, React, Zustand, Amplify, or Material UI.
+  rules helpers as pure shared code behind the
+  `src/shared/characterCreation.ts` facade, with implementation modules under
+  `src/shared/character-creation/`, without XState, React, Zustand, Amplify, or
+  Material UI.
 - Extracted the next layer of character creation primitives for skill
   normalization/cascade resolution, term outcome enumeration, aging effect
   selection, and mustering-out benefit resolution as pure shared helpers.
