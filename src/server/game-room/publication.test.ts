@@ -275,6 +275,34 @@ describe('room publication flow', () => {
     assert.equal(rejected.error.message, 'notes must be a string')
   })
 
+  it('rejects empty character sheet skills during publication', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+
+    const rejected = await publish(storage, {
+      type: 'UpdateCharacterSheet',
+      gameId,
+      actorId,
+      characterId,
+      skills: ['Pilot 1', '  ']
+    })
+
+    assert.equal(rejected.ok, false)
+    if (rejected.ok) return
+    assert.equal(rejected.error.code, 'invalid_command')
+    assert.equal(rejected.error.message, 'skills[1] cannot be empty')
+    assert.equal((await readEventStream(storage, gameId)).length, 2)
+  })
+
   it('validates piece character links during publication', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')

@@ -1110,6 +1110,36 @@ h1 {
   font-size: 12px;
 }
 
+.sheet-skill-editor {
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid rgba(244, 255, 248, 0.16);
+  padding-top: 8px;
+}
+
+.sheet-skill-editor label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sheet-skill-editor textarea {
+  min-height: 92px;
+  padding: 9px 10px;
+  line-height: 1.3;
+}
+
+.sheet-skill-editor button {
+  min-height: 34px;
+  justify-self: end;
+  padding: 0 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
 .sheet-empty {
   color: var(--muted);
   font-size: 12px;
@@ -2306,6 +2336,9 @@ const characterSkills = (character) => {
   return ["Vacc Suit-0", "Gun Combat-0", "Mechanic-0", "Recon-0"];
 };
 
+const skillListFromText = (value) =>
+  value.split(/[\n,]/).map((skill) => skill.trim()).filter(Boolean);
+
 const skillChips = (skills) => {
   const chips = document.createElement("div");
   chips.className = "chip-list";
@@ -2361,6 +2394,34 @@ const freedomActions = (piece) => {
   return actions;
 };
 
+const skillEditor = (piece, character, skills) => {
+  if (!piece?.characterId || !character) return null;
+
+  const form = document.createElement("div");
+  form.className = "sheet-skill-editor";
+  const label = document.createElement("label");
+  label.textContent = "Skills";
+  const textarea = document.createElement("textarea");
+  textarea.value = skills.join("\n");
+  textarea.placeholder = "Vacc Suit-0\\nGun Combat-0";
+  textarea.spellcheck = false;
+  const save = document.createElement("button");
+  save.type = "button";
+  save.textContent = "Save skills";
+  save.addEventListener("click", () => {
+    sendCommand({
+      type: "UpdateCharacterSheet",
+      gameId: roomId,
+      actorId,
+      characterId: piece.characterId,
+      skills: skillListFromText(textarea.value)
+    }).catch((error) => setError(error.message));
+  });
+  label.append(textarea);
+  form.append(label, save);
+  return form;
+};
+
 const renderDetailsTab = (body, piece, character) => {
   body.append(
     sheetRow("Type", character?.type || "PLAYER"),
@@ -2400,7 +2461,9 @@ const renderActionTab = (body, piece, character) => {
     });
     actions.append(button);
   }
-  body.append(actions);
+  const editor = skillEditor(piece, character, skills);
+  if (editor) body.append(actions, editor);
+  else body.append(actions);
 };
 
 const itemName = (item) => item?.Name || item?.name || "Item";
