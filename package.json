@@ -6,6 +6,8 @@
   "scripts": {
     "build:client": "node scripts/build-client.mjs",
     "check": "tsc --noEmit",
+    "deploy": "npm run build:client && wrangler deploy",
+    "deploy:dry-run": "npm run build:client && wrangler deploy --dry-run",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "lint": "biome lint .",
@@ -18,6 +20,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.14",
     "husky": "^9.1.7",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.87.0"
   }
 }

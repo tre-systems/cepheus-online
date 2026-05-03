@@ -2,6 +2,13 @@
   "name": "cepheus-online",
   "main": "src/server/index.ts",
   "compatibility_date": "2026-05-03",
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
   "durable_objects": {
     "bindings": [
       {
