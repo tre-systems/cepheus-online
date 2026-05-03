@@ -105,6 +105,28 @@ const CLIENT_HTML = `<!doctype html>
             <span>Image file</span>
             <input id="pieceImageFileInput" name="pieceImageFile" type="file" accept="image/*">
           </label>
+          <div class="piece-crop-fields">
+            <label class="piece-crop-toggle">
+              <input id="pieceCropInput" name="pieceCrop" type="checkbox">
+              <span>Crop</span>
+            </label>
+            <label>
+              <span>X</span>
+              <input id="pieceCropXInput" name="pieceCropX" inputmode="numeric" autocomplete="off" value="0">
+            </label>
+            <label>
+              <span>Y</span>
+              <input id="pieceCropYInput" name="pieceCropY" inputmode="numeric" autocomplete="off" value="0">
+            </label>
+            <label>
+              <span>W</span>
+              <input id="pieceCropWidthInput" name="pieceCropWidth" inputmode="numeric" autocomplete="off" value="150">
+            </label>
+            <label>
+              <span>H</span>
+              <input id="pieceCropHeightInput" name="pieceCropHeight" inputmode="numeric" autocomplete="off" value="150">
+            </label>
+          </div>
           <div class="piece-size-fields">
             <label>
               <span>Width</span>
@@ -1203,19 +1225,35 @@ h1 {
   align-items: center;
 }
 
+.piece-crop-fields,
 .piece-size-fields {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
+.piece-crop-fields {
+  grid-template-columns: 64px repeat(4, minmax(0, 1fr));
+}
+
+.piece-size-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.piece-crop-fields label,
 .piece-size-fields label {
   display: grid;
   gap: 5px;
   min-width: 0;
 }
 
+.piece-crop-toggle {
+  align-self: end;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.piece-crop-toggle input,
 .piece-sheet-field input {
   width: 18px;
   min-height: 18px;
@@ -1368,6 +1406,11 @@ const els = {
   pieceNameInput: document.getElementById("pieceNameInput"),
   pieceImageInput: document.getElementById("pieceImageInput"),
   pieceImageFileInput: document.getElementById("pieceImageFileInput"),
+  pieceCropInput: document.getElementById("pieceCropInput"),
+  pieceCropXInput: document.getElementById("pieceCropXInput"),
+  pieceCropYInput: document.getElementById("pieceCropYInput"),
+  pieceCropWidthInput: document.getElementById("pieceCropWidthInput"),
+  pieceCropHeightInput: document.getElementById("pieceCropHeightInput"),
   pieceWidthInput: document.getElementById("pieceWidthInput"),
   pieceHeightInput: document.getElementById("pieceHeightInput"),
   pieceScaleInput: document.getElementById("pieceScaleInput"),
@@ -1579,6 +1622,11 @@ const parsePositiveNumberInput = (input, fallback) => {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 };
 
+const parseNonNegativeIntegerInput = (input, fallback) => {
+  const value = Number.parseInt(input.value, 10);
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+};
+
 const readSelectedImageFileAsDataUrl = (input) => new Promise((resolve, reject) => {
   const file = input.files?.[0];
   if (!file) {
@@ -1598,6 +1646,45 @@ const readSelectedImageFileAsDataUrl = (input) => new Promise((resolve, reject) 
     reject(new Error("Could not read selected image"));
   });
   reader.readAsDataURL(file);
+});
+
+const readSelectedCroppedImageFileAsDataUrl = (input, crop) => new Promise((resolve, reject) => {
+  const file = input.files?.[0];
+  if (!file) {
+    resolve(null);
+    return;
+  }
+  if (!file.type.startsWith("image/")) {
+    reject(new Error("Selected file must be an image"));
+    return;
+  }
+
+  const image = new Image();
+  const objectUrl = URL.createObjectURL(file);
+  const cleanup = () => URL.revokeObjectURL(objectUrl);
+  image.addEventListener("load", () => {
+    cleanup();
+    if (crop.x >= image.naturalWidth || crop.y >= image.naturalHeight) {
+      reject(new Error("Crop starts outside selected image"));
+      return;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = crop.width;
+    canvas.height = crop.height;
+    const canvasContext = canvas.getContext("2d");
+    if (!canvasContext) {
+      reject(new Error("Could not crop selected image"));
+      return;
+    }
+    canvasContext.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
+    resolve(canvas.toDataURL("image/png"));
+  });
+  image.addEventListener("error", () => {
+    cleanup();
+    reject(new Error("Could not crop selected image"));
+  });
+  image.src = objectUrl;
 });
 
 const readImageDimensions = (file) => new Promise((resolve, reject) => {
@@ -1649,6 +1736,19 @@ const applyPieceFileDimensions = async () => {
   }
   els.pieceWidthInput.value = "50";
   els.pieceHeightInput.value = "50";
+};
+
+const selectedPieceImageDataUrl = async () => {
+  const file = els.pieceImageFileInput.files?.[0];
+  if (!file) return els.pieceImageInput.value.trim() || null;
+  if (!els.pieceCropInput.checked) return await readSelectedImageFileAsDataUrl(els.pieceImageFileInput);
+
+  return await readSelectedCroppedImageFileAsDataUrl(els.pieceImageFileInput, {
+    x: parseNonNegativeIntegerInput(els.pieceCropXInput, 0),
+    y: parseNonNegativeIntegerInput(els.pieceCropYInput, 0),
+    width: parsePositiveIntegerInput(els.pieceCropWidthInput, 150),
+    height: parsePositiveIntegerInput(els.pieceCropHeightInput, 150)
+  });
 };
 
 const createManualCharacterCommand = (characterId, name) => ({
@@ -1740,7 +1840,7 @@ const createCustomPiece = async () => {
   const y = Math.max(0, Math.min(board.height - height * scale, 140 + Math.floor(pieceIndex / 8) * 58));
   const pieceId = uniquePieceId(name);
   const characterId = els.pieceSheetInput.checked ? uniqueCharacterId(name) : null;
-  const imageAssetId = await readSelectedImageFileAsDataUrl(els.pieceImageFileInput) || els.pieceImageInput.value.trim() || null;
+  const imageAssetId = await selectedPieceImageDataUrl();
   if (characterId) {
     await sendCommand(createManualCharacterCommand(characterId, name));
     await sendCommand(updateManualCharacterSheetCommand(characterId));
@@ -1764,6 +1864,11 @@ const createCustomPiece = async () => {
   els.pieceNameInput.value = "";
   els.pieceImageInput.value = "";
   els.pieceImageFileInput.value = "";
+  els.pieceCropInput.checked = false;
+  els.pieceCropXInput.value = "0";
+  els.pieceCropYInput.value = "0";
+  els.pieceCropWidthInput.value = "150";
+  els.pieceCropHeightInput.value = "150";
   els.pieceWidthInput.value = "50";
   els.pieceHeightInput.value = "50";
   els.pieceScaleInput.value = "1";

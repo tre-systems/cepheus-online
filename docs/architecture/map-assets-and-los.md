@@ -70,6 +70,11 @@ URL-like references and `data:image/` references as image sources for Canvas
 pieces and rail avatars. This is enough for local file-input previews and future
 R2 URLs while keeping the published counter source folder outside git.
 
+For development, local counter spritesheets may be cropped in the browser into a
+final `data:image/png` piece image before the piece is created. Production should
+crop and upload derived counter assets to R2, or store reviewed asset ids, rather
+than persisting unreviewed local spritesheet bytes.
+
 ## Occlusion Model
 
 Line of sight should use a vector sidecar over the raster map:

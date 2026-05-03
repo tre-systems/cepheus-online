@@ -32,6 +32,11 @@ describe('Worker static client', () => {
     assert.equal(body.includes('id="pieceNameInput"'), true)
     assert.equal(body.includes('id="pieceImageInput"'), true)
     assert.equal(body.includes('id="pieceImageFileInput"'), true)
+    assert.equal(body.includes('id="pieceCropInput"'), true)
+    assert.equal(body.includes('id="pieceCropXInput"'), true)
+    assert.equal(body.includes('id="pieceCropYInput"'), true)
+    assert.equal(body.includes('id="pieceCropWidthInput"'), true)
+    assert.equal(body.includes('id="pieceCropHeightInput"'), true)
     assert.equal(body.includes('id="pieceWidthInput"'), true)
     assert.equal(body.includes('id="pieceHeightInput"'), true)
     assert.equal(body.includes('id="pieceScaleInput"'), true)
@@ -92,6 +97,36 @@ describe('Worker static client', () => {
     )
     assert.equal(
       body.includes(
+        'pieceCropInput: document.getElementById("pieceCropInput")'
+      ),
+      true
+    )
+    assert.equal(
+      body.includes(
+        'pieceCropXInput: document.getElementById("pieceCropXInput")'
+      ),
+      true
+    )
+    assert.equal(
+      body.includes(
+        'pieceCropYInput: document.getElementById("pieceCropYInput")'
+      ),
+      true
+    )
+    assert.equal(
+      body.includes(
+        'pieceCropWidthInput: document.getElementById("pieceCropWidthInput")'
+      ),
+      true
+    )
+    assert.equal(
+      body.includes(
+        'pieceCropHeightInput: document.getElementById("pieceCropHeightInput")'
+      ),
+      true
+    )
+    assert.equal(
+      body.includes(
         'pieceWidthInput: document.getElementById("pieceWidthInput")'
       ),
       true
@@ -115,11 +150,16 @@ describe('Worker static client', () => {
       true
     )
     assert.equal(body.includes('readSelectedImageFileAsDataUrl'), true)
+    assert.equal(body.includes('readSelectedCroppedImageFileAsDataUrl'), true)
     assert.equal(body.includes('readImageDimensions'), true)
     assert.equal(body.includes('URL.createObjectURL(file)'), true)
     assert.equal(body.includes('image.naturalWidth'), true)
+    assert.equal(body.includes('document.createElement("canvas")'), true)
+    assert.equal(body.includes('canvas.toDataURL("image/png")'), true)
+    assert.equal(body.includes('selectedPieceImageDataUrl'), true)
     assert.equal(body.includes('applyBoardFileDimensions'), true)
     assert.equal(body.includes('applyPieceFileDimensions'), true)
+    assert.equal(body.includes('parseNonNegativeIntegerInput'), true)
     assert.equal(body.includes('parsePositiveNumberInput'), true)
     assert.equal(body.includes('new FileReader()'), true)
     assert.equal(body.includes('reader.readAsDataURL(file)'), true)
@@ -129,7 +169,7 @@ describe('Worker static client', () => {
     assert.equal(body.includes('const scale = parsePositiveNumberInput(els.pieceScaleInput, 1)'), true)
     assert.equal(
       body.includes(
-        'const imageAssetId = await readSelectedImageFileAsDataUrl(els.pieceImageFileInput) || els.pieceImageInput.value.trim() || null'
+        'const imageAssetId = await selectedPieceImageDataUrl()'
       ),
       true
     )
@@ -144,6 +184,11 @@ describe('Worker static client', () => {
     assert.equal(body.includes('url: imageUrl'), true)
     assert.equal(body.includes('x,\n    y,\n    width,\n    height,\n    scale'), true)
     assert.equal(body.includes('els.pieceImageFileInput.value = ""'), true)
+    assert.equal(body.includes('els.pieceCropInput.checked = false'), true)
+    assert.equal(body.includes('els.pieceCropXInput.value = "0"'), true)
+    assert.equal(body.includes('els.pieceCropYInput.value = "0"'), true)
+    assert.equal(body.includes('els.pieceCropWidthInput.value = "150"'), true)
+    assert.equal(body.includes('els.pieceCropHeightInput.value = "150"'), true)
     assert.equal(body.includes('els.pieceWidthInput.value = "50"'), true)
     assert.equal(body.includes('els.pieceHeightInput.value = "50"'), true)
     assert.equal(body.includes('els.pieceScaleInput.value = "1"'), true)
