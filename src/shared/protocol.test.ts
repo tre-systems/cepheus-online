@@ -83,6 +83,28 @@ describe('protocol validation', () => {
     assert.equal(command.url, '/assets/boards/downport.png')
   })
 
+  it('accepts board selection commands', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-4',
+      command: {
+        type: 'SelectBoard',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        boardId: 'main-board'
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    const {command} = result.value
+    assert.equal(command.type, 'SelectBoard')
+    if (command.type !== 'SelectBoard') return
+    assert.equal(command.boardId, 'main-board')
+  })
+
   it('rejects unknown message types before command handling', () => {
     const result = decodeClientMessage({
       type: 'mutateEverything'

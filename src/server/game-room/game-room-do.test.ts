@@ -161,6 +161,37 @@ describe('GameRoomDO HTTP skeleton', () => {
     )
   })
 
+  it('selects the active board through HTTP commands', async () => {
+    const room = createRoom()
+    await postCommand(room, createGameBody())
+    await postCommand(room, createBoardBody())
+    await postCommand(
+      room,
+      commandBody('create-board-2', {
+        type: 'CreateBoard',
+        boardId: 'upper-deck',
+        name: 'Upper Deck',
+        width: 1200,
+        height: 800,
+        scale: 50
+      })
+    )
+
+    const response = await postCommand(
+      room,
+      commandBody('select-board', {
+        type: 'SelectBoard',
+        boardId: 'upper-deck'
+      })
+    )
+    const message = await response.json()
+
+    assert.equal(response.status, 200)
+    assert.equal(message.type, 'commandAccepted')
+    assert.equal(message.eventSeq, 4)
+    assert.equal(message.state.selectedBoardId, 'upper-deck')
+  })
+
   it('filters hidden pieces out of player projections', async () => {
     const room = createRoom()
     await postCommand(room, createGameBody())

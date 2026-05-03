@@ -30,6 +30,17 @@ const createGameCommand = (): Command => ({
   name: 'Spinward Test'
 })
 
+const createBoardCommand = (boardId = asBoardId('board-1')): Command => ({
+  type: 'CreateBoard',
+  gameId,
+  actorId,
+  boardId,
+  name: 'Downport',
+  width: 1000,
+  height: 800,
+  scale: 50
+})
+
 describe('room publication flow', () => {
   it('rejects invalid commands without writing an event stream', async () => {
     const storage = createMemoryStorage()
@@ -89,16 +100,7 @@ describe('room publication flow', () => {
   it('rejects stale expected sequence numbers before mutating storage', async () => {
     const storage = createMemoryStorage()
     await publish(storage, createGameCommand())
-    await publish(storage, {
-      type: 'CreateBoard',
-      gameId,
-      actorId,
-      boardId: asBoardId('board-1'),
-      name: 'Downport',
-      width: 1000,
-      height: 800,
-      scale: 50
-    })
+    await publish(storage, createBoardCommand())
     await publish(storage, {
       type: 'CreatePiece',
       gameId,
@@ -124,6 +126,64 @@ describe('room publication flow', () => {
     if (stale.ok) return
     assert.equal(stale.error.code, 'stale_command')
     assert.equal((await readEventStream(storage, gameId)).length, 3)
+  })
+
+  it('selects an existing board and publishes the projected board selection', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+    await publish(storage, createBoardCommand(asBoardId('board-1')))
+    await publish(storage, createBoardCommand(asBoardId('board-2')))
+
+    const selected = await publish(storage, {
+      type: 'SelectBoard',
+      gameId,
+      actorId,
+      boardId: asBoardId('board-2')
+    })
+
+    assert.equal(selected.ok, true)
+    if (!selected.ok) return
+    assert.equal(selected.value.state.selectedBoardId, asBoardId('board-2'))
+    assert.equal(selected.value.state.eventSeq, 4)
+
+    const storedEvent = (await readEventStream(storage, gameId))[3]?.event
+    assert.deepEqual(storedEvent, {
+      type: 'BoardSelected',
+      boardId: asBoardId('board-2')
+    })
+  })
+
+  it('rejects board selection when the board does not exist', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+
+    const selected = await publish(storage, {
+      type: 'SelectBoard',
+      gameId,
+      actorId,
+      boardId: asBoardId('missing-board')
+    })
+
+    assert.equal(selected.ok, false)
+    if (selected.ok) return
+    assert.equal(selected.error.code, 'missing_entity')
+    assert.equal((await readEventStream(storage, gameId)).length, 1)
+  })
+
+  it('rejects board selection when the game has not been created', async () => {
+    const storage = createMemoryStorage()
+
+    const selected = await publish(storage, {
+      type: 'SelectBoard',
+      gameId,
+      actorId,
+      boardId: asBoardId('board-1')
+    })
+
+    assert.equal(selected.ok, false)
+    if (selected.ok) return
+    assert.equal(selected.error.code, 'game_not_found')
+    assert.equal(storage.records.size, 0)
   })
 
   it('uses the stored room seed and event sequence for deterministic dice events', async () => {

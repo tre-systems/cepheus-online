@@ -64,6 +64,13 @@ export const projectGameState = (
         state.eventSeq = envelope.seq
         break
 
+      case 'BoardSelected':
+        if (!state) throw new Error('BoardSelected before GameCreated')
+        if (!state.boards[event.boardId]) break
+        state.selectedBoardId = event.boardId
+        state.eventSeq = envelope.seq
+        break
+
       case 'PieceCreated':
         if (!state) throw new Error('PieceCreated before GameCreated')
         state.pieces[event.pieceId] = {

@@ -30,6 +30,12 @@ export type Command =
       scale: number
     }
   | {
+      type: 'SelectBoard'
+      gameId: GameId
+      actorId: UserId
+      boardId: BoardId
+    }
+  | {
       type: 'CreatePiece'
       gameId: GameId
       actorId: UserId

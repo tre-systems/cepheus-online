@@ -35,6 +35,10 @@ export type GameEvent =
       scale: number
     }
   | {
+      type: 'BoardSelected'
+      boardId: BoardId
+    }
+  | {
       type: 'PieceCreated'
       pieceId: PieceId
       boardId: BoardId

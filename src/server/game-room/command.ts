@@ -136,6 +136,21 @@ export const deriveEventsForCommand = (
       ])
     }
 
+    case 'SelectBoard': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      if (!state.value.boards[command.boardId]) {
+        return err(commandError('missing_entity', 'Board does not exist'))
+      }
+
+      return ok([
+        {
+          type: 'BoardSelected',
+          boardId: command.boardId
+        }
+      ])
+    }
+
     case 'CreatePiece': {
       const state = requireGame(context.state)
       if (!state.ok) return state

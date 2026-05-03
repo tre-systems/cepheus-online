@@ -19,6 +19,7 @@ const CLIENT_HTML = `<!doctype html>
             <span class="status-pip" aria-hidden="true"></span>
             <span id="railStatusText">LIVE</span>
           </div>
+          <select id="boardSelect" class="board-select" title="Board" aria-label="Selected board"></select>
           <div id="initiativeRail" class="initiative-rail"></div>
           <div class="rail-tools" aria-label="Table tools">
             <button id="rollButton" class="rail-button" type="button" title="Roll dice" aria-label="Roll dice">2D</button>
@@ -33,6 +34,7 @@ const CLIENT_HTML = `<!doctype html>
             <div>
               <h1>Cepheus Online</h1>
               <p id="connectionStatus">Offline</p>
+              <p id="boardStatus">No board</p>
             </div>
             <p id="errorText" class="error-text" role="status"></p>
           </div>
@@ -647,7 +649,7 @@ h1 {
   position: relative;
   z-index: 6;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 6px;
   padding: max(7px, env(safe-area-inset-top)) 3px max(7px, env(safe-area-inset-bottom));
   border-right: 1px solid rgba(72, 255, 173, 0.36);
@@ -682,6 +684,24 @@ h1 {
   min-width: 0;
   overflow: hidden;
   text-overflow: clip;
+}
+
+.board-select {
+  width: 40px;
+  min-height: 30px;
+  border: 1px solid rgba(72, 255, 173, 0.46);
+  border-radius: 4px;
+  background: rgba(5, 17, 13, 0.94);
+  color: var(--accent);
+  padding: 0 3px;
+  font-size: 10px;
+  font-weight: 900;
+  box-shadow: none;
+}
+
+.board-select:disabled {
+  color: rgba(166, 180, 175, 0.58);
+  border-color: rgba(166, 180, 175, 0.22);
 }
 
 .initiative-rail {
@@ -799,6 +819,14 @@ h1 {
 .board-hud #connectionStatus {
   color: var(--accent);
   font-size: 10px;
+}
+
+.board-hud #boardStatus {
+  margin-top: 2px;
+  color: rgba(244, 255, 248, 0.82);
+  font-size: 10px;
+  font-weight: 760;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.76);
 }
 
 .board-hud .error-text {
@@ -1114,6 +1142,10 @@ h1 {
     width: 46px;
   }
 
+  .board-select {
+    width: 46px;
+  }
+
   .dice-overlay,
   .character-sheet {
     left: 68px;
@@ -1132,6 +1164,10 @@ h1 {
   .rail-button {
     width: 36px;
     min-height: 30px;
+  }
+
+  .board-select {
+    width: 36px;
   }
 
   .dice-overlay,
@@ -1206,6 +1242,8 @@ const els = {
   roll: document.getElementById("rollButton"),
   diceExpression: document.getElementById("diceExpression"),
   error: document.getElementById("errorText"),
+  boardStatus: document.getElementById("boardStatus"),
+  boardSelect: document.getElementById("boardSelect"),
   canvas: document.getElementById("boardCanvas"),
   diceStage: document.getElementById("diceStage"),
   diceOverlay: document.getElementById("diceOverlay"),
@@ -1229,6 +1267,7 @@ let socketOpen = false;
 let firstStateApplied = false;
 let latestDiceId = null;
 const viewerRole = qs.get("viewer") || "referee";
+const canSelectBoards = viewerRole.toLowerCase() === "referee";
 let selectedPieceId = null;
 let sheetOpen = false;
 let drag = null;
@@ -1345,6 +1384,14 @@ const parsePositiveIntegerInput = (input, fallback) => {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 };
 
+const boardList = () => Object.values(state?.boards || {});
+
+const selectedBoardId = () => {
+  if (!state) return null;
+  if (state.selectedBoardId && state.boards[state.selectedBoardId]) return state.selectedBoardId;
+  return Object.keys(state.boards)[0] || null;
+};
+
 const createCustomBoard = async () => {
   setError("");
   if (!state) {
@@ -1415,7 +1462,7 @@ const nextBootstrapCommand = () => {
   const boardIds = Object.keys(state.boards || {});
   if (boardIds.length === 0) return createBoardCommand();
   if (Object.keys(state.pieces || {}).length === 0) {
-    return createPieceCommand(state.selectedBoardId || boardIds[0]);
+    return createPieceCommand(selectedBoardId() || boardIds[0]);
   }
   return null;
 };
@@ -1495,8 +1542,7 @@ const applyState = (nextState) => {
 };
 
 const selectedBoard = () => {
-  if (!state) return null;
-  const boardId = state.selectedBoardId || Object.keys(state.boards)[0];
+  const boardId = selectedBoardId();
   return boardId ? state.boards[boardId] : null;
 };
 
@@ -1710,6 +1756,28 @@ const renderRail = () => {
   renderSheet();
 };
 
+const renderBoardControls = () => {
+  const boards = boardList();
+  const board = selectedBoard();
+  const selectedIndex = board ? boards.findIndex((candidate) => candidate.id === board.id) : -1;
+  els.boardStatus.textContent = board
+    ? board.name + " (" + (selectedIndex + 1) + "/" + boards.length + ")"
+    : "No board";
+
+  const options = boards.map((candidate, index) => {
+    const option = document.createElement("option");
+    option.value = candidate.id;
+    option.textContent = "B" + (index + 1) + " " + candidate.name;
+    return option;
+  });
+  els.boardSelect.replaceChildren(...options);
+  els.boardSelect.value = board?.id || "";
+  els.boardSelect.disabled = boards.length === 0 || !canSelectBoards;
+  els.boardSelect.title = canSelectBoards
+    ? board?.name || "Board"
+    : "Board selection is referee-only";
+};
+
 const drawGrid = (board, scaleX, scaleY) => {
   const grid = Math.max(25, board.scale || 50);
   ctx.strokeStyle = "rgba(238, 244, 241, 0.08)";
@@ -1730,6 +1798,7 @@ const drawGrid = (board, scaleX, scaleY) => {
 
 const render = () => {
   const board = selectedBoard();
+  renderBoardControls();
   const rect = els.canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
   const cssWidth = Math.max(1, Math.floor(rect.width));
@@ -1966,6 +2035,22 @@ els.createPiece.addEventListener("click", () => {
 
 els.createBoard.addEventListener("click", () => {
   createCustomBoard().catch((error) => setError(error.message));
+});
+
+els.boardSelect.addEventListener("change", () => {
+  const boardId = els.boardSelect.value;
+  if (!boardId || boardId === selectedBoardId() || !canSelectBoards) return;
+  selectedPieceId = null;
+  drag = null;
+  sendCommand({
+    type: "SelectBoard",
+    gameId: roomId,
+    actorId,
+    boardId
+  }).catch((error) => {
+    setError(error.message);
+    render();
+  });
 });
 
 els.roll.addEventListener("click", () => {

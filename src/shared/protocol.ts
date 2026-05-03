@@ -262,6 +262,17 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
       })
     }
 
+    case 'SelectBoard': {
+      const boardId = parseId(raw.boardId, 'boardId', asBoardId)
+      if (!boardId.ok) return boardId
+
+      return ok({
+        type: 'SelectBoard',
+        ...base.value,
+        boardId: boardId.value
+      })
+    }
+
     case 'CreatePiece': {
       const pieceId = parseId(raw.pieceId, 'pieceId', asPieceId)
       if (!pieceId.ok) return pieceId
