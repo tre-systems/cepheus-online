@@ -15,11 +15,16 @@ const CLIENT_HTML = `<!doctype html>
     <main class="app-shell">
       <section class="play-surface" aria-label="Tactical board">
         <aside class="combat-rail" aria-label="Characters and table controls">
-          <div class="brand-mark">CO</div>
+          <div class="rail-status" aria-label="Table status">
+            <span class="status-pip" aria-hidden="true"></span>
+            <span id="railStatusText">LIVE</span>
+          </div>
           <div id="initiativeRail" class="initiative-rail"></div>
-          <button id="sheetButton" class="rail-button" type="button" title="Character sheet" aria-label="Character sheet">S</button>
-          <button id="rollButton" class="rail-button" type="button" title="Roll dice" aria-label="Roll dice">D</button>
-          <button id="menuButton" class="rail-button" type="button" title="Room menu" aria-label="Room menu">M</button>
+          <div class="rail-tools" aria-label="Table tools">
+            <button id="rollButton" class="rail-button" type="button" title="Roll dice" aria-label="Roll dice">2D</button>
+            <button id="sheetButton" class="rail-button" type="button" title="Character sheet" aria-label="Character sheet">PC</button>
+            <button id="menuButton" class="rail-button" type="button" title="Room menu" aria-label="Room menu">...</button>
+          </div>
         </aside>
 
         <div class="board-frame">
@@ -551,7 +556,7 @@ h1 {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
+  grid-template-columns: 50px minmax(0, 1fr);
   min-height: 0;
 }
 
@@ -559,9 +564,9 @@ h1 {
   position: relative;
   z-index: 6;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
-  gap: 7px;
-  padding: max(9px, env(safe-area-inset-top)) 5px max(9px, env(safe-area-inset-bottom));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: max(7px, env(safe-area-inset-top)) 3px max(7px, env(safe-area-inset-bottom));
   border-right: 1px solid rgba(72, 255, 173, 0.36);
   background:
     linear-gradient(90deg, rgba(72, 255, 173, 0.1), transparent),
@@ -569,18 +574,38 @@ h1 {
   box-shadow: 10px 0 28px rgba(0, 0, 0, 0.48);
 }
 
-.combat-rail .brand-mark {
-  width: 38px;
-  height: 38px;
-  margin: 0 auto;
-  font-size: 14px;
+.rail-status {
+  min-height: 24px;
+  display: grid;
+  grid-template-columns: 5px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0;
+  overflow: hidden;
+}
+
+.status-pip {
+  width: 3px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(72, 255, 173, 0.82);
+}
+
+.rail-status span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 .initiative-rail {
   min-height: 0;
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: 6px;
   overflow: auto;
   scrollbar-width: none;
 }
@@ -591,15 +616,15 @@ h1 {
 
 .rail-piece {
   display: grid;
-  grid-template-columns: 14px 34px;
+  grid-template-columns: 11px 29px;
   align-items: center;
-  gap: 3px;
-  width: 50px;
-  min-height: 44px;
+  gap: 2px;
+  width: 44px;
+  min-height: 39px;
   border: 0;
   border-left: 3px solid transparent;
   border-radius: 3px;
-  padding: 2px 1px;
+  padding: 2px 0;
   background: rgba(0, 0, 0, 0.32);
   color: var(--text);
   box-shadow: none;
@@ -612,33 +637,40 @@ h1 {
 
 .rail-score {
   color: var(--accent-2);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 900;
   text-align: right;
 }
 
 .rail-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(244, 255, 248, 0.72);
   background:
     radial-gradient(circle at 50% 28%, rgba(244, 255, 248, 0.95), rgba(72, 255, 173, 0.74) 30%, #08120f 68%);
   color: #020504;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 900;
   overflow: hidden;
 }
 
+.rail-tools {
+  display: grid;
+  gap: 5px;
+  justify-items: center;
+}
+
 .rail-button {
-  width: 44px;
-  min-height: 44px;
+  width: 40px;
+  min-height: 32px;
   margin: 0 auto;
   padding: 0;
   border-color: rgba(72, 255, 173, 0.52);
   background: rgba(5, 17, 13, 0.92);
   color: var(--accent);
+  font-size: 11px;
   font-weight: 900;
   box-shadow: none;
 }
@@ -698,7 +730,7 @@ h1 {
 
 .dice-overlay {
   position: absolute;
-  left: 66px;
+  left: 56px;
   right: 8px;
   bottom: calc(10px + env(safe-area-inset-bottom));
   z-index: 12;
@@ -732,24 +764,28 @@ h1 {
   position: absolute;
   top: max(8px, env(safe-area-inset-top));
   bottom: max(8px, env(safe-area-inset-bottom));
-  left: 66px;
+  left: 56px;
   z-index: 10;
-  width: min(334px, calc(100vw - 74px));
+  width: min(320px, calc(100vw - 64px));
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   border: 1px solid rgba(72, 255, 173, 0.8);
-  background: rgba(0, 0, 0, 0.94);
+  background: #000;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.9),
     0 20px 50px rgba(0, 0, 0, 0.62),
     0 0 28px rgba(72, 255, 173, 0.12);
-  transform: translateX(calc(-100% - 72px));
-  transition: transform 180ms ease;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 120ms ease, visibility 120ms ease;
   overflow: hidden;
 }
 
 .character-sheet.open {
-  transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .sheet-header {
@@ -938,47 +974,55 @@ h1 {
 
 @media (min-width: 840px) {
   .play-surface {
-    grid-template-columns: 70px minmax(0, 1fr);
+    grid-template-columns: 58px minmax(0, 1fr);
   }
 
   .combat-rail {
-    padding-left: 8px;
-    padding-right: 8px;
+    padding-left: 5px;
+    padding-right: 5px;
   }
 
   .rail-piece {
-    width: 54px;
-    grid-template-columns: 16px 36px;
+    width: 48px;
+    grid-template-columns: 13px 32px;
   }
 
   .rail-avatar {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .rail-button {
+    width: 46px;
   }
 
   .dice-overlay,
   .character-sheet {
-    left: 82px;
+    left: 68px;
   }
 }
 
 @media (max-width: 520px) {
   .play-surface {
-    grid-template-columns: 54px minmax(0, 1fr);
+    grid-template-columns: 46px minmax(0, 1fr);
   }
 
   .combat-rail {
-    gap: 6px;
+    gap: 5px;
   }
 
   .rail-button {
-    width: 40px;
-    min-height: 40px;
+    width: 36px;
+    min-height: 30px;
   }
 
   .dice-overlay,
   .character-sheet {
-    left: 60px;
+    left: 51px;
+  }
+
+  .character-sheet {
+    width: min(306px, calc(100vw - 56px));
   }
 
   .room-form {
@@ -1624,7 +1668,7 @@ const CLIENT_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 51
   <path d="M356 322h36M374 304v36" stroke="#020504" stroke-width="12" stroke-linecap="round"/>
 </svg>`
 
-const CLIENT_SW = `const CACHE_NAME = "cepheus-online-shell-v1";
+const CLIENT_SW = `const CACHE_NAME = "cepheus-online-shell-v2";
 const SHELL_ASSETS = ["/", "/styles.css", "/client.js", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -1644,15 +1688,18 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/rooms/")) return;
+  if (event.request.method !== "GET") return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) =>
-      cached || fetch(event.request).then((response) => {
+    fetch(event.request).then((response) => {
+        if (!response.ok) return response;
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return response;
       })
-    )
+      .catch(() => caches.match(event.request).then((cached) =>
+        cached || caches.match("/")
+      ))
   );
 });`
 
