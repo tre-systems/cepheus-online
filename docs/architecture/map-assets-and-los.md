@@ -166,5 +166,11 @@ phase: `doMapSegmentsIntersect`, `findBlockingMapOccluderForSegment`, and
 reviewed occluders plus the latest board door state when they need runtime LOS
 against open or closed doors.
 
+The same module also owns early piece-planning helpers for center-to-center
+checks. `mapRectCenter` converts a board-space rectangle into the point used for
+piece visibility, and `filterVisibleMapTargets` returns the target rectangles
+whose centers are visible from a source rectangle under the current door state.
+These helpers preserve caller-owned target data and ordering.
+
 The server remains authoritative for door open/closed state and piece position.
 The client can render visibility cheaply from the latest projected state.

@@ -54,11 +54,23 @@ export interface MapPoint {
   y: number
 }
 
+export interface MapRect {
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+}
+
 export interface MapSegment {
   x1: number
   y1: number
   x2: number
   y2: number
+}
+
+export interface MapVisibilityTarget {
+  readonly id: string
+  readonly rect: MapRect
 }
 
 export type MapDoorStateLookup = Readonly<
@@ -387,3 +399,31 @@ export const hasMapLineOfSight = (
     occluders,
     doorStates
   ) === null
+
+export const mapRectCenter = (rect: MapRect): MapPoint => ({
+  x: rect.x + rect.width / 2,
+  y: rect.y + rect.height / 2
+})
+
+export const hasMapRectCenterLineOfSight = (
+  from: MapRect,
+  to: MapRect,
+  occluders: readonly MapOccluder[],
+  doorStates: MapDoorStateLookup = {}
+): boolean =>
+  hasMapLineOfSight(
+    mapRectCenter(from),
+    mapRectCenter(to),
+    occluders,
+    doorStates
+  )
+
+export const filterVisibleMapTargets = <Target extends MapVisibilityTarget>(
+  from: MapRect,
+  targets: readonly Target[],
+  occluders: readonly MapOccluder[],
+  doorStates: MapDoorStateLookup = {}
+): Target[] =>
+  targets.filter((target) =>
+    hasMapRectCenterLineOfSight(from, target.rect, occluders, doorStates)
+  )

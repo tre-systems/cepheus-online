@@ -211,19 +211,28 @@ await step('shell assets', async () => {
   const assets = [
     ['/', 'text/html', 'Cepheus Online'],
     ['/client.js', 'text/javascript', 'import "/client/app/app.js"'],
-    ['/client/app/app.js', 'text/javascript', 'new WebSocket'],
+    [
+      '/client/app/app.js',
+      'text/javascript',
+      ['./board-geometry.js', './room-api.js']
+    ],
+    ['/client/app/board-geometry.js', 'text/javascript', 'deriveBoardTransform'],
+    ['/client/app/image-assets.js', 'text/javascript', 'browserImageUrl'],
+    ['/client/app/room-api.js', 'text/javascript', 'postRoomCommand'],
     ['/client/dice.js', 'text/javascript', 'DICE_PIP_SLOTS'],
     ['/styles.css', 'text/css', '.app-shell']
   ]
 
-  for (const [pathname, contentType, marker] of assets) {
+  for (const [pathname, contentType, markers] of assets) {
     const { response, body } = await fetchText(pathname)
     assert(response.ok, `${pathname} returned HTTP ${response.status}`)
     assert(
       response.headers.get('content-type')?.includes(contentType),
       `${pathname} content-type mismatch`
     )
-    assert(body.includes(marker), `${pathname} missing marker ${marker}`)
+    for (const marker of Array.isArray(markers) ? markers : [markers]) {
+      assert(body.includes(marker), `${pathname} missing marker ${marker}`)
+    }
   }
 })
 

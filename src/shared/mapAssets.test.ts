@@ -5,8 +5,10 @@ import {
   deriveGeomorphTileKind,
   doMapSegmentsIntersect,
   filterBlockingMapOccluders,
+  filterVisibleMapTargets,
   findBlockingMapOccluderForSegment,
   hasMapLineOfSight,
+  mapRectCenter,
   validateLocalMapAssetMetadata,
   validateMapLosSidecar
 } from './mapAssets'
@@ -337,5 +339,91 @@ describe('hasMapLineOfSight', () => {
         offRayWall
       ])
     ).toBe(true)
+  })
+})
+
+describe('mapRectCenter', () => {
+  it('returns the center point of a map rectangle', () => {
+    expect(mapRectCenter({ x: 10, y: 20, width: 30, height: 40 }).x).toBe(25)
+    expect(mapRectCenter({ x: 10, y: 20, width: 30, height: 40 }).y).toBe(40)
+  })
+})
+
+describe('filterVisibleMapTargets', () => {
+  const viewer = { x: 0, y: 40, width: 20, height: 20 }
+
+  it('keeps a target with clear center-to-center line of sight', () => {
+    const targets = [
+      { id: 'nearby', rect: { x: 30, y: 40, width: 20, height: 20 } }
+    ]
+
+    const visible = filterVisibleMapTargets(viewer, targets, [])
+
+    expect(visible.length).toBe(1)
+    expect(visible[0]?.id).toBe('nearby')
+  })
+
+  it('drops a target blocked by an occluder', () => {
+    const targets = [
+      { id: 'behind-wall', rect: { x: 90, y: 40, width: 20, height: 20 } }
+    ]
+    const wall = {
+      type: 'wall' as const,
+      id: 'wall-1',
+      x1: 50,
+      y1: 0,
+      x2: 50,
+      y2: 100
+    }
+
+    const visible = filterVisibleMapTargets(viewer, targets, [wall])
+
+    expect(visible.length).toBe(0)
+  })
+
+  it('uses current door state to reveal targets behind open doors', () => {
+    const targets = [
+      { id: 'behind-door', rect: { x: 90, y: 40, width: 20, height: 20 } }
+    ]
+    const door = {
+      type: 'door' as const,
+      id: 'door-1',
+      x1: 50,
+      y1: 0,
+      x2: 50,
+      y2: 100,
+      open: false
+    }
+
+    expect(filterVisibleMapTargets(viewer, targets, [door]).length).toBe(0)
+    expect(
+      filterVisibleMapTargets(viewer, targets, [door], {
+        'door-1': { id: 'door-1', open: true }
+      }).length
+    ).toBe(1)
+  })
+
+  it('does not mutate target order or target data', () => {
+    const targets = [
+      {
+        id: 'alpha',
+        rect: { x: 10, y: 80, width: 20, height: 20 },
+        label: 'Alpha'
+      },
+      {
+        id: 'bravo',
+        rect: { x: 40, y: 80, width: 20, height: 20 },
+        label: 'Bravo'
+      }
+    ]
+    const before = JSON.stringify(targets)
+
+    const visible = filterVisibleMapTargets(viewer, targets, [])
+
+    expect(JSON.stringify(targets)).toBe(before)
+    expect(targets.map((target) => target.id).join(',')).toBe('alpha,bravo')
+    expect(visible.map((target) => target.id).join(',')).toBe('alpha,bravo')
+    expect(visible[0]).toBe(targets[0])
+    expect(visible[1]).toBe(targets[1])
   })
 })

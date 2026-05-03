@@ -15,6 +15,14 @@ import {
   clampPiecePosition as clampPiecePositionToBoard
 } from './board-geometry.js'
 import {
+  browserImageUrl,
+  cssUrl,
+  loadBrowserImage,
+  readImageDimensions,
+  readSelectedCroppedImageFileAsDataUrl,
+  readSelectedImageFileAsDataUrl
+} from './image-assets.js'
+import {
   buildRoomPath,
   buildViewerQuery,
   fetchRoomState,
@@ -396,102 +404,6 @@ const parseNonNegativeIntegerInput = (input, fallback) => {
   return Number.isFinite(value) && value >= 0 ? value : fallback
 }
 
-const readSelectedImageFileAsDataUrl = (input) =>
-  new Promise((resolve, reject) => {
-    const file = input.files?.[0]
-    if (!file) {
-      resolve(null)
-      return
-    }
-    if (!file.type.startsWith('image/')) {
-      reject(new Error('Selected file must be an image'))
-      return
-    }
-
-    const reader = new FileReader()
-    reader.addEventListener('load', () => {
-      resolve(typeof reader.result === 'string' ? reader.result : null)
-    })
-    reader.addEventListener('error', () => {
-      reject(new Error('Could not read selected image'))
-    })
-    reader.readAsDataURL(file)
-  })
-
-const readSelectedCroppedImageFileAsDataUrl = (input, crop) =>
-  new Promise((resolve, reject) => {
-    const file = input.files?.[0]
-    if (!file) {
-      resolve(null)
-      return
-    }
-    if (!file.type.startsWith('image/')) {
-      reject(new Error('Selected file must be an image'))
-      return
-    }
-
-    const image = new Image()
-    const objectUrl = URL.createObjectURL(file)
-    const cleanup = () => URL.revokeObjectURL(objectUrl)
-    image.addEventListener('load', () => {
-      cleanup()
-      if (crop.x >= image.naturalWidth || crop.y >= image.naturalHeight) {
-        reject(new Error('Crop starts outside selected image'))
-        return
-      }
-
-      const canvas = document.createElement('canvas')
-      canvas.width = crop.width
-      canvas.height = crop.height
-      const canvasContext = canvas.getContext('2d')
-      if (!canvasContext) {
-        reject(new Error('Could not crop selected image'))
-        return
-      }
-      canvasContext.drawImage(
-        image,
-        crop.x,
-        crop.y,
-        crop.width,
-        crop.height,
-        0,
-        0,
-        crop.width,
-        crop.height
-      )
-      resolve(canvas.toDataURL('image/png'))
-    })
-    image.addEventListener('error', () => {
-      cleanup()
-      reject(new Error('Could not crop selected image'))
-    })
-    image.src = objectUrl
-  })
-
-const readImageDimensions = (file) =>
-  new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
-      reject(new Error('Selected file must be an image'))
-      return
-    }
-
-    const image = new Image()
-    const objectUrl = URL.createObjectURL(file)
-    image.addEventListener('load', () => {
-      const dimensions = {
-        width: image.naturalWidth,
-        height: image.naturalHeight
-      }
-      URL.revokeObjectURL(objectUrl)
-      resolve(dimensions)
-    })
-    image.addEventListener('error', () => {
-      URL.revokeObjectURL(objectUrl)
-      reject(new Error('Could not inspect selected image'))
-    })
-    image.src = objectUrl
-  })
-
 const applyBoardFileDimensions = async () => {
   const file = els.boardImageFileInput.files?.[0]
   if (!file) return
@@ -761,49 +673,13 @@ const boardPieces = () => {
   )
 }
 
-const browserImageUrl = (value) => {
-  const imageRef = value || ''
-  if (
-    imageRef.startsWith('/') ||
-    imageRef.startsWith('http://') ||
-    imageRef.startsWith('https://') ||
-    imageRef.startsWith('blob:') ||
-    imageRef.startsWith('data:image/')
-  ) {
-    return imageRef
-  }
-  return null
-}
-
 const pieceImageUrl = (piece) => browserImageUrl(piece.imageAssetId)
 
 const boardImageUrl = (board) =>
   browserImageUrl(board.url) || browserImageUrl(board.imageAssetId)
 
-const cssUrl = (url) => 'url(' + JSON.stringify(url) + ')'
-
 const loadImage = (url, cache) => {
-  if (!url) return null
-
-  const cached = cache.get(url)
-  if (cached) {
-    return cached.loaded && !cached.failed ? cached.image : null
-  }
-
-  const image = new Image()
-  image.decoding = 'async'
-  image.onload = () => {
-    const cachedState = cache.get(url)
-    if (cachedState) cachedState.loaded = true
-    render()
-  }
-  image.onerror = () => {
-    const cachedState = cache.get(url)
-    if (cachedState) cachedState.failed = true
-  }
-  cache.set(url, { image, loaded: false, failed: false })
-  image.src = url
-  return null
+  return loadBrowserImage(url, cache, render)
 }
 
 const loadBoardImage = (board) =>

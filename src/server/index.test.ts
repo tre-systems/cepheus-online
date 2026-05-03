@@ -144,18 +144,11 @@ describe('Worker static client', () => {
     assert.equal(body.includes('readSelectedImageFileAsDataUrl'), true)
     assert.equal(body.includes('readSelectedCroppedImageFileAsDataUrl'), true)
     assert.equal(body.includes('readImageDimensions'), true)
-    assert.equal(body.includes('URL.createObjectURL(file)'), true)
-    assert.equal(body.includes('image.naturalWidth'), true)
-    assert.equal(body.includes("document.createElement('canvas')"), true)
-    assert.equal(body.includes("canvas.toDataURL('image/png')"), true)
     assert.equal(body.includes('selectedPieceImageDataUrl'), true)
     assert.equal(body.includes('applyBoardFileDimensions'), true)
     assert.equal(body.includes('applyPieceFileDimensions'), true)
     assert.equal(body.includes('parseNonNegativeIntegerInput'), true)
     assert.equal(body.includes('parsePositiveNumberInput'), true)
-    assert.equal(body.includes('new FileReader()'), true)
-    assert.equal(body.includes('reader.readAsDataURL(file)'), true)
-    assert.equal(body.includes("file.type.startsWith('image/')"), true)
     assert.equal(
       includesCode(
         'const width = parsePositiveIntegerInput(els.pieceWidthInput, 50)'
@@ -197,8 +190,6 @@ describe('Worker static client', () => {
     assert.equal(body.includes("els.pieceHeightInput.value = '50'"), true)
     assert.equal(body.includes("els.pieceScaleInput.value = '1'"), true)
     assert.equal(body.includes("els.boardImageFileInput.value = ''"), true)
-    assert.equal(body.includes('data:image/'), true)
-    assert.equal(body.includes('drawImage(image'), true)
     assert.equal(body.includes('renderRail'), true)
     assert.equal(body.includes('DEFAULT_BOARD_CAMERA'), true)
     assert.equal(body.includes('./board-geometry.js'), true)
@@ -277,6 +268,30 @@ describe('Worker static client', () => {
     assert.equal(body.includes('deriveBoardTransform'), true)
     assert.equal(body.includes('deriveCameraZoom'), true)
     assert.equal(body.includes('findHitPiece'), true)
+  })
+
+  it('serves the dependency-free image asset helper module', async () => {
+    const response = await worker.fetch(
+      new Request('https://cepheus.test/client/app/image-assets.js'),
+      {} as Env
+    )
+    const body = await response.text()
+
+    assert.equal(response.status, 200)
+    assert.equal(
+      response.headers.get('content-type'),
+      'text/javascript; charset=utf-8'
+    )
+    assert.equal(body.includes('URL.createObjectURL(file)'), true)
+    assert.equal(body.includes('image.naturalWidth'), true)
+    assert.equal(body.includes("document.createElement('canvas')"), true)
+    assert.equal(body.includes("canvas.toDataURL('image/png')"), true)
+    assert.equal(body.includes('new FileReader()'), true)
+    assert.equal(body.includes('reader.readAsDataURL(file)'), true)
+    assert.equal(body.includes("file.type.startsWith('image/')"), true)
+    assert.equal(body.includes('data:image/'), true)
+    assert.equal(body.includes('drawImage(image'), true)
+    assert.equal(body.includes('browserImageUrl'), true)
   })
 
   it('serves the dependency-free room API helper module', async () => {

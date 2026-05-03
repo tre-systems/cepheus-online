@@ -14,8 +14,8 @@ test plan should continue to grow in layers as implementation expands.
   assets, and dependency-free client command helpers.
 - `npm run smoke:deployed`: dependency-free production smoke for a deployed
   Worker URL. It creates a disposable room and verifies health, shell/PWA
-  assets, room commands, stale command rejection, viewer filtering, and
-  WebSocket broadcasts.
+  assets including served browser modules, room commands, stale command
+  rejection, viewer filtering, and WebSocket broadcasts.
 
 ## First Gate
 
