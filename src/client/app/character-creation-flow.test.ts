@@ -12,6 +12,9 @@ import {
   deriveCharacterCreationCommands,
   deriveCharacterSheetPatch,
   deriveCreateCharacterCommand,
+  deriveInitialCharacterCreationStateCommands,
+  deriveStartCharacterCareerTermCommand,
+  deriveStartCharacterCreationCommand,
   deriveUpdateCharacterSheetCommand,
   updateCharacterCreationDraft,
   updateCharacterCreationFields,
@@ -229,6 +232,69 @@ describe('character creation flow', () => {
     assert.deepEqual(updateCommand.equipment, [
       { name: 'Vacc Suit', quantity: 1, notes: 'Carried' }
     ])
+
+    const startCreationCommand = deriveStartCharacterCreationCommand(draft, {
+      identity,
+      state
+    })
+    assert.equal(startCreationCommand.type, 'StartCharacterCreation')
+    assert.equal(startCreationCommand.characterId, characterId)
+    assert.equal(startCreationCommand.expectedSeq, 12)
+
+    const startTermCommand = deriveStartCharacterCareerTermCommand(draft, {
+      identity,
+      state
+    })
+    assert.equal(startTermCommand.type, 'StartCharacterCareerTerm')
+    assert.equal(startTermCommand.characterId, characterId)
+    assert.equal(startTermCommand.career, 'Scout')
+    assert.equal(startTermCommand.expectedSeq, 12)
+  })
+
+  it('derives event-backed creation lifecycle commands with sequential expectedSeq', () => {
+    assert.deepEqual(
+      deriveInitialCharacterCreationStateCommands(completeDraft(), {
+        identity,
+        state: null
+      }),
+      []
+    )
+
+    const commands = deriveInitialCharacterCreationStateCommands(
+      completeDraft(),
+      {
+        identity,
+        state
+      }
+    )
+
+    assert.deepEqual(
+      commands.map((command) => command.type),
+      [
+        'StartCharacterCreation',
+        'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation',
+        'StartCharacterCareerTerm',
+        'AdvanceCharacterCreation'
+      ]
+    )
+    assert.deepEqual(
+      commands.map((command) => command.expectedSeq),
+      [12, 13, 14, 15, 16]
+    )
+
+    const events = commands
+      .filter((command) => command.type === 'AdvanceCharacterCreation')
+      .map((command) =>
+        command.type === 'AdvanceCharacterCreation'
+          ? command.creationEvent.type
+          : null
+      )
+    assert.deepEqual(events, [
+      'SET_CHARACTERISTICS',
+      'COMPLETE_HOMEWORLD',
+      'SELECT_CAREER'
+    ])
   })
 
   it('derives a detached sheet patch copy', () => {
@@ -262,6 +328,15 @@ describe('character creation flow', () => {
     )
     assert.deepEqual(invalidCommands, [])
 
+    const unsequencedCommands = deriveCharacterCreationCommands(
+      {
+        step: 'review',
+        draft: completeDraft()
+      },
+      { identity, state: null }
+    )
+    assert.deepEqual(unsequencedCommands, [])
+
     const commands = deriveCharacterCreationCommands(
       {
         step: 'review',
@@ -272,7 +347,19 @@ describe('character creation flow', () => {
 
     assert.deepEqual(
       commands.map((command) => command.type),
-      ['CreateCharacter', 'UpdateCharacterSheet']
+      [
+        'CreateCharacter',
+        'StartCharacterCreation',
+        'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation',
+        'StartCharacterCareerTerm',
+        'AdvanceCharacterCreation',
+        'UpdateCharacterSheet'
+      ]
+    )
+    assert.deepEqual(
+      commands.map((command) => command.expectedSeq),
+      [12, 13, 14, 15, 16, 17, 18]
     )
   })
 })

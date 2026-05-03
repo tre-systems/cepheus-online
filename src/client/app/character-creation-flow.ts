@@ -54,6 +54,18 @@ export type CharacterCreationDraftPatch = Partial<
 }
 
 type CreateCharacterCommand = Extract<Command, { type: 'CreateCharacter' }>
+type StartCharacterCreationCommand = Extract<
+  Command,
+  { type: 'StartCharacterCreation' }
+>
+type AdvanceCharacterCreationCommand = Extract<
+  Command,
+  { type: 'AdvanceCharacterCreation' }
+>
+type StartCharacterCareerTermCommand = Extract<
+  Command,
+  { type: 'StartCharacterCareerTerm' }
+>
 type UpdateCharacterSheetCommand = Extract<
   Command,
   { type: 'UpdateCharacterSheet' }
@@ -133,6 +145,25 @@ const isFiniteNonNegativeNumber = (value: number) =>
 
 const stepIndex = (step: CharacterCreationStep): number =>
   CHARACTER_CREATION_STEPS.indexOf(step)
+
+const sequenceCommandAt = <T extends Command>(
+  command: T,
+  state: Pick<GameState, 'eventSeq'> | null,
+  offset: number
+): T => {
+  if (
+    !state ||
+    command.expectedSeq !== undefined ||
+    command.type === 'CreateGame'
+  ) {
+    return command
+  }
+
+  return {
+    ...command,
+    expectedSeq: state.eventSeq + offset
+  }
+}
 
 const validateBasics = (draft: CharacterCreationDraft): string[] => {
   const errors: string[] = []
@@ -319,6 +350,89 @@ export const deriveCreateCharacterCommand = (
     state
   ) as CreateCharacterCommand
 
+export const deriveStartCharacterCreationCommand = (
+  draft: CharacterCreationDraft,
+  { identity, state = null }: CharacterCreationCommandOptions
+): StartCharacterCreationCommand =>
+  buildSequencedCommand(
+    {
+      type: 'StartCharacterCreation',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: draft.characterId
+    },
+    state
+  ) as StartCharacterCreationCommand
+
+export const deriveStartCharacterCareerTermCommand = (
+  draft: CharacterCreationDraft,
+  { identity, state = null }: CharacterCreationCommandOptions
+): StartCharacterCareerTermCommand =>
+  buildSequencedCommand(
+    {
+      type: 'StartCharacterCareerTerm',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: draft.characterId,
+      career: 'Scout'
+    },
+    state
+  ) as StartCharacterCareerTermCommand
+
+const initialCharacterCreationStateCommands = (
+  draft: CharacterCreationDraft,
+  identity: ClientIdentity
+): Command[] => [
+  {
+    type: 'StartCharacterCreation',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId: draft.characterId
+  },
+  {
+    type: 'AdvanceCharacterCreation',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId: draft.characterId,
+    creationEvent: { type: 'SET_CHARACTERISTICS' }
+  } satisfies AdvanceCharacterCreationCommand,
+  {
+    type: 'AdvanceCharacterCreation',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId: draft.characterId,
+    creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+  } satisfies AdvanceCharacterCreationCommand,
+  {
+    type: 'StartCharacterCareerTerm',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId: draft.characterId,
+    career: 'Scout'
+  } satisfies StartCharacterCareerTermCommand,
+  {
+    type: 'AdvanceCharacterCreation',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId: draft.characterId,
+    creationEvent: {
+      type: 'SELECT_CAREER',
+      isNewCareer: true
+    }
+  } satisfies AdvanceCharacterCreationCommand
+]
+
+export const deriveInitialCharacterCreationStateCommands = (
+  draft: CharacterCreationDraft,
+  { identity, state = null }: CharacterCreationCommandOptions
+): Command[] => {
+  if (!state) return []
+
+  return initialCharacterCreationStateCommands(draft, identity).map(
+    (command, index) => sequenceCommandAt(command, state, index)
+  )
+}
+
 export const deriveCharacterSheetPatch = (
   draft: CharacterCreationDraft
 ): CharacterSheetPatch => ({
@@ -356,9 +470,28 @@ export const deriveCharacterCreationCommands = (
     })
   }
   if (!validation.ok) return []
+  if (!options.state) return []
 
-  return [
-    deriveCreateCharacterCommand(flow.draft, options),
-    deriveUpdateCharacterSheetCommand(flow.draft, options)
+  const baseCommands: Command[] = [
+    {
+      type: 'CreateCharacter',
+      gameId: options.identity.gameId,
+      actorId: options.identity.actorId,
+      characterId: flow.draft.characterId,
+      characterType: flow.draft.characterType,
+      name: flow.draft.name.trim()
+    },
+    ...initialCharacterCreationStateCommands(flow.draft, options.identity),
+    {
+      type: 'UpdateCharacterSheet',
+      gameId: options.identity.gameId,
+      actorId: options.identity.actorId,
+      characterId: flow.draft.characterId,
+      ...deriveCharacterSheetPatch(flow.draft)
+    }
   ]
+
+  return baseCommands.map((command, index) =>
+    sequenceCommandAt(command, options.state ?? null, index)
+  )
 }
