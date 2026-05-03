@@ -11,6 +11,7 @@ import {
   pieceImageUrl
 } from './board-view.js'
 import { createBoardController } from './board-controller.js'
+import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   cssUrl,
   readImageDimensions,
@@ -429,6 +430,30 @@ const boardDoorActions = (board) => {
   return actions
 }
 
+const characterCreationActions = (character) => {
+  const plan = deriveCharacterCreationActionPlan(clientIdentity(), character)
+  if (!plan) return null
+  const actions = document.createElement('div')
+  actions.className = 'sheet-actions creation-actions'
+  for (const viewModel of plan.actions) {
+    if (!viewModel.command) continue
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = viewModel.label
+    button.className = viewModel.variant === 'primary' ? 'active' : ''
+    button.addEventListener('click', () => {
+      sendCommand(viewModel.command).catch((error) => setError(error.message))
+    })
+    actions.append(button)
+  }
+  return {
+    title: plan.title,
+    status: plan.status,
+    summary: plan.summary,
+    actions: actions.childElementCount > 0 ? actions : null
+  }
+}
+
 const characterSheetController = createCharacterSheetController({
   elements: {
     sheet: els.sheet,
@@ -472,6 +497,7 @@ const characterSheetController = createCharacterSheetController({
         reason
       })
     ),
+  getCharacterCreationActions: characterCreationActions,
   reportError: (message) => setError(message)
 })
 

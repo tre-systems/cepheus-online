@@ -1,5 +1,6 @@
 import type {
   BoardState,
+  CharacterCreationProjection,
   CharacterEquipmentItem,
   CharacterSheetPatch,
   CharacterState,
@@ -43,6 +44,13 @@ interface CharacterSheetDoorActions {
   actions: HTMLElement | null
 }
 
+interface CharacterSheetCreationActions {
+  title: string
+  status: string
+  summary: string
+  actions: HTMLElement | null
+}
+
 export interface CharacterSheetControllerOptions {
   elements: CharacterSheetElements
   document?: CharacterSheetDocument
@@ -65,6 +73,9 @@ export interface CharacterSheetControllerOptions {
     skill: string,
     reason: string
   ) => Promise<unknown>
+  getCharacterCreationActions?: (
+    character: CharacterState | null
+  ) => CharacterSheetCreationActions | null
   reportError: (message: string) => void
 }
 
@@ -99,6 +110,7 @@ export const createCharacterSheetController = ({
   setVisibility,
   setFreedom,
   rollSkill,
+  getCharacterCreationActions,
   reportError
 }: CharacterSheetControllerOptions): CharacterSheetController => {
   let sheetOpen = false
@@ -285,6 +297,33 @@ export const createCharacterSheetController = ({
     if (doorActions) body.append(sheetSectionTitle('Doors'), doorActions)
   }
 
+  const appendCreationActions = (
+    body: HTMLElement,
+    character: CharacterState | null
+  ) => {
+    const creationActions = getCharacterCreationActions?.(character)
+    if (!creationActions) return
+
+    body.append(
+      sheetSectionTitle(creationActions.title),
+      sheetRow('Status', creationActions.status),
+      emptySheetText(creationActions.summary)
+    )
+    if (creationActions.actions) body.append(creationActions.actions)
+  }
+
+  const creationRows = (creation: CharacterCreationProjection | null) => {
+    if (!creation) return [sheetRow('Creation', 'Not started')]
+    const rows = [
+      sheetRow('Creation', creation.state.status.replaceAll('_', ' ')),
+      sheetRow('Terms', String(creation.terms.length)),
+      sheetRow('Complete', creation.creationComplete ? 'Yes' : 'No')
+    ]
+    const career = creation.careers.at(-1)
+    if (career) rows.splice(2, 0, sheetRow('Career', career.name))
+    return rows
+  }
+
   const skillEditor = (
     piece: PieceState,
     character: CharacterState | null,
@@ -341,6 +380,7 @@ export const createCharacterSheetController = ({
       sheetRow('Type', character.type || 'PLAYER'),
       sheetRow('Age', character.age == null ? '-' : String(character.age)),
       statStrip(character),
+      ...creationRows(character.creation),
       sheetSectionTitle('Token'),
       sheetRow('Position', `${Math.round(piece.x)}, ${Math.round(piece.y)}`),
       sheetRow('Visibility', piece.visibility),
@@ -360,6 +400,7 @@ export const createCharacterSheetController = ({
     piece: PieceState,
     character: CharacterState | null
   ) => {
+    appendCreationActions(body, character)
     const skills = deriveCharacterSkills(character)
     if (skills.length === 0) {
       body.append(emptySheetText(characterSheetEmptyLabels.noTrainedSkills))

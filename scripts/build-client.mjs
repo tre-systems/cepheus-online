@@ -70,6 +70,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/character-creation-actions.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'character-creation-actions.js'
+    ),
+    exportName: 'CLIENT_CHARACTER_CREATION_ACTIONS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/character-sheet-controller.js',
     source: join(
       compiledClientRoot,
