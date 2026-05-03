@@ -1188,6 +1188,48 @@ h1 {
   font-weight: 500;
 }
 
+.sheet-edit-form {
+  display: grid;
+  gap: 8px;
+}
+
+.sheet-edit-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  gap: 8px;
+  align-items: end;
+}
+
+.sheet-edit-line label,
+.sheet-stat-edit label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sheet-stat-edit {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.sheet-stat-edit input,
+.sheet-edit-line input {
+  min-height: 34px;
+  padding: 0 6px;
+  text-align: center;
+}
+
+.sheet-edit-form button {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
 .chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -2190,6 +2232,72 @@ const statStrip = (character) => {
   return stats;
 };
 
+const nullableNumberFromInput = (input) => {
+  const value = input.value.trim();
+  if (!value) return null;
+  const number = Number.parseInt(value, 10);
+  return Number.isFinite(number) ? number : null;
+};
+
+const editableDetailsForm = (piece, character) => {
+  if (!piece?.characterId || !character) return statStrip(character);
+
+  const form = document.createElement("div");
+  form.className = "sheet-edit-form";
+  const line = document.createElement("div");
+  line.className = "sheet-edit-line";
+  const ageLabel = document.createElement("label");
+  ageLabel.textContent = "Age";
+  const ageInput = document.createElement("input");
+  ageInput.name = "age";
+  ageInput.inputMode = "numeric";
+  ageInput.autocomplete = "off";
+  ageInput.value = character.age == null ? "" : String(character.age);
+  ageLabel.append(ageInput);
+  const save = document.createElement("button");
+  save.type = "button";
+  save.textContent = "Save";
+  line.append(ageLabel, save);
+
+  const statFields = document.createElement("div");
+  statFields.className = "sheet-stat-edit";
+  const inputs = {};
+  const values = character.characteristics || {};
+  for (const [label, key] of [["Str", "str"], ["Dex", "dex"], ["End", "end"], ["Int", "int"], ["Edu", "edu"], ["Soc", "soc"]]) {
+    const field = document.createElement("label");
+    field.textContent = label;
+    const input = document.createElement("input");
+    input.name = key;
+    input.inputMode = "numeric";
+    input.autocomplete = "off";
+    input.value = values[key] == null ? "" : String(values[key]);
+    inputs[key] = input;
+    field.append(input);
+    statFields.append(field);
+  }
+
+  save.addEventListener("click", () => {
+    sendCommand({
+      type: "UpdateCharacterSheet",
+      gameId: roomId,
+      actorId,
+      characterId: piece.characterId,
+      age: nullableNumberFromInput(ageInput),
+      characteristics: {
+        str: nullableNumberFromInput(inputs.str),
+        dex: nullableNumberFromInput(inputs.dex),
+        end: nullableNumberFromInput(inputs.end),
+        int: nullableNumberFromInput(inputs.int),
+        edu: nullableNumberFromInput(inputs.edu),
+        soc: nullableNumberFromInput(inputs.soc)
+      }
+    }).catch((error) => setError(error.message));
+  });
+
+  form.append(line, statFields);
+  return form;
+};
+
 const characterSkills = (character) => {
   if (character && Array.isArray(character.skills)) {
     return character.skills.filter((skill) => typeof skill === "string" && skill.trim()).map((skill) => skill.trim());
@@ -2262,7 +2370,7 @@ const renderDetailsTab = (body, piece, character) => {
     visibilityActions(piece),
     sheetRow("Move", piece.freedom),
     freedomActions(piece),
-    statStrip(character),
+    editableDetailsForm(piece, character),
     skillChips(characterSkills(character))
   );
 };
