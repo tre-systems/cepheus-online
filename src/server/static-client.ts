@@ -422,20 +422,20 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(1, 8, 6, 0.96);
+  border: 1px solid rgba(9, 29, 21, 0.72);
   border-radius: 9px;
   background:
-    radial-gradient(circle at 30% 24%, #ffffff 0%, #f7fff9 26%, transparent 46%),
-    linear-gradient(145deg, #ffffff 0%, #eef9f1 42%, #b9ddca 100%);
+    radial-gradient(ellipse at 28% 18%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.56) 23%, transparent 42%),
+    linear-gradient(145deg, #ffffff 0%, #f3f8f4 56%, #d5e3da 100%);
   color: #020504;
   overflow: hidden;
   font-weight: 900;
   font-size: 24px;
   box-shadow:
-    inset 0 -12px 18px rgba(4, 18, 13, 0.2),
-    inset 10px 0 18px rgba(255, 255, 255, 0.16),
+    inset 0 -14px 18px rgba(27, 60, 43, 0.15),
+    inset 10px 0 18px rgba(255, 255, 255, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 14px 24px rgba(0, 0, 0, 0.26);
+    0 14px 24px rgba(0, 0, 0, 0.22);
   backface-visibility: hidden;
 }
 
@@ -443,11 +443,11 @@ h1 {
   content: "";
   position: absolute;
   inset: 4px;
-  border: 1px solid rgba(4, 18, 13, 0.13);
+  border: 1px solid rgba(15, 44, 31, 0.1);
   border-radius: 7px;
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
-    inset 0 -9px 12px rgba(4, 18, 13, 0.08);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.24),
+    inset 0 -9px 12px rgba(16, 48, 31, 0.05);
   pointer-events: none;
 }
 
@@ -455,10 +455,10 @@ h1 {
   content: "";
   position: absolute;
   inset: 8px 12px auto 12px;
-  height: 18px;
+  height: 20px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.64), transparent);
-  opacity: 0.55;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.16) 62%, transparent);
+  opacity: 0.46;
   pointer-events: none;
 }
 
@@ -468,34 +468,34 @@ h1 {
 
 .face.back {
   background:
-    radial-gradient(circle at 30% 24%, #f1fff5 0%, transparent 44%),
-    linear-gradient(145deg, #d2edda 0%, #92c5a5 100%);
+    radial-gradient(ellipse at 28% 18%, rgba(255, 255, 255, 0.76) 0%, transparent 42%),
+    linear-gradient(145deg, #edf5ee 0%, #c6d8cc 100%);
   transform: rotateY(180deg) translateZ(var(--die-depth));
 }
 
 .face.right {
   background:
-    radial-gradient(circle at 28% 24%, #e7fff0 0%, transparent 42%),
-    linear-gradient(90deg, #caead5 0%, #75a78d 100%);
+    radial-gradient(ellipse at 28% 18%, rgba(255, 255, 255, 0.62) 0%, transparent 40%),
+    linear-gradient(90deg, #e5eee7 0%, #adc2b4 100%);
   transform: rotateY(90deg) translateZ(var(--die-depth));
 }
 
 .face.left {
   background:
-    radial-gradient(circle at 28% 24%, #e7fff0 0%, transparent 42%),
-    linear-gradient(270deg, #caead5 0%, #75a78d 100%);
+    radial-gradient(ellipse at 28% 18%, rgba(255, 255, 255, 0.62) 0%, transparent 40%),
+    linear-gradient(270deg, #e5eee7 0%, #adc2b4 100%);
   transform: rotateY(-90deg) translateZ(var(--die-depth));
 }
 
 .face.top {
   background:
-    radial-gradient(circle at 30% 20%, #ffffff 0%, transparent 50%),
-    linear-gradient(145deg, #ffffff 0%, #d9f5e5 100%);
+    radial-gradient(ellipse at 28% 18%, rgba(255, 255, 255, 0.98) 0%, transparent 46%),
+    linear-gradient(145deg, #ffffff 0%, #e5f0e8 100%);
   transform: rotateX(90deg) translateZ(var(--die-depth));
 }
 
 .face.bottom {
-  background: linear-gradient(145deg, #a8d0b8 0%, #6f9f85 100%);
+  background: linear-gradient(145deg, #c0d1c5 0%, #8da996 100%);
   transform: rotateX(-90deg) translateZ(var(--die-depth));
 }
 
@@ -505,11 +505,11 @@ h1 {
   height: 10px;
   border-radius: 999px;
   background:
-    radial-gradient(circle at 38% 30%, rgba(70, 93, 81, 0.85), #010302 62%);
+    radial-gradient(circle at 36% 28%, #435248 0%, #0b100d 58%, #010302 100%);
   box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.18),
-    inset 0 -2px 2px rgba(0, 0, 0, 0.58),
-    0 1px 1px rgba(255, 255, 255, 0.18);
+    inset 0 1px 1px rgba(255, 255, 255, 0.12),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.72),
+    0 1px 1px rgba(255, 255, 255, 0.14);
 }
 
 .pip-top-left {
