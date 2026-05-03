@@ -2,6 +2,9 @@ import * as assert from 'node:assert/strict'
 import {describe, it} from 'node:test'
 
 import {parseDiceExpression, rollDiceExpression} from './dice'
+import type {EventEnvelope} from './events'
+import {asEventId, asGameId, asUserId} from './ids'
+import {projectGameState} from './projector'
 
 describe('dice expressions', () => {
   it('parses count, sides, and signed modifier', () => {
@@ -29,5 +32,42 @@ describe('dice expressions', () => {
     const result = parseDiceExpression('d6')
 
     assert.equal(result.ok, false)
+  })
+
+  it('projects rolled dice into recent game state', () => {
+    const events: EventEnvelope[] = [
+      {
+        id: asEventId('game-1:1'),
+        gameId: asGameId('game-1'),
+        seq: 1,
+        actorId: asUserId('user-1'),
+        createdAt: '2026-05-03T00:00:00.000Z',
+        event: {
+          type: 'GameCreated',
+          slug: 'game-1',
+          name: 'Spinward Test',
+          ownerId: asUserId('user-1')
+        }
+      },
+      {
+        id: asEventId('game-1:2'),
+        gameId: asGameId('game-1'),
+        seq: 2,
+        actorId: asUserId('user-1'),
+        createdAt: '2026-05-03T00:00:01.000Z',
+        event: {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: 'skill check',
+          rolls: [3, 4],
+          total: 7
+        }
+      }
+    ]
+
+    const state = projectGameState(events)
+
+    assert.equal(state?.diceLog.length, 1)
+    assert.equal(state?.diceLog[0]?.total, 7)
   })
 })

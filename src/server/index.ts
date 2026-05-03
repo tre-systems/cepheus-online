@@ -2,6 +2,7 @@ import {asGameId} from '../shared/ids'
 import type {Env} from './env'
 import {GameRoomDO} from './game-room/game-room-do'
 import {jsonResponse} from './http'
+import {serveStaticClient} from './static-client'
 
 export {GameRoomDO}
 
@@ -41,6 +42,11 @@ export default {
 
     if (url.pathname.startsWith('/rooms/')) {
       return routeGameRoom(request, env)
+    }
+
+    const staticClientResponse = serveStaticClient(url.pathname)
+    if (staticClientResponse) {
+      return staticClientResponse
     }
 
     if (env.ASSETS) {

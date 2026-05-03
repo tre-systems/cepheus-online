@@ -4,7 +4,7 @@ The source tree starts intentionally small.
 
 ```text
 src/shared/  deterministic domain types, commands, events, projectors, schemas
-src/server/  Cloudflare Worker routes and Durable Objects, added later
+src/server/  Cloudflare Worker routes, static client fallback, Durable Objects
 src/client/  browser DOM, Canvas, CSS, WebSocket client, and local UI state
 ```
 
@@ -17,9 +17,16 @@ src/client/  browser DOM, Canvas, CSS, WebSocket client, and local UI state
 
 ## Current Skeleton
 
-- `src/shared/commands.ts`: initial command union.
-- `src/shared/events.ts`: initial event union and event envelope.
-- `src/shared/projector.ts`: event-to-state projection.
+- `src/shared/commands.ts`: command union for room state changes.
+- `src/shared/events.ts`: event union and event envelope.
+- `src/shared/projector.ts`: event-to-state projection, including recent dice.
+- `src/shared/protocol.ts`: client/server message validation and wire types.
 - `src/shared/schemas/`: salvaged entity JSON schema definitions.
+- `src/server/index.ts`: Worker entrypoint, health route, room routing, and
+  static browser fallback.
+- `src/server/game-room/`: `GameRoomDO`, chunked event storage, checkpoints,
+  projection reload, and publication flow.
+- `src/client/game-commands.ts`: dependency-free command builders and message
+  application helpers for browser flows.
 - `src/client/reactive.ts`: zero-dependency signals and disposal scopes.
 - `src/client/dom.ts`: small DOM helper layer and trusted HTML boundary.

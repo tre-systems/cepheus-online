@@ -67,7 +67,9 @@ const parseUserId = (raw: string | null): UserId | null => {
 }
 
 const parseViewerFromUrl = (url: URL): GameViewer => ({
-  userId: parseUserId(url.searchParams.get('userId')),
+  userId: parseUserId(
+    url.searchParams.get('userId') ?? url.searchParams.get('user')
+  ),
   role: parseViewerRole(url.searchParams.get('viewer'))
 })
 

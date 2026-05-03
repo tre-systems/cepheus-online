@@ -14,6 +14,7 @@ export interface GameState {
   characters: Record<CharacterId, CharacterState>
   boards: Record<BoardId, BoardState>
   pieces: Record<PieceId, PieceState>
+  diceLog: DiceRollState[]
   selectedBoardId: BoardId | null
   eventSeq: number
 }
@@ -55,4 +56,14 @@ export interface PieceState {
   scale: number
   visibility: PieceVisibility
   freedom: PieceFreedom
+}
+
+export interface DiceRollState {
+  id: string
+  actorId: UserId | null
+  createdAt: string
+  expression: string
+  reason: string
+  rolls: number[]
+  total: number
 }

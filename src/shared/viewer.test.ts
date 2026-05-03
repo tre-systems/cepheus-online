@@ -48,6 +48,7 @@ const buildState = (): GameState => ({
       freedom: 'LOCKED'
     }
   },
+  diceLog: [],
   selectedBoardId: null,
   eventSeq: 2
 })

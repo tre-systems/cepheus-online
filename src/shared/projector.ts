@@ -27,6 +27,7 @@ export const projectGameState = (
           characters: {},
           boards: {},
           pieces: {},
+          diceLog: [],
           selectedBoardId: null,
           eventSeq: envelope.seq
         }
@@ -103,6 +104,18 @@ export const projectGameState = (
 
       case 'DiceRolled':
         if (!state) throw new Error('DiceRolled before GameCreated')
+        state.diceLog.push({
+          id: envelope.id,
+          actorId: envelope.actorId,
+          createdAt: envelope.createdAt,
+          expression: event.expression,
+          reason: event.reason,
+          rolls: event.rolls,
+          total: event.total
+        })
+        if (state.diceLog.length > 20) {
+          state.diceLog.splice(0, state.diceLog.length - 20)
+        }
         state.eventSeq = envelope.seq
         break
 
