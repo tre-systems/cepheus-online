@@ -356,18 +356,22 @@ h1 {
 }
 
 .dice-stage {
-  min-height: 182px;
+  min-height: 196px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  border: 1px solid rgba(72, 255, 173, 0.42);
+  border-radius: 8px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(72, 255, 173, 0.16), transparent 58%),
-    var(--panel-2);
-  perspective: 760px;
-  perspective-origin: 50% 42%;
+    radial-gradient(ellipse at 50% 34%, rgba(72, 255, 173, 0.2), transparent 52%),
+    radial-gradient(ellipse at 50% 78%, rgba(0, 0, 0, 0.6), transparent 68%),
+    linear-gradient(180deg, rgba(244, 255, 248, 0.04), transparent 42%),
+    rgba(1, 12, 8, 0.94);
+  perspective: 900px;
+  perspective-origin: 50% 38%;
   overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 44px rgba(72, 255, 173, 0.08);
 }
 
 .dice-empty {
@@ -379,23 +383,38 @@ h1 {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 22px;
+  gap: 18px;
   flex-wrap: wrap;
-  padding: 20px 16px 18px;
+  padding: 20px 18px 18px;
   transform-style: preserve-3d;
 }
 
 .die {
-  --die-size: 64px;
+  --die-size: 72px;
+  --die-depth: calc(var(--die-size) / 2);
+  --die-tilt-x: -22deg;
+  --die-tilt-y: -34deg;
+  --die-tilt-z: 1deg;
   width: var(--die-size);
   height: var(--die-size);
   position: relative;
   transform-style: preserve-3d;
-  transform: rotateX(-23deg) rotateY(-34deg) rotateZ(1deg);
+  transform: rotateX(var(--die-tilt-x)) rotateY(var(--die-tilt-y)) rotateZ(var(--die-tilt-z));
+}
+
+.die::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  transform: translateZ(calc(var(--die-depth) * -1.04));
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.46);
+  filter: blur(14px);
+  pointer-events: none;
 }
 
 .die.rolling {
-  animation: tumble 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: tumble 980ms cubic-bezier(0.18, 0.86, 0.22, 1);
 }
 
 .face {
@@ -404,77 +423,103 @@ h1 {
   display: grid;
   place-items: center;
   border: 1px solid rgba(1, 8, 6, 0.96);
-  border-radius: 10px;
+  border-radius: 9px;
   background:
-    linear-gradient(145deg, #ffffff 0%, #eefbf3 42%, #cdebdc 100%);
+    radial-gradient(circle at 30% 24%, #ffffff 0%, #f7fff9 26%, transparent 46%),
+    linear-gradient(145deg, #ffffff 0%, #eef9f1 42%, #b9ddca 100%);
   color: #020504;
   overflow: hidden;
   font-weight: 900;
-  font-size: 23px;
+  font-size: 24px;
   box-shadow:
-    inset 0 0 20px rgba(4, 18, 13, 0.2),
+    inset 0 -12px 18px rgba(4, 18, 13, 0.2),
+    inset 10px 0 18px rgba(255, 255, 255, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 14px 24px rgba(0, 0, 0, 0.2);
+    0 14px 24px rgba(0, 0, 0, 0.26);
   backface-visibility: hidden;
 }
 
 .face::before {
   content: "";
   position: absolute;
-  inset: 5px;
-  border: 1px solid rgba(4, 18, 13, 0.1);
+  inset: 4px;
+  border: 1px solid rgba(4, 18, 13, 0.13);
   border-radius: 7px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    inset 0 -9px 12px rgba(4, 18, 13, 0.08);
+  pointer-events: none;
+}
+
+.face::after {
+  content: "";
+  position: absolute;
+  inset: 8px 12px auto 12px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.64), transparent);
+  opacity: 0.55;
   pointer-events: none;
 }
 
 .face.front {
-  transform: translateZ(32px);
+  transform: translateZ(var(--die-depth));
 }
 
 .face.back {
-  background: linear-gradient(145deg, #d4efd9 0%, #9ecdb0 100%);
-  transform: rotateY(180deg) translateZ(32px);
+  background:
+    radial-gradient(circle at 30% 24%, #f1fff5 0%, transparent 44%),
+    linear-gradient(145deg, #d2edda 0%, #92c5a5 100%);
+  transform: rotateY(180deg) translateZ(var(--die-depth));
 }
 
 .face.right {
-  background: linear-gradient(90deg, #b6ddc4 0%, #7eaf95 100%);
-  transform: rotateY(90deg) translateZ(32px);
+  background:
+    radial-gradient(circle at 28% 24%, #e7fff0 0%, transparent 42%),
+    linear-gradient(90deg, #caead5 0%, #75a78d 100%);
+  transform: rotateY(90deg) translateZ(var(--die-depth));
 }
 
 .face.left {
-  background: linear-gradient(270deg, #b6ddc4 0%, #7eaf95 100%);
-  transform: rotateY(-90deg) translateZ(32px);
+  background:
+    radial-gradient(circle at 28% 24%, #e7fff0 0%, transparent 42%),
+    linear-gradient(270deg, #caead5 0%, #75a78d 100%);
+  transform: rotateY(-90deg) translateZ(var(--die-depth));
 }
 
 .face.top {
-  background: linear-gradient(145deg, #ffffff 0%, #dff7e9 100%);
-  transform: rotateX(90deg) translateZ(32px);
+  background:
+    radial-gradient(circle at 30% 20%, #ffffff 0%, transparent 50%),
+    linear-gradient(145deg, #ffffff 0%, #d9f5e5 100%);
+  transform: rotateX(90deg) translateZ(var(--die-depth));
 }
 
 .face.bottom {
-  background: linear-gradient(145deg, #afd7be 0%, #78a98d 100%);
-  transform: rotateX(-90deg) translateZ(32px);
+  background: linear-gradient(145deg, #a8d0b8 0%, #6f9f85 100%);
+  transform: rotateX(-90deg) translateZ(var(--die-depth));
 }
 
 .pip {
   position: absolute;
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
-  background: #020504;
+  background:
+    radial-gradient(circle at 38% 30%, rgba(70, 93, 81, 0.85), #010302 62%);
   box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.16),
-    0 0 0 1px rgba(0, 0, 0, 0.12);
+    inset 0 1px 2px rgba(255, 255, 255, 0.18),
+    inset 0 -2px 2px rgba(0, 0, 0, 0.58),
+    0 1px 1px rgba(255, 255, 255, 0.18);
 }
 
 .pip-top-left {
-  top: 15px;
-  left: 15px;
+  top: 16px;
+  left: 16px;
 }
 
 .pip-top-right {
-  top: 15px;
-  right: 15px;
+  top: 16px;
+  right: 16px;
 }
 
 .pip-center {
@@ -485,24 +530,24 @@ h1 {
 
 .pip-middle-left {
   top: 50%;
-  left: 15px;
+  left: 16px;
   transform: translateY(-50%);
 }
 
 .pip-middle-right {
   top: 50%;
-  right: 15px;
+  right: 16px;
   transform: translateY(-50%);
 }
 
 .pip-bottom-left {
-  bottom: 15px;
-  left: 15px;
+  bottom: 16px;
+  left: 16px;
 }
 
 .pip-bottom-right {
-  right: 15px;
-  bottom: 15px;
+  right: 16px;
+  bottom: 16px;
 }
 
 .roll-total {
@@ -511,7 +556,9 @@ h1 {
   color: var(--accent-2);
   font-weight: 900;
   font-size: 30px;
-  text-shadow: 0 0 18px rgba(72, 255, 173, 0.42);
+  text-shadow:
+    0 0 18px rgba(72, 255, 173, 0.62),
+    0 0 34px rgba(72, 255, 173, 0.28);
 }
 
 .dice-log {
@@ -750,14 +797,18 @@ h1 {
 }
 
 .dice-overlay .dice-stage {
-  width: min(360px, 100%);
-  min-height: 154px;
+  width: min(390px, 100%);
+  min-height: 168px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(72, 255, 173, 0.22), transparent 62%),
-    rgba(2, 8, 6, 0.92);
+    radial-gradient(ellipse at 50% 38%, rgba(72, 255, 173, 0.28), transparent 52%),
+    radial-gradient(ellipse at 50% 78%, rgba(0, 0, 0, 0.68), transparent 66%),
+    linear-gradient(180deg, rgba(244, 255, 248, 0.05), transparent 42%),
+    rgba(2, 8, 6, 0.94);
   box-shadow:
     0 18px 42px rgba(0, 0, 0, 0.58),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 0 34px rgba(72, 255, 173, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 42px rgba(72, 255, 173, 0.08);
 }
 
 .character-sheet {
@@ -1032,13 +1083,19 @@ h1 {
 
 @keyframes tumble {
   0% {
-    transform: rotateX(-23deg) rotateY(-34deg) rotateZ(1deg) translateY(-8px);
+    transform: rotateX(var(--die-tilt-x)) rotateY(var(--die-tilt-y)) rotateZ(var(--die-tilt-z)) translateY(-10px) scale(0.96);
   }
-  50% {
-    transform: rotateX(356deg) rotateY(-256deg) rotateZ(118deg) translateY(2px);
+  34% {
+    transform: rotateX(calc(var(--die-tilt-x) - 24deg)) rotateY(calc(var(--die-tilt-y) - 34deg)) rotateZ(calc(var(--die-tilt-z) + 36deg)) translateY(4px) scale(1.04);
+  }
+  64% {
+    transform: rotateX(calc(var(--die-tilt-x) + 18deg)) rotateY(calc(var(--die-tilt-y) + 22deg)) rotateZ(calc(var(--die-tilt-z) - 18deg)) translateY(-3px) scale(1.02);
+  }
+  82% {
+    transform: rotateX(calc(var(--die-tilt-x) - 6deg)) rotateY(calc(var(--die-tilt-y) - 8deg)) rotateZ(calc(var(--die-tilt-z) + 5deg)) translateY(1px) scale(1);
   }
   100% {
-    transform: rotateX(-23deg) rotateY(-34deg) rotateZ(1deg) translateY(0);
+    transform: rotateX(var(--die-tilt-x)) rotateY(var(--die-tilt-y)) rotateZ(var(--die-tilt-z)) translateY(0) scale(1);
   }
 }
 
@@ -1547,11 +1604,14 @@ const appendFaceValue = (face, value) => {
   }
 };
 
-const buildDie = (value) => {
+const buildDie = (value, index) => {
   const base = d6Face(value);
   const die = document.createElement("div");
   die.className = "die rolling";
   die.setAttribute("aria-label", "Die result " + value);
+  die.style.setProperty("--die-tilt-x", index % 2 === 0 ? "-22deg" : "-18deg");
+  die.style.setProperty("--die-tilt-y", index % 2 === 0 ? "-34deg" : "-24deg");
+  die.style.setProperty("--die-tilt-z", index % 2 === 0 ? "1deg" : "-4deg");
   const faces = [
     ["front", value],
     ["back", 7 - base],
@@ -1575,7 +1635,7 @@ const animateRoll = (roll) => {
   els.diceOverlay.classList.add("visible");
   const row = document.createElement("div");
   row.className = "dice-row";
-  for (const value of roll.rolls) row.append(buildDie(value));
+  roll.rolls.forEach((value, index) => row.append(buildDie(value, index)));
   const total = document.createElement("div");
   total.className = "roll-total";
   total.textContent = "Rolling...";
