@@ -1528,6 +1528,34 @@ const readSelectedImageFileAsDataUrl = (input) => new Promise((resolve, reject) 
   reader.readAsDataURL(file);
 });
 
+const readImageDimensions = (file) => new Promise((resolve, reject) => {
+  if (!file.type.startsWith("image/")) {
+    reject(new Error("Selected file must be an image"));
+    return;
+  }
+
+  const image = new Image();
+  const objectUrl = URL.createObjectURL(file);
+  image.addEventListener("load", () => {
+    const dimensions = {width: image.naturalWidth, height: image.naturalHeight};
+    URL.revokeObjectURL(objectUrl);
+    resolve(dimensions);
+  });
+  image.addEventListener("error", () => {
+    URL.revokeObjectURL(objectUrl);
+    reject(new Error("Could not inspect selected image"));
+  });
+  image.src = objectUrl;
+});
+
+const applyBoardFileDimensions = async () => {
+  const file = els.boardImageFileInput.files?.[0];
+  if (!file) return;
+  const dimensions = await readImageDimensions(file);
+  els.boardWidthInput.value = String(dimensions.width);
+  els.boardHeightInput.value = String(dimensions.height);
+};
+
 const createManualCharacterCommand = (characterId, name) => ({
   type: "CreateCharacter",
   gameId: roomId,
@@ -2336,6 +2364,10 @@ els.createPiece.addEventListener("click", () => {
 
 els.createBoard.addEventListener("click", () => {
   createCustomBoard().catch((error) => setError(error.message));
+});
+
+els.boardImageFileInput.addEventListener("change", () => {
+  applyBoardFileDimensions().catch((error) => setError(error.message));
 });
 
 els.boardSelect.addEventListener("change", () => {

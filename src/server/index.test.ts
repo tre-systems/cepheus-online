@@ -90,6 +90,10 @@ describe('Worker static client', () => {
       true
     )
     assert.equal(body.includes('readSelectedImageFileAsDataUrl'), true)
+    assert.equal(body.includes('readImageDimensions'), true)
+    assert.equal(body.includes('URL.createObjectURL(file)'), true)
+    assert.equal(body.includes('image.naturalWidth'), true)
+    assert.equal(body.includes('applyBoardFileDimensions'), true)
     assert.equal(body.includes('new FileReader()'), true)
     assert.equal(body.includes('reader.readAsDataURL(file)'), true)
     assert.equal(body.includes('file.type.startsWith("image/")'), true)
