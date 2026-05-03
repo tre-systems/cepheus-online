@@ -5,6 +5,24 @@ export type CharacterType = 'PLAYER' | 'NPC' | 'ANIMAL' | 'ROBOT'
 export type PieceVisibility = 'HIDDEN' | 'PREVIEW' | 'VISIBLE'
 export type PieceFreedom = 'LOCKED' | 'UNLOCKED' | 'SHARE'
 
+export type CharacteristicKey = 'str' | 'dex' | 'end' | 'int' | 'edu' | 'soc'
+
+export type CharacterCharacteristics = Record<CharacteristicKey, number | null>
+
+export interface CharacterEquipmentItem {
+  name: string
+  quantity: number
+  notes: string
+}
+
+export interface CharacterSheetPatch {
+  age?: number | null
+  characteristics?: Partial<CharacterCharacteristics>
+  skills?: string[]
+  equipment?: CharacterEquipmentItem[]
+  credits?: number
+}
+
 export interface GameState {
   id: GameId
   slug: string
@@ -31,6 +49,11 @@ export interface CharacterState {
   name: string
   active: boolean
   notes: string
+  age: number | null
+  characteristics: CharacterCharacteristics
+  skills: string[]
+  equipment: CharacterEquipmentItem[]
+  credits: number
 }
 
 export interface BoardState {

@@ -1,5 +1,10 @@
 import type {BoardId, CharacterId, GameId, PieceId, UserId} from './ids'
-import type {CharacterType, PieceFreedom, PieceVisibility} from './state'
+import type {
+  CharacterSheetPatch,
+  CharacterType,
+  PieceFreedom,
+  PieceVisibility
+} from './state'
 
 export type Command =
   | {
@@ -17,6 +22,12 @@ export type Command =
       characterType: CharacterType
       name: string
     }
+  | ({
+      type: 'UpdateCharacterSheet'
+      gameId: GameId
+      actorId: UserId
+      characterId: CharacterId
+    } & CharacterSheetPatch)
   | {
       type: 'CreateBoard'
       gameId: GameId
@@ -41,6 +52,7 @@ export type Command =
       actorId: UserId
       pieceId: PieceId
       boardId: BoardId
+      characterId?: CharacterId | null
       name: string
       imageAssetId?: string | null
       x: number

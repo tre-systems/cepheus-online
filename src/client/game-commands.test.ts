@@ -1,11 +1,18 @@
 import * as assert from 'node:assert/strict'
 import {describe, it} from 'node:test'
 
-import {asGameId, asPieceId, asUserId} from '../shared/ids'
+import {
+  asBoardId,
+  asCharacterId,
+  asGameId,
+  asPieceId,
+  asUserId
+} from '../shared/ids'
 import type {GameState} from '../shared/state'
 import {
   applyServerMessage,
   buildBootstrapCommands,
+  buildDefaultCharacterSheetUpdateCommand,
   buildMovePieceCommand,
   resolveClientIdentity
 } from './game-commands'
@@ -14,6 +21,9 @@ const identity = {
   gameId: asGameId('game-1'),
   actorId: asUserId('user-1')
 }
+
+const boardId = asBoardId('main-board')
+const characterId = asCharacterId('scout')
 
 const state = {
   id: identity.gameId,
@@ -32,6 +42,54 @@ const state = {
   diceLog: [],
   selectedBoardId: null,
   eventSeq: 7
+} satisfies GameState
+
+const stateWithBoard = {
+  ...state,
+  boards: {
+    [boardId]: {
+      id: boardId,
+      name: 'Downport Skirmish',
+      imageAssetId: null,
+      url: null,
+      width: 1200,
+      height: 800,
+      scale: 50
+    }
+  },
+  selectedBoardId: boardId
+} satisfies GameState
+
+const stateWithCharacter = {
+  ...stateWithBoard,
+  characters: {
+    [characterId]: {
+      id: characterId,
+      ownerId: identity.actorId,
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 34,
+      characteristics: {
+        str: 7,
+        dex: 8,
+        end: 7,
+        int: 9,
+        edu: 8,
+        soc: 6
+      },
+      skills: ['Pilot 1', 'Gun Combat 0', 'Vacc Suit 0'],
+      equipment: [
+        {
+          name: 'Vacc suit',
+          quantity: 1,
+          notes: 'Standard shipboard emergency suit'
+        }
+      ],
+      credits: 1000
+    }
+  }
 } satisfies GameState
 
 describe('client command helpers', () => {
@@ -63,6 +121,40 @@ describe('client command helpers', () => {
 
     assert.equal(commands.length, 1)
     assert.equal(commands[0]?.type, 'CreateGame')
+  })
+
+  it('bootstraps a default character and sheet before the default piece', () => {
+    const commands = buildBootstrapCommands(identity, stateWithBoard)
+
+    assert.equal(commands.length, 2)
+    assert.equal(commands[0]?.type, 'CreateCharacter')
+    assert.equal(commands[1]?.type, 'UpdateCharacterSheet')
+
+    const sheetCommand = buildDefaultCharacterSheetUpdateCommand({
+      requestId: 'test-sheet',
+      identity
+    })
+
+    assert.equal(sheetCommand?.type, 'UpdateCharacterSheet')
+    assert.equal(sheetCommand?.characterId, characterId)
+    assert.deepEqual(sheetCommand?.characteristics, {
+      str: 7,
+      dex: 8,
+      end: 7,
+      int: 9,
+      edu: 8,
+      soc: 6
+    })
+  })
+
+  it('binds the default piece to the default character', () => {
+    const commands = buildBootstrapCommands(identity, stateWithCharacter)
+
+    assert.equal(commands.length, 1)
+    assert.equal(commands[0]?.type, 'CreatePiece')
+    if (commands[0]?.type !== 'CreatePiece') return
+    assert.equal(commands[0].boardId, boardId)
+    assert.equal(commands[0].characterId, characterId)
   })
 
   it('replaces authoritative state on accepted messages', () => {

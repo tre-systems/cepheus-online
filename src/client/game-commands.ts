@@ -1,10 +1,12 @@
 import type {Command} from '../shared/commands'
 import {
   asBoardId,
+  asCharacterId,
   asGameId,
   asPieceId,
   asUserId,
   type BoardId,
+  type CharacterId,
   type GameId,
   type PieceId,
   type UserId
@@ -30,6 +32,14 @@ export interface ClientMessageApplication {
 
 export const DEFAULT_GAME_ID = 'demo-room'
 export const DEFAULT_ACTOR_ID = 'local-user'
+export const DEFAULT_BOARD_ID = asBoardId('main-board')
+export const DEFAULT_CHARACTER_ID = asCharacterId('scout')
+export const DEFAULT_PIECE_ID = asPieceId('scout-1')
+
+type UpdateCharacterSheetCommand = Extract<
+  Command,
+  {type: 'UpdateCharacterSheet'}
+>
 
 export const resolveClientIdentity = (
   searchParams: URLSearchParams
@@ -63,26 +73,73 @@ export const buildCreateBoardCommand = ({
   type: 'CreateBoard',
   gameId: identity.gameId,
   actorId: identity.actorId,
-  boardId: asBoardId('main-board'),
+  boardId: DEFAULT_BOARD_ID,
   name: 'Downport Skirmish',
   width: 1200,
   height: 800,
   scale: 50
 })
 
+export const buildCreateCharacterCommand = ({
+  identity,
+  characterId = DEFAULT_CHARACTER_ID
+}: ClientCommandOptions & {
+  characterId?: CharacterId
+}): Command => ({
+  type: 'CreateCharacter',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId,
+  characterType: 'PLAYER',
+  name: 'Scout'
+})
+
+export const buildDefaultCharacterSheetUpdateCommand = ({
+  identity,
+  characterId = DEFAULT_CHARACTER_ID
+}: ClientCommandOptions & {
+  characterId?: CharacterId
+}): UpdateCharacterSheetCommand | null => ({
+  type: 'UpdateCharacterSheet',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId,
+  age: 34,
+  characteristics: {
+    str: 7,
+    dex: 8,
+    end: 7,
+    int: 9,
+    edu: 8,
+    soc: 6
+  },
+  skills: ['Pilot 1', 'Gun Combat 0', 'Vacc Suit 0'],
+  equipment: [
+    {
+      name: 'Vacc suit',
+      quantity: 1,
+      notes: 'Standard shipboard emergency suit'
+    }
+  ],
+  credits: 1000
+})
+
 export const buildCreatePieceCommand = ({
   identity,
-  boardId = asBoardId('main-board'),
+  boardId = DEFAULT_BOARD_ID,
+  characterId = null,
   imageAssetId = null
 }: ClientCommandOptions & {
   boardId?: BoardId
+  characterId?: CharacterId | null
   imageAssetId?: string | null
 }): Command => ({
   type: 'CreatePiece',
   gameId: identity.gameId,
   actorId: identity.actorId,
-  pieceId: asPieceId('scout-1'),
+  pieceId: DEFAULT_PIECE_ID,
   boardId,
+  characterId,
   name: 'Scout',
   imageAssetId,
   x: 220,
@@ -139,15 +196,32 @@ export const buildBootstrapCommands = (
     return [buildCreateBoardCommand({requestId: 'bootstrap-board', identity})]
   }
 
+  if (Object.keys(state.characters).length === 0) {
+    return [
+      buildCreateCharacterCommand({
+        requestId: 'bootstrap-character',
+        identity
+      }),
+      buildDefaultCharacterSheetUpdateCommand({
+        requestId: 'bootstrap-character-sheet',
+        identity
+      })
+    ].filter((command): command is Command => command !== null)
+  }
+
   if (Object.keys(state.pieces).length === 0) {
     const boardId = (state.selectedBoardId ??
       Object.keys(state.boards)[0]) as BoardId
+    const characterId = (state.characters[DEFAULT_CHARACTER_ID]
+      ? DEFAULT_CHARACTER_ID
+      : Object.keys(state.characters)[0]) as CharacterId
 
     return [
       buildCreatePieceCommand({
         requestId: 'bootstrap-piece',
         identity,
-        boardId
+        boardId,
+        characterId
       })
     ]
   }

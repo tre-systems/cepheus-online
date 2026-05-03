@@ -48,6 +48,28 @@ const requireFiniteCoordinate = (
   return ok(value)
 }
 
+const requireFiniteOrNull = (
+  value: number | null,
+  label: string
+): Result<number | null, CommandError> => {
+  if (value !== null && !Number.isFinite(value)) {
+    return err(commandError('invalid_command', `${label} must be finite`))
+  }
+
+  return ok(value)
+}
+
+const requireNonEmptyString = (
+  value: string,
+  label: string
+): Result<string, CommandError> => {
+  if (!value.trim()) {
+    return err(commandError('invalid_command', `${label} cannot be empty`))
+  }
+
+  return ok(value)
+}
+
 const validateExpectedSeq = (
   command: Command,
   currentSeq: number
@@ -109,6 +131,69 @@ export const deriveEventsForCommand = (
       ])
     }
 
+    case 'UpdateCharacterSheet': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      if (!state.value.characters[command.characterId]) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (command.age !== undefined) {
+        const age = requireFiniteOrNull(command.age, 'age')
+        if (!age.ok) return age
+      }
+      if (command.characteristics !== undefined) {
+        for (const [key, value] of Object.entries(command.characteristics)) {
+          const characteristic = requireFiniteOrNull(
+            value,
+            `characteristics.${key}`
+          )
+          if (!characteristic.ok) return characteristic
+        }
+      }
+      if (command.skills !== undefined) {
+        for (const [index, skill] of command.skills.entries()) {
+          const value = requireNonEmptyString(skill, `skills[${index}]`)
+          if (!value.ok) return value
+        }
+      }
+      if (command.equipment !== undefined) {
+        for (const [index, item] of command.equipment.entries()) {
+          const name = requireNonEmptyString(
+            item.name,
+            `equipment[${index}].name`
+          )
+          if (!name.ok) return name
+          const quantity = requireFiniteCoordinate(
+            item.quantity,
+            `equipment[${index}].quantity`
+          )
+          if (!quantity.ok) return quantity
+        }
+      }
+      if (command.credits !== undefined) {
+        const credits = requireFiniteCoordinate(command.credits, 'credits')
+        if (!credits.ok) return credits
+      }
+
+      return ok([
+        {
+          type: 'CharacterSheetUpdated',
+          characterId: command.characterId,
+          ...(command.age === undefined ? {} : {age: command.age}),
+          ...(command.characteristics === undefined
+            ? {}
+            : {characteristics: command.characteristics}),
+          ...(command.skills === undefined ? {} : {skills: command.skills}),
+          ...(command.equipment === undefined
+            ? {}
+            : {equipment: command.equipment}),
+          ...(command.credits === undefined
+            ? {}
+            : {credits: command.credits})
+        }
+      ])
+    }
+
     case 'CreateBoard': {
       const state = requireGame(context.state)
       if (!state.ok) return state
@@ -157,6 +242,13 @@ export const deriveEventsForCommand = (
       if (!state.value.boards[command.boardId]) {
         return err(commandError('missing_entity', 'Board does not exist'))
       }
+      if (
+        command.characterId !== undefined &&
+        command.characterId !== null &&
+        !state.value.characters[command.characterId]
+      ) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
       if (state.value.pieces[command.pieceId]) {
         return err(commandError('duplicate_entity', 'Piece already exists'))
       }
@@ -170,6 +262,7 @@ export const deriveEventsForCommand = (
           type: 'PieceCreated',
           pieceId: command.pieceId,
           boardId: command.boardId,
+          characterId: command.characterId ?? null,
           name: command.name,
           imageAssetId: command.imageAssetId ?? null,
           x: command.x,

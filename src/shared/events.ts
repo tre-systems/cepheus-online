@@ -1,5 +1,10 @@
 import type {BoardId, CharacterId, EventId, GameId, PieceId, UserId} from './ids'
-import type {CharacterType, PieceFreedom, PieceVisibility} from './state'
+import type {
+  CharacterSheetPatch,
+  CharacterType,
+  PieceFreedom,
+  PieceVisibility
+} from './state'
 
 export interface EventEnvelope {
   id: EventId
@@ -24,6 +29,10 @@ export type GameEvent =
       characterType: CharacterType
       name: string
     }
+  | ({
+      type: 'CharacterSheetUpdated'
+      characterId: CharacterId
+    } & CharacterSheetPatch)
   | {
       type: 'BoardCreated'
       boardId: BoardId
@@ -42,6 +51,7 @@ export type GameEvent =
       type: 'PieceCreated'
       pieceId: PieceId
       boardId: BoardId
+      characterId: CharacterId | null
       name: string
       imageAssetId: string | null
       x: number

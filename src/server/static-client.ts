@@ -56,10 +56,10 @@ const CLIENT_HTML = `<!doctype html>
           <button id="sheetCloseButton" type="button" aria-label="Close character sheet">Close</button>
         </header>
         <nav class="sheet-tabs" aria-label="Character sheet sections">
-          <button class="sheet-tab active" type="button">Details</button>
-          <button class="sheet-tab" type="button">Action</button>
-          <button class="sheet-tab" type="button">Items</button>
-          <button class="sheet-tab" type="button">Notes</button>
+          <button class="sheet-tab active" type="button" data-sheet-tab="details">Details</button>
+          <button class="sheet-tab" type="button" data-sheet-tab="action">Action</button>
+          <button class="sheet-tab" type="button" data-sheet-tab="items">Items</button>
+          <button class="sheet-tab" type="button" data-sheet-tab="notes">Notes</button>
         </nav>
         <div class="sheet-body" id="sheetBody"></div>
       </aside>
@@ -1007,6 +1007,56 @@ h1 {
   color: #020504;
 }
 
+.sheet-skill-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.sheet-skill-actions button {
+  min-height: 36px;
+  justify-content: space-between;
+  border-radius: 4px;
+  text-align: left;
+  font-size: 12px;
+}
+
+.sheet-empty {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.item-list {
+  display: grid;
+  gap: 6px;
+}
+
+.item-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border-bottom: 1px solid rgba(244, 255, 248, 0.16);
+  padding-bottom: 6px;
+}
+
+.item-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.item-meta {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .stat-strip {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -1253,6 +1303,7 @@ const els = {
   sheetClose: document.getElementById("sheetCloseButton"),
   sheetName: document.getElementById("sheetName"),
   sheetBody: document.getElementById("sheetBody"),
+  sheetTabs: Array.from(document.querySelectorAll("[data-sheet-tab]")),
   menu: document.getElementById("menuButton"),
   roomDialog: document.getElementById("roomDialog"),
   roomCancel: document.getElementById("roomCancelButton")
@@ -1270,6 +1321,7 @@ const viewerRole = qs.get("viewer") || "referee";
 const canSelectBoards = viewerRole.toLowerCase() === "referee";
 let selectedPieceId = null;
 let sheetOpen = false;
+let activeSheetTab = "details";
 let drag = null;
 let requestCounter = 0;
 let diceHideTimer = null;
@@ -1345,6 +1397,38 @@ const createBoardCommand = () => ({
   scale: 50
 });
 
+const createCharacterCommand = () => ({
+  type: "CreateCharacter",
+  gameId: roomId,
+  actorId,
+  characterId: "scout",
+  characterType: "PLAYER",
+  name: "Scout"
+});
+
+const updateScoutSheetCommand = () => ({
+  type: "UpdateCharacterSheet",
+  gameId: roomId,
+  actorId,
+  characterId: "scout",
+  age: 34,
+  characteristics: {
+    str: 7,
+    dex: 8,
+    end: 8,
+    int: 7,
+    edu: 9,
+    soc: 6
+  },
+  skills: ["Vacc Suit-0", "Gun Combat-0", "Mechanic-0", "Recon-0"],
+  equipment: [
+    {name: "Vacc Suit", quantity: 1, notes: "Carried"},
+    {name: "Laser Carbine", quantity: 1, notes: "Carried"},
+    {name: "Medkit", quantity: 1, notes: "Stowed"}
+  ],
+  credits: 1200
+});
+
 const createPieceCommand = (boardId) => ({
   type: "CreatePiece",
   gameId: roomId,
@@ -1352,6 +1436,7 @@ const createPieceCommand = (boardId) => ({
   pieceId: "scout-1",
   boardId,
   name: "Scout",
+  characterId: "scout",
   imageAssetId: null,
   x: 220,
   y: 180
@@ -1461,6 +1546,8 @@ const nextBootstrapCommand = () => {
   if (!state) return createGameCommand();
   const boardIds = Object.keys(state.boards || {});
   if (boardIds.length === 0) return createBoardCommand();
+  if (!state.characters?.scout) return createCharacterCommand();
+  if ((state.characters.scout.skills || []).length === 0) return updateScoutSheetCommand();
   if (Object.keys(state.pieces || {}).length === 0) {
     return createPieceCommand(selectedBoardId() || boardIds[0]);
   }
@@ -1469,7 +1556,7 @@ const nextBootstrapCommand = () => {
 
 const bootstrapScene = async () => {
   setError("");
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     const command = nextBootstrapCommand();
     if (!command) break;
     await postCommand(command, "bootstrap-" + i);
@@ -1626,6 +1713,11 @@ const selectedPiece = () => {
   return pieces.find((piece) => piece.id === selectedPieceId) || pieces[0] || null;
 };
 
+const selectedCharacter = (piece) => {
+  if (!piece?.characterId) return null;
+  return state?.characters?.[piece.characterId] || null;
+};
+
 const setSheetOpen = (open) => {
   sheetOpen = open;
   els.sheet.classList.toggle("open", sheetOpen);
@@ -1644,42 +1736,53 @@ const sheetRow = (label, value) => {
   return row;
 };
 
-const renderSheet = () => {
-  const piece = selectedPiece();
-  els.sheetName.textContent = piece?.name || "No piece";
+const emptySheetText = (text) => {
+  const empty = document.createElement("p");
+  empty.className = "sheet-empty";
+  empty.textContent = text;
+  return empty;
+};
 
-  const body = document.createElement("div");
-  body.className = "sheet-grid";
-  if (!piece) {
-    body.append(sheetRow("Status", "No active token"));
-    body.append(sheetRow("Board", selectedBoard()?.name || "None"));
-    els.sheetBody.replaceChildren(body);
-    return;
-  }
-
+const statStrip = (character) => {
+  const values = character?.characteristics || {};
+  const fallback = {str: 7, dex: 8, end: 8, int: 7, edu: 9, soc: 6};
   const stats = document.createElement("div");
   stats.className = "stat-strip";
-  for (const [label, value] of [["Str", 7], ["Dex", 8], ["End", 8], ["Int", 7], ["Edu", 9], ["Soc", 6]]) {
+  for (const [label, key] of [["Str", "str"], ["Dex", "dex"], ["End", "end"], ["Int", "int"], ["Edu", "edu"], ["Soc", "soc"]]) {
     const stat = document.createElement("div");
     stat.className = "stat";
     const name = document.createElement("b");
     name.textContent = label;
     const number = document.createElement("span");
-    number.textContent = String(value);
+    number.textContent = String(values[key] ?? values[key.toUpperCase()] ?? fallback[key]);
     stat.append(name, number);
     stats.append(stat);
   }
+  return stats;
+};
 
+const characterSkills = (character) => {
+  if (character && Array.isArray(character.skills)) {
+    return character.skills.filter((skill) => typeof skill === "string" && skill.trim()).map((skill) => skill.trim());
+  }
+  if (character) return [];
+  return ["Vacc Suit-0", "Gun Combat-0", "Mechanic-0", "Recon-0"];
+};
+
+const skillChips = (skills) => {
   const chips = document.createElement("div");
   chips.className = "chip-list";
-  for (const label of ["Vacc Suit-0", "Gun Combat-0", "Mechanic-0", "Recon-0"]) {
+  for (const label of skills) {
     const chip = document.createElement("span");
     chip.textContent = label;
     chips.append(chip);
   }
+  return chips;
+};
 
-  const visibilityActions = document.createElement("div");
-  visibilityActions.className = "sheet-actions";
+const visibilityActions = (piece) => {
+  const actions = document.createElement("div");
+  actions.className = "sheet-actions";
   for (const visibility of ["HIDDEN", "PREVIEW", "VISIBLE"]) {
     const button = document.createElement("button");
     button.type = "button";
@@ -1694,17 +1797,111 @@ const renderSheet = () => {
         visibility
       }).catch((error) => setError(error.message));
     });
-    visibilityActions.append(button);
+    actions.append(button);
   }
+  return actions;
+};
 
+const renderDetailsTab = (body, piece, character) => {
   body.append(
-    sheetRow("Type", "PLAYER"),
+    sheetRow("Type", character?.type || "PLAYER"),
+    sheetRow("Age", character?.age == null ? "-" : String(character.age)),
     sheetRow("Position", Math.round(piece.x) + ", " + Math.round(piece.y)),
     sheetRow("Visibility", piece.visibility),
-    visibilityActions,
-    stats,
-    chips
+    visibilityActions(piece),
+    statStrip(character),
+    skillChips(characterSkills(character))
   );
+};
+
+const renderActionTab = (body, piece, character) => {
+  const skills = characterSkills(character);
+  if (skills.length === 0) {
+    body.append(emptySheetText("No trained skills"));
+    return;
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "sheet-skill-actions";
+  const name = character?.name || piece.name;
+  for (const skill of skills) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = skill;
+    button.addEventListener("click", () => {
+      sendCommand({
+        type: "RollDice",
+        gameId: roomId,
+        actorId,
+        expression: "2d6",
+        reason: name + ": " + skill
+      }).catch((error) => setError(error.message));
+    });
+    actions.append(button);
+  }
+  body.append(actions);
+};
+
+const itemName = (item) => item?.Name || item?.name || "Item";
+
+const itemQuantity = (item) => item?.Quantity ?? item?.quantity ?? 1;
+
+const itemCarried = (item) => item?.Carried ?? item?.carried;
+
+const itemNotes = (item) => item?.notes || item?.Notes || "";
+
+const renderItemsTab = (body, character) => {
+  body.append(sheetRow("Credits", character?.credits == null ? "-" : String(character.credits)));
+  const equipment = Array.isArray(character?.equipment) ? character.equipment : [];
+  if (equipment.length === 0) {
+    body.append(emptySheetText("No equipment listed"));
+    return;
+  }
+
+  const list = document.createElement("div");
+  list.className = "item-list";
+  for (const item of equipment) {
+    const row = document.createElement("div");
+    row.className = "item-row";
+    const name = document.createElement("span");
+    name.className = "item-name";
+    name.textContent = itemName(item);
+    const meta = document.createElement("span");
+    meta.className = "item-meta";
+    const carried = itemCarried(item);
+    const notes = itemNotes(item);
+    meta.textContent = "x" + itemQuantity(item) + (carried === undefined ? "" : carried ? " carried" : " stowed") + (notes ? " " + notes : "");
+    row.append(name, meta);
+    list.append(row);
+  }
+  body.append(list);
+};
+
+const renderNotesTab = (body, character) => {
+  body.append(emptySheetText(character?.notes || "No notes"));
+};
+
+const renderSheet = () => {
+  const piece = selectedPiece();
+  const character = selectedCharacter(piece);
+  els.sheetName.textContent = character?.name || piece?.name || "No piece";
+  for (const tab of els.sheetTabs) {
+    tab.classList.toggle("active", tab.dataset.sheetTab === activeSheetTab);
+  }
+
+  const body = document.createElement("div");
+  body.className = "sheet-grid";
+  if (!piece) {
+    body.append(sheetRow("Status", "No active token"));
+    body.append(sheetRow("Board", selectedBoard()?.name || "None"));
+    els.sheetBody.replaceChildren(body);
+    return;
+  }
+
+  if (activeSheetTab === "action") renderActionTab(body, piece, character);
+  else if (activeSheetTab === "items") renderItemsTab(body, character);
+  else if (activeSheetTab === "notes") renderNotesTab(body, character);
+  else renderDetailsTab(body, piece, character);
   els.sheetBody.replaceChildren(body);
 };
 
@@ -2020,6 +2217,13 @@ els.sheetButton.addEventListener("click", () => {
 els.sheetClose.addEventListener("click", () => {
   setSheetOpen(false);
 });
+
+for (const tab of els.sheetTabs) {
+  tab.addEventListener("click", () => {
+    activeSheetTab = tab.dataset.sheetTab || "details";
+    renderSheet();
+  });
+}
 
 els.bootstrap.addEventListener("click", () => {
   bootstrapScene().catch((error) => setError(error.message));

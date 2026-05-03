@@ -1,8 +1,17 @@
 import type {EventEnvelope} from './events'
-import type {GameState} from './state'
+import type {CharacterCharacteristics, GameState} from './state'
 
 const diceRevealAt = (createdAt: string): string =>
   new Date(Date.parse(createdAt) + 2500).toISOString()
+
+const defaultCharacteristics = (): CharacterCharacteristics => ({
+  str: null,
+  dex: null,
+  end: null,
+  int: null,
+  edu: null,
+  soc: null
+})
 
 export const projectGameState = (
   events: readonly EventEnvelope[],
@@ -44,10 +53,39 @@ export const projectGameState = (
           type: event.characterType,
           name: event.name,
           active: true,
-          notes: ''
+          notes: '',
+          age: null,
+          characteristics: defaultCharacteristics(),
+          skills: [],
+          equipment: [],
+          credits: 0
         }
         state.eventSeq = envelope.seq
         break
+
+      case 'CharacterSheetUpdated': {
+        if (!state) {
+          throw new Error('CharacterSheetUpdated before GameCreated')
+        }
+        const character = state.characters[event.characterId]
+        if (!character) break
+
+        if (event.age !== undefined) character.age = event.age
+        if (event.characteristics !== undefined) {
+          character.characteristics = {
+            ...character.characteristics,
+            ...event.characteristics
+          }
+        }
+        if (event.skills !== undefined) character.skills = [...event.skills]
+        if (event.equipment !== undefined) {
+          character.equipment = event.equipment.map((item) => ({...item}))
+        }
+        if (event.credits !== undefined) character.credits = event.credits
+
+        state.eventSeq = envelope.seq
+        break
+      }
 
       case 'BoardCreated':
         if (!state) throw new Error('BoardCreated before GameCreated')
@@ -76,7 +114,7 @@ export const projectGameState = (
         state.pieces[event.pieceId] = {
           id: event.pieceId,
           boardId: event.boardId,
-          characterId: null,
+          characterId: event.characterId,
           imageAssetId: event.imageAssetId,
           name: event.name,
           x: event.x,

@@ -8,7 +8,14 @@ import {
 import {err, ok, type Result} from './result'
 import type {Command} from './commands'
 import type {GameState} from './state'
-import type {CharacterType, PieceFreedom, PieceVisibility} from './state'
+import type {
+  CharacterEquipmentItem,
+  CharacteristicKey,
+  CharacterSheetPatch,
+  CharacterType,
+  PieceFreedom,
+  PieceVisibility
+} from './state'
 import {isObject, isString} from './util'
 
 export type CommandErrorCode =
@@ -91,6 +98,16 @@ const parseId = <T>(
   }
 }
 
+const parseOptionalId = <T>(
+  raw: unknown,
+  label: string,
+  parse: (value: string) => T
+): Result<T | null, CommandError> => {
+  if (raw === undefined || raw === null) return ok(null)
+
+  return parseId(raw, label, parse)
+}
+
 const parseString = (
   raw: unknown,
   label: string
@@ -127,6 +144,15 @@ const parseNumber = (
   return ok(raw)
 }
 
+const parseNullableNumber = (
+  raw: unknown,
+  label: string
+): Result<number | null, CommandError> => {
+  if (raw === null) return ok(null)
+
+  return parseNumber(raw, label)
+}
+
 const parseOptionalSeq = (
   raw: unknown,
   label: string
@@ -137,6 +163,125 @@ const parseOptionalSeq = (
   }
 
   return ok(raw)
+}
+
+const parseStringArray = (
+  raw: unknown,
+  label: string
+): Result<string[], CommandError> => {
+  if (!Array.isArray(raw)) {
+    return err(invalidCommand(`${label} must be an array`))
+  }
+
+  const values: string[] = []
+  for (const [index, item] of raw.entries()) {
+    const value = parseString(item, `${label}[${index}]`)
+    if (!value.ok) return value
+    values.push(value.value)
+  }
+
+  return ok(values)
+}
+
+const characteristicKeys = [
+  'str',
+  'dex',
+  'end',
+  'int',
+  'edu',
+  'soc'
+] satisfies CharacteristicKey[]
+
+const parseCharacteristicsPatch = (
+  raw: unknown,
+  label: string
+): Result<CharacterSheetPatch['characteristics'], CommandError> => {
+  if (!isObject(raw)) {
+    return err(invalidCommand(`${label} must be an object`))
+  }
+
+  const patch: CharacterSheetPatch['characteristics'] = {}
+
+  for (const key of characteristicKeys) {
+    if (raw[key] === undefined) continue
+    const value = parseNullableNumber(raw[key], `${label}.${key}`)
+    if (!value.ok) return value
+    patch[key] = value.value
+  }
+
+  return ok(patch)
+}
+
+const parseEquipment = (
+  raw: unknown,
+  label: string
+): Result<CharacterEquipmentItem[], CommandError> => {
+  if (!Array.isArray(raw)) {
+    return err(invalidCommand(`${label} must be an array`))
+  }
+
+  const equipment: CharacterEquipmentItem[] = []
+  for (const [index, item] of raw.entries()) {
+    if (!isObject(item)) {
+      return err(invalidCommand(`${label}[${index}] must be an object`))
+    }
+
+    const name = parseString(item.name, `${label}[${index}].name`)
+    if (!name.ok) return name
+    const quantity = parseNumber(item.quantity, `${label}[${index}].quantity`)
+    if (!quantity.ok) return quantity
+    const notes = parseOptionalString(item.notes, `${label}[${index}].notes`)
+    if (!notes.ok) return notes
+
+    equipment.push({
+      name: name.value,
+      quantity: quantity.value,
+      notes: notes.value ?? ''
+    })
+  }
+
+  return ok(equipment)
+}
+
+const parseCharacterSheetPatch = (
+  raw: Record<string, unknown>
+): Result<CharacterSheetPatch, CommandError> => {
+  const patch: CharacterSheetPatch = {}
+
+  if (raw.age !== undefined) {
+    const age = parseNullableNumber(raw.age, 'age')
+    if (!age.ok) return age
+    patch.age = age.value
+  }
+
+  if (raw.characteristics !== undefined) {
+    const characteristics = parseCharacteristicsPatch(
+      raw.characteristics,
+      'characteristics'
+    )
+    if (!characteristics.ok) return characteristics
+    patch.characteristics = characteristics.value
+  }
+
+  if (raw.skills !== undefined) {
+    const skills = parseStringArray(raw.skills, 'skills')
+    if (!skills.ok) return skills
+    patch.skills = skills.value
+  }
+
+  if (raw.equipment !== undefined) {
+    const equipment = parseEquipment(raw.equipment, 'equipment')
+    if (!equipment.ok) return equipment
+    patch.equipment = equipment.value
+  }
+
+  if (raw.credits !== undefined) {
+    const credits = parseNumber(raw.credits, 'credits')
+    if (!credits.ok) return credits
+    patch.credits = credits.value
+  }
+
+  return ok(patch)
 }
 
 const parseCharacterType = (
@@ -233,6 +378,24 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
       })
     }
 
+    case 'UpdateCharacterSheet': {
+      const characterId = parseId(
+        raw.characterId,
+        'characterId',
+        asCharacterId
+      )
+      if (!characterId.ok) return characterId
+      const sheetPatch = parseCharacterSheetPatch(raw)
+      if (!sheetPatch.ok) return sheetPatch
+
+      return ok({
+        type: 'UpdateCharacterSheet',
+        ...base.value,
+        characterId: characterId.value,
+        ...sheetPatch.value
+      })
+    }
+
     case 'CreateBoard': {
       const boardId = parseId(raw.boardId, 'boardId', asBoardId)
       if (!boardId.ok) return boardId
@@ -278,6 +441,12 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
       if (!pieceId.ok) return pieceId
       const boardId = parseId(raw.boardId, 'boardId', asBoardId)
       if (!boardId.ok) return boardId
+      const characterId = parseOptionalId(
+        raw.characterId,
+        'characterId',
+        asCharacterId
+      )
+      if (!characterId.ok) return characterId
       const name = parseString(raw.name, 'name')
       if (!name.ok) return name
       const imageAssetId = parseOptionalString(raw.imageAssetId, 'imageAssetId')
@@ -292,6 +461,7 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
         ...base.value,
         pieceId: pieceId.value,
         boardId: boardId.value,
+        characterId: characterId.value,
         name: name.value,
         imageAssetId: imageAssetId.value,
         x: x.value,

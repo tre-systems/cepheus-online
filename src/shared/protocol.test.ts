@@ -54,6 +54,74 @@ describe('protocol validation', () => {
     )
   })
 
+  it('accepts linked piece character references', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-2b',
+      command: {
+        type: 'CreatePiece',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        pieceId: 'enemy-1',
+        boardId: 'main-board',
+        characterId: 'enemy-character-1',
+        name: 'Enemy',
+        x: 100,
+        y: 150
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    const {command} = result.value
+    assert.equal(command.type, 'CreatePiece')
+    if (command.type !== 'CreatePiece') return
+    assert.equal(command.characterId, 'enemy-character-1')
+  })
+
+  it('accepts partial manual character sheet updates', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-sheet',
+      command: {
+        type: 'UpdateCharacterSheet',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        age: 34,
+        characteristics: {
+          str: 7,
+          dex: null
+        },
+        skills: ['Pilot 1', 'Gun Combat 0'],
+        equipment: [
+          {
+            name: 'Vacc suit',
+            quantity: 1
+          }
+        ],
+        credits: 1200
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    const {command} = result.value
+    assert.equal(command.type, 'UpdateCharacterSheet')
+    if (command.type !== 'UpdateCharacterSheet') return
+    assert.equal(command.age, 34)
+    assert.deepEqual(command.characteristics, {str: 7, dex: null})
+    assert.deepEqual(command.skills, ['Pilot 1', 'Gun Combat 0'])
+    assert.deepEqual(command.equipment, [
+      {name: 'Vacc suit', quantity: 1, notes: ''}
+    ])
+    assert.equal(command.credits, 1200)
+  })
+
   it('accepts optional board image URLs and asset references', () => {
     const result = decodeClientMessage({
       type: 'command',

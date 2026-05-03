@@ -2,7 +2,13 @@ import * as assert from 'node:assert/strict'
 import {describe, it} from 'node:test'
 
 import type {Command} from '../../shared/commands'
-import {asBoardId, asGameId, asPieceId, asUserId} from '../../shared/ids'
+import {
+  asBoardId,
+  asCharacterId,
+  asGameId,
+  asPieceId,
+  asUserId
+} from '../../shared/ids'
 import {getProjectedGameState} from './projection'
 import {runCommandPublication} from './publication'
 import {gameSeedKey, readCheckpoint, readEventStream} from './storage'
@@ -126,6 +132,111 @@ describe('room publication flow', () => {
     if (stale.ok) return
     assert.equal(stale.error.code, 'stale_command')
     assert.equal((await readEventStream(storage, gameId)).length, 3)
+  })
+
+  it('updates manual character sheet fields and preserves omitted fields', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+
+    const firstUpdate = await publish(storage, {
+      type: 'UpdateCharacterSheet',
+      gameId,
+      actorId,
+      characterId,
+      age: 34,
+      characteristics: {
+        str: 7,
+        dex: 9
+      },
+      skills: ['Pilot 1'],
+      equipment: [{name: 'Vacc suit', quantity: 1, notes: ''}],
+      credits: 1200
+    })
+
+    assert.equal(firstUpdate.ok, true)
+    const secondUpdate = await publish(storage, {
+      type: 'UpdateCharacterSheet',
+      gameId,
+      actorId,
+      characterId,
+      characteristics: {
+        dex: null
+      },
+      credits: 900
+    })
+
+    assert.equal(secondUpdate.ok, true)
+    if (!secondUpdate.ok) return
+    const character = secondUpdate.value.state.characters[characterId]
+    assert.equal(character?.age, 34)
+    assert.equal(character?.characteristics.str, 7)
+    assert.equal(character?.characteristics.dex, null)
+    assert.deepEqual(character?.skills, ['Pilot 1'])
+    assert.deepEqual(character?.equipment, [
+      {name: 'Vacc suit', quantity: 1, notes: ''}
+    ])
+    assert.equal(character?.credits, 900)
+  })
+
+  it('validates piece character links during publication', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, createBoardCommand())
+
+    const missingCharacter = await publish(storage, {
+      type: 'CreatePiece',
+      gameId,
+      actorId,
+      pieceId: asPieceId('piece-1'),
+      boardId: asBoardId('board-1'),
+      characterId,
+      name: 'Scout',
+      x: 10,
+      y: 10
+    })
+
+    assert.equal(missingCharacter.ok, false)
+    if (missingCharacter.ok) return
+    assert.equal(missingCharacter.error.code, 'missing_entity')
+    assert.equal((await readEventStream(storage, gameId)).length, 2)
+
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+
+    const linkedPiece = await publish(storage, {
+      type: 'CreatePiece',
+      gameId,
+      actorId,
+      pieceId: asPieceId('piece-1'),
+      boardId: asBoardId('board-1'),
+      characterId,
+      name: 'Scout',
+      x: 10,
+      y: 10
+    })
+
+    assert.equal(linkedPiece.ok, true)
+    if (!linkedPiece.ok) return
+    assert.equal(
+      linkedPiece.value.state.pieces[asPieceId('piece-1')]?.characterId,
+      characterId
+    )
   })
 
   it('selects an existing board and publishes the projected board selection', async () => {
