@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import {describe, it} from 'node:test'
 
-import {decodeClientMessage} from './protocol'
+import {decodeClientMessage, decodeCommand} from './protocol'
 
 describe('protocol validation', () => {
   it('accepts a command envelope with a typed command', () => {
@@ -176,6 +176,80 @@ describe('protocol validation', () => {
       {name: 'Vacc suit', quantity: 1, notes: ''}
     ])
     assert.equal(command.credits, 1200)
+  })
+
+  it('accepts expected sequence on all decoded command types', () => {
+    const base = {gameId: 'game-1', actorId: 'player-1', expectedSeq: 7}
+    const commands = [
+      {
+        type: 'CreateCharacter',
+        ...base,
+        characterId: 'char-1',
+        characterType: 'PLAYER',
+        name: 'Scout'
+      },
+      {
+        type: 'UpdateCharacterSheet',
+        ...base,
+        characterId: 'char-1',
+        notes: 'Ready'
+      },
+      {
+        type: 'CreateBoard',
+        ...base,
+        boardId: 'board-1',
+        name: 'Deck',
+        width: 1000,
+        height: 1000,
+        scale: 50
+      },
+      {
+        type: 'SelectBoard',
+        ...base,
+        boardId: 'board-1'
+      },
+      {
+        type: 'CreatePiece',
+        ...base,
+        pieceId: 'piece-1',
+        boardId: 'board-1',
+        name: 'Scout',
+        x: 10,
+        y: 20
+      },
+      {
+        type: 'MovePiece',
+        ...base,
+        pieceId: 'piece-1',
+        x: 11,
+        y: 21
+      },
+      {
+        type: 'SetPieceVisibility',
+        ...base,
+        pieceId: 'piece-1',
+        visibility: 'VISIBLE'
+      },
+      {
+        type: 'SetPieceFreedom',
+        ...base,
+        pieceId: 'piece-1',
+        freedom: 'UNLOCKED'
+      },
+      {
+        type: 'RollDice',
+        ...base,
+        expression: '2d6',
+        reason: 'Test'
+      }
+    ]
+
+    for (const command of commands) {
+      const decoded = decodeCommand(command)
+      assert.equal(decoded.ok, true)
+      if (!decoded.ok) continue
+      assert.equal(decoded.value.expectedSeq, 7)
+    }
   })
 
   it('rejects non-string character sheet notes', () => {

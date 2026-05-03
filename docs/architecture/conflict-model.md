@@ -65,7 +65,8 @@ Start with:
 
 - server-ordered commands/events for board and dice
 - block-style server-ordered notes
-- explicit command versions or expected sequence numbers for sensitive edits
+- consistent `expectedSeq` on state-changing commands so stale mutations reject
+  before append
 
 Only add a CRDT dependency when the first document-like collaboration feature
 needs true offline concurrent text editing.

@@ -342,16 +342,25 @@ const parsePieceFreedom = (
 
 const parseBaseCommand = (
   raw: Record<string, unknown>
-): Result<Pick<Command, 'gameId' | 'actorId'>, CommandError> => {
+): Result<
+  Pick<Command, 'gameId' | 'actorId' | 'expectedSeq'>,
+  CommandError
+> => {
   const gameId = parseId(raw.gameId, 'gameId', asGameId)
   if (!gameId.ok) return gameId
 
   const actorId = parseId(raw.actorId, 'actorId', asUserId)
   if (!actorId.ok) return actorId
 
+  const expectedSeq = parseOptionalSeq(raw.expectedSeq, 'expectedSeq')
+  if (!expectedSeq.ok) return expectedSeq
+
   return ok({
     gameId: gameId.value,
-    actorId: actorId.value
+    actorId: actorId.value,
+    ...(expectedSeq.value === undefined
+      ? {}
+      : {expectedSeq: expectedSeq.value})
   })
 }
 
@@ -506,18 +515,13 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
       if (!x.ok) return x
       const y = parseNumber(raw.y, 'y')
       if (!y.ok) return y
-      const expectedSeq = parseOptionalSeq(raw.expectedSeq, 'expectedSeq')
-      if (!expectedSeq.ok) return expectedSeq
 
       return ok({
         type: 'MovePiece',
         ...base.value,
         pieceId: pieceId.value,
         x: x.value,
-        y: y.value,
-        ...(expectedSeq.value === undefined
-          ? {}
-          : {expectedSeq: expectedSeq.value})
+        y: y.value
       })
     }
 

@@ -134,6 +134,34 @@ describe('room publication flow', () => {
     assert.equal((await readEventStream(storage, gameId)).length, 3)
   })
 
+  it('rejects stale expected sequence numbers on character sheet edits', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+
+    const stale = await publish(storage, {
+      type: 'UpdateCharacterSheet',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 1,
+      notes: 'This should not append'
+    })
+
+    assert.equal(stale.ok, false)
+    if (stale.ok) return
+    assert.equal(stale.error.code, 'stale_command')
+    assert.equal((await readEventStream(storage, gameId)).length, 2)
+  })
+
   it('publishes and projects custom piece dimensions', async () => {
     const storage = createMemoryStorage()
     const pieceId = asPieceId('door-1')

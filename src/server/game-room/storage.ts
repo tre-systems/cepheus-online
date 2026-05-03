@@ -101,6 +101,7 @@ export const appendEvents = async (
       updatedChunks.get(chunkIndex) ??
       (await getEventChunk(storage, gameId, chunkIndex))
     const envelope: EventEnvelope = {
+      version: 1,
       id: asEventId(`${gameId}:${nextSeq}`),
       gameId,
       seq: nextSeq,

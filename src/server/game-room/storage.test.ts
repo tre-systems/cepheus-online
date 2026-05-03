@@ -37,9 +37,14 @@ describe('chunked event storage', () => {
     )
 
     assert.equal(envelopes.length, EVENT_CHUNK_SIZE + 1)
+    assert.equal(envelopes[0]?.version, 1)
+    assert.equal(envelopes[EVENT_CHUNK_SIZE]?.version, 1)
     assert.equal(await getEventSeq(storage, gameId), EVENT_CHUNK_SIZE + 1)
     assert.equal(storage.records.get(`eventChunkCount:${gameId}`), 2)
-    assert.equal((await readEventStream(storage, gameId)).length, 65)
+    const storedEvents = await readEventStream(storage, gameId)
+    assert.equal(storedEvents.length, 65)
+    assert.equal(storedEvents[0]?.version, 1)
+    assert.equal(storedEvents[EVENT_CHUNK_SIZE]?.version, 1)
   })
 
   it('reads event tails without scanning earlier chunks', async () => {

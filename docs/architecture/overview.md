@@ -19,6 +19,9 @@ The server owns game truth. Clients submit commands. The room validates each
 command against current state, appends one or more events, projects the next
 state, and broadcasts a state-bearing message.
 
+This is a CQRS-style split: commands are the only mutation path, while reads
+return filtered projections from the event stream.
+
 ```mermaid
 flowchart LR
   C["Client command"] --> W["Worker route or WebSocket"]

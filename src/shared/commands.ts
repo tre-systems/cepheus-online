@@ -11,6 +11,7 @@ export type Command =
       type: 'CreateGame'
       gameId: GameId
       actorId: UserId
+      expectedSeq?: number
       slug: string
       name: string
     }
@@ -18,6 +19,7 @@ export type Command =
       type: 'CreateCharacter'
       gameId: GameId
       actorId: UserId
+      expectedSeq?: number
       characterId: CharacterId
       characterType: CharacterType
       name: string
@@ -26,12 +28,14 @@ export type Command =
       type: 'UpdateCharacterSheet'
       gameId: GameId
       actorId: UserId
+      expectedSeq?: number
       characterId: CharacterId
     } & CharacterSheetPatch)
   | {
       type: 'CreateBoard'
       gameId: GameId
       actorId: UserId
+      expectedSeq?: number
       boardId: BoardId
       name: string
       imageAssetId?: string | null
@@ -44,12 +48,14 @@ export type Command =
       type: 'SelectBoard'
       gameId: GameId
       actorId: UserId
+      expectedSeq?: number
       boardId: BoardId
     }
   | {
       type: 'CreatePiece'
       gameId: GameId
       actorId: UserId
+      expectedSeq?: number
       pieceId: PieceId
       boardId: BoardId
       characterId?: CharacterId | null
@@ -74,6 +80,7 @@ export type Command =
       type: 'SetPieceVisibility'
       gameId: GameId
       actorId: UserId
+      expectedSeq?: number
       pieceId: PieceId
       visibility: PieceVisibility
     }
@@ -81,6 +88,7 @@ export type Command =
       type: 'SetPieceFreedom'
       gameId: GameId
       actorId: UserId
+      expectedSeq?: number
       pieceId: PieceId
       freedom: PieceFreedom
     }
@@ -88,6 +96,7 @@ export type Command =
       type: 'RollDice'
       gameId: GameId
       actorId: UserId
+      expectedSeq?: number
       expression: string
       reason: string
     }

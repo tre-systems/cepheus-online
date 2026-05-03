@@ -1,0 +1,66 @@
+import {asUserId, type GameId, type UserId} from '../../shared/ids'
+import type {ClientMessage, ServerMessage} from '../../shared/protocol'
+import type {GameState} from '../../shared/state'
+import {
+  filterGameStateForViewer,
+  type GameViewer,
+  type ViewerRole
+} from '../../shared/viewer'
+import type {DurableObjectStorage} from '../cloudflare'
+import {getProjectedGameState} from './projection'
+import {getEventSeq} from './storage'
+
+export const parseViewerRole = (raw: string | null): ViewerRole => {
+  switch (raw?.trim().toLowerCase()) {
+    case 'referee':
+    case 'gm':
+      return 'REFEREE'
+    case 'player':
+      return 'PLAYER'
+    default:
+      return 'SPECTATOR'
+  }
+}
+
+export const parseViewerUserId = (raw: string | null): UserId | null => {
+  if (!raw) return null
+
+  try {
+    return asUserId(raw)
+  } catch {
+    return null
+  }
+}
+
+export const parseViewerFromUrl = (url: URL): GameViewer => ({
+  userId: parseViewerUserId(
+    url.searchParams.get('userId') ?? url.searchParams.get('user')
+  ),
+  role: parseViewerRole(url.searchParams.get('viewer'))
+})
+
+export const viewerFromCommand = (
+  message: Extract<ClientMessage, {type: 'command'}>
+): GameViewer => ({
+  userId: message.command.actorId,
+  role: 'PLAYER'
+})
+
+export const filterStateForViewer = (
+  state: GameState | null,
+  viewer: GameViewer
+): GameState | null => (state ? filterGameStateForViewer(state, viewer) : null)
+
+export const buildRoomStateMessage = async (
+  storage: DurableObjectStorage,
+  gameId: GameId,
+  viewer: GameViewer
+): Promise<ServerMessage> => {
+  const state = await getProjectedGameState(storage, gameId)
+
+  return {
+    type: 'roomState',
+    state: filterStateForViewer(state, viewer),
+    eventSeq: state?.eventSeq ?? (await getEventSeq(storage, gameId))
+  }
+}

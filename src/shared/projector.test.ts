@@ -19,6 +19,7 @@ const envelope = (
   seq: number,
   event: EventEnvelope['event']
 ): EventEnvelope => ({
+  version: 1,
   id: asEventId(`${gameId}:${seq}`),
   gameId,
   seq,

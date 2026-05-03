@@ -1,4 +1,4 @@
-import {asGameId, asUserId, type GameId, type UserId} from '../../shared/ids'
+import {asGameId, type GameId} from '../../shared/ids'
 import {
   decodeClientMessage,
   type ClientMessage,
@@ -8,14 +8,19 @@ import {
 import type {GameState} from '../../shared/state'
 import {
   filterGameStateForViewer,
-  type GameViewer,
-  type ViewerRole
+  type GameViewer
 } from '../../shared/viewer'
 import type {DurableObjectState, WebSocketResponseInit} from '../cloudflare'
 import type {Env} from '../env'
 import {jsonResponse} from '../http'
-import {getProjectedGameState} from './projection'
 import {runCommandPublication} from './publication'
+import {
+  buildRoomStateMessage,
+  parseViewerFromUrl,
+  parseViewerRole,
+  parseViewerUserId,
+  viewerFromCommand
+} from './queries'
 import {getEventSeq} from './storage'
 
 declare const WebSocketPair: {
@@ -44,41 +49,6 @@ const parseRoomRoute = (url: URL): RoomRoute | null => {
   }
 }
 
-const parseViewerRole = (raw: string | null): ViewerRole => {
-  switch (raw?.trim().toLowerCase()) {
-    case 'referee':
-    case 'gm':
-      return 'REFEREE'
-    case 'player':
-      return 'PLAYER'
-    default:
-      return 'SPECTATOR'
-  }
-}
-
-const parseUserId = (raw: string | null): UserId | null => {
-  if (!raw) return null
-
-  try {
-    return asUserId(raw)
-  } catch {
-    return null
-  }
-}
-
-const parseViewerFromUrl = (url: URL): GameViewer => ({
-  userId: parseUserId(
-    url.searchParams.get('userId') ?? url.searchParams.get('user')
-  ),
-  role: parseViewerRole(url.searchParams.get('viewer'))
-})
-
-const viewerFromCommand = (message: Extract<ClientMessage, {type: 'command'}>) =>
-  ({
-    userId: message.command.actorId,
-    role: 'PLAYER'
-  }) satisfies GameViewer
-
 const commandError = (
   code: CommandError['code'],
   message: string
@@ -103,11 +73,6 @@ const statusForError = (error: CommandError): number => {
       return 400
   }
 }
-
-const filterState = (
-  state: GameState | null,
-  viewer: GameViewer
-): GameState | null => (state ? filterGameStateForViewer(state, viewer) : null)
 
 const serializeMessage = (message: ServerMessage): string =>
   JSON.stringify(message)
@@ -135,9 +100,12 @@ export class GameRoomDO {
     const roleTag = tags.find((tag) => tag.startsWith('viewer:'))
     const userTag = tags.find((tag) => tag.startsWith('user:'))
     const role = parseViewerRole(roleTag?.slice('viewer:'.length) ?? null)
-    const userId = parseUserId(userTag?.slice('user:'.length) ?? null)
+    const rawUserId = userTag?.slice('user:'.length) ?? null
 
-    return {userId, role}
+    return {
+      userId: parseViewerUserId(rawUserId),
+      role
+    }
   }
 
   private gameIdFromSocket(socket: WebSocket): GameId | null {
@@ -155,13 +123,7 @@ export class GameRoomDO {
     gameId: GameId,
     viewer: GameViewer
   ): Promise<ServerMessage> {
-    const state = await getProjectedGameState(this.state.storage, gameId)
-
-    return {
-      type: 'roomState',
-      state: filterState(state, viewer),
-      eventSeq: state?.eventSeq ?? (await getEventSeq(this.state.storage, gameId))
-    }
+    return buildRoomStateMessage(this.state.storage, gameId, viewer)
   }
 
   private broadcastState(

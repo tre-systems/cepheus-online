@@ -29,6 +29,7 @@ Persist domain events inside an envelope:
 
 ```ts
 interface EventEnvelope {
+  version: 1
   id: EventId
   gameId: GameId
   seq: number
@@ -39,7 +40,8 @@ interface EventEnvelope {
 ```
 
 The event payload says what happened. The envelope says when, where, and by
-whom. `seq` is the ordering source of truth; timestamps are metadata.
+whom. `version` is the event envelope schema version. `seq` is the ordering
+source of truth; timestamps are metadata.
 
 ## Chunked Persistence
 

@@ -7,6 +7,7 @@ import type {
 } from './state'
 
 export interface EventEnvelope {
+  version: 1
   id: EventId
   gameId: GameId
   seq: number

@@ -37,6 +37,7 @@ describe('dice expressions', () => {
   it('projects rolled dice into recent game state', () => {
     const events: EventEnvelope[] = [
       {
+        version: 1,
         id: asEventId('game-1:1'),
         gameId: asGameId('game-1'),
         seq: 1,
@@ -50,6 +51,7 @@ describe('dice expressions', () => {
         }
       },
       {
+        version: 1,
         id: asEventId('game-1:2'),
         gameId: asGameId('game-1'),
         seq: 2,
