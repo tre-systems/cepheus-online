@@ -42,13 +42,15 @@ layout and the intended normalization target.
 - Extracted the next layer of character creation primitives for skill
   normalization/cascade resolution, term outcome enumeration, aging effect
   selection, and mustering-out benefit resolution as pure shared helpers.
+- Added pure term lifecycle helpers for term creation, reenlistment resolution,
+  anagathics use/payment, aging roll modifiers, and creation/mustering gates.
 
 ## Next Salvage Candidates
 
 Do not copy these blindly. Extract the domain logic and tests:
 
-- deeper character creation rules: full term records, career event tables,
-  mishaps, retirement/anagathics costs, and career completion
+- deeper character creation rules: career event tables, mishaps, retirement
+  benefit tables, promotion rank effects, and final event-sourced persistence
 - dice and combat calculations
 - initiative ordering
 - equipment ledger behavior

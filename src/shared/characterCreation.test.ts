@@ -6,8 +6,17 @@ import {
   availableCareerNames,
   canTransitionCareerCreationState,
   careerSkillWithLevel,
+  canCompleteCreation,
+  canOfferAnagathics,
+  canOfferMusteringBenefit,
+  canOfferNewCareer,
+  canOfferReenlistment,
+  canStartNextCareerTerm,
   characteristicModifier,
   createCareerCreationState,
+  createCareerTerm,
+  deriveAgingRollModifier,
+  deriveAnagathicsModifier,
   deriveBasicTrainingPlan,
   deriveCareerBenefitCount,
   deriveCareerQualificationDm,
@@ -18,16 +27,22 @@ import {
   formatCareerSkill,
   isCareerCreationStatus,
   isCascadeCareerSkill,
+  mustResolveAging,
   normalizeCareerSkill,
   parseCareerCheck,
   parseCareerSkill,
+  payForAnagathics,
   resolveAging,
+  resolveAnagathicsUse,
   resolveCareerBenefit,
   resolveCascadeCareerSkill,
+  resolveReenlistment,
   selectAgingEffect,
+  startCareerTerm,
   tallyCareerSkills,
   transitionCareerCreationState,
   type CareerBasicsTable,
+  type CareerTerm,
   type CareerSkillTable
 } from './characterCreation'
 
@@ -413,6 +428,8 @@ describe('career term outcome helpers', () => {
 })
 
 describe('mustering-out and aging helpers', () => {
+  const scoutTerm = createCareerTerm({ career: 'Scout' })
+
   const benefitTables = {
     materialBenefits: {
       Scout: {
@@ -519,10 +536,202 @@ describe('mustering-out and aging helpers', () => {
       { type: 'PHYSICAL', modifier: -1 }
     ])
 
-    assert.deepEqual(resolveAging({ currentAge: null, table: agingTable, roll: 0 }), {
-      age: 22,
-      message: 'Character aged to 22.',
-      characteristicChanges: []
+    assert.deepEqual(
+      resolveAging({ currentAge: null, table: agingTable, roll: 0 }),
+      {
+        age: 22,
+        message: 'Character aged to 22.',
+        characteristicChanges: []
+      }
+    )
+  })
+
+  it('creates, completes, and starts career terms without mutating inputs', () => {
+    const existingTerm = {
+      ...createCareerTerm({ career: 'Scout' }),
+      skills: ['Pilot-1']
+    }
+    const existingTerms = [existingTerm]
+    const careers = [{ name: 'Scout', rank: 1 }]
+
+    const started = startCareerTerm({
+      career: 'Scout',
+      terms: existingTerms,
+      careers
     })
+
+    assert.equal(started.terms.length, 2)
+    assert.equal(started.terms[0].complete, true)
+    assert.equal(started.terms[1].career, 'Scout')
+    assert.equal(started.terms[1].completedBasicTraining, true)
+    assert.deepEqual(started.careers, careers)
+    assert.equal(started.canEnterDraft, true)
+    assert.equal(started.failedToQualify, false)
+    assert.equal(existingTerm.complete, false)
+
+    const drafted = startCareerTerm({
+      career: 'Marine',
+      terms: [],
+      careers: [],
+      drafted: true
+    })
+    assert.equal(drafted.canEnterDraft, false)
+    assert.equal(drafted.terms[0].draft, 1)
+    assert.deepEqual(drafted.careers, [{ name: 'Marine', rank: 0 }])
+  })
+
+  it('derives aging modifiers and anagathics payment effects', () => {
+    const terms: CareerTerm[] = [
+      { ...createCareerTerm({ career: 'Scout' }), anagathics: true },
+      { ...createCareerTerm({ career: 'Scout' }), anagathics: false },
+      { ...createCareerTerm({ career: 'Scout' }), anagathics: true }
+    ]
+
+    assert.equal(deriveAnagathicsModifier(terms), 2)
+    assert.equal(deriveAgingRollModifier(terms), -1)
+
+    const paid = payForAnagathics({
+      credits: 10000,
+      terms,
+      cost: 5000
+    })
+
+    assert.equal(paid.credits, 5000)
+    assert.equal(paid.terms[2].anagathicsCost, 5000)
+    assert.equal(terms[2].anagathicsCost, undefined)
+
+    assert.deepEqual(resolveAnagathicsUse({ term: scoutTerm, survived: true }), {
+      term: {
+        ...scoutTerm,
+        anagathics: true
+      },
+      survived: true
+    })
+  })
+
+  it('decides whether a character must age or can start another term', () => {
+    assert.equal(mustResolveAging({ age: 18, termCount: 0 }), false)
+    assert.equal(mustResolveAging({ age: 18, termCount: 1 }), true)
+    assert.equal(mustResolveAging({ age: 22, termCount: 1 }), false)
+
+    assert.equal(
+      canStartNextCareerTerm({
+        termCount: 1,
+        term: scoutTerm
+      }),
+      true
+    )
+    assert.equal(
+      canStartNextCareerTerm({
+        termCount: 7,
+        term: scoutTerm
+      }),
+      false
+    )
+    assert.equal(
+      canStartNextCareerTerm({
+        termCount: 1,
+        term: { ...scoutTerm, career: 'Drifter' }
+      }),
+      false
+    )
+  })
+
+  it('gates anagathics, reenlistment, benefits, new career, and completion', () => {
+    assert.equal(canOfferAnagathics({ term: scoutTerm }), true)
+    assert.equal(
+      canOfferAnagathics({
+        term: { ...scoutTerm, survival: 8 }
+      }),
+      false
+    )
+    assert.equal(
+      canOfferReenlistment({
+        term: { ...scoutTerm, skillsAndTraining: ['Pilot-1'] }
+      }),
+      true
+    )
+    assert.equal(
+      canOfferReenlistment({
+        term: { ...scoutTerm, skillsAndTraining: ['Pilot-1'] },
+        mustAge: true
+      }),
+      false
+    )
+    assert.equal(canOfferMusteringBenefit({ remainingBenefits: 1 }), true)
+    assert.equal(
+      canOfferNewCareer({ termCount: 6, remainingBenefits: 0 }),
+      true
+    )
+    assert.equal(
+      canOfferNewCareer({ termCount: 7, remainingBenefits: 0 }),
+      false
+    )
+    assert.equal(
+      canCompleteCreation({
+        terms: [{ ...scoutTerm, complete: true }]
+      }),
+      true
+    )
+  })
+
+  it('resolves reenlistment retirement, forced, allowed, and blocked paths', () => {
+    assert.deepEqual(
+      resolveReenlistment({
+        term: scoutTerm,
+        termCount: 7,
+        roll: 8,
+        check: '6+',
+        characteristics
+      }),
+      {
+        outcome: 'retire',
+        message: 'Your character must retire.',
+        term: {
+          ...scoutTerm,
+          musteringOut: true,
+          canReenlist: false,
+          complete: true
+        },
+        nextTermCareer: null
+      }
+    )
+
+    assert.deepEqual(
+      resolveReenlistment({
+        term: scoutTerm,
+        termCount: 2,
+        roll: 12,
+        check: '6+',
+        characteristics
+      }),
+      {
+        outcome: 'forced',
+        message: 'Your character must reenlist.',
+        term: scoutTerm,
+        nextTermCareer: 'Scout'
+      }
+    )
+
+    const allowed = resolveReenlistment({
+      term: scoutTerm,
+      termCount: 2,
+      roll: 7,
+      check: '6+',
+      characteristics
+    })
+    assert.equal(allowed.outcome, 'allowed')
+    assert.equal(allowed.term.reEnlistment, 7)
+
+    const blocked = resolveReenlistment({
+      term: scoutTerm,
+      termCount: 2,
+      roll: 5,
+      check: '6+',
+      characteristics
+    })
+    assert.equal(blocked.outcome, 'blocked')
+    assert.equal(blocked.term.musteringOut, true)
+    assert.equal(blocked.term.canReenlist, false)
   })
 })
