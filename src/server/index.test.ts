@@ -18,6 +18,7 @@ const clientModules = new Map<
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
         '/client/app/character-command-plan.js',
+        '/client/app/character-generator-preview.js',
         '/client/app/character-sheet-controller.js',
         '/client/app/dice-overlay.js',
         '/client/app/door-los-view.js',
@@ -60,6 +61,15 @@ const clientModules = new Map<
         '/shared/character-creation/skills.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-flow.js'
+      ]
+    }
+  ],
+  [
+    '/client/app/character-generator-preview.js',
+    {
+      markers: [
+        'deriveGeneratedCharacterPreview',
+        'formatGeneratedCharacterCharacteristics'
       ]
     }
   ],

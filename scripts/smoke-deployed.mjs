@@ -23,10 +23,14 @@ const CLIENT_MODULES = new Map([
         '/client/app/board-view.js',
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
+        '/client/app/character-creation-actions.js',
+        '/client/app/character-command-plan.js',
+        '/client/app/character-generator-preview.js',
         '/client/app/character-sheet-controller.js',
         '/client/app/dice-overlay.js',
         '/client/app/door-los-view.js',
         '/client/app/image-assets.js',
+        '/client/app/piece-command-plan.js',
         '/client/app/pwa-install.js',
         '/client/app/room-api.js',
         '/client/app/room-menu-controller.js',
@@ -50,6 +54,51 @@ const CLIENT_MODULES = new Map([
     }
   ],
   ['/client/app/bootstrap-flow.js', { markers: ['nextBootstrapCommand'] }],
+  [
+    '/client/app/character-creation-actions.js',
+    { markers: ['deriveCharacterCreationActionPlan'] }
+  ],
+  [
+    '/client/app/character-command-plan.js',
+    {
+      markers: ['planCreatePlayableCharacterCommands'],
+      imports: [
+        '/shared/character-creation/career-rules.js',
+        '/shared/character-creation/cepheus-srd-ruleset.js',
+        '/shared/character-creation/skills.js',
+        '/client/app/bootstrap-flow.js',
+        '/client/app/character-creation-flow.js'
+      ]
+    }
+  ],
+  [
+    '/client/app/character-generator-preview.js',
+    {
+      markers: [
+        'deriveGeneratedCharacterPreview',
+        'formatGeneratedCharacterCharacteristics'
+      ]
+    }
+  ],
+  [
+    '/shared/character-creation/career-rules.js',
+    { markers: ['evaluateCareerCheck', 'parseCareerCheck'] }
+  ],
+  [
+    '/shared/character-creation/cepheus-srd-ruleset.js',
+    { markers: ['CEPHEUS_SRD_CAREERS', 'Scout', 'Merchant'] }
+  ],
+  [
+    '/shared/character-creation/skills.js',
+    { markers: ['normalizeCareerSkill', 'tallyCareerSkills'] }
+  ],
+  [
+    '/client/app/character-creation-flow.js',
+    {
+      markers: ['deriveCharacterCreationCommands'],
+      imports: ['/client/game-commands.js']
+    }
+  ],
   [
     '/client/app/character-sheet-controller.js',
     {
@@ -76,6 +125,16 @@ const CLIENT_MODULES = new Map([
     }
   ],
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
+  [
+    '/client/app/piece-command-plan.js',
+    {
+      markers: ['planCreatePieceCommands'],
+      imports: [
+        '/client/app/bootstrap-flow.js',
+        '/client/app/character-creation-flow.js'
+      ]
+    }
+  ],
   ['/client/app/pwa-install.js', { markers: ['createPwaInstallController'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
   [

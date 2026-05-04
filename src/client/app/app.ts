@@ -17,6 +17,7 @@ import {
   planCreatePlayableCharacterCommands,
   planGeneratePlayableCharacterCommands
 } from './character-command-plan.js'
+import { deriveGeneratedCharacterPreview } from './character-generator-preview.js'
 import {
   cssUrl,
   readImageDimensions,
@@ -230,42 +231,42 @@ const characterSkillsFromInput = () =>
     .map((skill) => skill.trim())
     .filter(Boolean)
 
-const generatedCharacteristicText = (characteristics) =>
-  ['str', 'dex', 'end', 'int', 'edu', 'soc']
-    .map((key) => `${key.toUpperCase()} ${characteristics[key] ?? '-'}`)
-    .join('  ')
-
 const renderGeneratedCharacterPreview = () => {
-  if (!pendingGeneratedCharacter) {
+  const preview = deriveGeneratedCharacterPreview(pendingGeneratedCharacter)
+  if (!preview) {
     els.generatedCharacterPreview.hidden = true
     els.generatedCharacterPreview.replaceChildren()
     els.acceptGeneratedCharacter.disabled = true
     return
   }
 
-  const generated = pendingGeneratedCharacter
   const title = document.createElement('strong')
-  title.textContent = `${generated.name} - ${generated.career}`
-  const characteristics = document.createElement('p')
-  characteristics.textContent = generatedCharacteristicText(
-    generated.characteristics
-  )
-  const outcome = document.createElement('p')
-  outcome.textContent = [
-    generated.survivalPassed ? 'Survived' : 'Mishap survived',
-    `${generated.credits} credits`,
-    generated.drafted ? 'Drafted' : 'Qualified'
-  ].join(' / ')
-  const skills = document.createElement('p')
-  skills.textContent = generated.skills.join(', ')
+  title.textContent = preview.title
+  const subtitle = document.createElement('p')
+  subtitle.className = 'generated-character-subtitle'
+  subtitle.textContent = preview.subtitle
+  const lines = preview.lines.map((line) => {
+    const row = document.createElement('p')
+    row.className = 'generated-character-line'
+    row.textContent = `${line.label}: ${line.value}`
+    return row
+  })
+  const chips = document.createElement('div')
+  chips.className = 'generated-character-chips'
+  for (const chip of preview.chips) {
+    const element = document.createElement('span')
+    element.className = `generated-character-chip ${chip.tone}`
+    element.textContent = chip.label
+    chips.append(element)
+  }
   els.generatedCharacterPreview.replaceChildren(
     title,
-    characteristics,
-    outcome,
-    skills
+    subtitle,
+    ...lines,
+    chips
   )
   els.generatedCharacterPreview.hidden = false
-  els.acceptGeneratedCharacter.disabled = false
+  els.acceptGeneratedCharacter.disabled = !preview.canAccept
 }
 
 const applyBoardFileDimensions = async () => {

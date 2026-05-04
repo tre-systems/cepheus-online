@@ -1293,6 +1293,39 @@ h1 {
   line-height: 1.35;
 }
 
+.generated-character-subtitle {
+  color: var(--muted) !important;
+}
+
+.generated-character-line {
+  overflow-wrap: anywhere;
+}
+
+.generated-character-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.generated-character-chip {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  padding: 2px 5px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.generated-character-chip.success {
+  border-color: rgba(117, 255, 94, 0.62);
+  background: rgba(117, 255, 94, 0.12);
+}
+
+.generated-character-chip.warning {
+  border-color: rgba(255, 226, 114, 0.62);
+  background: rgba(255, 226, 114, 0.12);
+}
+
 .room-form textarea {
   min-height: 70px;
   resize: vertical;

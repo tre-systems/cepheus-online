@@ -92,6 +92,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/character-generator-preview.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'character-generator-preview.js'
+    ),
+    exportName: 'CLIENT_CHARACTER_GENERATOR_PREVIEW_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/character-sheet-controller.js',
     source: join(
       compiledClientRoot,
