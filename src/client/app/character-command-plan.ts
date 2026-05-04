@@ -25,7 +25,6 @@ import type { ClientIdentity } from '../game-commands.js'
 import { uniqueCharacterId, uniquePieceId } from './bootstrap-flow.js'
 import {
   createCharacterCreationFlow,
-  deriveCharacterSheetPatch,
   selectCharacterCreationCareerPlan,
   validateCurrentCharacterCreationStep
 } from './character-creation-flow.js'
@@ -231,45 +230,18 @@ const initialCreationCommands = ({
   characterId,
   characterType,
   name,
-  age,
   career,
-  drafted,
-  characteristics,
-  skills,
-  equipment,
-  credits,
-  notes
+  drafted
 }: {
   identity: ClientIdentity
   state: GameState
   characterId: CharacterId
   characterType: CharacterType
   name: string
-  age: number | null
   career: string
   drafted: boolean
-  characteristics: CharacterCharacteristics
-  skills: string[]
-  equipment: CharacterEquipmentItem[]
-  credits: number
-  notes: string
-}): Command[] => {
-  const flow = {
-    ...createCharacterCreationFlow(characterId, {
-      name,
-      characterType,
-      age,
-      careerPlan: selectCharacterCreationCareerPlan(career, { drafted }),
-      characteristics,
-      skills,
-      equipment,
-      credits,
-      notes
-    }),
-    step: 'review' as const
-  }
-
-  return [
+}): Command[] =>
+  [
     {
       type: 'CreateCharacter',
       gameId: identity.gameId,
@@ -312,17 +284,8 @@ const initialCreationCommands = ({
       actorId: identity.actorId,
       characterId,
       creationEvent: { type: 'SELECT_CAREER', isNewCareer: true, drafted }
-    },
-    {
-      type: 'UpdateCharacterSheet',
-      gameId: identity.gameId,
-      actorId: identity.actorId,
-      characterId,
-      age: flow.draft.age,
-      ...deriveCharacterSheetPatch(flow.draft)
     }
   ].map((command, index) => sequenceCommandAt(command as Command, state, index))
-}
 
 const randomInt = (rng: () => number, maxExclusive: number): number =>
   Math.floor(rng() * maxExclusive)
@@ -665,17 +628,9 @@ export const planCreatePlayableCharacterCommands = ({
     characterId,
     characterType,
     name: trimmedName,
-    age,
     career: career ?? 'Scout',
-    drafted,
-    characteristics,
-    skills,
-    equipment,
-    credits,
-    notes
-  }).map((command) =>
-    command.type === 'UpdateCharacterSheet' ? { ...command, age } : command
-  )
+    drafted
+  })
 
   const finishCommands = playableCreationCommands(
     identity,
@@ -683,6 +638,23 @@ export const planCreatePlayableCharacterCommands = ({
     creationOutcome
   ).map((command, index) =>
     sequenceCommandAt(command, state, initialCommands.length + index)
+  )
+
+  const finalizeCommand = sequenceCommandAt(
+    {
+      type: 'FinalizeCharacterCreation',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId,
+      age,
+      characteristics: { ...characteristics },
+      skills: [...skills],
+      equipment: equipment.map((item) => ({ ...item })),
+      credits,
+      notes
+    },
+    state,
+    initialCommands.length + finishCommands.length
   )
 
   const pieceId =
@@ -716,14 +688,19 @@ export const planCreatePlayableCharacterCommands = ({
               scale: 1
             },
             state,
-            initialCommands.length + finishCommands.length
+            initialCommands.length + finishCommands.length + 1
           )
         ]
       : []
 
   return {
     ok: true,
-    commands: [...initialCommands, ...finishCommands, ...pieceCommand],
+    commands: [
+      ...initialCommands,
+      ...finishCommands,
+      finalizeCommand,
+      ...pieceCommand
+    ],
     characterId,
     pieceId
   }

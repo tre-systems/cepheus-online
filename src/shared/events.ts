@@ -8,6 +8,7 @@ import type {
 } from './ids'
 import type { CareerCreationEvent } from './characterCreation'
 import type {
+  CharacterCreationSheet,
   CharacterCreationProjection,
   CharacterSheetPatch,
   CharacterType,
@@ -55,6 +56,10 @@ export type GameEvent =
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }
+  | ({
+      type: 'CharacterCreationFinalized'
+      characterId: CharacterId
+    } & CharacterCreationSheet)
   | ({
       type: 'CharacterCareerTermStarted'
       characterId: CharacterId

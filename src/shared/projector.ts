@@ -1,6 +1,11 @@
 import type { EventEnvelope } from './events'
 import { startCareerTerm } from './characterCreation'
-import type { CharacterCharacteristics, GameState } from './state'
+import type {
+  CharacterCharacteristics,
+  CharacterState,
+  CharacterSheetPatch,
+  GameState
+} from './state'
 
 const diceRevealAt = (createdAt: string): string =>
   new Date(Date.parse(createdAt) + 2500).toISOString()
@@ -13,6 +18,25 @@ const defaultCharacteristics = (): CharacterCharacteristics => ({
   edu: null,
   soc: null
 })
+
+const applyCharacterSheetPatch = (
+  character: CharacterState,
+  patch: CharacterSheetPatch
+) => {
+  if (patch.notes !== undefined) character.notes = patch.notes
+  if (patch.age !== undefined) character.age = patch.age
+  if (patch.characteristics !== undefined) {
+    character.characteristics = {
+      ...character.characteristics,
+      ...patch.characteristics
+    }
+  }
+  if (patch.skills !== undefined) character.skills = [...patch.skills]
+  if (patch.equipment !== undefined) {
+    character.equipment = patch.equipment.map((item) => ({ ...item }))
+  }
+  if (patch.credits !== undefined) character.credits = patch.credits
+}
 
 export const projectGameState = (
   events: readonly EventEnvelope[],
@@ -71,20 +95,7 @@ export const projectGameState = (
         }
         const character = state.characters[event.characterId]
         if (!character) break
-
-        if (event.notes !== undefined) character.notes = event.notes
-        if (event.age !== undefined) character.age = event.age
-        if (event.characteristics !== undefined) {
-          character.characteristics = {
-            ...character.characteristics,
-            ...event.characteristics
-          }
-        }
-        if (event.skills !== undefined) character.skills = [...event.skills]
-        if (event.equipment !== undefined) {
-          character.equipment = event.equipment.map((item) => ({ ...item }))
-        }
-        if (event.credits !== undefined) character.credits = event.credits
+        applyCharacterSheetPatch(character, event)
 
         state.eventSeq = envelope.seq
         break
@@ -118,6 +129,18 @@ export const projectGameState = (
             structuredClone(event.creationEvent)
           ]
         }
+        state.eventSeq = envelope.seq
+        break
+      }
+
+      case 'CharacterCreationFinalized': {
+        if (!state) {
+          throw new Error('CharacterCreationFinalized before GameCreated')
+        }
+        const character = state.characters[event.characterId]
+        if (!character?.creation) break
+        applyCharacterSheetPatch(character, event)
+
         state.eventSeq = envelope.seq
         break
       }

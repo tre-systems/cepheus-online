@@ -242,9 +242,27 @@ describe('game state projection', () => {
           }
         },
         creationComplete: true
+      }),
+      envelope(7, {
+        type: 'CharacterCreationFinalized',
+        characterId,
+        notes: 'Final scout.',
+        age: 34,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        skills: ['Pilot-1', 'Vacc Suit-0'],
+        equipment: [{ name: 'Vacc suit', quantity: 1, notes: 'Carried' }],
+        credits: 1200
       })
     ])
 
+    const character = state?.characters[characterId]
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'PLAYABLE')
     assert.equal(creation?.creationComplete, true)
@@ -254,7 +272,18 @@ describe('game state projection', () => {
       { type: 'SET_CHARACTERISTICS' },
       { type: 'CREATION_COMPLETE' }
     ])
-    assert.equal(state?.eventSeq, 6)
+    assert.equal(character?.age, 34)
+    assert.deepEqual(character?.characteristics, {
+      str: 7,
+      dex: 8,
+      end: 7,
+      int: 9,
+      edu: 8,
+      soc: 6
+    })
+    assert.deepEqual(character?.skills, ['Pilot-1', 'Vacc Suit-0'])
+    assert.equal(character?.credits, 1200)
+    assert.equal(state?.eventSeq, 7)
   })
 
   it('ignores character creation events for missing characters', () => {

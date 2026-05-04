@@ -97,6 +97,104 @@ const validateExpectedSeq = (
   return ok(undefined)
 }
 
+const validateCharacterSheetPatch = (
+  command: Extract<Command, { type: 'UpdateCharacterSheet' }>
+): Result<void, CommandError> => {
+  if (command.notes !== undefined && typeof command.notes !== 'string') {
+    return err(commandError('invalid_command', 'notes must be a string'))
+  }
+  if (command.age !== undefined) {
+    const age = requireFiniteOrNull(command.age, 'age')
+    if (!age.ok) return age
+  }
+  if (command.characteristics !== undefined) {
+    for (const [key, value] of Object.entries(command.characteristics)) {
+      const characteristic = requireFiniteOrNull(
+        value,
+        `characteristics.${key}`
+      )
+      if (!characteristic.ok) return characteristic
+    }
+  }
+  if (command.skills !== undefined) {
+    for (const [index, skill] of command.skills.entries()) {
+      const value = requireNonEmptyString(skill, `skills[${index}]`)
+      if (!value.ok) return value
+    }
+  }
+  if (command.equipment !== undefined) {
+    for (const [index, item] of command.equipment.entries()) {
+      const name = requireNonEmptyString(
+        item.name,
+        `equipment[${index}].name`
+      )
+      if (!name.ok) return name
+      const quantity = requireFiniteCoordinate(
+        item.quantity,
+        `equipment[${index}].quantity`
+      )
+      if (!quantity.ok) return quantity
+    }
+  }
+  if (command.credits !== undefined) {
+    const credits = requireFiniteCoordinate(command.credits, 'credits')
+    if (!credits.ok) return credits
+  }
+
+  return ok(undefined)
+}
+
+const characterSheetPatchFields = (
+  command: Extract<Command, { type: 'UpdateCharacterSheet' }>
+) => ({
+  ...(command.notes === undefined ? {} : { notes: command.notes }),
+  ...(command.age === undefined ? {} : { age: command.age }),
+  ...(command.characteristics === undefined
+    ? {}
+    : { characteristics: command.characteristics }),
+  ...(command.skills === undefined ? {} : { skills: command.skills }),
+  ...(command.equipment === undefined ? {} : { equipment: command.equipment }),
+  ...(command.credits === undefined ? {} : { credits: command.credits })
+})
+
+const validateCharacterCreationSheet = (
+  command: Extract<Command, { type: 'FinalizeCharacterCreation' }>
+): Result<void, CommandError> => {
+  if (typeof command.notes !== 'string') {
+    return err(commandError('invalid_command', 'notes must be a string'))
+  }
+  const age = requireFiniteOrNull(command.age, 'age')
+  if (!age.ok) return age
+
+  for (const [key, value] of Object.entries(command.characteristics)) {
+    const characteristic = requireFiniteOrNull(
+      value,
+      `characteristics.${key}`
+    )
+    if (!characteristic.ok) return characteristic
+  }
+
+  for (const [index, skill] of command.skills.entries()) {
+    const value = requireNonEmptyString(skill, `skills[${index}]`)
+    if (!value.ok) return value
+  }
+
+  for (const [index, item] of command.equipment.entries()) {
+    const name = requireNonEmptyString(item.name, `equipment[${index}].name`)
+    if (!name.ok) return name
+    const quantity = requireFiniteCoordinate(
+      item.quantity,
+      `equipment[${index}].quantity`
+    )
+    if (!quantity.ok) return quantity
+  }
+
+  const credits = requireFiniteCoordinate(command.credits, 'credits')
+  if (!credits.ok) return credits
+
+  return ok(undefined)
+}
+
 export const deriveEventsForCommand = (
   command: Command,
   context: CommandContext
@@ -144,61 +242,54 @@ export const deriveEventsForCommand = (
       if (!state.value.characters[command.characterId]) {
         return err(commandError('missing_entity', 'Character does not exist'))
       }
-      if (command.notes !== undefined && typeof command.notes !== 'string') {
-        return err(commandError('invalid_command', 'notes must be a string'))
-      }
-      if (command.age !== undefined) {
-        const age = requireFiniteOrNull(command.age, 'age')
-        if (!age.ok) return age
-      }
-      if (command.characteristics !== undefined) {
-        for (const [key, value] of Object.entries(command.characteristics)) {
-          const characteristic = requireFiniteOrNull(
-            value,
-            `characteristics.${key}`
-          )
-          if (!characteristic.ok) return characteristic
-        }
-      }
-      if (command.skills !== undefined) {
-        for (const [index, skill] of command.skills.entries()) {
-          const value = requireNonEmptyString(skill, `skills[${index}]`)
-          if (!value.ok) return value
-        }
-      }
-      if (command.equipment !== undefined) {
-        for (const [index, item] of command.equipment.entries()) {
-          const name = requireNonEmptyString(
-            item.name,
-            `equipment[${index}].name`
-          )
-          if (!name.ok) return name
-          const quantity = requireFiniteCoordinate(
-            item.quantity,
-            `equipment[${index}].quantity`
-          )
-          if (!quantity.ok) return quantity
-        }
-      }
-      if (command.credits !== undefined) {
-        const credits = requireFiniteCoordinate(command.credits, 'credits')
-        if (!credits.ok) return credits
-      }
+      const patch = validateCharacterSheetPatch(command)
+      if (!patch.ok) return patch
 
       return ok([
         {
           type: 'CharacterSheetUpdated',
           characterId: command.characterId,
-          ...(command.notes === undefined ? {} : { notes: command.notes }),
-          ...(command.age === undefined ? {} : { age: command.age }),
-          ...(command.characteristics === undefined
-            ? {}
-            : { characteristics: command.characteristics }),
-          ...(command.skills === undefined ? {} : { skills: command.skills }),
-          ...(command.equipment === undefined
-            ? {}
-            : { equipment: command.equipment }),
-          ...(command.credits === undefined ? {} : { credits: command.credits })
+          ...characterSheetPatchFields(command)
+        }
+      ])
+    }
+
+    case 'FinalizeCharacterCreation': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!character.creation) {
+        return err(
+          commandError(
+            'missing_entity',
+            'Character creation has not been started'
+          )
+        )
+      }
+      if (character.creation.state.status !== 'PLAYABLE') {
+        return err(
+          commandError(
+            'invalid_command',
+            `Character creation cannot finalize from ${character.creation.state.status}`
+          )
+        )
+      }
+      const sheet = validateCharacterCreationSheet(command)
+      if (!sheet.ok) return sheet
+
+      return ok([
+        {
+          type: 'CharacterCreationFinalized',
+          characterId: command.characterId,
+          age: command.age,
+          characteristics: { ...command.characteristics },
+          skills: [...command.skills],
+          equipment: command.equipment.map((item) => ({ ...item })),
+          credits: command.credits,
+          notes: command.notes
         }
       ])
     }

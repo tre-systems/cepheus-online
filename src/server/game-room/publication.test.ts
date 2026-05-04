@@ -299,6 +299,114 @@ describe('room publication flow', () => {
     assert.equal((await readCheckpoint(storage, gameId))?.seq, 14)
   })
 
+  it('publishes final character creation sheets only after playable', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    const early = await publish(storage, {
+      type: 'FinalizeCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      age: 34,
+      characteristics: {
+        str: 7,
+        dex: 8,
+        end: 7,
+        int: 9,
+        edu: 8,
+        soc: 6
+      },
+      skills: ['Pilot-1'],
+      equipment: [],
+      credits: 1200,
+      notes: 'Too early.'
+    })
+
+    assert.equal(early.ok, false)
+    if (early.ok) return
+    assert.equal(early.error.code, 'invalid_command')
+
+    const advance = async (
+      creationEvent: Extract<
+        Command,
+        { type: 'AdvanceCharacterCreation' }
+      >['creationEvent']
+    ) =>
+      publish(storage, {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent
+      })
+
+    await advance({ type: 'SET_CHARACTERISTICS' })
+    await advance({ type: 'COMPLETE_HOMEWORLD' })
+    await publish(storage, {
+      type: 'StartCharacterCareerTerm',
+      gameId,
+      actorId,
+      characterId,
+      career: 'Scout'
+    })
+    await advance({ type: 'SELECT_CAREER', isNewCareer: true })
+    await advance({ type: 'COMPLETE_BASIC_TRAINING' })
+    await advance({
+      type: 'SURVIVAL_PASSED',
+      canCommission: false,
+      canAdvance: false
+    })
+    await advance({ type: 'COMPLETE_SKILLS' })
+    await advance({ type: 'COMPLETE_AGING' })
+    await advance({ type: 'LEAVE_CAREER' })
+    await advance({ type: 'FINISH_MUSTERING' })
+    await advance({ type: 'CREATION_COMPLETE' })
+
+    const finalized = await publish(storage, {
+      type: 'FinalizeCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      age: 34,
+      characteristics: {
+        str: 7,
+        dex: 8,
+        end: 7,
+        int: 9,
+        edu: 8,
+        soc: 6
+      },
+      skills: ['Pilot-1', 'Vacc Suit-0'],
+      equipment: [{ name: 'Vacc suit', quantity: 1, notes: 'Carried' }],
+      credits: 1200,
+      notes: 'Final scout.'
+    })
+
+    assert.equal(finalized.ok, true)
+    if (!finalized.ok) return
+    const character = finalized.value.state.characters[characterId]
+    assert.equal(character?.age, 34)
+    assert.deepEqual(character?.skills, ['Pilot-1', 'Vacc Suit-0'])
+    assert.equal(character?.notes, 'Final scout.')
+    assert.equal((await readEventStream(storage, gameId)).length, 15)
+  })
+
   it('rejects stale expected sequence numbers on character creation commands', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')

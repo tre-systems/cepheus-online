@@ -31,6 +31,15 @@ export interface CharacterSheetPatch {
   credits?: number
 }
 
+export interface CharacterCreationSheet {
+  notes: string
+  age: number | null
+  characteristics: CharacterCharacteristics
+  skills: string[]
+  equipment: CharacterEquipmentItem[]
+  credits: number
+}
+
 export interface CharacterCreationProjection {
   state: CareerCreationState
   terms: CareerTerm[]

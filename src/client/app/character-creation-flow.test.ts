@@ -726,6 +726,6 @@ describe('character creation flow', () => {
         'CREATION_COMPLETE'
       ]
     )
-    assert.equal(playableCommands.at(-1)?.type, 'UpdateCharacterSheet')
+    assert.equal(playableCommands.at(-1)?.type, 'FinalizeCharacterCreation')
   })
 })

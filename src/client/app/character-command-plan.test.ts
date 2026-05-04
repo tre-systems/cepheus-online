@@ -99,7 +99,6 @@ describe('character command planner', () => {
         'AdvanceCharacterCreation',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation',
-        'UpdateCharacterSheet',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
@@ -108,6 +107,7 @@ describe('character command planner', () => {
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
+        'FinalizeCharacterCreation',
         'CreatePiece'
       ]
     )
@@ -115,13 +115,18 @@ describe('character command planner', () => {
       plan.commands.map((command) => command.expectedSeq),
       [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35]
     )
-    const finalCreationEventCommand = plan.commands.at(-2)
+    const finalCreationEventCommand = plan.commands.at(-3)
     assert.equal(finalCreationEventCommand?.type, 'AdvanceCharacterCreation')
     if (finalCreationEventCommand?.type !== 'AdvanceCharacterCreation') return
     assert.equal(
       finalCreationEventCommand.creationEvent.type,
       'CREATION_COMPLETE'
     )
+    const finalizeCommand = plan.commands.at(-2)
+    assert.equal(finalizeCommand?.type, 'FinalizeCharacterCreation')
+    if (finalizeCommand?.type !== 'FinalizeCharacterCreation') return
+    assert.deepEqual(finalizeCommand.characteristics, validInput().characteristics)
+    assert.deepEqual(finalizeCommand.skills, ['Gun Combat-0', 'Vacc Suit-0'])
     const pieceCommand = plan.commands.at(-1)
     assert.equal(pieceCommand?.type, 'CreatePiece')
     if (pieceCommand?.type !== 'CreatePiece') return
@@ -138,7 +143,7 @@ describe('character command planner', () => {
     assert.equal(plan.ok, true)
     if (!plan.ok) return
     assert.equal(plan.pieceId, null)
-    assert.equal(plan.commands.at(-1)?.type, 'AdvanceCharacterCreation')
+    assert.equal(plan.commands.at(-1)?.type, 'FinalizeCharacterCreation')
   })
 
   it('uses existing entity counts for ids and token placement', () => {

@@ -31,7 +31,7 @@ const requiredChecks = [
 >)[]
 
 describe('Cepheus SRD career ruleset', () => {
-  it('includes the expected SRD career subset', () => {
+  it('includes the expected SRD careers with the legacy defaults first', () => {
     const careerNames = CEPHEUS_SRD_CAREERS.map((career) => career.name)
 
     assert.deepEqual(careerNames, [
@@ -46,7 +46,19 @@ describe('Cepheus SRD career ruleset', () => {
       'Physician',
       'Rogue',
       'Technician',
-      'Drifter'
+      'Drifter',
+      'Athlete',
+      'Barbarian',
+      'Bureaucrat',
+      'Colonist',
+      'Diplomat',
+      'Entertainer',
+      'Hunter',
+      'Maritime Defense',
+      'Noble',
+      'Pirate',
+      'Scientist',
+      'Surface Defense'
     ])
   })
 

@@ -124,6 +124,10 @@ type UpdateCharacterSheetCommand = Extract<
   Command,
   { type: 'UpdateCharacterSheet' }
 >
+type FinalizeCharacterCreationCommand = Extract<
+  Command,
+  { type: 'FinalizeCharacterCreation' }
+>
 
 const CHARACTER_CREATION_STEPS = [
   'basics',
@@ -829,6 +833,26 @@ export const deriveUpdateCharacterSheetCommand = (
     state
   ) as UpdateCharacterSheetCommand
 
+export const deriveFinalizeCharacterCreationCommand = (
+  draft: CharacterCreationDraft,
+  { identity, state = null }: CharacterCreationCommandOptions
+): FinalizeCharacterCreationCommand =>
+  buildSequencedCommand(
+    {
+      type: 'FinalizeCharacterCreation',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: draft.characterId,
+      age: draft.age,
+      characteristics: { ...draft.characteristics },
+      skills: [...draft.skills],
+      equipment: cloneEquipment(draft.equipment),
+      credits: draft.credits,
+      notes: draft.notes
+    },
+    state
+  ) as FinalizeCharacterCreationCommand
+
 export const deriveCharacterCreationCommands = (
   flow: CharacterCreationFlow,
   options: CharacterCreationCommandOptions
@@ -842,6 +866,36 @@ export const deriveCharacterCreationCommands = (
   if (!validation.ok) return []
   if (!options.state) return []
 
+  const lifecycleCommands = initialCharacterCreationStateCommands(
+    flow.draft,
+    options.identity
+  )
+  const reachesPlayable = lifecycleCommands.some(
+    (command) =>
+      command.type === 'AdvanceCharacterCreation' &&
+      command.creationEvent.type === 'CREATION_COMPLETE'
+  )
+  const sheetCommand: Command = reachesPlayable
+    ? {
+        type: 'FinalizeCharacterCreation',
+        gameId: options.identity.gameId,
+        actorId: options.identity.actorId,
+        characterId: flow.draft.characterId,
+        age: flow.draft.age,
+        characteristics: { ...flow.draft.characteristics },
+        skills: [...flow.draft.skills],
+        equipment: cloneEquipment(flow.draft.equipment),
+        credits: flow.draft.credits,
+        notes: flow.draft.notes
+      }
+    : {
+        type: 'UpdateCharacterSheet',
+        gameId: options.identity.gameId,
+        actorId: options.identity.actorId,
+        characterId: flow.draft.characterId,
+        ...deriveCharacterSheetPatch(flow.draft)
+      }
+
   const baseCommands: Command[] = [
     {
       type: 'CreateCharacter',
@@ -851,14 +905,8 @@ export const deriveCharacterCreationCommands = (
       characterType: flow.draft.characterType,
       name: flow.draft.name.trim()
     },
-    ...initialCharacterCreationStateCommands(flow.draft, options.identity),
-    {
-      type: 'UpdateCharacterSheet',
-      gameId: options.identity.gameId,
-      actorId: options.identity.actorId,
-      characterId: flow.draft.characterId,
-      ...deriveCharacterSheetPatch(flow.draft)
-    }
+    ...lifecycleCommands,
+    sheetCommand
   ]
 
   return baseCommands.map((command, index) =>

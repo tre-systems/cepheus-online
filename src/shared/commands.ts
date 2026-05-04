@@ -1,6 +1,7 @@
 import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
 import type { CareerCreationEvent } from './characterCreation'
 import type {
+  CharacterCreationSheet,
   CharacterSheetPatch,
   CharacterType,
   PieceFreedom,
@@ -47,6 +48,13 @@ export type Command =
       characterId: CharacterId
       creationEvent: CareerCreationEvent
     }
+  | ({
+      type: 'FinalizeCharacterCreation'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+    } & CharacterCreationSheet)
   | {
       type: 'StartCharacterCareerTerm'
       gameId: GameId
