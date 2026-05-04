@@ -13,6 +13,7 @@ import {
 import { createBoardController } from './board-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
+  applyCharacterCreationCareerRoll,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationWizardStep,
   characterCreationCareerNames,
@@ -22,6 +23,7 @@ import {
 } from './character-creation-flow.js'
 import {
   deriveCharacterCreationButtonStates,
+  deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationReviewSummary,
   deriveCharacterCreationStepProgressItems,
@@ -408,7 +410,28 @@ const renderCharacterCreationFields = (flow) => {
     }
     fragment.append(label)
   }
+  const careerRollButton = renderCharacterCreationCareerRollButton(flow)
+  if (careerRollButton) fragment.append(careerRollButton)
   return fragment
+}
+
+const renderCharacterCreationCareerRollButton = (flow) => {
+  const viewModel = deriveCharacterCreationCareerRollButton(flow)
+  if (!viewModel) return null
+
+  const wrapper = document.createElement('div')
+  wrapper.className = 'character-creation-roll-action'
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.textContent = viewModel.label
+  button.disabled = viewModel.disabled
+  button.addEventListener('click', () => {
+    rollCharacterCreationCareerCheck().catch((error) => setError(error.message))
+  })
+  const hint = document.createElement('small')
+  hint.textContent = viewModel.reason
+  wrapper.append(button, hint)
+  return wrapper
 }
 
 const renderCharacterCreationReview = (flow) => {
@@ -435,6 +458,45 @@ const renderCharacterCreationReview = (flow) => {
   }
 
   return review
+}
+
+const rollCharacterCreationCareerCheck = async () => {
+  if (!characterCreationFlow) return
+  setError('')
+  syncCharacterCreationWizardFields()
+
+  const rollAction = deriveCharacterCreationCareerRollButton(
+    characterCreationFlow
+  )
+  if (!rollAction) return
+
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-career-roll')
+    )
+  }
+
+  const response = await postCommand(
+    buildRollDiceCommand({
+      identity: clientIdentity(),
+      expression: '2d6',
+      reason: rollAction.reason
+    }),
+    requestId('career-roll')
+  )
+  const latestRoll =
+    response.state?.diceLog?.[response.state.diceLog.length - 1]
+  if (!latestRoll) {
+    setError('Career roll did not return a dice result')
+    return
+  }
+
+  characterCreationFlow = applyCharacterCreationCareerRoll(
+    characterCreationFlow,
+    latestRoll.total
+  ).flow
+  renderCharacterCreationWizard()
 }
 
 const renderGeneratedCharacterPreview = () => {
@@ -1185,6 +1247,11 @@ els.backCharacterWizard.addEventListener('click', () => {
 els.characterCreationFields.addEventListener('input', () => {
   syncCharacterCreationWizardFields()
   renderCharacterCreationWizardControls()
+})
+
+els.characterCreationFields.addEventListener('change', () => {
+  syncCharacterCreationWizardFields()
+  renderCharacterCreationWizard()
 })
 
 els.nextCharacterWizard.addEventListener('click', () => {

@@ -5,6 +5,7 @@ import { asCharacterId, asGameId, asUserId } from '../../shared/ids'
 import type { GameState } from '../../shared/state'
 import {
   advanceCharacterCreationStep,
+  applyCharacterCreationCareerRoll,
   applyCharacterCreationCareerPlan,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationStep,
@@ -18,6 +19,7 @@ import {
   deriveCharacterSheetPatch,
   deriveCreateCharacterCommand,
   deriveInitialCharacterCreationStateCommands,
+  deriveNextCharacterCreationCareerRoll,
   deriveStartCharacterCareerTermCommand,
   deriveStartCharacterCreationCommand,
   deriveUpdateCharacterSheetCommand,
@@ -211,6 +213,66 @@ describe('character creation flow', () => {
     const updated = applyCharacterCreationCareerPlan(draft, careerPlan)
     assert.deepEqual(updated.careerPlan, evaluated)
     assert.equal(draft.careerPlan, null)
+  })
+
+  it('walks SRD career checks with server dice roll totals', () => {
+    let flow = createCharacterCreationFlow(characterId, {
+      name: 'Iona Vesh',
+      characteristics: completeDraft().characteristics,
+      careerPlan: selectCharacterCreationCareerPlan('Merchant')
+    })
+    flow = { ...flow, step: 'career' }
+
+    assert.deepEqual(deriveNextCharacterCreationCareerRoll(flow), {
+      key: 'qualificationRoll',
+      label: 'Roll qualification',
+      reason: 'Iona Vesh Merchant qualification'
+    })
+
+    let result = applyCharacterCreationCareerRoll(flow, 7)
+    flow = result.flow
+    assert.equal(result.moved, false)
+    assert.equal(flow.draft.careerPlan?.qualificationRoll, 7)
+    assert.equal(flow.draft.careerPlan?.qualificationPassed, true)
+    assert.deepEqual(deriveNextCharacterCreationCareerRoll(flow), {
+      key: 'survivalRoll',
+      label: 'Roll survival',
+      reason: 'Iona Vesh Merchant survival'
+    })
+
+    result = applyCharacterCreationCareerRoll(flow, 8)
+    flow = result.flow
+    assert.equal(flow.draft.careerPlan?.survivalRoll, 8)
+    assert.equal(flow.draft.careerPlan?.survivalPassed, true)
+    assert.equal(flow.draft.careerPlan?.canCommission, true)
+    assert.deepEqual(deriveNextCharacterCreationCareerRoll(flow), {
+      key: 'commissionRoll',
+      label: 'Roll commission',
+      reason: 'Iona Vesh Merchant commission'
+    })
+
+    result = applyCharacterCreationCareerRoll(flow, 4)
+    flow = result.flow
+    assert.equal(flow.draft.careerPlan?.commissionRoll, 4)
+    assert.equal(flow.draft.careerPlan?.commissionPassed, true)
+    assert.equal(deriveNextCharacterCreationCareerRoll(flow), null)
+  })
+
+  it('stops career roll progression after failed qualification', () => {
+    const flow = {
+      step: 'career' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: completeDraft().characteristics,
+        careerPlan: selectCharacterCreationCareerPlan('Merchant')
+      })
+    }
+
+    const result = applyCharacterCreationCareerRoll(flow, 2)
+
+    assert.equal(result.flow.draft.careerPlan?.qualificationRoll, 2)
+    assert.equal(result.flow.draft.careerPlan?.qualificationPassed, false)
+    assert.equal(deriveNextCharacterCreationCareerRoll(result.flow), null)
   })
 
   it('ignores undefined patch fields from sparse form updates', () => {

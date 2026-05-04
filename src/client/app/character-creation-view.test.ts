@@ -10,6 +10,7 @@ import {
   characterCreationPrimaryCtaLabels,
   characterCreationStepLabels,
   deriveCharacterCreationButtonStates,
+  deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerOptionViewModels,
   deriveCharacterCreationCtaLabels,
   deriveCharacterCreationFieldViewModels,
@@ -208,10 +209,10 @@ describe('character creation view helpers', () => {
           survivalPassed: true,
           commissionRoll: null,
           commissionPassed: null,
-          advancementRoll: 13,
-          advancementPassed: false,
+          advancementRoll: null,
+          advancementPassed: null,
           canCommission: true,
-          canAdvance: true,
+          canAdvance: false,
           drafted: false
         }
       }
@@ -259,11 +260,56 @@ describe('character creation view helpers', () => {
         label: 'Advancement roll',
         kind: 'number',
         step: 'career',
-        value: '13',
-        required: true,
-        errors: ['Advancement roll must be between 2 and 12']
+        value: '',
+        required: false,
+        errors: []
       }
     ])
+  })
+
+  it('derives the next career roll button from SRD career progress', () => {
+    const careerFlow = {
+      step: 'career' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        careerPlan: {
+          career: 'Merchant',
+          qualificationRoll: null,
+          qualificationPassed: null,
+          survivalRoll: null,
+          survivalPassed: null,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: null,
+          canAdvance: null,
+          drafted: false
+        }
+      })
+    }
+
+    assert.deepEqual(deriveCharacterCreationCareerRollButton(careerFlow), {
+      label: 'Roll qualification',
+      reason: 'Iona Vesh Merchant qualification',
+      disabled: false
+    })
+
+    assert.equal(
+      deriveCharacterCreationCareerRollButton({
+        ...careerFlow,
+        step: 'skills'
+      }),
+      null
+    )
   })
 
   it('derives SRD career option view models from draft characteristics', () => {
@@ -338,6 +384,49 @@ describe('character creation view helpers', () => {
         message: 'Ready to continue'
       }
     )
+  })
+
+  it('blocks career progression after failed qualification', () => {
+    const flow = {
+      step: 'career' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        careerPlan: {
+          career: 'Merchant',
+          qualificationRoll: 2,
+          qualificationPassed: false,
+          survivalRoll: null,
+          survivalPassed: null,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: true,
+          canAdvance: false,
+          drafted: false
+        }
+      })
+    }
+
+    assert.deepEqual(deriveCharacterCreationValidationSummary(flow), {
+      ok: false,
+      step: 'career',
+      errors: [
+        'Qualification failed; choose a different career',
+        'Survival roll is required',
+        'Commission roll is required'
+      ],
+      errorCount: 3,
+      message: '3 issues to fix'
+    })
   })
 
   it('derives mobile wizard progress items from step validation', () => {

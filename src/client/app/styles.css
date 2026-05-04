@@ -1335,6 +1335,27 @@ h1 {
   min-width: 0;
 }
 
+.character-creation-roll-action {
+  display: grid;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.character-creation-roll-action button {
+  width: 100%;
+  border-color: rgba(72, 255, 173, 0.56);
+  background:
+    linear-gradient(180deg, rgba(72, 255, 173, 0.28), rgba(72, 255, 173, 0.08)),
+    #06120e;
+  color: var(--accent-2);
+}
+
+.character-creation-roll-action small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
 .character-creation-review {
   display: grid;
   gap: 7px;

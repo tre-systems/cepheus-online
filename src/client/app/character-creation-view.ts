@@ -7,6 +7,7 @@ import type {
 } from './character-creation-flow.js'
 import {
   characterCreationSteps,
+  deriveNextCharacterCreationCareerRoll,
   validateCurrentCharacterCreationStep
 } from './character-creation-flow.js'
 import type {
@@ -64,6 +65,12 @@ export interface CharacterCreationButtonState {
 export interface CharacterCreationButtonStates {
   primary: CharacterCreationButtonState
   secondary: CharacterCreationButtonState | null
+}
+
+export interface CharacterCreationCareerRollButton {
+  label: string
+  reason: string
+  disabled: boolean
 }
 
 export interface CharacterCreationValidationSummary {
@@ -211,6 +218,20 @@ export const deriveCharacterCreationButtonStates = (
   }
 }
 
+export const deriveCharacterCreationCareerRollButton = (
+  flow: CharacterCreationFlow
+): CharacterCreationCareerRollButton | null => {
+  if (flow.step !== 'career') return null
+  const action = deriveNextCharacterCreationCareerRoll(flow)
+  if (!action) return null
+
+  return {
+    label: action.label,
+    reason: action.reason,
+    disabled: false
+  }
+}
+
 const valueText = (value: string | number | null | undefined): string => {
   if (value === null || value === undefined) return ''
   return String(value)
@@ -351,9 +372,12 @@ const careerRollErrors = ({
   const careerDefinition = selectedCareerDefinition(careerPlan?.career)
   const requiresCommission =
     careerDefinition !== null &&
+    careerPlan?.survivalPassed !== false &&
     parseCareerCheck(careerDefinition.commission) !== null
   const requiresAdvancement =
     careerDefinition !== null &&
+    careerPlan?.survivalPassed === true &&
+    careerPlan.canCommission === false &&
     parseCareerCheck(careerDefinition.advancement) !== null
 
   return [
@@ -362,6 +386,9 @@ const careerRollErrors = ({
       label: 'Qualification roll',
       required: true
     }),
+    ...(careerPlan?.qualificationPassed === false
+      ? ['Qualification failed; choose a different career']
+      : []),
     ...rollErrors({
       value: careerPlan?.survivalRoll,
       label: 'Survival roll',
@@ -475,9 +502,12 @@ export const deriveCharacterCreationFieldViewModels = (
       const careerDefinition = selectedCareerDefinition(careerPlan?.career)
       const requiresCommission =
         careerDefinition !== null &&
+        careerPlan?.survivalPassed !== false &&
         parseCareerCheck(careerDefinition.commission) !== null
       const requiresAdvancement =
         careerDefinition !== null &&
+        careerPlan?.survivalPassed === true &&
+        careerPlan.canCommission === false &&
         parseCareerCheck(careerDefinition.advancement) !== null
 
       return [

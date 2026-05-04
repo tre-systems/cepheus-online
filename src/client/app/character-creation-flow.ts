@@ -83,6 +83,18 @@ export interface CharacterCreationWizardResult {
   moved: boolean
 }
 
+export type CharacterCreationCareerRollKey =
+  | 'qualificationRoll'
+  | 'survivalRoll'
+  | 'commissionRoll'
+  | 'advancementRoll'
+
+export interface CharacterCreationCareerRollAction {
+  key: CharacterCreationCareerRollKey
+  label: string
+  reason: string
+}
+
 export type CharacterCreationDraftPatch = Partial<
   Omit<
     CharacterCreationDraft,
@@ -486,6 +498,68 @@ export const applyCharacterCreationCareerPlan = (
   updateCharacterCreationDraft(draft, {
     careerPlan: evaluateCharacterCreationCareerPlan(draft, plan)
   })
+
+export const deriveNextCharacterCreationCareerRoll = (
+  flow: Pick<CharacterCreationFlow, 'draft'>
+): CharacterCreationCareerRollAction | null => {
+  const { careerPlan } = flow.draft
+  if (!careerPlan?.career.trim()) return null
+
+  const career = careerPlan.career.trim()
+  if (careerPlan.qualificationRoll === null) {
+    return {
+      key: 'qualificationRoll',
+      label: 'Roll qualification',
+      reason: `${flow.draft.name.trim() || 'Character'} ${career} qualification`
+    }
+  }
+  if (careerPlan.qualificationPassed === false) return null
+  if (careerPlan.survivalRoll === null) {
+    return {
+      key: 'survivalRoll',
+      label: 'Roll survival',
+      reason: `${flow.draft.name.trim() || 'Character'} ${career} survival`
+    }
+  }
+  if (careerPlan.survivalPassed === false) return null
+  if (careerPlan.canCommission && careerPlan.commissionRoll === null) {
+    return {
+      key: 'commissionRoll',
+      label: 'Roll commission',
+      reason: `${flow.draft.name.trim() || 'Character'} ${career} commission`
+    }
+  }
+  if (careerPlan.canAdvance && careerPlan.advancementRoll === null) {
+    return {
+      key: 'advancementRoll',
+      label: 'Roll advancement',
+      reason: `${flow.draft.name.trim() || 'Character'} ${career} advancement`
+    }
+  }
+  return null
+}
+
+export const applyCharacterCreationCareerRoll = (
+  flow: CharacterCreationFlow,
+  roll: number
+): CharacterCreationWizardResult => {
+  const action = deriveNextCharacterCreationCareerRoll(flow)
+  if (!action || !flow.draft.careerPlan) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const updatedDraft = applyCharacterCreationCareerPlan(flow.draft, {
+    ...flow.draft.careerPlan,
+    [action.key]: roll
+  })
+  const updatedFlow = { ...flow, draft: updatedDraft }
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
+  }
+}
 
 export const updateCharacterCreationFields = (
   flow: CharacterCreationFlow,
