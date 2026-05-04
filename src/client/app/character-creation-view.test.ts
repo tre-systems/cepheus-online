@@ -9,9 +9,11 @@ import {
 import {
   characterCreationPrimaryCtaLabels,
   characterCreationStepLabels,
+  deriveCharacterCreationButtonStates,
   deriveCharacterCreationCtaLabels,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationReviewSummary,
+  deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationValidationSummary,
   equipmentText,
   parseCharacterCreationDraftPatch
@@ -177,6 +179,105 @@ describe('character creation view helpers', () => {
         message: 'Ready to continue'
       }
     )
+  })
+
+  it('derives mobile wizard progress items from step validation', () => {
+    const flow = {
+      step: 'skills' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }
+      })
+    }
+
+    assert.deepEqual(deriveCharacterCreationStepProgressItems(flow), [
+      {
+        step: 'basics',
+        label: 'Basics',
+        index: 0,
+        current: false,
+        complete: true,
+        invalid: false,
+        disabled: false,
+        errors: []
+      },
+      {
+        step: 'characteristics',
+        label: 'Characteristics',
+        index: 1,
+        current: false,
+        complete: true,
+        invalid: false,
+        disabled: false,
+        errors: []
+      },
+      {
+        step: 'skills',
+        label: 'Skills',
+        index: 2,
+        current: true,
+        complete: false,
+        invalid: true,
+        disabled: false,
+        errors: ['At least one skill is required']
+      },
+      {
+        step: 'equipment',
+        label: 'Equipment',
+        index: 3,
+        current: false,
+        complete: false,
+        invalid: false,
+        disabled: true,
+        errors: []
+      },
+      {
+        step: 'review',
+        label: 'Review',
+        index: 4,
+        current: false,
+        complete: false,
+        invalid: false,
+        disabled: true,
+        errors: []
+      }
+    ])
+  })
+
+  it('derives button enabled state from current step validation', () => {
+    assert.deepEqual(
+      deriveCharacterCreationButtonStates(
+        createCharacterCreationFlow(characterId)
+      ),
+      {
+        primary: {
+          label: 'Continue to characteristics',
+          disabled: true,
+          reason: '1 issue to fix'
+        },
+        secondary: null
+      }
+    )
+
+    assert.deepEqual(deriveCharacterCreationButtonStates(completeFlow()), {
+      primary: {
+        label: 'Create character',
+        disabled: false,
+        reason: null
+      },
+      secondary: {
+        label: 'Back',
+        disabled: false,
+        reason: null
+      }
+    })
   })
 
   it('parses simple form values into a draft patch', () => {

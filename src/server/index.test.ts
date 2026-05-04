@@ -18,6 +18,8 @@ const clientModules = new Map<
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
         '/client/app/character-command-plan.js',
+        '/client/app/character-creation-flow.js',
+        '/client/app/character-creation-view.js',
         '/client/app/character-generator-preview.js',
         '/client/app/character-sheet-controller.js',
         '/client/app/dice-overlay.js',
@@ -89,7 +91,17 @@ const clientModules = new Map<
     '/client/app/character-creation-flow.js',
     {
       markers: ['deriveCharacterCreationCommands'],
-      imports: ['/client/game-commands.js']
+      imports: ['/client/game-commands.js', '/client/app/bootstrap-flow.js']
+    }
+  ],
+  [
+    '/client/app/character-creation-view.js',
+    {
+      markers: [
+        'deriveCharacterCreationFieldViewModels',
+        'parseCharacterCreationDraftPatch'
+      ],
+      imports: ['/client/app/character-creation-flow.js']
     }
   ],
   [

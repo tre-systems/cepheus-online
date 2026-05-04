@@ -5,10 +5,13 @@ import { asCharacterId, asGameId, asUserId } from '../../shared/ids'
 import type { GameState } from '../../shared/state'
 import {
   advanceCharacterCreationStep,
+  applyParsedCharacterCreationDraftPatch,
   backCharacterCreationStep,
+  backCharacterCreationWizardStep,
   characterCreationSteps,
   createCharacterCreationFlow,
   createInitialCharacterDraft,
+  createManualCharacterCreationFlow,
   deriveCharacterCreationCommands,
   deriveCharacterSheetPatch,
   deriveCreateCharacterCommand,
@@ -16,6 +19,7 @@ import {
   deriveStartCharacterCareerTermCommand,
   deriveStartCharacterCreationCommand,
   deriveUpdateCharacterSheetCommand,
+  nextCharacterCreationWizardStep,
   updateCharacterCreationDraft,
   updateCharacterCreationFields,
   validateCurrentCharacterCreationStep
@@ -83,6 +87,50 @@ describe('character creation flow', () => {
       'equipment',
       'review'
     ])
+  })
+
+  it('initializes a manual draft from room state and name defaults', () => {
+    const existingCharacterId = asCharacterId('character-2')
+    const roomState = {
+      ...state,
+      characters: {
+        [existingCharacterId]: {
+          id: existingCharacterId,
+          ownerId: identity.actorId,
+          type: 'PLAYER',
+          name: 'Character 2',
+          active: true,
+          notes: '',
+          age: null,
+          characteristics: {
+            str: null,
+            dex: null,
+            end: null,
+            int: null,
+            edu: null,
+            soc: null
+          },
+          skills: [],
+          equipment: [],
+          credits: 0,
+          creation: null
+        }
+      }
+    } satisfies GameState
+
+    const defaultFlow = createManualCharacterCreationFlow({ state: roomState })
+    assert.equal(defaultFlow.step, 'basics')
+    assert.equal(defaultFlow.draft.name, 'Character 2')
+    assert.equal(defaultFlow.draft.characterId, asCharacterId('character-2-2'))
+
+    const namedFlow = createManualCharacterCreationFlow({
+      state: roomState,
+      name: '  Iona Vesh  ',
+      characterType: 'NPC'
+    })
+    assert.equal(namedFlow.draft.name, 'Iona Vesh')
+    assert.equal(namedFlow.draft.characterType, 'NPC')
+    assert.equal(namedFlow.draft.characterId, asCharacterId('iona-vesh-2'))
   })
 
   it('updates draft fields without mutating the original draft', () => {
@@ -178,6 +226,76 @@ describe('character creation flow', () => {
     assert.equal(flow.step, 'review')
     assert.equal(advanceCharacterCreationStep(flow).step, 'review')
     assert.equal(backCharacterCreationStep(flow).step, 'equipment')
+  })
+
+  it('moves wizard steps with validation results', () => {
+    const emptyFlow = createCharacterCreationFlow(characterId)
+    const blocked = nextCharacterCreationWizardStep(emptyFlow)
+
+    assert.equal(blocked.moved, false)
+    assert.equal(blocked.flow.step, 'basics')
+    assert.deepEqual(blocked.validation, {
+      ok: false,
+      step: 'basics',
+      errors: ['Name is required']
+    })
+
+    const next = nextCharacterCreationWizardStep(
+      updateCharacterCreationFields(emptyFlow, { name: 'Iona Vesh' })
+    )
+    assert.equal(next.moved, true)
+    assert.equal(next.flow.step, 'characteristics')
+    assert.deepEqual(next.validation, {
+      ok: false,
+      step: 'characteristics',
+      errors: [
+        'STR is required',
+        'DEX is required',
+        'END is required',
+        'INT is required',
+        'EDU is required',
+        'SOC is required'
+      ]
+    })
+
+    const back = backCharacterCreationWizardStep(next.flow)
+    assert.equal(back.moved, true)
+    assert.equal(back.flow.step, 'basics')
+    assert.deepEqual(back.validation, {
+      ok: true,
+      step: 'basics',
+      errors: []
+    })
+  })
+
+  it('applies parsed draft patches with current-step validation', () => {
+    const flow = createCharacterCreationFlow(characterId)
+    const result = applyParsedCharacterCreationDraftPatch(flow, {
+      name: 'Iona Vesh',
+      age: 34,
+      skills: ['Pilot-1', 'pilot-1', ' Vacc Suit-0 '],
+      characteristics: { str: 7, dex: Number.NaN }
+    })
+
+    assert.equal(result.moved, false)
+    assert.equal(result.flow.step, 'basics')
+    assert.equal(result.flow.draft.name, 'Iona Vesh')
+    assert.equal(result.flow.draft.age, 34)
+    assert.deepEqual(result.flow.draft.skills, ['Pilot-1', 'Vacc Suit-0'])
+    assert.deepEqual(result.validation, {
+      ok: true,
+      step: 'basics',
+      errors: []
+    })
+
+    const characteristics = nextCharacterCreationWizardStep(result.flow)
+    assert.deepEqual(characteristics.validation.errors, [
+      'DEX must be a finite number',
+      'END is required',
+      'INT is required',
+      'EDU is required',
+      'SOC is required'
+    ])
   })
 
   it('validates the review step against the whole draft', () => {

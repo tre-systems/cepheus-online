@@ -157,6 +157,11 @@ Vacc Suit-0</textarea>
             <input id="characterTokenInput" name="characterToken" type="checkbox" checked>
             <span>Create token</span>
           </label>
+          <div id="characterCreationWizard" class="character-creation-wizard" hidden>
+            <div id="characterCreationSteps" class="character-creation-steps"></div>
+            <div id="characterCreationStatus" class="character-creation-status"></div>
+            <div id="characterCreationFields" class="character-creation-fields"></div>
+          </div>
           <div id="generatedCharacterPreview" class="generated-character-preview" hidden></div>
           <div class="piece-create-title">
             <span>New piece</span>
@@ -243,6 +248,9 @@ Vacc Suit-0</textarea>
           <div class="dialog-actions">
             <button id="bootstrapButton" type="button">Bootstrap</button>
             <button id="refreshButton" type="button">Refresh</button>
+            <button id="startCharacterWizardButton" type="button">Start wizard</button>
+            <button id="backCharacterWizardButton" type="button" disabled>Back</button>
+            <button id="nextCharacterWizardButton" type="button" disabled>Next</button>
             <button id="generateCharacterButton" type="button">Roll character</button>
             <button id="acceptGeneratedCharacterButton" type="button" disabled>Accept character</button>
             <button id="createCharacterButton" type="button">Create character</button>

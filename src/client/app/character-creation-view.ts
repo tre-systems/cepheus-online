@@ -4,7 +4,10 @@ import type {
   CharacterCreationStep,
   CharacterCreationValidation
 } from './character-creation-flow.js'
-import { validateCurrentCharacterCreationStep } from './character-creation-flow.js'
+import {
+  characterCreationSteps,
+  validateCurrentCharacterCreationStep
+} from './character-creation-flow.js'
 import type {
   CharacterEquipmentItem,
   CharacteristicKey
@@ -29,6 +32,28 @@ export interface CharacterCreationFieldViewModel {
 export interface CharacterCreationCtaLabels {
   primary: string
   secondary: string | null
+}
+
+export interface CharacterCreationStepProgressItem {
+  step: CharacterCreationStep
+  label: string
+  index: number
+  current: boolean
+  complete: boolean
+  invalid: boolean
+  disabled: boolean
+  errors: string[]
+}
+
+export interface CharacterCreationButtonState {
+  label: string
+  disabled: boolean
+  reason: string | null
+}
+
+export interface CharacterCreationButtonStates {
+  primary: CharacterCreationButtonState
+  secondary: CharacterCreationButtonState | null
 }
 
 export interface CharacterCreationValidationSummary {
@@ -100,6 +125,60 @@ export const deriveCharacterCreationCtaLabels = (
   primary: characterCreationPrimaryCtaLabels[step],
   secondary: step === 'basics' ? null : 'Back'
 })
+
+const stepIndex = (step: CharacterCreationStep): number =>
+  characterCreationSteps().indexOf(step)
+
+export const deriveCharacterCreationStepProgressItems = (
+  flow: CharacterCreationFlow
+): CharacterCreationStepProgressItem[] => {
+  const currentIndex = stepIndex(flow.step)
+
+  return characterCreationSteps().map((step, index) => {
+    const validation = validationForStep(flow, step)
+    const visited = index <= currentIndex
+    const current = step === flow.step
+
+    return {
+      step,
+      label: characterCreationStepLabels[step],
+      index,
+      current,
+      complete: index < currentIndex && validation.ok,
+      invalid: visited && !validation.ok,
+      disabled: index > currentIndex,
+      errors: visited ? [...validation.errors] : []
+    }
+  })
+}
+
+export const deriveCharacterCreationButtonStates = (
+  flow: CharacterCreationFlow
+): CharacterCreationButtonStates => {
+  const labels = deriveCharacterCreationCtaLabels(flow.step)
+  const validation = validationForStep(flow)
+  const reason = validation.ok
+    ? null
+    : `${validation.errors.length} ${
+        validation.errors.length === 1 ? 'issue' : 'issues'
+      } to fix`
+
+  return {
+    primary: {
+      label: labels.primary,
+      disabled: !validation.ok,
+      reason
+    },
+    secondary:
+      labels.secondary === null
+        ? null
+        : {
+            label: labels.secondary,
+            disabled: false,
+            reason: null
+          }
+  }
+}
 
 const valueText = (value: string | number | null | undefined): string => {
   if (value === null || value === undefined) return ''

@@ -9,6 +9,7 @@ import type {
   GameState
 } from '../../shared/state'
 import { buildSequencedCommand, type ClientIdentity } from '../game-commands.js'
+import { uniqueCharacterId } from './bootstrap-flow.js'
 
 export type CharacterCreationStep =
   | 'basics'
@@ -43,6 +44,18 @@ export interface CharacterCreationValidation {
 export interface CharacterCreationCommandOptions {
   identity: ClientIdentity
   state?: Pick<GameState, 'eventSeq'> | null
+}
+
+export interface ManualCharacterCreationFlowOptions {
+  state?: Pick<GameState, 'characters'> | null
+  name?: string | null
+  characterType?: CharacterType
+}
+
+export interface CharacterCreationWizardResult {
+  flow: CharacterCreationFlow
+  validation: CharacterCreationValidation
+  moved: boolean
 }
 
 export type CharacterCreationDraftPatch = Partial<
@@ -145,6 +158,10 @@ const isFiniteNonNegativeNumber = (value: number) =>
 
 const stepIndex = (step: CharacterCreationStep): number =>
   CHARACTER_CREATION_STEPS.indexOf(step)
+
+const defaultManualCharacterName = (
+  state: Pick<GameState, 'characters'> | null
+): string => `Character ${Object.keys(state?.characters || {}).length + 1}`
 
 const sequenceCommandAt = <T extends Command>(
   command: T,
@@ -265,6 +282,19 @@ export const createCharacterCreationFlow = (
   draft: createInitialCharacterDraft(characterId, overrides)
 })
 
+export const createManualCharacterCreationFlow = ({
+  state = null,
+  name = null,
+  characterType = 'PLAYER'
+}: ManualCharacterCreationFlowOptions = {}): CharacterCreationFlow => {
+  const defaultName = defaultManualCharacterName(state)
+  const draftName = name?.trim() || defaultName
+  return createCharacterCreationFlow(uniqueCharacterId(state, draftName), {
+    name: draftName,
+    characterType
+  })
+}
+
 export const updateCharacterCreationDraft = (
   draft: CharacterCreationDraft,
   patch: CharacterCreationDraftPatch
@@ -331,6 +361,45 @@ export const backCharacterCreationStep = (
   return {
     ...flow,
     step: CHARACTER_CREATION_STEPS[previousIndex]
+  }
+}
+
+export const nextCharacterCreationWizardStep = (
+  flow: CharacterCreationFlow
+): CharacterCreationWizardResult => {
+  const validation = validateCurrentCharacterCreationStep(flow)
+  if (!validation.ok) {
+    return { flow, validation, moved: false }
+  }
+
+  const nextFlow = advanceCharacterCreationStep(flow)
+  return {
+    flow: nextFlow,
+    validation: validateCurrentCharacterCreationStep(nextFlow),
+    moved: nextFlow.step !== flow.step
+  }
+}
+
+export const backCharacterCreationWizardStep = (
+  flow: CharacterCreationFlow
+): CharacterCreationWizardResult => {
+  const previousFlow = backCharacterCreationStep(flow)
+  return {
+    flow: previousFlow,
+    validation: validateCurrentCharacterCreationStep(previousFlow),
+    moved: previousFlow.step !== flow.step
+  }
+}
+
+export const applyParsedCharacterCreationDraftPatch = (
+  flow: CharacterCreationFlow,
+  patch: CharacterCreationDraftPatch
+): CharacterCreationWizardResult => {
+  const updatedFlow = updateCharacterCreationFields(flow, patch)
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
   }
 }
 

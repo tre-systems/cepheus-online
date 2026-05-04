@@ -1267,6 +1267,105 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.character-creation-wizard {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(72, 255, 173, 0.5);
+  background:
+    linear-gradient(180deg, rgba(72, 255, 173, 0.1), transparent 46%),
+    rgba(0, 20, 15, 0.72);
+  padding: 9px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 24px rgba(72, 255, 173, 0.08);
+}
+
+.character-creation-wizard[hidden] {
+  display: none;
+}
+
+.character-creation-progress,
+.character-creation-fields {
+  display: grid;
+  gap: 7px;
+}
+
+.character-creation-progress {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.character-creation-progress span {
+  border-bottom: 2px solid rgba(72, 255, 173, 0.22);
+  color: var(--muted);
+  padding-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.character-creation-progress span.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.character-creation-status p {
+  margin: 0;
+  font-size: 11px;
+}
+
+.character-creation-status .ok {
+  color: var(--accent-2);
+}
+
+.character-creation-status .invalid,
+.character-creation-field small {
+  color: #ffe272;
+}
+
+.character-creation-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.character-creation-field input,
+.character-creation-field select,
+.character-creation-field textarea {
+  min-width: 0;
+}
+
+.character-creation-review {
+  display: grid;
+  gap: 7px;
+}
+
+.character-creation-review strong {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.character-creation-review p,
+.character-creation-review dl,
+.character-creation-review dd {
+  margin: 0;
+}
+
+.character-creation-review dt {
+  margin-top: 4px;
+  color: var(--accent-2);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.character-creation-review dd {
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .generated-character-preview {
   grid-column: 1 / -1;
   display: grid;

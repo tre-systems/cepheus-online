@@ -13,6 +13,21 @@ import {
 import { createBoardController } from './board-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
+  applyParsedCharacterCreationDraftPatch,
+  backCharacterCreationWizardStep,
+  createManualCharacterCreationFlow,
+  deriveCharacterCreationCommands,
+  nextCharacterCreationWizardStep,
+  validateCurrentCharacterCreationStep
+} from './character-creation-flow.js'
+import {
+  deriveCharacterCreationButtonStates,
+  deriveCharacterCreationFieldViewModels,
+  deriveCharacterCreationReviewSummary,
+  deriveCharacterCreationStepProgressItems,
+  parseCharacterCreationDraftPatch
+} from './character-creation-view.js'
+import {
   generateCharacterPreview,
   planCreatePlayableCharacterCommands,
   planGeneratePlayableCharacterCommands
@@ -31,7 +46,8 @@ import {
   parseNonNegativeIntegerValue,
   parsePositiveIntegerValue,
   parsePositiveNumberValue,
-  uniqueBoardId
+  uniqueBoardId,
+  uniquePieceId
 } from './bootstrap-flow.js'
 import {
   buildRoomPath,
@@ -67,6 +83,9 @@ const els = {
   bootstrap: document.getElementById('bootstrapButton'),
   refresh: document.getElementById('refreshButton'),
   createCharacter: document.getElementById('createCharacterButton'),
+  startCharacterWizard: document.getElementById('startCharacterWizardButton'),
+  backCharacterWizard: document.getElementById('backCharacterWizardButton'),
+  nextCharacterWizard: document.getElementById('nextCharacterWizardButton'),
   acceptGeneratedCharacter: document.getElementById(
     'acceptGeneratedCharacterButton'
   ),
@@ -74,6 +93,10 @@ const els = {
   generatedCharacterPreview: document.getElementById(
     'generatedCharacterPreview'
   ),
+  characterCreationWizard: document.getElementById('characterCreationWizard'),
+  characterCreationSteps: document.getElementById('characterCreationSteps'),
+  characterCreationStatus: document.getElementById('characterCreationStatus'),
+  characterCreationFields: document.getElementById('characterCreationFields'),
   createPiece: document.getElementById('createPieceButton'),
   createBoard: document.getElementById('createBoardButton'),
   characterNameInput: document.getElementById('characterNameInput'),
@@ -144,6 +167,7 @@ let boardController = null
 let requestCounter = 0
 let diceHideTimer = null
 let pendingGeneratedCharacter = null
+let characterCreationFlow = null
 
 const setStatus = (text) => {
   els.status.textContent = text
@@ -230,6 +254,181 @@ const characterSkillsFromInput = () =>
     .split(/[\n,]/)
     .map((skill) => skill.trim())
     .filter(Boolean)
+
+const characterCreationSeed = () => ({
+  name: els.characterNameInput.value.trim(),
+  age: nullableIntegerInput(els.characterAgeInput),
+  characteristics: {
+    str: nullableIntegerInput(els.characterStrInput),
+    dex: nullableIntegerInput(els.characterDexInput),
+    end: nullableIntegerInput(els.characterEndInput),
+    int: nullableIntegerInput(els.characterIntInput),
+    edu: nullableIntegerInput(els.characterEduInput),
+    soc: nullableIntegerInput(els.characterSocInput)
+  },
+  skills: characterSkillsFromInput(),
+  equipment: [],
+  credits: parseNonNegativeIntegerInput(els.characterCreditsInput, 0),
+  notes: ''
+})
+
+const startCharacterCreationWizard = () => {
+  const seed = characterCreationSeed()
+  const flow = createManualCharacterCreationFlow({
+    state,
+    name: seed.name || null,
+    characterType: 'PLAYER'
+  })
+  characterCreationFlow = {
+    ...flow,
+    draft: {
+      ...flow.draft,
+      ...seed,
+      name: seed.name || flow.draft.name
+    }
+  }
+  pendingGeneratedCharacter = null
+  renderGeneratedCharacterPreview()
+  renderCharacterCreationWizard()
+}
+
+const syncCharacterCreationWizardFields = () => {
+  if (!characterCreationFlow) return
+
+  const values = {}
+  for (const field of els.characterCreationFields.querySelectorAll(
+    '[data-character-creation-field]'
+  )) {
+    values[field.dataset.characterCreationField] = field.value
+  }
+  characterCreationFlow = applyParsedCharacterCreationDraftPatch(
+    characterCreationFlow,
+    parseCharacterCreationDraftPatch(values)
+  ).flow
+}
+
+const renderCharacterCreationWizardControls = () => {
+  if (!characterCreationFlow) return
+  const buttons = deriveCharacterCreationButtonStates(characterCreationFlow)
+  els.backCharacterWizard.disabled = buttons.secondary?.disabled ?? true
+  els.nextCharacterWizard.disabled = buttons.primary.disabled
+  els.nextCharacterWizard.title = buttons.primary.reason ?? ''
+  els.nextCharacterWizard.textContent = buttons.primary.label
+
+  const validation = validateCurrentCharacterCreationStep(characterCreationFlow)
+  const status = document.createElement('p')
+  status.textContent = validation.ok
+    ? 'Ready to continue'
+    : `${validation.errors.length} ${
+        validation.errors.length === 1 ? 'issue' : 'issues'
+      } to fix`
+  status.className = validation.ok ? 'ok' : 'invalid'
+  els.characterCreationStatus.replaceChildren(status)
+}
+
+const renderCharacterCreationWizard = () => {
+  if (!characterCreationFlow) {
+    els.characterCreationWizard.hidden = true
+    els.characterCreationSteps.replaceChildren()
+    els.characterCreationStatus.replaceChildren()
+    els.characterCreationFields.replaceChildren()
+    els.backCharacterWizard.disabled = true
+    els.nextCharacterWizard.disabled = true
+    els.nextCharacterWizard.textContent = 'Next'
+    return
+  }
+
+  const flow = characterCreationFlow
+  const progress = document.createElement('div')
+  progress.className = 'character-creation-progress'
+  for (const step of deriveCharacterCreationStepProgressItems(flow)) {
+    const item = document.createElement('span')
+    item.className = [
+      step.current ? 'active' : '',
+      step.complete ? 'complete' : '',
+      step.invalid ? 'invalid' : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
+    item.textContent = step.label
+    progress.append(item)
+  }
+
+  els.characterCreationSteps.replaceChildren(progress)
+  els.characterCreationFields.replaceChildren(
+    flow.step === 'review'
+      ? renderCharacterCreationReview(flow)
+      : renderCharacterCreationFields(flow)
+  )
+  els.characterCreationWizard.hidden = false
+  renderCharacterCreationWizardControls()
+}
+
+const renderCharacterCreationFields = (flow) => {
+  const fragment = document.createDocumentFragment()
+  for (const field of deriveCharacterCreationFieldViewModels(flow)) {
+    const label = document.createElement('label')
+    label.className = `character-creation-field ${field.kind}`
+    const name = document.createElement('span')
+    name.textContent = field.required ? `${field.label} *` : field.label
+
+    let control = null
+    if (field.kind === 'textarea') {
+      control = document.createElement('textarea')
+      control.rows = field.key === 'skills' ? 4 : 3
+    } else if (field.kind === 'select') {
+      control = document.createElement('select')
+      for (const value of ['PLAYER', 'NPC', 'ANIMAL', 'ROBOT']) {
+        const option = document.createElement('option')
+        option.value = value
+        option.textContent = value
+        control.append(option)
+      }
+    } else {
+      control = document.createElement('input')
+      control.type = 'text'
+      if (field.kind === 'number') control.inputMode = 'numeric'
+    }
+    control.dataset.characterCreationField = field.key
+    control.value = field.value
+    control.autocomplete = 'off'
+
+    label.append(name, control)
+    if (field.errors.length > 0) {
+      const error = document.createElement('small')
+      error.textContent = field.errors.join(', ')
+      label.append(error)
+    }
+    fragment.append(label)
+  }
+  return fragment
+}
+
+const renderCharacterCreationReview = (flow) => {
+  const summary = deriveCharacterCreationReviewSummary(flow)
+  const review = document.createElement('div')
+  review.className = 'character-creation-review'
+  const title = document.createElement('strong')
+  title.textContent = summary.title
+  const subtitle = document.createElement('p')
+  subtitle.textContent = summary.subtitle
+  review.append(title, subtitle)
+
+  for (const section of summary.sections) {
+    const group = document.createElement('dl')
+    const heading = document.createElement('dt')
+    heading.textContent = section.label
+    group.append(heading)
+    for (const item of section.items) {
+      const row = document.createElement('dd')
+      row.textContent = `${item.label}: ${item.value}`
+      group.append(row)
+    }
+    review.append(group)
+  }
+
+  return review
+}
 
 const renderGeneratedCharacterPreview = () => {
   const preview = deriveGeneratedCharacterPreview(pendingGeneratedCharacter)
@@ -412,6 +611,128 @@ const createCustomCharacter = async () => {
   els.roomDialog.close()
   characterSheetController.setOpen(true)
   render()
+}
+
+const createWizardToken = async () => {
+  if (!characterCreationFlow || !els.characterTokenInput.checked) return
+  if (!selectedBoard()) {
+    await postCommand(
+      createBoardCommand({ roomId, actorId }),
+      requestId('create-board-for-wizard-character')
+    )
+  }
+
+  const board = selectedBoard()
+  if (!state || !board) return
+
+  const width = 50
+  const height = 50
+  const scale = 1
+  const pieceId = uniquePieceId(state, characterCreationFlow.draft.name)
+  const x = Math.max(
+    0,
+    Math.min(board.width - width * scale, 160 + (boardPieces().length % 8) * 58)
+  )
+  const y = Math.max(
+    0,
+    Math.min(
+      board.height - height * scale,
+      140 + Math.floor(boardPieces().length / 8) * 58
+    )
+  )
+
+  await postCommand({
+    type: 'CreatePiece',
+    gameId: roomId,
+    actorId,
+    pieceId,
+    boardId: board.id,
+    name: characterCreationFlow.draft.name.trim(),
+    characterId: characterCreationFlow.draft.characterId,
+    imageAssetId: null,
+    x,
+    y,
+    width,
+    height,
+    scale
+  })
+  selectedPieceId = pieceId
+}
+
+const finishCharacterCreationWizard = async () => {
+  if (!characterCreationFlow) return
+  setError('')
+  syncCharacterCreationWizardFields()
+
+  const validation = validateCurrentCharacterCreationStep({
+    ...characterCreationFlow,
+    step: 'review'
+  })
+  if (!validation.ok) {
+    setError(validation.errors.join(', '))
+    renderCharacterCreationWizard()
+    return
+  }
+
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-wizard-character')
+    )
+  }
+
+  const commands = deriveCharacterCreationCommands(characterCreationFlow, {
+    identity: clientIdentity(),
+    state
+  })
+  if (commands.length === 0) {
+    setError('Character creation needs the current room state')
+    return
+  }
+
+  for (const command of commands) {
+    await postCommand(command)
+  }
+
+  await createWizardToken()
+  els.characterNameInput.value = ''
+  characterCreationFlow = null
+  renderCharacterCreationWizard()
+  els.roomDialog.close()
+  characterSheetController.setOpen(true)
+  render()
+}
+
+const advanceCharacterCreationWizard = async () => {
+  if (!characterCreationFlow) {
+    startCharacterCreationWizard()
+    return
+  }
+
+  syncCharacterCreationWizardFields()
+  if (characterCreationFlow.step === 'review') {
+    await finishCharacterCreationWizard()
+    return
+  }
+
+  const result = nextCharacterCreationWizardStep(characterCreationFlow)
+  if (!result.moved) {
+    setError(result.validation.errors.join(', '))
+  } else {
+    setError('')
+    characterCreationFlow = result.flow
+  }
+  renderCharacterCreationWizard()
+}
+
+const backCharacterCreationWizard = () => {
+  if (!characterCreationFlow) return
+  syncCharacterCreationWizardFields()
+  characterCreationFlow = backCharacterCreationWizardStep(
+    characterCreationFlow
+  ).flow
+  setError('')
+  renderCharacterCreationWizard()
 }
 
 const rollGeneratedCharacter = () => {
@@ -844,6 +1165,23 @@ els.refresh.addEventListener('click', () => {
 
 els.createCharacter.addEventListener('click', () => {
   createCustomCharacter().catch((error) => setError(error.message))
+})
+
+els.startCharacterWizard.addEventListener('click', () => {
+  startCharacterCreationWizard()
+})
+
+els.backCharacterWizard.addEventListener('click', () => {
+  backCharacterCreationWizard()
+})
+
+els.characterCreationFields.addEventListener('input', () => {
+  syncCharacterCreationWizardFields()
+  renderCharacterCreationWizardControls()
+})
+
+els.nextCharacterWizard.addEventListener('click', () => {
+  advanceCharacterCreationWizard().catch((error) => setError(error.message))
 })
 
 els.generateCharacter.addEventListener('click', () => {
