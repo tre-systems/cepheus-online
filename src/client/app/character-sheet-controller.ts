@@ -312,6 +312,13 @@ export const createCharacterSheetController = ({
     if (creationActions.actions) body.append(creationActions.actions)
   }
 
+  const creationEventLabel = (type: string) =>
+    type
+      .toLowerCase()
+      .split('_')
+      .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+      .join(' ')
+
   const creationRows = (creation: CharacterCreationProjection | null) => {
     if (!creation) return [sheetRow('Creation', 'Not started')]
     const rows = [
@@ -321,6 +328,15 @@ export const createCharacterSheetController = ({
     ]
     const career = creation.careers.at(-1)
     if (career) rows.splice(2, 0, sheetRow('Career', career.name))
+    if (creation.history && creation.history.length > 0) {
+      rows.push(sheetRow('Steps', String(creation.history.length)))
+      rows.push(
+        sheetRow(
+          'Latest',
+          creationEventLabel(creation.history.at(-1)?.type ?? '')
+        )
+      )
+    }
     return rows
   }
 

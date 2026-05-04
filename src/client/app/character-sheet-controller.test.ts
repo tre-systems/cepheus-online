@@ -299,6 +299,53 @@ describe('character sheet controller', () => {
     assert.deepEqual(harness.calls.freedom, ['LOCKED'])
   })
 
+  it('renders recovered character creation history in details', () => {
+    const scout = character({
+      creation: {
+        state: {
+          status: 'PLAYABLE',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: true,
+        history: [
+          { type: 'SET_CHARACTERISTICS' },
+          { type: 'CREATION_COMPLETE' }
+        ]
+      }
+    })
+    const harness = createHarness({
+      selectedPiece: piece(),
+      state: gameState({ [characterId]: scout })
+    })
+
+    harness.controller.render()
+
+    findByText(harness.elements.sheetBody, 'Steps')
+    findByText(harness.elements.sheetBody, '2')
+    findByText(harness.elements.sheetBody, 'Latest')
+    findByText(harness.elements.sheetBody, 'Creation Complete')
+  })
+
   it('edits items with row controls instead of textarea text', () => {
     const scout = character()
     const harness = createHarness({

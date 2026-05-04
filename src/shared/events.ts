@@ -6,7 +6,7 @@ import type {
   PieceId,
   UserId
 } from './ids'
-import type { CareerCreationEvent, CareerTermStart } from './characterCreation'
+import type { CareerCreationEvent } from './characterCreation'
 import type {
   CharacterCreationProjection,
   CharacterSheetPatch,
@@ -60,7 +60,7 @@ export type GameEvent =
       characterId: CharacterId
       career: string
       drafted: boolean
-    } & CareerTermStart)
+    })
   | {
       type: 'BoardCreated'
       boardId: BoardId

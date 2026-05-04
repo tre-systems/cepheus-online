@@ -1,4 +1,5 @@
 import type { EventEnvelope } from './events'
+import { startCareerTerm } from './characterCreation'
 import type { CharacterCharacteristics, GameState } from './state'
 
 const diceRevealAt = (createdAt: string): string =>
@@ -111,7 +112,11 @@ export const projectGameState = (
         character.creation = {
           ...character.creation,
           state: structuredClone(event.state),
-          creationComplete: event.creationComplete
+          creationComplete: event.creationComplete,
+          history: [
+            ...(character.creation.history ?? []),
+            structuredClone(event.creationEvent)
+          ]
         }
         state.eventSeq = envelope.seq
         break
@@ -123,13 +128,19 @@ export const projectGameState = (
         }
         const character = state.characters[event.characterId]
         if (!character?.creation) break
+        const result = startCareerTerm({
+          career: event.career,
+          terms: character.creation.terms,
+          careers: character.creation.careers,
+          drafted: event.drafted
+        })
 
         character.creation = {
           ...character.creation,
-          terms: event.terms.map((term) => structuredClone(term)),
-          careers: event.careers.map((career) => ({ ...career })),
-          canEnterDraft: event.canEnterDraft,
-          failedToQualify: event.failedToQualify
+          terms: result.terms.map((term) => structuredClone(term)),
+          careers: result.careers.map((career) => ({ ...career })),
+          canEnterDraft: result.canEnterDraft,
+          failedToQualify: result.failedToQualify
         }
         state.eventSeq = envelope.seq
         break

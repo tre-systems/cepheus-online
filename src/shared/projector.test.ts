@@ -207,7 +207,8 @@ describe('game state projection', () => {
           canEnterDraft: true,
           failedToQualify: false,
           characteristicChanges: [],
-          creationComplete: false
+          creationComplete: false,
+          history: []
         }
       }),
       envelope(4, {
@@ -227,23 +228,7 @@ describe('game state projection', () => {
         type: 'CharacterCareerTermStarted',
         characterId,
         career: 'Scout',
-        drafted: false,
-        terms: [
-          {
-            career: 'Scout',
-            skills: [],
-            skillsAndTraining: [],
-            benefits: [],
-            complete: false,
-            canReenlist: true,
-            completedBasicTraining: false,
-            musteringOut: false,
-            anagathics: false
-          }
-        ],
-        careers: [{ name: 'Scout', rank: 0 }],
-        canEnterDraft: true,
-        failedToQualify: false
+        drafted: false
       }),
       envelope(6, {
         type: 'CharacterCreationTransitioned',
@@ -265,6 +250,10 @@ describe('game state projection', () => {
     assert.equal(creation?.creationComplete, true)
     assert.deepEqual(creation?.terms.map((term) => term.career), ['Scout'])
     assert.deepEqual(creation?.careers, [{ name: 'Scout', rank: 0 }])
+    assert.deepEqual(creation?.history, [
+      { type: 'SET_CHARACTERISTICS' },
+      { type: 'CREATION_COMPLETE' }
+    ])
     assert.equal(state?.eventSeq, 6)
   })
 

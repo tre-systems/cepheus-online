@@ -1,11 +1,12 @@
-import type {ClientMessage, CommandError} from '../../shared/protocol'
-import {projectGameState} from '../../shared/projector'
-import {err, ok, type Result} from '../../shared/result'
-import type {GameId} from '../../shared/ids'
-import type {GameState} from '../../shared/state'
-import type {DurableObjectStorage} from '../cloudflare'
-import {deriveEventsForCommand} from './command'
-import {getProjectedGameState} from './projection'
+import type { EventEnvelope } from '../../shared/events'
+import type { GameId } from '../../shared/ids'
+import type { ClientMessage, CommandError } from '../../shared/protocol'
+import { projectGameState } from '../../shared/projector'
+import { err, ok, type Result } from '../../shared/result'
+import type { GameState } from '../../shared/state'
+import type { DurableObjectStorage } from '../cloudflare'
+import { deriveEventsForCommand } from './command'
+import { getProjectedGameState } from './projection'
 import {
   appendEvents,
   getEventSeq,
@@ -27,8 +28,17 @@ const commandError = (
   message
 })
 
-const shouldCheckpoint = (state: GameState): boolean =>
-  state.eventSeq === 1 || state.eventSeq % 64 === 0
+const shouldCheckpoint = (
+  state: GameState,
+  envelopes: readonly EventEnvelope[]
+): boolean =>
+  state.eventSeq === 1 ||
+  state.eventSeq % 64 === 0 ||
+  envelopes.some(
+    (envelope) =>
+      envelope.event.type === 'CharacterCreationTransitioned' &&
+      envelope.event.creationComplete
+  )
 
 const hasProjectionParity = (
   left: GameState | null,
@@ -80,7 +90,7 @@ export const runCommandPublication = async (
     )
   }
 
-  if (shouldCheckpoint(nextState)) {
+  if (shouldCheckpoint(nextState, envelopes)) {
     await saveCheckpoint(storage, nextState, createdAt)
   }
 

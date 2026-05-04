@@ -206,12 +206,24 @@ describe('room publication flow', () => {
       'HOMEWORLD'
     )
 
+    const homeworld = await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 4,
+      creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+    })
+
+    assert.equal(homeworld.ok, true)
+    if (!homeworld.ok) return
+
     const term = await publish(storage, {
       type: 'StartCharacterCareerTerm',
       gameId,
       actorId,
       characterId,
-      expectedSeq: 4,
+      expectedSeq: 5,
       career: 'Scout'
     })
 
@@ -220,7 +232,71 @@ describe('room publication flow', () => {
     const creation = term.value.state.characters[characterId]?.creation
     assert.deepEqual(creation?.terms.map((entry) => entry.career), ['Scout'])
     assert.deepEqual(creation?.careers, [{ name: 'Scout', rank: 0 }])
-    assert.equal(term.value.state.eventSeq, 5)
+    assert.equal(term.value.state.eventSeq, 6)
+  })
+
+  it('checkpoints when character creation becomes playable', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    const advance = async (
+      creationEvent: Extract<
+        Command,
+        { type: 'AdvanceCharacterCreation' }
+      >['creationEvent']
+    ) =>
+      publish(storage, {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent
+      })
+
+    await advance({ type: 'SET_CHARACTERISTICS' })
+    await advance({ type: 'COMPLETE_HOMEWORLD' })
+    await publish(storage, {
+      type: 'StartCharacterCareerTerm',
+      gameId,
+      actorId,
+      characterId,
+      career: 'Scout'
+    })
+    await advance({ type: 'SELECT_CAREER', isNewCareer: true })
+    await advance({ type: 'COMPLETE_BASIC_TRAINING' })
+    await advance({
+      type: 'SURVIVAL_PASSED',
+      canCommission: false,
+      canAdvance: false
+    })
+    await advance({ type: 'COMPLETE_SKILLS' })
+    await advance({ type: 'COMPLETE_AGING' })
+    await advance({ type: 'LEAVE_CAREER' })
+    await advance({ type: 'FINISH_MUSTERING' })
+    const completed = await advance({ type: 'CREATION_COMPLETE' })
+
+    assert.equal(completed.ok, true)
+    if (!completed.ok) return
+    assert.equal(
+      completed.value.state.characters[characterId]?.creation?.state.status,
+      'PLAYABLE'
+    )
+    assert.equal((await readCheckpoint(storage, gameId))?.seq, 14)
   })
 
   it('rejects stale expected sequence numbers on character creation commands', async () => {
@@ -300,6 +376,43 @@ describe('room publication flow', () => {
     assert.equal(
       rejected.error.message,
       'COMPLETE_HOMEWORLD is not valid from CHARACTERISTICS'
+    )
+    assert.equal((await readEventStream(storage, gameId)).length, 3)
+  })
+
+  it('rejects career term starts outside career selection', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    const rejected = await publish(storage, {
+      type: 'StartCharacterCareerTerm',
+      gameId,
+      actorId,
+      characterId,
+      career: 'Scout'
+    })
+
+    assert.equal(rejected.ok, false)
+    if (rejected.ok) return
+    assert.equal(rejected.error.code, 'invalid_command')
+    assert.equal(
+      rejected.error.message,
+      'Career terms cannot start from CHARACTERISTICS'
     )
     assert.equal((await readEventStream(storage, gameId)).length, 3)
   })

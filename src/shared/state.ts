@@ -1,5 +1,6 @@
 import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
 import type {
+  CareerCreationEvent,
   AgingChange,
   CareerCreationState,
   CareerRank,
@@ -38,6 +39,7 @@ export interface CharacterCreationProjection {
   failedToQualify: boolean
   characteristicChanges: AgingChange[]
   creationComplete: boolean
+  history?: CareerCreationEvent[]
 }
 
 export interface GameState {

@@ -2,7 +2,6 @@ import type { Command } from '../../shared/commands'
 import {
   canTransitionCareerCreationState,
   createCareerCreationState,
-  startCareerTerm,
   transitionCareerCreationState
 } from '../../shared/characterCreation'
 import { rollDiceExpression } from '../../shared/dice'
@@ -231,7 +230,8 @@ export const deriveEventsForCommand = (
             canEnterDraft: true,
             failedToQualify: false,
             characteristicChanges: [],
-            creationComplete: false
+            creationComplete: false,
+            history: []
           }
         }
       ])
@@ -297,23 +297,23 @@ export const deriveEventsForCommand = (
           )
         )
       }
+      if (character.creation.state.status !== 'CAREER_SELECTION') {
+        return err(
+          commandError(
+            'invalid_command',
+            `Career terms cannot start from ${character.creation.state.status}`
+          )
+        )
+      }
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career
-
-      const result = startCareerTerm({
-        career: career.value,
-        terms: character.creation.terms,
-        careers: character.creation.careers,
-        drafted: command.drafted ?? false
-      })
 
       return ok([
         {
           type: 'CharacterCareerTermStarted',
           characterId: command.characterId,
           career: career.value,
-          drafted: command.drafted ?? false,
-          ...result
+          drafted: command.drafted ?? false
         }
       ])
     }
