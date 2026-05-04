@@ -5,7 +5,8 @@ import type { ClientIdentity } from '../game-commands.js'
 import { uniqueCharacterId, uniquePieceId } from './bootstrap-flow.js'
 import {
   createCharacterCreationFlow,
-  deriveCharacterCreationCommands
+  deriveCharacterCreationCommands,
+  selectCharacterCreationCareerPlan
 } from './character-creation-flow.js'
 
 export interface CreatePieceCommandPlanInput {
@@ -64,6 +65,7 @@ export const createDefaultPieceCharacterCreationFlow = (
       edu: 7,
       soc: 7
     },
+    careerPlan: selectCharacterCreationCareerPlan('Scout'),
     skills: ['Athletics-0', 'Gun Combat-0'],
     equipment: [],
     credits: 0

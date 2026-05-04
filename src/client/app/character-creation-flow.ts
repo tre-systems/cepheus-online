@@ -1,4 +1,12 @@
 import type { Command } from '../../shared/commands'
+import {
+  evaluateCareerCheck,
+  parseCareerCheck
+} from '../../shared/character-creation/career-rules.js'
+import {
+  CEPHEUS_SRD_CAREERS,
+  type CepheusCareerDefinition
+} from '../../shared/character-creation/cepheus-srd-ruleset.js'
 import type { CharacterId } from '../../shared/ids'
 import type {
   CharacterCharacteristics,
@@ -14,9 +22,25 @@ import { uniqueCharacterId } from './bootstrap-flow.js'
 export type CharacterCreationStep =
   | 'basics'
   | 'characteristics'
+  | 'career'
   | 'skills'
   | 'equipment'
   | 'review'
+
+export interface CharacterCreationCareerPlan {
+  career: string
+  qualificationRoll: number | null
+  qualificationPassed: boolean | null
+  survivalRoll: number | null
+  survivalPassed: boolean | null
+  commissionRoll: number | null
+  commissionPassed: boolean | null
+  advancementRoll: number | null
+  advancementPassed: boolean | null
+  canCommission: boolean | null
+  canAdvance: boolean | null
+  drafted: boolean
+}
 
 export interface CharacterCreationDraft {
   characterId: CharacterId
@@ -24,6 +48,7 @@ export interface CharacterCreationDraft {
   name: string
   age: number | null
   characteristics: CharacterCharacteristics
+  careerPlan: CharacterCreationCareerPlan | null
   skills: string[]
   equipment: CharacterEquipmentItem[]
   credits: number
@@ -59,9 +84,13 @@ export interface CharacterCreationWizardResult {
 }
 
 export type CharacterCreationDraftPatch = Partial<
-  Omit<CharacterCreationDraft, 'characteristics' | 'skills' | 'equipment'>
+  Omit<
+    CharacterCreationDraft,
+    'characteristics' | 'careerPlan' | 'skills' | 'equipment'
+  >
 > & {
   characteristics?: Partial<CharacterCharacteristics>
+  careerPlan?: CharacterCreationCareerPlan | null
   skills?: readonly string[]
   equipment?: readonly CharacterEquipmentItem[]
 }
@@ -87,6 +116,7 @@ type UpdateCharacterSheetCommand = Extract<
 const CHARACTER_CREATION_STEPS = [
   'basics',
   'characteristics',
+  'career',
   'skills',
   'equipment',
   'review'
@@ -109,6 +139,53 @@ const emptyCharacteristics = (): CharacterCharacteristics => ({
   edu: null,
   soc: null
 })
+
+const createCareerPlan = (
+  overrides: Partial<CharacterCreationCareerPlan> = {}
+): CharacterCreationCareerPlan => ({
+  career: overrides.career ?? '',
+  qualificationRoll: overrides.qualificationRoll ?? null,
+  qualificationPassed: overrides.qualificationPassed ?? null,
+  survivalRoll: overrides.survivalRoll ?? null,
+  survivalPassed: overrides.survivalPassed ?? null,
+  commissionRoll: overrides.commissionRoll ?? null,
+  commissionPassed: overrides.commissionPassed ?? null,
+  advancementRoll: overrides.advancementRoll ?? null,
+  advancementPassed: overrides.advancementPassed ?? null,
+  canCommission: overrides.canCommission ?? null,
+  canAdvance: overrides.canAdvance ?? null,
+  drafted: overrides.drafted ?? false
+})
+
+const cloneCareerPlan = (
+  plan: CharacterCreationCareerPlan | null
+): CharacterCreationCareerPlan | null =>
+  plan
+    ? {
+        career: plan.career,
+        qualificationRoll: plan.qualificationRoll,
+        qualificationPassed: plan.qualificationPassed,
+        survivalRoll: plan.survivalRoll,
+        survivalPassed: plan.survivalPassed,
+        commissionRoll: plan.commissionRoll,
+        commissionPassed: plan.commissionPassed,
+        advancementRoll: plan.advancementRoll,
+        advancementPassed: plan.advancementPassed,
+        canCommission: plan.canCommission,
+        canAdvance: plan.canAdvance,
+        drafted: plan.drafted
+      }
+    : null
+
+const normalizeCareerPlan = (
+  plan: CharacterCreationCareerPlan | null | undefined
+): CharacterCreationCareerPlan | null =>
+  plan
+    ? createCareerPlan({
+        ...plan,
+        career: plan.career.trim()
+      })
+    : null
 
 const cloneEquipment = (
   equipment: readonly CharacterEquipmentItem[]
@@ -206,6 +283,9 @@ const validateCharacteristics = (draft: CharacterCreationDraft): string[] => {
   return errors
 }
 
+const validateCareer = (draft: CharacterCreationDraft): string[] =>
+  draft.careerPlan?.career.trim() ? [] : ['Career is required']
+
 const validateSkills = (draft: CharacterCreationDraft): string[] =>
   draft.skills.length === 0 ? ['At least one skill is required'] : []
 
@@ -234,6 +314,8 @@ const validationErrorsForStep = (
       return validateBasics(draft)
     case 'characteristics':
       return validateCharacteristics(draft)
+    case 'career':
+      return validateCareer(draft)
     case 'skills':
       return validateSkills(draft)
     case 'equipment':
@@ -242,6 +324,7 @@ const validationErrorsForStep = (
       return [
         ...validateBasics(draft),
         ...validateCharacteristics(draft),
+        ...validateCareer(draft),
         ...validateSkills(draft),
         ...validateEquipment(draft)
       ]
@@ -268,6 +351,7 @@ export const createInitialCharacterDraft = (
     ...emptyCharacteristics(),
     ...(overrides.characteristics ?? {})
   },
+  careerPlan: normalizeCareerPlan(overrides.careerPlan),
   skills: normalizeSkillList(overrides.skills ?? []),
   equipment: normalizeEquipmentList(overrides.equipment ?? []),
   credits: overrides.credits ?? 0,
@@ -309,6 +393,10 @@ export const updateCharacterCreationDraft = (
     ...draft.characteristics,
     ...(patch.characteristics ?? {})
   },
+  careerPlan:
+    patch.careerPlan === undefined
+      ? cloneCareerPlan(draft.careerPlan)
+      : normalizeCareerPlan(patch.careerPlan),
   skills:
     patch.skills === undefined
       ? [...draft.skills]
@@ -318,6 +406,86 @@ export const updateCharacterCreationDraft = (
       ? cloneEquipment(draft.equipment)
       : normalizeEquipmentList(patch.equipment)
 })
+
+export const characterCreationCareerNames = (): string[] =>
+  CEPHEUS_SRD_CAREERS.map((career) => career.name)
+
+export const selectCharacterCreationCareerPlan = (
+  career: string,
+  overrides: Partial<Omit<CharacterCreationCareerPlan, 'career'>> = {}
+): CharacterCreationCareerPlan => createCareerPlan({ ...overrides, career })
+
+const findCareerDefinition = (
+  careerName: string
+): CepheusCareerDefinition | null =>
+  CEPHEUS_SRD_CAREERS.find((career) => career.name === careerName) ?? null
+
+const evaluateOptionalCareerRoll = ({
+  check,
+  characteristics,
+  roll
+}: {
+  check: string
+  characteristics: Partial<CharacterCharacteristics>
+  roll: number | null
+}): boolean | null => {
+  if (roll === null || !Number.isFinite(roll)) return null
+  return evaluateCareerCheck({ check, characteristics, roll })?.success ?? null
+}
+
+export const evaluateCharacterCreationCareerPlan = (
+  draft: Pick<CharacterCreationDraft, 'characteristics'>,
+  plan: CharacterCreationCareerPlan
+): CharacterCreationCareerPlan => {
+  const normalizedPlan = normalizeCareerPlan(plan) ?? createCareerPlan()
+  const careerDefinition = findCareerDefinition(normalizedPlan.career)
+  if (!careerDefinition) return normalizedPlan
+
+  const qualificationPassed = evaluateOptionalCareerRoll({
+    check: careerDefinition.qualification,
+    characteristics: draft.characteristics,
+    roll: normalizedPlan.qualificationRoll
+  })
+  const survivalPassed = evaluateOptionalCareerRoll({
+    check: careerDefinition.survival,
+    characteristics: draft.characteristics,
+    roll: normalizedPlan.survivalRoll
+  })
+  const canCommission =
+    survivalPassed === false
+      ? false
+      : parseCareerCheck(careerDefinition.commission) !== null
+  const canAdvance =
+    survivalPassed === false || canCommission
+      ? false
+      : parseCareerCheck(careerDefinition.advancement) !== null
+
+  return {
+    ...normalizedPlan,
+    qualificationPassed,
+    survivalPassed,
+    commissionPassed: evaluateOptionalCareerRoll({
+      check: careerDefinition.commission,
+      characteristics: draft.characteristics,
+      roll: normalizedPlan.commissionRoll
+    }),
+    advancementPassed: evaluateOptionalCareerRoll({
+      check: careerDefinition.advancement,
+      characteristics: draft.characteristics,
+      roll: normalizedPlan.advancementRoll
+    }),
+    canCommission,
+    canAdvance
+  }
+}
+
+export const applyCharacterCreationCareerPlan = (
+  draft: CharacterCreationDraft,
+  plan: CharacterCreationCareerPlan
+): CharacterCreationDraft =>
+  updateCharacterCreationDraft(draft, {
+    careerPlan: evaluateCharacterCreationCareerPlan(draft, plan)
+  })
 
 export const updateCharacterCreationFields = (
   flow: CharacterCreationFlow,
@@ -396,9 +564,22 @@ export const applyParsedCharacterCreationDraftPatch = (
   patch: CharacterCreationDraftPatch
 ): CharacterCreationWizardResult => {
   const updatedFlow = updateCharacterCreationFields(flow, patch)
+  const careerPlanNeedsEvaluation =
+    patch.careerPlan !== undefined || patch.characteristics !== undefined
+  const evaluatedFlow =
+    careerPlanNeedsEvaluation && updatedFlow.draft.careerPlan !== null
+      ? {
+          ...updatedFlow,
+          draft: applyCharacterCreationCareerPlan(
+            updatedFlow.draft,
+            updatedFlow.draft.careerPlan
+          )
+        }
+      : updatedFlow
+
   return {
-    flow: updatedFlow,
-    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    flow: evaluatedFlow,
+    validation: validateCurrentCharacterCreationStep(evaluatedFlow),
     moved: false
   }
 }
@@ -443,7 +624,8 @@ export const deriveStartCharacterCareerTermCommand = (
       gameId: identity.gameId,
       actorId: identity.actorId,
       characterId: draft.characterId,
-      career: 'Scout'
+      career: draft.careerPlan?.career.trim() ?? '',
+      ...(draft.careerPlan?.drafted ? { drafted: true } : {})
     },
     state
   ) as StartCharacterCareerTermCommand
@@ -451,45 +633,55 @@ export const deriveStartCharacterCareerTermCommand = (
 const initialCharacterCreationStateCommands = (
   draft: CharacterCreationDraft,
   identity: ClientIdentity
-): Command[] => [
-  {
-    type: 'StartCharacterCreation',
+): Command[] => {
+  const careerPlan = draft.careerPlan
+  const baseCommand = {
     gameId: identity.gameId,
     actorId: identity.actorId,
     characterId: draft.characterId
-  },
-  {
+  }
+  const advance = (
+    creationEvent: AdvanceCharacterCreationCommand['creationEvent']
+  ): AdvanceCharacterCreationCommand => ({
     type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId: draft.characterId,
-    creationEvent: { type: 'SET_CHARACTERISTICS' }
-  } satisfies AdvanceCharacterCreationCommand,
-  {
-    type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId: draft.characterId,
-    creationEvent: { type: 'COMPLETE_HOMEWORLD' }
-  } satisfies AdvanceCharacterCreationCommand,
-  {
-    type: 'StartCharacterCareerTerm',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId: draft.characterId,
-    career: 'Scout'
-  } satisfies StartCharacterCareerTermCommand,
-  {
-    type: 'AdvanceCharacterCreation',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId: draft.characterId,
-    creationEvent: {
+    ...baseCommand,
+    creationEvent
+  })
+  const commands: Command[] = [
+    {
+      type: 'StartCharacterCreation',
+      ...baseCommand
+    },
+    advance({ type: 'SET_CHARACTERISTICS' }),
+    advance({ type: 'COMPLETE_HOMEWORLD' }),
+    {
+      type: 'StartCharacterCareerTerm',
+      ...baseCommand,
+      career: careerPlan?.career.trim() ?? '',
+      ...(careerPlan?.drafted ? { drafted: true } : {})
+    } satisfies StartCharacterCareerTermCommand,
+    advance({
       type: 'SELECT_CAREER',
-      isNewCareer: true
-    }
-  } satisfies AdvanceCharacterCreationCommand
-]
+      isNewCareer: true,
+      ...(careerPlan?.drafted ? { drafted: true } : {})
+    })
+  ]
+
+  if (careerPlan && careerPlan.survivalPassed !== null) {
+    commands.push(advance({ type: 'COMPLETE_BASIC_TRAINING' }))
+    commands.push(
+      careerPlan.survivalPassed
+        ? advance({
+            type: 'SURVIVAL_PASSED',
+            canCommission: careerPlan.canCommission ?? false,
+            canAdvance: careerPlan.canAdvance ?? false
+          })
+        : advance({ type: 'SURVIVAL_FAILED' })
+    )
+  }
+
+  return commands
+}
 
 export const deriveInitialCharacterCreationStateCommands = (
   draft: CharacterCreationDraft,

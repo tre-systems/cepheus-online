@@ -24,6 +24,7 @@ import { uniqueCharacterId, uniquePieceId } from './bootstrap-flow.js'
 import {
   createCharacterCreationFlow,
   deriveCharacterSheetPatch,
+  selectCharacterCreationCareerPlan,
   validateCurrentCharacterCreationStep
 } from './character-creation-flow.js'
 
@@ -246,6 +247,7 @@ const initialCreationCommands = ({
       name,
       characterType,
       age,
+      careerPlan: selectCharacterCreationCareerPlan(career, { drafted }),
       characteristics,
       skills,
       equipment,
@@ -582,6 +584,9 @@ export const planCreatePlayableCharacterCommands = ({
       name: trimmedName,
       characterType,
       age,
+      careerPlan: selectCharacterCreationCareerPlan(career ?? 'Scout', {
+        drafted
+      }),
       characteristics,
       skills,
       equipment,

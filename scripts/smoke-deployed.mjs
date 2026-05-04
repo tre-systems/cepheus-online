@@ -98,7 +98,12 @@ const CLIENT_MODULES = new Map([
     '/client/app/character-creation-flow.js',
     {
       markers: ['deriveCharacterCreationCommands'],
-      imports: ['/client/game-commands.js', '/client/app/bootstrap-flow.js']
+      imports: [
+        '/shared/character-creation/career-rules.js',
+        '/shared/character-creation/cepheus-srd-ruleset.js',
+        '/client/game-commands.js',
+        '/client/app/bootstrap-flow.js'
+      ]
     }
   ],
   [
@@ -108,7 +113,11 @@ const CLIENT_MODULES = new Map([
         'deriveCharacterCreationFieldViewModels',
         'parseCharacterCreationDraftPatch'
       ],
-      imports: ['/client/app/character-creation-flow.js']
+      imports: [
+        '/client/app/character-creation-flow.js',
+        '/shared/character-creation/career-rules.js',
+        '/shared/character-creation/cepheus-srd-ruleset.js'
+      ]
     }
   ],
   [

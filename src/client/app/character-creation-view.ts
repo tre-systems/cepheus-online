@@ -1,4 +1,5 @@
 import type {
+  CharacterCreationCareerPlan,
   CharacterCreationDraftPatch,
   CharacterCreationFlow,
   CharacterCreationStep,
@@ -9,9 +10,18 @@ import {
   validateCurrentCharacterCreationStep
 } from './character-creation-flow.js'
 import type {
+  CharacterCharacteristics,
   CharacterEquipmentItem,
   CharacteristicKey
 } from '../../shared/state'
+import {
+  characteristicModifier,
+  parseCareerCheck
+} from '../../shared/character-creation/career-rules.js'
+import {
+  CEPHEUS_SRD_CAREERS,
+  type CepheusCareerDefinition
+} from '../../shared/character-creation/cepheus-srd-ruleset.js'
 
 export type CharacterCreationFieldKind =
   | 'number'
@@ -85,6 +95,25 @@ export type CharacterCreationFormValues = Partial<
   Record<string, string | number | null | undefined>
 >
 
+export interface CharacterCreationCareerCheckViewModel {
+  label: string
+  requirement: string
+  available: boolean
+  characteristic: CharacteristicKey | null
+  target: number | null
+  modifier: number
+}
+
+export interface CharacterCreationCareerOptionViewModel {
+  key: string
+  label: string
+  selected: boolean
+  qualification: CharacterCreationCareerCheckViewModel
+  survival: CharacterCreationCareerCheckViewModel
+  commission: CharacterCreationCareerCheckViewModel
+  advancement: CharacterCreationCareerCheckViewModel
+}
+
 const characteristicDefinitions: {
   key: CharacteristicKey
   label: string
@@ -103,6 +132,7 @@ export const characterCreationStepLabels: Record<
 > = {
   basics: 'Basics',
   characteristics: 'Characteristics',
+  career: 'Career',
   skills: 'Skills',
   equipment: 'Equipment',
   review: 'Review'
@@ -113,7 +143,8 @@ export const characterCreationPrimaryCtaLabels: Record<
   string
 > = {
   basics: 'Continue to characteristics',
-  characteristics: 'Continue to skills',
+  characteristics: 'Continue to career',
+  career: 'Continue to skills',
   skills: 'Continue to equipment',
   equipment: 'Review character',
   review: 'Create character'
@@ -236,14 +267,118 @@ const parseEquipmentText = (value: string): CharacterEquipmentItem[] =>
     })
     .filter((item): item is CharacterEquipmentItem => item !== null)
 
+const parseCareerPlan = (
+  values: CharacterCreationFormValues
+): CharacterCreationCareerPlan | undefined => {
+  const keys = [
+    'career',
+    'qualificationRoll',
+    'survivalRoll',
+    'commissionRoll',
+    'advancementRoll'
+  ]
+  if (!keys.some((key) => values[key] !== undefined)) return undefined
+
+  return {
+    ...emptyCareerPlan(),
+    career: valueText(values.career),
+    qualificationRoll: parseOptionalNumber(values.qualificationRoll) ?? null,
+    survivalRoll: parseOptionalNumber(values.survivalRoll) ?? null,
+    commissionRoll: parseOptionalNumber(values.commissionRoll) ?? null,
+    advancementRoll: parseOptionalNumber(values.advancementRoll) ?? null
+  }
+}
+
 const validationForStep = (
   flow: CharacterCreationFlow,
   step: CharacterCreationStep = flow.step
-): CharacterCreationValidation =>
-  validateCurrentCharacterCreationStep({
+): CharacterCreationValidation => {
+  const validation = validateCurrentCharacterCreationStep({
     ...flow,
     step
   })
+  if (step !== 'career') return validation
+
+  const errors = [...validation.errors, ...careerRollErrors(flow.draft)]
+  return {
+    ok: errors.length === 0,
+    step,
+    errors
+  }
+}
+
+const selectedCareerDefinition = (
+  career: string | null | undefined,
+  careers: readonly CepheusCareerDefinition[] = CEPHEUS_SRD_CAREERS
+): CepheusCareerDefinition | null =>
+  careers.find((candidate) => candidate.name === career) ?? null
+
+const emptyCareerPlan = (): CharacterCreationCareerPlan => ({
+  career: '',
+  qualificationRoll: null,
+  qualificationPassed: null,
+  survivalRoll: null,
+  survivalPassed: null,
+  commissionRoll: null,
+  commissionPassed: null,
+  advancementRoll: null,
+  advancementPassed: null,
+  canCommission: null,
+  canAdvance: null,
+  drafted: false
+})
+
+const rollErrors = ({
+  value,
+  label,
+  required
+}: {
+  value: number | null | undefined
+  label: string
+  required: boolean
+}): string[] => {
+  if (value === null || value === undefined) {
+    return required ? [`${label} is required`] : []
+  }
+  if (!Number.isFinite(value)) return [`${label} must be a finite number`]
+  if (value < 2 || value > 12) return [`${label} must be between 2 and 12`]
+  return []
+}
+
+const careerRollErrors = ({
+  careerPlan
+}: Pick<CharacterCreationFlow['draft'], 'careerPlan'>): string[] => {
+  const careerDefinition = selectedCareerDefinition(careerPlan?.career)
+  const requiresCommission =
+    careerDefinition !== null &&
+    parseCareerCheck(careerDefinition.commission) !== null
+  const requiresAdvancement =
+    careerDefinition !== null &&
+    parseCareerCheck(careerDefinition.advancement) !== null
+
+  return [
+    ...rollErrors({
+      value: careerPlan?.qualificationRoll,
+      label: 'Qualification roll',
+      required: true
+    }),
+    ...rollErrors({
+      value: careerPlan?.survivalRoll,
+      label: 'Survival roll',
+      required: true
+    }),
+    ...rollErrors({
+      value: careerPlan?.commissionRoll,
+      label: 'Commission roll',
+      required: requiresCommission
+    }),
+    ...rollErrors({
+      value: careerPlan?.advancementRoll,
+      label: 'Advancement roll',
+      required: requiresAdvancement
+    })
+  ]
+}
 
 const fieldErrors = (
   errors: readonly string[],
@@ -256,6 +391,13 @@ const fieldErrors = (
     if (key === 'skills') return error.startsWith('At least one skill')
     if (key === 'credits') return error.startsWith('Credits ')
     if (key === 'equipment') return error.startsWith('Equipment ')
+    if (key === 'career') return error.startsWith('Career ')
+    if (key === 'qualificationRoll') {
+      return error.startsWith('Qualification roll ')
+    }
+    if (key === 'survivalRoll') return error.startsWith('Survival roll ')
+    if (key === 'commissionRoll') return error.startsWith('Commission roll ')
+    if (key === 'advancementRoll') return error.startsWith('Advancement roll ')
     if (characteristicKey) {
       return error.startsWith(`${characteristicKey.toUpperCase()} `)
     }
@@ -328,6 +470,64 @@ export const deriveCharacterCreationFieldViewModels = (
         required: true,
         errors: fieldErrors(validation.errors, key, key)
       }))
+    case 'career': {
+      const careerPlan = draft.careerPlan
+      const careerDefinition = selectedCareerDefinition(careerPlan?.career)
+      const requiresCommission =
+        careerDefinition !== null &&
+        parseCareerCheck(careerDefinition.commission) !== null
+      const requiresAdvancement =
+        careerDefinition !== null &&
+        parseCareerCheck(careerDefinition.advancement) !== null
+
+      return [
+        {
+          key: 'career',
+          label: 'Career',
+          kind: 'select',
+          step,
+          value: careerPlan?.career ?? '',
+          required: true,
+          errors: fieldErrors(validation.errors, 'career')
+        },
+        {
+          key: 'qualificationRoll',
+          label: 'Qualification roll',
+          kind: 'number',
+          step,
+          value: valueText(careerPlan?.qualificationRoll),
+          required: true,
+          errors: fieldErrors(validation.errors, 'qualificationRoll')
+        },
+        {
+          key: 'survivalRoll',
+          label: 'Survival roll',
+          kind: 'number',
+          step,
+          value: valueText(careerPlan?.survivalRoll),
+          required: true,
+          errors: fieldErrors(validation.errors, 'survivalRoll')
+        },
+        {
+          key: 'commissionRoll',
+          label: 'Commission roll',
+          kind: 'number',
+          step,
+          value: valueText(careerPlan?.commissionRoll),
+          required: requiresCommission,
+          errors: fieldErrors(validation.errors, 'commissionRoll')
+        },
+        {
+          key: 'advancementRoll',
+          label: 'Advancement roll',
+          kind: 'number',
+          step,
+          value: valueText(careerPlan?.advancementRoll),
+          required: requiresAdvancement,
+          errors: fieldErrors(validation.errors, 'advancementRoll')
+        }
+      ]
+    }
     case 'skills':
       return [
         {
@@ -407,6 +607,8 @@ export const parseCharacterCreationDraftPatch = (
   if (values.equipment !== undefined) {
     patch.equipment = parseEquipmentText(valueText(values.equipment))
   }
+  const careerPlan = parseCareerPlan(values)
+  if (careerPlan !== undefined) patch.careerPlan = careerPlan
 
   const characteristics: CharacterCreationDraftPatch['characteristics'] = {}
   for (const { key } of characteristicDefinitions) {
@@ -431,6 +633,82 @@ export const equipmentText = (
 
 const itemValue = (value: string | number | null): string =>
   value === null || value === '' ? 'Not set' : String(value)
+
+const careerReviewItems = (
+  careerPlan: CharacterCreationCareerPlan | null
+): CharacterCreationReviewItem[] => [
+  { label: 'Career', value: itemValue(careerPlan?.career.trim() ?? '') },
+  {
+    label: 'Qualification roll',
+    value: itemValue(careerPlan?.qualificationRoll ?? null)
+  },
+  {
+    label: 'Survival roll',
+    value: itemValue(careerPlan?.survivalRoll ?? null)
+  },
+  {
+    label: 'Commission roll',
+    value: itemValue(careerPlan?.commissionRoll ?? null)
+  },
+  {
+    label: 'Advancement roll',
+    value: itemValue(careerPlan?.advancementRoll ?? null)
+  }
+]
+
+const careerCheckViewModel = ({
+  label,
+  requirement,
+  characteristics
+}: {
+  label: string
+  requirement: string
+  characteristics: Partial<CharacterCharacteristics>
+}): CharacterCreationCareerCheckViewModel => {
+  const check = parseCareerCheck(requirement)
+
+  return {
+    label,
+    requirement,
+    available: check !== null,
+    characteristic: check?.characteristic ?? null,
+    target: check?.target ?? null,
+    modifier:
+      check?.characteristic === undefined || check.characteristic === null
+        ? 0
+        : characteristicModifier(characteristics[check.characteristic])
+  }
+}
+
+export const deriveCharacterCreationCareerOptionViewModels = (
+  draft: Pick<CharacterCreationFlow['draft'], 'careerPlan' | 'characteristics'>,
+  careers: readonly CepheusCareerDefinition[] = CEPHEUS_SRD_CAREERS
+): CharacterCreationCareerOptionViewModel[] =>
+  careers.map((career) => ({
+    key: career.name,
+    label: career.name,
+    selected: draft.careerPlan?.career === career.name,
+    qualification: careerCheckViewModel({
+      label: 'Qualification',
+      requirement: career.qualification,
+      characteristics: draft.characteristics
+    }),
+    survival: careerCheckViewModel({
+      label: 'Survival',
+      requirement: career.survival,
+      characteristics: draft.characteristics
+    }),
+    commission: careerCheckViewModel({
+      label: 'Commission',
+      requirement: career.commission,
+      characteristics: draft.characteristics
+    }),
+    advancement: careerCheckViewModel({
+      label: 'Advancement',
+      requirement: career.advancement,
+      characteristics: draft.characteristics
+    })
+  }))
 
 export const deriveCharacterCreationReviewSummary = (
   flow: CharacterCreationFlow
@@ -464,6 +742,11 @@ export const deriveCharacterCreationReviewSummary = (
           label,
           value: itemValue(draft.characteristics[key])
         }))
+      },
+      {
+        key: 'career',
+        label: characterCreationStepLabels.career,
+        items: careerReviewItems(draft.careerPlan)
       },
       {
         key: 'skills',

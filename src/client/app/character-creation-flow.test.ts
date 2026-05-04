@@ -5,9 +5,11 @@ import { asCharacterId, asGameId, asUserId } from '../../shared/ids'
 import type { GameState } from '../../shared/state'
 import {
   advanceCharacterCreationStep,
+  applyCharacterCreationCareerPlan,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationStep,
   backCharacterCreationWizardStep,
+  characterCreationCareerNames,
   characterCreationSteps,
   createCharacterCreationFlow,
   createInitialCharacterDraft,
@@ -19,7 +21,9 @@ import {
   deriveStartCharacterCareerTermCommand,
   deriveStartCharacterCreationCommand,
   deriveUpdateCharacterSheetCommand,
+  evaluateCharacterCreationCareerPlan,
   nextCharacterCreationWizardStep,
+  selectCharacterCreationCareerPlan,
   updateCharacterCreationDraft,
   updateCharacterCreationFields,
   validateCurrentCharacterCreationStep
@@ -58,6 +62,7 @@ const completeDraft = () =>
       edu: 8,
       soc: 6
     },
+    careerPlan: selectCharacterCreationCareerPlan('Merchant'),
     skills: ['Pilot-1', 'Vacc Suit-0'],
     equipment: [{ name: 'Vacc Suit', quantity: 1, notes: 'Carried' }],
     credits: 1200,
@@ -83,9 +88,15 @@ describe('character creation flow', () => {
     assert.deepEqual(characterCreationSteps(), [
       'basics',
       'characteristics',
+      'career',
       'skills',
       'equipment',
       'review'
+    ])
+    assert.deepEqual(characterCreationCareerNames().slice(0, 3), [
+      'Scout',
+      'Merchant',
+      'Marine'
     ])
   })
 
@@ -166,11 +177,40 @@ describe('character creation flow', () => {
       edu: null,
       soc: null
     })
+    assert.equal(updated.careerPlan, null)
     assert.deepEqual(updated.skills, ['Pilot-1', 'Vacc Suit-0'])
     assert.deepEqual(updated.equipment, [
       { name: 'Vacc Suit', quantity: 1, notes: 'Carried' },
       { name: 'Medkit', quantity: 1, notes: '' }
     ])
+  })
+
+  it('applies and evaluates an SRD career plan without mutating the draft', () => {
+    const draft = createInitialCharacterDraft(characterId, {
+      characteristics: completeDraft().characteristics
+    })
+    const careerPlan = selectCharacterCreationCareerPlan('Merchant', {
+      qualificationRoll: 6,
+      survivalRoll: 5,
+      commissionRoll: 4,
+      advancementRoll: 8,
+      drafted: true
+    })
+
+    const evaluated = evaluateCharacterCreationCareerPlan(draft, careerPlan)
+    assert.equal(evaluated.career, 'Merchant')
+    assert.equal(evaluated.qualificationPassed, true)
+    assert.equal(evaluated.survivalPassed, true)
+    assert.equal(evaluated.canCommission, true)
+    assert.equal(evaluated.canAdvance, false)
+    assert.equal(evaluated.commissionPassed, true)
+    assert.equal(evaluated.advancementPassed, true)
+    assert.equal(evaluated.drafted, true)
+    assert.equal(draft.careerPlan, null)
+
+    const updated = applyCharacterCreationCareerPlan(draft, careerPlan)
+    assert.deepEqual(updated.careerPlan, evaluated)
+    assert.equal(draft.careerPlan, null)
   })
 
   it('ignores undefined patch fields from sparse form updates', () => {
@@ -216,6 +256,11 @@ describe('character creation flow', () => {
     assert.equal(flow.step, 'characteristics')
     flow = updateCharacterCreationFields(flow, {
       characteristics: completeDraft().characteristics
+    })
+    flow = advanceCharacterCreationStep(flow)
+    assert.equal(flow.step, 'career')
+    flow = updateCharacterCreationFields(flow, {
+      careerPlan: selectCharacterCreationCareerPlan('Scout')
     })
     flow = advanceCharacterCreationStep(flow)
     assert.equal(flow.step, 'skills')
@@ -298,6 +343,34 @@ describe('character creation flow', () => {
     ])
   })
 
+  it('requires a career before the skills step can be reached', () => {
+    const characteristicsFlow = {
+      step: 'characteristics' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: completeDraft().characteristics
+      })
+    }
+
+    const careerStep = nextCharacterCreationWizardStep(characteristicsFlow)
+    assert.equal(careerStep.moved, true)
+    assert.equal(careerStep.flow.step, 'career')
+    assert.deepEqual(careerStep.validation, {
+      ok: false,
+      step: 'career',
+      errors: ['Career is required']
+    })
+    assert.equal(advanceCharacterCreationStep(careerStep.flow).step, 'career')
+
+    const skillsStep = nextCharacterCreationWizardStep(
+      updateCharacterCreationFields(careerStep.flow, {
+        careerPlan: selectCharacterCreationCareerPlan('Merchant')
+      })
+    )
+    assert.equal(skillsStep.moved, true)
+    assert.equal(skillsStep.flow.step, 'skills')
+  })
+
   it('validates the review step against the whole draft', () => {
     const flow = {
       step: 'review' as const,
@@ -317,6 +390,7 @@ describe('character creation flow', () => {
         'INT is required',
         'EDU is required',
         'SOC is required',
+        'Career is required',
         'At least one skill is required',
         'Credits must be a non-negative number'
       ]
@@ -365,7 +439,7 @@ describe('character creation flow', () => {
     })
     assert.equal(startTermCommand.type, 'StartCharacterCareerTerm')
     assert.equal(startTermCommand.characterId, characterId)
-    assert.equal(startTermCommand.career, 'Scout')
+    assert.equal(startTermCommand.career, 'Merchant')
     assert.equal(startTermCommand.expectedSeq, 12)
   })
 
@@ -412,6 +486,67 @@ describe('character creation flow', () => {
       'SET_CHARACTERISTICS',
       'COMPLETE_HOMEWORLD',
       'SELECT_CAREER'
+    ])
+
+    const startTerm = commands.find(
+      (command) => command.type === 'StartCharacterCareerTerm'
+    )
+    assert.equal(startTerm?.type, 'StartCharacterCareerTerm')
+    if (startTerm?.type !== 'StartCharacterCareerTerm') return
+    assert.equal(startTerm.career, 'Merchant')
+  })
+
+  it('derives selected career and evaluated survival events from the career plan', () => {
+    const draft = applyCharacterCreationCareerPlan(
+      completeDraft(),
+      selectCharacterCreationCareerPlan('Merchant', {
+        survivalRoll: 5,
+        drafted: true
+      })
+    )
+
+    const commands = deriveInitialCharacterCreationStateCommands(draft, {
+      identity,
+      state
+    })
+    assert.deepEqual(
+      commands.map((command) => command.type),
+      [
+        'StartCharacterCreation',
+        'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation',
+        'StartCharacterCareerTerm',
+        'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation'
+      ]
+    )
+    assert.deepEqual(
+      commands.map((command) => command.expectedSeq),
+      [12, 13, 14, 15, 16, 17, 18]
+    )
+
+    const startTerm = commands.find(
+      (command) => command.type === 'StartCharacterCareerTerm'
+    )
+    assert.equal(startTerm?.type, 'StartCharacterCareerTerm')
+    if (startTerm?.type !== 'StartCharacterCareerTerm') return
+    assert.equal(startTerm.career, 'Merchant')
+    assert.equal(startTerm.drafted, true)
+
+    const events = commands
+      .filter((command) => command.type === 'AdvanceCharacterCreation')
+      .map((command) =>
+        command.type === 'AdvanceCharacterCreation'
+          ? command.creationEvent
+          : null
+      )
+    assert.deepEqual(events, [
+      { type: 'SET_CHARACTERISTICS' },
+      { type: 'COMPLETE_HOMEWORLD' },
+      { type: 'SELECT_CAREER', isNewCareer: true, drafted: true },
+      { type: 'COMPLETE_BASIC_TRAINING' },
+      { type: 'SURVIVAL_PASSED', canCommission: true, canAdvance: false }
     ])
   })
 

@@ -15,6 +15,7 @@ import { deriveCharacterCreationActionPlan } from './character-creation-actions.
 import {
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationWizardStep,
+  characterCreationCareerNames,
   createManualCharacterCreationFlow,
   deriveCharacterCreationCommands,
   nextCharacterCreationWizardStep,
@@ -25,6 +26,7 @@ import {
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationReviewSummary,
   deriveCharacterCreationStepProgressItems,
+  deriveCharacterCreationValidationSummary,
   parseCharacterCreationDraftPatch
 } from './character-creation-view.js'
 import {
@@ -315,7 +317,9 @@ const renderCharacterCreationWizardControls = () => {
   els.nextCharacterWizard.title = buttons.primary.reason ?? ''
   els.nextCharacterWizard.textContent = buttons.primary.label
 
-  const validation = validateCurrentCharacterCreationStep(characterCreationFlow)
+  const validation = deriveCharacterCreationValidationSummary(
+    characterCreationFlow
+  )
   const status = document.createElement('p')
   status.textContent = validation.ok
     ? 'Ready to continue'
@@ -378,10 +382,14 @@ const renderCharacterCreationFields = (flow) => {
       control.rows = field.key === 'skills' ? 4 : 3
     } else if (field.kind === 'select') {
       control = document.createElement('select')
-      for (const value of ['PLAYER', 'NPC', 'ANIMAL', 'ROBOT']) {
+      const values =
+        field.key === 'career'
+          ? ['', ...characterCreationCareerNames()]
+          : ['PLAYER', 'NPC', 'ANIMAL', 'ROBOT']
+      for (const value of values) {
         const option = document.createElement('option')
         option.value = value
-        option.textContent = value
+        option.textContent = value || 'Select career'
         control.append(option)
       }
     } else {

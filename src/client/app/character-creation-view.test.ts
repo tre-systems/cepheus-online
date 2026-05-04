@@ -10,6 +10,7 @@ import {
   characterCreationPrimaryCtaLabels,
   characterCreationStepLabels,
   deriveCharacterCreationButtonStates,
+  deriveCharacterCreationCareerOptionViewModels,
   deriveCharacterCreationCtaLabels,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationReviewSummary,
@@ -23,26 +24,42 @@ const characterId = asCharacterId('mustering-out-scout')
 
 const completeFlow = () => ({
   step: 'review' as const,
-  draft: createInitialCharacterDraft(characterId, {
-    characterType: 'PLAYER',
-    name: 'Iona Vesh',
-    age: 34,
-    characteristics: {
-      str: 7,
-      dex: 8,
-      end: 7,
-      int: 9,
-      edu: 8,
-      soc: 6
-    },
-    skills: ['Pilot-1', 'Vacc Suit-0'],
-    equipment: [
-      { name: 'Vacc Suit', quantity: 1, notes: 'Carried' },
-      { name: 'Medkit', quantity: 2, notes: '' }
-    ],
-    credits: 1200,
-    notes: 'Detached scout.'
-  })
+  draft: {
+    ...createInitialCharacterDraft(characterId, {
+      characterType: 'PLAYER',
+      name: 'Iona Vesh',
+      age: 34,
+      characteristics: {
+        str: 7,
+        dex: 8,
+        end: 7,
+        int: 9,
+        edu: 8,
+        soc: 6
+      },
+      skills: ['Pilot-1', 'Vacc Suit-0'],
+      equipment: [
+        { name: 'Vacc Suit', quantity: 1, notes: 'Carried' },
+        { name: 'Medkit', quantity: 2, notes: '' }
+      ],
+      credits: 1200,
+      notes: 'Detached scout.'
+    }),
+    careerPlan: {
+      career: 'Scout',
+      qualificationRoll: 8,
+      qualificationPassed: true,
+      survivalRoll: 9,
+      survivalPassed: true,
+      commissionRoll: null,
+      commissionPassed: null,
+      advancementRoll: null,
+      advancementPassed: null,
+      canCommission: false,
+      canAdvance: false,
+      drafted: false
+    }
+  }
 })
 
 describe('character creation view helpers', () => {
@@ -50,6 +67,7 @@ describe('character creation view helpers', () => {
     assert.deepEqual(characterCreationStepLabels, {
       basics: 'Basics',
       characteristics: 'Characteristics',
+      career: 'Career',
       skills: 'Skills',
       equipment: 'Equipment',
       review: 'Review'
@@ -58,6 +76,14 @@ describe('character creation view helpers', () => {
       characterCreationPrimaryCtaLabels.basics,
       'Continue to characteristics'
     )
+    assert.equal(
+      characterCreationPrimaryCtaLabels.characteristics,
+      'Continue to career'
+    )
+    assert.deepEqual(deriveCharacterCreationCtaLabels('career'), {
+      primary: 'Continue to skills',
+      secondary: 'Back'
+    })
     assert.deepEqual(deriveCharacterCreationCtaLabels('basics'), {
       primary: 'Continue to characteristics',
       secondary: null
@@ -159,6 +185,139 @@ describe('character creation view helpers', () => {
     ])
   })
 
+  it('derives career step field view models with SRD roll requirements', () => {
+    const careerFlow = {
+      step: 'career' as const,
+      draft: {
+        ...createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          characteristics: {
+            str: 7,
+            dex: 8,
+            end: 7,
+            int: 9,
+            edu: 8,
+            soc: 6
+          }
+        }),
+        careerPlan: {
+          career: 'Merchant',
+          qualificationRoll: 7,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: 13,
+          advancementPassed: false,
+          canCommission: true,
+          canAdvance: true,
+          drafted: false
+        }
+      }
+    }
+
+    assert.deepEqual(deriveCharacterCreationFieldViewModels(careerFlow), [
+      {
+        key: 'career',
+        label: 'Career',
+        kind: 'select',
+        step: 'career',
+        value: 'Merchant',
+        required: true,
+        errors: []
+      },
+      {
+        key: 'qualificationRoll',
+        label: 'Qualification roll',
+        kind: 'number',
+        step: 'career',
+        value: '7',
+        required: true,
+        errors: []
+      },
+      {
+        key: 'survivalRoll',
+        label: 'Survival roll',
+        kind: 'number',
+        step: 'career',
+        value: '8',
+        required: true,
+        errors: []
+      },
+      {
+        key: 'commissionRoll',
+        label: 'Commission roll',
+        kind: 'number',
+        step: 'career',
+        value: '',
+        required: true,
+        errors: ['Commission roll is required']
+      },
+      {
+        key: 'advancementRoll',
+        label: 'Advancement roll',
+        kind: 'number',
+        step: 'career',
+        value: '13',
+        required: true,
+        errors: ['Advancement roll must be between 2 and 12']
+      }
+    ])
+  })
+
+  it('derives SRD career option view models from draft characteristics', () => {
+    const options = deriveCharacterCreationCareerOptionViewModels({
+      careerPlan: completeFlow().draft.careerPlan,
+      characteristics: {
+        str: 7,
+        dex: 8,
+        end: 7,
+        int: 9,
+        edu: 8,
+        soc: 6
+      }
+    })
+
+    assert.deepEqual(options[0], {
+      key: 'Scout',
+      label: 'Scout',
+      selected: true,
+      qualification: {
+        label: 'Qualification',
+        requirement: 'Int 6+',
+        available: true,
+        characteristic: 'int',
+        target: 6,
+        modifier: 1
+      },
+      survival: {
+        label: 'Survival',
+        requirement: 'End 7+',
+        available: true,
+        characteristic: 'end',
+        target: 7,
+        modifier: 0
+      },
+      commission: {
+        label: 'Commission',
+        requirement: '-',
+        available: false,
+        characteristic: null,
+        target: null,
+        modifier: 0
+      },
+      advancement: {
+        label: 'Advancement',
+        requirement: '-',
+        available: false,
+        characteristic: null,
+        target: null,
+        modifier: 0
+      }
+    })
+  })
+
   it('derives validation summaries from the current flow rules', () => {
     const flow = createCharacterCreationFlow(characterId)
 
@@ -219,9 +378,23 @@ describe('character creation view helpers', () => {
         errors: []
       },
       {
+        step: 'career',
+        label: 'Career',
+        index: 2,
+        current: false,
+        complete: false,
+        invalid: true,
+        disabled: false,
+        errors: [
+          'Career is required',
+          'Qualification roll is required',
+          'Survival roll is required'
+        ]
+      },
+      {
         step: 'skills',
         label: 'Skills',
-        index: 2,
+        index: 3,
         current: true,
         complete: false,
         invalid: true,
@@ -231,7 +404,7 @@ describe('character creation view helpers', () => {
       {
         step: 'equipment',
         label: 'Equipment',
-        index: 3,
+        index: 4,
         current: false,
         complete: false,
         invalid: false,
@@ -241,7 +414,7 @@ describe('character creation view helpers', () => {
       {
         step: 'review',
         label: 'Review',
-        index: 4,
+        index: 5,
         current: false,
         complete: false,
         invalid: false,
@@ -296,7 +469,12 @@ describe('character creation view helpers', () => {
         equipment:
           'Vacc Suit | 1 | Carried\nLaser Pistol | bad | 3D6\n\nMedkit | 2',
         credits: '1200',
-        notes: 'Detached scout.'
+        notes: 'Detached scout.',
+        career: 'Scout',
+        qualificationRoll: 8,
+        survivalRoll: '',
+        commissionRoll: null,
+        advancementRoll: 'bad'
       }),
       {
         name: ' Iona Vesh ',
@@ -310,6 +488,20 @@ describe('character creation view helpers', () => {
           { name: 'Laser Pistol', quantity: 1, notes: '3D6' },
           { name: 'Medkit', quantity: 2, notes: '' }
         ],
+        careerPlan: {
+          career: 'Scout',
+          qualificationRoll: 8,
+          qualificationPassed: null,
+          survivalRoll: null,
+          survivalPassed: null,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: Number.NaN,
+          advancementPassed: null,
+          canCommission: null,
+          canAdvance: null,
+          drafted: false
+        },
         characteristics: {
           str: 7,
           dex: 8,
@@ -362,6 +554,17 @@ describe('character creation view helpers', () => {
           { label: 'Int', value: '9' },
           { label: 'Edu', value: '8' },
           { label: 'Soc', value: '6' }
+        ]
+      },
+      {
+        key: 'career',
+        label: 'Career',
+        items: [
+          { label: 'Career', value: 'Scout' },
+          { label: 'Qualification roll', value: '8' },
+          { label: 'Survival roll', value: '9' },
+          { label: 'Commission roll', value: 'Not set' },
+          { label: 'Advancement roll', value: 'Not set' }
         ]
       },
       {
