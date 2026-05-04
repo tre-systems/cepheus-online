@@ -561,10 +561,10 @@ describe('character creation view helpers', () => {
         label: 'Career',
         items: [
           { label: 'Career', value: 'Scout' },
-          { label: 'Qualification roll', value: '8' },
-          { label: 'Survival roll', value: '9' },
-          { label: 'Commission roll', value: 'Not set' },
-          { label: 'Advancement roll', value: 'Not set' }
+          { label: 'Qualification', value: '8 (passed)' },
+          { label: 'Survival', value: '9 (passed)' },
+          { label: 'Commission', value: 'Not available' },
+          { label: 'Advancement', value: 'Not available' }
         ]
       },
       {

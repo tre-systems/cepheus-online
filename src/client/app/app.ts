@@ -18,8 +18,7 @@ import {
   characterCreationCareerNames,
   createManualCharacterCreationFlow,
   deriveCharacterCreationCommands,
-  nextCharacterCreationWizardStep,
-  validateCurrentCharacterCreationStep
+  nextCharacterCreationWizardStep
 } from './character-creation-flow.js'
 import {
   deriveCharacterCreationButtonStates,
@@ -672,7 +671,7 @@ const finishCharacterCreationWizard = async () => {
   setError('')
   syncCharacterCreationWizardFields()
 
-  const validation = validateCurrentCharacterCreationStep({
+  const validation = deriveCharacterCreationValidationSummary({
     ...characterCreationFlow,
     step: 'review'
   })

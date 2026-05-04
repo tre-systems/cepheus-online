@@ -678,6 +678,41 @@ const initialCharacterCreationStateCommands = (
           })
         : advance({ type: 'SURVIVAL_FAILED' })
     )
+
+    if (!careerPlan.survivalPassed) {
+      commands.push(
+        advance({ type: 'MISHAP_RESOLVED' }),
+        advance({ type: 'FINISH_MUSTERING' }),
+        advance({ type: 'CREATION_COMPLETE' })
+      )
+      return commands
+    }
+
+    if (careerPlan.canCommission) {
+      commands.push(
+        advance({
+          type: careerPlan.commissionPassed
+            ? 'COMPLETE_COMMISSION'
+            : 'SKIP_COMMISSION'
+        })
+      )
+    } else if (careerPlan.canAdvance) {
+      commands.push(
+        advance({
+          type: careerPlan.advancementPassed
+            ? 'COMPLETE_ADVANCEMENT'
+            : 'SKIP_ADVANCEMENT'
+        })
+      )
+    }
+
+    commands.push(
+      advance({ type: 'COMPLETE_SKILLS' }),
+      advance({ type: 'COMPLETE_AGING' }),
+      advance({ type: 'LEAVE_CAREER' }),
+      advance({ type: 'FINISH_MUSTERING' }),
+      advance({ type: 'CREATION_COMPLETE' })
+    )
   }
 
   return commands

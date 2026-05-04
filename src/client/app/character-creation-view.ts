@@ -634,25 +634,47 @@ export const equipmentText = (
 const itemValue = (value: string | number | null): string =>
   value === null || value === '' ? 'Not set' : String(value)
 
+const outcomeValue = (
+  roll: number | null | undefined,
+  passed: boolean | null | undefined,
+  unavailableLabel = 'Not set'
+): string => {
+  if (roll === null || roll === undefined) return unavailableLabel
+  if (passed === true) return `${roll} (passed)`
+  if (passed === false) return `${roll} (failed)`
+  return `${roll} (not evaluated)`
+}
+
 const careerReviewItems = (
   careerPlan: CharacterCreationCareerPlan | null
 ): CharacterCreationReviewItem[] => [
   { label: 'Career', value: itemValue(careerPlan?.career.trim() ?? '') },
   {
-    label: 'Qualification roll',
-    value: itemValue(careerPlan?.qualificationRoll ?? null)
+    label: 'Qualification',
+    value: outcomeValue(
+      careerPlan?.qualificationRoll,
+      careerPlan?.qualificationPassed
+    )
   },
   {
-    label: 'Survival roll',
-    value: itemValue(careerPlan?.survivalRoll ?? null)
+    label: 'Survival',
+    value: outcomeValue(careerPlan?.survivalRoll, careerPlan?.survivalPassed)
   },
   {
-    label: 'Commission roll',
-    value: itemValue(careerPlan?.commissionRoll ?? null)
+    label: 'Commission',
+    value: outcomeValue(
+      careerPlan?.commissionRoll,
+      careerPlan?.commissionPassed,
+      careerPlan?.canCommission === false ? 'Not available' : 'Not set'
+    )
   },
   {
-    label: 'Advancement roll',
-    value: itemValue(careerPlan?.advancementRoll ?? null)
+    label: 'Advancement',
+    value: outcomeValue(
+      careerPlan?.advancementRoll,
+      careerPlan?.advancementPassed,
+      careerPlan?.canAdvance === false ? 'Not available' : 'Not set'
+    )
   }
 ]
 

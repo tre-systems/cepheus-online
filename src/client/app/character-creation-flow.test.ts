@@ -496,7 +496,7 @@ describe('character creation flow', () => {
     assert.equal(startTerm.career, 'Merchant')
   })
 
-  it('derives selected career and evaluated survival events from the career plan', () => {
+  it('derives a playable creation sequence from an evaluated career plan', () => {
     const draft = applyCharacterCreationCareerPlan(
       completeDraft(),
       selectCharacterCreationCareerPlan('Merchant', {
@@ -518,12 +518,18 @@ describe('character creation flow', () => {
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation',
+        'AdvanceCharacterCreation',
         'AdvanceCharacterCreation'
       ]
     )
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
-      [12, 13, 14, 15, 16, 17, 18]
+      [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
     )
 
     const startTerm = commands.find(
@@ -546,7 +552,13 @@ describe('character creation flow', () => {
       { type: 'COMPLETE_HOMEWORLD' },
       { type: 'SELECT_CAREER', isNewCareer: true, drafted: true },
       { type: 'COMPLETE_BASIC_TRAINING' },
-      { type: 'SURVIVAL_PASSED', canCommission: true, canAdvance: false }
+      { type: 'SURVIVAL_PASSED', canCommission: true, canAdvance: false },
+      { type: 'SKIP_COMMISSION' },
+      { type: 'COMPLETE_SKILLS' },
+      { type: 'COMPLETE_AGING' },
+      { type: 'LEAVE_CAREER' },
+      { type: 'FINISH_MUSTERING' },
+      { type: 'CREATION_COMPLETE' }
     ])
   })
 
@@ -614,5 +626,44 @@ describe('character creation flow', () => {
       commands.map((command) => command.expectedSeq),
       [12, 13, 14, 15, 16, 17, 18]
     )
+
+    const playableDraft = applyCharacterCreationCareerPlan(
+      completeDraft(),
+      selectCharacterCreationCareerPlan('Merchant', {
+        survivalRoll: 5,
+        commissionRoll: 4
+      })
+    )
+    const playableCommands = deriveCharacterCreationCommands(
+      {
+        step: 'review',
+        draft: playableDraft
+      },
+      { identity, state }
+    )
+    assert.equal(playableCommands.length, 15)
+    assert.deepEqual(
+      playableCommands
+        .filter((command) => command.type === 'AdvanceCharacterCreation')
+        .map((command) =>
+          command.type === 'AdvanceCharacterCreation'
+            ? command.creationEvent.type
+            : null
+        ),
+      [
+        'SET_CHARACTERISTICS',
+        'COMPLETE_HOMEWORLD',
+        'SELECT_CAREER',
+        'COMPLETE_BASIC_TRAINING',
+        'SURVIVAL_PASSED',
+        'COMPLETE_COMMISSION',
+        'COMPLETE_SKILLS',
+        'COMPLETE_AGING',
+        'LEAVE_CAREER',
+        'FINISH_MUSTERING',
+        'CREATION_COMPLETE'
+      ]
+    )
+    assert.equal(playableCommands.at(-1)?.type, 'UpdateCharacterSheet')
   })
 })
