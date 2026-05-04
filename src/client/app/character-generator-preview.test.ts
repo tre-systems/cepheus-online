@@ -7,6 +7,8 @@ import {
   deriveGeneratedCharacterPreview,
   deriveGeneratedCharacterPreviewChips,
   deriveGeneratedCharacterPreviewLines,
+  deriveGeneratedCharacterSkillChips,
+  deriveGeneratedCharacterStatChips,
   formatGeneratedCharacterCharacteristics
 } from './character-generator-preview'
 
@@ -136,6 +138,21 @@ describe('character generator preview helpers', () => {
     )
   })
 
+  it('derives compact stat and skill chips for the generated card', () => {
+    assert.deepEqual(deriveGeneratedCharacterStatChips(generatedCharacter()), [
+      { key: 'str', label: 'STR', value: '7' },
+      { key: 'dex', label: 'DEX', value: '8' },
+      { key: 'end', label: 'END', value: '6' },
+      { key: 'int', label: 'INT', value: '9' },
+      { key: 'edu', label: 'EDU', value: '10' },
+      { key: 'soc', label: 'SOC', value: '5' }
+    ])
+    assert.deepEqual(deriveGeneratedCharacterSkillChips(generatedCharacter()), [
+      { key: '0-Pilot-1', label: 'Pilot-1' },
+      { key: '1-Vacc Suit-0', label: 'Vacc Suit-0' }
+    ])
+  })
+
   it('derives ordered outcome chips with tone hints', () => {
     assert.deepEqual(
       deriveGeneratedCharacterPreviewChips(generatedCharacter()),
@@ -175,6 +192,18 @@ describe('character generator preview helpers', () => {
       title: 'Iona Vesh',
       subtitle: 'Scout / Age 22',
       canAccept: true,
+      stats: [
+        { key: 'str', label: 'STR', value: '7' },
+        { key: 'dex', label: 'DEX', value: '8' },
+        { key: 'end', label: 'END', value: '6' },
+        { key: 'int', label: 'INT', value: '9' },
+        { key: 'edu', label: 'EDU', value: '10' },
+        { key: 'soc', label: 'SOC', value: '5' }
+      ],
+      skills: [
+        { key: '0-Pilot-1', label: 'Pilot-1' },
+        { key: '1-Vacc Suit-0', label: 'Vacc Suit-0' }
+      ],
       lines: [
         {
           key: 'characteristics',

@@ -244,6 +244,48 @@ describe('character command planner', () => {
     assert.equal(plan.commands.at(-1)?.type, 'CreatePiece')
   })
 
+  it('resolves generated cascade skills into concrete Cepheus specialties', () => {
+    const generated = generateCharacterPreview({
+      state: state(),
+      name: 'Cascade Scout',
+      rng: () => 0.5
+    })
+
+    assert.equal(
+      generated.skills.some((skill) => skill.includes('*')),
+      false
+    )
+    assert.equal(
+      generated.skills.some((skill) =>
+        [
+          'Laser Pistol',
+          'Slug Pistol',
+          'Laser Rifle',
+          'Slug Rifle',
+          'Turret Weapons',
+          'Bay Weapons',
+          'Ortillery',
+          'Grav Vehicle',
+          'Tracked Vehicle',
+          'Wheeled Vehicle',
+          'Blade',
+          'Bludgeoning Weapons',
+          'Natural Weapons',
+          'Life Sciences',
+          'Physical Sciences',
+          'Social Sciences',
+          'Rotor Aircraft',
+          'Fixed Wing Aircraft',
+          'Veterinary Medicine',
+          'Riding',
+          'Training'
+        ].some((specialty) => skill.startsWith(`${specialty}-`))
+      ),
+      true
+    )
+    assert.equal(/Training: .+, .+\./.test(generated.notes), true)
+  })
+
   it('can accept a previously rolled character preview without rerolling', () => {
     const generated = generateCharacterPreview({
       state: state(),

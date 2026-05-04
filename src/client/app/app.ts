@@ -513,12 +513,33 @@ const renderGeneratedCharacterPreview = () => {
   const subtitle = document.createElement('p')
   subtitle.className = 'generated-character-subtitle'
   subtitle.textContent = preview.subtitle
-  const lines = preview.lines.map((line) => {
-    const row = document.createElement('p')
-    row.className = 'generated-character-line'
-    row.textContent = `${line.label}: ${line.value}`
-    return row
-  })
+  const stats = document.createElement('div')
+  stats.className = 'generated-character-stats'
+  for (const stat of preview.stats) {
+    const element = document.createElement('span')
+    element.className = 'generated-character-stat'
+    const label = document.createElement('b')
+    label.textContent = stat.label
+    const value = document.createElement('span')
+    value.textContent = stat.value
+    element.append(label, value)
+    stats.append(element)
+  }
+  const skills = document.createElement('div')
+  skills.className = 'generated-character-skills'
+  if (preview.skills.length === 0) {
+    const empty = document.createElement('span')
+    empty.className = 'generated-character-skill empty'
+    empty.textContent = 'No skills'
+    skills.append(empty)
+  } else {
+    for (const skill of preview.skills) {
+      const element = document.createElement('span')
+      element.className = 'generated-character-skill'
+      element.textContent = skill.label
+      skills.append(element)
+    }
+  }
   const chips = document.createElement('div')
   chips.className = 'generated-character-chips'
   for (const chip of preview.chips) {
@@ -530,7 +551,8 @@ const renderGeneratedCharacterPreview = () => {
   els.generatedCharacterPreview.replaceChildren(
     title,
     subtitle,
-    ...lines,
+    stats,
+    skills,
     chips
   )
   els.generatedCharacterPreview.hidden = false

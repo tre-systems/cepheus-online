@@ -18,6 +18,17 @@ export interface GeneratedCharacterPreviewLine {
   value: string
 }
 
+export interface GeneratedCharacterStatChip {
+  key: keyof CharacterCharacteristics
+  label: string
+  value: string
+}
+
+export interface GeneratedCharacterSkillChip {
+  key: string
+  label: string
+}
+
 export interface GeneratedCharacterOutcomeLabels {
   qualification: string
   survival: string
@@ -29,6 +40,8 @@ export interface GeneratedCharacterOutcomeLabels {
 export interface GeneratedCharacterPreviewViewModel {
   title: string
   subtitle: string
+  stats: GeneratedCharacterStatChip[]
+  skills: GeneratedCharacterSkillChip[]
   lines: GeneratedCharacterPreviewLine[]
   chips: GeneratedCharacterPreviewChip[]
   canAccept: boolean
@@ -58,6 +71,23 @@ export const formatGeneratedCharacterCharacteristics = (
   characteristicDefinitions
     .map(({ key, label }) => `${label} ${characteristics[key] ?? '-'}`)
     .join('  ')
+
+export const deriveGeneratedCharacterStatChips = (
+  generated: GeneratedCharacterSummary
+): GeneratedCharacterStatChip[] =>
+  characteristicDefinitions.map(({ key, label }) => ({
+    key,
+    label,
+    value: String(generated.characteristics[key] ?? '-')
+  }))
+
+export const deriveGeneratedCharacterSkillChips = (
+  generated: GeneratedCharacterSummary
+): GeneratedCharacterSkillChip[] =>
+  generated.skills.map((skill, index) => ({
+    key: `${index}-${skill}`,
+    label: skill
+  }))
 
 export const deriveGeneratedCharacterOutcomeLabels = (
   generated: GeneratedCharacterSummary
@@ -149,6 +179,8 @@ export const deriveGeneratedCharacterPreview = (
   return {
     title: generated.name,
     subtitle: `${generated.career} / Age ${generated.age}`,
+    stats: deriveGeneratedCharacterStatChips(generated),
+    skills: deriveGeneratedCharacterSkillChips(generated),
     lines: deriveGeneratedCharacterPreviewLines(generated),
     chips: deriveGeneratedCharacterPreviewChips(generated),
     canAccept: true

@@ -17,6 +17,8 @@ import {
 } from '../../shared/character-creation/cepheus-srd-ruleset.js'
 import {
   normalizeCareerSkill,
+  parseCareerSkill,
+  resolveCascadeCareerSkill,
   tallyCareerSkills
 } from '../../shared/character-creation/skills.js'
 import type { ClientIdentity } from '../game-commands.js'
@@ -124,6 +126,16 @@ const GENERATED_NAMES = [
   'Juno',
   'Mara'
 ] as const
+
+const GENERATED_CASCADE_SKILLS: Record<string, readonly string[]> = {
+  'Aircraft*': ['Rotor Aircraft', 'Fixed Wing Aircraft', 'Grav Vehicle'],
+  'Animals*': ['Veterinary Medicine', 'Riding', 'Training'],
+  'Gun Combat*': ['Laser Pistol', 'Slug Pistol', 'Laser Rifle', 'Slug Rifle'],
+  'Gunnery*': ['Turret Weapons', 'Bay Weapons', 'Ortillery'],
+  'Melee Combat*': ['Blade', 'Bludgeoning Weapons', 'Natural Weapons'],
+  'Sciences*': ['Life Sciences', 'Physical Sciences', 'Social Sciences'],
+  'Vehicle*': ['Grav Vehicle', 'Tracked Vehicle', 'Wheeled Vehicle']
+}
 
 const sequenceCommandAt = <T extends Command>(
   command: T,
@@ -333,12 +345,49 @@ const shuffledCareers = (rng: () => number): CepheusCareerDefinition[] => {
   return careers
 }
 
-const normalizeGeneratedSkill = (skill: string, level = 0): string | null => {
-  return normalizeCareerSkill(skill, level)
+const resolveGeneratedCascadeSkill = (
+  rng: () => number,
+  skill: string,
+  level: number
+): string | null => {
+  const cascade = skill.trim()
+  const options = GENERATED_CASCADE_SKILLS[cascade]
+  if (!options || options.length === 0)
+    return normalizeCareerSkill(skill, level)
+
+  const pendingSkill = normalizeCareerSkill(cascade, level)
+  if (!pendingSkill) return null
+
+  const parsed = parseCareerSkill(pendingSkill)
+  const selection = selectFrom(rng, options)
+  const resolved = resolveCascadeCareerSkill({
+    pendingCascadeSkills: [pendingSkill],
+    cascadeSkill: pendingSkill,
+    selection
+  })
+
+  return (
+    resolved.termSkills[0] ??
+    normalizeCareerSkill(selection, parsed?.level ?? level)
+  )
 }
 
-const addSkill = (skills: string[], skill: string, level = 0) => {
-  const normalized = normalizeGeneratedSkill(skill, level)
+const normalizeGeneratedSkill = (
+  rng: () => number,
+  skill: string,
+  level = 0
+): string | null =>
+  skill.includes('*')
+    ? resolveGeneratedCascadeSkill(rng, skill, level)
+    : normalizeCareerSkill(skill, level)
+
+const addSkill = (
+  rng: () => number,
+  skills: string[],
+  skill: string,
+  level = 0
+) => {
+  const normalized = normalizeGeneratedSkill(rng, skill, level)
   if (normalized) skills.push(normalized)
 }
 
@@ -434,7 +483,7 @@ export const generateCharacterPreview = ({
     notes
   })
   const skills: string[] = []
-  for (const skill of career.serviceSkills) addSkill(skills, skill, 0)
+  for (const skill of career.serviceSkills) addSkill(rng, skills, skill, 0)
 
   const trainingTables = [
     career.personalDevelopment,
@@ -442,18 +491,25 @@ export const generateCharacterPreview = ({
     career.specialistSkills,
     career.advancedEducation
   ]
-  const trainingTable = selectFrom(rng, trainingTables)
-  const trainingEntry = selectFrom(rng, trainingTable)
-  const characteristicGain = applyPersonalDevelopment(
-    characteristics,
-    trainingEntry
-  )
-  if (characteristicGain) {
-    notes.push(`Training: ${characteristicGain}.`)
-  } else {
-    addSkill(skills, trainingEntry, 1)
-    notes.push(`Training: ${trainingEntry.replace('*', '')}.`)
+  const trainingNotes: string[] = []
+  for (let pick = 0; pick < 2; pick++) {
+    const trainingTable = selectFrom(rng, trainingTables)
+    const trainingEntry = selectFrom(rng, trainingTable)
+    const characteristicGain = applyPersonalDevelopment(
+      characteristics,
+      trainingEntry
+    )
+    if (characteristicGain) {
+      trainingNotes.push(characteristicGain)
+    } else {
+      const before = skills.length
+      addSkill(rng, skills, trainingEntry, 1)
+      trainingNotes.push(
+        skills[before] ?? trainingEntry.replace('*', '').trim()
+      )
+    }
   }
+  notes.push(`Training: ${trainingNotes.join(', ')}.`)
 
   const survivalRoll = roll2d6(rng)
   const survival = resolveCareerRoll({
