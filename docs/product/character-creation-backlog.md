@@ -100,6 +100,25 @@ Important remaining gaps:
   preview.
 - The rules engine should stay dependency-free and unit-tested.
 
+## Delta-V Pattern Tasks
+
+The character creation flow should follow the same architectural discipline as
+the broader [implementation backlog](backlog.md):
+
+- Keep character creation actions behind the client command router rather than
+  wiring buttons directly to room API calls.
+- Derive one step view model from authoritative state and local draft UI state;
+  render from that model instead of scattering status checks through DOM code.
+- Treat creation rolls as deterministic server facts that also drive the shared
+  dice animation for connected players.
+- Add JSON protocol fixtures for creation commands and events once the
+  homeworld/background and term-loop payloads stabilize.
+- Add projection parity tests for every new creation event family.
+- Keep pending selections such as cascade skills and aging choices as explicit
+  projected state, not transient browser-only flags.
+- Keep the final sheet as a projection from creation events plus finalization,
+  not a whole-object save that bypasses the creation history.
+
 ## Milestone 1: Make The Current Wizard Obvious
 
 Goal: a new player can start character creation on a phone and understand the

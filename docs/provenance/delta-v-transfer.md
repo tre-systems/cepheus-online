@@ -12,8 +12,15 @@ renderer assets, AI logic, combat systems, or competitive matchmaking.
 - `/Users/robertgilks/Source/delta-v/patterns/client.md`
 - `/Users/robertgilks/Source/delta-v/patterns/testing.md`
 - `/Users/robertgilks/Source/delta-v/docs/CODING_STANDARDS.md`
+- `/Users/robertgilks/Source/delta-v/AGENTS.md`
+- `/Users/robertgilks/Source/delta-v/docs/BACKLOG.md`
 - `/Users/robertgilks/Source/delta-v/docs/SECURITY.md`
 - `/Users/robertgilks/Source/delta-v/docs/OBSERVABILITY.md`
+- `/Users/robertgilks/Source/delta-v/src/client/game/client-kernel.ts`
+- `/Users/robertgilks/Source/delta-v/src/client/game/command-router.ts`
+- `/Users/robertgilks/Source/delta-v/src/client/game/input-events.ts`
+- `/Users/robertgilks/Source/delta-v/src/shared/engine/event-projector/`
+- `/Users/robertgilks/Source/delta-v/src/server/game-do/publication.ts`
 - `/Users/robertgilks/Source/delta-v/src/client/reactive.ts`
 - `/Users/robertgilks/Source/delta-v/src/client/dom.ts`
 - `/Users/robertgilks/Source/delta-v/src/shared/prng.ts`
@@ -37,6 +44,10 @@ renderer assets, AI logic, combat systems, or competitive matchmaking.
   room access, hidden referee data, and Cloudflare cost controls.
 - `docs/engineering/testing-strategy.md`: staged test strategy for the current skeleton and
   later Cloudflare/browser work.
+- `docs/product/backlog.md`: active parallel work streams derived from the
+  deeper Delta-V review, including client kernel extraction, publication
+  hardening, protocol fixtures, PWA hygiene, map tooling, and visibility
+  security.
 
 ## Adapted Rather Than Copied
 
