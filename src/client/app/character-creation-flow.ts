@@ -522,6 +522,9 @@ export const evaluateCharacterCreationCareerPlan = (
     characteristics: draft.characteristics,
     roll: normalizedPlan.qualificationRoll
   })
+  const resolvedQualificationPassed = normalizedPlan.drafted
+    ? true
+    : qualificationPassed
   const survivalPassed = evaluateOptionalCareerRoll({
     check: careerDefinition.survival,
     characteristics: draft.characteristics,
@@ -538,7 +541,7 @@ export const evaluateCharacterCreationCareerPlan = (
 
   return {
     ...normalizedPlan,
-    qualificationPassed,
+    qualificationPassed: resolvedQualificationPassed,
     survivalPassed,
     commissionPassed: evaluateOptionalCareerRoll({
       check: careerDefinition.commission,
@@ -570,7 +573,7 @@ export const deriveNextCharacterCreationCareerRoll = (
   if (!careerPlan?.career.trim()) return null
 
   const career = careerPlan.career.trim()
-  if (careerPlan.qualificationRoll === null) {
+  if (!careerPlan.drafted && careerPlan.qualificationRoll === null) {
     return {
       key: 'qualificationRoll',
       label: 'Roll qualification',

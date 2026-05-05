@@ -282,6 +282,14 @@ describe('character creation view helpers', () => {
     assert.deepEqual(deriveCharacterCreationBasicTrainingButton(flow), {
       label: 'Apply basic training',
       reason: 'First Scout term grants service skills at level 0',
+      skills: [
+        'Comms-0',
+        'Electronics-0',
+        'Gun Combat-0',
+        'Gunnery-0',
+        'Recon-0',
+        'Piloting-0'
+      ],
       disabled: false
     })
 
@@ -618,6 +626,7 @@ describe('character creation view helpers', () => {
         credits: '1200',
         notes: 'Detached scout.',
         career: 'Scout',
+        drafted: 'true',
         qualificationRoll: 8,
         survivalRoll: '',
         commissionRoll: null,
@@ -647,7 +656,7 @@ describe('character creation view helpers', () => {
           advancementPassed: null,
           canCommission: null,
           canAdvance: null,
-          drafted: false
+          drafted: true
         },
         characteristics: {
           str: 7,

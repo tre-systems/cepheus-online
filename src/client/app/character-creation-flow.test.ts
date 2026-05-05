@@ -350,6 +350,29 @@ describe('character creation flow', () => {
     assert.equal(deriveNextCharacterCreationCareerRoll(result.flow), null)
   })
 
+  it('skips qualification and starts survival after entering the draft', () => {
+    const draft = createInitialCharacterDraft(characterId, {
+      name: 'Iona Vesh',
+      characteristics: completeDraft().characteristics,
+      careerPlan: selectCharacterCreationCareerPlan('Marine', {
+        drafted: true
+      })
+    })
+    const careerPlan = draft.careerPlan
+    if (!careerPlan) throw new Error('Expected draft career plan')
+    const flow = {
+      step: 'career' as const,
+      draft: applyCharacterCreationCareerPlan(draft, careerPlan)
+    }
+
+    assert.equal(flow.draft.careerPlan?.qualificationPassed, true)
+    assert.deepEqual(deriveNextCharacterCreationCareerRoll(flow), {
+      key: 'survivalRoll',
+      label: 'Roll survival',
+      reason: 'Iona Vesh Marine survival'
+    })
+  })
+
   it('ignores undefined patch fields from sparse form updates', () => {
     const draft = createInitialCharacterDraft(characterId, {
       name: 'Iona Vesh',

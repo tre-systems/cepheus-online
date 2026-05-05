@@ -28,6 +28,7 @@ import {
   deriveCharacterCreationButtonStates,
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCareerRollButton,
+  deriveCharacterCreationCareerOptionViewModels,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationReviewSummary,
   deriveCharacterCreationStepProgressItems,
@@ -75,6 +76,7 @@ import { planCreatePieceCommands } from './piece-command-plan.js'
 import { createPwaInstallController } from './pwa-install.js'
 import { createRoomMenuController } from './room-menu-controller.js'
 import { registerClientServiceWorker } from './service-worker.js'
+import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset.js'
 
 const DEFAULT_GAME_ID = 'demo-room'
 const DEFAULT_ACTOR_ID = 'local-user'
@@ -411,6 +413,19 @@ const renderCharacterCreationWizard = () => {
 
 const renderCharacterCreationFields = (flow) => {
   const fragment = document.createDocumentFragment()
+  if (flow.step === 'characteristics') {
+    fragment.append(renderCharacterCreationCharacteristicGrid(flow))
+    const characteristicRollButton =
+      renderCharacterCreationCharacteristicRollButton(flow)
+    if (characteristicRollButton) fragment.append(characteristicRollButton)
+    return fragment
+  }
+  if (flow.step === 'career') {
+    fragment.append(renderCharacterCreationCareerPicker(flow))
+    const careerRollButton = renderCharacterCreationCareerRollButton(flow)
+    if (careerRollButton) fragment.append(careerRollButton)
+    return fragment
+  }
   for (const field of deriveCharacterCreationFieldViewModels(flow)) {
     const label = document.createElement('label')
     label.className = `character-creation-field ${field.kind}`
@@ -458,6 +473,215 @@ const renderCharacterCreationFields = (flow) => {
   if (careerRollButton) fragment.append(careerRollButton)
   if (basicTrainingButton) fragment.append(basicTrainingButton)
   return fragment
+}
+
+const characteristicModifierLabel = (value) => {
+  if (value === '' || value === null || value === undefined) return ''
+  const number = Number(value)
+  if (!Number.isFinite(number)) return ''
+  const modifier = Math.floor(number / 3) - 2
+  if (modifier === 0) return ''
+  return modifier > 0 ? `+${modifier}` : String(modifier)
+}
+
+const renderCharacterCreationCharacteristicGrid = (flow) => {
+  const fields = deriveCharacterCreationFieldViewModels(flow)
+  const grid = document.createElement('div')
+  grid.className = 'creation-stat-grid'
+  for (const field of fields) {
+    const label = document.createElement('label')
+    label.className = 'creation-stat-cell'
+    const name = document.createElement('span')
+    name.textContent = field.label
+    const row = document.createElement('span')
+    row.className = 'creation-stat-value-row'
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.inputMode = 'numeric'
+    input.dataset.characterCreationField = field.key
+    input.value = field.value
+    input.autocomplete = 'off'
+    input.setAttribute('aria-label', field.label)
+    const modifier = document.createElement('small')
+    modifier.textContent = characteristicModifierLabel(field.value)
+    row.append(input, modifier)
+    label.append(name, row)
+    if (field.errors.length > 0) {
+      const error = document.createElement('small')
+      error.className = 'creation-stat-error'
+      error.textContent = field.errors.join(', ')
+      label.append(error)
+    }
+    grid.append(label)
+  }
+  return grid
+}
+
+const formatCareerCheck = (check) => {
+  if (!check.available) return 'Unavailable'
+  const modifier =
+    check.modifier === 0
+      ? ''
+      : check.modifier > 0
+        ? `, DM +${check.modifier}`
+        : `, DM ${check.modifier}`
+  return `${check.requirement}${modifier}`
+}
+
+const careerOutcomeText = (plan) => {
+  if (!plan?.career) return 'Select a career to attempt qualification.'
+  if (plan.drafted && plan.survivalRoll === null) {
+    return `Drafted into ${plan.career}: ready to roll survival.`
+  }
+  const lines = []
+  if (plan.qualificationRoll !== null) {
+    lines.push(
+      `Qualification ${plan.qualificationRoll}: ${
+        plan.qualificationPassed ? 'accepted' : 'rejected'
+      }`
+    )
+  }
+  if (plan.survivalRoll !== null) {
+    lines.push(
+      `Survival ${plan.survivalRoll}: ${
+        plan.survivalPassed ? 'survived' : 'mishap'
+      }`
+    )
+  }
+  if (plan.commissionRoll !== null) {
+    lines.push(
+      `Commission ${plan.commissionRoll}: ${
+        plan.commissionPassed ? 'commissioned' : 'not commissioned'
+      }`
+    )
+  }
+  if (plan.advancementRoll !== null) {
+    lines.push(
+      `Advancement ${plan.advancementRoll}: ${
+        plan.advancementPassed ? 'advanced' : 'held rank'
+      }`
+    )
+  }
+  return lines.join(' | ') || `${plan.career}: ready to roll qualification.`
+}
+
+const renderCharacterCreationCareerPicker = (flow) => {
+  const wrapper = document.createElement('div')
+  wrapper.className = 'creation-career-picker'
+
+  const plan = flow.draft.careerPlan
+  for (const [key, value] of Object.entries({
+    career: plan?.career ?? '',
+    drafted: plan?.drafted ? 'true' : 'false',
+    qualificationRoll: plan?.qualificationRoll ?? '',
+    survivalRoll: plan?.survivalRoll ?? '',
+    commissionRoll: plan?.commissionRoll ?? '',
+    advancementRoll: plan?.advancementRoll ?? ''
+  })) {
+    const hidden = document.createElement('input')
+    hidden.type = 'hidden'
+    hidden.dataset.characterCreationField = key
+    hidden.value = value === null ? '' : String(value)
+    wrapper.append(hidden)
+  }
+
+  const outcome = document.createElement('div')
+  outcome.className = 'creation-career-outcome'
+  const outcomeTitle = document.createElement('strong')
+  outcomeTitle.textContent = plan?.career || 'Qualify'
+  const outcomeBody = document.createElement('p')
+  outcomeBody.textContent = careerOutcomeText(plan)
+  outcome.append(outcomeTitle, outcomeBody)
+  wrapper.append(outcome)
+
+  if (plan?.qualificationPassed === false && !plan.drafted) {
+    wrapper.append(renderCharacterCreationDraftFallback(flow))
+  }
+
+  const list = document.createElement('div')
+  list.className = 'creation-career-list'
+  for (const career of deriveCharacterCreationCareerOptionViewModels(
+    flow.draft
+  )) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = career.selected ? 'selected' : ''
+    button.setAttribute('aria-pressed', career.selected ? 'true' : 'false')
+    const title = document.createElement('span')
+    title.className = 'creation-career-title'
+    title.textContent = career.label
+    const qualification = document.createElement('span')
+    qualification.textContent = formatCareerCheck(career.qualification)
+    const survival = document.createElement('span')
+    survival.textContent = `Survival ${formatCareerCheck(career.survival)}`
+    button.append(title, qualification, survival)
+    button.addEventListener('click', () => {
+      if (!characterCreationFlow) return
+      characterCreationFlow = applyParsedCharacterCreationDraftPatch(
+        characterCreationFlow,
+        parseCharacterCreationDraftPatch({ career: career.key })
+      ).flow
+      setError('')
+      renderCharacterCreationWizard()
+    })
+    list.append(button)
+  }
+  wrapper.append(list)
+  return wrapper
+}
+
+const selectDraftCareer = (career) => {
+  if (!characterCreationFlow) return
+  characterCreationFlow = applyParsedCharacterCreationDraftPatch(
+    characterCreationFlow,
+    {
+      careerPlan: {
+        career,
+        qualificationRoll: null,
+        qualificationPassed: true,
+        survivalRoll: null,
+        survivalPassed: null,
+        commissionRoll: null,
+        commissionPassed: null,
+        advancementRoll: null,
+        advancementPassed: null,
+        canCommission: null,
+        canAdvance: null,
+        drafted: true
+      }
+    }
+  ).flow
+  setError('')
+  renderCharacterCreationWizard()
+}
+
+const renderCharacterCreationDraftFallback = (flow) => {
+  const panel = document.createElement('div')
+  panel.className = 'creation-draft-fallback'
+  const title = document.createElement('strong')
+  title.textContent = 'The Draft'
+  const note = document.createElement('p')
+  note.textContent = 'Qualification failed. Roll 1D6 or choose a draft service.'
+
+  const rollButton = document.createElement('button')
+  rollButton.type = 'button'
+  rollButton.textContent = 'Roll draft'
+  rollButton.addEventListener('click', () => {
+    rollCharacterCreationDraft(flow).catch((error) => setError(error.message))
+  })
+
+  const list = document.createElement('div')
+  list.className = 'creation-draft-list'
+  CEPHEUS_SRD_RULESET.theDraft.forEach((career, index) => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = `${index + 1} ${career}`
+    button.addEventListener('click', () => selectDraftCareer(career))
+    list.append(button)
+  })
+
+  panel.append(title, note, rollButton, list)
+  return panel
 }
 
 const renderCharacterCreationCharacteristicRollButton = (flow) => {
@@ -521,7 +745,14 @@ const renderCharacterCreationBasicTrainingButton = (flow) => {
   })
   const hint = document.createElement('small')
   hint.textContent = viewModel.reason
-  wrapper.append(button, hint)
+  const skills = document.createElement('div')
+  skills.className = 'creation-training-skills'
+  for (const skill of viewModel.skills) {
+    const chip = document.createElement('span')
+    chip.textContent = skill
+    skills.append(chip)
+  }
+  wrapper.append(button, hint, skills)
   return wrapper
 }
 
@@ -627,6 +858,40 @@ const rollCharacterCreationCareerCheck = async () => {
     latestRoll.total
   ).flow
   renderCharacterCreationWizard()
+}
+
+const rollCharacterCreationDraft = async () => {
+  if (!characterCreationFlow) return
+  setError('')
+  syncCharacterCreationWizardFields()
+
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-draft-roll')
+    )
+  }
+
+  const response = await postCommand(
+    buildRollDiceCommand({
+      identity: clientIdentity(),
+      expression: '1d6',
+      reason: `${characterCreationFlow.draft.name.trim() || 'Character'} draft`
+    }),
+    requestId('draft-roll')
+  )
+  const latestRoll =
+    response.state?.diceLog?.[response.state.diceLog.length - 1]
+  if (!latestRoll) {
+    setError('Draft roll did not return a dice result')
+    return
+  }
+
+  const index = Math.max(
+    0,
+    Math.min(CEPHEUS_SRD_RULESET.theDraft.length - 1, latestRoll.total - 1)
+  )
+  selectDraftCareer(CEPHEUS_SRD_RULESET.theDraft[index])
 }
 
 const renderGeneratedCharacterPreview = () => {

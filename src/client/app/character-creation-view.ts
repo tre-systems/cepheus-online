@@ -84,6 +84,7 @@ export interface CharacterCreationCharacteristicRollButton {
 export interface CharacterCreationBasicTrainingButton {
   label: string
   reason: string
+  skills: string[]
   disabled: boolean
 }
 
@@ -269,6 +270,7 @@ export const deriveCharacterCreationBasicTrainingButton = (
   return {
     label: action.label,
     reason: action.reason,
+    skills: [...action.skills],
     disabled: false
   }
 }
@@ -289,6 +291,17 @@ const parseOptionalNumber = (
 
   const parsed = Number(text)
   return Number.isFinite(parsed) ? parsed : Number.NaN
+}
+
+const parseOptionalBoolean = (
+  value: string | number | boolean | null | undefined
+): boolean | undefined => {
+  if (value === undefined || value === null) return undefined
+  if (typeof value === 'boolean') return value
+
+  const text = String(value).trim().toLowerCase()
+  if (!text) return false
+  return text === 'true' || text === '1' || text === 'yes' || text === 'on'
 }
 
 const parseNumberWithDefault = (
@@ -337,9 +350,12 @@ const parseCareerPlan = (
     'qualificationRoll',
     'survivalRoll',
     'commissionRoll',
-    'advancementRoll'
+    'advancementRoll',
+    'drafted'
   ]
   if (!keys.some((key) => values[key] !== undefined)) return undefined
+
+  const drafted = parseOptionalBoolean(values.drafted)
 
   return {
     ...emptyCareerPlan(),
@@ -347,7 +363,8 @@ const parseCareerPlan = (
     qualificationRoll: parseOptionalNumber(values.qualificationRoll) ?? null,
     survivalRoll: parseOptionalNumber(values.survivalRoll) ?? null,
     commissionRoll: parseOptionalNumber(values.commissionRoll) ?? null,
-    advancementRoll: parseOptionalNumber(values.advancementRoll) ?? null
+    advancementRoll: parseOptionalNumber(values.advancementRoll) ?? null,
+    drafted: drafted ?? false
   }
 }
 
@@ -425,9 +442,9 @@ const careerRollErrors = ({
     ...rollErrors({
       value: careerPlan?.qualificationRoll,
       label: 'Qualification roll',
-      required: true
+      required: careerPlan?.drafted !== true
     }),
-    ...(careerPlan?.qualificationPassed === false
+    ...(careerPlan?.qualificationPassed === false && careerPlan.drafted !== true
       ? ['Qualification failed; choose a different career']
       : []),
     ...rollErrors({

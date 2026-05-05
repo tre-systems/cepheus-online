@@ -1501,6 +1501,186 @@ h1 {
   min-width: 0;
 }
 
+.creation-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.creation-stat-cell {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  border-bottom: 1px solid rgba(244, 255, 248, 0.3);
+  padding-bottom: 5px;
+}
+
+.creation-stat-cell > span:first-child {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.creation-stat-value-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 2px;
+}
+
+.creation-stat-cell input {
+  min-height: 30px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1;
+  text-align: left;
+  box-shadow: none;
+}
+
+.creation-stat-cell input:focus {
+  box-shadow: none;
+}
+
+.creation-stat-value-row small {
+  min-height: 11px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.creation-stat-error {
+  grid-column: 1 / -1;
+  min-height: 22px;
+  color: #ffe272;
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+.creation-career-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.creation-career-outcome {
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(72, 255, 173, 0.5);
+  background:
+    linear-gradient(180deg, rgba(244, 255, 248, 0.08), transparent),
+    rgba(72, 255, 173, 0.08);
+  padding: 9px;
+}
+
+.creation-career-outcome strong {
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.creation-career-outcome p {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.creation-career-list {
+  display: grid;
+  gap: 5px;
+  max-height: min(42dvh, 340px);
+  overflow: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+
+.creation-career-list button {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  align-items: center;
+  border-color: rgba(72, 255, 173, 0.28);
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 7px 8px;
+  color: var(--muted);
+  text-align: left;
+  box-shadow: none;
+}
+
+.creation-career-list button.selected {
+  border-color: var(--accent);
+  background: rgba(72, 255, 173, 0.15);
+  color: var(--accent-2);
+}
+
+.creation-career-title {
+  grid-row: span 2;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.creation-training-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.creation-training-skills span {
+  border: 1px solid rgba(72, 255, 173, 0.55);
+  background: rgba(72, 255, 173, 0.09);
+  padding: 3px 5px;
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.creation-draft-fallback {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(244, 255, 248, 0.7);
+  background: rgba(230, 255, 238, 0.92);
+  color: #06100d;
+  padding: 9px;
+}
+
+.creation-draft-fallback strong {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.creation-draft-fallback p {
+  color: #163127;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.creation-draft-fallback button {
+  min-height: 38px;
+  border-color: rgba(6, 16, 13, 0.34);
+  background: rgba(6, 16, 13, 0.08);
+  color: #06100d;
+  box-shadow: none;
+}
+
+.creation-draft-list {
+  display: grid;
+  gap: 4px;
+}
+
+.creation-draft-list button {
+  justify-content: start;
+  text-align: left;
+}
+
 .character-creation-roll-action {
   display: grid;
   gap: 5px;
