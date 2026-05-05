@@ -7,6 +7,7 @@ import {
   CEPHEUS_SRD_CAREERS,
   type CepheusCareerDefinition
 } from '../../shared/character-creation/cepheus-srd-ruleset.js'
+import { normalizeCareerSkill } from '../../shared/character-creation/skills.js'
 import type { CharacterId } from '../../shared/ids'
 import type {
   CharacterCharacteristics,
@@ -89,10 +90,24 @@ export type CharacterCreationCareerRollKey =
   | 'commissionRoll'
   | 'advancementRoll'
 
+export type CharacterCreationCharacteristicRollKey = CharacteristicKey
+
+export interface CharacterCreationCharacteristicRollAction {
+  key: CharacterCreationCharacteristicRollKey
+  label: string
+  reason: string
+}
+
 export interface CharacterCreationCareerRollAction {
   key: CharacterCreationCareerRollKey
   label: string
   reason: string
+}
+
+export interface CharacterCreationBasicTrainingAction {
+  label: string
+  reason: string
+  skills: string[]
 }
 
 export type CharacterCreationDraftPatch = Partial<
@@ -426,6 +441,51 @@ export const updateCharacterCreationDraft = (
 export const characterCreationCareerNames = (): string[] =>
   CEPHEUS_SRD_CAREERS.map((career) => career.name)
 
+const characteristicRollLabels: Record<CharacteristicKey, string> = {
+  str: 'Str',
+  dex: 'Dex',
+  end: 'End',
+  int: 'Int',
+  edu: 'Edu',
+  soc: 'Soc'
+}
+
+export const deriveNextCharacterCreationCharacteristicRoll = (
+  flow: Pick<CharacterCreationFlow, 'draft'>
+): CharacterCreationCharacteristicRollAction | null => {
+  for (const key of CHARACTERISTIC_KEYS) {
+    if (flow.draft.characteristics[key] === null) {
+      const label = characteristicRollLabels[key]
+      return {
+        key,
+        label: `Roll ${label}`,
+        reason: `${flow.draft.name.trim() || 'Character'} ${label}`
+      }
+    }
+  }
+  return null
+}
+
+export const applyCharacterCreationCharacteristicRoll = (
+  flow: CharacterCreationFlow,
+  roll: number
+): CharacterCreationWizardResult => {
+  const action = deriveNextCharacterCreationCharacteristicRoll(flow)
+  if (!action) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const updatedFlow = updateCharacterCreationFields(flow, {
+    characteristics: { [action.key]: roll }
+  })
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
+  }
+}
+
 export const selectCharacterCreationCareerPlan = (
   career: string,
   overrides: Partial<Omit<CharacterCreationCareerPlan, 'career'>> = {}
@@ -558,6 +618,46 @@ export const applyCharacterCreationCareerRoll = (
     [action.key]: roll
   })
   const updatedFlow = { ...flow, draft: updatedDraft }
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
+  }
+}
+
+export const deriveCharacterCreationBasicTrainingAction = (
+  flow: CharacterCreationFlow
+): CharacterCreationBasicTrainingAction | null => {
+  if (flow.step !== 'skills' || flow.draft.skills.length > 0) return null
+  const careerName = flow.draft.careerPlan?.career.trim()
+  if (!careerName) return null
+  const careerDefinition = findCareerDefinition(careerName)
+  if (!careerDefinition) return null
+
+  const skills = careerDefinition.serviceSkills
+    .map((skill) => normalizeCareerSkill(skill, 0))
+    .filter((skill): skill is string => skill !== null)
+  if (skills.length === 0) return null
+
+  return {
+    label: 'Apply basic training',
+    reason: `First ${careerName} term grants service skills at level 0`,
+    skills
+  }
+}
+
+export const applyCharacterCreationBasicTraining = (
+  flow: CharacterCreationFlow
+): CharacterCreationWizardResult => {
+  const action = deriveCharacterCreationBasicTrainingAction(flow)
+  if (!action) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const updatedFlow = updateCharacterCreationFields(flow, {
+    skills: action.skills
+  })
   return {
     flow: updatedFlow,
     validation: validateCurrentCharacterCreationStep(updatedFlow),

@@ -5,6 +5,8 @@ import { asCharacterId, asGameId, asUserId } from '../../shared/ids'
 import type { GameState } from '../../shared/state'
 import {
   advanceCharacterCreationStep,
+  applyCharacterCreationBasicTraining,
+  applyCharacterCreationCharacteristicRoll,
   applyCharacterCreationCareerRoll,
   applyCharacterCreationCareerPlan,
   applyParsedCharacterCreationDraftPatch,
@@ -16,9 +18,11 @@ import {
   createInitialCharacterDraft,
   createManualCharacterCreationFlow,
   deriveCharacterCreationCommands,
+  deriveCharacterCreationBasicTrainingAction,
   deriveCharacterSheetPatch,
   deriveCreateCharacterCommand,
   deriveInitialCharacterCreationStateCommands,
+  deriveNextCharacterCreationCharacteristicRoll,
   deriveNextCharacterCreationCareerRoll,
   deriveStartCharacterCareerTermCommand,
   deriveStartCharacterCreationCommand,
@@ -213,6 +217,77 @@ describe('character creation flow', () => {
     const updated = applyCharacterCreationCareerPlan(draft, careerPlan)
     assert.deepEqual(updated.careerPlan, evaluated)
     assert.equal(draft.careerPlan, null)
+  })
+
+  it('walks characteristic rolls one stat at a time from server dice totals', () => {
+    let flow = createCharacterCreationFlow(characterId, {
+      name: 'Iona Vesh'
+    })
+    flow = { ...flow, step: 'characteristics' }
+
+    assert.deepEqual(deriveNextCharacterCreationCharacteristicRoll(flow), {
+      key: 'str',
+      label: 'Roll Str',
+      reason: 'Iona Vesh Str'
+    })
+
+    const result = applyCharacterCreationCharacteristicRoll(flow, 8)
+    flow = result.flow
+    assert.equal(result.moved, false)
+    assert.equal(flow.draft.characteristics.str, 8)
+    assert.deepEqual(deriveNextCharacterCreationCharacteristicRoll(flow), {
+      key: 'dex',
+      label: 'Roll Dex',
+      reason: 'Iona Vesh Dex'
+    })
+
+    for (const roll of [7, 6, 9, 10, 5]) {
+      flow = applyCharacterCreationCharacteristicRoll(flow, roll).flow
+    }
+
+    assert.deepEqual(flow.draft.characteristics, {
+      str: 8,
+      dex: 7,
+      end: 6,
+      int: 9,
+      edu: 10,
+      soc: 5
+    })
+    assert.equal(deriveNextCharacterCreationCharacteristicRoll(flow), null)
+  })
+
+  it('applies first-term basic training from the selected career service skills', () => {
+    let flow = createCharacterCreationFlow(characterId, {
+      name: 'Iona Vesh',
+      characteristics: completeDraft().characteristics,
+      careerPlan: selectCharacterCreationCareerPlan('Scout', {
+        qualificationRoll: 8,
+        qualificationPassed: true,
+        survivalRoll: 7,
+        survivalPassed: true
+      })
+    })
+    flow = { ...flow, step: 'skills' }
+
+    const action = deriveCharacterCreationBasicTrainingAction(flow)
+    assert.equal(action?.label, 'Apply basic training')
+    assert.equal(
+      action?.reason,
+      'First Scout term grants service skills at level 0'
+    )
+    assert.deepEqual(action?.skills, [
+      'Comms-0',
+      'Electronics-0',
+      'Gun Combat-0',
+      'Gunnery-0',
+      'Recon-0',
+      'Piloting-0'
+    ])
+
+    const result = applyCharacterCreationBasicTraining(flow)
+    assert.equal(result.moved, false)
+    assert.deepEqual(result.flow.draft.skills, action?.skills)
+    assert.equal(deriveCharacterCreationBasicTrainingAction(result.flow), null)
   })
 
   it('walks SRD career checks with server dice roll totals', () => {

@@ -9,7 +9,9 @@ import {
 import {
   characterCreationPrimaryCtaLabels,
   characterCreationStepLabels,
+  deriveCharacterCreationBasicTrainingButton,
   deriveCharacterCreationButtonStates,
+  deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerOptionViewModels,
   deriveCharacterCreationCtaLabels,
@@ -265,6 +267,62 @@ describe('character creation view helpers', () => {
         errors: []
       }
     ])
+  })
+
+  it('derives the basic training button from an empty skills step', () => {
+    const flow = {
+      step: 'skills' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: completeFlow().draft.characteristics,
+        careerPlan: completeFlow().draft.careerPlan
+      })
+    }
+
+    assert.deepEqual(deriveCharacterCreationBasicTrainingButton(flow), {
+      label: 'Apply basic training',
+      reason: 'First Scout term grants service skills at level 0',
+      disabled: false
+    })
+
+    assert.equal(
+      deriveCharacterCreationBasicTrainingButton({
+        ...flow,
+        draft: { ...flow.draft, skills: ['Pilot-0'] }
+      }),
+      null
+    )
+  })
+
+  it('derives the next characteristic roll button from missing stats', () => {
+    const flow = {
+      step: 'characteristics' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: {
+          str: 7,
+          dex: null,
+          end: null,
+          int: null,
+          edu: null,
+          soc: null
+        }
+      })
+    }
+
+    assert.deepEqual(deriveCharacterCreationCharacteristicRollButton(flow), {
+      label: 'Roll Dex',
+      reason: 'Iona Vesh Dex',
+      disabled: false
+    })
+
+    assert.equal(
+      deriveCharacterCreationCharacteristicRollButton({
+        ...flow,
+        step: 'career'
+      }),
+      null
+    )
   })
 
   it('derives the next career roll button from SRD career progress', () => {

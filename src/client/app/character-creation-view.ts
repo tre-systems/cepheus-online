@@ -7,6 +7,8 @@ import type {
 } from './character-creation-flow.js'
 import {
   characterCreationSteps,
+  deriveCharacterCreationBasicTrainingAction,
+  deriveNextCharacterCreationCharacteristicRoll,
   deriveNextCharacterCreationCareerRoll,
   validateCurrentCharacterCreationStep
 } from './character-creation-flow.js'
@@ -68,6 +70,18 @@ export interface CharacterCreationButtonStates {
 }
 
 export interface CharacterCreationCareerRollButton {
+  label: string
+  reason: string
+  disabled: boolean
+}
+
+export interface CharacterCreationCharacteristicRollButton {
+  label: string
+  reason: string
+  disabled: boolean
+}
+
+export interface CharacterCreationBasicTrainingButton {
   label: string
   reason: string
   disabled: boolean
@@ -223,6 +237,33 @@ export const deriveCharacterCreationCareerRollButton = (
 ): CharacterCreationCareerRollButton | null => {
   if (flow.step !== 'career') return null
   const action = deriveNextCharacterCreationCareerRoll(flow)
+  if (!action) return null
+
+  return {
+    label: action.label,
+    reason: action.reason,
+    disabled: false
+  }
+}
+
+export const deriveCharacterCreationCharacteristicRollButton = (
+  flow: CharacterCreationFlow
+): CharacterCreationCharacteristicRollButton | null => {
+  if (flow.step !== 'characteristics') return null
+  const action = deriveNextCharacterCreationCharacteristicRoll(flow)
+  if (!action) return null
+
+  return {
+    label: action.label,
+    reason: action.reason,
+    disabled: false
+  }
+}
+
+export const deriveCharacterCreationBasicTrainingButton = (
+  flow: CharacterCreationFlow
+): CharacterCreationBasicTrainingButton | null => {
+  const action = deriveCharacterCreationBasicTrainingAction(flow)
   if (!action) return null
 
   return {

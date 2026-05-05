@@ -94,6 +94,7 @@ const clientModules = new Map<
       imports: [
         '/shared/character-creation/career-rules.js',
         '/shared/character-creation/cepheus-srd-ruleset.js',
+        '/shared/character-creation/skills.js',
         '/client/game-commands.js',
         '/client/app/bootstrap-flow.js'
       ]

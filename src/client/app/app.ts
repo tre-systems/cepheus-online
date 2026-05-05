@@ -13,6 +13,8 @@ import {
 import { createBoardController } from './board-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
+  applyCharacterCreationBasicTraining,
+  applyCharacterCreationCharacteristicRoll,
   applyCharacterCreationCareerRoll,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationWizardStep,
@@ -22,7 +24,9 @@ import {
   nextCharacterCreationWizardStep
 } from './character-creation-flow.js'
 import {
+  deriveCharacterCreationBasicTrainingButton,
   deriveCharacterCreationButtonStates,
+  deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationReviewSummary,
@@ -286,8 +290,11 @@ const startCharacterCreationWizard = () => {
     ...flow,
     draft: {
       ...flow.draft,
-      ...seed,
-      name: seed.name || flow.draft.name
+      name: seed.name || flow.draft.name,
+      age: seed.age,
+      credits: seed.credits,
+      equipment: seed.equipment,
+      notes: seed.notes
     }
   }
   pendingGeneratedCharacter = null
@@ -411,8 +418,34 @@ const renderCharacterCreationFields = (flow) => {
     fragment.append(label)
   }
   const careerRollButton = renderCharacterCreationCareerRollButton(flow)
+  const characteristicRollButton =
+    renderCharacterCreationCharacteristicRollButton(flow)
+  const basicTrainingButton = renderCharacterCreationBasicTrainingButton(flow)
+  if (characteristicRollButton) fragment.append(characteristicRollButton)
   if (careerRollButton) fragment.append(careerRollButton)
+  if (basicTrainingButton) fragment.append(basicTrainingButton)
   return fragment
+}
+
+const renderCharacterCreationCharacteristicRollButton = (flow) => {
+  const viewModel = deriveCharacterCreationCharacteristicRollButton(flow)
+  if (!viewModel) return null
+
+  const wrapper = document.createElement('div')
+  wrapper.className = 'character-creation-roll-action'
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.textContent = viewModel.label
+  button.disabled = viewModel.disabled
+  button.addEventListener('click', () => {
+    rollCharacterCreationCharacteristic().catch((error) =>
+      setError(error.message)
+    )
+  })
+  const hint = document.createElement('small')
+  hint.textContent = viewModel.reason
+  wrapper.append(button, hint)
+  return wrapper
 }
 
 const renderCharacterCreationCareerRollButton = (flow) => {
@@ -432,6 +465,70 @@ const renderCharacterCreationCareerRollButton = (flow) => {
   hint.textContent = viewModel.reason
   wrapper.append(button, hint)
   return wrapper
+}
+
+const renderCharacterCreationBasicTrainingButton = (flow) => {
+  const viewModel = deriveCharacterCreationBasicTrainingButton(flow)
+  if (!viewModel) return null
+
+  const wrapper = document.createElement('div')
+  wrapper.className = 'character-creation-roll-action'
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.textContent = viewModel.label
+  button.disabled = viewModel.disabled
+  button.addEventListener('click', () => {
+    if (!characterCreationFlow) return
+    syncCharacterCreationWizardFields()
+    characterCreationFlow = applyCharacterCreationBasicTraining(
+      characterCreationFlow
+    ).flow
+    setError('')
+    renderCharacterCreationWizard()
+  })
+  const hint = document.createElement('small')
+  hint.textContent = viewModel.reason
+  wrapper.append(button, hint)
+  return wrapper
+}
+
+const rollCharacterCreationCharacteristic = async () => {
+  if (!characterCreationFlow) return
+  setError('')
+  syncCharacterCreationWizardFields()
+
+  const rollAction = deriveCharacterCreationCharacteristicRollButton(
+    characterCreationFlow
+  )
+  if (!rollAction) return
+
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-characteristic-roll')
+    )
+  }
+
+  const response = await postCommand(
+    buildRollDiceCommand({
+      identity: clientIdentity(),
+      expression: '2d6',
+      reason: rollAction.reason
+    }),
+    requestId('characteristic-roll')
+  )
+  const latestRoll =
+    response.state?.diceLog?.[response.state.diceLog.length - 1]
+  if (!latestRoll) {
+    setError('Characteristic roll did not return a dice result')
+    return
+  }
+
+  characterCreationFlow = applyCharacterCreationCharacteristicRoll(
+    characterCreationFlow,
+    latestRoll.total
+  ).flow
+  renderCharacterCreationWizard()
 }
 
 const renderCharacterCreationReview = (flow) => {
