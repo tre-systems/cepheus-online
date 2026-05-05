@@ -268,6 +268,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/shared/character-creation/background-skills.js',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'background-skills.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_BACKGROUND_SKILLS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/shared/ids',
     source: join(compiledClientRoot, 'shared', 'ids.js'),
     exportName: 'SHARED_IDS_JS',
@@ -369,6 +380,30 @@ for (const asset of assets) {
   }
 }
 
+const extractModuleImports = (body) => {
+  const imports = new Set()
+  const importPattern =
+    /\bimport\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)/g
+
+  for (const match of body.matchAll(importPattern)) {
+    imports.add(match[1] ?? match[2])
+  }
+
+  return [...imports]
+}
+
+const resolveModulePath = (fromPathname, specifier) => {
+  if (
+    !specifier.startsWith('./') &&
+    !specifier.startsWith('../') &&
+    !specifier.startsWith('/')
+  ) {
+    throw new Error(`${fromPathname} imports non-runtime module ${specifier}`)
+  }
+
+  return new URL(specifier, `https://cepheus.test${fromPathname}`).pathname
+}
+
 await rm(compiledClientRoot, { recursive: true, force: true })
 execFileSync('npx', ['tsc', '-p', 'tsconfig.client.json'], {
   cwd: root,
@@ -402,6 +437,27 @@ const shortHash = buildHash.digest('hex').slice(0, 12)
 for (const [exportName, rawBody] of sourceBodies) {
   const body = rawBody.replaceAll('__BUILD_HASH__', shortHash)
   lines.push(`export const ${exportName} = ${JSON.stringify(body)}`)
+}
+
+const servedPathnames = new Set(assets.map((asset) => asset.pathname))
+const javascriptAssets = assets.filter((asset) =>
+  asset.contentType.startsWith('text/javascript')
+)
+
+for (const asset of javascriptAssets) {
+  const body = sourceBodies.get(asset.exportName)
+  if (body === undefined) {
+    throw new Error(`${asset.pathname} has no generated body`)
+  }
+
+  for (const specifier of extractModuleImports(body)) {
+    const importedPathname = resolveModulePath(asset.pathname, specifier)
+    if (!servedPathnames.has(importedPathname)) {
+      throw new Error(
+        `${asset.pathname} imports unserved runtime module ${importedPathname}`
+      )
+    }
+  }
 }
 
 lines.push(

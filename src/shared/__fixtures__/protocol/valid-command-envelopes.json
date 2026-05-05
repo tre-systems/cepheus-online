@@ -1,0 +1,79 @@
+[
+  {
+    "name": "character creation command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-create-character",
+      "command": {
+        "type": "CreateCharacter",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 12,
+        "characterId": "crew-scout-1",
+        "characterType": "PLAYER",
+        "name": "Mara Vale"
+      }
+    },
+    "commandType": "CreateCharacter",
+    "expectedSeq": 12
+  },
+  {
+    "name": "stale-sensitive movement command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-move-piece",
+      "command": {
+        "type": "MovePiece",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 27,
+        "pieceId": "crew-scout-token",
+        "x": 480,
+        "y": 320
+      }
+    },
+    "commandType": "MovePiece",
+    "expectedSeq": 27
+  },
+  {
+    "name": "character creation transition command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-advance-creation",
+      "command": {
+        "type": "AdvanceCharacterCreation",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 19,
+        "characterId": "crew-scout-1",
+        "creationEvent": {
+          "type": "SURVIVAL_PASSED",
+          "canCommission": true,
+          "canAdvance": false
+        }
+      }
+    },
+    "commandType": "AdvanceCharacterCreation",
+    "expectedSeq": 19
+  },
+  {
+    "name": "board setup command with an asset URL",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-create-board",
+      "command": {
+        "type": "CreateBoard",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "boardId": "subsector-station",
+        "name": "Station Docking Bay",
+        "imageAssetId": "cepheus-docking-bay",
+        "url": "/assets/boards/cepheus-docking-bay.png",
+        "width": 2400,
+        "height": 1600,
+        "scale": 50
+      }
+    },
+    "commandType": "CreateBoard"
+  }
+]

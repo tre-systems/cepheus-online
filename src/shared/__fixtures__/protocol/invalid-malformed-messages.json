@@ -1,0 +1,79 @@
+[
+  {
+    "name": "missing message type",
+    "message": {
+      "requestId": "bad-missing-type"
+    },
+    "errorCode": "invalid_message",
+    "errorMessage": "Message must be an object with a type"
+  },
+  {
+    "name": "empty command request id",
+    "message": {
+      "type": "command",
+      "requestId": "",
+      "command": {
+        "type": "CreateGame",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "slug": "cepheus-run",
+        "name": "Cepheus Run"
+      }
+    },
+    "errorCode": "invalid_message",
+    "errorMessage": "requestId cannot be empty"
+  },
+  {
+    "name": "unsupported command type",
+    "message": {
+      "type": "command",
+      "requestId": "bad-command-type",
+      "command": {
+        "type": "TeleportPiece",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "pieceId": "crew-scout-token"
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "Unsupported command type TeleportPiece"
+  },
+  {
+    "name": "negative expected sequence",
+    "message": {
+      "type": "command",
+      "requestId": "bad-expected-seq",
+      "command": {
+        "type": "MovePiece",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": -1,
+        "pieceId": "crew-scout-token",
+        "x": 480,
+        "y": 320
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "expectedSeq must be a non-negative integer"
+  },
+  {
+    "name": "malformed character creation event payload",
+    "message": {
+      "type": "command",
+      "requestId": "bad-creation-event",
+      "command": {
+        "type": "AdvanceCharacterCreation",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": "crew-scout-1",
+        "creationEvent": {
+          "type": "SURVIVAL_PASSED",
+          "canCommission": "yes",
+          "canAdvance": false
+        }
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "canCommission must be a boolean"
+  }
+]

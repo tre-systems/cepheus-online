@@ -89,10 +89,20 @@ const clientModules = new Map<
     { markers: ['normalizeCareerSkill', 'tallyCareerSkills'] }
   ],
   [
+    '/shared/character-creation/background-skills.js',
+    {
+      markers: [
+        'deriveBackgroundSkillPlan',
+        'deriveTotalBackgroundSkillAllowance'
+      ]
+    }
+  ],
+  [
     '/client/app/character-creation-flow.js',
     {
       markers: ['deriveCharacterCreationCommands'],
       imports: [
+        '/shared/character-creation/background-skills.js',
         '/shared/character-creation/career-rules.js',
         '/shared/character-creation/cepheus-srd-ruleset.js',
         '/shared/character-creation/skills.js',
@@ -110,8 +120,10 @@ const clientModules = new Map<
       ],
       imports: [
         '/client/app/character-creation-flow.js',
+        '/shared/character-creation/background-skills.js',
         '/shared/character-creation/career-rules.js',
-        '/shared/character-creation/cepheus-srd-ruleset.js'
+        '/shared/character-creation/cepheus-srd-ruleset.js',
+        '/shared/character-creation/skills.js'
       ]
     }
   ],

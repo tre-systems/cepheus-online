@@ -9,13 +9,15 @@ import {
 import {
   characterCreationPrimaryCtaLabels,
   characterCreationStepLabels,
+  characterCreationViewSteps,
   deriveCharacterCreationBasicTrainingButton,
   deriveCharacterCreationButtonStates,
-  deriveCharacterCreationCharacteristicRollButton,
-  deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerOptionViewModels,
+  deriveCharacterCreationCareerRollButton,
+  deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCtaLabels,
   deriveCharacterCreationFieldViewModels,
+  deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationReviewSummary,
   deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationValidationSummary,
@@ -48,6 +50,12 @@ const completeFlow = () => ({
       credits: 1200,
       notes: 'Detached scout.'
     }),
+    homeworld: {
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid']
+    },
+    backgroundSkills: ['Zero-G-0', 'Slug Pistol-0'],
+    pendingCascadeSkills: [],
     careerPlan: {
       career: 'Scout',
       qualificationRoll: 8,
@@ -70,21 +78,39 @@ describe('character creation view helpers', () => {
     assert.deepEqual(characterCreationStepLabels, {
       basics: 'Basics',
       characteristics: 'Characteristics',
+      homeworld: 'Homeworld',
       career: 'Career',
       skills: 'Skills',
       equipment: 'Equipment',
       review: 'Review'
     })
+    assert.deepEqual(characterCreationViewSteps(), [
+      'basics',
+      'characteristics',
+      'homeworld',
+      'career',
+      'skills',
+      'equipment',
+      'review'
+    ])
     assert.equal(
       characterCreationPrimaryCtaLabels.basics,
       'Continue to characteristics'
     )
     assert.equal(
       characterCreationPrimaryCtaLabels.characteristics,
+      'Continue to homeworld'
+    )
+    assert.equal(
+      characterCreationPrimaryCtaLabels.homeworld,
       'Continue to career'
     )
     assert.deepEqual(deriveCharacterCreationCtaLabels('career'), {
       primary: 'Continue to skills',
+      secondary: 'Back'
+    })
+    assert.deepEqual(deriveCharacterCreationCtaLabels('homeworld'), {
+      primary: 'Continue to career',
       secondary: 'Back'
     })
     assert.deepEqual(deriveCharacterCreationCtaLabels('basics'), {
@@ -267,6 +293,245 @@ describe('character creation view helpers', () => {
         errors: []
       }
     ])
+  })
+
+  it('derives homeworld fields, options, and background skill summary', () => {
+    const flow = {
+      step: 'career' as const,
+      draft: {
+        ...createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          characteristics: {
+            str: 7,
+            dex: 8,
+            end: 7,
+            int: 9,
+            edu: 9,
+            soc: 6
+          }
+        }),
+        homeworld: {
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid', 'Industrial']
+        },
+        backgroundSkills: ['Zero-G-0'],
+        pendingCascadeSkills: ['Gun Combat-0']
+      }
+    }
+
+    assert.deepEqual(
+      deriveCharacterCreationFieldViewModels(flow, 'homeworld'),
+      [
+        {
+          key: 'homeworld.lawLevel',
+          label: 'Law level',
+          kind: 'text',
+          step: 'homeworld',
+          value: 'No Law',
+          required: true,
+          errors: []
+        },
+        {
+          key: 'homeworld.tradeCodes',
+          label: 'Trade code',
+          kind: 'text',
+          step: 'homeworld',
+          value: 'Asteroid, Industrial',
+          required: true,
+          errors: []
+        }
+      ]
+    )
+
+    const viewModel = deriveCharacterCreationHomeworldViewModel(flow)
+
+    assert.equal(viewModel.step, 'homeworld')
+    assert.deepEqual(
+      viewModel.lawLevelOptions.filter((option) => option.selected),
+      [{ value: 'No Law', label: 'No Law', selected: true }]
+    )
+    assert.deepEqual(
+      viewModel.tradeCodeOptions.filter((option) => option.selected),
+      [
+        { value: 'Asteroid', label: 'Asteroid', selected: true },
+        { value: 'Industrial', label: 'Industrial', selected: true }
+      ]
+    )
+    assert.deepEqual(viewModel.backgroundSkills, {
+      allowance: 4,
+      selectedSkills: ['Zero-G-0'],
+      availableSkills: [
+        'Gun Combat*',
+        'Zero-G',
+        'Broker',
+        'Admin',
+        'Advocate',
+        'Animals*',
+        'Carousing',
+        'Comms',
+        'Computer',
+        'Electronics',
+        'Engineering',
+        'Life Sciences',
+        'Linguistics',
+        'Mechanics',
+        'Medicine',
+        'Physical Sciences',
+        'Social Sciences',
+        'Space Sciences'
+      ],
+      skillOptions: [
+        {
+          value: 'Gun Combat-0',
+          label: 'Gun Combat*',
+          selected: true,
+          preselected: true,
+          cascade: true
+        },
+        {
+          value: 'Zero-G-0',
+          label: 'Zero-G',
+          selected: true,
+          preselected: true,
+          cascade: false
+        },
+        {
+          value: 'Broker-0',
+          label: 'Broker',
+          selected: false,
+          preselected: true,
+          cascade: false
+        },
+        {
+          value: 'Admin-0',
+          label: 'Admin',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Advocate-0',
+          label: 'Advocate',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Animals-0',
+          label: 'Animals*',
+          selected: false,
+          preselected: false,
+          cascade: true
+        },
+        {
+          value: 'Carousing-0',
+          label: 'Carousing',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Comms-0',
+          label: 'Comms',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Computer-0',
+          label: 'Computer',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Electronics-0',
+          label: 'Electronics',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Engineering-0',
+          label: 'Engineering',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Life Sciences-0',
+          label: 'Life Sciences',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Linguistics-0',
+          label: 'Linguistics',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Mechanics-0',
+          label: 'Mechanics',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Medicine-0',
+          label: 'Medicine',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Physical Sciences-0',
+          label: 'Physical Sciences',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Social Sciences-0',
+          label: 'Social Sciences',
+          selected: false,
+          preselected: false,
+          cascade: false
+        },
+        {
+          value: 'Space Sciences-0',
+          label: 'Space Sciences',
+          selected: false,
+          preselected: false,
+          cascade: false
+        }
+      ],
+      remainingSelections: 2,
+      pendingCascadeSkills: ['Gun Combat-0'],
+      cascadeSkillChoices: [
+        {
+          cascadeSkill: 'Gun Combat-0',
+          label: 'Gun Combat',
+          level: 0,
+          options: [
+            { value: 'Archery-0', label: 'Archery', cascade: false },
+            {
+              value: 'Energy Pistol-0',
+              label: 'Energy Pistol',
+              cascade: false
+            },
+            { value: 'Energy Rifle-0', label: 'Energy Rifle', cascade: false },
+            { value: 'Shotgun-0', label: 'Shotgun', cascade: false },
+            { value: 'Slug Pistol-0', label: 'Slug Pistol', cascade: false },
+            { value: 'Slug Rifle-0', label: 'Slug Rifle', cascade: false }
+          ]
+        }
+      ],
+      errors: ['1 cascade skill choice remains'],
+      message: '1 cascade skill choice remains'
+    })
   })
 
   it('derives the basic training button from an empty skills step', () => {
@@ -533,9 +798,22 @@ describe('character creation view helpers', () => {
         errors: []
       },
       {
+        step: 'homeworld',
+        label: 'Homeworld',
+        index: 2,
+        current: false,
+        complete: false,
+        invalid: true,
+        disabled: false,
+        errors: [
+          'Homeworld law level is required',
+          'Homeworld trade code is required'
+        ]
+      },
+      {
         step: 'career',
         label: 'Career',
-        index: 2,
+        index: 3,
         current: false,
         complete: false,
         invalid: true,
@@ -549,7 +827,7 @@ describe('character creation view helpers', () => {
       {
         step: 'skills',
         label: 'Skills',
-        index: 3,
+        index: 4,
         current: true,
         complete: false,
         invalid: true,
@@ -559,7 +837,7 @@ describe('character creation view helpers', () => {
       {
         step: 'equipment',
         label: 'Equipment',
-        index: 4,
+        index: 5,
         current: false,
         complete: false,
         invalid: false,
@@ -569,7 +847,7 @@ describe('character creation view helpers', () => {
       {
         step: 'review',
         label: 'Review',
-        index: 5,
+        index: 6,
         current: false,
         complete: false,
         invalid: false,
@@ -630,7 +908,9 @@ describe('character creation view helpers', () => {
         qualificationRoll: 8,
         survivalRoll: '',
         commissionRoll: null,
-        advancementRoll: 'bad'
+        advancementRoll: 'bad',
+        'homeworld.lawLevel': ' No Law ',
+        'homeworld.tradeCodes': 'Asteroid, Industrial'
       }),
       {
         name: ' Iona Vesh ',
@@ -657,6 +937,10 @@ describe('character creation view helpers', () => {
           canCommission: null,
           canAdvance: null,
           drafted: true
+        },
+        homeworld: {
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid', 'Industrial']
         },
         characteristics: {
           str: 7,

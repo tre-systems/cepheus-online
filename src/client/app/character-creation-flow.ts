@@ -4,10 +4,23 @@ import {
   parseCareerCheck
 } from '../../shared/character-creation/career-rules.js'
 import {
+  CEPHEUS_SRD_RULESET,
   CEPHEUS_SRD_CAREERS,
   type CepheusCareerDefinition
 } from '../../shared/character-creation/cepheus-srd-ruleset.js'
-import { normalizeCareerSkill } from '../../shared/character-creation/skills.js'
+import {
+  deriveBackgroundSkillPlan,
+  deriveTotalBackgroundSkillAllowance,
+  hasBackgroundHomeworld,
+  type BackgroundHomeworld,
+  type BackgroundSkillPlan
+} from '../../shared/character-creation/background-skills.js'
+import {
+  careerSkillWithLevel,
+  isCascadeCareerSkill,
+  normalizeCareerSkill,
+  resolveCascadeCareerSkill
+} from '../../shared/character-creation/skills.js'
 import type { CharacterId } from '../../shared/ids'
 import type {
   CharacterCharacteristics,
@@ -23,6 +36,7 @@ import { uniqueCharacterId } from './bootstrap-flow.js'
 export type CharacterCreationStep =
   | 'basics'
   | 'characteristics'
+  | 'homeworld'
   | 'career'
   | 'skills'
   | 'equipment'
@@ -49,6 +63,9 @@ export interface CharacterCreationDraft {
   name: string
   age: number | null
   characteristics: CharacterCharacteristics
+  homeworld: BackgroundHomeworld
+  backgroundSkills: string[]
+  pendingCascadeSkills: string[]
   careerPlan: CharacterCreationCareerPlan | null
   skills: string[]
   equipment: CharacterEquipmentItem[]
@@ -113,10 +130,19 @@ export interface CharacterCreationBasicTrainingAction {
 export type CharacterCreationDraftPatch = Partial<
   Omit<
     CharacterCreationDraft,
-    'characteristics' | 'careerPlan' | 'skills' | 'equipment'
+    | 'characteristics'
+    | 'homeworld'
+    | 'backgroundSkills'
+    | 'pendingCascadeSkills'
+    | 'careerPlan'
+    | 'skills'
+    | 'equipment'
   >
 > & {
   characteristics?: Partial<CharacterCharacteristics>
+  homeworld?: BackgroundHomeworld | null
+  backgroundSkills?: readonly string[]
+  pendingCascadeSkills?: readonly string[]
   careerPlan?: CharacterCreationCareerPlan | null
   skills?: readonly string[]
   equipment?: readonly CharacterEquipmentItem[]
@@ -147,6 +173,7 @@ type FinalizeCharacterCreationCommand = Extract<
 const CHARACTER_CREATION_STEPS = [
   'basics',
   'characteristics',
+  'homeworld',
   'career',
   'skills',
   'equipment',
@@ -169,6 +196,11 @@ const emptyCharacteristics = (): CharacterCharacteristics => ({
   int: null,
   edu: null,
   soc: null
+})
+
+const emptyHomeworld = (): BackgroundHomeworld => ({
+  lawLevel: null,
+  tradeCodes: []
 })
 
 const createCareerPlan = (
@@ -227,6 +259,15 @@ const cloneEquipment = (
     notes: item.notes
   }))
 
+const cloneHomeworld = (
+  homeworld: BackgroundHomeworld
+): BackgroundHomeworld => ({
+  lawLevel: homeworld.lawLevel ?? null,
+  tradeCodes: Array.isArray(homeworld.tradeCodes)
+    ? [...homeworld.tradeCodes]
+    : (homeworld.tradeCodes ?? [])
+})
+
 const normalizeSkillList = (skills: readonly string[]): string[] => {
   const normalized: string[] = []
   const seen = new Set<string>()
@@ -241,6 +282,26 @@ const normalizeSkillList = (skills: readonly string[]): string[] => {
 
   return normalized
 }
+
+const normalizeBackgroundSkillList = (skills: readonly string[]): string[] =>
+  normalizeSkillList(
+    skills
+      .map((skill) => normalizeCareerSkill(skill, 0))
+      .filter((skill): skill is string => skill !== null)
+  )
+
+const normalizePendingCascadeSkillList = (
+  skills: readonly string[]
+): string[] =>
+  normalizeSkillList(
+    skills
+      .map((skill) =>
+        isCascadeCareerSkill(skill)
+          ? careerSkillWithLevel(skill, 0)
+          : normalizeCareerSkill(skill, 0)
+      )
+      .filter((skill): skill is string => skill !== null)
+  )
 
 const normalizeEquipmentList = (
   equipment: readonly CharacterEquipmentItem[]
@@ -260,6 +321,36 @@ const normalizeEquipmentList = (
 
   return normalized
 }
+
+const normalizeHomeworld = (
+  homeworld: BackgroundHomeworld | null | undefined
+): BackgroundHomeworld => {
+  if (!homeworld) return emptyHomeworld()
+
+  const lawLevel = homeworld.lawLevel?.trim() || null
+  const rawTradeCodes = Array.isArray(homeworld.tradeCodes)
+    ? homeworld.tradeCodes
+    : homeworld.tradeCodes
+      ? [homeworld.tradeCodes]
+      : []
+  const tradeCodes: string[] = []
+  const seen = new Set<string>()
+
+  for (const rawTradeCode of rawTradeCodes) {
+    const tradeCode = rawTradeCode.trim()
+    const key = tradeCode.toLowerCase()
+    if (!tradeCode || seen.has(key)) continue
+    tradeCodes.push(tradeCode)
+    seen.add(key)
+  }
+
+  return { lawLevel, tradeCodes }
+}
+
+const hasHomeworldTradeCodes = (homeworld: BackgroundHomeworld): boolean =>
+  Array.isArray(homeworld.tradeCodes)
+    ? homeworld.tradeCodes.length > 0
+    : Boolean(homeworld.tradeCodes)
 
 const isFiniteNonNegativeNumber = (value: number) =>
   Number.isFinite(value) && value >= 0
@@ -314,6 +405,26 @@ const validateCharacteristics = (draft: CharacterCreationDraft): string[] => {
   return errors
 }
 
+const validateHomeworld = (draft: CharacterCreationDraft): string[] => {
+  const errors: string[] = []
+  if (!draft.homeworld.lawLevel) {
+    errors.push('Homeworld law level is required')
+  }
+  if (!hasHomeworldTradeCodes(draft.homeworld)) {
+    errors.push('Homeworld trade code is required')
+  }
+  const selectedCount =
+    draft.backgroundSkills.length + draft.pendingCascadeSkills.length
+  const requiredCount = requiredBackgroundSkillSelections(draft)
+  if (draft.pendingCascadeSkills.length > 0) {
+    errors.push('Pending background cascade skills must be resolved')
+  }
+  if (selectedCount < requiredCount) {
+    errors.push('Required background skill selections are incomplete')
+  }
+  return errors
+}
+
 const validateCareer = (draft: CharacterCreationDraft): string[] =>
   draft.careerPlan?.career.trim() ? [] : ['Career is required']
 
@@ -345,6 +456,8 @@ const validationErrorsForStep = (
       return validateBasics(draft)
     case 'characteristics':
       return validateCharacteristics(draft)
+    case 'homeworld':
+      return validateHomeworld(draft)
     case 'career':
       return validateCareer(draft)
     case 'skills':
@@ -373,21 +486,39 @@ export const characterCreationSteps = (): CharacterCreationStep[] => [
 export const createInitialCharacterDraft = (
   characterId: CharacterId,
   overrides: Partial<CharacterCreationDraft> = {}
-): CharacterCreationDraft => ({
-  characterId,
-  characterType: overrides.characterType ?? 'PLAYER',
-  name: overrides.name ?? '',
-  age: overrides.age ?? null,
-  characteristics: {
+): CharacterCreationDraft => {
+  const characteristics = {
     ...emptyCharacteristics(),
     ...(overrides.characteristics ?? {})
-  },
-  careerPlan: normalizeCareerPlan(overrides.careerPlan),
-  skills: normalizeSkillList(overrides.skills ?? []),
-  equipment: normalizeEquipmentList(overrides.equipment ?? []),
-  credits: overrides.credits ?? 0,
-  notes: overrides.notes ?? ''
-})
+  }
+  const homeworld = normalizeHomeworld(overrides.homeworld)
+  const backgroundPlan = deriveCharacterCreationBackgroundSkillPlan({
+    characteristics,
+    homeworld
+  })
+
+  return {
+    characterId,
+    characterType: overrides.characterType ?? 'PLAYER',
+    name: overrides.name ?? '',
+    age: overrides.age ?? null,
+    characteristics,
+    homeworld,
+    backgroundSkills:
+      overrides.backgroundSkills === undefined
+        ? backgroundPlan.backgroundSkills
+        : normalizeBackgroundSkillList(overrides.backgroundSkills),
+    pendingCascadeSkills:
+      overrides.pendingCascadeSkills === undefined
+        ? backgroundPlan.pendingCascadeSkills
+        : normalizePendingCascadeSkillList(overrides.pendingCascadeSkills),
+    careerPlan: normalizeCareerPlan(overrides.careerPlan),
+    skills: normalizeSkillList(overrides.skills ?? []),
+    equipment: normalizeEquipmentList(overrides.equipment ?? []),
+    credits: overrides.credits ?? 0,
+    notes: overrides.notes ?? ''
+  }
+}
 
 export const createCharacterCreationFlow = (
   characterId: CharacterId,
@@ -413,33 +544,162 @@ export const createManualCharacterCreationFlow = ({
 export const updateCharacterCreationDraft = (
   draft: CharacterCreationDraft,
   patch: CharacterCreationDraftPatch
-): CharacterCreationDraft => ({
-  characterId: patch.characterId ?? draft.characterId,
-  characterType: patch.characterType ?? draft.characterType,
-  name: patch.name ?? draft.name,
-  age: patch.age ?? draft.age,
-  credits: patch.credits ?? draft.credits,
-  notes: patch.notes ?? draft.notes,
-  characteristics: {
+): CharacterCreationDraft => {
+  const characteristics = {
     ...draft.characteristics,
     ...(patch.characteristics ?? {})
-  },
-  careerPlan:
-    patch.careerPlan === undefined
-      ? cloneCareerPlan(draft.careerPlan)
-      : normalizeCareerPlan(patch.careerPlan),
-  skills:
-    patch.skills === undefined
-      ? [...draft.skills]
-      : normalizeSkillList(patch.skills),
-  equipment:
-    patch.equipment === undefined
-      ? cloneEquipment(draft.equipment)
-      : normalizeEquipmentList(patch.equipment)
-})
+  }
+  const homeworld =
+    patch.homeworld === undefined
+      ? cloneHomeworld(draft.homeworld)
+      : normalizeHomeworld(patch.homeworld)
+  const refreshBackgroundPlan =
+    patch.homeworld !== undefined || patch.characteristics?.edu !== undefined
+  const backgroundPlan = refreshBackgroundPlan
+    ? deriveCharacterCreationBackgroundSkillPlan({ characteristics, homeworld })
+    : null
+
+  return {
+    characterId: patch.characterId ?? draft.characterId,
+    characterType: patch.characterType ?? draft.characterType,
+    name: patch.name ?? draft.name,
+    age: patch.age ?? draft.age,
+    credits: patch.credits ?? draft.credits,
+    notes: patch.notes ?? draft.notes,
+    characteristics,
+    homeworld,
+    backgroundSkills:
+      patch.backgroundSkills !== undefined
+        ? normalizeBackgroundSkillList(patch.backgroundSkills)
+        : backgroundPlan
+          ? backgroundPlan.backgroundSkills
+          : [...draft.backgroundSkills],
+    pendingCascadeSkills:
+      patch.pendingCascadeSkills !== undefined
+        ? normalizePendingCascadeSkillList(patch.pendingCascadeSkills)
+        : backgroundPlan
+          ? backgroundPlan.pendingCascadeSkills
+          : [...draft.pendingCascadeSkills],
+    careerPlan:
+      patch.careerPlan === undefined
+        ? cloneCareerPlan(draft.careerPlan)
+        : normalizeCareerPlan(patch.careerPlan),
+    skills:
+      patch.skills === undefined
+        ? [...draft.skills]
+        : normalizeSkillList(patch.skills),
+    equipment:
+      patch.equipment === undefined
+        ? cloneEquipment(draft.equipment)
+        : normalizeEquipmentList(patch.equipment)
+  }
+}
 
 export const characterCreationCareerNames = (): string[] =>
   CEPHEUS_SRD_CAREERS.map((career) => career.name)
+
+export const deriveCharacterCreationBackgroundSkillPlan = (
+  draft: Pick<CharacterCreationDraft, 'characteristics' | 'homeworld'>
+): BackgroundSkillPlan =>
+  deriveBackgroundSkillPlan({
+    edu: draft.characteristics.edu,
+    homeworld: draft.homeworld,
+    rules: CEPHEUS_SRD_RULESET
+  })
+
+const totalBackgroundSkillSelections = (
+  draft: Pick<
+    CharacterCreationDraft,
+    'backgroundSkills' | 'pendingCascadeSkills'
+  >
+): number => draft.backgroundSkills.length + draft.pendingCascadeSkills.length
+
+const requiredBackgroundSkillSelections = (
+  draft: Pick<CharacterCreationDraft, 'characteristics' | 'homeworld'>
+): number =>
+  hasBackgroundHomeworld(draft.homeworld)
+    ? deriveTotalBackgroundSkillAllowance(draft.characteristics.edu)
+    : 0
+
+export const applyCharacterCreationBackgroundSkillSelection = (
+  draft: CharacterCreationDraft,
+  selection: string
+): CharacterCreationDraft => {
+  if (
+    totalBackgroundSkillSelections(draft) >=
+    requiredBackgroundSkillSelections(draft)
+  ) {
+    return updateCharacterCreationDraft(draft, {})
+  }
+
+  const trimmed = selection.trim()
+  if (!trimmed) return updateCharacterCreationDraft(draft, {})
+
+  if (isCascadeCareerSkill(trimmed)) {
+    return updateCharacterCreationDraft(draft, {
+      pendingCascadeSkills: [
+        ...draft.pendingCascadeSkills,
+        careerSkillWithLevel(trimmed, 0)
+      ]
+    })
+  }
+
+  const normalized = normalizeCareerSkill(trimmed, 0)
+  if (!normalized) return updateCharacterCreationDraft(draft, {})
+
+  return updateCharacterCreationDraft(draft, {
+    backgroundSkills: [...draft.backgroundSkills, normalized]
+  })
+}
+
+export const removeCharacterCreationBackgroundSkillSelection = (
+  draft: CharacterCreationDraft,
+  selection: string
+): CharacterCreationDraft => {
+  const trimmed = selection.trim()
+  if (!trimmed) return updateCharacterCreationDraft(draft, {})
+
+  const normalized = isCascadeCareerSkill(trimmed)
+    ? careerSkillWithLevel(trimmed, 0)
+    : normalizeCareerSkill(trimmed, 0)
+  if (!normalized) return updateCharacterCreationDraft(draft, {})
+
+  return updateCharacterCreationDraft(draft, {
+    backgroundSkills: draft.backgroundSkills.filter(
+      (skill) => skill !== normalized
+    ),
+    pendingCascadeSkills: draft.pendingCascadeSkills.filter(
+      (skill) => skill !== normalized
+    )
+  })
+}
+
+export const resolveCharacterCreationCascadeSkill = ({
+  draft,
+  cascadeSkill,
+  selection
+}: {
+  draft: CharacterCreationDraft
+  cascadeSkill: string
+  selection: string
+}): CharacterCreationDraft => {
+  if (!draft.pendingCascadeSkills.includes(cascadeSkill)) {
+    return updateCharacterCreationDraft(draft, {})
+  }
+
+  const resolution = resolveCascadeCareerSkill({
+    pendingCascadeSkills: draft.pendingCascadeSkills,
+    backgroundSkills: draft.backgroundSkills,
+    cascadeSkill,
+    selection,
+    basicTraining: true
+  })
+
+  return updateCharacterCreationDraft(draft, {
+    backgroundSkills: resolution.backgroundSkills,
+    pendingCascadeSkills: resolution.pendingCascadeSkills
+  })
+}
 
 const characteristicRollLabels: Record<CharacteristicKey, string> = {
   str: 'Str',
@@ -915,7 +1175,7 @@ export const deriveCharacterSheetPatch = (
 ): CharacterSheetPatch => ({
   age: draft.age,
   characteristics: { ...draft.characteristics },
-  skills: [...draft.skills],
+  skills: normalizeSkillList([...draft.backgroundSkills, ...draft.skills]),
   equipment: cloneEquipment(draft.equipment),
   credits: draft.credits,
   notes: draft.notes
@@ -948,7 +1208,7 @@ export const deriveFinalizeCharacterCreationCommand = (
       characterId: draft.characterId,
       age: draft.age,
       characteristics: { ...draft.characteristics },
-      skills: [...draft.skills],
+      skills: normalizeSkillList([...draft.backgroundSkills, ...draft.skills]),
       equipment: cloneEquipment(draft.equipment),
       credits: draft.credits,
       notes: draft.notes
@@ -986,7 +1246,10 @@ export const deriveCharacterCreationCommands = (
         characterId: flow.draft.characterId,
         age: flow.draft.age,
         characteristics: { ...flow.draft.characteristics },
-        skills: [...flow.draft.skills],
+        skills: normalizeSkillList([
+          ...flow.draft.backgroundSkills,
+          ...flow.draft.skills
+        ]),
         equipment: cloneEquipment(flow.draft.equipment),
         credits: flow.draft.credits,
         notes: flow.draft.notes

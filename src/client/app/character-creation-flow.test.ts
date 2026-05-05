@@ -6,6 +6,7 @@ import type { GameState } from '../../shared/state'
 import {
   advanceCharacterCreationStep,
   applyCharacterCreationBasicTraining,
+  applyCharacterCreationBackgroundSkillSelection,
   applyCharacterCreationCharacteristicRoll,
   applyCharacterCreationCareerRoll,
   applyCharacterCreationCareerPlan,
@@ -21,6 +22,7 @@ import {
   deriveCharacterCreationBasicTrainingAction,
   deriveCharacterSheetPatch,
   deriveCreateCharacterCommand,
+  deriveCharacterCreationBackgroundSkillPlan,
   deriveInitialCharacterCreationStateCommands,
   deriveNextCharacterCreationCharacteristicRoll,
   deriveNextCharacterCreationCareerRoll,
@@ -29,6 +31,8 @@ import {
   deriveUpdateCharacterSheetCommand,
   evaluateCharacterCreationCareerPlan,
   nextCharacterCreationWizardStep,
+  removeCharacterCreationBackgroundSkillSelection,
+  resolveCharacterCreationCascadeSkill,
   selectCharacterCreationCareerPlan,
   updateCharacterCreationDraft,
   updateCharacterCreationFields,
@@ -68,6 +72,12 @@ const completeDraft = () =>
       edu: 8,
       soc: 6
     },
+    homeworld: {
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid']
+    },
+    backgroundSkills: ['Zero-G-0', 'Gun Combat-0', 'Admin-0'],
+    pendingCascadeSkills: [],
     careerPlan: selectCharacterCreationCareerPlan('Merchant'),
     skills: ['Pilot-1', 'Vacc Suit-0'],
     equipment: [{ name: 'Vacc Suit', quantity: 1, notes: 'Carried' }],
@@ -94,6 +104,7 @@ describe('character creation flow', () => {
     assert.deepEqual(characterCreationSteps(), [
       'basics',
       'characteristics',
+      'homeworld',
       'career',
       'skills',
       'equipment',
@@ -174,6 +185,10 @@ describe('character creation flow', () => {
       edu: null,
       soc: null
     })
+    assert.deepEqual(draft.homeworld, {
+      lawLevel: null,
+      tradeCodes: []
+    })
     assert.equal(updated.name, '  Iona Vesh  ')
     assert.deepEqual(updated.characteristics, {
       str: 7,
@@ -182,6 +197,10 @@ describe('character creation flow', () => {
       int: null,
       edu: null,
       soc: null
+    })
+    assert.deepEqual(updated.homeworld, {
+      lawLevel: null,
+      tradeCodes: []
     })
     assert.equal(updated.careerPlan, null)
     assert.deepEqual(updated.skills, ['Pilot-1', 'Vacc Suit-0'])
@@ -254,6 +273,159 @@ describe('character creation flow', () => {
       soc: 5
     })
     assert.equal(deriveNextCharacterCreationCharacteristicRoll(flow), null)
+  })
+
+  it('uses homeworld background before career and derives background skills', () => {
+    const characteristicsFlow = {
+      step: 'characteristics' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: completeDraft().characteristics
+      })
+    }
+
+    const homeworldStep = nextCharacterCreationWizardStep(characteristicsFlow)
+    assert.equal(homeworldStep.moved, true)
+    assert.equal(homeworldStep.flow.step, 'homeworld')
+    assert.deepEqual(homeworldStep.validation, {
+      ok: false,
+      step: 'homeworld',
+      errors: [
+        'Homeworld law level is required',
+        'Homeworld trade code is required'
+      ]
+    })
+    assert.equal(
+      advanceCharacterCreationStep(homeworldStep.flow).step,
+      'homeworld'
+    )
+
+    const selectedHomeworld = updateCharacterCreationFields(
+      homeworldStep.flow,
+      {
+        homeworld: {
+          lawLevel: ' No Law ',
+          tradeCodes: [' Asteroid ', 'Asteroid', ' Industrial ']
+        }
+      }
+    )
+
+    assert.deepEqual(selectedHomeworld.draft.homeworld, {
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid', 'Industrial']
+    })
+    assert.deepEqual(
+      deriveCharacterCreationBackgroundSkillPlan(selectedHomeworld.draft),
+      {
+        backgroundSkills: ['Zero-G-0', 'Broker-0'],
+        pendingCascadeSkills: ['Gun Combat-0']
+      }
+    )
+    assert.deepEqual(selectedHomeworld.draft.backgroundSkills, [
+      'Zero-G-0',
+      'Broker-0'
+    ])
+    assert.deepEqual(selectedHomeworld.draft.pendingCascadeSkills, [
+      'Gun Combat-0'
+    ])
+
+    const careerStep = nextCharacterCreationWizardStep(selectedHomeworld)
+    assert.equal(careerStep.moved, false)
+    assert.equal(careerStep.flow.step, 'homeworld')
+    assert.deepEqual(careerStep.validation, {
+      ok: false,
+      step: 'homeworld',
+      errors: ['Pending background cascade skills must be resolved']
+    })
+
+    const resolvedHomeworld = {
+      ...selectedHomeworld,
+      draft: resolveCharacterCreationCascadeSkill({
+        draft: selectedHomeworld.draft,
+        cascadeSkill: 'Gun Combat-0',
+        selection: 'Slug Rifle'
+      })
+    }
+
+    assert.deepEqual(resolvedHomeworld.draft.backgroundSkills, [
+      'Zero-G-0',
+      'Broker-0',
+      'Slug Rifle-0'
+    ])
+    assert.deepEqual(resolvedHomeworld.draft.pendingCascadeSkills, [])
+
+    const resolvedCareerStep =
+      nextCharacterCreationWizardStep(resolvedHomeworld)
+    assert.equal(resolvedCareerStep.moved, true)
+    assert.equal(resolvedCareerStep.flow.step, 'career')
+    assert.deepEqual(resolvedCareerStep.validation, {
+      ok: false,
+      step: 'career',
+      errors: ['Career is required']
+    })
+  })
+
+  it('requires primary education background selections before career', () => {
+    const flow = {
+      step: 'homeworld' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: completeDraft().characteristics,
+        homeworld: {
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid']
+        }
+      })
+    }
+
+    assert.deepEqual(flow.draft.backgroundSkills, ['Zero-G-0'])
+    assert.deepEqual(flow.draft.pendingCascadeSkills, ['Gun Combat-0'])
+    assert.deepEqual(validateCurrentCharacterCreationStep(flow), {
+      ok: false,
+      step: 'homeworld',
+      errors: [
+        'Pending background cascade skills must be resolved',
+        'Required background skill selections are incomplete'
+      ]
+    })
+
+    const selectedDraft = applyCharacterCreationBackgroundSkillSelection(
+      flow.draft,
+      ' Admin '
+    )
+    assert.deepEqual(selectedDraft.backgroundSkills, ['Zero-G-0', 'Admin-0'])
+    assert.deepEqual(selectedDraft.pendingCascadeSkills, ['Gun Combat-0'])
+
+    const removedDraft = removeCharacterCreationBackgroundSkillSelection(
+      selectedDraft,
+      'Admin'
+    )
+    assert.deepEqual(removedDraft.backgroundSkills, ['Zero-G-0'])
+    assert.deepEqual(removedDraft.pendingCascadeSkills, ['Gun Combat-0'])
+
+    const resolvedDraft = resolveCharacterCreationCascadeSkill({
+      draft: selectedDraft,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
+    assert.deepEqual(resolvedDraft.backgroundSkills, [
+      'Zero-G-0',
+      'Admin-0',
+      'Slug Rifle-0'
+    ])
+    assert.deepEqual(resolvedDraft.pendingCascadeSkills, [])
+
+    const careerStep = nextCharacterCreationWizardStep({
+      ...flow,
+      draft: resolvedDraft
+    })
+    assert.equal(careerStep.moved, true)
+    assert.equal(careerStep.flow.step, 'career')
+    assert.deepEqual(careerStep.validation, {
+      ok: false,
+      step: 'career',
+      errors: ['Career is required']
+    })
   })
 
   it('applies first-term basic training from the selected career service skills', () => {
@@ -418,6 +590,23 @@ describe('character creation flow', () => {
       characteristics: completeDraft().characteristics
     })
     flow = advanceCharacterCreationStep(flow)
+    assert.equal(flow.step, 'homeworld')
+    flow = updateCharacterCreationFields(flow, {
+      homeworld: completeDraft().homeworld
+    })
+    flow = {
+      ...flow,
+      draft: applyCharacterCreationBackgroundSkillSelection(flow.draft, 'Admin')
+    }
+    flow = {
+      ...flow,
+      draft: resolveCharacterCreationCascadeSkill({
+        draft: flow.draft,
+        cascadeSkill: 'Gun Combat-0',
+        selection: 'Slug Rifle'
+      })
+    }
+    flow = advanceCharacterCreationStep(flow)
     assert.equal(flow.step, 'career')
     flow = updateCharacterCreationFields(flow, {
       careerPlan: selectCharacterCreationCareerPlan('Scout')
@@ -504,15 +693,14 @@ describe('character creation flow', () => {
   })
 
   it('requires a career before the skills step can be reached', () => {
-    const characteristicsFlow = {
-      step: 'characteristics' as const,
-      draft: createInitialCharacterDraft(characterId, {
-        name: 'Iona Vesh',
-        characteristics: completeDraft().characteristics
+    const homeworldFlow = {
+      step: 'homeworld' as const,
+      draft: updateCharacterCreationDraft(completeDraft(), {
+        careerPlan: null
       })
     }
 
-    const careerStep = nextCharacterCreationWizardStep(characteristicsFlow)
+    const careerStep = nextCharacterCreationWizardStep(homeworldFlow)
     assert.equal(careerStep.moved, true)
     assert.equal(careerStep.flow.step, 'career')
     assert.deepEqual(careerStep.validation, {
@@ -580,7 +768,13 @@ describe('character creation flow', () => {
     assert.equal(updateCommand.characterId, characterId)
     assert.equal(updateCommand.expectedSeq, 12)
     assert.deepEqual(updateCommand.characteristics, draft.characteristics)
-    assert.deepEqual(updateCommand.skills, ['Pilot-1', 'Vacc Suit-0'])
+    assert.deepEqual(updateCommand.skills, [
+      'Zero-G-0',
+      'Gun Combat-0',
+      'Admin-0',
+      'Pilot-1',
+      'Vacc Suit-0'
+    ])
     assert.deepEqual(updateCommand.equipment, [
       { name: 'Vacc Suit', quantity: 1, notes: 'Carried' }
     ])
@@ -736,7 +930,7 @@ describe('character creation flow', () => {
         edu: 8,
         soc: 6
       },
-      skills: ['Pilot-1', 'Vacc Suit-0'],
+      skills: ['Zero-G-0', 'Gun Combat-0', 'Admin-0', 'Pilot-1', 'Vacc Suit-0'],
       equipment: [{ name: 'Vacc Suit', quantity: 1, notes: 'Carried' }],
       credits: 1200,
       notes: 'Detached scout.'

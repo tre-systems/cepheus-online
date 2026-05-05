@@ -13,6 +13,9 @@ npm run deploy:dry-run
 `deploy:dry-run` builds the client assets and asks Wrangler to validate the
 Worker bundle without publishing it.
 
+`verify` also checks internal documentation links so release notes and
+operating docs do not drift to missing local files or anchors.
+
 ## Production Smoke
 
 After a deploy, run the dependency-free deployed Worker smoke:

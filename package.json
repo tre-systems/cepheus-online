@@ -6,6 +6,7 @@
   "scripts": {
     "build:client": "node scripts/build-client.mjs",
     "check": "tsc --noEmit",
+    "check:docs": "node scripts/check-doc-links.mjs",
     "deploy": "npm run build:client && wrangler deploy",
     "deploy:dry-run": "npm run build:client && wrangler deploy --dry-run",
     "format": "biome format --write .",
@@ -15,7 +16,7 @@
     "prepare": "husky",
     "smoke:deployed": "node scripts/smoke-deployed.mjs",
     "test": "node scripts/run-tests.mjs",
-    "verify": "npm run build:client && npm run lint && npm run check && npm test",
+    "verify": "npm run build:client && npm run lint && npm run check:docs && npm run check && npm test",
     "list:salvage": "find data src/shared/schemas docs legacy -maxdepth 3 -type f | sort"
   },
   "devDependencies": {

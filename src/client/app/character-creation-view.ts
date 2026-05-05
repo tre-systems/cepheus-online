@@ -1,3 +1,27 @@
+import {
+  derivePrimaryEducationSkillOptions,
+  deriveTotalBackgroundSkillAllowance
+} from '../../shared/character-creation/background-skills.js'
+import {
+  characteristicModifier,
+  parseCareerCheck
+} from '../../shared/character-creation/career-rules.js'
+import {
+  CEPHEUS_SRD_CAREERS,
+  CEPHEUS_SRD_RULESET,
+  type CepheusCareerDefinition
+} from '../../shared/character-creation/cepheus-srd-ruleset.js'
+import {
+  careerSkillWithLevel,
+  formatCareerSkill,
+  isCascadeCareerSkill,
+  parseCareerSkill
+} from '../../shared/character-creation/skills.js'
+import type {
+  CharacterCharacteristics,
+  CharacterEquipmentItem,
+  CharacteristicKey
+} from '../../shared/state'
 import type {
   CharacterCreationCareerPlan,
   CharacterCreationDraftPatch,
@@ -8,23 +32,12 @@ import type {
 import {
   characterCreationSteps,
   deriveCharacterCreationBasicTrainingAction,
-  deriveNextCharacterCreationCharacteristicRoll,
   deriveNextCharacterCreationCareerRoll,
+  deriveNextCharacterCreationCharacteristicRoll,
   validateCurrentCharacterCreationStep
 } from './character-creation-flow.js'
-import type {
-  CharacterCharacteristics,
-  CharacterEquipmentItem,
-  CharacteristicKey
-} from '../../shared/state'
-import {
-  characteristicModifier,
-  parseCareerCheck
-} from '../../shared/character-creation/career-rules.js'
-import {
-  CEPHEUS_SRD_CAREERS,
-  type CepheusCareerDefinition
-} from '../../shared/character-creation/cepheus-srd-ruleset.js'
+
+export type CharacterCreationViewStep = CharacterCreationStep
 
 export type CharacterCreationFieldKind =
   | 'number'
@@ -36,7 +49,7 @@ export interface CharacterCreationFieldViewModel {
   key: string
   label: string
   kind: CharacterCreationFieldKind
-  step: CharacterCreationStep
+  step: CharacterCreationViewStep
   value: string
   required: boolean
   errors: string[]
@@ -48,7 +61,7 @@ export interface CharacterCreationCtaLabels {
 }
 
 export interface CharacterCreationStepProgressItem {
-  step: CharacterCreationStep
+  step: CharacterCreationViewStep
   label: string
   index: number
   current: boolean
@@ -90,7 +103,7 @@ export interface CharacterCreationBasicTrainingButton {
 
 export interface CharacterCreationValidationSummary {
   ok: boolean
-  step: CharacterCreationStep
+  step: CharacterCreationViewStep
   errors: string[]
   errorCount: number
   message: string
@@ -136,6 +149,66 @@ export interface CharacterCreationCareerOptionViewModel {
   advancement: CharacterCreationCareerCheckViewModel
 }
 
+export interface CharacterCreationHomeworldOptionViewModel {
+  value: string
+  label: string
+  selected: boolean
+}
+
+export interface CharacterCreationBackgroundSkillOptionViewModel {
+  value: string
+  label: string
+  selected: boolean
+  preselected: boolean
+  cascade: boolean
+}
+
+export interface CharacterCreationCascadeSkillChoiceOptionViewModel {
+  value: string
+  label: string
+  cascade: boolean
+}
+
+export interface CharacterCreationCascadeSkillChoiceViewModel {
+  cascadeSkill: string
+  label: string
+  level: number
+  options: CharacterCreationCascadeSkillChoiceOptionViewModel[]
+}
+
+export interface CharacterCreationBackgroundSkillSummary {
+  allowance: number
+  selectedSkills: string[]
+  availableSkills: string[]
+  skillOptions: CharacterCreationBackgroundSkillOptionViewModel[]
+  remainingSelections: number
+  pendingCascadeSkills: string[]
+  cascadeSkillChoices: CharacterCreationCascadeSkillChoiceViewModel[]
+  errors: string[]
+  message: string
+}
+
+export interface CharacterCreationHomeworldViewModel {
+  step: 'homeworld'
+  fields: CharacterCreationFieldViewModel[]
+  lawLevelOptions: CharacterCreationHomeworldOptionViewModel[]
+  tradeCodeOptions: CharacterCreationHomeworldOptionViewModel[]
+  backgroundSkills: CharacterCreationBackgroundSkillSummary
+}
+
+interface CharacterCreationHomeworldDraftFields {
+  homeWorld?: {
+    lawLevel?: string | null
+    tradeCodes?: string | readonly string[] | null
+  } | null
+  homeworld?: {
+    lawLevel?: string | null
+    tradeCodes?: string | readonly string[] | null
+  } | null
+  backgroundSkills?: readonly string[]
+  pendingCascadeSkills?: readonly string[]
+}
+
 const characteristicDefinitions: {
   key: CharacteristicKey
   label: string
@@ -149,11 +222,12 @@ const characteristicDefinitions: {
 ]
 
 export const characterCreationStepLabels: Record<
-  CharacterCreationStep,
+  CharacterCreationViewStep,
   string
 > = {
   basics: 'Basics',
   characteristics: 'Characteristics',
+  homeworld: 'Homeworld',
   career: 'Career',
   skills: 'Skills',
   equipment: 'Equipment',
@@ -161,11 +235,12 @@ export const characterCreationStepLabels: Record<
 }
 
 export const characterCreationPrimaryCtaLabels: Record<
-  CharacterCreationStep,
+  CharacterCreationViewStep,
   string
 > = {
   basics: 'Continue to characteristics',
-  characteristics: 'Continue to career',
+  characteristics: 'Continue to homeworld',
+  homeworld: 'Continue to career',
   career: 'Continue to skills',
   skills: 'Continue to equipment',
   equipment: 'Review character',
@@ -173,21 +248,24 @@ export const characterCreationPrimaryCtaLabels: Record<
 }
 
 export const deriveCharacterCreationCtaLabels = (
-  step: CharacterCreationStep
+  step: CharacterCreationViewStep
 ): CharacterCreationCtaLabels => ({
   primary: characterCreationPrimaryCtaLabels[step],
   secondary: step === 'basics' ? null : 'Back'
 })
 
-const stepIndex = (step: CharacterCreationStep): number =>
-  characterCreationSteps().indexOf(step)
+export const characterCreationViewSteps = (): CharacterCreationViewStep[] =>
+  characterCreationSteps()
+
+const stepIndex = (step: CharacterCreationViewStep): number =>
+  characterCreationViewSteps().indexOf(step)
 
 export const deriveCharacterCreationStepProgressItems = (
   flow: CharacterCreationFlow
 ): CharacterCreationStepProgressItem[] => {
   const currentIndex = stepIndex(flow.step)
 
-  return characterCreationSteps().map((step, index) => {
+  return characterCreationViewSteps().map((step, index) => {
     const validation = validationForStep(flow, step)
     const visited = index <= currentIndex
     const current = step === flow.step
@@ -368,10 +446,25 @@ const parseCareerPlan = (
   }
 }
 
+const parseHomeworld = (
+  values: CharacterCreationFormValues
+): CharacterCreationDraftPatch['homeworld'] | undefined => {
+  const lawLevel = values['homeworld.lawLevel'] ?? values.lawLevel
+  const tradeCodes = values['homeworld.tradeCodes'] ?? values.tradeCodes
+  if (lawLevel === undefined && tradeCodes === undefined) return undefined
+
+  return {
+    lawLevel:
+      lawLevel === undefined ? null : valueText(lawLevel).trim() || null,
+    tradeCodes:
+      tradeCodes === undefined ? [] : splitListText(valueText(tradeCodes))
+  }
+}
+
 const validationForStep = (
   flow: CharacterCreationFlow,
-  step: CharacterCreationStep = flow.step
-): CharacterCreationValidation => {
+  step: CharacterCreationViewStep = flow.step
+): CharacterCreationValidation & { step: CharacterCreationViewStep } => {
   const validation = validateCurrentCharacterCreationStep({
     ...flow,
     step
@@ -477,6 +570,12 @@ const fieldErrors = (
     if (key === 'credits') return error.startsWith('Credits ')
     if (key === 'equipment') return error.startsWith('Equipment ')
     if (key === 'career') return error.startsWith('Career ')
+    if (key === 'homeworld.lawLevel') {
+      return error.startsWith('Homeworld law level ')
+    }
+    if (key === 'homeworld.tradeCodes') {
+      return error.startsWith('Homeworld trade code ')
+    }
     if (key === 'qualificationRoll') {
       return error.startsWith('Qualification roll ')
     }
@@ -489,9 +588,117 @@ const fieldErrors = (
     return false
   })
 
+const homeworldDraftFields = (
+  draft: CharacterCreationFlow['draft']
+): CharacterCreationHomeworldDraftFields =>
+  draft as CharacterCreationFlow['draft'] &
+    CharacterCreationHomeworldDraftFields
+
+const selectedHomeworld = (
+  draft: CharacterCreationFlow['draft']
+): NonNullable<CharacterCreationHomeworldDraftFields['homeWorld']> => {
+  const fields = homeworldDraftFields(draft)
+  return fields.homeWorld ?? fields.homeworld ?? {}
+}
+
+const selectedTradeCodes = (
+  tradeCodes: string | readonly string[] | null | undefined
+): string[] => {
+  if (!tradeCodes) return []
+  return typeof tradeCodes === 'string' ? [tradeCodes] : [...tradeCodes]
+}
+
+const backgroundSkillValue = (skill: string): string =>
+  isCascadeCareerSkill(skill)
+    ? careerSkillWithLevel(skill, 0)
+    : formatCareerSkill({ name: skill, level: 0 })
+
+const cascadeChoiceOptions = (
+  cascadeSkill: string
+): CharacterCreationCascadeSkillChoiceOptionViewModel[] => {
+  const parsed = parseCareerSkill(cascadeSkill)
+  if (!parsed) return []
+
+  const options = CEPHEUS_SRD_RULESET.cascadeSkills[parsed.name] ?? []
+  return options.map((option) => ({
+    value: isCascadeCareerSkill(option)
+      ? careerSkillWithLevel(option, parsed.level)
+      : formatCareerSkill({ name: option, level: parsed.level }),
+    label: option,
+    cascade: isCascadeCareerSkill(option)
+  }))
+}
+
+const cascadeSkillChoiceViewModels = (
+  pendingCascadeSkills: readonly string[]
+): CharacterCreationCascadeSkillChoiceViewModel[] =>
+  pendingCascadeSkills.map((cascadeSkill) => {
+    const parsed = parseCareerSkill(cascadeSkill)
+    return {
+      cascadeSkill,
+      label: parsed?.name ?? cascadeSkill,
+      level: parsed?.level ?? 0,
+      options: cascadeChoiceOptions(cascadeSkill)
+    }
+  })
+
+const deriveCharacterCreationBackgroundSkillSummary = (
+  flow: CharacterCreationFlow
+): CharacterCreationBackgroundSkillSummary => {
+  const fields = homeworldDraftFields(flow.draft)
+  const homeworld = selectedHomeworld(flow.draft)
+  const allowance = deriveTotalBackgroundSkillAllowance(
+    flow.draft.characteristics.edu
+  )
+  const selectedSkills = [...(fields.backgroundSkills ?? [])]
+  const pendingCascadeSkills = [...(fields.pendingCascadeSkills ?? [])]
+  const selected = new Set([...selectedSkills, ...pendingCascadeSkills])
+  const primaryEducationOptions = derivePrimaryEducationSkillOptions({
+    edu: flow.draft.characteristics.edu,
+    homeworld,
+    rules: CEPHEUS_SRD_RULESET
+  })
+  const skillOptions = primaryEducationOptions.map((option) => {
+    const value = backgroundSkillValue(option.name)
+    return {
+      value,
+      label: option.name,
+      selected: selected.has(value),
+      preselected: option.preselected,
+      cascade: isCascadeCareerSkill(option.name)
+    }
+  })
+  const cascadeSkillChoices = cascadeSkillChoiceViewModels(pendingCascadeSkills)
+  const errors =
+    pendingCascadeSkills.length === 0
+      ? []
+      : [
+          `${pendingCascadeSkills.length} cascade skill ${
+            pendingCascadeSkills.length === 1
+              ? 'choice remains'
+              : 'choices remain'
+          }`
+        ]
+
+  return {
+    allowance,
+    selectedSkills,
+    availableSkills: primaryEducationOptions.map((option) => option.name),
+    skillOptions,
+    remainingSelections: Math.max(
+      allowance - selectedSkills.length - pendingCascadeSkills.length,
+      0
+    ),
+    pendingCascadeSkills,
+    cascadeSkillChoices,
+    errors,
+    message: errors.length === 0 ? 'Background skills ready' : errors.join(', ')
+  }
+}
+
 export const deriveCharacterCreationValidationSummary = (
   flow: CharacterCreationFlow,
-  step: CharacterCreationStep = flow.step
+  step: CharacterCreationViewStep = flow.step
 ): CharacterCreationValidationSummary => {
   const validation = validationForStep(flow, step)
   const errorCount = validation.errors.length
@@ -509,7 +716,7 @@ export const deriveCharacterCreationValidationSummary = (
 
 export const deriveCharacterCreationFieldViewModels = (
   flow: CharacterCreationFlow,
-  step: CharacterCreationStep = flow.step
+  step: CharacterCreationViewStep = flow.step
 ): CharacterCreationFieldViewModel[] => {
   const validation = validationForStep(flow, step)
   const { draft } = flow
@@ -555,6 +762,29 @@ export const deriveCharacterCreationFieldViewModels = (
         required: true,
         errors: fieldErrors(validation.errors, key, key)
       }))
+    case 'homeworld': {
+      const homeworld = selectedHomeworld(draft)
+      return [
+        {
+          key: 'homeworld.lawLevel',
+          label: 'Law level',
+          kind: 'text',
+          step,
+          value: homeworld.lawLevel ?? '',
+          required: true,
+          errors: fieldErrors(validation.errors, 'homeworld.lawLevel')
+        },
+        {
+          key: 'homeworld.tradeCodes',
+          label: 'Trade code',
+          kind: 'text',
+          step,
+          value: selectedTradeCodes(homeworld.tradeCodes).join(', '),
+          required: true,
+          errors: fieldErrors(validation.errors, 'homeworld.tradeCodes')
+        }
+      ]
+    }
     case 'career': {
       const careerPlan = draft.careerPlan
       const careerDefinition = selectedCareerDefinition(careerPlan?.career)
@@ -667,6 +897,39 @@ export const deriveCharacterCreationFieldViewModels = (
   }
 }
 
+const optionViewModels = (
+  values: readonly string[],
+  selectedValues: readonly string[]
+): CharacterCreationHomeworldOptionViewModel[] => {
+  const selected = new Set(selectedValues)
+  return values.map((value) => ({
+    value,
+    label: value,
+    selected: selected.has(value)
+  }))
+}
+
+export const deriveCharacterCreationHomeworldViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationHomeworldViewModel => {
+  const homeworld = selectedHomeworld(flow.draft)
+  const tradeCodes = selectedTradeCodes(homeworld.tradeCodes)
+
+  return {
+    step: 'homeworld',
+    fields: deriveCharacterCreationFieldViewModels(flow, 'homeworld'),
+    lawLevelOptions: optionViewModels(
+      Object.keys(CEPHEUS_SRD_RULESET.homeWorldSkillsByLawLevel),
+      homeworld.lawLevel ? [homeworld.lawLevel] : []
+    ),
+    tradeCodeOptions: optionViewModels(
+      Object.keys(CEPHEUS_SRD_RULESET.homeWorldSkillsByTradeCode),
+      tradeCodes
+    ),
+    backgroundSkills: deriveCharacterCreationBackgroundSkillSummary(flow)
+  }
+}
+
 export const parseCharacterCreationDraftPatch = (
   values: CharacterCreationFormValues
 ): CharacterCreationDraftPatch => {
@@ -697,6 +960,8 @@ export const parseCharacterCreationDraftPatch = (
   }
   const careerPlan = parseCareerPlan(values)
   if (careerPlan !== undefined) patch.careerPlan = careerPlan
+  const homeworld = parseHomeworld(values)
+  if (homeworld !== undefined) patch.homeworld = homeworld
 
   const characteristics: CharacterCreationDraftPatch['characteristics'] = {}
   for (const { key } of characteristicDefinitions) {

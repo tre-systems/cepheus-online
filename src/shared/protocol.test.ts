@@ -1,9 +1,64 @@
 import * as assert from 'node:assert/strict'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import { describe, it } from 'node:test'
 
 import { decodeClientMessage, decodeCommand } from './protocol'
+import type { CommandErrorCode } from './protocol'
+
+type ValidCommandEnvelopeFixture = {
+  readonly name: string
+  readonly message: unknown
+  readonly commandType: string
+  readonly expectedSeq?: number
+}
+
+type InvalidMalformedMessageFixture = {
+  readonly name: string
+  readonly message: unknown
+  readonly errorCode: CommandErrorCode
+  readonly errorMessage: string
+}
+
+const loadFixture = <T>(name: string): T => {
+  const file = path.join('src', 'shared', '__fixtures__', 'protocol', name)
+
+  return JSON.parse(fs.readFileSync(file, 'utf8')) as T
+}
+
+const validCommandEnvelopeFixtures = loadFixture<ValidCommandEnvelopeFixture[]>(
+  'valid-command-envelopes.json'
+)
+
+const invalidMalformedMessageFixtures = loadFixture<
+  InvalidMalformedMessageFixture[]
+>('invalid-malformed-messages.json')
 
 describe('protocol validation', () => {
+  for (const fixture of validCommandEnvelopeFixtures) {
+    it(`accepts fixture: ${fixture.name}`, () => {
+      const result = decodeClientMessage(fixture.message)
+
+      assert.equal(result.ok, true)
+      if (!result.ok) return
+      assert.equal(result.value.type, 'command')
+      if (result.value.type !== 'command') return
+      assert.equal(result.value.command.type, fixture.commandType)
+      assert.equal(result.value.command.expectedSeq, fixture.expectedSeq)
+    })
+  }
+
+  for (const fixture of invalidMalformedMessageFixtures) {
+    it(`rejects fixture: ${fixture.name}`, () => {
+      const result = decodeClientMessage(fixture.message)
+
+      assert.equal(result.ok, false)
+      if (result.ok) return
+      assert.equal(result.error.code, fixture.errorCode)
+      assert.equal(result.error.message, fixture.errorMessage)
+    })
+  }
+
   it('accepts a command envelope with a typed command', () => {
     const result = decodeClientMessage({
       type: 'command',

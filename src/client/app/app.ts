@@ -14,6 +14,7 @@ import { createBoardController } from './board-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBasicTraining,
+  applyCharacterCreationBackgroundSkillSelection,
   applyCharacterCreationCharacteristicRoll,
   applyCharacterCreationCareerRoll,
   applyParsedCharacterCreationDraftPatch,
@@ -21,7 +22,9 @@ import {
   characterCreationCareerNames,
   createManualCharacterCreationFlow,
   deriveCharacterCreationCommands,
-  nextCharacterCreationWizardStep
+  nextCharacterCreationWizardStep,
+  removeCharacterCreationBackgroundSkillSelection,
+  resolveCharacterCreationCascadeSkill
 } from './character-creation-flow.js'
 import {
   deriveCharacterCreationBasicTrainingButton,
@@ -30,6 +33,7 @@ import {
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerOptionViewModels,
   deriveCharacterCreationFieldViewModels,
+  deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationReviewSummary,
   deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationValidationSummary,
@@ -426,6 +430,10 @@ const renderCharacterCreationFields = (flow) => {
     if (careerRollButton) fragment.append(careerRollButton)
     return fragment
   }
+  if (flow.step === 'homeworld') {
+    fragment.append(renderCharacterCreationHomeworld(flow))
+    return fragment
+  }
   for (const field of deriveCharacterCreationFieldViewModels(flow)) {
     const label = document.createElement('label')
     label.className = `character-creation-field ${field.kind}`
@@ -473,6 +481,157 @@ const renderCharacterCreationFields = (flow) => {
   if (careerRollButton) fragment.append(careerRollButton)
   if (basicTrainingButton) fragment.append(basicTrainingButton)
   return fragment
+}
+
+const renderCharacterCreationHomeworld = (flow) => {
+  const viewModel = deriveCharacterCreationHomeworldViewModel(flow)
+  const wrapper = document.createElement('div')
+  wrapper.className = 'creation-homeworld'
+
+  const fieldGrid = document.createElement('div')
+  fieldGrid.className = 'creation-homeworld-fields'
+
+  const lawField = viewModel.fields.find(
+    (field) => field.key === 'homeworld.lawLevel'
+  )
+  const tradeField = viewModel.fields.find(
+    (field) => field.key === 'homeworld.tradeCodes'
+  )
+
+  if (lawField) {
+    fieldGrid.append(
+      renderCharacterCreationOptionField(lawField, viewModel.lawLevelOptions)
+    )
+  }
+  if (tradeField) {
+    fieldGrid.append(
+      renderCharacterCreationOptionField(tradeField, viewModel.tradeCodeOptions)
+    )
+  }
+
+  const summary = document.createElement('div')
+  summary.className = 'creation-homeworld-summary'
+  const title = document.createElement('strong')
+  title.textContent = 'Background skills'
+  const detail = document.createElement('p')
+  detail.textContent = `${viewModel.backgroundSkills.allowance} total from EDU. ${viewModel.backgroundSkills.message}`
+  const skillList = renderCharacterCreationBackgroundSkills(viewModel)
+
+  summary.append(title, detail, skillList)
+  for (const cascade of viewModel.backgroundSkills.cascadeSkillChoices) {
+    summary.append(renderCharacterCreationCascadeChoice(cascade))
+  }
+  wrapper.append(fieldGrid, summary)
+  return wrapper
+}
+
+const renderCharacterCreationBackgroundSkills = (viewModel) => {
+  const list = document.createElement('div')
+  list.className = 'creation-background-options'
+  const remaining = viewModel.backgroundSkills.remainingSelections
+
+  for (const option of viewModel.backgroundSkills.skillOptions) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = option.selected ? 'selected' : ''
+    button.textContent = option.label
+    button.disabled = option.preselected || (!option.selected && remaining <= 0)
+    button.title = option.preselected
+      ? 'Granted by homeworld'
+      : option.selected
+        ? 'Remove selection'
+        : option.cascade
+          ? 'Select, then choose a specialty'
+          : 'Select background skill'
+    button.addEventListener('click', () => {
+      if (!characterCreationFlow) return
+      syncCharacterCreationWizardFields()
+      characterCreationFlow = {
+        ...characterCreationFlow,
+        draft: option.selected
+          ? removeCharacterCreationBackgroundSkillSelection(
+              characterCreationFlow.draft,
+              option.label
+            )
+          : applyCharacterCreationBackgroundSkillSelection(
+              characterCreationFlow.draft,
+              option.label
+            )
+      }
+      setError('')
+      renderCharacterCreationWizard()
+    })
+    list.append(button)
+  }
+
+  return list
+}
+
+const renderCharacterCreationCascadeChoice = (cascade) => {
+  const panel = document.createElement('div')
+  panel.className = 'creation-cascade-choice'
+  const title = document.createElement('strong')
+  title.textContent = `${cascade.label}-${cascade.level}`
+  const options = document.createElement('div')
+  options.className = 'creation-background-options'
+
+  for (const option of cascade.options) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = option.label
+    button.title = option.cascade
+      ? 'This opens another cascade choice'
+      : 'Resolve cascade skill'
+    button.addEventListener('click', () => {
+      if (!characterCreationFlow) return
+      syncCharacterCreationWizardFields()
+      characterCreationFlow = {
+        ...characterCreationFlow,
+        draft: resolveCharacterCreationCascadeSkill({
+          draft: characterCreationFlow.draft,
+          cascadeSkill: cascade.cascadeSkill,
+          selection: option.label
+        })
+      }
+      setError('')
+      renderCharacterCreationWizard()
+    })
+    options.append(button)
+  }
+
+  panel.append(title, options)
+  return panel
+}
+
+const renderCharacterCreationOptionField = (field, options) => {
+  const label = document.createElement('label')
+  label.className = `character-creation-field ${field.kind}`
+  const name = document.createElement('span')
+  name.textContent = field.required ? `${field.label} *` : field.label
+  const control = document.createElement('select')
+  control.dataset.characterCreationField = field.key
+  control.autocomplete = 'off'
+
+  const empty = document.createElement('option')
+  empty.value = ''
+  empty.textContent = `Select ${field.label.toLowerCase()}`
+  control.append(empty)
+
+  for (const option of options) {
+    const item = document.createElement('option')
+    item.value = option.value
+    item.textContent = option.label
+    item.selected = option.selected
+    control.append(item)
+  }
+
+  label.append(name, control)
+  if (field.errors.length > 0) {
+    const error = document.createElement('small')
+    error.textContent = field.errors.join(', ')
+    label.append(error)
+  }
+  return label
 }
 
 const characteristicModifierLabel = (value) => {

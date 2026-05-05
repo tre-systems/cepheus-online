@@ -6,6 +6,8 @@ test plan should continue to grow in layers as implementation expands.
 ## Current Gate
 
 - `npm run check`: TypeScript compile check for `src/**/*.ts`.
+- `npm run check:docs`: dependency-free internal Markdown link check for
+  root docs, `data/`, and `docs/`.
 - `npm test`: compiles source and co-located `*.test.ts` files to a temporary
   CommonJS build and runs Node's built-in test runner.
 - Current tests cover shared protocol/dice/projection behavior, event envelope
@@ -91,6 +93,7 @@ scenarios.
 The target local gate once implementation starts:
 
 ```bash
+npm run check:docs
 npm run check
 npm test
 npm run build
