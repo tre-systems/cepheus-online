@@ -765,6 +765,14 @@ h1 {
   transform: translateY(0);
 }
 
+.dice-overlay.in-dialog {
+  position: fixed;
+  left: max(58px, env(safe-area-inset-left));
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 50;
+}
+
 .dice-overlay .dice-stage {
   width: min(390px, 100%);
   min-height: 168px;

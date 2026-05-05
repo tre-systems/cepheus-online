@@ -1279,6 +1279,13 @@ const render = () => {
 }
 
 const animateRoll = (roll) => {
+  const overlayHost = els.roomDialog.open
+    ? els.roomDialog
+    : document.querySelector('.app-shell')
+  if (overlayHost && els.diceOverlay.parentElement !== overlayHost) {
+    overlayHost.append(els.diceOverlay)
+  }
+  els.diceOverlay.classList.toggle('in-dialog', els.roomDialog.open)
   diceHideTimer = animateDiceRoll({
     roll,
     overlay: els.diceOverlay,
