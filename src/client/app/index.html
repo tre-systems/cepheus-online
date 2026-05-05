@@ -31,6 +31,7 @@
           <div id="initiativeRail" class="initiative-rail"></div>
           <div class="rail-tools" aria-label="Table tools">
             <button id="rollButton" class="rail-button" type="button" title="Roll dice" aria-label="Roll dice">2D</button>
+            <button id="createCharacterRailButton" class="rail-button" type="button" title="Create traveller" aria-label="Create traveller">+</button>
             <button id="sheetButton" class="rail-button" type="button" title="Character sheet" aria-label="Character sheet">PC</button>
             <button id="menuButton" class="rail-button" type="button" title="Room menu" aria-label="Room menu">...</button>
           </div>
@@ -86,6 +87,93 @@
         <div class="sheet-body" id="sheetBody"></div>
       </aside>
 
+      <aside class="character-creator" id="characterCreator" aria-label="Character creator" hidden>
+        <header class="creator-header">
+          <div>
+            <p class="sheet-kicker">Creation</p>
+            <h2 id="characterCreatorTitle">Create traveller</h2>
+          </div>
+          <button id="characterCreatorCloseButton" type="button" aria-label="Close character creator">Close</button>
+        </header>
+        <div class="creator-body">
+          <section class="creator-section">
+            <div class="creator-section-title">
+              <span>Start</span>
+              <p>Build a Cepheus Engine traveller step by step with live dice.</p>
+            </div>
+            <button id="startCharacterWizardButton" class="creator-primary-button" type="button">Begin character creation</button>
+          </section>
+          <section id="characterCreationWizard" class="character-creation-wizard" hidden>
+            <div id="characterCreationSteps" class="character-creation-steps"></div>
+            <div id="characterCreationStatus" class="character-creation-status"></div>
+            <div id="characterCreationFields" class="character-creation-fields"></div>
+          </section>
+          <section class="creator-section">
+            <div class="creator-section-title">
+              <span>Quick character</span>
+              <p>Use this for a fast token or to accept a complete generated profile.</p>
+            </div>
+            <label>
+              <span>Name</span>
+              <input id="characterNameInput" name="characterName" autocomplete="off" spellcheck="false" placeholder="Mae">
+            </label>
+            <label>
+              <span>Age</span>
+              <input id="characterAgeInput" name="characterAge" inputmode="numeric" autocomplete="off" value="30">
+            </label>
+            <div class="character-stat-fields">
+              <label>
+                <span>Str</span>
+                <input id="characterStrInput" name="characterStr" inputmode="numeric" autocomplete="off" value="7">
+              </label>
+              <label>
+                <span>Dex</span>
+                <input id="characterDexInput" name="characterDex" inputmode="numeric" autocomplete="off" value="7">
+              </label>
+              <label>
+                <span>End</span>
+                <input id="characterEndInput" name="characterEnd" inputmode="numeric" autocomplete="off" value="7">
+              </label>
+              <label>
+                <span>Int</span>
+                <input id="characterIntInput" name="characterInt" inputmode="numeric" autocomplete="off" value="7">
+              </label>
+              <label>
+                <span>Edu</span>
+                <input id="characterEduInput" name="characterEdu" inputmode="numeric" autocomplete="off" value="7">
+              </label>
+              <label>
+                <span>Soc</span>
+                <input id="characterSocInput" name="characterSoc" inputmode="numeric" autocomplete="off" value="7">
+              </label>
+            </div>
+            <label class="character-skills-field">
+              <span>Skills</span>
+              <textarea id="characterSkillsInput" name="characterSkills" autocomplete="off" spellcheck="false">Gun Combat-0
+Vacc Suit-0</textarea>
+            </label>
+            <label>
+              <span>Credits</span>
+              <input id="characterCreditsInput" name="characterCredits" inputmode="numeric" autocomplete="off" value="1200">
+            </label>
+            <label class="piece-sheet-field">
+              <input id="characterTokenInput" name="characterToken" type="checkbox" checked>
+              <span>Create token</span>
+            </label>
+            <div id="generatedCharacterPreview" class="generated-character-preview" hidden></div>
+            <div class="creator-quick-actions">
+              <button id="generateCharacterButton" type="button">Roll character</button>
+              <button id="acceptGeneratedCharacterButton" type="button" disabled>Accept</button>
+              <button id="createCharacterButton" type="button">Create</button>
+            </div>
+          </section>
+        </div>
+        <footer class="creator-actions">
+          <button id="backCharacterWizardButton" type="button" disabled>Back</button>
+          <button id="nextCharacterWizardButton" type="button" disabled>Next</button>
+        </footer>
+      </aside>
+
       <dialog class="room-dialog" id="roomDialog">
         <form id="roomForm" class="room-form" method="dialog">
           <div class="dialog-title">
@@ -107,62 +195,6 @@
             <span>Dice</span>
             <input id="diceExpression" value="2d6" autocomplete="off" spellcheck="false">
           </label>
-          <div class="character-create-title">
-            <span>New character</span>
-          </div>
-          <label>
-            <span>Name</span>
-            <input id="characterNameInput" name="characterName" autocomplete="off" spellcheck="false" placeholder="Mae">
-          </label>
-          <label>
-            <span>Age</span>
-            <input id="characterAgeInput" name="characterAge" inputmode="numeric" autocomplete="off" value="30">
-          </label>
-          <div class="character-stat-fields">
-            <label>
-              <span>Str</span>
-              <input id="characterStrInput" name="characterStr" inputmode="numeric" autocomplete="off" value="7">
-            </label>
-            <label>
-              <span>Dex</span>
-              <input id="characterDexInput" name="characterDex" inputmode="numeric" autocomplete="off" value="7">
-            </label>
-            <label>
-              <span>End</span>
-              <input id="characterEndInput" name="characterEnd" inputmode="numeric" autocomplete="off" value="7">
-            </label>
-            <label>
-              <span>Int</span>
-              <input id="characterIntInput" name="characterInt" inputmode="numeric" autocomplete="off" value="7">
-            </label>
-            <label>
-              <span>Edu</span>
-              <input id="characterEduInput" name="characterEdu" inputmode="numeric" autocomplete="off" value="7">
-            </label>
-            <label>
-              <span>Soc</span>
-              <input id="characterSocInput" name="characterSoc" inputmode="numeric" autocomplete="off" value="7">
-            </label>
-          </div>
-          <label class="character-skills-field">
-            <span>Skills</span>
-            <textarea id="characterSkillsInput" name="characterSkills" autocomplete="off" spellcheck="false">Gun Combat-0
-Vacc Suit-0</textarea>
-          </label>
-          <label>
-            <span>Credits</span>
-            <input id="characterCreditsInput" name="characterCredits" inputmode="numeric" autocomplete="off" value="1200">
-          </label>
-          <label class="piece-sheet-field">
-            <input id="characterTokenInput" name="characterToken" type="checkbox" checked>
-            <span>Create token</span>
-          </label>
-          <div id="characterCreationWizard" class="character-creation-wizard" hidden>
-            <div id="characterCreationSteps" class="character-creation-steps"></div>
-            <div id="characterCreationStatus" class="character-creation-status"></div>
-            <div id="characterCreationFields" class="character-creation-fields"></div>
-          </div>
-          <div id="generatedCharacterPreview" class="generated-character-preview" hidden></div>
           <div class="piece-create-title">
             <span>New piece</span>
           </div>
@@ -248,12 +280,6 @@ Vacc Suit-0</textarea>
           <div class="dialog-actions">
             <button id="bootstrapButton" type="button">Bootstrap</button>
             <button id="refreshButton" type="button">Refresh</button>
-            <button id="startCharacterWizardButton" type="button">Start wizard</button>
-            <button id="backCharacterWizardButton" type="button" disabled>Back</button>
-            <button id="nextCharacterWizardButton" type="button" disabled>Next</button>
-            <button id="generateCharacterButton" type="button">Roll character</button>
-            <button id="acceptGeneratedCharacterButton" type="button" disabled>Accept character</button>
-            <button id="createCharacterButton" type="button">Create character</button>
             <button id="createPieceButton" type="button">Create piece</button>
             <button id="createBoardButton" type="button">Create board</button>
             <button id="roomCancelButton" type="button">Close</button>

@@ -90,6 +90,10 @@ const els = {
   bootstrap: document.getElementById('bootstrapButton'),
   refresh: document.getElementById('refreshButton'),
   createCharacter: document.getElementById('createCharacterButton'),
+  createCharacterRail: document.getElementById('createCharacterRailButton'),
+  characterCreator: document.getElementById('characterCreator'),
+  characterCreatorClose: document.getElementById('characterCreatorCloseButton'),
+  characterCreatorTitle: document.getElementById('characterCreatorTitle'),
   startCharacterWizard: document.getElementById('startCharacterWizardButton'),
   backCharacterWizard: document.getElementById('backCharacterWizardButton'),
   nextCharacterWizard: document.getElementById('nextCharacterWizardButton'),
@@ -175,6 +179,20 @@ let requestCounter = 0
 let diceHideTimer = null
 let pendingGeneratedCharacter = null
 let characterCreationFlow = null
+
+const isCharacterCreatorOpen = () => !els.characterCreator.hidden
+
+const openCharacterCreatorPanel = () => {
+  els.characterCreator.hidden = false
+  if (els.roomDialog.open) els.roomDialog.close()
+  characterSheetController.setOpen(false)
+  render()
+}
+
+const closeCharacterCreatorPanel = () => {
+  els.characterCreator.hidden = true
+  render()
+}
 
 const setStatus = (text) => {
   els.status.textContent = text
@@ -280,6 +298,9 @@ const characterCreationSeed = () => ({
 })
 
 const startCharacterCreationWizard = () => {
+  if (!isCharacterCreatorOpen()) {
+    els.characterCreator.hidden = false
+  }
   const seed = characterCreationSeed()
   const flow = createManualCharacterCreationFlow({
     state,
@@ -318,7 +339,13 @@ const syncCharacterCreationWizardFields = () => {
 }
 
 const renderCharacterCreationWizardControls = () => {
-  if (!characterCreationFlow) return
+  if (!characterCreationFlow) {
+    els.backCharacterWizard.disabled = true
+    els.nextCharacterWizard.disabled = true
+    els.nextCharacterWizard.title = ''
+    els.nextCharacterWizard.textContent = 'Next'
+    return
+  }
   const buttons = deriveCharacterCreationButtonStates(characterCreationFlow)
   els.backCharacterWizard.disabled = buttons.secondary?.disabled ?? true
   els.nextCharacterWizard.disabled = buttons.primary.disabled
@@ -339,6 +366,12 @@ const renderCharacterCreationWizardControls = () => {
 }
 
 const renderCharacterCreationWizard = () => {
+  els.characterCreatorTitle.textContent =
+    characterCreationFlow?.draft?.name?.trim() || 'Create traveller'
+  els.startCharacterWizard.textContent = characterCreationFlow
+    ? 'Restart character creation'
+    : 'Begin character creation'
+
   if (!characterCreationFlow) {
     els.characterCreationWizard.hidden = true
     els.characterCreationSteps.replaceChildren()
@@ -796,7 +829,7 @@ const createCustomCharacter = async () => {
   els.characterNameInput.value = ''
   pendingGeneratedCharacter = null
   renderGeneratedCharacterPreview()
-  els.roomDialog.close()
+  closeCharacterCreatorPanel()
   characterSheetController.setOpen(true)
   render()
 }
@@ -886,7 +919,7 @@ const finishCharacterCreationWizard = async () => {
   els.characterNameInput.value = ''
   characterCreationFlow = null
   renderCharacterCreationWizard()
-  els.roomDialog.close()
+  closeCharacterCreatorPanel()
   characterSheetController.setOpen(true)
   render()
 }
@@ -970,7 +1003,7 @@ const acceptGeneratedCharacter = async () => {
   els.characterNameInput.value = ''
   pendingGeneratedCharacter = null
   renderGeneratedCharacterPreview()
-  els.roomDialog.close()
+  closeCharacterCreatorPanel()
   characterSheetController.setOpen(true)
   render()
 }
@@ -1279,12 +1312,15 @@ const render = () => {
 }
 
 const animateRoll = (roll) => {
-  const overlayHost = els.roomDialog.open
-    ? els.roomDialog
-    : document.querySelector('.app-shell')
+  const overlayHost = isCharacterCreatorOpen()
+    ? els.characterCreator
+    : els.roomDialog.open
+      ? els.roomDialog
+      : document.querySelector('.app-shell')
   if (overlayHost && els.diceOverlay.parentElement !== overlayHost) {
     overlayHost.append(els.diceOverlay)
   }
+  els.diceOverlay.classList.toggle('in-creator', isCharacterCreatorOpen())
   els.diceOverlay.classList.toggle('in-dialog', els.roomDialog.open)
   diceHideTimer = animateDiceRoll({
     roll,
@@ -1336,12 +1372,25 @@ createRoomMenuController({
 
 els.sheetButton.addEventListener('click', () => {
   if (!selectedPieceId && selectedPiece()) selectedPieceId = selectedPiece().id
+  if (!selectedPieceId) {
+    openCharacterCreatorPanel()
+    return
+  }
   characterSheetController.toggleOpen()
   render()
 })
 
 els.sheetClose.addEventListener('click', () => {
   characterSheetController.setOpen(false)
+})
+
+els.createCharacterRail.addEventListener('click', () => {
+  openCharacterCreatorPanel()
+  if (!characterCreationFlow) startCharacterCreationWizard()
+})
+
+els.characterCreatorClose.addEventListener('click', () => {
+  closeCharacterCreatorPanel()
 })
 
 for (const tab of els.sheetTabs) {
