@@ -4,9 +4,12 @@ build/
 coverage/
 .tmp/
 .wrangler/
+
+# Local editor and licensed tabletop assets.
 .vscode/
 Geomorphs/
 Counters/
+
 .DS_Store
 *.log
 *.local

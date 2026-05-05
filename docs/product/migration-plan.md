@@ -10,8 +10,9 @@ slice before widening into rules depth:
 
 1. Complete the `app.ts` extraction so client modules stay small, testable, and
    separated by feature.
-2. Improve the character sheet UX, then add the guided character creation flow
-   on top of the event-backed sheet model.
+2. Build the guided character creation backlog, starting with homeworld,
+   background skills, and cascade selection before widening into the full career
+   term loop.
 3. Expand board and map support with asset selection, placement workflows, and
    line-of-sight/visibility behavior that remains referee-controlled.
 4. Improve dice presentation so rolls are easier to read at the table while the
@@ -66,7 +67,9 @@ Success criteria: referee can run a simple scene without leaving the app.
 
 ## Phase 4: Cepheus Rules
 
-- Port character creation machine.
+- Port the character creation procedure through the active
+  [character creation backlog](character-creation-backlog.md), keeping the
+  server-command, event, and projection boundaries explicit.
 - Port dice, skill, combat, damage, initiative, and equipment calculations.
 - Add tests before or during each extracted behavior.
 

@@ -63,4 +63,7 @@ Do not copy these blindly. Extract the domain logic and tests:
 - import/export character format
 
 See [readiness-review.md](readiness-review.md) for the reviewed extraction
-backlog.
+backlog, and
+[`../product/character-creation-backlog.md`](../product/character-creation-backlog.md)
+for the active character creation implementation queue derived from the deeper
+legacy review.
