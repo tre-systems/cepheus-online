@@ -44,7 +44,6 @@ import {
 } from './character-creation-flow.js'
 import {
   deriveCharacterCreationBasicTrainingButton,
-  deriveCharacterCreationButtonStates,
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerOptionViewModels,
@@ -53,7 +52,6 @@ import {
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationReviewSummary,
-  deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationValidationSummary,
   parseCharacterCreationDraftPatch
 } from './character-creation-view.js'
@@ -117,6 +115,7 @@ const els = {
   createCharacterRail: document.getElementById('createCharacterRailButton'),
   characterCreator: document.getElementById('characterCreator'),
   creatorBody: document.getElementById('creatorBody'),
+  creatorActions: document.getElementById('creatorActions'),
   characterCreatorClose: document.getElementById('characterCreatorCloseButton'),
   characterCreatorTitle: document.getElementById('characterCreatorTitle'),
   creatorStartSection: document.getElementById('creatorStartSection'),
@@ -357,6 +356,11 @@ const startCharacterCreationWizard = () => {
   if (!isCharacterCreatorOpen()) {
     els.characterCreator.hidden = false
   }
+  if (characterCreationFlow) {
+    renderCharacterCreationWizard()
+    scrollCharacterCreatorToTop()
+    return
+  }
   const seed = characterCreationSeed()
   const flow = createManualCharacterCreationFlow({
     state,
@@ -373,10 +377,29 @@ const startCharacterCreationWizard = () => {
       notes: seed.notes
     }
   }
+  characterCreationFlow = nextCharacterCreationWizardStep(
+    characterCreationFlow
+  ).flow
   pendingGeneratedCharacter = null
   renderGeneratedCharacterPreview()
   renderCharacterCreationWizard()
   scrollCharacterCreatorToTop()
+}
+
+const autoAdvanceCharacterCreationSetup = () => {
+  if (!characterCreationFlow) return false
+  if (
+    !['basics', 'characteristics', 'homeworld'].includes(
+      characterCreationFlow.step
+    )
+  ) {
+    return false
+  }
+
+  const result = nextCharacterCreationWizardStep(characterCreationFlow)
+  if (!result.moved) return false
+  characterCreationFlow = result.flow
+  return true
 }
 
 const syncCharacterCreationWizardFields = () => {
@@ -398,40 +421,33 @@ const renderCharacterCreationWizardControls = () => {
   if (!characterCreationFlow) {
     els.backCharacterWizard.disabled = true
     els.nextCharacterWizard.disabled = true
+    els.backCharacterWizard.hidden = false
+    els.nextCharacterWizard.hidden = false
+    if (els.creatorActions) els.creatorActions.hidden = false
     els.nextCharacterWizard.title = ''
     els.nextCharacterWizard.textContent = 'Next'
     return
   }
-  const buttons = deriveCharacterCreationButtonStates(characterCreationFlow)
-  els.backCharacterWizard.disabled = buttons.secondary?.disabled ?? true
-  els.nextCharacterWizard.disabled = buttons.primary.disabled
-  els.nextCharacterWizard.title = buttons.primary.reason ?? ''
-  els.nextCharacterWizard.textContent = buttons.primary.label
+  els.backCharacterWizard.disabled = true
+  els.nextCharacterWizard.disabled = true
+  els.backCharacterWizard.hidden = true
+  els.nextCharacterWizard.hidden = true
+  if (els.creatorActions) els.creatorActions.hidden = true
 
-  const validation = deriveCharacterCreationValidationSummary(
-    characterCreationFlow
-  )
-  if (validation.ok) {
-    els.characterCreationStatus.replaceChildren()
-    return
-  }
-
-  const status = document.createElement('p')
-  status.textContent = `${validation.errors.length} ${
-    validation.errors.length === 1 ? 'issue' : 'issues'
-  } to fix`
-  status.className = 'invalid'
-  els.characterCreationStatus.replaceChildren(status)
+  els.characterCreationStatus.replaceChildren()
 }
 
 const renderCharacterCreationWizard = () => {
+  while (autoAdvanceCharacterCreationSetup()) {
+    // Keep setup steps linear even when reopening a flow that is already valid.
+  }
+
   els.characterCreatorTitle.textContent =
     characterCreationFlow?.draft?.name?.trim() || 'Create traveller'
   els.characterCreator.classList.toggle('flow-active', Boolean(characterCreationFlow))
+  els.creatorStartSection.hidden = Boolean(characterCreationFlow)
   els.creatorQuickSection.hidden = Boolean(characterCreationFlow)
-  els.startCharacterWizard.textContent = characterCreationFlow
-    ? 'Restart'
-    : 'Begin character creation'
+  els.startCharacterWizard.textContent = 'Begin character creation'
 
   if (!characterCreationFlow) {
     els.characterCreationWizard.hidden = true
@@ -440,27 +456,15 @@ const renderCharacterCreationWizard = () => {
     els.characterCreationFields.replaceChildren()
     els.backCharacterWizard.disabled = true
     els.nextCharacterWizard.disabled = true
+    els.backCharacterWizard.hidden = false
+    els.nextCharacterWizard.hidden = false
+    if (els.creatorActions) els.creatorActions.hidden = false
     els.nextCharacterWizard.textContent = 'Next'
     return
   }
 
   const flow = characterCreationFlow
-  const progress = document.createElement('div')
-  progress.className = 'character-creation-progress'
-  for (const step of deriveCharacterCreationStepProgressItems(flow)) {
-    const item = document.createElement('span')
-    item.className = [
-      step.current ? 'active' : '',
-      step.complete ? 'complete' : '',
-      step.invalid ? 'invalid' : ''
-    ]
-      .filter(Boolean)
-      .join(' ')
-    item.textContent = step.label
-    progress.append(item)
-  }
-
-  els.characterCreationSteps.replaceChildren(progress)
+  els.characterCreationSteps.replaceChildren()
   els.characterCreationFields.replaceChildren(
     renderCharacterCreationNextStep(flow),
     flow.step === 'review'
@@ -498,7 +502,7 @@ const renderCharacterCreationNextStep = (flow) => {
     stats.append(item)
   }
 
-  if (!viewModel.primaryAction.disabled) {
+  if (!viewModel.primaryAction.disabled && flow.step === 'review') {
     const primary = document.createElement('button')
     primary.type = 'button'
     primary.textContent = viewModel.primaryAction.label
@@ -510,7 +514,10 @@ const renderCharacterCreationNextStep = (flow) => {
     actions.append(primary)
   }
 
-  panel.append(heading, prompt, stats)
+  panel.append(heading, prompt)
+  if (!['characteristics', 'homeworld'].includes(flow.step)) {
+    panel.append(stats)
+  }
   if (actions.childElementCount > 0) panel.append(actions)
   return panel
 }
@@ -519,9 +526,6 @@ const renderCharacterCreationFields = (flow) => {
   const fragment = document.createDocumentFragment()
   if (flow.step === 'characteristics') {
     fragment.append(renderCharacterCreationCharacteristicGrid(flow))
-    const characteristicRollButton =
-      renderCharacterCreationCharacteristicRollButton(flow)
-    if (characteristicRollButton) fragment.append(characteristicRollButton)
     return fragment
   }
   if (flow.step === 'career') {
@@ -535,8 +539,8 @@ const renderCharacterCreationFields = (flow) => {
     if (reenlistmentRollButton) fragment.append(reenlistmentRollButton)
     fragment.append(renderCharacterCreationTermSkillTables(flow))
     fragment.append(renderCharacterCreationTermCascadeChoices(flow))
-    fragment.append(renderCharacterCreationTermResolution(flow))
     fragment.append(renderCharacterCreationCareerPicker(flow))
+    fragment.append(renderCharacterCreationTermResolution(flow))
     fragment.append(renderCharacterCreationTermHistory(flow))
     return fragment
   }
@@ -627,13 +631,29 @@ const renderCharacterCreationHomeworld = (flow) => {
   const title = document.createElement('strong')
   title.textContent = 'Background skills'
   const detail = document.createElement('p')
-  detail.textContent = `${viewModel.backgroundSkills.allowance} total from EDU. ${viewModel.backgroundSkills.message}`
+  const selectedCount =
+    viewModel.backgroundSkills.selectedSkills.length +
+    viewModel.backgroundSkills.pendingCascadeSkills.length
+  const remaining = viewModel.backgroundSkills.remainingSelections
+  const grantedCount = viewModel.backgroundSkills.skillOptions.filter(
+    (option) => option.preselected
+  ).length
+  const pendingCascadeCount = viewModel.backgroundSkills.cascadeSkillChoices.length
+  detail.textContent =
+    pendingCascadeCount > 0
+      ? `Choose ${pendingCascadeCount === 1 ? 'a specialty' : 'specialties'} for the granted cascade skill.`
+      : remaining > 0
+      ? `${selectedCount}/${viewModel.backgroundSkills.allowance} selected. Choose ${remaining} more.`
+      : `${selectedCount}/${viewModel.backgroundSkills.allowance} selected. ${
+          grantedCount > 0 ? `${grantedCount} granted by homeworld.` : ''
+        }`
   const skillList = renderCharacterCreationBackgroundSkills(viewModel)
 
-  summary.append(title, detail, skillList)
+  summary.append(title, detail)
   for (const cascade of viewModel.backgroundSkills.cascadeSkillChoices) {
     summary.append(renderCharacterCreationCascadeChoice(cascade))
   }
+  summary.append(skillList)
   wrapper.append(fieldGrid, summary)
   return wrapper
 }
@@ -794,9 +814,16 @@ const renderCharacterCreationBackgroundSkills = (viewModel) => {
   for (const option of viewModel.backgroundSkills.skillOptions) {
     const button = document.createElement('button')
     button.type = 'button'
-    button.className = option.selected ? 'selected' : ''
+    const unavailable = !option.selected && remaining <= 0
+    button.className = [
+      option.selected ? 'selected' : '',
+      option.preselected ? 'preselected' : '',
+      unavailable ? 'unavailable' : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
     button.textContent = option.label
-    button.disabled = option.preselected || (!option.selected && remaining <= 0)
+    button.disabled = option.preselected || unavailable
     button.title = option.preselected
       ? 'Granted by homeworld'
       : option.selected
@@ -896,7 +923,9 @@ const renderCharacterCreationOptionField = (field, options) => {
   label.append(name, control)
   if (field.errors.length > 0) {
     const error = document.createElement('small')
-    error.textContent = field.errors.join(', ')
+    error.textContent = field.errors
+      .map((message) => message.replace(/^Homeworld /, ''))
+      .join(', ')
     label.append(error)
   }
   return label
@@ -914,44 +943,59 @@ const characteristicModifierLabel = (value) => {
 const renderCharacterCreationCharacteristicGrid = (flow) => {
   const fields = deriveCharacterCreationFieldViewModels(flow)
   const grid = document.createElement('div')
-  grid.className = 'creation-stat-grid'
+  grid.className = 'creation-stat-grid dice-stat-grid'
   for (const field of fields) {
-    const label = document.createElement('label')
-    label.className = 'creation-stat-cell'
+    const cell = document.createElement('div')
+    cell.className = 'creation-stat-cell dice-stat-cell'
     const name = document.createElement('span')
     name.textContent = field.label
     const row = document.createElement('span')
     row.className = 'creation-stat-value-row'
-    const input = document.createElement('input')
-    input.type = 'text'
-    input.inputMode = 'numeric'
-    input.dataset.characterCreationField = field.key
-    input.value = field.value
-    input.autocomplete = 'off'
-    input.setAttribute('aria-label', field.label)
     const modifier = document.createElement('small')
-    modifier.textContent = characteristicModifierLabel(field.value)
-    row.append(input, modifier)
-    label.append(name, row)
-    if (field.errors.length > 0) {
+    if (field.value === '' || field.value === null) {
+      const rollButton = document.createElement('button')
+      rollButton.type = 'button'
+      rollButton.className = 'stat-die-button'
+      rollButton.setAttribute('aria-label', `Roll ${field.label}`)
+      rollButton.title = `Roll ${field.label}`
+      for (let index = 0; index < 5; index += 1) {
+        const pip = document.createElement('span')
+        pip.className = 'stat-die-pip'
+        rollButton.append(pip)
+      }
+      rollButton.addEventListener('click', () => {
+        rollCharacterCreationCharacteristic(field.key).catch((error) =>
+          setError(error.message)
+        )
+      })
+      modifier.textContent = ''
+      row.append(rollButton, modifier)
+    } else {
+      const value = document.createElement('strong')
+      value.textContent = field.value
+      modifier.textContent = characteristicModifierLabel(field.value)
+      row.append(value, modifier)
+    }
+    cell.append(name, row)
+    if (field.errors.length > 0 && field.value !== '') {
       const error = document.createElement('small')
       error.className = 'creation-stat-error'
       error.textContent = field.errors.join(', ')
-      label.append(error)
+      cell.append(error)
     }
-    grid.append(label)
+    grid.append(cell)
   }
   return grid
 }
 
-const formatCareerCheck = (check) => {
+const formatCareerCheckShort = (check) => {
   if (!check.available) return 'Unavailable'
   const modifier =
     check.modifier === 0
       ? ''
       : check.modifier > 0
-        ? `, DM +${check.modifier}`
-        : `, DM ${check.modifier}`
+        ? ` +${check.modifier}`
+        : ` ${check.modifier}`
   return `${check.requirement}${modifier}`
 }
 
@@ -1025,7 +1069,9 @@ const renderCharacterCreationCareerPicker = (flow) => {
   const outcome = document.createElement('div')
   outcome.className = 'creation-career-outcome'
   const outcomeTitle = document.createElement('strong')
-  outcomeTitle.textContent = plan?.career || 'Qualify'
+  outcomeTitle.textContent = plan?.career
+    ? `${plan.career} term`
+    : 'Choose a career'
   const outcomeBody = document.createElement('p')
   outcomeBody.textContent = careerOutcomeText(plan)
   outcome.append(outcomeTitle, outcomeBody)
@@ -1035,36 +1081,42 @@ const renderCharacterCreationCareerPicker = (flow) => {
     wrapper.append(renderCharacterCreationDraftFallback(flow))
   }
 
-  const list = document.createElement('div')
-  list.className = 'creation-career-list'
-  for (const career of deriveCharacterCreationCareerOptionViewModels(
-    flow.draft
-  )) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = career.selected ? 'selected' : ''
-    button.setAttribute('aria-pressed', career.selected ? 'true' : 'false')
-    const title = document.createElement('span')
-    title.className = 'creation-career-title'
-    title.textContent = career.label
-    const qualification = document.createElement('span')
-    qualification.textContent = formatCareerCheck(career.qualification)
-    const survival = document.createElement('span')
-    survival.textContent = `Survival ${formatCareerCheck(career.survival)}`
-    button.append(title, qualification, survival)
-    button.addEventListener('click', () => {
-      if (!characterCreationFlow) return
-      characterCreationFlow = applyParsedCharacterCreationDraftPatch(
-        characterCreationFlow,
-        parseCharacterCreationDraftPatch({ career: career.key })
-      ).flow
-      setError('')
-      renderCharacterCreationWizard()
-      scrollCharacterCreatorToTop()
-    })
-    list.append(button)
+  const shouldShowCareerList =
+    !plan?.career || (plan.qualificationPassed === false && !plan.drafted)
+  if (shouldShowCareerList) {
+    const list = document.createElement('div')
+    list.className = 'creation-career-list'
+    for (const career of deriveCharacterCreationCareerOptionViewModels(
+      flow.draft
+    )) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = career.selected ? 'selected' : ''
+      button.setAttribute('aria-pressed', career.selected ? 'true' : 'false')
+      const title = document.createElement('span')
+      title.className = 'creation-career-title'
+      title.textContent = career.label
+      const qualification = document.createElement('span')
+      qualification.className = 'creation-career-check'
+      qualification.textContent = `Qualify ${formatCareerCheckShort(career.qualification)}`
+      const survival = document.createElement('span')
+      survival.className = 'creation-career-check'
+      survival.textContent = `Survive ${formatCareerCheckShort(career.survival)}`
+      button.append(title, qualification, survival)
+      button.addEventListener('click', () => {
+        if (!characterCreationFlow) return
+        characterCreationFlow = applyParsedCharacterCreationDraftPatch(
+          characterCreationFlow,
+          parseCharacterCreationDraftPatch({ career: career.key })
+        ).flow
+        setError('')
+        renderCharacterCreationWizard()
+        scrollCharacterCreatorToTop()
+      })
+      list.append(button)
+    }
+    wrapper.append(list)
   }
-  wrapper.append(list)
   return wrapper
 }
 
@@ -1077,9 +1129,7 @@ const renderCharacterCreationTermResolution = (flow) => {
   const text = document.createElement('p')
 
   if (!plan?.career) {
-    text.textContent = 'Choose a career, then roll through the term.'
-    panel.append(title, text)
-    return panel
+    return document.createDocumentFragment()
   }
 
   if (!isCharacterCreationCareerTermResolved(flow.draft)) {
@@ -1421,7 +1471,7 @@ const renderCharacterCreationMusteringOut = (flow) => {
   return panel
 }
 
-const rollCharacterCreationCharacteristic = async () => {
+const rollCharacterCreationCharacteristic = async (characteristicKey = null) => {
   if (!characterCreationFlow) return
   setError('')
   syncCharacterCreationWizardFields()
@@ -1430,6 +1480,9 @@ const rollCharacterCreationCharacteristic = async () => {
     characterCreationFlow
   )
   if (!rollAction) return
+  const targetKey = characteristicKey ?? rollAction.key ?? null
+  const targetLabel =
+    targetKey === null ? rollAction.label.replace('Roll ', '') : targetKey.toUpperCase()
 
   if (!state) {
     await postCommand(
@@ -1442,7 +1495,7 @@ const rollCharacterCreationCharacteristic = async () => {
     buildRollDiceCommand({
       identity: clientIdentity(),
       expression: '2d6',
-      reason: rollAction.reason
+      reason: `${characterCreationFlow.draft.name.trim() || 'Character'} ${targetLabel}`
     }),
     requestId('characteristic-roll')
   )
@@ -1456,8 +1509,10 @@ const rollCharacterCreationCharacteristic = async () => {
   await waitForDiceReveal(latestRoll)
   characterCreationFlow = applyCharacterCreationCharacteristicRoll(
     characterCreationFlow,
-    latestRoll.total
+    latestRoll.total,
+    targetKey
   ).flow
+  autoAdvanceCharacterCreationSetup()
   renderCharacterCreationWizard()
   scrollCharacterCreatorToTop()
 }
@@ -2548,6 +2603,7 @@ els.characterCreationFields.addEventListener('input', () => {
 
 els.characterCreationFields.addEventListener('change', () => {
   syncCharacterCreationWizardFields()
+  autoAdvanceCharacterCreationSetup()
   renderCharacterCreationWizard()
 })
 

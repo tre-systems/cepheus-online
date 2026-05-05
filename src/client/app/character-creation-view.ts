@@ -831,9 +831,7 @@ const characterCreationPrompt = (
       return 'Name the traveller and choose the sheet type.'
     case 'characteristics': {
       const roll = deriveCharacterCreationCharacteristicRollButton(flow)
-      return roll
-        ? 'Roll or enter all six characteristics.'
-        : 'Characteristics are ready.'
+      return roll ? '' : 'Characteristics are ready.'
     }
     case 'homeworld': {
       const summary = deriveCharacterCreationBackgroundSkillSummary(flow)

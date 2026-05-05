@@ -296,6 +296,22 @@ describe('character creation flow', () => {
     assert.equal(deriveNextCharacterCreationCharacteristicRoll(flow), null)
   })
 
+  it('can apply characteristic rolls in any selected order', () => {
+    let flow = createCharacterCreationFlow(characterId, {
+      name: 'Iona Vesh'
+    })
+    flow = { ...flow, step: 'characteristics' }
+
+    flow = applyCharacterCreationCharacteristicRoll(flow, 10, 'edu').flow
+    flow = applyCharacterCreationCharacteristicRoll(flow, 9, 'int').flow
+    flow = applyCharacterCreationCharacteristicRoll(flow, 7, 'str').flow
+
+    assert.equal(flow.draft.characteristics.edu, 10)
+    assert.equal(flow.draft.characteristics.int, 9)
+    assert.equal(flow.draft.characteristics.str, 7)
+    assert.equal(flow.draft.characteristics.dex, null)
+  })
+
   it('uses homeworld background before career and derives background skills', () => {
     const characteristicsFlow = {
       step: 'characteristics' as const,

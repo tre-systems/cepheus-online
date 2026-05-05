@@ -1067,16 +1067,17 @@ export const deriveNextCharacterCreationCharacteristicRoll = (
 
 export const applyCharacterCreationCharacteristicRoll = (
   flow: CharacterCreationFlow,
-  roll: number
+  roll: number,
+  characteristic: CharacteristicKey | null = null
 ): CharacterCreationWizardResult => {
-  const action = deriveNextCharacterCreationCharacteristicRoll(flow)
-  if (!action) {
+  const key = characteristic ?? deriveNextCharacterCreationCharacteristicRoll(flow)?.key
+  if (!key || flow.draft.characteristics[key] !== null) {
     const validation = validateCurrentCharacterCreationStep(flow)
     return { flow, validation, moved: false }
   }
 
   const updatedFlow = updateCharacterCreationFields(flow, {
-    characteristics: { [action.key]: roll }
+    characteristics: { [key]: roll }
   })
   return {
     flow: updatedFlow,

@@ -64,7 +64,7 @@ describe('client dice helpers', () => {
       }),
       {
         rollDurationMs: 1200,
-        visibleDurationMs: 6200
+        visibleDurationMs: 2400
       }
     )
     assert.equal(
