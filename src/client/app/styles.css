@@ -1268,26 +1268,43 @@ h1 {
 
 .stat-strip {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  align-items: end;
+  padding: 2px 0 6px;
 }
 
 .stat {
-  border: 1px solid rgba(72, 255, 173, 0.42);
-  padding: 5px 3px;
-  text-align: center;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 2px;
+  align-items: baseline;
+  border-bottom: 1px solid rgba(244, 255, 248, 0.28);
+  padding-bottom: 3px;
 }
 
 .stat b {
-  display: block;
+  grid-column: 1 / -1;
   color: var(--accent);
   font-size: 10px;
+  font-weight: 850;
+  line-height: 1.1;
 }
 
-.stat span {
+.stat-value {
   color: var(--text);
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 500;
+  line-height: 1;
+}
+
+.stat-modifier {
+  min-height: 12px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .sheet-edit-form {

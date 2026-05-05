@@ -170,14 +170,20 @@ export const createCharacterSheetController = ({
   const statStrip = (character: CharacterState | null) => {
     const stats = documentApi.createElement('div')
     stats.className = 'stat-strip'
-    for (const { label, value } of characteristicRows(character)) {
+    for (const { label, value, modifierLabel } of characteristicRows(
+      character
+    )) {
       const stat = documentApi.createElement('div')
       stat.className = 'stat'
       const name = documentApi.createElement('b')
       name.textContent = label
       const number = documentApi.createElement('span')
+      number.className = 'stat-value'
       number.textContent = value
-      stat.append(name, number)
+      const modifier = documentApi.createElement('span')
+      modifier.className = 'stat-modifier'
+      modifier.textContent = modifierLabel
+      stat.append(name, number, modifier)
       stats.append(stat)
     }
     return stats

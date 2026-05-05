@@ -19,6 +19,10 @@ const characteristicDefinitions: {
   { key: 'soc', label: 'Soc', fallback: 6 }
 ]
 
+const characteristicModifier = (
+  characteristic: number | null | undefined
+): number => (characteristic == null ? 0 : Math.floor(characteristic / 3) - 2)
+
 export const characterSheetTabLabels = {
   details: 'Details',
   action: 'Action',
@@ -38,6 +42,8 @@ export interface CharacteristicDisplayRow {
   key: CharacteristicKey
   label: string
   value: string
+  modifier: number
+  modifierLabel: string
   inputValue: string
 }
 
@@ -77,10 +83,14 @@ export const characteristicRows = (
 
   return characteristicDefinitions.map(({ key, label, fallback }) => {
     const value = values?.[key] ?? fallback
+    const modifier = characteristicModifier(value)
     return {
       key,
       label,
       value: String(value),
+      modifier,
+      modifierLabel:
+        modifier === 0 ? '' : modifier > 0 ? `+${modifier}` : String(modifier),
       inputValue: values?.[key] == null ? '' : String(values[key])
     }
   })

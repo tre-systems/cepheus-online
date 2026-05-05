@@ -108,12 +108,54 @@ describe('character sheet view helpers', () => {
 
   it('builds characteristic and equipment display values', () => {
     assert.deepEqual(characteristicRows(character()), [
-      { key: 'str', label: 'Str', value: '6', inputValue: '6' },
-      { key: 'dex', label: 'Dex', value: '8', inputValue: '8' },
-      { key: 'end', label: 'End', value: '8', inputValue: '' },
-      { key: 'int', label: 'Int', value: '9', inputValue: '9' },
-      { key: 'edu', label: 'Edu', value: '10', inputValue: '10' },
-      { key: 'soc', label: 'Soc', value: '6', inputValue: '' }
+      {
+        key: 'str',
+        label: 'Str',
+        value: '6',
+        modifier: 0,
+        modifierLabel: '',
+        inputValue: '6'
+      },
+      {
+        key: 'dex',
+        label: 'Dex',
+        value: '8',
+        modifier: 0,
+        modifierLabel: '',
+        inputValue: '8'
+      },
+      {
+        key: 'end',
+        label: 'End',
+        value: '8',
+        modifier: 0,
+        modifierLabel: '',
+        inputValue: ''
+      },
+      {
+        key: 'int',
+        label: 'Int',
+        value: '9',
+        modifier: 1,
+        modifierLabel: '+1',
+        inputValue: '9'
+      },
+      {
+        key: 'edu',
+        label: 'Edu',
+        value: '10',
+        modifier: 1,
+        modifierLabel: '+1',
+        inputValue: '10'
+      },
+      {
+        key: 'soc',
+        label: 'Soc',
+        value: '6',
+        modifier: 0,
+        modifierLabel: '',
+        inputValue: ''
+      }
     ])
 
     const equipment = [
