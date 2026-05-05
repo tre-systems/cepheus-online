@@ -8,9 +8,9 @@ the new app proves one vertical slice at a time.
 The current implementation queue should keep tightening the playable vertical
 slice before widening into rules depth:
 
-For active parallel work streams and write ownership, use the
-[implementation backlog](backlog.md). This migration plan stays as the staged
-product path.
+For ordered implementation slices, active parallel work streams, and write
+ownership, use the [implementation plan](backlog.md). This migration plan stays
+as the staged product path.
 
 1. Complete the `app.ts` extraction so client modules stay small, testable, and
    separated by feature.

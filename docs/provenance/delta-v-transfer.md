@@ -44,10 +44,10 @@ renderer assets, AI logic, combat systems, or competitive matchmaking.
   room access, hidden referee data, and Cloudflare cost controls.
 - `docs/engineering/testing-strategy.md`: staged test strategy for the current skeleton and
   later Cloudflare/browser work.
-- `docs/product/backlog.md`: active parallel work streams derived from the
+- `docs/product/backlog.md`: ordered implementation plan derived from the
   deeper Delta-V review, including client kernel extraction, publication
-  hardening, protocol fixtures, PWA hygiene, map tooling, and visibility
-  security.
+  hardening, protocol fixtures, character creation sequencing, PWA hygiene, map
+  tooling, and visibility security.
 
 ## Adapted Rather Than Copied
 

@@ -24,7 +24,7 @@ It points to the canonical owner docs rather than repeating their full content.
 | Dependency and source boundary rules | [docs/engineering/development-standards.md](./docs/engineering/development-standards.md) |
 | Test strategy | [docs/engineering/testing-strategy.md](./docs/engineering/testing-strategy.md) |
 | Security and abuse baseline | [docs/engineering/security-baseline.md](./docs/engineering/security-baseline.md) |
-| Product direction | [docs/product/vision.md](./docs/product/vision.md), [docs/product/migration-plan.md](./docs/product/migration-plan.md) |
+| Product direction and active plan | [docs/product/vision.md](./docs/product/vision.md), [docs/product/migration-plan.md](./docs/product/migration-plan.md), [docs/product/backlog.md](./docs/product/backlog.md) |
 | Delta-V transfer notes | [docs/provenance/delta-v-transfer.md](./docs/provenance/delta-v-transfer.md) |
 
 ## Project Shape

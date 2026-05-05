@@ -103,7 +103,7 @@ Important remaining gaps:
 ## Delta-V Pattern Tasks
 
 The character creation flow should follow the same architectural discipline as
-the broader [implementation backlog](backlog.md):
+the broader [implementation plan](backlog.md):
 
 - Keep character creation actions behind the client command router rather than
   wiring buttons directly to room API calls.

@@ -1,11 +1,44 @@
-# Implementation Backlog
+# Implementation Plan
 
-This is the active engineering backlog for Cepheus Online. It turns the latest
-Delta-V architecture review into work streams that can be picked up by multiple
-agents without trampling each other. Shipped work belongs in `git log`; this
-file is for active or future work that still needs a named home.
+This is the active engineering plan for Cepheus Online. It turns the backlog
+into ordered implementation slices while preserving clear ownership for parallel
+agents. Shipped work belongs in `git log`; this file is for active or future
+work that still needs a named home.
 
 Last reviewed: 2026-05-05.
+
+## North Star
+
+Build a mobile-first Cepheus Engine PWA where a referee can run a tactical scene
+and players can create and play valid characters without leaving the app. The
+app should keep game truth in a server-ordered event stream, use Discord for
+chat and table narrative, and stay dependency-light.
+
+The near-term product target is:
+
+- two tabs can join the same room, move pieces, open doors, roll live dice, and
+  recover state after refresh
+- a player can create a valid Cepheus character through a step-by-step,
+  dice-driven process that feels like the rules procedure
+- a referee can use local geomorph/counter assets without committing licensed
+  product files
+- the deployed Cloudflare Worker, Durable Object, static client, PWA assets, and
+  WebSocket dice path are continuously smoke-tested
+
+## Planning Principles
+
+- Character creation is the feature priority, but it must not land inside a
+  larger client or server monolith.
+- Commands are intent, events are facts, and projections are read models.
+- Every state-changing action should flow through one client command router and
+  one server publication path.
+- Shared rules code must stay deterministic, dependency-free, and free of DOM,
+  network, storage, logging, and ambient randomness.
+- The browser may keep local planning state, but authoritative game state is
+  replaced from server responses.
+- Viewer filtering happens server-side before state leaves the room.
+- Parallel agents should work in separate write areas and integrate through the
+  shared command/event/projection contracts.
 
 ## Delta-V Learnings Applied
 
@@ -20,23 +53,21 @@ The reviewed Delta-V sources were strongest in these areas:
 - contract fixtures for protocol shapes
 - deterministic RNG derived from match seed and event sequence
 - zero-framework reactive state used selectively, not as a global store
-- active backlog streams with explicit write ownership for parallel agents
+- active work streams with explicit write ownership for parallel agents
 - fast local checks plus heavier smoke, accessibility, and simulation gates
 
 Cepheus Online should adopt those patterns where they fit the campaign-tabletop
 product. It should not copy Delta-V game rules, renderer modules, AI, rating,
 leaderboard, or quick-match systems.
 
-## Parallel Work Streams
+## Phase 0: Architecture Stabilization
 
-Use these streams when several agents are working from `main`. Each stream lists
-its primary write area. Agents should avoid another stream's write area unless
-the handoff is explicit.
+Purpose: make the next feature slices cheaper and safer by tightening the
+client and server seams around the current behavior.
 
-### Agent A: Client Kernel And Input Pipeline
+This phase can run in parallel across Agents A, B, C, and E.
 
-Goal: retire the current `app.ts` monolith and make browser behavior easier to
-change safely.
+### Slice 0A: Client Kernel And Command Router
 
 Primary write ownership:
 
@@ -68,18 +99,15 @@ Tasks:
 - Ensure each stateful client manager exposes a `dispose()` path when it owns
   listeners, effects, timers, or sockets.
 
-Acceptance:
+Done when:
 
-- `app.ts` becomes a thin boot file or composition shell.
+- `app.ts` is a thin boot file or composition shell.
 - All game-truth commands pass through one router before hitting the room API.
 - Board input, sheet actions, dice rolls, and character creation actions are
   testable without a browser.
 - No authoritative state is mutated directly in the browser.
 
-### Agent B: Publication And Projection Hardening
-
-Goal: make command acceptance, persistence, projection, and broadcasting as
-deterministic as Delta-V's single publication pipeline.
+### Slice 0B: Publication And Projection Hardening
 
 Primary write ownership:
 
@@ -104,22 +132,19 @@ Tasks:
 - Move checkpoint decisions into named policy helpers with Cepheus boundaries:
   game creation, character creation completion, map scene changes, combat round
   boundaries, and larger event-count intervals.
-- Add a publication test that reconstructs from checkpoint plus tail after every
+- Add publication tests that reconstruct from checkpoint plus tail after every
   new event family.
 - Add telemetry hooks or structured test seams for projection mismatch,
   invalid command, and stale command outcomes without logging secrets.
 
-Acceptance:
+Done when:
 
 - A new event type cannot compile without projector support.
 - Stored projection and live projection are checked consistently.
 - Accepted commands always return the state that can be recovered from storage.
 - Viewer-safe state is never assembled in more than one ad hoc path.
 
-### Agent C: Protocol Contracts And Validation
-
-Goal: make commands, events, and state-bearing messages stable wire contracts,
-not just TypeScript shapes.
+### Slice 0C: Protocol Contracts And Validation
 
 Primary write ownership:
 
@@ -142,54 +167,17 @@ Tasks:
 - Keep validation staged: cheap shape and size checks before command
   publication, command validation before event derivation, projection checks
   after persistence.
-- Make command errors stable enough for the client to branch on categories
-  such as `stale_command`, `invalid_command`, `missing_entity`, and
-  `not_allowed`.
+- Make command errors stable enough for the client to branch on categories such
+  as `stale_command`, `invalid_command`, `missing_entity`, and `not_allowed`.
 
-Acceptance:
+Done when:
 
 - Protocol fixture tests catch accidental wire-shape changes.
 - Client and server share one command/event/message vocabulary.
 - User mistakes return typed errors; programmer or corrupt-storage failures are
   the only throw paths.
 
-### Agent D: Character Creation Procedure
-
-Goal: build the full Cepheus character creation mini-game on top of the
-server-ordered command/event spine.
-
-Primary write ownership:
-
-- `docs/product/character-creation-backlog.md`
-- `src/shared/character-creation/`
-- character creation command/event/projection code
-- `src/client/app/character-creation-*.ts`
-- character sheet integration tests
-
-Tasks:
-
-- Work through the dedicated
-  [character creation backlog](character-creation-backlog.md), starting with
-  homeworld, background skills, and cascade selection.
-- Model character creation as a derived step view model: current status,
-  prompt, legal actions, pending selections, recent result, and sheet preview.
-- Connect every character creation roll to the shared dice system so connected
-  players see the same animation and result.
-- Persist semantic creation events, not whole-character snapshots.
-- Add fixture-backed end-to-end scenarios for characteristics, homeworld,
-  failed qualification to Draft, one successful term, mustering out, and
-  finalization.
-
-Acceptance:
-
-- A player can create a valid character end to end on a phone.
-- Refresh reconstructs the current creation state and final sheet from events.
-- Every rules action is either legal and visible or impossible to trigger.
-
-### Agent E: PWA, Connectivity, And Release Hygiene
-
-Goal: bring the browser install/update experience and developer checks closer
-to Delta-V without adding runtime dependencies.
+### Slice 0D: PWA And Release Hygiene
 
 Primary write ownership:
 
@@ -217,16 +205,155 @@ Tasks:
 - Add mobile PWA manual checks to the testing docs: install, reload, offline
   shell, update, and reconnect.
 
-Acceptance:
+Done when:
 
 - PWA install and update behavior is predictable on mobile.
 - Docs links and deploy config fail early with actionable messages.
 - Heavy checks are available without making every small docs change expensive.
 
-### Agent F: Map Assets, LOS, And Referee Scene Tools
+## Phase 1: Character Creation MVP
 
-Goal: turn local geomorph and counter assets into practical referee scene setup
-without committing licensed assets.
+Purpose: make character creation coherent, visible, and recoverable before
+adding the whole career loop.
+
+This phase starts after Slice 0A has established the client command-router
+shape. Shared rules and server event work can begin earlier if it avoids client
+files.
+
+Primary write ownership:
+
+- `docs/product/character-creation-backlog.md`
+- `src/shared/character-creation/`
+- character creation command/event/projection code
+- `src/client/app/character-creation-*.ts`
+- character sheet integration tests
+
+### Slice 1A: Wizard Usability
+
+Tasks:
+
+- Add a clear creation header with current phase, current prompt, and the next
+  primary action.
+- Keep quick/manual character creation secondary to the step-by-step wizard.
+- Show the compact one-line characteristic strip throughout the flow.
+- Surface stale/rejected command recovery as a small actionable message.
+- Ensure every visible roll uses the shared dice renderer.
+
+Done when:
+
+- A new player can understand the next action on a phone-sized viewport.
+- No creation action appears before its prerequisites are met.
+- Refresh recovers the current creation state from the room projection.
+
+### Slice 1B: Homeworld, Background Skills, And Cascade Choices
+
+Tasks:
+
+- Extend character creation projection with homeworld, background skills, and
+  pending cascade selections.
+- Add commands and events for setting homeworld data and resolving background
+  skill selections.
+- Port or confirm pure helpers for primary education, homeworld-derived skills,
+  background skill allowance, and cascade resolution.
+- Add mobile UI controls for law level, trade code, primary education, and
+  background skill selection.
+- Add a cascade skill modal that blocks progress until resolved.
+- Add command, event, projector, protocol, and client view-model tests.
+
+Done when:
+
+- Character creation cannot enter career selection until background choices are
+  complete.
+- Skills gained from homeworld/background are visible with provenance.
+- Cascade choices survive refresh and resolve through server events.
+
+### Slice 1C: Career Entry, Draft, And Basic Training
+
+Tasks:
+
+- Move career entry onto explicit server-backed commands and events.
+- Prevent normal qualification into careers already left, except for allowed
+  Drifter behavior.
+- Apply previous-career qualification penalties.
+- On failed qualification, expose only Drifter or the Draft.
+- Implement the Draft as a 1d6 ruleset table roll.
+- Implement first-term basic training and later new-career basic training.
+- Persist drafted terms and clear draft eligibility after draft use.
+
+Done when:
+
+- Failed qualification produces Drifter or Draft, matching the legacy app.
+- Draft result is determined by a visible roll and persisted in the event
+  stream.
+- Basic training updates skills with provenance and refresh recovery.
+
+## Phase 2: Full Character Generation
+
+Purpose: complete the Cepheus character creation mini-game end to end.
+
+### Slice 2A: Career Term Loop
+
+Tasks:
+
+- Promote term state into server projection: career, rank, title, drafted flag,
+  basic training, survival, commission, advancement, skills, mishap, and term
+  completion.
+- Implement survival rolls and failure outcomes.
+- Implement mishap and death handling from the ruleset.
+- Implement commission and advancement, including rank/title/bonus skill
+  rewards.
+- Implement term skill table selection and roll resolution.
+- Enforce outstanding selection gates for cascade, commission, promotion, and
+  term skills.
+- Add compact term-history cards.
+
+Done when:
+
+- A normal successful term can be completed using only visible legal actions.
+- Failed survival produces a valid mishap or death outcome.
+- Term history matches the event stream after refresh.
+
+### Slice 2B: Aging, Anagathics, And Reenlistment
+
+Tasks:
+
+- Wire aging helpers into server-backed commands and events.
+- Use the correct aging modifier from term count and anagathics use.
+- Present legal aging characteristic loss choices only when required.
+- Persist characteristic changes with term provenance.
+- Implement optional anagathics survival and cost/payment flow.
+- Implement reenlistment, including mandatory retirement after seven terms,
+  forced reenlistment on 12, allowed reenlistment, and blocked reenlistment.
+
+Done when:
+
+- Aging cannot be skipped when required.
+- Reenlistment outcomes are deterministic and visible.
+- The player can continue, leave, retire, or be forced by the rules.
+
+### Slice 2C: Mustering Out And Final Sheet
+
+Tasks:
+
+- Implement benefit count calculation from completed terms and rank.
+- Implement cash and material benefit rolls from the ruleset.
+- Apply cash limits and benefit modifiers.
+- Persist credits, starting credits, and material benefits.
+- Support continuing into a new career after mustering out when rules allow.
+- Finalize only when gates pass: at least one term, legal exit, no outstanding
+  selections, and no unresolved death/mishap branch.
+- Project the final playable sheet from creation state and finalization.
+- Add UPP/export display for completed characters.
+
+Done when:
+
+- A character can be created from first roll through final playable sheet.
+- Mustering choices and benefits are replayable from the event stream.
+- The final sheet is valid without manual cleanup.
+
+## Phase 3: Tactical Table And Referee Scene Tools
+
+Purpose: make the board useful for a real table session.
 
 Primary write ownership:
 
@@ -235,6 +362,7 @@ Primary write ownership:
 - `src/client/app/door-los-view.ts`
 - board/piece creation flows
 - map asset docs and tests
+- future referee mode surfaces
 
 Tasks:
 
@@ -249,18 +377,20 @@ Tasks:
   geomorphs, with manual correction before use.
 - Make door open/close commands visible and replayable through the normal event
   stream.
+- Add prep/admin mode, richer piece/character visibility controls, and direct
+  board management.
 
-Acceptance:
+Done when:
 
 - Local licensed assets remain untracked.
 - Referee setup can use local maps and counters without weakening projection or
   viewer filtering.
 - LOS behavior is deterministic and testable from sidecar data plus door state.
+- A referee can prepare and run a basic tactical scene without editing JSON.
 
-### Agent G: Security, Visibility, And Operational Telemetry
+## Phase 4: Table Security, Discord, And Deployment Confidence
 
-Goal: protect hidden referee data and keep Cloudflare behavior observable
-without exposing private table content.
+Purpose: make public rooms and hosted play safe enough to use with real players.
 
 Primary write ownership:
 
@@ -280,28 +410,66 @@ Tasks:
   stale command rejection, viewer filtering, and WebSocket dice broadcast.
 - Make production diagnostics summarize sensitive Cloudflare data instead of
   dumping raw IPs, tokens, or hidden game state.
-- Document Discord identity and room authorization before enabling it.
+- Document and implement Discord identity, room authorization, and invite flow.
+- Log player-relevant game and character creation events to Discord when
+  integration is enabled. Do not build in-app chat.
 
-Acceptance:
+Done when:
 
 - Player projections never contain referee-only data.
 - Public deployment checks prove the hosted app still works as one slice.
+- Discord identifies players and carries the table narrative without replacing
+  the board, dice, or sheets.
 - Operational output is useful without leaking table secrets.
 
-## Immediate Ordering
+## Phase 5: Cepheus Rules Breadth
 
-The next best implementation sequence is:
+Purpose: move beyond character generation into the broader rules helpers needed
+for play.
 
-1. Start Agent A's client-kernel extraction around the current behavior. This
-   reduces conflict risk before character creation grows further.
-2. In parallel, start Agent B/C shared-server tasks for projector registry,
-   parity policy, and protocol fixtures, avoiding client files.
-3. Resume Agent D with homeworld/background/cascade once the client command
-   router shape is clear, or start its shared rules and server events while the
-   client extraction is in progress.
-4. Keep Agent E's doc-link/deploy preflight tasks small and independent.
+Tasks:
 
-For the product goal of a great character generator, Agent D remains the
-feature priority. The Delta-V lesson is that the client and publication
-structure should be tightened enough that the full character procedure does not
-land inside another monolith.
+- Port skill roll helpers, difficulty modifiers, and action roll presentation.
+- Port combat, damage, healing, armor, initiative, and status calculations as
+  pure shared rules helpers.
+- Replace simple equipment text with item-level equipment commands/events and a
+  ledger/export path.
+- Add character action-sheet controls that use skills, equipment, cover, stance,
+  fatigue, and status.
+- Add notes and handouts as server-ordered blocks, with CRDTs only if a concrete
+  document-collaboration need appears.
+
+Done when:
+
+- Player-facing character sheets support common play actions directly.
+- Equipment and ledger changes are event-sourced rather than whole-list edits.
+- Tactical combat helpers match the old app's expected behavior and are covered
+  by rules tests.
+
+## Immediate Execution Plan
+
+The next batch should run like this:
+
+1. Start Slice 0A locally first. It reduces merge risk before character
+   creation grows and gives all later UI work a command-router target.
+2. In parallel, assign Slice 0B and Slice 0C to separate agents because they
+   mostly touch shared/server contracts and tests.
+3. Start Slice 1B shared rules and server event design in parallel, but hold
+   major client wiring until Slice 0A defines the router/session shape.
+4. Keep Slice 0D small and independent: doc-link check, deploy preflight, and
+   PWA update/connectivity work can land without waiting for the character
+   flow.
+
+The first product-visible milestone after this batch is: homeworld/background
+character creation with cascade resolution, visible dice, refresh recovery, and
+the current board/dice flow still working.
+
+## Do Not Start Yet
+
+- In-app chat. Discord is the chat and narrative log.
+- CRDTs for notes before a concrete collaborative editing need exists.
+- React, Material UI, Amplify, DataStore, XState, Zustand, or a schema-form UI.
+- Public Discord room authorization before viewer filtering and rate limits are
+  tightened.
+- Large Cepheus combat UI before the character creation and board scene flows
+  are stable.

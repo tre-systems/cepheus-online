@@ -10,8 +10,8 @@ grouped by purpose so each future change has an obvious home.
   model, and source boundaries.
 - [Migration plan](product/migration-plan.md): staged implementation path from
   skeleton to playable vertical slice.
-- [Implementation backlog](product/backlog.md): active parallel work streams
-  and tasks.
+- [Implementation plan](product/backlog.md): ordered slices, parallel work
+  streams, and current priorities.
 - [Character creation backlog](product/character-creation-backlog.md): active
   task queue for the guided Cepheus character creation flow.
 - [Architecture Decision Records](adr/README.md): accepted technical decisions
@@ -21,7 +21,7 @@ grouped by purpose so each future change has an obvious home.
 
 - [Product vision](product/vision.md)
 - [Migration plan](product/migration-plan.md)
-- [Implementation backlog](product/backlog.md)
+- [Implementation plan](product/backlog.md)
 - [Character creation backlog](product/character-creation-backlog.md)
 
 ## Architecture
