@@ -261,6 +261,29 @@ describe('protocol validation', () => {
         creationEvent: { type: 'SET_CHARACTERISTICS' }
       },
       {
+        type: 'SetCharacterCreationHomeworld',
+        ...base,
+        characterId: 'char-1',
+        homeworld: {
+          name: 'Regina',
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid', 'Industrial']
+        }
+      },
+      {
+        type: 'SelectCharacterCreationBackgroundSkill',
+        ...base,
+        characterId: 'char-1',
+        skill: 'Admin'
+      },
+      {
+        type: 'ResolveCharacterCreationCascadeSkill',
+        ...base,
+        characterId: 'char-1',
+        cascadeSkill: 'Gun Combat-0',
+        selection: 'Slug Rifle'
+      },
+      {
         type: 'FinalizeCharacterCreation',
         ...base,
         characterId: 'char-1',
@@ -445,6 +468,84 @@ describe('protocol validation', () => {
     if (result.ok) return
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(result.error.message, 'canCommission must be a boolean')
+  })
+
+  it('accepts character creation homeworld/background commands', () => {
+    const homeworld = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-homeworld',
+      command: {
+        type: 'SetCharacterCreationHomeworld',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        homeworld: {
+          name: ' Regina ',
+          lawLevel: ' No Law ',
+          tradeCodes: [' Asteroid ', 'Asteroid', ' Industrial ']
+        }
+      }
+    })
+
+    assert.equal(homeworld.ok, true)
+    if (!homeworld.ok) return
+    assert.equal(homeworld.value.type, 'command')
+    if (homeworld.value.type !== 'command') return
+    const { command } = homeworld.value
+    assert.equal(command.type, 'SetCharacterCreationHomeworld')
+    if (command.type !== 'SetCharacterCreationHomeworld') return
+    assert.deepEqual(command.homeworld, {
+      name: 'Regina',
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid', 'Industrial']
+    })
+
+    const selected = decodeCommand({
+      type: 'SelectCharacterCreationBackgroundSkill',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      skill: ' Admin '
+    })
+    assert.equal(selected.ok, true)
+    if (!selected.ok) return
+    assert.equal(selected.value.type, 'SelectCharacterCreationBackgroundSkill')
+    if (selected.value.type !== 'SelectCharacterCreationBackgroundSkill') return
+    assert.equal(selected.value.skill, 'Admin')
+
+    const resolved = decodeCommand({
+      type: 'ResolveCharacterCreationCascadeSkill',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    assert.equal(resolved.value.type, 'ResolveCharacterCreationCascadeSkill')
+  })
+
+  it('rejects malformed character creation homeworld commands', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-homeworld',
+      command: {
+        type: 'SetCharacterCreationHomeworld',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        homeworld: {
+          lawLevel: 'No Law',
+          tradeCodes: []
+        }
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'homeworld.tradeCodes cannot be empty')
   })
 
   it('accepts door state commands for board occluders', () => {

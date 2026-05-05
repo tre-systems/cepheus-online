@@ -206,12 +206,56 @@ describe('room publication flow', () => {
       'HOMEWORLD'
     )
 
+    const homeworldSet = await publish(storage, {
+      type: 'SetCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 4,
+      homeworld: {
+        name: 'Regina',
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid', 'Industrial']
+      }
+    })
+
+    assert.equal(homeworldSet.ok, true)
+    if (!homeworldSet.ok) return
+    assert.deepEqual(
+      homeworldSet.value.state.characters[characterId]?.creation
+        ?.backgroundSkills,
+      ['Zero-G-0', 'Broker-0']
+    )
+    assert.deepEqual(
+      homeworldSet.value.state.characters[characterId]?.creation
+        ?.pendingCascadeSkills,
+      ['Gun Combat-0']
+    )
+
+    const resolvedCascade = await publish(storage, {
+      type: 'ResolveCharacterCreationCascadeSkill',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 5,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
+
+    assert.equal(resolvedCascade.ok, true)
+    if (!resolvedCascade.ok) return
+    assert.deepEqual(
+      resolvedCascade.value.state.characters[characterId]?.creation
+        ?.backgroundSkills,
+      ['Zero-G-0', 'Broker-0', 'Slug Rifle-0']
+    )
+
     const homeworld = await publish(storage, {
       type: 'AdvanceCharacterCreation',
       gameId,
       actorId,
       characterId,
-      expectedSeq: 4,
+      expectedSeq: 6,
       creationEvent: { type: 'COMPLETE_HOMEWORLD' }
     })
 
@@ -223,16 +267,30 @@ describe('room publication flow', () => {
       gameId,
       actorId,
       characterId,
-      expectedSeq: 5,
+      expectedSeq: 7,
       career: 'Scout'
     })
 
     assert.equal(term.ok, true)
     if (!term.ok) return
     const creation = term.value.state.characters[characterId]?.creation
-    assert.deepEqual(creation?.terms.map((entry) => entry.career), ['Scout'])
+    assert.deepEqual(
+      creation?.terms.map((entry) => entry.career),
+      ['Scout']
+    )
     assert.deepEqual(creation?.careers, [{ name: 'Scout', rank: 0 }])
-    assert.equal(term.value.state.eventSeq, 6)
+    assert.equal(term.value.state.eventSeq, 8)
+
+    const recovered = await getProjectedGameState(storage, gameId)
+    assert.deepEqual(recovered?.characters[characterId]?.creation?.homeworld, {
+      name: 'Regina',
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid', 'Industrial']
+    })
+    assert.deepEqual(
+      recovered?.characters[characterId]?.creation?.backgroundSkills,
+      ['Zero-G-0', 'Broker-0', 'Slug Rifle-0']
+    )
   })
 
   it('checkpoints when character creation becomes playable', async () => {
@@ -269,6 +327,25 @@ describe('room publication flow', () => {
       })
 
     await advance({ type: 'SET_CHARACTERISTICS' })
+    await publish(storage, {
+      type: 'SetCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId,
+      homeworld: {
+        name: 'Regina',
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid', 'Industrial']
+      }
+    })
+    await publish(storage, {
+      type: 'ResolveCharacterCreationCascadeSkill',
+      gameId,
+      actorId,
+      characterId,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
     await advance({ type: 'COMPLETE_HOMEWORLD' })
     await publish(storage, {
       type: 'StartCharacterCareerTerm',
@@ -296,7 +373,7 @@ describe('room publication flow', () => {
       completed.value.state.characters[characterId]?.creation?.state.status,
       'PLAYABLE'
     )
-    assert.equal((await readCheckpoint(storage, gameId))?.seq, 14)
+    assert.equal((await readCheckpoint(storage, gameId))?.seq, 16)
   })
 
   it('publishes final character creation sheets only after playable', async () => {
@@ -357,6 +434,25 @@ describe('room publication flow', () => {
       })
 
     await advance({ type: 'SET_CHARACTERISTICS' })
+    await publish(storage, {
+      type: 'SetCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId,
+      homeworld: {
+        name: 'Regina',
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid', 'Industrial']
+      }
+    })
+    await publish(storage, {
+      type: 'ResolveCharacterCreationCascadeSkill',
+      gameId,
+      actorId,
+      characterId,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
     await advance({ type: 'COMPLETE_HOMEWORLD' })
     await publish(storage, {
       type: 'StartCharacterCareerTerm',
@@ -404,7 +500,7 @@ describe('room publication flow', () => {
     assert.equal(character?.age, 34)
     assert.deepEqual(character?.skills, ['Pilot-1', 'Vacc Suit-0'])
     assert.equal(character?.notes, 'Final scout.')
-    assert.equal((await readEventStream(storage, gameId)).length, 15)
+    assert.equal((await readEventStream(storage, gameId)).length, 17)
   })
 
   it('rejects stale expected sequence numbers on character creation commands', async () => {
@@ -432,6 +528,51 @@ describe('room publication flow', () => {
     if (stale.ok) return
     assert.equal(stale.error.code, 'stale_command')
     assert.equal((await readEventStream(storage, gameId)).length, 2)
+  })
+
+  it('rejects stale expected sequence numbers on homeworld/background commands', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+    await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      creationEvent: { type: 'SET_CHARACTERISTICS' }
+    })
+
+    const stale = await publish(storage, {
+      type: 'SetCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 3,
+      homeworld: {
+        name: 'Regina',
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid']
+      }
+    })
+
+    assert.equal(stale.ok, false)
+    if (stale.ok) return
+    assert.equal(stale.error.code, 'stale_command')
+    assert.equal((await readEventStream(storage, gameId)).length, 4)
   })
 
   it('rejects character creation commands for missing characters', async () => {
@@ -486,6 +627,61 @@ describe('room publication flow', () => {
       'COMPLETE_HOMEWORLD is not valid from CHARACTERISTICS'
     )
     assert.equal((await readEventStream(storage, gameId)).length, 3)
+  })
+
+  it('rejects career selection before background choices are complete', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+    await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      creationEvent: { type: 'SET_CHARACTERISTICS' }
+    })
+    await publish(storage, {
+      type: 'SetCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId,
+      homeworld: {
+        name: 'Regina',
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid']
+      }
+    })
+
+    const rejected = await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+    })
+
+    assert.equal(rejected.ok, false)
+    if (rejected.ok) return
+    assert.equal(rejected.error.code, 'invalid_command')
+    assert.equal(
+      rejected.error.message,
+      'Background choices must be complete before career selection'
+    )
+    assert.equal((await readEventStream(storage, gameId)).length, 5)
   })
 
   it('rejects career term starts outside career selection', async () => {

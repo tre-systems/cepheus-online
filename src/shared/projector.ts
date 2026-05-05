@@ -1,5 +1,5 @@
 import type { EventEnvelope } from './events'
-import { startCareerTerm } from './characterCreation'
+import { leaveCareerTerm, startCareerTerm } from './characterCreation'
 import type {
   CharacterCharacteristics,
   CharacterState,
@@ -119,15 +119,103 @@ export const projectGameState = (
         }
         const character = state.characters[event.characterId]
         if (!character?.creation) break
+        let terms = character.creation.terms.map((term) =>
+          structuredClone(term)
+        )
+        let careers = character.creation.careers.map((career) => ({
+          ...career
+        }))
+        const creationEvent = event.creationEvent
+
+        if (
+          creationEvent.type === 'REENLIST' ||
+          creationEvent.type === 'FORCED_REENLIST'
+        ) {
+          const career = terms.at(-1)?.career
+          if (career) {
+            const result = startCareerTerm({
+              career,
+              terms,
+              careers
+            })
+            terms = result.terms.map((term) => structuredClone(term))
+            careers = result.careers.map((entry) => ({ ...entry }))
+          }
+        } else if (
+          creationEvent.type === 'LEAVE_CAREER' ||
+          creationEvent.type === 'REENLIST_BLOCKED' ||
+          creationEvent.type === 'MISHAP_RESOLVED'
+        ) {
+          terms = terms.map((term, index) =>
+            index === terms.length - 1
+              ? leaveCareerTerm(term)
+              : structuredClone(term)
+          )
+        }
 
         character.creation = {
           ...character.creation,
           state: structuredClone(event.state),
           creationComplete: event.creationComplete,
+          terms,
+          careers,
           history: [
             ...(character.creation.history ?? []),
-            structuredClone(event.creationEvent)
+            structuredClone(creationEvent)
           ]
+        }
+        state.eventSeq = envelope.seq
+        break
+      }
+
+      case 'CharacterCreationHomeworldSet': {
+        if (!state) {
+          throw new Error('CharacterCreationHomeworldSet before GameCreated')
+        }
+        const character = state.characters[event.characterId]
+        if (!character?.creation) break
+
+        character.creation = {
+          ...character.creation,
+          homeworld: structuredClone(event.homeworld),
+          backgroundSkills: [...event.backgroundSkills],
+          pendingCascadeSkills: [...event.pendingCascadeSkills]
+        }
+        state.eventSeq = envelope.seq
+        break
+      }
+
+      case 'CharacterCreationBackgroundSkillSelected': {
+        if (!state) {
+          throw new Error(
+            'CharacterCreationBackgroundSkillSelected before GameCreated'
+          )
+        }
+        const character = state.characters[event.characterId]
+        if (!character?.creation) break
+
+        character.creation = {
+          ...character.creation,
+          backgroundSkills: [...event.backgroundSkills],
+          pendingCascadeSkills: [...event.pendingCascadeSkills]
+        }
+        state.eventSeq = envelope.seq
+        break
+      }
+
+      case 'CharacterCreationCascadeSkillResolved': {
+        if (!state) {
+          throw new Error(
+            'CharacterCreationCascadeSkillResolved before GameCreated'
+          )
+        }
+        const character = state.characters[event.characterId]
+        if (!character?.creation) break
+
+        character.creation = {
+          ...character.creation,
+          backgroundSkills: [...event.backgroundSkills],
+          pendingCascadeSkills: [...event.pendingCascadeSkills]
         }
         state.eventSeq = envelope.seq
         break

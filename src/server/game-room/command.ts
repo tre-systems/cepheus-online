@@ -2,13 +2,26 @@ import type { Command } from '../../shared/commands'
 import {
   canTransitionCareerCreationState,
   createCareerCreationState,
+  careerSkillWithLevel,
+  deriveBackgroundSkillPlan,
+  deriveTotalBackgroundSkillAllowance,
+  hasBackgroundHomeworld,
+  isCascadeCareerSkill,
+  normalizeCareerSkill,
+  resolveCascadeCareerSkill,
   transitionCareerCreationState
 } from '../../shared/characterCreation'
+import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
 import { rollDiceExpression } from '../../shared/dice'
 import type { GameEvent } from '../../shared/events'
 import { deriveEventRng } from '../../shared/prng'
 import { err, ok, type Result } from '../../shared/result'
-import type { GameState } from '../../shared/state'
+import type {
+  CharacterCreationHomeworld,
+  CharacterCreationProjection,
+  CharacterState,
+  GameState
+} from '../../shared/state'
 import type { CommandError } from '../../shared/protocol'
 
 export interface CommandContext {
@@ -124,10 +137,7 @@ const validateCharacterSheetPatch = (
   }
   if (command.equipment !== undefined) {
     for (const [index, item] of command.equipment.entries()) {
-      const name = requireNonEmptyString(
-        item.name,
-        `equipment[${index}].name`
-      )
+      const name = requireNonEmptyString(item.name, `equipment[${index}].name`)
       if (!name.ok) return name
       const quantity = requireFiniteCoordinate(
         item.quantity,
@@ -157,6 +167,136 @@ const characterSheetPatchFields = (
   ...(command.credits === undefined ? {} : { credits: command.credits })
 })
 
+const normalizeHomeworld = (
+  homeworld: CharacterCreationHomeworld
+): Result<CharacterCreationHomeworld, CommandError> => {
+  if (homeworld.name !== null && typeof homeworld.name !== 'string') {
+    return err(
+      commandError('invalid_command', 'homeworld.name must be a string')
+    )
+  }
+  if (typeof homeworld.lawLevel !== 'string') {
+    return err(
+      commandError('invalid_command', 'homeworld.lawLevel must be a string')
+    )
+  }
+  if (!Array.isArray(homeworld.tradeCodes)) {
+    return err(
+      commandError('invalid_command', 'homeworld.tradeCodes must be an array')
+    )
+  }
+
+  const name = homeworld.name?.trim() || null
+  const lawLevel = homeworld.lawLevel.trim() || null
+  const tradeCodes: string[] = []
+  const seen = new Set<string>()
+
+  for (const rawTradeCode of homeworld.tradeCodes) {
+    if (typeof rawTradeCode !== 'string') {
+      return err(
+        commandError('invalid_command', 'homeworld.tradeCodes must be strings')
+      )
+    }
+    const tradeCode = rawTradeCode.trim()
+    const key = tradeCode.toLowerCase()
+    if (!tradeCode || seen.has(key)) continue
+    tradeCodes.push(tradeCode)
+    seen.add(key)
+  }
+
+  if (!lawLevel) {
+    return err(
+      commandError('invalid_command', 'Homeworld law level is required')
+    )
+  }
+  if (tradeCodes.length === 0) {
+    return err(
+      commandError('invalid_command', 'Homeworld trade code is required')
+    )
+  }
+
+  return ok({ name, lawLevel, tradeCodes })
+}
+
+const backgroundSelectionCount = (
+  creation: CharacterCreationProjection
+): number =>
+  (creation.backgroundSkills ?? []).length +
+  (creation.pendingCascadeSkills ?? []).length
+
+const requiredBackgroundSelectionCount = (character: CharacterState): number =>
+  hasBackgroundHomeworld(character.creation?.homeworld)
+    ? deriveTotalBackgroundSkillAllowance(character.characteristics.edu)
+    : 0
+
+const hasCompleteBackgroundChoices = (character: CharacterState): boolean => {
+  const creation = character.creation
+  if (!creation?.homeworld || !hasBackgroundHomeworld(creation.homeworld)) {
+    return false
+  }
+
+  return (
+    (creation.pendingCascadeSkills ?? []).length === 0 &&
+    backgroundSelectionCount(creation) >=
+      requiredBackgroundSelectionCount(character)
+  )
+}
+
+const requireHomeworldCreation = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'HOMEWORLD') {
+    return err(
+      commandError(
+        'invalid_command',
+        `Background choices cannot change from ${character.creation.state.status}`
+      )
+    )
+  }
+  if (!character.creation.homeworld) {
+    return err(commandError('missing_entity', 'Homeworld has not been set'))
+  }
+
+  return ok(character.creation)
+}
+
+const uniqueSkills = (skills: readonly string[]): string[] => {
+  const unique: string[] = []
+  const seen = new Set<string>()
+
+  for (const skill of skills) {
+    const key = skill.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push(skill)
+  }
+
+  return unique
+}
+
+const normalizeBackgroundSkill = (
+  skill: string
+): Result<string, CommandError> => {
+  const trimmed = skill.trim()
+  if (!trimmed) {
+    return err(commandError('invalid_command', 'skill cannot be empty'))
+  }
+
+  const normalized = isCascadeCareerSkill(trimmed)
+    ? careerSkillWithLevel(trimmed, 0)
+    : normalizeCareerSkill(trimmed, 0)
+  if (!normalized) {
+    return err(commandError('invalid_command', 'skill is not valid'))
+  }
+
+  return ok(normalized)
+}
+
 const validateCharacterCreationSheet = (
   command: Extract<Command, { type: 'FinalizeCharacterCreation' }>
 ): Result<void, CommandError> => {
@@ -167,10 +307,7 @@ const validateCharacterCreationSheet = (
   if (!age.ok) return age
 
   for (const [key, value] of Object.entries(command.characteristics)) {
-    const characteristic = requireFiniteOrNull(
-      value,
-      `characteristics.${key}`
-    )
+    const characteristic = requireFiniteOrNull(value, `characteristics.${key}`)
     if (!characteristic.ok) return characteristic
   }
 
@@ -322,6 +459,9 @@ export const deriveEventsForCommand = (
             failedToQualify: false,
             characteristicChanges: [],
             creationComplete: false,
+            homeworld: null,
+            backgroundSkills: [],
+            pendingCascadeSkills: [],
             history: []
           }
         }
@@ -340,6 +480,18 @@ export const deriveEventsForCommand = (
           commandError(
             'missing_entity',
             'Character creation has not been started'
+          )
+        )
+      }
+      if (
+        command.creationEvent.type === 'COMPLETE_HOMEWORLD' &&
+        character.creation.homeworld &&
+        !hasCompleteBackgroundChoices(character)
+      ) {
+        return err(
+          commandError(
+            'invalid_command',
+            'Background choices must be complete before career selection'
           )
         )
       }
@@ -369,6 +521,132 @@ export const deriveEventsForCommand = (
           creationEvent: command.creationEvent,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'SetCharacterCreationHomeworld': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!character.creation) {
+        return err(
+          commandError(
+            'missing_entity',
+            'Character creation has not been started'
+          )
+        )
+      }
+      if (character.creation.state.status !== 'HOMEWORLD') {
+        return err(
+          commandError(
+            'invalid_command',
+            `Homeworld cannot be set from ${character.creation.state.status}`
+          )
+        )
+      }
+      const homeworld = normalizeHomeworld(command.homeworld)
+      if (!homeworld.ok) return homeworld
+      const backgroundPlan = deriveBackgroundSkillPlan({
+        edu: character.characteristics.edu,
+        homeworld: homeworld.value,
+        rules: CEPHEUS_SRD_RULESET
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationHomeworldSet',
+          characterId: command.characterId,
+          homeworld: homeworld.value,
+          backgroundSkills: backgroundPlan.backgroundSkills,
+          pendingCascadeSkills: backgroundPlan.pendingCascadeSkills
+        }
+      ])
+    }
+
+    case 'SelectCharacterCreationBackgroundSkill': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = requireHomeworldCreation(character)
+      if (!creation.ok) return creation
+      if (
+        backgroundSelectionCount(creation.value) >=
+        requiredBackgroundSelectionCount(character)
+      ) {
+        return err(
+          commandError('invalid_command', 'Background skill allowance is full')
+        )
+      }
+      const skill = normalizeBackgroundSkill(command.skill)
+      if (!skill.ok) return skill
+
+      const backgroundSkills = [...(creation.value.backgroundSkills ?? [])]
+      const pendingCascadeSkills = [
+        ...(creation.value.pendingCascadeSkills ?? [])
+      ]
+      if (isCascadeCareerSkill(command.skill.trim())) {
+        pendingCascadeSkills.push(skill.value)
+      } else {
+        backgroundSkills.push(skill.value)
+      }
+
+      return ok([
+        {
+          type: 'CharacterCreationBackgroundSkillSelected',
+          characterId: command.characterId,
+          skill: skill.value,
+          backgroundSkills: uniqueSkills(backgroundSkills),
+          pendingCascadeSkills: uniqueSkills(pendingCascadeSkills)
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationCascadeSkill': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = requireHomeworldCreation(character)
+      if (!creation.ok) return creation
+      const cascadeSkill = normalizeBackgroundSkill(command.cascadeSkill)
+      if (!cascadeSkill.ok) return cascadeSkill
+      const selection = requireNonEmptyString(command.selection, 'selection')
+      if (!selection.ok) return selection
+      if (
+        !(creation.value.pendingCascadeSkills ?? []).includes(
+          cascadeSkill.value
+        )
+      ) {
+        return err(
+          commandError('missing_entity', 'Pending cascade skill does not exist')
+        )
+      }
+
+      const resolution = resolveCascadeCareerSkill({
+        pendingCascadeSkills: creation.value.pendingCascadeSkills ?? [],
+        backgroundSkills: creation.value.backgroundSkills ?? [],
+        cascadeSkill: cascadeSkill.value,
+        selection: selection.value,
+        basicTraining: true
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationCascadeSkillResolved',
+          characterId: command.characterId,
+          cascadeSkill: cascadeSkill.value,
+          selection: selection.value,
+          backgroundSkills: uniqueSkills(resolution.backgroundSkills),
+          pendingCascadeSkills: uniqueSkills(resolution.pendingCascadeSkills)
         }
       ])
     }

@@ -32,6 +32,7 @@ import type {
 import {
   characterCreationSteps,
   deriveCharacterCreationBasicTrainingAction,
+  deriveCharacterCreationCareerSkipAction,
   deriveNextCharacterCreationCareerRoll,
   deriveNextCharacterCreationCharacteristicRoll,
   validateCurrentCharacterCreationStep
@@ -86,6 +87,7 @@ export interface CharacterCreationCareerRollButton {
   label: string
   reason: string
   disabled: boolean
+  skipLabel: string | null
 }
 
 export interface CharacterCreationCharacteristicRollButton {
@@ -109,13 +111,31 @@ export interface CharacterCreationValidationSummary {
   message: string
 }
 
+export interface CharacterCreationStatStripItem {
+  key: CharacteristicKey
+  label: string
+  value: string
+  modifier: string
+  missing: boolean
+}
+
+export interface CharacterCreationNextStepViewModel {
+  step: CharacterCreationViewStep
+  phase: string
+  prompt: string
+  primaryAction: CharacterCreationButtonState
+  secondaryAction: CharacterCreationButtonState | null
+  validation: CharacterCreationValidationSummary
+  stats: CharacterCreationStatStripItem[]
+}
+
 export interface CharacterCreationReviewItem {
   label: string
   value: string
 }
 
 export interface CharacterCreationReviewSection {
-  key: CharacterCreationStep
+  key: string
   label: string
   items: CharacterCreationReviewItem[]
 }
@@ -176,6 +196,24 @@ export interface CharacterCreationCascadeSkillChoiceViewModel {
   options: CharacterCreationCascadeSkillChoiceOptionViewModel[]
 }
 
+export interface CharacterCreationPendingCascadeChoiceViewModel {
+  open: boolean
+  cascadeSkill: string
+  title: string
+  prompt: string
+  label: string
+  level: number
+  options: CharacterCreationCascadeSkillChoiceOptionViewModel[]
+}
+
+export interface CharacterCreationHomeworldSummaryViewModel {
+  lawLevel: string
+  tradeCodes: string[]
+  tradeCodeSummary: string
+  backgroundSkillSummary: string
+  cascadeSummary: string
+}
+
 export interface CharacterCreationBackgroundSkillSummary {
   allowance: number
   selectedSkills: string[]
@@ -193,7 +231,9 @@ export interface CharacterCreationHomeworldViewModel {
   fields: CharacterCreationFieldViewModel[]
   lawLevelOptions: CharacterCreationHomeworldOptionViewModel[]
   tradeCodeOptions: CharacterCreationHomeworldOptionViewModel[]
+  summary: CharacterCreationHomeworldSummaryViewModel
   backgroundSkills: CharacterCreationBackgroundSkillSummary
+  pendingCascadeChoice: CharacterCreationPendingCascadeChoiceViewModel | null
 }
 
 interface CharacterCreationHomeworldDraftFields {
@@ -321,7 +361,8 @@ export const deriveCharacterCreationCareerRollButton = (
   return {
     label: action.label,
     reason: action.reason,
-    disabled: false
+    disabled: false,
+    skipLabel: deriveCharacterCreationCareerSkipAction(flow)?.label ?? null
   }
 }
 
@@ -352,6 +393,24 @@ export const deriveCharacterCreationBasicTrainingButton = (
     disabled: false
   }
 }
+
+const signedModifier = (modifier: number): string =>
+  modifier > 0 ? `+${modifier}` : String(modifier)
+
+export const deriveCharacterCreationStatStrip = (
+  flow: Pick<CharacterCreationFlow, 'draft'>
+): CharacterCreationStatStripItem[] =>
+  characteristicDefinitions.map(({ key, label }) => {
+    const value = flow.draft.characteristics[key]
+    return {
+      key,
+      label,
+      value: value === null ? '-' : String(value),
+      modifier:
+        value === null ? '-' : signedModifier(characteristicModifier(value)),
+      missing: value === null
+    }
+  })
 
 const valueText = (value: string | number | null | undefined): string => {
   if (value === null || value === undefined) return ''
@@ -512,6 +571,7 @@ const rollErrors = ({
   if (value === null || value === undefined) {
     return required ? [`${label} is required`] : []
   }
+  if (value === -1) return []
   if (!Number.isFinite(value)) return [`${label} must be a finite number`]
   if (value < 2 || value > 12) return [`${label} must be between 2 and 12`]
   return []
@@ -569,7 +629,7 @@ const fieldErrors = (
     if (key === 'skills') return error.startsWith('At least one skill')
     if (key === 'credits') return error.startsWith('Credits ')
     if (key === 'equipment') return error.startsWith('Equipment ')
-    if (key === 'career') return error.startsWith('Career ')
+    if (key === 'career') return error.startsWith('Career is ')
     if (key === 'homeworld.lawLevel') {
       return error.startsWith('Homeworld law level ')
     }
@@ -629,7 +689,7 @@ const cascadeChoiceOptions = (
   }))
 }
 
-const cascadeSkillChoiceViewModels = (
+export const deriveCharacterCreationCascadeSkillChoiceViewModels = (
   pendingCascadeSkills: readonly string[]
 ): CharacterCreationCascadeSkillChoiceViewModel[] =>
   pendingCascadeSkills.map((cascadeSkill) => {
@@ -641,6 +701,24 @@ const cascadeSkillChoiceViewModels = (
       options: cascadeChoiceOptions(cascadeSkill)
     }
   })
+
+const pendingCascadeChoiceViewModel = (
+  pendingCascadeSkills: readonly string[]
+): CharacterCreationPendingCascadeChoiceViewModel | null => {
+  const choice =
+    deriveCharacterCreationCascadeSkillChoiceViewModels(pendingCascadeSkills)[0]
+  if (!choice) return null
+
+  return {
+    open: true,
+    cascadeSkill: choice.cascadeSkill,
+    title: `Choose ${choice.label}`,
+    prompt: `Resolve ${choice.label}-${choice.level} into a specialty.`,
+    label: choice.label,
+    level: choice.level,
+    options: choice.options
+  }
+}
 
 const deriveCharacterCreationBackgroundSkillSummary = (
   flow: CharacterCreationFlow
@@ -668,7 +746,8 @@ const deriveCharacterCreationBackgroundSkillSummary = (
       cascade: isCascadeCareerSkill(option.name)
     }
   })
-  const cascadeSkillChoices = cascadeSkillChoiceViewModels(pendingCascadeSkills)
+  const cascadeSkillChoices =
+    deriveCharacterCreationCascadeSkillChoiceViewModels(pendingCascadeSkills)
   const errors =
     pendingCascadeSkills.length === 0
       ? []
@@ -696,6 +775,35 @@ const deriveCharacterCreationBackgroundSkillSummary = (
   }
 }
 
+const plural = (count: number, singular: string, pluralText: string): string =>
+  `${count} ${count === 1 ? singular : pluralText}`
+
+const homeworldSummaryViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationHomeworldSummaryViewModel => {
+  const homeworld = selectedHomeworld(flow.draft)
+  const tradeCodes = selectedTradeCodes(homeworld.tradeCodes)
+  const backgroundSkills = deriveCharacterCreationBackgroundSkillSummary(flow)
+  const selectedCount =
+    backgroundSkills.selectedSkills.length +
+    backgroundSkills.pendingCascadeSkills.length
+
+  return {
+    lawLevel: homeworld.lawLevel ?? 'Not set',
+    tradeCodes,
+    tradeCodeSummary: tradeCodes.length > 0 ? tradeCodes.join(', ') : 'Not set',
+    backgroundSkillSummary: `${selectedCount}/${backgroundSkills.allowance} background skills selected`,
+    cascadeSummary:
+      backgroundSkills.pendingCascadeSkills.length === 0
+        ? 'No cascade choices pending'
+        : `${plural(
+            backgroundSkills.pendingCascadeSkills.length,
+            'cascade choice',
+            'cascade choices'
+          )} pending`
+  }
+}
+
 export const deriveCharacterCreationValidationSummary = (
   flow: CharacterCreationFlow,
   step: CharacterCreationViewStep = flow.step
@@ -711,6 +819,81 @@ export const deriveCharacterCreationValidationSummary = (
     message: validation.ok
       ? 'Ready to continue'
       : `${errorCount} ${errorCount === 1 ? 'issue' : 'issues'} to fix`
+  }
+}
+
+const characterCreationPrompt = (
+  flow: CharacterCreationFlow,
+  validation: CharacterCreationValidationSummary
+): string => {
+  switch (flow.step) {
+    case 'basics':
+      return 'Name the traveller and choose the sheet type.'
+    case 'characteristics': {
+      const roll = deriveCharacterCreationCharacteristicRollButton(flow)
+      return roll
+        ? 'Roll or enter all six characteristics.'
+        : 'Characteristics are ready.'
+    }
+    case 'homeworld': {
+      const summary = deriveCharacterCreationBackgroundSkillSummary(flow)
+      if (
+        validation.errors.includes('Homeworld law level is required') ||
+        validation.errors.includes('Homeworld trade code is required')
+      ) {
+        return 'Choose homeworld law level and trade codes.'
+      }
+      if (summary.pendingCascadeSkills.length > 0) {
+        return `${plural(
+          summary.pendingCascadeSkills.length,
+          'cascade choice',
+          'cascade choices'
+        )} must be resolved.`
+      }
+      if (summary.remainingSelections > 0) {
+        return `Choose ${plural(
+          summary.remainingSelections,
+          'more background skill',
+          'more background skills'
+        )}.`
+      }
+      return 'Homeworld and background skills are ready.'
+    }
+    case 'career':
+      return deriveCharacterCreationCareerRollButton(flow)
+        ? 'Resolve the current career term rolls.'
+        : 'Choose a career and confirm term results.'
+    case 'skills':
+      return deriveCharacterCreationBasicTrainingButton(flow)
+        ? 'Apply basic training or enter skills manually.'
+        : 'Review the skill list before equipment.'
+    case 'equipment':
+      return 'Add starting equipment, credits, and notes.'
+    case 'review':
+      return validation.ok
+        ? 'Review the complete character before creating it.'
+        : 'Fix the highlighted character details before creating it.'
+    default: {
+      const exhaustive: never = flow.step
+      return exhaustive
+    }
+  }
+}
+
+export const deriveCharacterCreationNextStepViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationNextStepViewModel => {
+  const validation = deriveCharacterCreationValidationSummary(flow)
+  const buttons = deriveCharacterCreationButtonStates(flow)
+
+  return {
+    step: flow.step,
+    phase: characterCreationStepLabels[flow.step],
+    prompt: characterCreationPrompt(flow, validation),
+    primaryAction: buttons.primary,
+    secondaryAction: buttons.secondary,
+    validation,
+    stats: deriveCharacterCreationStatStrip(flow)
   }
 }
 
@@ -732,15 +915,6 @@ export const deriveCharacterCreationFieldViewModels = (
           value: draft.name,
           required: true,
           errors: fieldErrors(validation.errors, 'name')
-        },
-        {
-          key: 'age',
-          label: 'Age',
-          kind: 'number',
-          step,
-          value: valueText(draft.age),
-          required: false,
-          errors: fieldErrors(validation.errors, 'age')
         },
         {
           key: 'characterType',
@@ -926,7 +1100,11 @@ export const deriveCharacterCreationHomeworldViewModel = (
       Object.keys(CEPHEUS_SRD_RULESET.homeWorldSkillsByTradeCode),
       tradeCodes
     ),
-    backgroundSkills: deriveCharacterCreationBackgroundSkillSummary(flow)
+    summary: homeworldSummaryViewModel(flow),
+    backgroundSkills: deriveCharacterCreationBackgroundSkillSummary(flow),
+    pendingCascadeChoice: pendingCascadeChoiceViewModel(
+      flow.draft.pendingCascadeSkills
+    )
   }
 }
 
@@ -947,7 +1125,6 @@ export const parseCharacterCreationDraftPatch = (
       patch.characterType = characterType
     }
   }
-  if (values.age !== undefined) patch.age = parseOptionalNumber(values.age)
   if (values.credits !== undefined) {
     patch.credits = parseNumberWithDefault(values.credits, 0)
   }
@@ -993,6 +1170,7 @@ const outcomeValue = (
   unavailableLabel = 'Not set'
 ): string => {
   if (roll === null || roll === undefined) return unavailableLabel
+  if (roll === -1) return 'Skipped'
   if (passed === true) return `${roll} (passed)`
   if (passed === false) return `${roll} (failed)`
   return `${roll} (not evaluated)`
@@ -1030,6 +1208,52 @@ const careerReviewItems = (
     )
   }
 ]
+
+const termHistoryReviewItems = (
+  draft: CharacterCreationFlow['draft']
+): CharacterCreationReviewItem[] => {
+  if (draft.completedTerms.length === 0) {
+    return [{ label: 'Terms', value: 'Not recorded' }]
+  }
+
+  return draft.completedTerms.map((term, index) => ({
+    label: `Term ${index + 1}`,
+    value: [
+      term.career,
+      term.drafted ? 'drafted' : null,
+      term.survivalPassed ? 'survived' : 'mishap',
+      term.commissionPassed === true ? 'commissioned' : null,
+      term.advancementPassed === true ? 'advanced' : null,
+      term.rankTitle ? `rank ${term.rankTitle}` : null,
+      term.rankBonusSkill ? `rank skill ${term.rankBonusSkill}` : null,
+      (term.termSkillRolls ?? []).length > 0
+        ? `training ${(term.termSkillRolls ?? [])
+            .map((roll) => `${roll.skill} (${roll.roll})`)
+            .join(', ')}`
+        : null,
+      term.agingRoll != null
+        ? `aging ${term.agingRoll}${
+            term.agingMessage ? ` ${term.agingMessage}` : ''
+          }`
+        : null
+    ]
+      .filter(Boolean)
+      .join(', ')
+  }))
+}
+
+const musteringReviewItems = (
+  draft: CharacterCreationFlow['draft']
+): CharacterCreationReviewItem[] => {
+  if (draft.musteringBenefits.length === 0) {
+    return [{ label: 'Benefits', value: 'Not rolled' }]
+  }
+
+  return draft.musteringBenefits.map((benefit, index) => ({
+    label: `Benefit ${index + 1}`,
+    value: `${benefit.career} ${benefit.kind} ${benefit.roll}: ${benefit.value}`
+  }))
+}
 
 const careerCheckViewModel = ({
   label,
@@ -1124,9 +1348,19 @@ export const deriveCharacterCreationReviewSummary = (
         items: careerReviewItems(draft.careerPlan)
       },
       {
+        key: 'career-history',
+        label: 'Terms',
+        items: termHistoryReviewItems(draft)
+      },
+      {
         key: 'skills',
         label: characterCreationStepLabels.skills,
         items: [{ label: 'Skills', value: skills }]
+      },
+      {
+        key: 'mustering-out',
+        label: 'Mustering out',
+        items: musteringReviewItems(draft)
       },
       {
         key: 'equipment',

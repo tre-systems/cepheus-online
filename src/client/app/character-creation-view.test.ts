@@ -4,7 +4,8 @@ import { describe, it } from 'node:test'
 import { asCharacterId } from '../../shared/ids'
 import {
   createCharacterCreationFlow,
-  createInitialCharacterDraft
+  createInitialCharacterDraft,
+  type CharacterCreationFlow
 } from './character-creation-flow'
 import {
   characterCreationPrimaryCtaLabels,
@@ -18,7 +19,9 @@ import {
   deriveCharacterCreationCtaLabels,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationHomeworldViewModel,
+  deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationReviewSummary,
+  deriveCharacterCreationStatStrip,
   deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationValidationSummary,
   equipmentText,
@@ -27,7 +30,7 @@ import {
 
 const characterId = asCharacterId('mustering-out-scout')
 
-const completeFlow = () => ({
+const completeFlow = (): CharacterCreationFlow => ({
   step: 'review' as const,
   draft: {
     ...createInitialCharacterDraft(characterId, {
@@ -54,7 +57,7 @@ const completeFlow = () => ({
       lawLevel: 'No Law',
       tradeCodes: ['Asteroid']
     },
-    backgroundSkills: ['Zero-G-0', 'Slug Pistol-0'],
+    backgroundSkills: ['Zero-G-0', 'Slug Pistol-0', 'Admin-0'],
     pendingCascadeSkills: [],
     careerPlan: {
       career: 'Scout',
@@ -68,8 +71,45 @@ const completeFlow = () => ({
       advancementPassed: null,
       canCommission: false,
       canAdvance: false,
-      drafted: false
-    }
+      drafted: false,
+      termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Pilot' }],
+      agingRoll: 0,
+      agingMessage: 'Character aged to 34.',
+      agingSelections: [],
+      reenlistmentRoll: 7,
+      reenlistmentOutcome: 'allowed'
+    },
+    completedTerms: [
+      {
+        career: 'Scout',
+        drafted: false,
+        age: 34,
+        qualificationRoll: 8,
+        survivalRoll: 9,
+        survivalPassed: true,
+        canCommission: false,
+        commissionRoll: null,
+        commissionPassed: null,
+        canAdvance: false,
+        advancementRoll: null,
+        advancementPassed: null,
+        termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Pilot' }],
+        agingRoll: 0,
+        agingMessage: 'Character aged to 34.',
+        agingSelections: [],
+        reenlistmentRoll: 7,
+        reenlistmentOutcome: 'allowed'
+      }
+    ],
+    musteringBenefits: [
+      {
+        career: 'Scout',
+        kind: 'cash',
+        roll: 2,
+        value: '10000',
+        credits: 10000
+      }
+    ]
   }
 })
 
@@ -135,15 +175,6 @@ describe('character creation view helpers', () => {
         value: '',
         required: true,
         errors: ['Name is required']
-      },
-      {
-        key: 'age',
-        label: 'Age',
-        kind: 'number',
-        step: 'basics',
-        value: '',
-        required: false,
-        errors: []
       },
       {
         key: 'characterType',
@@ -357,6 +388,29 @@ describe('character creation view helpers', () => {
         { value: 'Industrial', label: 'Industrial', selected: true }
       ]
     )
+    assert.deepEqual(viewModel.summary, {
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid', 'Industrial'],
+      tradeCodeSummary: 'Asteroid, Industrial',
+      backgroundSkillSummary: '2/4 background skills selected',
+      cascadeSummary: '1 cascade choice pending'
+    })
+    assert.deepEqual(viewModel.pendingCascadeChoice, {
+      open: true,
+      cascadeSkill: 'Gun Combat-0',
+      title: 'Choose Gun Combat',
+      prompt: 'Resolve Gun Combat-0 into a specialty.',
+      label: 'Gun Combat',
+      level: 0,
+      options: [
+        { value: 'Archery-0', label: 'Archery', cascade: false },
+        { value: 'Energy Pistol-0', label: 'Energy Pistol', cascade: false },
+        { value: 'Energy Rifle-0', label: 'Energy Rifle', cascade: false },
+        { value: 'Shotgun-0', label: 'Shotgun', cascade: false },
+        { value: 'Slug Pistol-0', label: 'Slug Pistol', cascade: false },
+        { value: 'Slug Rifle-0', label: 'Slug Rifle', cascade: false }
+      ]
+    })
     assert.deepEqual(viewModel.backgroundSkills, {
       allowance: 4,
       selectedSkills: ['Zero-G-0'],
@@ -534,6 +588,113 @@ describe('character creation view helpers', () => {
     })
   })
 
+  it('derives a compact stat strip from any creation step', () => {
+    assert.deepEqual(
+      deriveCharacterCreationStatStrip({
+        draft: createInitialCharacterDraft(characterId, {
+          characteristics: {
+            str: 3,
+            dex: 6,
+            end: 8,
+            int: 9,
+            edu: 12,
+            soc: null
+          }
+        })
+      }),
+      [
+        {
+          key: 'str',
+          label: 'Str',
+          value: '3',
+          modifier: '-1',
+          missing: false
+        },
+        { key: 'dex', label: 'Dex', value: '6', modifier: '0', missing: false },
+        { key: 'end', label: 'End', value: '8', modifier: '0', missing: false },
+        {
+          key: 'int',
+          label: 'Int',
+          value: '9',
+          modifier: '+1',
+          missing: false
+        },
+        {
+          key: 'edu',
+          label: 'Edu',
+          value: '12',
+          modifier: '+2',
+          missing: false
+        },
+        { key: 'soc', label: 'Soc', value: '-', modifier: '-', missing: true }
+      ]
+    )
+  })
+
+  it('derives a mobile next-step model with phase prompt and actions', () => {
+    const flow = {
+      step: 'homeworld' as const,
+      draft: {
+        ...createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          characteristics: {
+            str: 7,
+            dex: 8,
+            end: 7,
+            int: 9,
+            edu: 9,
+            soc: 6
+          }
+        }),
+        homeworld: {
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid']
+        },
+        backgroundSkills: ['Zero-G-0', 'Admin-0', 'Broker-0'],
+        pendingCascadeSkills: ['Gun Combat-0']
+      }
+    }
+
+    const viewModel = deriveCharacterCreationNextStepViewModel(flow)
+
+    assert.equal(viewModel.step, 'homeworld')
+    assert.equal(viewModel.phase, 'Homeworld')
+    assert.equal(viewModel.prompt, '1 cascade choice must be resolved.')
+    assert.deepEqual(viewModel.primaryAction, {
+      label: 'Continue to career',
+      disabled: true,
+      reason: '1 issue to fix'
+    })
+    assert.deepEqual(viewModel.secondaryAction, {
+      label: 'Back',
+      disabled: false,
+      reason: null
+    })
+    assert.deepEqual(viewModel.validation, {
+      ok: false,
+      step: 'homeworld',
+      errors: ['Pending background cascade skills must be resolved'],
+      errorCount: 1,
+      message: '1 issue to fix'
+    })
+    assert.deepEqual(
+      viewModel.stats.map(({ label, value, modifier, missing }) => ({
+        label,
+        value,
+        modifier,
+        missing
+      })),
+      [
+        { label: 'Str', value: '7', modifier: '0', missing: false },
+        { label: 'Dex', value: '8', modifier: '0', missing: false },
+        { label: 'End', value: '7', modifier: '0', missing: false },
+        { label: 'Int', value: '9', modifier: '+1', missing: false },
+        { label: 'Edu', value: '9', modifier: '+1', missing: false },
+        { label: 'Soc', value: '6', modifier: '0', missing: false }
+      ]
+    )
+  })
+
   it('derives the basic training button from an empty skills step', () => {
     const flow = {
       step: 'skills' as const,
@@ -631,7 +792,8 @@ describe('character creation view helpers', () => {
     assert.deepEqual(deriveCharacterCreationCareerRollButton(careerFlow), {
       label: 'Roll qualification',
       reason: 'Iona Vesh Merchant qualification',
-      disabled: false
+      disabled: false,
+      skipLabel: null
     })
 
     assert.equal(
@@ -891,7 +1053,6 @@ describe('character creation view helpers', () => {
       parseCharacterCreationDraftPatch({
         name: ' Iona Vesh ',
         characterType: 'NPC',
-        age: '34',
         str: '7',
         dex: '8',
         end: '',
@@ -915,7 +1076,6 @@ describe('character creation view helpers', () => {
       {
         name: ' Iona Vesh ',
         characterType: 'NPC',
-        age: 34,
         credits: 1200,
         notes: 'Detached scout.',
         skills: ['Pilot-1', 'Vacc Suit-0', 'Mechanic-0'],
@@ -957,7 +1117,6 @@ describe('character creation view helpers', () => {
   it('keeps sparse form values sparse and ignores unknown character types', () => {
     assert.deepEqual(
       parseCharacterCreationDraftPatch({
-        age: undefined,
         characterType: 'ALIEN',
         credits: '',
         skills: ''
@@ -1008,9 +1167,25 @@ describe('character creation view helpers', () => {
         ]
       },
       {
+        key: 'career-history',
+        label: 'Terms',
+        items: [
+          {
+            label: 'Term 1',
+            value:
+              'Scout, survived, training Pilot (1), aging 0 Character aged to 34.'
+          }
+        ]
+      },
+      {
         key: 'skills',
         label: 'Skills',
         items: [{ label: 'Skills', value: 'Pilot-1, Vacc Suit-0' }]
+      },
+      {
+        key: 'mustering-out',
+        label: 'Mustering out',
+        items: [{ label: 'Benefit 1', value: 'Scout cash 2: 10000' }]
       },
       {
         key: 'equipment',

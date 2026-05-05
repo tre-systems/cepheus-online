@@ -65,6 +65,12 @@ export const createDefaultPieceCharacterCreationFlow = (
       edu: 7,
       soc: 7
     },
+    homeworld: {
+      lawLevel: 'Low Law',
+      tradeCodes: ['Industrial']
+    },
+    backgroundSkills: ['Broker-0', 'Slug Pistol-0', 'Admin-0'],
+    pendingCascadeSkills: [],
     careerPlan: selectCharacterCreationCareerPlan('Scout'),
     skills: ['Athletics-0', 'Gun Combat-0'],
     equipment: [],

@@ -10,10 +10,19 @@ import {
   applyCharacterCreationCharacteristicRoll,
   applyCharacterCreationCareerRoll,
   applyCharacterCreationCareerPlan,
+  applyCharacterCreationAgingChange,
+  applyCharacterCreationAgingRoll,
+  applyCharacterCreationMusteringBenefit,
+  applyCharacterCreationReenlistmentRoll,
+  applyCharacterCreationTermSkillRoll,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationStep,
   backCharacterCreationWizardStep,
+  canRollCharacterCreationMusteringBenefit,
+  characterCreationMusteringBenefitRollModifier,
+  type CharacterCreationFlow,
   characterCreationCareerNames,
+  completeCharacterCreationCareerTerm,
   characterCreationSteps,
   createCharacterCreationFlow,
   createInitialCharacterDraft,
@@ -26,14 +35,22 @@ import {
   deriveInitialCharacterCreationStateCommands,
   deriveNextCharacterCreationCharacteristicRoll,
   deriveNextCharacterCreationCareerRoll,
+  deriveNextCharacterCreationAgingRoll,
+  deriveNextCharacterCreationReenlistmentRoll,
+  deriveCharacterCreationAgingChangeOptions,
+  deriveCharacterCreationTermSkillTableActions,
   deriveStartCharacterCareerTermCommand,
   deriveStartCharacterCreationCommand,
   deriveUpdateCharacterSheetCommand,
   evaluateCharacterCreationCareerPlan,
+  remainingMusteringBenefits,
+  remainingCharacterCreationTermSkillRolls,
   nextCharacterCreationWizardStep,
   removeCharacterCreationBackgroundSkillSelection,
   resolveCharacterCreationCascadeSkill,
+  resolveCharacterCreationTermCascadeSkill,
   selectCharacterCreationCareerPlan,
+  skipCharacterCreationCareerRoll,
   updateCharacterCreationDraft,
   updateCharacterCreationFields,
   validateCurrentCharacterCreationStep
@@ -93,6 +110,7 @@ describe('character creation flow', () => {
     assert.equal(flow.draft.characterId, characterId)
     assert.equal(flow.draft.characterType, 'PLAYER')
     assert.equal(flow.draft.name, '')
+    assert.equal(flow.draft.age, 18)
     assert.deepEqual(flow.draft.characteristics, {
       str: null,
       dex: null,
@@ -230,6 +248,9 @@ describe('character creation flow', () => {
     assert.equal(evaluated.canAdvance, false)
     assert.equal(evaluated.commissionPassed, true)
     assert.equal(evaluated.advancementPassed, true)
+    assert.equal(evaluated.rank, 1)
+    assert.equal(evaluated.rankTitle, 'Deck Cadet')
+    assert.equal(evaluated.rankBonusSkill, null)
     assert.equal(evaluated.drafted, true)
     assert.equal(draft.careerPlan, null)
 
@@ -428,6 +449,39 @@ describe('character creation flow', () => {
     })
   })
 
+  it('preserves resolved background cascade skills when unchanged form values sync', () => {
+    let draft = createInitialCharacterDraft(characterId, {
+      name: 'Iona Vesh',
+      characteristics: completeDraft().characteristics,
+      homeworld: {
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid']
+      }
+    })
+
+    draft = resolveCharacterCreationCascadeSkill({
+      draft,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
+    draft = applyCharacterCreationBackgroundSkillSelection(draft, 'Admin')
+
+    const synced = updateCharacterCreationDraft(draft, {
+      characteristics: completeDraft().characteristics,
+      homeworld: {
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid']
+      }
+    })
+
+    assert.deepEqual(synced.backgroundSkills, [
+      'Zero-G-0',
+      'Slug Rifle-0',
+      'Admin-0'
+    ])
+    assert.deepEqual(synced.pendingCascadeSkills, [])
+  })
+
   it('applies first-term basic training from the selected career service skills', () => {
     let flow = createCharacterCreationFlow(characterId, {
       name: 'Iona Vesh',
@@ -502,7 +556,447 @@ describe('character creation flow', () => {
     flow = result.flow
     assert.equal(flow.draft.careerPlan?.commissionRoll, 4)
     assert.equal(flow.draft.careerPlan?.commissionPassed, true)
+    assert.equal(flow.draft.careerPlan?.rank, 1)
+    assert.equal(flow.draft.careerPlan?.rankTitle, 'Deck Cadet')
     assert.equal(deriveNextCharacterCreationCareerRoll(flow), null)
+    assert.equal(remainingCharacterCreationTermSkillRolls(flow.draft), 1)
+    assert.deepEqual(
+      deriveCharacterCreationTermSkillTableActions(flow).map(
+        ({ table, label, disabled }) => ({ table, label, disabled })
+      ),
+      [
+        {
+          table: 'personalDevelopment',
+          label: 'Personal development',
+          disabled: false
+        },
+        { table: 'serviceSkills', label: 'Service skills', disabled: false },
+        {
+          table: 'specialistSkills',
+          label: 'Specialist skills',
+          disabled: false
+        },
+        {
+          table: 'advancedEducation',
+          label: 'Advanced education',
+          disabled: false
+        }
+      ]
+    )
+
+    result = applyCharacterCreationTermSkillRoll({
+      flow,
+      table: 'serviceSkills',
+      roll: 1
+    })
+    flow = result.flow
+    assert.equal(remainingCharacterCreationTermSkillRolls(flow.draft), 0)
+    assert.deepEqual(flow.draft.careerPlan?.termSkillRolls, [
+      { table: 'serviceSkills', roll: 1, skill: 'Comms' }
+    ])
+    assert.deepEqual(flow.draft.skills, [
+      'Comms-1',
+      'Engineering-0',
+      'Gun Combat-0',
+      'Melee Combat-0',
+      'Broker-0',
+      'Vehicle-0'
+    ])
+  })
+
+  it('applies advancement rank titles and rank bonus skills', () => {
+    const priorTerm = {
+      career: 'Merchant',
+      drafted: false,
+      age: 22,
+      rank: 2,
+      qualificationRoll: 7,
+      survivalRoll: 8,
+      survivalPassed: true,
+      canCommission: true,
+      commissionRoll: 8,
+      commissionPassed: true,
+      canAdvance: false,
+      advancementRoll: null,
+      advancementPassed: null,
+      termSkillRolls: [
+        { table: 'serviceSkills' as const, roll: 1, skill: 'Comms' }
+      ],
+      reenlistmentRoll: 7,
+      reenlistmentOutcome: 'allowed' as const
+    }
+    let flow: CharacterCreationFlow = {
+      step: 'career',
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: completeDraft().characteristics,
+        completedTerms: [priorTerm],
+        careerPlan: selectCharacterCreationCareerPlan('Merchant', {
+          qualificationRoll: 12,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          canCommission: false,
+          canAdvance: true
+        })
+      })
+    }
+
+    assert.deepEqual(deriveNextCharacterCreationCareerRoll(flow), {
+      key: 'advancementRoll',
+      label: 'Roll advancement',
+      reason: 'Iona Vesh Merchant advancement'
+    })
+
+    flow = applyCharacterCreationCareerRoll(flow, 8).flow
+
+    assert.equal(flow.draft.careerPlan?.advancementPassed, true)
+    assert.equal(flow.draft.careerPlan?.rank, 3)
+    assert.equal(flow.draft.careerPlan?.rankTitle, 'Third Officer')
+    assert.equal(flow.draft.careerPlan?.rankBonusSkill, 'Piloting')
+    assert.deepEqual(flow.draft.skills, ['Piloting-1'])
+  })
+
+  it('lets optional commission and advancement rolls be skipped', () => {
+    let flow: CharacterCreationFlow = {
+      step: 'career',
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: completeDraft().characteristics,
+        careerPlan: selectCharacterCreationCareerPlan('Merchant', {
+          qualificationRoll: 7,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          canCommission: true
+        })
+      })
+    }
+
+    flow = skipCharacterCreationCareerRoll(flow).flow
+
+    assert.equal(flow.draft.careerPlan?.commissionRoll, -1)
+    assert.equal(flow.draft.careerPlan?.commissionPassed, false)
+    assert.equal(deriveNextCharacterCreationCareerRoll(flow), null)
+    assert.equal(remainingCharacterCreationTermSkillRolls(flow.draft), 1)
+
+    flow = {
+      step: 'career',
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: completeDraft().characteristics,
+        completedTerms: [
+          {
+            career: 'Merchant',
+            drafted: false,
+            age: 22,
+            rank: 1,
+            qualificationRoll: 7,
+            survivalRoll: 8,
+            survivalPassed: true,
+            canCommission: true,
+            commissionRoll: 8,
+            commissionPassed: true,
+            canAdvance: false,
+            advancementRoll: null,
+            advancementPassed: null,
+            termSkillRolls: [
+              { table: 'serviceSkills' as const, roll: 1, skill: 'Comms' }
+            ],
+            reenlistmentRoll: 7,
+            reenlistmentOutcome: 'allowed'
+          }
+        ],
+        careerPlan: selectCharacterCreationCareerPlan('Merchant', {
+          qualificationRoll: 12,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          canCommission: false,
+          canAdvance: true
+        })
+      })
+    }
+
+    flow = skipCharacterCreationCareerRoll(flow).flow
+
+    assert.equal(flow.draft.careerPlan?.advancementRoll, -1)
+    assert.equal(flow.draft.careerPlan?.advancementPassed, false)
+    assert.equal(deriveNextCharacterCreationCareerRoll(flow), null)
+  })
+
+  it('applies personal development rolls as characteristic gains', () => {
+    const originalStr = completeDraft().characteristics.str ?? 0
+    let flow: CharacterCreationFlow = {
+      step: 'career' as const,
+      draft: applyCharacterCreationCareerPlan(
+        createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          characteristics: completeDraft().characteristics,
+          careerPlan: selectCharacterCreationCareerPlan('Merchant')
+        }),
+        {
+          ...selectCharacterCreationCareerPlan('Merchant'),
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          canCommission: true,
+          commissionRoll: 8,
+          commissionPassed: true,
+          canAdvance: false,
+          advancementRoll: null,
+          advancementPassed: null
+        }
+      )
+    }
+
+    flow = applyCharacterCreationTermSkillRoll({
+      flow,
+      table: 'personalDevelopment',
+      roll: 1
+    }).flow
+
+    assert.equal(flow.draft.characteristics.str, originalStr + 1)
+    assert.equal(remainingCharacterCreationTermSkillRolls(flow.draft), 0)
+    assert.deepEqual(flow.draft.careerPlan?.termSkillRolls, [
+      { table: 'personalDevelopment', roll: 1, skill: '+1 Str' }
+    ])
+    assert.deepEqual(flow.draft.skills, [
+      'Comms-0',
+      'Engineering-0',
+      'Gun Combat-0',
+      'Melee Combat-0',
+      'Broker-0',
+      'Vehicle-0'
+    ])
+  })
+
+  it('requires rolled career cascade skills to be resolved before term completion', () => {
+    let flow: CharacterCreationFlow = {
+      step: 'career',
+      draft: applyCharacterCreationCareerPlan(
+        createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          characteristics: completeDraft().characteristics,
+          careerPlan: selectCharacterCreationCareerPlan('Merchant')
+        }),
+        {
+          ...selectCharacterCreationCareerPlan('Merchant'),
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          canCommission: true,
+          commissionRoll: 8,
+          commissionPassed: true,
+          canAdvance: false,
+          advancementRoll: null,
+          advancementPassed: null
+        }
+      )
+    }
+
+    flow = applyCharacterCreationTermSkillRoll({
+      flow,
+      table: 'serviceSkills',
+      roll: 3
+    }).flow
+
+    assert.deepEqual(flow.draft.pendingTermCascadeSkills, ['Gun Combat-1'])
+    assert.equal(deriveCharacterCreationTermSkillTableActions(flow).length, 0)
+    assert.deepEqual(validateCurrentCharacterCreationStep(flow).errors, [
+      'Career term must be completed',
+      'Pending career cascade skills must be resolved'
+    ])
+    assert.deepEqual(flow.draft.skills, [
+      'Comms-0',
+      'Engineering-0',
+      'Gun Combat-0',
+      'Melee Combat-0',
+      'Broker-0',
+      'Vehicle-0'
+    ])
+
+    flow = resolveCharacterCreationTermCascadeSkill({
+      flow,
+      cascadeSkill: 'Gun Combat-1',
+      selection: 'Slug Rifle'
+    }).flow
+
+    assert.deepEqual(flow.draft.pendingTermCascadeSkills, [])
+    assert.deepEqual(flow.draft.skills, [
+      'Comms-0',
+      'Engineering-0',
+      'Gun Combat-0',
+      'Melee Combat-0',
+      'Broker-0',
+      'Vehicle-0',
+      'Slug Rifle-1'
+    ])
+
+    assert.deepEqual(deriveNextCharacterCreationReenlistmentRoll(flow), {
+      label: 'Roll reenlistment',
+      reason: 'Iona Vesh Merchant reenlistment'
+    })
+    flow = applyCharacterCreationReenlistmentRoll(flow, 7).flow
+    assert.equal(flow.draft.careerPlan?.reenlistmentOutcome, 'allowed')
+
+    const completed = completeCharacterCreationCareerTerm({
+      flow,
+      continueCareer: false
+    })
+    assert.equal(completed.moved, true)
+    assert.equal(completed.flow.draft.completedTerms.length, 1)
+  })
+
+  it('applies reenlistment outcomes before a term can be closed', () => {
+    let flow: CharacterCreationFlow = {
+      step: 'career',
+      draft: applyCharacterCreationCareerPlan(
+        createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          characteristics: completeDraft().characteristics,
+          careerPlan: selectCharacterCreationCareerPlan('Merchant')
+        }),
+        {
+          ...selectCharacterCreationCareerPlan('Merchant'),
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          canCommission: true,
+          commissionRoll: 8,
+          commissionPassed: true,
+          canAdvance: false,
+          advancementRoll: null,
+          advancementPassed: null,
+          termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Comms' }]
+        }
+      )
+    }
+
+    assert.deepEqual(deriveNextCharacterCreationReenlistmentRoll(flow), {
+      label: 'Roll reenlistment',
+      reason: 'Iona Vesh Merchant reenlistment'
+    })
+    assert.deepEqual(validateCurrentCharacterCreationStep(flow).errors, [
+      'Career term must be completed',
+      'Reenlistment roll is incomplete'
+    ])
+
+    flow = applyCharacterCreationReenlistmentRoll(flow, 12).flow
+    assert.equal(flow.draft.careerPlan?.reenlistmentOutcome, 'forced')
+    assert.equal(
+      completeCharacterCreationCareerTerm({ flow, continueCareer: true }).flow
+        .step,
+      'career'
+    )
+
+    const forcedPlan = flow.draft.careerPlan
+    if (!forcedPlan) throw new Error('Expected career plan')
+    flow = applyCharacterCreationReenlistmentRoll(
+      {
+        ...flow,
+        draft: {
+          ...flow.draft,
+          careerPlan: {
+            ...forcedPlan,
+            reenlistmentRoll: null,
+            reenlistmentOutcome: null
+          }
+        }
+      },
+      3
+    ).flow
+    assert.equal(flow.draft.careerPlan?.reenlistmentOutcome, 'blocked')
+    assert.equal(
+      completeCharacterCreationCareerTerm({ flow, continueCareer: true }).flow
+        .step,
+      'skills'
+    )
+  })
+
+  it('requires aging rolls and characteristic choices before reenlistment', () => {
+    const completedTerm = {
+      career: 'Merchant',
+      drafted: false,
+      age: 22,
+      qualificationRoll: 8,
+      survivalRoll: 8,
+      survivalPassed: true,
+      canCommission: false,
+      commissionRoll: null,
+      commissionPassed: null,
+      canAdvance: false,
+      advancementRoll: null,
+      advancementPassed: null,
+      termSkillRolls: [{ table: 'serviceSkills' as const, roll: 1, skill: 'Comms' }],
+      reenlistmentRoll: 7,
+      reenlistmentOutcome: 'allowed' as const
+    }
+    let flow: CharacterCreationFlow = {
+      step: 'career',
+      draft: applyCharacterCreationCareerPlan(
+        createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          age: 30,
+          characteristics: completeDraft().characteristics,
+          completedTerms: [
+            completedTerm,
+            { ...completedTerm, age: 26 },
+            { ...completedTerm, age: 30 }
+          ],
+          careerPlan: selectCharacterCreationCareerPlan('Merchant')
+        }),
+        {
+          ...selectCharacterCreationCareerPlan('Merchant'),
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          canCommission: true,
+          commissionRoll: 8,
+          commissionPassed: true,
+          canAdvance: false,
+          advancementRoll: null,
+          advancementPassed: null,
+          termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Comms' }]
+        }
+      )
+    }
+
+    assert.deepEqual(deriveNextCharacterCreationAgingRoll(flow), {
+      label: 'Roll aging',
+      reason: 'Iona Vesh aging',
+      modifier: -4
+    })
+    assert.equal(deriveNextCharacterCreationReenlistmentRoll(flow), null)
+    assert.deepEqual(validateCurrentCharacterCreationStep(flow).errors, [
+      'Career term must be completed',
+      'Aging roll is incomplete'
+    ])
+
+    flow = applyCharacterCreationAgingRoll(flow, -2).flow
+    assert.equal(flow.draft.age, 34)
+    assert.equal(flow.draft.pendingAgingChanges.length, 3)
+    assert.deepEqual(deriveCharacterCreationAgingChangeOptions(flow)[0], {
+      index: 0,
+      type: 'PHYSICAL',
+      modifier: -1,
+      options: ['str', 'dex', 'end']
+    })
+
+    flow = applyCharacterCreationAgingChange({
+      flow,
+      index: 0,
+      characteristic: 'str'
+    }).flow
+    assert.equal(flow.draft.characteristics.str, 6)
+    assert.deepEqual(deriveCharacterCreationAgingChangeOptions(flow)[0].options, [
+      'dex',
+      'end'
+    ])
   })
 
   it('stops career roll progression after failed qualification', () => {
@@ -543,6 +1037,224 @@ describe('character creation flow', () => {
       label: 'Roll survival',
       reason: 'Iona Vesh Marine survival'
     })
+  })
+
+  it('records a completed career term and starts another term in the same career', () => {
+    const resolvedDraft = applyCharacterCreationCareerPlan(
+      createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        age: 18,
+        characteristics: completeDraft().characteristics
+      }),
+      selectCharacterCreationCareerPlan('Merchant', {
+        qualificationRoll: 7,
+        survivalRoll: 8,
+        commissionRoll: 4,
+        termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Comms' }],
+        reenlistmentRoll: 7,
+        reenlistmentOutcome: 'allowed'
+      })
+    )
+    const flow = {
+      step: 'career' as const,
+      draft: resolvedDraft
+    }
+
+    const result = completeCharacterCreationCareerTerm({
+      flow,
+      continueCareer: true
+    })
+
+    assert.equal(result.moved, false)
+    assert.equal(result.flow.step, 'career')
+    assert.equal(result.flow.draft.age, 22)
+    assert.equal(result.flow.draft.completedTerms.length, 1)
+    assert.deepEqual(result.flow.draft.completedTerms[0], {
+      career: 'Merchant',
+      drafted: false,
+      age: 18,
+      rank: 1,
+      rankTitle: 'Deck Cadet',
+      qualificationRoll: 7,
+      survivalRoll: 8,
+      survivalPassed: true,
+      canCommission: true,
+      commissionRoll: 4,
+      commissionPassed: true,
+      canAdvance: false,
+      advancementRoll: null,
+      advancementPassed: null,
+      termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Comms' }],
+      agingRoll: null,
+      agingMessage: null,
+      agingSelections: [],
+      reenlistmentRoll: 7,
+      reenlistmentOutcome: 'allowed'
+    })
+    assert.equal(result.flow.draft.careerPlan?.career, 'Merchant')
+    assert.equal(result.flow.draft.careerPlan?.drafted, false)
+    assert.equal(result.flow.draft.careerPlan?.qualificationPassed, true)
+    assert.deepEqual(deriveNextCharacterCreationCareerRoll(result.flow), {
+      key: 'survivalRoll',
+      label: 'Roll survival',
+      reason: 'Iona Vesh Merchant survival'
+    })
+  })
+
+  it('musters out completed terms into credits, equipment, and sheet history', () => {
+    let flow: CharacterCreationFlow = {
+      step: 'career' as const,
+      draft: applyCharacterCreationCareerPlan(
+        createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          age: 18,
+          characteristics: completeDraft().characteristics,
+          homeworld: completeDraft().homeworld,
+          backgroundSkills: completeDraft().backgroundSkills,
+          skills: ['Pilot-1']
+        }),
+        selectCharacterCreationCareerPlan('Merchant', {
+          qualificationRoll: 7,
+          survivalRoll: 8,
+          commissionRoll: 4,
+          termSkillRolls: [
+            { table: 'serviceSkills', roll: 1, skill: 'Comms' }
+          ],
+          reenlistmentRoll: 5,
+          reenlistmentOutcome: 'blocked'
+        })
+      )
+    }
+
+    flow = completeCharacterCreationCareerTerm({
+      flow,
+      continueCareer: false
+    }).flow
+    assert.equal(flow.step, 'skills')
+    assert.equal(flow.draft.age, 22)
+    assert.equal(remainingMusteringBenefits(flow.draft), 1)
+
+    flow = { ...flow, step: 'equipment' }
+    const benefitResult = applyCharacterCreationMusteringBenefit({
+      flow,
+      kind: 'material',
+      roll: 3
+    })
+
+    assert.equal(benefitResult.moved, false)
+    assert.equal(remainingMusteringBenefits(benefitResult.flow.draft), 0)
+    assert.deepEqual(benefitResult.flow.draft.musteringBenefits, [
+      {
+        career: 'Merchant',
+        kind: 'material',
+        roll: 3,
+        value: 'Weapon',
+        credits: 0
+      }
+    ])
+    assert.deepEqual(benefitResult.flow.draft.equipment, [
+      {
+        name: 'Weapon',
+        quantity: 1,
+        notes: 'Mustering out: Merchant'
+      }
+    ])
+
+    const patch = deriveCharacterSheetPatch(benefitResult.flow.draft)
+    assert.equal(
+      patch.notes,
+      [
+        'Term 1: Merchant, survived.',
+        'Mustering out: Merchant material 3 -> Weapon.'
+      ].join('\n')
+    )
+  })
+
+  it('limits cash benefits and applies mustering-out roll modifiers', () => {
+    const completedTerm = {
+      career: 'Merchant',
+      drafted: false,
+      age: 22,
+      rank: 5,
+      qualificationRoll: 8,
+      survivalRoll: 8,
+      survivalPassed: true,
+      canCommission: true,
+      commissionRoll: 8,
+      commissionPassed: true,
+      canAdvance: false,
+      advancementRoll: null,
+      advancementPassed: null,
+      termSkillRolls: [
+        { table: 'serviceSkills' as const, roll: 1, skill: 'Comms' }
+      ],
+      reenlistmentRoll: 7,
+      reenlistmentOutcome: 'allowed' as const
+    }
+    const flow: CharacterCreationFlow = {
+      step: 'equipment',
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        skills: ['Gambling-1'],
+        completedTerms: Array.from({ length: 7 }, (_, index) => ({
+          ...completedTerm,
+          age: 22 + index * 4
+        })),
+        musteringBenefits: [
+          {
+            career: 'Merchant',
+            kind: 'cash',
+            roll: 1,
+            value: '1000',
+            credits: 1000
+          },
+          {
+            career: 'Merchant',
+            kind: 'cash',
+            roll: 2,
+            value: '5000',
+            credits: 5000
+          },
+          {
+            career: 'Merchant',
+            kind: 'cash',
+            roll: 3,
+            value: '10000',
+            credits: 10000
+          }
+        ]
+      })
+    }
+
+    assert.equal(remainingMusteringBenefits(flow.draft), 6)
+    assert.equal(
+      characterCreationMusteringBenefitRollModifier({
+        draft: flow.draft,
+        kind: 'cash'
+      }),
+      2
+    )
+    assert.equal(
+      characterCreationMusteringBenefitRollModifier({
+        draft: flow.draft,
+        kind: 'material'
+      }),
+      1
+    )
+    assert.equal(
+      canRollCharacterCreationMusteringBenefit({
+        draft: flow.draft,
+        kind: 'cash'
+      }),
+      false
+    )
+    assert.equal(
+      canRollCharacterCreationMusteringBenefit({
+        draft: flow.draft,
+        kind: 'material'
+      }),
+      true
+    )
   })
 
   it('ignores undefined patch fields from sparse form updates', () => {
@@ -738,6 +1450,8 @@ describe('character creation flow', () => {
         'INT is required',
         'EDU is required',
         'SOC is required',
+        'Homeworld law level is required',
+        'Homeworld trade code is required',
         'Career is required',
         'At least one skill is required',
         'Credits must be a non-negative number'
@@ -819,6 +1533,9 @@ describe('character creation flow', () => {
       [
         'StartCharacterCreation',
         'AdvanceCharacterCreation',
+        'SetCharacterCreationHomeworld',
+        'SelectCharacterCreationBackgroundSkill',
+        'ResolveCharacterCreationCascadeSkill',
         'AdvanceCharacterCreation',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation'
@@ -826,7 +1543,7 @@ describe('character creation flow', () => {
     )
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
-      [12, 13, 14, 15, 16]
+      Array.from({ length: commands.length }, (_, index) => 12 + index)
     )
 
     const events = commands
@@ -868,6 +1585,9 @@ describe('character creation flow', () => {
       [
         'StartCharacterCreation',
         'AdvanceCharacterCreation',
+        'SetCharacterCreationHomeworld',
+        'SelectCharacterCreationBackgroundSkill',
+        'ResolveCharacterCreationCascadeSkill',
         'AdvanceCharacterCreation',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation',
@@ -883,7 +1603,7 @@ describe('character creation flow', () => {
     )
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
-      [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+      Array.from({ length: commands.length }, (_, index) => 12 + index)
     )
 
     const startTerm = commands.find(
@@ -970,6 +1690,9 @@ describe('character creation flow', () => {
         'CreateCharacter',
         'StartCharacterCreation',
         'AdvanceCharacterCreation',
+        'SetCharacterCreationHomeworld',
+        'SelectCharacterCreationBackgroundSkill',
+        'ResolveCharacterCreationCascadeSkill',
         'AdvanceCharacterCreation',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation',
@@ -978,7 +1701,7 @@ describe('character creation flow', () => {
     )
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
-      [12, 13, 14, 15, 16, 17, 18]
+      Array.from({ length: commands.length }, (_, index) => 12 + index)
     )
 
     const playableDraft = applyCharacterCreationCareerPlan(
@@ -995,7 +1718,7 @@ describe('character creation flow', () => {
       },
       { identity, state }
     )
-    assert.equal(playableCommands.length, 15)
+    assert.equal(playableCommands.length, 18)
     assert.deepEqual(
       playableCommands
         .filter((command) => command.type === 'AdvanceCharacterCreation')

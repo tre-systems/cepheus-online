@@ -2,6 +2,7 @@ import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
 import type {
   CareerCreationEvent,
   AgingChange,
+  BackgroundHomeworld,
   CareerCreationState,
   CareerRank,
   CareerTerm
@@ -40,6 +41,12 @@ export interface CharacterCreationSheet {
   credits: number
 }
 
+export interface CharacterCreationHomeworld extends BackgroundHomeworld {
+  name: string | null
+  lawLevel: string | null
+  tradeCodes: string[]
+}
+
 export interface CharacterCreationProjection {
   state: CareerCreationState
   terms: CareerTerm[]
@@ -48,6 +55,9 @@ export interface CharacterCreationProjection {
   failedToQualify: boolean
   characteristicChanges: AgingChange[]
   creationComplete: boolean
+  homeworld?: CharacterCreationHomeworld | null
+  backgroundSkills?: string[]
+  pendingCascadeSkills?: string[]
   history?: CareerCreationEvent[]
 }
 

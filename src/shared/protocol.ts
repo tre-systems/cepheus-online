@@ -5,6 +5,7 @@ import type { Command } from './commands'
 import type { GameState } from './state'
 import type {
   CharacterCreationSheet,
+  CharacterCreationHomeworld,
   CharacterEquipmentItem,
   CharacteristicKey,
   CharacterSheetPatch,
@@ -347,6 +348,60 @@ const parseCharacterCreationSheet = (
   })
 }
 
+const parseHomeworldTradeCodes = (
+  raw: unknown,
+  label: string
+): Result<string[], CommandError> => {
+  if (isString(raw)) {
+    const value = raw.trim()
+    return ok(value ? [value] : [])
+  }
+
+  if (!Array.isArray(raw)) {
+    return err(invalidCommand(`${label} must be a string or an array`))
+  }
+
+  const values: string[] = []
+  const seen = new Set<string>()
+  for (const [index, item] of raw.entries()) {
+    const value = parseString(item, `${label}[${index}]`)
+    if (!value.ok) return value
+    const key = value.value.toLowerCase()
+    if (seen.has(key)) continue
+    values.push(value.value)
+    seen.add(key)
+  }
+
+  return ok(values)
+}
+
+const parseCharacterCreationHomeworld = (
+  raw: unknown
+): Result<CharacterCreationHomeworld, CommandError> => {
+  if (!isObject(raw)) {
+    return err(invalidCommand('homeworld must be an object'))
+  }
+
+  const name = parseOptionalString(raw.name, 'homeworld.name')
+  if (!name.ok) return name
+  const lawLevel = parseString(raw.lawLevel, 'homeworld.lawLevel')
+  if (!lawLevel.ok) return lawLevel
+  const tradeCodes = parseHomeworldTradeCodes(
+    raw.tradeCodes,
+    'homeworld.tradeCodes'
+  )
+  if (!tradeCodes.ok) return tradeCodes
+  if (tradeCodes.value.length === 0) {
+    return err(invalidCommand('homeworld.tradeCodes cannot be empty'))
+  }
+
+  return ok({
+    name: name.value,
+    lawLevel: lawLevel.value,
+    tradeCodes: tradeCodes.value
+  })
+}
+
 const parseCharacterType = (
   raw: unknown
 ): Result<CharacterType, CommandError> => {
@@ -446,10 +501,7 @@ const parseCareerCreationEvent = (
     }
 
     case 'SURVIVAL_PASSED': {
-      const canCommission = parseBoolean(
-        raw.canCommission,
-        'canCommission'
-      )
+      const canCommission = parseBoolean(raw.canCommission, 'canCommission')
       if (!canCommission.ok) return canCommission
       const canAdvance = parseBoolean(raw.canAdvance, 'canAdvance')
       if (!canAdvance.ok) return canAdvance
@@ -568,6 +620,51 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
         ...base.value,
         characterId: characterId.value,
         creationEvent: creationEvent.value
+      })
+    }
+
+    case 'SetCharacterCreationHomeworld': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const homeworld = parseCharacterCreationHomeworld(raw.homeworld)
+      if (!homeworld.ok) return homeworld
+
+      return ok({
+        type: 'SetCharacterCreationHomeworld',
+        ...base.value,
+        characterId: characterId.value,
+        homeworld: homeworld.value
+      })
+    }
+
+    case 'SelectCharacterCreationBackgroundSkill': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const skill = parseString(raw.skill, 'skill')
+      if (!skill.ok) return skill
+
+      return ok({
+        type: 'SelectCharacterCreationBackgroundSkill',
+        ...base.value,
+        characterId: characterId.value,
+        skill: skill.value
+      })
+    }
+
+    case 'ResolveCharacterCreationCascadeSkill': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const cascadeSkill = parseString(raw.cascadeSkill, 'cascadeSkill')
+      if (!cascadeSkill.ok) return cascadeSkill
+      const selection = parseString(raw.selection, 'selection')
+      if (!selection.ok) return selection
+
+      return ok({
+        type: 'ResolveCharacterCreationCascadeSkill',
+        ...base.value,
+        characterId: characterId.value,
+        cascadeSkill: cascadeSkill.value,
+        selection: selection.value
       })
     }
 

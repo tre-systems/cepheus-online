@@ -21,6 +21,7 @@ export interface AnimateRollOptions {
   overlay: HTMLElement
   stage: HTMLElement
   hideTimer: number | null
+  onReveal?: () => void
 }
 
 export const deriveFaceValueContent = (value: number): DiceFaceValueContent => {
@@ -68,7 +69,8 @@ export const animateRoll = ({
   roll,
   overlay,
   stage,
-  hideTimer
+  hideTimer,
+  onReveal
 }: AnimateRollOptions): number => {
   if (hideTimer) window.clearTimeout(hideTimer)
   overlay.classList.add('visible')
@@ -93,6 +95,7 @@ export const animateRoll = ({
     for (const die of Array.from(row.querySelectorAll('.die'))) {
       die.classList.remove('rolling')
     }
+    onReveal?.()
   }, timing.rollDurationMs)
 
   return window.setTimeout(() => {

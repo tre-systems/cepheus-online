@@ -1,5 +1,14 @@
 import type { CharacterCharacteristics, CharacteristicKey } from '../state'
-import type { BasicTrainingPlan, CareerBasics, CareerBasicsTable, CareerCheck, CareerRollOutcome, CareerSkillTable, SurvivalPromotionOptions } from './types'
+import type {
+  BasicTrainingPlan,
+  CareerBasics,
+  CareerBasicsTable,
+  CareerCheck,
+  CareerRankReward,
+  CareerRollOutcome,
+  CareerSkillTable,
+  SurvivalPromotionOptions
+} from './types'
 
 export const characteristicModifier = (
   characteristic: number | null | undefined
@@ -99,3 +108,23 @@ export const deriveSurvivalPromotionOptions = (
   canCommission: currentRank === 0 && careerBasics.Commission !== '-',
   canAdvance: currentRank > 0 && careerBasics.Advancement !== '-'
 })
+
+export const parseCareerRankReward = ({
+  ranksAndSkills,
+  career,
+  rank
+}: {
+  ranksAndSkills: Record<string, Record<string, string>>
+  career: string
+  rank: number
+}): CareerRankReward => {
+  const entry = ranksAndSkills[career]?.[String(rank)]?.trim() ?? ''
+  const [titlePart, bonusPart] = entry.split('[')
+  const title = titlePart.trim()
+  const bonusSkill = bonusPart?.replace(']', '').trim() || null
+  return {
+    rank,
+    title: title === '-' ? '' : title,
+    bonusSkill
+  }
+}

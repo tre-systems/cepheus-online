@@ -19,7 +19,9 @@ import {
   deriveAnagathicsModifier,
   deriveBasicTrainingPlan,
   deriveCareerBenefitCount,
+  deriveCashBenefitRollModifier,
   deriveCareerQualificationDm,
+  deriveMaterialBenefitRollModifier,
   deriveRemainingCareerBenefits,
   deriveSurvivalPromotionOptions,
   enumerateTermOutcomes,
@@ -31,6 +33,7 @@ import {
   normalizeCareerSkill,
   parseCareerCheck,
   parseCareerSkill,
+  parseCareerRankReward,
   payForAnagathics,
   resolveAging,
   resolveAnagathicsUse,
@@ -304,6 +307,27 @@ describe('career ruleset helpers', () => {
       canCommission: false,
       canAdvance: false
     })
+    assert.deepEqual(
+      parseCareerRankReward({
+        ranksAndSkills: {
+          Navy: {
+            '1': 'Ensign [Leadership]',
+            '2': 'Lieutenant'
+          }
+        },
+        career: 'Navy',
+        rank: 1
+      }),
+      { rank: 1, title: 'Ensign', bonusSkill: 'Leadership' }
+    )
+    assert.deepEqual(
+      parseCareerRankReward({
+        ranksAndSkills: { Athlete: { '1': '-' } },
+        career: 'Athlete',
+        rank: 1
+      }),
+      { rank: 1, title: '', bonusSkill: null }
+    )
   })
 })
 
@@ -485,12 +509,17 @@ describe('mustering-out and aging helpers', () => {
       }),
       0
     )
+    assert.equal(
+      deriveCashBenefitRollModifier({ retired: true, hasGambling: true }),
+      2
+    )
+    assert.equal(deriveMaterialBenefitRollModifier({ currentRank: 5 }), 1)
 
     assert.deepEqual(
       resolveCareerBenefit({
         tables: benefitTables,
         career: 'Scout',
-        roll: 6,
+        roll: 9,
         kind: 'material'
       }),
       {

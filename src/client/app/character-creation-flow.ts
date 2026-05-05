@@ -1,6 +1,8 @@
 import type { Command } from '../../shared/commands'
 import {
+  deriveBasicTrainingPlan,
   evaluateCareerCheck,
+  parseCareerRankReward,
   parseCareerCheck
 } from '../../shared/character-creation/career-rules.js'
 import {
@@ -8,6 +10,18 @@ import {
   CEPHEUS_SRD_CAREERS,
   type CepheusCareerDefinition
 } from '../../shared/character-creation/cepheus-srd-ruleset.js'
+import {
+  deriveCashBenefitRollModifier,
+  deriveMaterialBenefitRollModifier,
+  deriveRemainingCareerBenefits,
+  resolveCareerBenefit
+} from '../../shared/character-creation/benefits.js'
+import { resolveAging } from '../../shared/character-creation/aging.js'
+import type {
+  AgingChange,
+  AgingChangeType,
+  BenefitKind
+} from '../../shared/character-creation/types.js'
 import {
   deriveBackgroundSkillPlan,
   deriveTotalBackgroundSkillAllowance,
@@ -17,8 +31,10 @@ import {
 } from '../../shared/character-creation/background-skills.js'
 import {
   careerSkillWithLevel,
+  formatCareerSkill,
   isCascadeCareerSkill,
   normalizeCareerSkill,
+  parseCareerSkill,
   resolveCascadeCareerSkill
 } from '../../shared/character-creation/skills.js'
 import type { CharacterId } from '../../shared/ids'
@@ -42,6 +58,8 @@ export type CharacterCreationStep =
   | 'equipment'
   | 'review'
 
+export const CHARACTER_CREATION_STARTING_AGE = 18
+
 export interface CharacterCreationCareerPlan {
   career: string
   qualificationRoll: number | null
@@ -55,6 +73,71 @@ export interface CharacterCreationCareerPlan {
   canCommission: boolean | null
   canAdvance: boolean | null
   drafted: boolean
+  rank?: number | null
+  rankTitle?: string | null
+  rankBonusSkill?: string | null
+  termSkillRolls?: CharacterCreationTermSkillRoll[]
+  agingRoll?: number | null
+  agingMessage?: string | null
+  agingSelections?: CharacterCreationAgingSelection[]
+  reenlistmentRoll?: number | null
+  reenlistmentOutcome?: CharacterCreationReenlistmentOutcome | null
+}
+
+export type CharacterCreationReenlistmentOutcome =
+  | 'forced'
+  | 'allowed'
+  | 'blocked'
+  | 'retire'
+
+export type CharacterCreationTermSkillTable =
+  | 'personalDevelopment'
+  | 'serviceSkills'
+  | 'specialistSkills'
+  | 'advancedEducation'
+
+export interface CharacterCreationTermSkillRoll {
+  table: CharacterCreationTermSkillTable
+  roll: number
+  skill: string
+}
+
+export interface CharacterCreationCompletedTerm {
+  career: string
+  drafted: boolean
+  age: number | null
+  rank?: number | null
+  rankTitle?: string | null
+  rankBonusSkill?: string | null
+  qualificationRoll: number | null
+  survivalRoll: number | null
+  survivalPassed: boolean
+  canCommission: boolean
+  commissionRoll: number | null
+  commissionPassed: boolean | null
+  canAdvance: boolean
+  advancementRoll: number | null
+  advancementPassed: boolean | null
+  termSkillRolls?: CharacterCreationTermSkillRoll[]
+  agingRoll?: number | null
+  agingMessage?: string | null
+  agingSelections?: CharacterCreationAgingSelection[]
+  reenlistmentRoll?: number | null
+  reenlistmentOutcome?: CharacterCreationReenlistmentOutcome | null
+}
+
+export interface CharacterCreationAgingSelection {
+  type: AgingChangeType
+  modifier: number
+  characteristic: CharacteristicKey
+}
+
+export interface CharacterCreationMusteringBenefit {
+  career: string
+  kind: BenefitKind
+  roll: number
+  value: string
+  credits: number
 }
 
 export interface CharacterCreationDraft {
@@ -66,7 +149,11 @@ export interface CharacterCreationDraft {
   homeworld: BackgroundHomeworld
   backgroundSkills: string[]
   pendingCascadeSkills: string[]
+  pendingTermCascadeSkills: string[]
+  pendingAgingChanges: AgingChange[]
   careerPlan: CharacterCreationCareerPlan | null
+  completedTerms: CharacterCreationCompletedTerm[]
+  musteringBenefits: CharacterCreationMusteringBenefit[]
   skills: string[]
   equipment: CharacterEquipmentItem[]
   credits: number
@@ -121,10 +208,34 @@ export interface CharacterCreationCareerRollAction {
   reason: string
 }
 
+export interface CharacterCreationCareerSkipAction {
+  key: 'commissionRoll' | 'advancementRoll'
+  label: string
+}
+
 export interface CharacterCreationBasicTrainingAction {
   label: string
   reason: string
   skills: string[]
+  kind: 'all' | 'choose-one' | 'none'
+}
+
+export interface CharacterCreationTermSkillTableAction {
+  table: CharacterCreationTermSkillTable
+  label: string
+  reason: string
+  disabled: boolean
+}
+
+export interface CharacterCreationReenlistmentRollAction {
+  label: string
+  reason: string
+}
+
+export interface CharacterCreationAgingRollAction {
+  label: string
+  reason: string
+  modifier: number
 }
 
 export type CharacterCreationDraftPatch = Partial<
@@ -134,7 +245,11 @@ export type CharacterCreationDraftPatch = Partial<
     | 'homeworld'
     | 'backgroundSkills'
     | 'pendingCascadeSkills'
+    | 'pendingTermCascadeSkills'
+    | 'pendingAgingChanges'
     | 'careerPlan'
+    | 'completedTerms'
+    | 'musteringBenefits'
     | 'skills'
     | 'equipment'
   >
@@ -143,7 +258,11 @@ export type CharacterCreationDraftPatch = Partial<
   homeworld?: BackgroundHomeworld | null
   backgroundSkills?: readonly string[]
   pendingCascadeSkills?: readonly string[]
+  pendingTermCascadeSkills?: readonly string[]
+  pendingAgingChanges?: readonly AgingChange[]
   careerPlan?: CharacterCreationCareerPlan | null
+  completedTerms?: readonly CharacterCreationCompletedTerm[]
+  musteringBenefits?: readonly CharacterCreationMusteringBenefit[]
   skills?: readonly string[]
   equipment?: readonly CharacterEquipmentItem[]
 }
@@ -156,6 +275,18 @@ type StartCharacterCreationCommand = Extract<
 type AdvanceCharacterCreationCommand = Extract<
   Command,
   { type: 'AdvanceCharacterCreation' }
+>
+type SetCharacterCreationHomeworldCommand = Extract<
+  Command,
+  { type: 'SetCharacterCreationHomeworld' }
+>
+type SelectCharacterCreationBackgroundSkillCommand = Extract<
+  Command,
+  { type: 'SelectCharacterCreationBackgroundSkill' }
+>
+type ResolveCharacterCreationCascadeSkillCommand = Extract<
+  Command,
+  { type: 'ResolveCharacterCreationCascadeSkill' }
 >
 type StartCharacterCareerTermCommand = Extract<
   Command,
@@ -217,8 +348,43 @@ const createCareerPlan = (
   advancementPassed: overrides.advancementPassed ?? null,
   canCommission: overrides.canCommission ?? null,
   canAdvance: overrides.canAdvance ?? null,
-  drafted: overrides.drafted ?? false
+  drafted: overrides.drafted ?? false,
+  rank: overrides.rank ?? null,
+  rankTitle: overrides.rankTitle ?? null,
+  rankBonusSkill: overrides.rankBonusSkill ?? null,
+  termSkillRolls: cloneTermSkillRolls(overrides.termSkillRolls ?? []),
+  agingRoll: overrides.agingRoll ?? null,
+  agingMessage: overrides.agingMessage ?? null,
+  agingSelections: cloneAgingSelections(overrides.agingSelections ?? []),
+  reenlistmentRoll: overrides.reenlistmentRoll ?? null,
+  reenlistmentOutcome: overrides.reenlistmentOutcome ?? null
 })
+
+const cloneTermSkillRolls = (
+  rolls: readonly CharacterCreationTermSkillRoll[]
+): CharacterCreationTermSkillRoll[] =>
+  rolls.map((roll) => ({
+    table: roll.table,
+    roll: roll.roll,
+    skill: roll.skill
+  }))
+
+const cloneAgingChanges = (
+  changes: readonly AgingChange[]
+): AgingChange[] =>
+  changes.map((change) => ({
+    type: change.type,
+    modifier: change.modifier
+  }))
+
+const cloneAgingSelections = (
+  selections: readonly CharacterCreationAgingSelection[]
+): CharacterCreationAgingSelection[] =>
+  selections.map((selection) => ({
+    type: selection.type,
+    modifier: selection.modifier,
+    characteristic: selection.characteristic
+  }))
 
 const cloneCareerPlan = (
   plan: CharacterCreationCareerPlan | null
@@ -236,7 +402,16 @@ const cloneCareerPlan = (
         advancementPassed: plan.advancementPassed,
         canCommission: plan.canCommission,
         canAdvance: plan.canAdvance,
-        drafted: plan.drafted
+        drafted: plan.drafted,
+        rank: plan.rank ?? null,
+        rankTitle: plan.rankTitle ?? null,
+        rankBonusSkill: plan.rankBonusSkill ?? null,
+        termSkillRolls: cloneTermSkillRolls(plan.termSkillRolls ?? []),
+        agingRoll: plan.agingRoll ?? null,
+        agingMessage: plan.agingMessage ?? null,
+        agingSelections: cloneAgingSelections(plan.agingSelections ?? []),
+        reenlistmentRoll: plan.reenlistmentRoll ?? null,
+        reenlistmentOutcome: plan.reenlistmentOutcome ?? null
       }
     : null
 
@@ -259,6 +434,46 @@ const cloneEquipment = (
     notes: item.notes
   }))
 
+const cloneCompletedTerms = (
+  terms: readonly CharacterCreationCompletedTerm[]
+): CharacterCreationCompletedTerm[] =>
+  terms.map((term) => ({
+    career: term.career,
+    drafted: term.drafted,
+    age: term.age,
+    ...(term.rank != null ? { rank: term.rank } : {}),
+    ...(term.rankTitle != null ? { rankTitle: term.rankTitle } : {}),
+    ...(term.rankBonusSkill != null
+      ? { rankBonusSkill: term.rankBonusSkill }
+      : {}),
+    qualificationRoll: term.qualificationRoll,
+    survivalRoll: term.survivalRoll,
+    survivalPassed: term.survivalPassed,
+    canCommission: term.canCommission,
+    commissionRoll: term.commissionRoll,
+    commissionPassed: term.commissionPassed,
+    canAdvance: term.canAdvance,
+    advancementRoll: term.advancementRoll,
+    advancementPassed: term.advancementPassed,
+    termSkillRolls: cloneTermSkillRolls(term.termSkillRolls ?? []),
+    agingRoll: term.agingRoll ?? null,
+    agingMessage: term.agingMessage ?? null,
+    agingSelections: cloneAgingSelections(term.agingSelections ?? []),
+    reenlistmentRoll: term.reenlistmentRoll ?? null,
+    reenlistmentOutcome: term.reenlistmentOutcome ?? null
+  }))
+
+const cloneMusteringBenefits = (
+  benefits: readonly CharacterCreationMusteringBenefit[]
+): CharacterCreationMusteringBenefit[] =>
+  benefits.map((benefit) => ({
+    career: benefit.career,
+    kind: benefit.kind,
+    roll: benefit.roll,
+    value: benefit.value,
+    credits: benefit.credits
+  }))
+
 const cloneHomeworld = (
   homeworld: BackgroundHomeworld
 ): BackgroundHomeworld => ({
@@ -267,6 +482,25 @@ const cloneHomeworld = (
     ? [...homeworld.tradeCodes]
     : (homeworld.tradeCodes ?? [])
 })
+
+const homeworldTradeCodes = (homeworld: BackgroundHomeworld): string[] => {
+  if (typeof homeworld.tradeCodes === 'string') return [homeworld.tradeCodes]
+  if (Array.isArray(homeworld.tradeCodes)) return [...homeworld.tradeCodes]
+  return []
+}
+
+const sameHomeworld = (
+  left: BackgroundHomeworld,
+  right: BackgroundHomeworld
+): boolean => {
+  const leftCodes = homeworldTradeCodes(left)
+  const rightCodes = homeworldTradeCodes(right)
+  return (
+    (left.lawLevel ?? null) === (right.lawLevel ?? null) &&
+    leftCodes.length === rightCodes.length &&
+    leftCodes.every((code, index) => code === rightCodes[index])
+  )
+}
 
 const normalizeSkillList = (skills: readonly string[]): string[] => {
   const normalized: string[] = []
@@ -425,8 +659,77 @@ const validateHomeworld = (draft: CharacterCreationDraft): string[] => {
   return errors
 }
 
-const validateCareer = (draft: CharacterCreationDraft): string[] =>
-  draft.careerPlan?.career.trim() ? [] : ['Career is required']
+const validateCareer = (draft: CharacterCreationDraft): string[] => {
+  const errors: string[] = []
+  const plan = draft.careerPlan
+  if (!plan?.career.trim()) {
+    errors.push('Career is required')
+    return errors
+  }
+  const hasStartedTerm =
+    plan.drafted || plan.qualificationRoll !== null
+  if (hasStartedTerm && deriveNextCharacterCreationCareerRoll({ draft })) {
+    errors.push('Career term rolls are incomplete')
+  }
+  const termResolved = hasStartedTerm && isCharacterCreationCareerTermResolved(draft)
+  const termRecorded = draft.completedTerms.some(
+    (term) =>
+      term.career === plan.career.trim() &&
+      term.drafted === plan.drafted &&
+      term.qualificationRoll === plan.qualificationRoll &&
+      term.survivalRoll === plan.survivalRoll &&
+      term.survivalPassed === (plan.survivalPassed === true) &&
+      term.commissionRoll === plan.commissionRoll &&
+      term.commissionPassed === plan.commissionPassed &&
+      term.advancementRoll === plan.advancementRoll &&
+      term.advancementPassed === plan.advancementPassed &&
+      (term.agingRoll ?? null) === (plan.agingRoll ?? null) &&
+      term.reenlistmentRoll === (plan.reenlistmentRoll ?? null) &&
+      term.reenlistmentOutcome === (plan.reenlistmentOutcome ?? null)
+  )
+  if (termResolved && !termRecorded) {
+    errors.push('Career term must be completed')
+  }
+  if (
+    termResolved &&
+    !termRecorded &&
+    remainingCharacterCreationTermSkillRolls(draft) > 0
+  ) {
+    errors.push('Career term skill rolls are incomplete')
+  }
+  if (termResolved && draft.pendingTermCascadeSkills.length > 0) {
+    errors.push('Pending career cascade skills must be resolved')
+  }
+  if (termResolved && draft.pendingAgingChanges.length > 0) {
+    errors.push('Pending aging characteristic changes must be resolved')
+  }
+  if (
+    termResolved &&
+    !termRecorded &&
+    plan.survivalPassed === true &&
+    remainingCharacterCreationTermSkillRolls(draft) === 0 &&
+    draft.pendingTermCascadeSkills.length === 0 &&
+    draft.pendingAgingChanges.length === 0 &&
+    requiresCharacterCreationAgingRoll(draft) &&
+    plan.agingRoll === null
+  ) {
+    errors.push('Aging roll is incomplete')
+  }
+  if (
+    termResolved &&
+    !termRecorded &&
+    plan.survivalPassed === true &&
+    remainingCharacterCreationTermSkillRolls(draft) === 0 &&
+    draft.pendingTermCascadeSkills.length === 0 &&
+    draft.pendingAgingChanges.length === 0 &&
+    (!requiresCharacterCreationAgingRoll(draft) || plan.agingRoll !== null) &&
+    plan.reenlistmentOutcome === null &&
+    !flowlessTermCountRequiresRetirement(draft)
+  ) {
+    errors.push('Reenlistment roll is incomplete')
+  }
+  return errors
+}
 
 const validateSkills = (draft: CharacterCreationDraft): string[] =>
   draft.skills.length === 0 ? ['At least one skill is required'] : []
@@ -435,6 +738,9 @@ const validateEquipment = (draft: CharacterCreationDraft): string[] => {
   const errors: string[] = []
   if (!isFiniteNonNegativeNumber(draft.credits)) {
     errors.push('Credits must be a non-negative number')
+  }
+  if (remainingMusteringBenefits(draft) > 0) {
+    errors.push('Mustering out benefits are incomplete')
   }
 
   for (const [index, item] of draft.equipment.entries()) {
@@ -468,6 +774,7 @@ const validationErrorsForStep = (
       return [
         ...validateBasics(draft),
         ...validateCharacteristics(draft),
+        ...validateHomeworld(draft),
         ...validateCareer(draft),
         ...validateSkills(draft),
         ...validateEquipment(draft)
@@ -496,12 +803,15 @@ export const createInitialCharacterDraft = (
     characteristics,
     homeworld
   })
+  const completedTerms = cloneCompletedTerms(overrides.completedTerms ?? [])
 
   return {
     characterId,
     characterType: overrides.characterType ?? 'PLAYER',
     name: overrides.name ?? '',
-    age: overrides.age ?? null,
+    age:
+      overrides.age ??
+      CHARACTER_CREATION_STARTING_AGE + completedTerms.length * 4,
     characteristics,
     homeworld,
     backgroundSkills:
@@ -512,7 +822,15 @@ export const createInitialCharacterDraft = (
       overrides.pendingCascadeSkills === undefined
         ? backgroundPlan.pendingCascadeSkills
         : normalizePendingCascadeSkillList(overrides.pendingCascadeSkills),
+    pendingTermCascadeSkills: normalizePendingCascadeSkillList(
+      overrides.pendingTermCascadeSkills ?? []
+    ),
+    pendingAgingChanges: cloneAgingChanges(overrides.pendingAgingChanges ?? []),
     careerPlan: normalizeCareerPlan(overrides.careerPlan),
+    completedTerms,
+    musteringBenefits: cloneMusteringBenefits(
+      overrides.musteringBenefits ?? []
+    ),
     skills: normalizeSkillList(overrides.skills ?? []),
     equipment: normalizeEquipmentList(overrides.equipment ?? []),
     credits: overrides.credits ?? 0,
@@ -553,8 +871,13 @@ export const updateCharacterCreationDraft = (
     patch.homeworld === undefined
       ? cloneHomeworld(draft.homeworld)
       : normalizeHomeworld(patch.homeworld)
+  const homeworldChanged =
+    patch.homeworld !== undefined && !sameHomeworld(draft.homeworld, homeworld)
+  const eduChanged =
+    patch.characteristics?.edu !== undefined &&
+    patch.characteristics.edu !== draft.characteristics.edu
   const refreshBackgroundPlan =
-    patch.homeworld !== undefined || patch.characteristics?.edu !== undefined
+    homeworldChanged || eduChanged
   const backgroundPlan = refreshBackgroundPlan
     ? deriveCharacterCreationBackgroundSkillPlan({ characteristics, homeworld })
     : null
@@ -580,10 +903,26 @@ export const updateCharacterCreationDraft = (
         : backgroundPlan
           ? backgroundPlan.pendingCascadeSkills
           : [...draft.pendingCascadeSkills],
+    pendingTermCascadeSkills:
+      patch.pendingTermCascadeSkills === undefined
+        ? [...draft.pendingTermCascadeSkills]
+        : normalizePendingCascadeSkillList(patch.pendingTermCascadeSkills),
+    pendingAgingChanges:
+      patch.pendingAgingChanges === undefined
+        ? cloneAgingChanges(draft.pendingAgingChanges)
+        : cloneAgingChanges(patch.pendingAgingChanges),
     careerPlan:
       patch.careerPlan === undefined
         ? cloneCareerPlan(draft.careerPlan)
         : normalizeCareerPlan(patch.careerPlan),
+    completedTerms:
+      patch.completedTerms === undefined
+        ? cloneCompletedTerms(draft.completedTerms)
+        : cloneCompletedTerms(patch.completedTerms),
+    musteringBenefits:
+      patch.musteringBenefits === undefined
+        ? cloneMusteringBenefits(draft.musteringBenefits)
+        : cloneMusteringBenefits(patch.musteringBenefits),
     skills:
       patch.skills === undefined
         ? [...draft.skills]
@@ -770,12 +1109,16 @@ const evaluateOptionalCareerRoll = ({
 }
 
 export const evaluateCharacterCreationCareerPlan = (
-  draft: Pick<CharacterCreationDraft, 'characteristics'>,
+  draft: Pick<CharacterCreationDraft, 'characteristics' | 'completedTerms'>,
   plan: CharacterCreationCareerPlan
 ): CharacterCreationCareerPlan => {
   const normalizedPlan = normalizeCareerPlan(plan) ?? createCareerPlan()
   const careerDefinition = findCareerDefinition(normalizedPlan.career)
   if (!careerDefinition) return normalizedPlan
+  const currentRank = currentCharacterCreationCareerRank(
+    draft,
+    normalizedPlan.career
+  )
 
   const qualificationPassed = evaluateOptionalCareerRoll({
     check: careerDefinition.qualification,
@@ -793,13 +1136,12 @@ export const evaluateCharacterCreationCareerPlan = (
   const canCommission =
     survivalPassed === false
       ? false
-      : parseCareerCheck(careerDefinition.commission) !== null
+      : currentRank === 0 && parseCareerCheck(careerDefinition.commission) !== null
   const canAdvance =
     survivalPassed === false || canCommission
       ? false
       : parseCareerCheck(careerDefinition.advancement) !== null
-
-  return {
+  const evaluatedPlan = {
     ...normalizedPlan,
     qualificationPassed: resolvedQualificationPassed,
     survivalPassed,
@@ -813,9 +1155,55 @@ export const evaluateCharacterCreationCareerPlan = (
       characteristics: draft.characteristics,
       roll: normalizedPlan.advancementRoll
     }),
+    termSkillRolls: cloneTermSkillRolls(normalizedPlan.termSkillRolls ?? []),
     canCommission,
     canAdvance
   }
+  const reward = characterCreationRankRewardForPlan(draft, evaluatedPlan)
+
+  return {
+    ...evaluatedPlan,
+    rank: reward?.rank ?? normalizedPlan.rank ?? null,
+    rankTitle: reward?.title ?? normalizedPlan.rankTitle ?? null,
+    rankBonusSkill: reward?.bonusSkill ?? normalizedPlan.rankBonusSkill ?? null
+  }
+}
+
+const characterCreationRankRewardForPlan = (
+  draft: Pick<CharacterCreationDraft, 'completedTerms'>,
+  plan: CharacterCreationCareerPlan
+) => {
+  if (!plan.career) return null
+  const currentRank = currentCharacterCreationCareerRank(draft, plan.career)
+  const nextRank =
+    plan.commissionPassed === true && currentRank === 0
+      ? 1
+      : plan.advancementPassed === true
+        ? currentRank + 1
+        : null
+  if (nextRank === null) return null
+  return parseCareerRankReward({
+    ranksAndSkills: CEPHEUS_SRD_RULESET.ranksAndSkills,
+    career: plan.career,
+    rank: nextRank
+  })
+}
+
+const currentCharacterCreationCareerRank = (
+  draft: Pick<CharacterCreationDraft, 'completedTerms'>,
+  career: string
+): number =>
+  draft.completedTerms
+    .filter((term) => term.career === career)
+    .reduce((rank, term) => Math.max(rank, term.rank ?? 0), 0)
+
+const careerRankAfterPlan = (draft: CharacterCreationDraft): number => {
+  const plan = draft.careerPlan
+  if (!plan?.career) return 0
+  const currentRank = currentCharacterCreationCareerRank(draft, plan.career)
+  if (plan.commissionPassed === true && currentRank === 0) return 1
+  if (plan.advancementPassed === true) return currentRank + 1
+  return currentRank
 }
 
 export const applyCharacterCreationCareerPlan = (
@@ -866,6 +1254,482 @@ export const deriveNextCharacterCreationCareerRoll = (
   return null
 }
 
+const termSkillTableLabels: Record<CharacterCreationTermSkillTable, string> = {
+  personalDevelopment: 'Personal development',
+  serviceSkills: 'Service skills',
+  specialistSkills: 'Specialist skills',
+  advancedEducation: 'Advanced education'
+}
+
+const careerTermSkillTables = (
+  career: CepheusCareerDefinition
+): Record<CharacterCreationTermSkillTable, readonly string[]> => ({
+  personalDevelopment: career.personalDevelopment,
+  serviceSkills: career.serviceSkills,
+  specialistSkills: career.specialistSkills,
+  advancedEducation: career.advancedEducation
+})
+
+export const requiredCharacterCreationTermSkillRolls = (
+  draft: Pick<CharacterCreationDraft, 'careerPlan'>
+): number => {
+  const plan = draft.careerPlan
+  if (!plan || !isCareerPlanTermResolved(plan)) {
+    return 0
+  }
+  if (plan.survivalPassed === false) return 0
+  return plan.canCommission === false && plan.canAdvance === false ? 2 : 1
+}
+
+export const remainingCharacterCreationTermSkillRolls = (
+  draft: Pick<CharacterCreationDraft, 'careerPlan'>
+): number =>
+  Math.max(
+    0,
+    requiredCharacterCreationTermSkillRolls(draft) -
+      (draft.careerPlan?.termSkillRolls?.length ?? 0)
+  )
+
+export const deriveCharacterCreationTermSkillTableActions = (
+  flow: CharacterCreationFlow
+): CharacterCreationTermSkillTableAction[] => {
+  if (flow.step !== 'career') return []
+  const plan = flow.draft.careerPlan
+  if (
+    !plan?.career ||
+    remainingCharacterCreationTermSkillRolls(flow.draft) <= 0 ||
+    flow.draft.pendingTermCascadeSkills.length > 0
+  ) {
+    return []
+  }
+  const career = findCareerDefinition(plan.career)
+  if (!career) return []
+
+  return (
+    Object.keys(termSkillTableLabels) as CharacterCreationTermSkillTable[]
+  ).map((table) => {
+    const requiresEducation = table === 'advancedEducation'
+    const disabled =
+      requiresEducation && (flow.draft.characteristics.edu ?? 0) < 8
+    return {
+      table,
+      label: termSkillTableLabels[table],
+      reason: disabled
+        ? 'Advanced education requires EDU 8+'
+        : `${flow.draft.name.trim() || 'Character'} ${career.name} ${termSkillTableLabels[table].toLowerCase()}`,
+      disabled
+    }
+  })
+}
+
+export const deriveNextCharacterCreationReenlistmentRoll = (
+  flow: CharacterCreationFlow
+): CharacterCreationReenlistmentRollAction | null => {
+  if (flow.step !== 'career') return null
+  const plan = flow.draft.careerPlan
+  if (!plan?.career || plan.survivalPassed !== true) return null
+  if (!isCareerPlanTermResolved(plan)) return null
+  if (remainingCharacterCreationTermSkillRolls(flow.draft) > 0) return null
+  if (flow.draft.pendingTermCascadeSkills.length > 0) return null
+  if (flow.draft.pendingAgingChanges.length > 0) return null
+  if (requiresCharacterCreationAgingRoll(flow.draft) && plan.agingRoll === null) {
+    return null
+  }
+  if (plan.reenlistmentOutcome !== null) return null
+  if (flow.draft.completedTerms.length + 1 >= 7) return null
+  const check = CEPHEUS_SRD_RULESET.careerBasics[plan.career]?.ReEnlistment
+  if (!check) return null
+  return {
+    label: 'Roll reenlistment',
+    reason: `${flow.draft.name.trim() || 'Character'} ${plan.career} reenlistment`
+  }
+}
+
+const currentCharacterCreationTermCount = (
+  draft: Pick<CharacterCreationDraft, 'completedTerms'>
+): number => draft.completedTerms.length + 1
+
+export const requiresCharacterCreationAgingRoll = (
+  draft: Pick<CharacterCreationDraft, 'age' | 'completedTerms' | 'careerPlan'>
+): boolean => {
+  const plan = draft.careerPlan
+  return (
+    plan?.survivalPassed === true &&
+    (draft.age ?? CHARACTER_CREATION_STARTING_AGE) >= 30 &&
+    plan.agingRoll === null
+  )
+}
+
+export const deriveNextCharacterCreationAgingRoll = (
+  flow: CharacterCreationFlow
+): CharacterCreationAgingRollAction | null => {
+  if (flow.step !== 'career') return null
+  const plan = flow.draft.careerPlan
+  if (!plan?.career || plan.survivalPassed !== true) return null
+  if (!isCareerPlanTermResolved(plan)) return null
+  if (remainingCharacterCreationTermSkillRolls(flow.draft) > 0) return null
+  if (flow.draft.pendingTermCascadeSkills.length > 0) return null
+  if (flow.draft.pendingAgingChanges.length > 0) return null
+  if (!requiresCharacterCreationAgingRoll(flow.draft)) return null
+
+  const modifier = -currentCharacterCreationTermCount(flow.draft)
+  return {
+    label: 'Roll aging',
+    reason: `${flow.draft.name.trim() || 'Character'} aging`,
+    modifier
+  }
+}
+
+export const applyCharacterCreationAgingRoll = (
+  flow: CharacterCreationFlow,
+  roll: number
+): CharacterCreationWizardResult => {
+  const action = deriveNextCharacterCreationAgingRoll(flow)
+  const plan = flow.draft.careerPlan
+  if (!action || !plan) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const resolution = resolveAging({
+    currentAge: flow.draft.age,
+    table: CEPHEUS_SRD_RULESET.aging,
+    roll,
+    years: 4
+  })
+  const updatedFlow = updateCharacterCreationFields(flow, {
+    age: resolution.age,
+    pendingAgingChanges: resolution.characteristicChanges,
+    careerPlan: {
+      ...plan,
+      agingRoll: roll,
+      agingMessage: resolution.message,
+      agingSelections: []
+    }
+  })
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
+  }
+}
+
+const characteristicOptionsForAgingChange = (
+  change: AgingChange,
+  selections: readonly CharacterCreationAgingSelection[]
+): CharacteristicKey[] => {
+  const allowed =
+    change.type === 'PHYSICAL'
+      ? (['str', 'dex', 'end'] satisfies CharacteristicKey[])
+      : (['int', 'edu', 'soc'] satisfies CharacteristicKey[])
+  const alreadySelected = new Set(
+    selections
+      .filter((selection) => selection.type === change.type)
+      .map((selection) => selection.characteristic)
+  )
+  return allowed.filter((key) => !alreadySelected.has(key))
+}
+
+export const deriveCharacterCreationAgingChangeOptions = (
+  flow: CharacterCreationFlow
+): Array<{
+  index: number
+  type: AgingChangeType
+  modifier: number
+  options: CharacteristicKey[]
+}> => {
+  const selections = flow.draft.careerPlan?.agingSelections ?? []
+  return flow.draft.pendingAgingChanges.map((change, index) => ({
+    index,
+    type: change.type,
+    modifier: change.modifier,
+    options: characteristicOptionsForAgingChange(change, selections)
+  }))
+}
+
+export const applyCharacterCreationAgingChange = ({
+  flow,
+  index,
+  characteristic
+}: {
+  flow: CharacterCreationFlow
+  index: number
+  characteristic: CharacteristicKey
+}): CharacterCreationWizardResult => {
+  const plan = flow.draft.careerPlan
+  const change = flow.draft.pendingAgingChanges[index]
+  if (!plan || !change) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+  const options = characteristicOptionsForAgingChange(
+    change,
+    plan.agingSelections ?? []
+  )
+  if (!options.includes(characteristic)) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const currentValue = flow.draft.characteristics[characteristic] ?? 0
+  const pendingAgingChanges = cloneAgingChanges(flow.draft.pendingAgingChanges)
+  pendingAgingChanges.splice(index, 1)
+  const selection: CharacterCreationAgingSelection = {
+    type: change.type,
+    modifier: change.modifier,
+    characteristic
+  }
+  const updatedFlow = updateCharacterCreationFields(flow, {
+    pendingAgingChanges,
+    characteristics: {
+      ...flow.draft.characteristics,
+      [characteristic]: Math.max(0, currentValue + change.modifier)
+    },
+    careerPlan: {
+      ...plan,
+      agingSelections: [...(plan.agingSelections ?? []), selection]
+    }
+  })
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
+  }
+}
+
+const evaluateCharacterCreationReenlistment = ({
+  draft,
+  career,
+  roll
+}: {
+  draft: CharacterCreationDraft
+  career: string
+  roll: number
+}): CharacterCreationReenlistmentOutcome => {
+  if (draft.completedTerms.length + 1 >= 7) return 'retire'
+  if (roll === 12) return 'forced'
+  const check = CEPHEUS_SRD_RULESET.careerBasics[career]?.ReEnlistment ?? ''
+  const result = evaluateCareerCheck({
+    check,
+    characteristics: draft.characteristics,
+    roll
+  })
+  return result?.success ? 'allowed' : 'blocked'
+}
+
+export const applyCharacterCreationReenlistmentRoll = (
+  flow: CharacterCreationFlow,
+  roll: number
+): CharacterCreationWizardResult => {
+  const action = deriveNextCharacterCreationReenlistmentRoll(flow)
+  const plan = flow.draft.careerPlan
+  if (!action || !plan) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const updatedFlow = updateCharacterCreationFields(flow, {
+    careerPlan: {
+      ...plan,
+      reenlistmentRoll: roll,
+      reenlistmentOutcome: evaluateCharacterCreationReenlistment({
+        draft: flow.draft,
+        career: plan.career,
+        roll
+      })
+    }
+  })
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
+  }
+}
+
+const resolveTermSkillRoll = ({
+  career,
+  table,
+  roll
+}: {
+  career: CepheusCareerDefinition
+  table: CharacterCreationTermSkillTable
+  roll: number
+}): CharacterCreationTermSkillRoll => {
+  const entries = careerTermSkillTables(career)[table]
+  const index = Math.max(0, Math.min(entries.length - 1, roll - 1))
+  const skill = entries[index] ?? ''
+  return {
+    table,
+    roll,
+    skill
+  }
+}
+
+const addRolledSkill = (
+  skills: readonly string[],
+  rawSkill: string
+): string[] => {
+  const normalized = normalizeCareerSkill(rawSkill, 1)
+  const parsedNewSkill = normalized ? parseCareerSkill(normalized) : null
+  if (!normalized || !parsedNewSkill) return normalizeSkillList(skills)
+
+  const updatedSkills: string[] = []
+  let merged = false
+
+  for (const skill of normalizeSkillList(skills)) {
+    const parsedSkill = parseCareerSkill(skill)
+    if (!parsedSkill || parsedSkill.name !== parsedNewSkill.name) {
+      updatedSkills.push(skill)
+      continue
+    }
+
+    if (!merged) {
+      updatedSkills.push(
+        formatCareerSkill({
+          name: parsedSkill.name,
+          level: parsedSkill.level + parsedNewSkill.level
+        })
+      )
+      merged = true
+    }
+  }
+
+  if (!merged) updatedSkills.push(normalized)
+  return updatedSkills
+}
+
+const addRolledSkills = (
+  skills: readonly string[],
+  rawSkills: readonly string[]
+): string[] => rawSkills.reduce(addRolledSkill, normalizeSkillList(skills))
+
+const termCharacteristicGain = (
+  rawSkill: string
+): { key: CharacteristicKey; label: string } | null => {
+  const parsed = /^\+1\s+(Str|Dex|End|Int|Edu|Soc)$/i.exec(rawSkill.trim())
+  if (!parsed) return null
+  const label = parsed[1] as 'Str' | 'Dex' | 'End' | 'Int' | 'Edu' | 'Soc'
+  return {
+    key: label.toLowerCase() as CharacteristicKey,
+    label
+  }
+}
+
+const basicTrainingSkillsForCurrentTerm = (
+  draft: CharacterCreationDraft
+): string[] => {
+  const careerName = draft.careerPlan?.career.trim()
+  if (!careerName) return []
+  const plan = deriveBasicTrainingPlan({
+    career: careerName,
+    serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
+    completedTermCount: draft.completedTerms.length,
+    previousCareerNames: draft.completedTerms.map((term) => term.career)
+  })
+  if (plan.kind === 'none') return []
+
+  const sourceSkills = plan.kind === 'all' ? plan.skills : plan.skills.slice(0, 1)
+  return sourceSkills
+    .map((skill) => normalizeCareerSkill(skill, 0))
+    .filter((skill): skill is string => skill !== null)
+}
+
+export const applyCharacterCreationTermSkillRoll = ({
+  flow,
+  table,
+  roll
+}: {
+  flow: CharacterCreationFlow
+  table: CharacterCreationTermSkillTable
+  roll: number
+}): CharacterCreationWizardResult => {
+  const plan = flow.draft.careerPlan
+  if (!plan || remainingCharacterCreationTermSkillRolls(flow.draft) <= 0) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+  if (table === 'advancedEducation' && (flow.draft.characteristics.edu ?? 0) < 8) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+  const career = findCareerDefinition(plan.career)
+  if (!career) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const termSkillRoll = resolveTermSkillRoll({ career, table, roll })
+  const basicTrainingSkills =
+    (plan.termSkillRolls?.length ?? 0) === 0
+      ? basicTrainingSkillsForCurrentTerm(flow.draft)
+      : []
+  const characteristicGain = termCharacteristicGain(termSkillRoll.skill)
+  const rolledCascadeSkill = isCascadeCareerSkill(termSkillRoll.skill)
+    ? careerSkillWithLevel(termSkillRoll.skill, 1)
+    : null
+  const updatedFlow = updateCharacterCreationFields(flow, {
+    careerPlan: {
+      ...plan,
+      termSkillRolls: [...(plan.termSkillRolls ?? []), termSkillRoll]
+    },
+    pendingTermCascadeSkills: rolledCascadeSkill
+      ? [...flow.draft.pendingTermCascadeSkills, rolledCascadeSkill]
+      : flow.draft.pendingTermCascadeSkills,
+    characteristics: characteristicGain
+      ? {
+          ...flow.draft.characteristics,
+          [characteristicGain.key]:
+            (flow.draft.characteristics[characteristicGain.key] ?? 0) + 1
+        }
+      : flow.draft.characteristics,
+    skills: characteristicGain
+      ? normalizeSkillList([...flow.draft.skills, ...basicTrainingSkills])
+      : rolledCascadeSkill
+        ? normalizeSkillList([...flow.draft.skills, ...basicTrainingSkills])
+        : addRolledSkill(
+            normalizeSkillList([...flow.draft.skills, ...basicTrainingSkills]),
+            termSkillRoll.skill
+          )
+  })
+
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
+  }
+}
+
+export const resolveCharacterCreationTermCascadeSkill = ({
+  flow,
+  cascadeSkill,
+  selection
+}: {
+  flow: CharacterCreationFlow
+  cascadeSkill: string
+  selection: string
+}): CharacterCreationWizardResult => {
+  if (!flow.draft.pendingTermCascadeSkills.includes(cascadeSkill)) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const resolution = resolveCascadeCareerSkill({
+    pendingCascadeSkills: flow.draft.pendingTermCascadeSkills,
+    termSkills: [],
+    cascadeSkill,
+    selection
+  })
+  const updatedFlow = updateCharacterCreationFields(flow, {
+    pendingTermCascadeSkills: resolution.pendingCascadeSkills,
+    skills: addRolledSkills(flow.draft.skills, resolution.termSkills)
+  })
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
+  }
+}
+
 export const applyCharacterCreationCareerRoll = (
   flow: CharacterCreationFlow,
   roll: number
@@ -880,7 +1744,342 @@ export const applyCharacterCreationCareerRoll = (
     ...flow.draft.careerPlan,
     [action.key]: roll
   })
-  const updatedFlow = { ...flow, draft: updatedDraft }
+  const rewardSkill = updatedDraft.careerPlan?.rankBonusSkill ?? null
+  const rankedDraft =
+    rewardSkill && ['commissionRoll', 'advancementRoll'].includes(action.key)
+      ? applyCharacterCreationRankBonusSkill(updatedDraft, rewardSkill)
+      : updatedDraft
+  const updatedFlow = { ...flow, draft: rankedDraft }
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
+  }
+}
+
+export const deriveCharacterCreationCareerSkipAction = (
+  flow: Pick<CharacterCreationFlow, 'draft' | 'step'>
+): CharacterCreationCareerSkipAction | null => {
+  if (flow.step !== 'career') return null
+  const action = deriveNextCharacterCreationCareerRoll(flow)
+  if (action?.key === 'commissionRoll') {
+    return { key: action.key, label: 'Skip commission' }
+  }
+  if (action?.key === 'advancementRoll') {
+    return { key: action.key, label: 'Skip advancement' }
+  }
+  return null
+}
+
+export const skipCharacterCreationCareerRoll = (
+  flow: CharacterCreationFlow
+): CharacterCreationWizardResult => {
+  const action = deriveCharacterCreationCareerSkipAction(flow)
+  if (!action || !flow.draft.careerPlan) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const updatedFlow = {
+    ...flow,
+    draft: applyCharacterCreationCareerPlan(flow.draft, {
+      ...flow.draft.careerPlan,
+      [action.key]: -1
+    })
+  }
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
+  }
+}
+
+const applyCharacterCreationRankBonusSkill = (
+  draft: CharacterCreationDraft,
+  rewardSkill: string
+): CharacterCreationDraft => {
+  const normalizedSkill = normalizeCareerSkill(rewardSkill, 1)
+  if (!normalizedSkill) return draft
+  if (isCascadeCareerSkill(rewardSkill)) {
+    const pending = careerSkillWithLevel(rewardSkill, 1)
+    return updateCharacterCreationDraft(draft, {
+      pendingTermCascadeSkills: pending
+        ? [...draft.pendingTermCascadeSkills, pending]
+        : draft.pendingTermCascadeSkills
+    })
+  }
+  return updateCharacterCreationDraft(draft, {
+    skills: addRolledSkill(draft.skills, rewardSkill)
+  })
+}
+
+export const isCharacterCreationCareerTermResolved = (
+  draft: CharacterCreationDraft
+): boolean => {
+  const plan = draft.careerPlan
+  return plan ? isCareerPlanTermResolved(plan) : false
+}
+
+const isCareerPlanTermResolved = (
+  plan: CharacterCreationCareerPlan
+): boolean => {
+  if (!plan?.career.trim()) return false
+  if (!plan.drafted && plan.qualificationPassed !== true) return false
+  if (plan.survivalPassed === null || plan.survivalRoll === null) return false
+  if (plan.survivalPassed === false) return true
+  if (plan.canCommission && plan.commissionRoll === null) return false
+  if (plan.canAdvance && plan.advancementRoll === null) return false
+  return true
+}
+
+const completedTermFromPlan = (
+  draft: CharacterCreationDraft
+): CharacterCreationCompletedTerm | null => {
+  const plan = draft.careerPlan
+  if (!plan || !isCharacterCreationCareerTermResolved(draft)) return null
+
+  return {
+    career: plan.career.trim(),
+    drafted: plan.drafted,
+    age: draft.age,
+    rank: careerRankAfterPlan(draft),
+    rankTitle: plan.rankTitle ?? null,
+    rankBonusSkill: plan.rankBonusSkill ?? null,
+    qualificationRoll: plan.qualificationRoll,
+    survivalRoll: plan.survivalRoll,
+    survivalPassed: plan.survivalPassed === true,
+    canCommission: plan.canCommission === true,
+    commissionRoll: plan.commissionRoll,
+    commissionPassed: plan.commissionPassed,
+    canAdvance: plan.canAdvance === true,
+    advancementRoll: plan.advancementRoll,
+    advancementPassed: plan.advancementPassed,
+    termSkillRolls: cloneTermSkillRolls(plan.termSkillRolls ?? []),
+    ...(plan.agingRoll != null
+      ? {
+          agingRoll: plan.agingRoll,
+          agingMessage: plan.agingMessage ?? null,
+          agingSelections: cloneAgingSelections(plan.agingSelections ?? [])
+        }
+      : {}),
+    reenlistmentRoll: plan.reenlistmentRoll ?? null,
+    reenlistmentOutcome:
+      plan.reenlistmentOutcome ??
+      (plan.survivalPassed === false
+        ? null
+        : flowlessTermCountRequiresRetirement(draft)
+          ? 'retire'
+          : null)
+  }
+}
+
+const flowlessTermCountRequiresRetirement = (
+  draft: Pick<CharacterCreationDraft, 'completedTerms'>
+): boolean => draft.completedTerms.length + 1 >= 7
+
+export const completeCharacterCreationCareerTerm = ({
+  flow,
+  continueCareer
+}: {
+  flow: CharacterCreationFlow
+  continueCareer: boolean
+}): CharacterCreationWizardResult => {
+  const completedTerm = completedTermFromPlan(flow.draft)
+  if (
+    !completedTerm ||
+    remainingCharacterCreationTermSkillRolls(flow.draft) > 0 ||
+    flow.draft.pendingTermCascadeSkills.length > 0 ||
+    flow.draft.pendingAgingChanges.length > 0 ||
+    (completedTerm.survivalPassed &&
+      requiresCharacterCreationAgingRoll(flow.draft)) ||
+    (completedTerm.survivalPassed &&
+      !completedTerm.reenlistmentOutcome)
+  ) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const nextAge =
+    completedTerm.agingRoll == null
+      ? (flow.draft.age ?? CHARACTER_CREATION_STARTING_AGE) + 4
+      : flow.draft.age
+  const canContinueCareer =
+    continueCareer &&
+    completedTerm.survivalPassed &&
+    (completedTerm.reenlistmentOutcome === 'allowed' ||
+      completedTerm.reenlistmentOutcome === 'forced')
+  const nextCareerPlan =
+    canContinueCareer
+      ? createCareerPlan({
+          career: completedTerm.career,
+          qualificationRoll: 12,
+          qualificationPassed: true,
+          drafted: false
+        })
+      : flow.draft.careerPlan
+  const nextFlow = updateCharacterCreationFields(flow, {
+    age: nextAge,
+    careerPlan: nextCareerPlan,
+    pendingTermCascadeSkills: [],
+    completedTerms: [...flow.draft.completedTerms, completedTerm]
+  })
+
+  const resolvedFlow =
+    canContinueCareer
+      ? nextFlow
+      : { ...nextFlow, step: 'skills' as const }
+  return {
+    flow: resolvedFlow,
+    validation: validateCurrentCharacterCreationStep(resolvedFlow),
+    moved: resolvedFlow.step !== flow.step
+  }
+}
+
+export const remainingMusteringBenefits = (
+  draft: Pick<
+    CharacterCreationDraft,
+    'completedTerms' | 'musteringBenefits'
+  >
+): number => {
+  const term = nextMusteringBenefitTerm(draft)
+  return term ? remainingMusteringBenefitsForCareer(draft, term.career) : 0
+}
+
+const termsInCareer = (
+  draft: Pick<CharacterCreationDraft, 'completedTerms'>,
+  career: string
+): number => draft.completedTerms.filter((term) => term.career === career).length
+
+const benefitsInCareer = (
+  draft: Pick<CharacterCreationDraft, 'musteringBenefits'>,
+  career: string
+): number =>
+  draft.musteringBenefits.filter((benefit) => benefit.career === career).length
+
+const cashBenefitsInCareer = (
+  draft: Pick<CharacterCreationDraft, 'musteringBenefits'>,
+  career: string
+): number =>
+  draft.musteringBenefits.filter(
+    (benefit) => benefit.career === career && benefit.kind === 'cash'
+  ).length
+
+const rankInCareer = (
+  draft: Pick<CharacterCreationDraft, 'completedTerms'>,
+  career: string
+): number =>
+  draft.completedTerms
+    .filter((term) => term.career === career)
+    .reduce((rank, term) => Math.max(rank, term.rank ?? 0), 0)
+
+const remainingMusteringBenefitsForCareer = (
+  draft: Pick<CharacterCreationDraft, 'completedTerms' | 'musteringBenefits'>,
+  career: string
+): number =>
+  deriveRemainingCareerBenefits({
+    termsInCareer: termsInCareer(draft, career),
+    currentRank: rankInCareer(draft, career),
+    benefitsReceived: benefitsInCareer(draft, career)
+  })
+
+const nextMusteringBenefitTerm = (
+  draft: Pick<CharacterCreationDraft, 'completedTerms' | 'musteringBenefits'>
+): CharacterCreationCompletedTerm | null =>
+  draft.completedTerms.find(
+    (term) => remainingMusteringBenefitsForCareer(draft, term.career) > 0
+  ) ?? null
+
+export const characterCreationMusteringBenefitRollModifier = ({
+  draft,
+  kind
+}: {
+  draft: Pick<
+    CharacterCreationDraft,
+    'completedTerms' | 'musteringBenefits' | 'skills'
+  >
+  kind: BenefitKind
+}): number => {
+  const term = nextMusteringBenefitTerm(draft)
+  if (!term) return 0
+  if (kind === 'cash') {
+    return deriveCashBenefitRollModifier({
+      retired: draft.completedTerms.length >= 7,
+      hasGambling: draft.skills.some((skill) => parseCareerSkill(skill)?.name === 'Gambling')
+    })
+  }
+  return deriveMaterialBenefitRollModifier({
+    currentRank: rankInCareer(draft, term.career)
+  })
+}
+
+export const canRollCharacterCreationMusteringBenefit = ({
+  draft,
+  kind
+}: {
+  draft: Pick<
+    CharacterCreationDraft,
+    'completedTerms' | 'musteringBenefits' | 'skills'
+  >
+  kind: BenefitKind
+}): boolean => {
+  const term = nextMusteringBenefitTerm(draft)
+  if (!term) return false
+  if (kind === 'cash' && cashBenefitsInCareer(draft, term.career) >= 3) {
+    return false
+  }
+  return true
+}
+
+export const applyCharacterCreationMusteringBenefit = ({
+  flow,
+  kind,
+  roll
+}: {
+  flow: CharacterCreationFlow
+  kind: BenefitKind
+  roll: number
+}): CharacterCreationWizardResult => {
+  const remaining = remainingMusteringBenefits(flow.draft)
+  const term = nextMusteringBenefitTerm(flow.draft)
+  if (
+    remaining <= 0 ||
+    !term ||
+    !canRollCharacterCreationMusteringBenefit({ draft: flow.draft, kind })
+  ) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const benefit = resolveCareerBenefit({
+    tables: CEPHEUS_SRD_RULESET,
+    career: term.career,
+    roll,
+    kind
+  })
+  const musteringBenefit: CharacterCreationMusteringBenefit = {
+    career: term.career,
+    kind,
+    roll,
+    value: benefit.value,
+    credits: benefit.credits
+  }
+  const equipment =
+    kind === 'material' && benefit.value !== '-'
+      ? [
+          ...flow.draft.equipment,
+          {
+            name: benefit.value,
+            quantity: 1,
+            notes: `Mustering out: ${term.career}`
+          }
+        ]
+      : flow.draft.equipment
+  const updatedFlow = updateCharacterCreationFields(flow, {
+    musteringBenefits: [...flow.draft.musteringBenefits, musteringBenefit],
+    credits: flow.draft.credits + benefit.credits,
+    equipment
+  })
+
   return {
     flow: updatedFlow,
     validation: validateCurrentCharacterCreationStep(updatedFlow),
@@ -905,7 +2104,8 @@ export const deriveCharacterCreationBasicTrainingAction = (
   return {
     label: 'Apply basic training',
     reason: `First ${careerName} term grants service skills at level 0`,
-    skills
+    skills,
+    kind: 'all'
   }
 }
 
@@ -1076,6 +2276,8 @@ const initialCharacterCreationStateCommands = (
   identity: ClientIdentity
 ): Command[] => {
   const careerPlan = draft.careerPlan
+  const firstCareer = draft.completedTerms[0]?.career ?? careerPlan?.career.trim() ?? ''
+  const firstDrafted = draft.completedTerms[0]?.drafted ?? careerPlan?.drafted ?? false
   const baseCommand = {
     gameId: identity.gameId,
     actorId: identity.actorId,
@@ -1088,75 +2290,203 @@ const initialCharacterCreationStateCommands = (
     ...baseCommand,
     creationEvent
   })
+  const backgroundPlan = deriveCharacterCreationBackgroundSkillPlan(draft)
+  const backgroundCommands =
+    draft.homeworld.lawLevel && hasHomeworldTradeCodes(draft.homeworld)
+      ? characterCreationBackgroundCommands({
+          draft,
+          identity,
+          baseCommand,
+          backgroundPlan
+        })
+      : []
   const commands: Command[] = [
     {
       type: 'StartCharacterCreation',
       ...baseCommand
     },
     advance({ type: 'SET_CHARACTERISTICS' }),
+    ...backgroundCommands,
     advance({ type: 'COMPLETE_HOMEWORLD' }),
     {
       type: 'StartCharacterCareerTerm',
       ...baseCommand,
-      career: careerPlan?.career.trim() ?? '',
-      ...(careerPlan?.drafted ? { drafted: true } : {})
+      career: firstCareer,
+      ...(firstDrafted ? { drafted: true } : {})
     } satisfies StartCharacterCareerTermCommand,
     advance({
       type: 'SELECT_CAREER',
       isNewCareer: true,
-      ...(careerPlan?.drafted ? { drafted: true } : {})
+      ...(firstDrafted ? { drafted: true } : {})
     })
   ]
 
-  if (careerPlan && careerPlan.survivalPassed !== null) {
+  const completedTerms =
+    draft.completedTerms.length > 0
+      ? draft.completedTerms
+      : careerPlan && careerPlan.survivalPassed !== null
+        ? [
+            {
+              career: careerPlan.career.trim(),
+              drafted: careerPlan.drafted,
+              age: draft.age,
+              qualificationRoll: careerPlan.qualificationRoll,
+              survivalRoll: careerPlan.survivalRoll,
+              survivalPassed: careerPlan.survivalPassed === true,
+              canCommission: careerPlan.canCommission === true,
+              commissionRoll: careerPlan.commissionRoll,
+              commissionPassed: careerPlan.commissionPassed,
+              canAdvance: careerPlan.canAdvance === true,
+              advancementRoll: careerPlan.advancementRoll,
+              advancementPassed: careerPlan.advancementPassed,
+              termSkillRolls: cloneTermSkillRolls(careerPlan.termSkillRolls ?? [])
+            } satisfies CharacterCreationCompletedTerm
+          ]
+        : []
+
+  if (completedTerms.length > 0) {
     commands.push(advance({ type: 'COMPLETE_BASIC_TRAINING' }))
-    commands.push(
-      careerPlan.survivalPassed
-        ? advance({
-            type: 'SURVIVAL_PASSED',
-            canCommission: careerPlan.canCommission ?? false,
-            canAdvance: careerPlan.canAdvance ?? false
+    let endedWithMishap = false
+
+    for (const [index, term] of completedTerms.entries()) {
+      commands.push(
+        term.survivalPassed
+          ? advance({
+              type: 'SURVIVAL_PASSED',
+              canCommission: term.canCommission,
+              canAdvance: term.canAdvance
+            })
+          : advance({ type: 'SURVIVAL_FAILED' })
+      )
+
+      if (!term.survivalPassed) {
+        commands.push(advance({ type: 'MISHAP_RESOLVED' }))
+        endedWithMishap = true
+        break
+      }
+
+      if (term.canCommission) {
+        commands.push(
+          advance({
+            type: term.commissionPassed
+              ? 'COMPLETE_COMMISSION'
+              : 'SKIP_COMMISSION'
           })
-        : advance({ type: 'SURVIVAL_FAILED' })
-    )
+        )
+      } else if (term.canAdvance) {
+        commands.push(
+          advance({
+            type: term.advancementPassed
+              ? 'COMPLETE_ADVANCEMENT'
+              : 'SKIP_ADVANCEMENT'
+          })
+        )
+      }
 
-    if (!careerPlan.survivalPassed) {
-      commands.push(
-        advance({ type: 'MISHAP_RESOLVED' }),
-        advance({ type: 'FINISH_MUSTERING' }),
-        advance({ type: 'CREATION_COMPLETE' })
-      )
-      return commands
+      commands.push(advance({ type: 'COMPLETE_SKILLS' }))
+      commands.push(advance({ type: 'COMPLETE_AGING' }))
+      if (index < completedTerms.length - 1) {
+        commands.push(advance({ type: 'REENLIST' }))
+      }
     }
 
-    if (careerPlan.canCommission) {
-      commands.push(
-        advance({
-          type: careerPlan.commissionPassed
-            ? 'COMPLETE_COMMISSION'
-            : 'SKIP_COMMISSION'
-        })
-      )
-    } else if (careerPlan.canAdvance) {
-      commands.push(
-        advance({
-          type: careerPlan.advancementPassed
-            ? 'COMPLETE_ADVANCEMENT'
-            : 'SKIP_ADVANCEMENT'
-        })
-      )
-    }
-
+    if (!endedWithMishap) commands.push(advance({ type: 'LEAVE_CAREER' }))
     commands.push(
-      advance({ type: 'COMPLETE_SKILLS' }),
-      advance({ type: 'COMPLETE_AGING' }),
-      advance({ type: 'LEAVE_CAREER' }),
       advance({ type: 'FINISH_MUSTERING' }),
       advance({ type: 'CREATION_COMPLETE' })
     )
   }
 
   return commands
+}
+
+const characterCreationBackgroundCommands = ({
+  draft,
+  identity,
+  baseCommand,
+  backgroundPlan
+}: {
+  draft: CharacterCreationDraft
+  identity: ClientIdentity
+  baseCommand: Pick<
+    SetCharacterCreationHomeworldCommand,
+    'gameId' | 'actorId' | 'characterId'
+  >
+  backgroundPlan: BackgroundSkillPlan
+}): Command[] => {
+  const commands: Command[] = [
+    {
+      type: 'SetCharacterCreationHomeworld',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: draft.characterId,
+      homeworld: {
+        name: null,
+        lawLevel: draft.homeworld.lawLevel ?? null,
+        tradeCodes: Array.isArray(draft.homeworld.tradeCodes)
+          ? [...draft.homeworld.tradeCodes]
+          : draft.homeworld.tradeCodes
+            ? [draft.homeworld.tradeCodes]
+            : []
+      }
+    } satisfies SetCharacterCreationHomeworldCommand
+  ]
+
+  const resolvedCascadeSkills = new Set<string>()
+  for (const cascadeSkill of backgroundPlan.pendingCascadeSkills) {
+    const selection = resolvedCascadeSelection(cascadeSkill, draft)
+    if (!selection) continue
+    commands.push({
+      type: 'ResolveCharacterCreationCascadeSkill',
+      ...baseCommand,
+      cascadeSkill,
+      selection
+    } satisfies ResolveCharacterCreationCascadeSkillCommand)
+    resolvedCascadeSkills.add(careerSkillWithLevel(selection, 0))
+  }
+
+  const preselected = new Set(backgroundPlan.backgroundSkills)
+  const requiredCount = requiredBackgroundSkillSelections(draft)
+  const extraSelectionCount = Math.max(
+    0,
+    requiredCount -
+      backgroundPlan.backgroundSkills.length -
+      backgroundPlan.pendingCascadeSkills.length
+  )
+  let selected = 0
+  for (const skill of draft.backgroundSkills) {
+    if (selected >= extraSelectionCount) break
+    if (preselected.has(skill) || resolvedCascadeSkills.has(skill)) continue
+    commands.splice(commands.length - resolvedCascadeSkills.size, 0, {
+      type: 'SelectCharacterCreationBackgroundSkill',
+      ...baseCommand,
+      skill
+    } satisfies SelectCharacterCreationBackgroundSkillCommand)
+    selected += 1
+  }
+
+  return commands
+}
+
+const resolvedCascadeSelection = (
+  cascadeSkill: string,
+  draft: CharacterCreationDraft
+): string | null => {
+  const cascadeName = cascadeSkill.replace(/-\d+$/, '')
+  const options = CEPHEUS_SRD_RULESET.cascadeSkills[cascadeName]
+  if (!options || options.length === 0) return null
+
+  for (const option of options) {
+    if (
+      draft.backgroundSkills.some(
+        (skill) => skill === careerSkillWithLevel(option, 0)
+      )
+    ) {
+      return option
+    }
+  }
+
+  return options[0] ?? null
 }
 
 export const deriveInitialCharacterCreationStateCommands = (
@@ -1170,16 +2500,43 @@ export const deriveInitialCharacterCreationStateCommands = (
   )
 }
 
+const careerHistoryNotes = (draft: CharacterCreationDraft): string[] => {
+  const terms = draft.completedTerms.map((term, index) => {
+    const survival = term.survivalPassed ? 'survived' : 'mishap'
+    const drafted = term.drafted ? ', drafted' : ''
+    return `Term ${index + 1}: ${term.career}${drafted}, ${survival}.`
+  })
+  const benefits = draft.musteringBenefits.map(
+    (benefit) =>
+      `Mustering out: ${benefit.career} ${benefit.kind} ${benefit.roll} -> ${benefit.value}.`
+  )
+  return [...terms, ...benefits]
+}
+
+const deriveCharacterCreationSheet = (
+  draft: CharacterCreationDraft
+): {
+  age: CharacterCreationDraft['age']
+  characteristics: CharacterCharacteristics
+  skills: string[]
+  equipment: CharacterEquipmentItem[]
+  credits: number
+  notes: string
+} => {
+  const history = careerHistoryNotes(draft)
+  return {
+    age: draft.age,
+    characteristics: { ...draft.characteristics },
+    skills: normalizeSkillList([...draft.backgroundSkills, ...draft.skills]),
+    equipment: cloneEquipment(draft.equipment),
+    credits: draft.credits,
+    notes: [draft.notes.trim(), ...history].filter(Boolean).join('\n')
+  }
+}
+
 export const deriveCharacterSheetPatch = (
   draft: CharacterCreationDraft
-): CharacterSheetPatch => ({
-  age: draft.age,
-  characteristics: { ...draft.characteristics },
-  skills: normalizeSkillList([...draft.backgroundSkills, ...draft.skills]),
-  equipment: cloneEquipment(draft.equipment),
-  credits: draft.credits,
-  notes: draft.notes
-})
+): CharacterSheetPatch => deriveCharacterCreationSheet(draft)
 
 export const deriveUpdateCharacterSheetCommand = (
   draft: CharacterCreationDraft,
@@ -1199,22 +2556,19 @@ export const deriveUpdateCharacterSheetCommand = (
 export const deriveFinalizeCharacterCreationCommand = (
   draft: CharacterCreationDraft,
   { identity, state = null }: CharacterCreationCommandOptions
-): FinalizeCharacterCreationCommand =>
-  buildSequencedCommand(
+): FinalizeCharacterCreationCommand => {
+  const sheet = deriveCharacterCreationSheet(draft)
+  return buildSequencedCommand(
     {
       type: 'FinalizeCharacterCreation',
       gameId: identity.gameId,
       actorId: identity.actorId,
       characterId: draft.characterId,
-      age: draft.age,
-      characteristics: { ...draft.characteristics },
-      skills: normalizeSkillList([...draft.backgroundSkills, ...draft.skills]),
-      equipment: cloneEquipment(draft.equipment),
-      credits: draft.credits,
-      notes: draft.notes
+      ...sheet
     },
     state
   ) as FinalizeCharacterCreationCommand
+}
 
 export const deriveCharacterCreationCommands = (
   flow: CharacterCreationFlow,
@@ -1239,21 +2593,10 @@ export const deriveCharacterCreationCommands = (
       command.creationEvent.type === 'CREATION_COMPLETE'
   )
   const sheetCommand: Command = reachesPlayable
-    ? {
-        type: 'FinalizeCharacterCreation',
-        gameId: options.identity.gameId,
-        actorId: options.identity.actorId,
-        characterId: flow.draft.characterId,
-        age: flow.draft.age,
-        characteristics: { ...flow.draft.characteristics },
-        skills: normalizeSkillList([
-          ...flow.draft.backgroundSkills,
-          ...flow.draft.skills
-        ]),
-        equipment: cloneEquipment(flow.draft.equipment),
-        credits: flow.draft.credits,
-        notes: flow.draft.notes
-      }
+    ? deriveFinalizeCharacterCreationCommand(flow.draft, {
+        identity: options.identity,
+        state: null
+      })
     : {
         type: 'UpdateCharacterSheet',
         gameId: options.identity.gameId,

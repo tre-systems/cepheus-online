@@ -84,6 +84,12 @@ export interface SurvivalPromotionOptions {
   canAdvance: boolean
 }
 
+export interface CareerRankReward {
+  rank: number
+  title: string
+  bonusSkill: string | null
+}
+
 export interface CareerSkill {
   name: string
   level: number

@@ -46,6 +46,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/app-command-router.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'app-command-router.js'
+    ),
+    exportName: 'CLIENT_APP_COMMAND_ROUTER_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/board-geometry.js',
     source: join(compiledClientRoot, 'client', 'app', 'board-geometry.js'),
     exportName: 'CLIENT_BOARD_GEOMETRY_JS',
@@ -276,6 +287,28 @@ const assets = [
       'background-skills.js'
     ),
     exportName: 'SHARED_CHARACTER_CREATION_BACKGROUND_SKILLS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/character-creation/benefits.js',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'benefits.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_BENEFITS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/character-creation/aging.js',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'aging.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_AGING_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {

@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import type { CareerCreationEvent, CareerCreationStatus } from './characterCreation'
 import type { EventEnvelope } from './events'
 import {
   asBoardId,
@@ -284,6 +285,91 @@ describe('game state projection', () => {
     assert.deepEqual(character?.skills, ['Pilot-1', 'Vacc Suit-0'])
     assert.equal(character?.credits, 1200)
     assert.equal(state?.eventSeq, 7)
+  })
+
+  it('projects reenlistment as a second career term', () => {
+    const characterId = asCharacterId('char-1')
+    const transition = (
+      seq: number,
+      creationEvent: CareerCreationEvent,
+      status: CareerCreationStatus,
+      creationComplete = false
+    ) =>
+      envelope(seq, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent,
+        state: {
+          status,
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete
+      })
+
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'CHARACTERISTICS',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCareerTermStarted',
+        characterId,
+        career: 'Scout',
+        drafted: false
+      }),
+      transition(5, { type: 'SURVIVAL_PASSED', canCommission: false, canAdvance: false }, 'SURVIVAL'),
+      transition(6, { type: 'COMPLETE_SKILLS' }, 'SURVIVAL'),
+      transition(7, { type: 'COMPLETE_AGING' }, 'REENLISTMENT'),
+      transition(8, { type: 'REENLIST' }, 'SURVIVAL'),
+      transition(9, { type: 'SURVIVAL_PASSED', canCommission: false, canAdvance: false }, 'SURVIVAL'),
+      transition(10, { type: 'COMPLETE_SKILLS' }, 'SURVIVAL'),
+      transition(11, { type: 'COMPLETE_AGING' }, 'REENLISTMENT'),
+      transition(12, { type: 'LEAVE_CAREER' }, 'MUSTERING_OUT'),
+      transition(13, { type: 'FINISH_MUSTERING' }, 'ACTIVE'),
+      transition(14, { type: 'CREATION_COMPLETE' }, 'PLAYABLE', true)
+    ])
+
+    const terms = state?.characters[characterId]?.creation?.terms
+    assert.deepEqual(
+      terms?.map((term) => term.career),
+      ['Scout', 'Scout']
+    )
+    assert.equal(terms?.[0]?.complete, true)
+    assert.equal(terms?.[1]?.complete, true)
+    assert.equal(terms?.[1]?.musteringOut, true)
+    assert.equal(state?.characters[characterId]?.creation?.state.status, 'PLAYABLE')
   })
 
   it('ignores character creation events for missing characters', () => {

@@ -14,6 +14,7 @@ const clientModules = new Map<
       markers: ['new WebSocket', 'registerClientServiceWorker'],
       imports: [
         '/client/app/board-view.js',
+        '/client/app/app-command-router.js',
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
@@ -34,6 +35,10 @@ const clientModules = new Map<
         '/shared/character-creation/cepheus-srd-ruleset.js'
       ]
     }
+  ],
+  [
+    '/client/app/app-command-router.js',
+    { markers: ['createAppCommandRouter', 'sequenceCommand'] }
   ],
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
@@ -98,11 +103,21 @@ const clientModules = new Map<
     }
   ],
   [
+    '/shared/character-creation/benefits.js',
+    { markers: ['resolveCareerBenefit', 'deriveRemainingCareerBenefits'] }
+  ],
+  [
+    '/shared/character-creation/aging.js',
+    { markers: ['resolveAging', 'selectAgingEffect'] }
+  ],
+  [
     '/client/app/character-creation-flow.js',
     {
       markers: ['deriveCharacterCreationCommands'],
       imports: [
+        '/shared/character-creation/aging.js',
         '/shared/character-creation/background-skills.js',
+        '/shared/character-creation/benefits.js',
         '/shared/character-creation/career-rules.js',
         '/shared/character-creation/cepheus-srd-ruleset.js',
         '/shared/character-creation/skills.js',

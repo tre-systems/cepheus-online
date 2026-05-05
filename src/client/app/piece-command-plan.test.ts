@@ -115,6 +115,9 @@ describe('piece command planner', () => {
         'CreateCharacter',
         'StartCharacterCreation',
         'AdvanceCharacterCreation',
+        'SetCharacterCreationHomeworld',
+        'SelectCharacterCreationBackgroundSkill',
+        'ResolveCharacterCreationCascadeSkill',
         'AdvanceCharacterCreation',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation',
@@ -124,7 +127,7 @@ describe('piece command planner', () => {
     )
     assert.deepEqual(
       result.commands.map((command) => command.expectedSeq),
-      [12, 13, 14, 15, 16, 17, 18, 19]
+      Array.from({ length: result.commands.length }, (_, index) => 12 + index)
     )
     assert.equal(result.commands.at(-1)?.type, 'CreatePiece')
     const createPieceCommand = result.commands.at(-1)

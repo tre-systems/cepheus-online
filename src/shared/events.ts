@@ -9,6 +9,7 @@ import type {
 import type { CareerCreationEvent } from './characterCreation'
 import type {
   CharacterCreationSheet,
+  CharacterCreationHomeworld,
   CharacterCreationProjection,
   CharacterSheetPatch,
   CharacterType,
@@ -56,16 +57,38 @@ export type GameEvent =
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }
+  | {
+      type: 'CharacterCreationHomeworldSet'
+      characterId: CharacterId
+      homeworld: CharacterCreationHomeworld
+      backgroundSkills: string[]
+      pendingCascadeSkills: string[]
+    }
+  | {
+      type: 'CharacterCreationBackgroundSkillSelected'
+      characterId: CharacterId
+      skill: string
+      backgroundSkills: string[]
+      pendingCascadeSkills: string[]
+    }
+  | {
+      type: 'CharacterCreationCascadeSkillResolved'
+      characterId: CharacterId
+      cascadeSkill: string
+      selection: string
+      backgroundSkills: string[]
+      pendingCascadeSkills: string[]
+    }
   | ({
       type: 'CharacterCreationFinalized'
       characterId: CharacterId
     } & CharacterCreationSheet)
-  | ({
+  | {
       type: 'CharacterCareerTermStarted'
       characterId: CharacterId
       career: string
       drafted: boolean
-    })
+    }
   | {
       type: 'BoardCreated'
       boardId: BoardId

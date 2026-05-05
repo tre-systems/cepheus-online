@@ -15,16 +15,32 @@ import { deriveCharacterCreationActionPlan } from './character-creation-actions.
 import {
   applyCharacterCreationBasicTraining,
   applyCharacterCreationBackgroundSkillSelection,
+  applyCharacterCreationAgingChange,
+  applyCharacterCreationAgingRoll,
   applyCharacterCreationCharacteristicRoll,
   applyCharacterCreationCareerRoll,
+  applyCharacterCreationMusteringBenefit,
+  applyCharacterCreationReenlistmentRoll,
+  applyCharacterCreationTermSkillRoll,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationWizardStep,
+  canRollCharacterCreationMusteringBenefit,
+  characterCreationMusteringBenefitRollModifier,
   characterCreationCareerNames,
+  completeCharacterCreationCareerTerm,
   createManualCharacterCreationFlow,
   deriveCharacterCreationCommands,
+  deriveCharacterCreationAgingChangeOptions,
+  deriveCharacterCreationTermSkillTableActions,
+  deriveNextCharacterCreationAgingRoll,
+  deriveNextCharacterCreationReenlistmentRoll,
+  isCharacterCreationCareerTermResolved,
   nextCharacterCreationWizardStep,
+  remainingMusteringBenefits,
   removeCharacterCreationBackgroundSkillSelection,
-  resolveCharacterCreationCascadeSkill
+  resolveCharacterCreationCascadeSkill,
+  resolveCharacterCreationTermCascadeSkill,
+  skipCharacterCreationCareerRoll
 } from './character-creation-flow.js'
 import {
   deriveCharacterCreationBasicTrainingButton,
@@ -32,8 +48,10 @@ import {
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerOptionViewModels,
+  deriveCharacterCreationCascadeSkillChoiceViewModels,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationHomeworldViewModel,
+  deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationReviewSummary,
   deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationValidationSummary,
@@ -70,9 +88,9 @@ import {
 import {
   applyServerMessage as applyClientServerMessage,
   buildRollDiceCommand,
-  buildSequencedCommand,
   buildSetDoorOpenCommand
 } from '../game-commands.js'
+import { createAppCommandRouter } from './app-command-router.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
@@ -98,8 +116,11 @@ const els = {
   createCharacter: document.getElementById('createCharacterButton'),
   createCharacterRail: document.getElementById('createCharacterRailButton'),
   characterCreator: document.getElementById('characterCreator'),
+  creatorBody: document.getElementById('creatorBody'),
   characterCreatorClose: document.getElementById('characterCreatorCloseButton'),
   characterCreatorTitle: document.getElementById('characterCreatorTitle'),
+  creatorStartSection: document.getElementById('creatorStartSection'),
+  creatorQuickSection: document.getElementById('creatorQuickSection'),
   startCharacterWizard: document.getElementById('startCharacterWizardButton'),
   backCharacterWizard: document.getElementById('backCharacterWizardButton'),
   nextCharacterWizard: document.getElementById('nextCharacterWizardButton'),
@@ -183,10 +204,16 @@ let selectedPieceId = null
 let boardController = null
 let requestCounter = 0
 let diceHideTimer = null
+const revealedDiceIds = new Set()
+const diceRevealWaiters = new Map()
 let pendingGeneratedCharacter = null
 let characterCreationFlow = null
 
 const isCharacterCreatorOpen = () => !els.characterCreator.hidden
+
+const scrollCharacterCreatorToTop = () => {
+  els.creatorBody?.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const openCharacterCreatorPanel = () => {
   els.characterCreator.hidden = false
@@ -235,18 +262,42 @@ const handleServerMessage = (message) => {
   }
 }
 
-const postCommand = async (command, id = requestId(command.type)) => {
-  const sequencedCommand = buildSequencedCommand(command, state)
-  const response = await postRoomCommand({
-    roomId,
-    requestId: id,
-    command: sequencedCommand
+const resolveDiceReveal = (rollId) => {
+  if (!rollId) return
+  revealedDiceIds.add(rollId)
+  const waiters = diceRevealWaiters.get(rollId) || []
+  diceRevealWaiters.delete(rollId)
+  for (const resolve of waiters) resolve()
+}
+
+const waitForDiceReveal = (roll) => {
+  if (!roll?.id || revealedDiceIds.has(roll.id)) return Promise.resolve()
+  return new Promise((resolve) => {
+    const waiters = diceRevealWaiters.get(roll.id) || []
+    waiters.push(resolve)
+    diceRevealWaiters.set(roll.id, waiters)
   })
-  handleServerMessage(response.message)
-  if (!response.ok) {
-    throw new Error(response.message.error?.message || 'Command failed')
+}
+
+const commandRouter = createAppCommandRouter({
+  getEventSeq: () => state?.eventSeq ?? null,
+  createRequestId: (command) => requestId(command.type),
+  submit: async ({ requestId, command }) => {
+    const response = await postRoomCommand({
+      roomId,
+      requestId,
+      command
+    })
+    handleServerMessage(response.message)
+    if (!response.ok) {
+      throw new Error(response.message.error?.message || 'Command failed')
+    }
+    return response.message
   }
-  return response.message
+})
+
+const postCommand = async (command, id = requestId(command.type)) => {
+  return commandRouter.dispatch(command, { requestId: id })
 }
 
 const dispatchCommand = async (command) => {
@@ -288,7 +339,6 @@ const characterSkillsFromInput = () =>
 
 const characterCreationSeed = () => ({
   name: els.characterNameInput.value.trim(),
-  age: nullableIntegerInput(els.characterAgeInput),
   characteristics: {
     str: nullableIntegerInput(els.characterStrInput),
     dex: nullableIntegerInput(els.characterDexInput),
@@ -318,7 +368,6 @@ const startCharacterCreationWizard = () => {
     draft: {
       ...flow.draft,
       name: seed.name || flow.draft.name,
-      age: seed.age,
       credits: seed.credits,
       equipment: seed.equipment,
       notes: seed.notes
@@ -327,6 +376,7 @@ const startCharacterCreationWizard = () => {
   pendingGeneratedCharacter = null
   renderGeneratedCharacterPreview()
   renderCharacterCreationWizard()
+  scrollCharacterCreatorToTop()
 }
 
 const syncCharacterCreationWizardFields = () => {
@@ -361,21 +411,26 @@ const renderCharacterCreationWizardControls = () => {
   const validation = deriveCharacterCreationValidationSummary(
     characterCreationFlow
   )
+  if (validation.ok) {
+    els.characterCreationStatus.replaceChildren()
+    return
+  }
+
   const status = document.createElement('p')
-  status.textContent = validation.ok
-    ? 'Ready to continue'
-    : `${validation.errors.length} ${
-        validation.errors.length === 1 ? 'issue' : 'issues'
-      } to fix`
-  status.className = validation.ok ? 'ok' : 'invalid'
+  status.textContent = `${validation.errors.length} ${
+    validation.errors.length === 1 ? 'issue' : 'issues'
+  } to fix`
+  status.className = 'invalid'
   els.characterCreationStatus.replaceChildren(status)
 }
 
 const renderCharacterCreationWizard = () => {
   els.characterCreatorTitle.textContent =
     characterCreationFlow?.draft?.name?.trim() || 'Create traveller'
+  els.characterCreator.classList.toggle('flow-active', Boolean(characterCreationFlow))
+  els.creatorQuickSection.hidden = Boolean(characterCreationFlow)
   els.startCharacterWizard.textContent = characterCreationFlow
-    ? 'Restart character creation'
+    ? 'Restart'
     : 'Begin character creation'
 
   if (!characterCreationFlow) {
@@ -407,12 +462,57 @@ const renderCharacterCreationWizard = () => {
 
   els.characterCreationSteps.replaceChildren(progress)
   els.characterCreationFields.replaceChildren(
+    renderCharacterCreationNextStep(flow),
     flow.step === 'review'
       ? renderCharacterCreationReview(flow)
       : renderCharacterCreationFields(flow)
   )
   els.characterCreationWizard.hidden = false
   renderCharacterCreationWizardControls()
+}
+
+const renderCharacterCreationNextStep = (flow) => {
+  const viewModel = deriveCharacterCreationNextStepViewModel(flow)
+  const panel = document.createElement('section')
+  panel.className = 'creation-next-step'
+
+  const heading = document.createElement('strong')
+  heading.textContent = viewModel.phase
+  const prompt = document.createElement('p')
+  prompt.textContent = viewModel.prompt
+  const stats = document.createElement('div')
+  stats.className = 'creation-stat-strip'
+  const actions = document.createElement('div')
+  actions.className = 'creation-next-step-actions'
+
+  for (const stat of viewModel.stats) {
+    const item = document.createElement('span')
+    if (stat.missing) item.classList.add('missing')
+    const label = document.createElement('b')
+    label.textContent = stat.label
+    const value = document.createElement('span')
+    value.textContent = stat.value
+    const modifier = document.createElement('small')
+    modifier.textContent = stat.modifier
+    item.append(label, value, modifier)
+    stats.append(item)
+  }
+
+  if (!viewModel.primaryAction.disabled) {
+    const primary = document.createElement('button')
+    primary.type = 'button'
+    primary.textContent = viewModel.primaryAction.label
+    primary.addEventListener('click', () => {
+      advanceCharacterCreationWizard().catch((error) =>
+        setError(error.message)
+      )
+    })
+    actions.append(primary)
+  }
+
+  panel.append(heading, prompt, stats)
+  if (actions.childElementCount > 0) panel.append(actions)
+  return panel
 }
 
 const renderCharacterCreationFields = (flow) => {
@@ -425,9 +525,19 @@ const renderCharacterCreationFields = (flow) => {
     return fragment
   }
   if (flow.step === 'career') {
-    fragment.append(renderCharacterCreationCareerPicker(flow))
     const careerRollButton = renderCharacterCreationCareerRollButton(flow)
     if (careerRollButton) fragment.append(careerRollButton)
+    const agingRollButton = renderCharacterCreationAgingRollButton(flow)
+    if (agingRollButton) fragment.append(agingRollButton)
+    fragment.append(renderCharacterCreationAgingChoices(flow))
+    const reenlistmentRollButton =
+      renderCharacterCreationReenlistmentRollButton(flow)
+    if (reenlistmentRollButton) fragment.append(reenlistmentRollButton)
+    fragment.append(renderCharacterCreationTermSkillTables(flow))
+    fragment.append(renderCharacterCreationTermCascadeChoices(flow))
+    fragment.append(renderCharacterCreationTermResolution(flow))
+    fragment.append(renderCharacterCreationCareerPicker(flow))
+    fragment.append(renderCharacterCreationTermHistory(flow))
     return fragment
   }
   if (flow.step === 'homeworld') {
@@ -480,6 +590,9 @@ const renderCharacterCreationFields = (flow) => {
   if (characteristicRollButton) fragment.append(characteristicRollButton)
   if (careerRollButton) fragment.append(careerRollButton)
   if (basicTrainingButton) fragment.append(basicTrainingButton)
+  if (flow.step === 'equipment') {
+    fragment.prepend(renderCharacterCreationMusteringOut(flow))
+  }
   return fragment
 }
 
@@ -525,6 +638,154 @@ const renderCharacterCreationHomeworld = (flow) => {
   return wrapper
 }
 
+const renderCharacterCreationTermSkillTables = (flow) => {
+  const actions = deriveCharacterCreationTermSkillTableActions(flow)
+  if (actions.length === 0) return document.createDocumentFragment()
+
+  const panel = document.createElement('div')
+  panel.className = 'creation-term-skills'
+  const title = document.createElement('strong')
+  title.textContent = 'Skills and training'
+  const text = document.createElement('p')
+  text.textContent = 'Choose a skill table, then roll 1D6 for this term.'
+  const buttons = document.createElement('div')
+  buttons.className = 'creation-term-actions'
+
+  for (const action of actions) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = action.label
+    button.title = action.reason
+    button.disabled = action.disabled
+    button.addEventListener('click', () => {
+      rollCharacterCreationTermSkill(action.table).catch((error) =>
+        setError(error.message)
+      )
+    })
+    buttons.append(button)
+  }
+
+  panel.append(title, text, buttons)
+  return panel
+}
+
+const renderCharacterCreationReenlistmentRollButton = (flow) => {
+  const action = deriveNextCharacterCreationReenlistmentRoll(flow)
+  if (!action) return null
+
+  const panel = document.createElement('div')
+  panel.className = 'creation-roll-action'
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.textContent = action.label
+  button.addEventListener('click', () => {
+    rollCharacterCreationReenlistment().catch((error) =>
+      setError(error.message)
+    )
+  })
+  const note = document.createElement('small')
+  note.textContent = action.reason
+  panel.append(button, note)
+  return panel
+}
+
+const renderCharacterCreationAgingRollButton = (flow) => {
+  const action = deriveNextCharacterCreationAgingRoll(flow)
+  if (!action) return null
+
+  const panel = document.createElement('div')
+  panel.className = 'creation-roll-action'
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.textContent = action.label
+  button.addEventListener('click', () => {
+    rollCharacterCreationAging().catch((error) => setError(error.message))
+  })
+  const note = document.createElement('small')
+  const modifier = action.modifier === 0 ? '' : ` (${action.modifier})`
+  note.textContent = `${action.reason}${modifier}`
+  panel.append(button, note)
+  return panel
+}
+
+const renderCharacterCreationAgingChoices = (flow) => {
+  const changes = deriveCharacterCreationAgingChangeOptions(flow)
+  if (changes.length === 0) return document.createDocumentFragment()
+
+  const panel = document.createElement('div')
+  panel.className = 'creation-term-skills'
+  const title = document.createElement('strong')
+  title.textContent = 'Aging effects'
+  const text = document.createElement('p')
+  text.textContent = 'Choose where each aging effect applies.'
+  panel.append(title, text)
+
+  for (const change of changes) {
+    const row = document.createElement('div')
+    row.className = 'creation-term-actions'
+    const label = document.createElement('small')
+    label.textContent = `${change.type.toLowerCase()} ${change.modifier}`
+    row.append(label)
+    for (const option of change.options) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.textContent = option.toUpperCase()
+      button.addEventListener('click', () => {
+        if (!characterCreationFlow) return
+        characterCreationFlow = applyCharacterCreationAgingChange({
+          flow: characterCreationFlow,
+          index: change.index,
+          characteristic: option
+        }).flow
+        setError('')
+        renderCharacterCreationWizard()
+      })
+      row.append(button)
+    }
+    panel.append(row)
+  }
+
+  return panel
+}
+
+const reenlistmentOutcomeText = (plan) => {
+  if (plan?.reenlistmentOutcome === 'forced') {
+    return `Reenlistment ${plan.reenlistmentRoll}: mandatory reenlistment.`
+  }
+  if (plan?.reenlistmentOutcome === 'allowed') {
+    return `Reenlistment ${plan.reenlistmentRoll}: may reenlist or muster out.`
+  }
+  if (plan?.reenlistmentOutcome === 'blocked') {
+    return `Reenlistment ${plan.reenlistmentRoll}: must muster out.`
+  }
+  if (plan?.reenlistmentOutcome === 'retire') {
+    return 'Seven terms served: must retire and muster out.'
+  }
+  return 'Roll reenlistment before deciding what happens next.'
+}
+
+const renderCharacterCreationTermCascadeChoices = (flow) => {
+  if (flow.draft.pendingTermCascadeSkills.length === 0) {
+    return document.createDocumentFragment()
+  }
+
+  const panel = document.createElement('div')
+  panel.className = 'creation-term-skills'
+  const title = document.createElement('strong')
+  title.textContent = 'Choose a specialty'
+  const text = document.createElement('p')
+  text.textContent = 'Resolve the rolled cascade skill before continuing.'
+  panel.append(title, text)
+
+  for (const cascade of deriveCharacterCreationCascadeSkillChoiceViewModels(
+    flow.draft.pendingTermCascadeSkills
+  )) {
+    panel.append(renderCharacterCreationCascadeChoice(cascade, 'term'))
+  }
+
+  return panel
+}
+
 const renderCharacterCreationBackgroundSkills = (viewModel) => {
   const list = document.createElement('div')
   list.className = 'creation-background-options'
@@ -567,7 +828,7 @@ const renderCharacterCreationBackgroundSkills = (viewModel) => {
   return list
 }
 
-const renderCharacterCreationCascadeChoice = (cascade) => {
+const renderCharacterCreationCascadeChoice = (cascade, scope = 'background') => {
   const panel = document.createElement('div')
   panel.className = 'creation-cascade-choice'
   const title = document.createElement('strong')
@@ -585,14 +846,21 @@ const renderCharacterCreationCascadeChoice = (cascade) => {
     button.addEventListener('click', () => {
       if (!characterCreationFlow) return
       syncCharacterCreationWizardFields()
-      characterCreationFlow = {
-        ...characterCreationFlow,
-        draft: resolveCharacterCreationCascadeSkill({
-          draft: characterCreationFlow.draft,
-          cascadeSkill: cascade.cascadeSkill,
-          selection: option.label
-        })
-      }
+      characterCreationFlow =
+        scope === 'term'
+          ? resolveCharacterCreationTermCascadeSkill({
+              flow: characterCreationFlow,
+              cascadeSkill: cascade.cascadeSkill,
+              selection: option.label
+            }).flow
+          : {
+              ...characterCreationFlow,
+              draft: resolveCharacterCreationCascadeSkill({
+                draft: characterCreationFlow.draft,
+                cascadeSkill: cascade.cascadeSkill,
+                selection: option.label
+              })
+            }
       setError('')
       renderCharacterCreationWizard()
     })
@@ -709,17 +977,27 @@ const careerOutcomeText = (plan) => {
   }
   if (plan.commissionRoll !== null) {
     lines.push(
-      `Commission ${plan.commissionRoll}: ${
-        plan.commissionPassed ? 'commissioned' : 'not commissioned'
-      }`
+      plan.commissionRoll === -1
+        ? 'Commission skipped'
+        : `Commission ${plan.commissionRoll}: ${
+            plan.commissionPassed ? 'commissioned' : 'not commissioned'
+          }`
     )
   }
   if (plan.advancementRoll !== null) {
     lines.push(
-      `Advancement ${plan.advancementRoll}: ${
-        plan.advancementPassed ? 'advanced' : 'held rank'
-      }`
+      plan.advancementRoll === -1
+        ? 'Advancement skipped'
+        : `Advancement ${plan.advancementRoll}: ${
+            plan.advancementPassed ? 'advanced' : 'held rank'
+          }`
     )
+  }
+  if (plan.agingRoll != null) {
+    lines.push(`Aging ${plan.agingRoll}: ${plan.agingMessage ?? 'resolved'}`)
+  }
+  if (plan.reenlistmentOutcome) {
+    lines.push(reenlistmentOutcomeText(plan))
   }
   return lines.join(' | ') || `${plan.career}: ready to roll qualification.`
 }
@@ -782,11 +1060,173 @@ const renderCharacterCreationCareerPicker = (flow) => {
       ).flow
       setError('')
       renderCharacterCreationWizard()
+      scrollCharacterCreatorToTop()
     })
     list.append(button)
   }
   wrapper.append(list)
   return wrapper
+}
+
+const renderCharacterCreationTermResolution = (flow) => {
+  const panel = document.createElement('div')
+  panel.className = 'creation-term-resolution'
+  const plan = flow.draft.careerPlan
+  const title = document.createElement('strong')
+  title.textContent = 'Career term'
+  const text = document.createElement('p')
+
+  if (!plan?.career) {
+    text.textContent = 'Choose a career, then roll through the term.'
+    panel.append(title, text)
+    return panel
+  }
+
+  if (!isCharacterCreationCareerTermResolved(flow.draft)) {
+    text.textContent = 'Roll each required check. The next roll appears above.'
+    panel.append(title, text)
+    return panel
+  }
+
+  if (deriveCharacterCreationTermSkillTableActions(flow).length > 0) {
+    text.textContent = 'Roll this term’s skills before deciding what happens next.'
+    panel.append(title, text)
+    return panel
+  }
+
+  if (flow.draft.pendingTermCascadeSkills.length > 0) {
+    text.textContent = 'Choose the rolled skill specialty before deciding what happens next.'
+    panel.append(title, text)
+    return panel
+  }
+
+  if (deriveNextCharacterCreationAgingRoll(flow)) {
+    text.textContent = 'Roll aging before deciding what happens next.'
+    panel.append(title, text)
+    return panel
+  }
+
+  if (flow.draft.pendingAgingChanges.length > 0) {
+    text.textContent = 'Apply aging effects before deciding what happens next.'
+    panel.append(title, text)
+    return panel
+  }
+
+  if (plan.survivalPassed === true && !plan.reenlistmentOutcome) {
+    text.textContent = 'Roll reenlistment before deciding what happens next.'
+    panel.append(title, text)
+    return panel
+  }
+
+  const survived = plan.survivalPassed === true
+  text.textContent = survived
+    ? reenlistmentOutcomeText(plan)
+    : 'A mishap ended the term. Muster out to continue character creation.'
+  const actions = document.createElement('div')
+  actions.className = 'creation-term-actions'
+
+  if (
+    survived &&
+    (plan.reenlistmentOutcome === 'allowed' ||
+      plan.reenlistmentOutcome === 'forced')
+  ) {
+    const another = document.createElement('button')
+    another.type = 'button'
+    another.textContent =
+      plan.reenlistmentOutcome === 'forced'
+        ? 'Serve required term'
+        : 'Serve another term'
+    another.addEventListener('click', () => {
+      if (!characterCreationFlow) return
+      characterCreationFlow = completeCharacterCreationCareerTerm({
+        flow: characterCreationFlow,
+        continueCareer: true
+      }).flow
+      setError('')
+      renderCharacterCreationWizard()
+      scrollCharacterCreatorToTop()
+    })
+    actions.append(another)
+  }
+
+  const muster = document.createElement('button')
+  muster.type = 'button'
+  muster.textContent = 'Muster out'
+  muster.addEventListener('click', () => {
+    if (!characterCreationFlow) return
+    characterCreationFlow = completeCharacterCreationCareerTerm({
+      flow: characterCreationFlow,
+      continueCareer: false
+    }).flow
+    setError('')
+    renderCharacterCreationWizard()
+    scrollCharacterCreatorToTop()
+  })
+  actions.append(muster)
+
+  panel.append(title, text, actions)
+  return panel
+}
+
+const termSummary = (term, index) => {
+  const result = term.survivalPassed ? 'survived' : 'mishap'
+  const commission =
+    term.commissionRoll === null
+      ? ''
+      : term.commissionRoll === -1
+        ? ', skipped commission'
+        : term.commissionPassed
+          ? ', commissioned'
+          : ', no commission'
+  const advancement =
+    term.advancementRoll === null
+      ? ''
+      : term.advancementRoll === -1
+        ? ', skipped advancement'
+        : term.advancementPassed
+          ? ', advanced'
+          : ', held rank'
+  const rank = term.rankTitle ? `, rank ${term.rankTitle}` : ''
+  const bonusSkill = term.rankBonusSkill
+    ? `; rank skill ${term.rankBonusSkill}`
+    : ''
+  const training =
+    term.termSkillRolls?.length > 0
+      ? `; training ${term.termSkillRolls
+          .map((roll) => `${roll.skill} (${roll.roll})`)
+          .join(', ')}`
+      : ''
+  const aging =
+    term.agingRoll != null
+      ? `; aging ${term.agingRoll}${
+          term.agingMessage ? ` ${term.agingMessage}` : ''
+        }`
+      : ''
+  const reenlistment =
+    term.reenlistmentOutcome && term.reenlistmentRoll !== null
+      ? `; reenlistment ${term.reenlistmentRoll} ${term.reenlistmentOutcome}`
+      : term.reenlistmentOutcome === 'retire'
+        ? '; retirement required'
+        : ''
+  return `${index + 1}. ${term.career}: ${result}${commission}${advancement}${rank}${bonusSkill}${training}${aging}${reenlistment}`
+}
+
+const renderCharacterCreationTermHistory = (flow) => {
+  if (flow.draft.completedTerms.length === 0) {
+    return document.createDocumentFragment()
+  }
+  const panel = document.createElement('div')
+  panel.className = 'creation-term-history'
+  const title = document.createElement('strong')
+  title.textContent = 'Terms served'
+  const list = document.createElement('div')
+  for (const [index, term] of flow.draft.completedTerms.entries()) {
+    const item = document.createElement('span')
+    item.textContent = termSummary(term, index)
+    list.append(item)
+  }
+  panel.append(title, list)
+  return panel
 }
 
 const selectDraftCareer = (career) => {
@@ -812,6 +1252,7 @@ const selectDraftCareer = (career) => {
   ).flow
   setError('')
   renderCharacterCreationWizard()
+  scrollCharacterCreatorToTop()
 }
 
 const renderCharacterCreationDraftFallback = (flow) => {
@@ -861,6 +1302,18 @@ const renderCharacterCreationCharacteristicRollButton = (flow) => {
   const hint = document.createElement('small')
   hint.textContent = viewModel.reason
   wrapper.append(button, hint)
+  if (viewModel.skipLabel) {
+    const skipButton = document.createElement('button')
+    skipButton.type = 'button'
+    skipButton.className = 'secondary'
+    skipButton.textContent = viewModel.skipLabel
+    skipButton.addEventListener('click', () => {
+      characterCreationFlow = skipCharacterCreationCareerRoll(flow).flow
+      renderCharacterCreationWizard()
+      scrollCharacterCreatorToTop()
+    })
+    wrapper.append(skipButton)
+  }
   return wrapper
 }
 
@@ -915,6 +1368,59 @@ const renderCharacterCreationBasicTrainingButton = (flow) => {
   return wrapper
 }
 
+const renderCharacterCreationMusteringOut = (flow) => {
+  const panel = document.createElement('div')
+  panel.className = 'creation-mustering-out'
+  const title = document.createElement('strong')
+  title.textContent = 'Mustering out'
+  const remaining = remainingMusteringBenefits(flow.draft)
+  const summary = document.createElement('p')
+  summary.textContent =
+    flow.draft.completedTerms.length === 0
+      ? 'No career terms completed yet.'
+      : remaining > 0
+        ? `${remaining} benefit ${remaining === 1 ? 'roll' : 'rolls'} remaining.`
+        : 'Benefits complete.'
+
+  const benefitList = document.createElement('div')
+  benefitList.className = 'creation-benefit-list'
+  for (const benefit of flow.draft.musteringBenefits) {
+    const item = document.createElement('span')
+    item.textContent = `${benefit.career}: ${benefit.kind} ${benefit.roll} -> ${benefit.value}`
+    benefitList.append(item)
+  }
+
+  const actions = document.createElement('div')
+  actions.className = 'creation-term-actions'
+  for (const [kind, label] of [
+    ['cash', 'Roll cash'],
+    ['material', 'Roll benefit']
+  ]) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = label
+    const modifier = characterCreationMusteringBenefitRollModifier({
+      draft: flow.draft,
+      kind
+    })
+    button.disabled =
+      remaining <= 0 ||
+      !canRollCharacterCreationMusteringBenefit({ draft: flow.draft, kind })
+    if (modifier !== 0) {
+      button.title = `${modifier > 0 ? '+' : ''}${modifier} DM`
+    }
+    button.addEventListener('click', () => {
+      rollCharacterCreationMusteringBenefit(kind).catch((error) =>
+        setError(error.message)
+      )
+    })
+    actions.append(button)
+  }
+
+  panel.append(title, summary, benefitList, actions)
+  return panel
+}
+
 const rollCharacterCreationCharacteristic = async () => {
   if (!characterCreationFlow) return
   setError('')
@@ -947,11 +1453,192 @@ const rollCharacterCreationCharacteristic = async () => {
     return
   }
 
+  await waitForDiceReveal(latestRoll)
   characterCreationFlow = applyCharacterCreationCharacteristicRoll(
     characterCreationFlow,
     latestRoll.total
   ).flow
   renderCharacterCreationWizard()
+  scrollCharacterCreatorToTop()
+}
+
+const rollCharacterCreationMusteringBenefit = async (kind) => {
+  if (!characterCreationFlow) return
+  setError('')
+  syncCharacterCreationWizardFields()
+
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-mustering-roll')
+    )
+  }
+
+  if (
+    !canRollCharacterCreationMusteringBenefit({
+      draft: characterCreationFlow.draft,
+      kind
+    })
+  ) {
+    return
+  }
+  const modifier = characterCreationMusteringBenefitRollModifier({
+    draft: characterCreationFlow.draft,
+    kind
+  })
+  const modifierText =
+    modifier === 0 ? '' : modifier > 0 ? `+${modifier}` : `${modifier}`
+  const response = await postCommand(
+    buildRollDiceCommand({
+      identity: clientIdentity(),
+      expression: `1d6${modifierText}`,
+      reason: `${characterCreationFlow.draft.name.trim() || 'Character'} mustering out`
+    }),
+    requestId('mustering-roll')
+  )
+  const latestRoll =
+    response.state?.diceLog?.[response.state.diceLog.length - 1]
+  if (!latestRoll) {
+    setError('Mustering roll did not return a dice result')
+    return
+  }
+
+  await waitForDiceReveal(latestRoll)
+  characterCreationFlow = applyCharacterCreationMusteringBenefit({
+    flow: characterCreationFlow,
+    kind,
+    roll: latestRoll.total
+  }).flow
+  renderCharacterCreationWizard()
+  scrollCharacterCreatorToTop()
+}
+
+const rollCharacterCreationTermSkill = async (table) => {
+  if (!characterCreationFlow) return
+  setError('')
+  syncCharacterCreationWizardFields()
+
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-term-skill-roll')
+    )
+  }
+
+  const action = deriveCharacterCreationTermSkillTableActions(
+    characterCreationFlow
+  ).find((candidate) => candidate.table === table)
+  if (!action || action.disabled) return
+
+  const response = await postCommand(
+    buildRollDiceCommand({
+      identity: clientIdentity(),
+      expression: '1d6',
+      reason: action.reason
+    }),
+    requestId('term-skill-roll')
+  )
+  const latestRoll =
+    response.state?.diceLog?.[response.state.diceLog.length - 1]
+  if (!latestRoll) {
+    setError('Term skill roll did not return a dice result')
+    return
+  }
+
+  await waitForDiceReveal(latestRoll)
+  characterCreationFlow = applyCharacterCreationTermSkillRoll({
+    flow: characterCreationFlow,
+    table,
+    roll: latestRoll.total
+  }).flow
+  renderCharacterCreationWizard()
+  scrollCharacterCreatorToTop()
+}
+
+const rollCharacterCreationReenlistment = async () => {
+  if (!characterCreationFlow) return
+  setError('')
+  syncCharacterCreationWizardFields()
+
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-reenlistment-roll')
+    )
+  }
+
+  const action = deriveNextCharacterCreationReenlistmentRoll(
+    characterCreationFlow
+  )
+  if (!action) return
+
+  const response = await postCommand(
+    buildRollDiceCommand({
+      identity: clientIdentity(),
+      expression: '2d6',
+      reason: action.reason
+    }),
+    requestId('reenlistment-roll')
+  )
+  const latestRoll =
+    response.state?.diceLog?.[response.state.diceLog.length - 1]
+  if (!latestRoll) {
+    setError('Reenlistment roll did not return a dice result')
+    return
+  }
+
+  await waitForDiceReveal(latestRoll)
+  characterCreationFlow = applyCharacterCreationReenlistmentRoll(
+    characterCreationFlow,
+    latestRoll.total
+  ).flow
+  renderCharacterCreationWizard()
+  scrollCharacterCreatorToTop()
+}
+
+const rollCharacterCreationAging = async () => {
+  if (!characterCreationFlow) return
+  setError('')
+  syncCharacterCreationWizardFields()
+
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-aging-roll')
+    )
+  }
+
+  const action = deriveNextCharacterCreationAgingRoll(characterCreationFlow)
+  if (!action) return
+
+  const modifier =
+    action.modifier === 0
+      ? ''
+      : action.modifier > 0
+        ? `+${action.modifier}`
+        : `${action.modifier}`
+  const response = await postCommand(
+    buildRollDiceCommand({
+      identity: clientIdentity(),
+      expression: `2d6${modifier}`,
+      reason: action.reason
+    }),
+    requestId('aging-roll')
+  )
+  const latestRoll =
+    response.state?.diceLog?.[response.state.diceLog.length - 1]
+  if (!latestRoll) {
+    setError('Aging roll did not return a dice result')
+    return
+  }
+
+  await waitForDiceReveal(latestRoll)
+  characterCreationFlow = applyCharacterCreationAgingRoll(
+    characterCreationFlow,
+    latestRoll.total
+  ).flow
+  renderCharacterCreationWizard()
+  scrollCharacterCreatorToTop()
 }
 
 const renderCharacterCreationReview = (flow) => {
@@ -1012,11 +1699,13 @@ const rollCharacterCreationCareerCheck = async () => {
     return
   }
 
+  await waitForDiceReveal(latestRoll)
   characterCreationFlow = applyCharacterCreationCareerRoll(
     characterCreationFlow,
     latestRoll.total
   ).flow
   renderCharacterCreationWizard()
+  scrollCharacterCreatorToTop()
 }
 
 const rollCharacterCreationDraft = async () => {
@@ -1046,11 +1735,13 @@ const rollCharacterCreationDraft = async () => {
     return
   }
 
+  await waitForDiceReveal(latestRoll)
   const index = Math.max(
     0,
     Math.min(CEPHEUS_SRD_RULESET.theDraft.length - 1, latestRoll.total - 1)
   )
   selectDraftCareer(CEPHEUS_SRD_RULESET.theDraft[index])
+  scrollCharacterCreatorToTop()
 }
 
 const renderGeneratedCharacterPreview = () => {
@@ -1366,6 +2057,9 @@ const advanceCharacterCreationWizard = async () => {
   } else {
     setError('')
     characterCreationFlow = result.flow
+    renderCharacterCreationWizard()
+    scrollCharacterCreatorToTop()
+    return
   }
   renderCharacterCreationWizard()
 }
@@ -1378,6 +2072,7 @@ const backCharacterCreationWizard = () => {
   ).flow
   setError('')
   renderCharacterCreationWizard()
+  scrollCharacterCreatorToTop()
 }
 
 const rollGeneratedCharacter = () => {
@@ -1538,6 +2233,8 @@ const applyState = (nextState) => {
   render()
   if (latestRoll && firstStateApplied && latestRoll.id !== previousDiceId) {
     animateRoll(latestRoll)
+  } else if (latestRoll && latestRoll.id !== previousDiceId) {
+    resolveDiceReveal(latestRoll.id)
   }
   firstStateApplied = true
 }
@@ -1750,7 +2447,8 @@ const animateRoll = (roll) => {
     roll,
     overlay: els.diceOverlay,
     stage: els.diceStage,
-    hideTimer: diceHideTimer
+    hideTimer: diceHideTimer,
+    onReveal: () => resolveDiceReveal(roll.id)
   })
 }
 

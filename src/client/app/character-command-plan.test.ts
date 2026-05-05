@@ -96,6 +96,9 @@ describe('character command planner', () => {
         'CreateCharacter',
         'StartCharacterCreation',
         'AdvanceCharacterCreation',
+        'SetCharacterCreationHomeworld',
+        'SelectCharacterCreationBackgroundSkill',
+        'ResolveCharacterCreationCascadeSkill',
         'AdvanceCharacterCreation',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation',
@@ -113,7 +116,7 @@ describe('character command planner', () => {
     )
     assert.deepEqual(
       plan.commands.map((command) => command.expectedSeq),
-      [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35]
+      Array.from({ length: plan.commands.length }, (_, index) => 20 + index)
     )
     const finalCreationEventCommand = plan.commands.at(-3)
     assert.equal(finalCreationEventCommand?.type, 'AdvanceCharacterCreation')

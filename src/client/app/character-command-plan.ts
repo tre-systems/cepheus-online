@@ -8,6 +8,7 @@ import type {
   GameState
 } from '../../shared/state'
 import {
+  characteristicModifier,
   evaluateCareerCheck,
   parseCareerCheck
 } from '../../shared/character-creation/career-rules.js'
@@ -136,6 +137,34 @@ const GENERATED_CASCADE_SKILLS: Record<string, readonly string[]> = {
   'Vehicle*': ['Grav Vehicle', 'Tracked Vehicle', 'Wheeled Vehicle']
 }
 
+const defaultCreationHomeworld = () => ({
+  name: null,
+  lawLevel: 'Low Law',
+  tradeCodes: ['Industrial']
+})
+
+const DEFAULT_CREATION_CASCADE_SKILL = 'Gun Combat-0'
+const DEFAULT_CREATION_CASCADE_SELECTION = 'Slug Pistol'
+const DEFAULT_CREATION_BACKGROUND_POOL = [
+  'Admin-0',
+  'Computer-0',
+  'Mechanics-0',
+  'Medicine-0',
+  'Electronics-0'
+] as const
+
+const defaultBackgroundSkillsFor = (
+  characteristics: CharacterCharacteristics
+): string[] => {
+  const allowance = 3 + characteristicModifier(characteristics.edu)
+  const additionalSelections = Math.max(0, allowance - 2)
+  return [
+    'Broker-0',
+    'Slug Pistol-0',
+    ...DEFAULT_CREATION_BACKGROUND_POOL.slice(0, additionalSelections)
+  ]
+}
+
 const sequenceCommandAt = <T extends Command>(
   command: T,
   state: Pick<GameState, 'eventSeq'>,
@@ -224,6 +253,37 @@ const playableCreationCommands = (
   return commands
 }
 
+const playableCareerPlan = ({
+  career,
+  drafted,
+  outcome = {
+    survivalPassed: true,
+    canCommission: false,
+    commissionPassed: null,
+    canAdvance: true,
+    advancementPassed: true
+  }
+}: {
+  career: string
+  drafted: boolean
+  outcome?: PlayableCreationOutcome
+}) =>
+  selectCharacterCreationCareerPlan(career, {
+    drafted,
+    qualificationRoll: drafted ? null : 8,
+    survivalRoll: outcome.survivalPassed ? 8 : 2,
+    commissionRoll: outcome.canCommission
+      ? outcome.commissionPassed
+        ? 8
+        : 2
+      : null,
+    advancementRoll: outcome.canAdvance
+      ? outcome.advancementPassed
+        ? 8
+        : 2
+      : null
+  })
+
 const initialCreationCommands = ({
   identity,
   state,
@@ -231,7 +291,8 @@ const initialCreationCommands = ({
   characterType,
   name,
   career,
-  drafted
+  drafted,
+  characteristics
 }: {
   identity: ClientIdentity
   state: GameState
@@ -240,6 +301,7 @@ const initialCreationCommands = ({
   name: string
   career: string
   drafted: boolean
+  characteristics: CharacterCharacteristics
 }): Command[] =>
   [
     {
@@ -262,6 +324,33 @@ const initialCreationCommands = ({
       actorId: identity.actorId,
       characterId,
       creationEvent: { type: 'SET_CHARACTERISTICS' }
+    },
+    {
+      type: 'SetCharacterCreationHomeworld',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId,
+      homeworld: defaultCreationHomeworld()
+    },
+    ...DEFAULT_CREATION_BACKGROUND_POOL.slice(
+      0,
+      Math.max(0, 3 + characteristicModifier(characteristics.edu) - 2)
+    ).map(
+      (skill): Command => ({
+        type: 'SelectCharacterCreationBackgroundSkill',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId,
+        skill
+      })
+    ),
+    {
+      type: 'ResolveCharacterCreationCascadeSkill',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId,
+      cascadeSkill: DEFAULT_CREATION_CASCADE_SKILL,
+      selection: DEFAULT_CREATION_CASCADE_SELECTION
     },
     {
       type: 'AdvanceCharacterCreation',
@@ -603,8 +692,13 @@ export const planCreatePlayableCharacterCommands = ({
       name: trimmedName,
       characterType,
       age,
-      careerPlan: selectCharacterCreationCareerPlan(career ?? 'Scout', {
-        drafted
+      homeworld: defaultCreationHomeworld(),
+      backgroundSkills: defaultBackgroundSkillsFor(characteristics),
+      pendingCascadeSkills: [],
+      careerPlan: playableCareerPlan({
+        career: career ?? 'Scout',
+        drafted,
+        outcome: creationOutcome
       }),
       characteristics,
       skills,
@@ -629,7 +723,8 @@ export const planCreatePlayableCharacterCommands = ({
     characterType,
     name: trimmedName,
     career: career ?? 'Scout',
-    drafted
+    drafted,
+    characteristics
   })
 
   const finishCommands = playableCreationCommands(

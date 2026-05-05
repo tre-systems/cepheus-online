@@ -2,6 +2,7 @@ import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
 import type { CareerCreationEvent } from './characterCreation'
 import type {
   CharacterCreationSheet,
+  CharacterCreationHomeworld,
   CharacterSheetPatch,
   CharacterType,
   PieceFreedom,
@@ -47,6 +48,31 @@ export type Command =
       expectedSeq?: number
       characterId: CharacterId
       creationEvent: CareerCreationEvent
+    }
+  | {
+      type: 'SetCharacterCreationHomeworld'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+      homeworld: CharacterCreationHomeworld
+    }
+  | {
+      type: 'SelectCharacterCreationBackgroundSkill'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+      skill: string
+    }
+  | {
+      type: 'ResolveCharacterCreationCascadeSkill'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+      cascadeSkill: string
+      selection: string
     }
   | ({
       type: 'FinalizeCharacterCreation'
