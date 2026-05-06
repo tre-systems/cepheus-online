@@ -82,8 +82,13 @@ const transitionStatus = (
         ? { ...state, status: 'MUSTERING_OUT' }
         : null
     case 'COMMISSION':
-      return event.type === 'COMPLETE_COMMISSION' ||
-        event.type === 'SKIP_COMMISSION'
+      if (event.type === 'COMPLETE_COMMISSION') {
+        return {
+          ...state,
+          status: state.context.canAdvance ? 'ADVANCEMENT' : 'SKILLS_TRAINING'
+        }
+      }
+      return event.type === 'SKIP_COMMISSION'
         ? { ...state, status: 'SKILLS_TRAINING' }
         : null
     case 'ADVANCEMENT':

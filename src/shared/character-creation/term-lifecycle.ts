@@ -223,7 +223,11 @@ export const resolveReenlistment = ({
     return {
       outcome: 'forced',
       message: 'Your character must reenlist.',
-      term: cloneCareerTerm(term),
+      term: {
+        ...cloneCareerTerm(term),
+        canReenlist: true,
+        reEnlistment: roll
+      },
       nextTermCareer: term.career
     }
   }

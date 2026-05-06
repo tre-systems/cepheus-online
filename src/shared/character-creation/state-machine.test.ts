@@ -255,4 +255,89 @@ describe('career creation state machine transition matrix', () => {
       )
     }
   })
+
+  it('follows SRD term order from commission into advancement when available', () => {
+    const afterSurvival = transitionCareerCreationState(
+      createCareerCreationState('SURVIVAL'),
+      { type: 'SURVIVAL_PASSED', canCommission: true, canAdvance: true }
+    )
+
+    assert.deepEqual(afterSurvival, {
+      status: 'COMMISSION',
+      context: { canCommission: true, canAdvance: true }
+    })
+
+    assert.deepEqual(
+      transitionCareerCreationState(afterSurvival, {
+        type: 'COMPLETE_COMMISSION'
+      }),
+      {
+        status: 'ADVANCEMENT',
+        context: { canCommission: true, canAdvance: true }
+      }
+    )
+
+    assert.deepEqual(
+      transitionCareerCreationState(afterSurvival, {
+        type: 'SKIP_COMMISSION'
+      }),
+      {
+        status: 'SKILLS_TRAINING',
+        context: { canCommission: true, canAdvance: true }
+      }
+    )
+  })
+
+  it('accepts the SRD creation phase order through finalization', () => {
+    const orderedEvents = [
+      { type: 'SET_CHARACTERISTICS' },
+      { type: 'COMPLETE_HOMEWORLD' },
+      { type: 'SELECT_CAREER', isNewCareer: true, drafted: true },
+      { type: 'COMPLETE_BASIC_TRAINING' },
+      { type: 'SURVIVAL_PASSED', canCommission: true, canAdvance: true },
+      { type: 'COMPLETE_COMMISSION' },
+      { type: 'COMPLETE_ADVANCEMENT' },
+      { type: 'COMPLETE_SKILLS' },
+      { type: 'COMPLETE_AGING' },
+      { type: 'LEAVE_CAREER' },
+      { type: 'FINISH_MUSTERING' },
+      { type: 'CREATION_COMPLETE' }
+    ] satisfies readonly CareerCreationEvent[]
+    const expectedStatuses = [
+      'HOMEWORLD',
+      'CAREER_SELECTION',
+      'BASIC_TRAINING',
+      'SURVIVAL',
+      'COMMISSION',
+      'ADVANCEMENT',
+      'SKILLS_TRAINING',
+      'AGING',
+      'REENLISTMENT',
+      'MUSTERING_OUT',
+      'ACTIVE',
+      'PLAYABLE'
+    ] satisfies readonly CareerCreationStatus[]
+
+    let state = createCareerCreationState()
+    for (const [index, event] of orderedEvents.entries()) {
+      state = transitionCareerCreationState(state, event)
+      assert.equal(state.status, expectedStatuses[index], event.type)
+    }
+  })
+
+  it('keeps reenlisted terms on survival without repeating career selection or basic training', () => {
+    assert.deepEqual(
+      transitionCareerCreationState(createCareerCreationState('REENLISTMENT'), {
+        type: 'REENLIST'
+      }),
+      createCareerCreationState('SURVIVAL')
+    )
+
+    assert.deepEqual(
+      transitionCareerCreationState(createCareerCreationState('REENLISTMENT'), {
+        type: 'FORCED_REENLIST'
+      }),
+      createCareerCreationState('SURVIVAL')
+    )
+  })
 })

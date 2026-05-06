@@ -22,10 +22,8 @@ export const parseCareerSkill = (skill: string): CareerSkill | null => {
   }
 }
 
-export const careerSkillWithLevel = (
-  skill: string,
-  level: number
-): string => skill.trim().replace('*', `-${level}`)
+export const careerSkillWithLevel = (skill: string, level: number): string =>
+  skill.trim().replace('*', `-${level}`)
 
 export const normalizeCareerSkill = (
   skill: string,
@@ -45,6 +43,30 @@ export const normalizeCareerSkill = (
     name: parsed.name,
     level: /-(-?\d+)$/.test(trimmed) ? parsed.level : defaultLevel
   })
+}
+
+export const resolveCareerSkillTableRoll = ({
+  table,
+  career,
+  roll
+}: {
+  table: Record<string, Record<string, string>>
+  career: string
+  roll: number
+}): string | null => {
+  const careerTable = table[career]
+  if (!careerTable) return null
+
+  const rolls = Object.keys(careerTable)
+    .map((key) => Number(key))
+    .filter(Number.isFinite)
+  if (rolls.length === 0) return null
+
+  const clampedRoll = Math.max(
+    Math.min(...rolls),
+    Math.min(Math.max(...rolls), roll)
+  )
+  return careerTable[String(clampedRoll)] ?? null
 }
 
 export const tallyCareerSkills = (skills: readonly string[]): string[] => {
@@ -82,13 +104,18 @@ export const resolveCascadeCareerSkill = ({
   selection: string
   basicTraining?: boolean
 }): CascadeSkillResolution => {
-  const remaining = pendingCascadeSkills.filter((skill) => skill !== cascadeSkill)
+  const remaining = pendingCascadeSkills.filter(
+    (skill) => skill !== cascadeSkill
+  )
   const parsed = parseCareerSkill(cascadeSkill)
   const level = parsed?.level ?? 0
 
   if (isCascadeCareerSkill(selection)) {
     return {
-      pendingCascadeSkills: [...remaining, careerSkillWithLevel(selection, level)],
+      pendingCascadeSkills: [
+        ...remaining,
+        careerSkillWithLevel(selection, level)
+      ],
       backgroundSkills: [...backgroundSkills],
       careerSkills: [...careerSkills],
       termSkills: [...termSkills]

@@ -91,6 +91,73 @@ Important remaining gaps:
 - Character creation roll semantics need to be connected to shared dice events
   so all players can see the same creation rolls at the same time.
 
+## SRD Procedure Audit Checklist
+
+Audit date: 2026-05-06. Source artifacts checked:
+`data/rulesets/srd/cepheus-engine-srd.json`,
+`data/ruleset/cepheus-engine-srd.json`, and
+[SRD Source](../integrations/srd-source.md). The character creation table groups
+match between both local SRD JSON files; their current differences are in
+equipment data, not creation procedure data.
+
+Use this as the executable checklist for bringing the shared state machine and
+legal-action planner up to the SRD procedure. Each item should have shared
+projection state, semantic commands/events, legal-action coverage, and replay
+tests before it is considered done.
+
+- [x] Coarse lifecycle statuses exist for characteristics, homeworld, career
+  selection, term steps, mustering out, playable, and deceased.
+- [~] Roll characteristics and lock assignments. Current legal action:
+  `setCharacteristics`. Gap: no first-class characteristic roll facts,
+  assignment choices, or replayed roll provenance.
+- [~] Set homeworld data and derive background skills from law level, trade
+  codes, and primary education options. Current legal action:
+  `completeHomeworld`; pure helpers exist. Gap: no server-backed homeworld
+  projection, background selection commands/events, or refresh-safe pending
+  cascade flow.
+- [~] Resolve cascade skills whenever SRD table entries use cascade markers.
+  Current planner can block on `cascadeSkillResolution`. Gap: cascade choices
+  are not yet a first-class server-backed modal step through all creation
+  sources.
+- [~] Qualify for a career using `careerBasics`, applying prior-career limits
+  and qualification penalties. Current legal action: `selectCareer`. Gap:
+  qualification success/failure is not a persisted roll fact and failed
+  qualification does not yet expose only Drifter or the Draft from shared state.
+- [ ] Resolve the Draft by rolling the `theDraft` table exactly once when
+  eligible, then mark draft use on the term.
+- [~] Apply basic training from `serviceSkills`: all service skills at level 0
+  in the first term ever, one selected service skill for a first term in a new
+  career, none when returning. Current planner can block on
+  `basicTrainingSkillSelection`. Gap: not yet end-to-end server-backed.
+- [~] Roll survival from `careerBasics`; on failure, enter mishap/death or legal
+  exit handling. Current legal action: `rollSurvival`. Gap: mishap/death
+  outcome tables and roll facts are not fully projected.
+- [~] Resolve commission and advancement from `careerBasics` and
+  `ranksAndSkills`, including rank titles and bonus skills. Current legal
+  actions: `rollCommission`, `skipCommission`, `rollAdvancement`,
+  `skipAdvancement`. Gap: bonus skill decisions and rank provenance are not yet
+  complete.
+- [~] Select a term skill table and roll skills from `personalDevelopment`,
+  `serviceSkills`, `specialistSkills`, or `advEducation`. Current planner can
+  block on `skillTrainingSelection`. Gap: table choice, roll result, and skill
+  provenance are not yet persisted end to end.
+- [~] Resolve aging from the `aging` table, including characteristic loss
+  choices and anagathics modifiers. Current legal action: `resolveAging`; aging
+  loss can block progress. Gap: anagathics and characteristic-choice events are
+  incomplete.
+- [~] Roll reenlistment from `careerBasics`, handling mandatory retirement
+  after seven terms, forced reenlistment on 12, success, failure, and voluntary
+  exit. Current legal actions cover unresolved, forced, allowed, and blocked
+  outcomes. Gap: roll facts and exit provenance are not fully wired.
+- [~] Muster out using `materialBenefits` and `cashBenefits`, with benefit
+  counts, cash limits, rank/Gambling modifiers, and material effects. Current
+  planner can block on remaining benefits. Gap: benefit roll commands/events
+  and final projected credits/materials are incomplete.
+- [~] Finalize only after at least one legal term or exit, no unresolved pending
+  decisions, no unresolved death/mishap branch, and all mustering benefits are
+  resolved. Current legal action: `completeCreation`. Gap: final sheet
+  projection and protocol fixtures still need completion.
+
 ## Backlog Principles
 
 - Commands are intents. Events are facts. Projections are read models. Keep that
@@ -325,7 +392,9 @@ Tasks:
   title, and any commission skill reward.
 - Implement advancement eligibility, advancement roll, promotion rank, rank
   title, and any promotion skill reward.
-- Implement term skill table selection and roll resolution.
+- Implement term skill table selection and roll resolution, including the SRD
+  rule preserved from legacy that careers without commission require two term
+  skill rolls before aging/reenlistment can proceed.
 - Enforce outstanding selection gates for cascade skills, commission skills,
   promotion skills, and term skills.
 - Add term history cards that summarize the term in a compact, readable way.

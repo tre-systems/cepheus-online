@@ -6,7 +6,8 @@ export const deriveCareerBenefitCount = ({
 }: {
   termsInCareer: number
   currentRank: number
-}): number => termsInCareer + Math.max(0, currentRank - 3)
+}): number =>
+  termsInCareer + Math.min(3, Math.ceil(Math.max(0, currentRank) / 2))
 
 export const deriveRemainingCareerBenefits = ({
   termsInCareer,

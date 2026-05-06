@@ -131,6 +131,7 @@ export interface CareerCreationPendingDecision {
 
 export interface CareerCreationActionContext {
   pendingDecisions?: readonly CareerCreationPendingDecision[]
+  requiredTermSkillCount?: number
   remainingMusteringBenefits?: number
   canContinueCareer?: boolean
   canCompleteCreation?: boolean
@@ -149,6 +150,7 @@ export interface CareerCreationActionProjection {
   careers?: readonly CareerRank[]
   characteristicChanges?: readonly AgingChange[]
   pendingCascadeSkills?: readonly string[]
+  requiredTermSkillCount?: number
   creationComplete?: boolean
 }
 
@@ -184,6 +186,8 @@ export interface SurvivalPromotionOptions {
   canCommission: boolean
   canAdvance: boolean
 }
+
+export type FailedQualificationOption = 'Drifter' | 'Draft'
 
 export interface CareerRankReward {
   rank: number

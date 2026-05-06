@@ -1148,7 +1148,7 @@ describe('character creation flow', () => {
     }).flow
     assert.equal(flow.step, 'skills')
     assert.equal(flow.draft.age, 22)
-    assert.equal(remainingMusteringBenefits(flow.draft), 1)
+    assert.equal(remainingMusteringBenefits(flow.draft), 2)
 
     flow = { ...flow, step: 'equipment' }
     const benefitResult = applyCharacterCreationMusteringBenefit({
@@ -1158,7 +1158,7 @@ describe('character creation flow', () => {
     })
 
     assert.equal(benefitResult.moved, false)
-    assert.equal(remainingMusteringBenefits(benefitResult.flow.draft), 0)
+    assert.equal(remainingMusteringBenefits(benefitResult.flow.draft), 1)
     assert.deepEqual(benefitResult.flow.draft.musteringBenefits, [
       {
         career: 'Merchant',
@@ -1242,7 +1242,7 @@ describe('character creation flow', () => {
       })
     }
 
-    assert.equal(remainingMusteringBenefits(flow.draft), 6)
+    assert.equal(remainingMusteringBenefits(flow.draft), 7)
     assert.equal(
       characterCreationMusteringBenefitRollModifier({
         draft: flow.draft,

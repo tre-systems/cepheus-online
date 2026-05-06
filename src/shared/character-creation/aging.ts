@@ -4,7 +4,7 @@ export const selectAgingEffect = (
   table: readonly AgingEffect[],
   roll: number
 ): AgingEffect | null => {
-  if (roll === 0 || table.length === 0) return null
+  if (table.length === 0) return null
 
   const rolls = table.map((effect) => Number(effect.Roll))
   const minRoll = Math.min(...rolls)
@@ -30,14 +30,6 @@ export const resolveAging = ({
   const age = (currentAge ?? 18) + years
   const effect = selectAgingEffect(table, roll)
   const changes = effect?.Changes ?? []
-
-  if (roll === 0) {
-    return {
-      age,
-      message: `Character aged to ${age}.`,
-      characteristicChanges: []
-    }
-  }
 
   if (changes.length === 0) {
     return {

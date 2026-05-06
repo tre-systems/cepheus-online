@@ -488,10 +488,39 @@ describe('mustering-out and aging helpers', () => {
     }
   ]
 
+  const completeAgingTable = [
+    {
+      Roll: -1,
+      Effects: 'Reduce one physical characteristic by 1.',
+      Changes: [{ type: 'PHYSICAL' as const, modifier: -1 }]
+    },
+    {
+      Roll: 0,
+      Effects: 'Reduce one physical characteristic by 1.',
+      Changes: [{ type: 'PHYSICAL' as const, modifier: -1 }]
+    },
+    {
+      Roll: 1,
+      Effects: 'No effect.'
+    }
+  ]
+
   it('derives benefit counts and resolves cash or material rolls', () => {
     assert.equal(
-      deriveCareerBenefitCount({ termsInCareer: 3, currentRank: 5 }),
+      deriveCareerBenefitCount({ termsInCareer: 3, currentRank: 0 }),
+      3
+    )
+    assert.equal(
+      deriveCareerBenefitCount({ termsInCareer: 3, currentRank: 1 }),
+      4
+    )
+    assert.equal(
+      deriveCareerBenefitCount({ termsInCareer: 3, currentRank: 3 }),
       5
+    )
+    assert.equal(
+      deriveCareerBenefitCount({ termsInCareer: 3, currentRank: 5 }),
+      6
     )
     assert.equal(
       deriveRemainingCareerBenefits({
@@ -499,7 +528,7 @@ describe('mustering-out and aging helpers', () => {
         currentRank: 5,
         benefitsReceived: 2
       }),
-      3
+      4
     )
     assert.equal(
       deriveRemainingCareerBenefits({
@@ -544,7 +573,7 @@ describe('mustering-out and aging helpers', () => {
   })
 
   it('selects and resolves clamped aging effects without mutating rules data', () => {
-    assert.equal(selectAgingEffect(agingTable, 0), null)
+    assert.equal(selectAgingEffect(completeAgingTable, 0)?.Roll, 0)
     assert.equal(selectAgingEffect(agingTable, -8)?.Roll, -2)
     assert.equal(selectAgingEffect(agingTable, 8)?.Roll, 1)
 
@@ -566,11 +595,35 @@ describe('mustering-out and aging helpers', () => {
     ])
 
     assert.deepEqual(
-      resolveAging({ currentAge: null, table: agingTable, roll: 0 }),
+      resolveAging({ currentAge: null, table: agingTable, roll: 8 }),
       {
         age: 22,
-        message: 'Character aged to 22.',
+        message: 'No aging effects.',
         characteristicChanges: []
+      }
+    )
+  })
+
+  it('treats SRD aging roll 0 as the represented aging-table effect', () => {
+    const srdAgingTable = [
+      {
+        Roll: 0,
+        Effects: 'Reduce one physical characteristic by 1',
+        Changes: [{ type: 'PHYSICAL' as const, modifier: -1 }]
+      },
+      {
+        Roll: 1,
+        Effects: 'No effect',
+        Changes: []
+      }
+    ]
+
+    assert.deepEqual(
+      resolveAging({ currentAge: 34, table: srdAgingTable, roll: 0 }),
+      {
+        age: 38,
+        message: 'Reduce one physical characteristic by 1',
+        characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
       }
     )
   })
@@ -737,7 +790,10 @@ describe('mustering-out and aging helpers', () => {
       {
         outcome: 'forced',
         message: 'Your character must reenlist.',
-        term: scoutTerm,
+        term: {
+          ...scoutTerm,
+          reEnlistment: 12
+        },
         nextTermCareer: 'Scout'
       }
     )

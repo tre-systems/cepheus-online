@@ -7,6 +7,7 @@ import type {
   CareerRankReward,
   CareerRollOutcome,
   CareerSkillTable,
+  FailedQualificationOption,
   SurvivalPromotionOptions
 } from './types'
 
@@ -23,8 +24,9 @@ export const parseCareerCheck = (check: string): CareerCheck | null => {
     return { characteristic: null, target: Number(plainTarget[1]) }
   }
 
-  const characteristicTarget =
-    /^(Str|Dex|End|Int|Edu|Soc)\s+(\d+)\+$/i.exec(trimmed)
+  const characteristicTarget = /^(Str|Dex|End|Int|Edu|Soc)\s+(\d+)\+$/i.exec(
+    trimmed
+  )
   if (!characteristicTarget) return null
 
   return {
@@ -77,6 +79,15 @@ export const availableCareerNames = (
   return Object.keys(careerBasics).filter((career) => !unavailable.has(career))
 }
 
+export const deriveFailedQualificationOptions = ({
+  canEnterDraft = true
+}: {
+  canEnterDraft?: boolean
+} = {}): FailedQualificationOption[] => [
+  'Drifter',
+  ...(canEnterDraft ? (['Draft'] as const) : [])
+]
+
 export const deriveBasicTrainingPlan = ({
   career,
   serviceSkills,
@@ -105,9 +116,15 @@ export const deriveSurvivalPromotionOptions = (
   careerBasics: Pick<CareerBasics, 'Commission' | 'Advancement'>,
   currentRank: number
 ): SurvivalPromotionOptions => ({
-  canCommission: currentRank === 0 && careerBasics.Commission !== '-',
-  canAdvance: currentRank > 0 && careerBasics.Advancement !== '-'
+  canCommission:
+    currentRank === 0 && parseCareerCheck(careerBasics.Commission) !== null,
+  canAdvance:
+    currentRank > 0 && parseCareerCheck(careerBasics.Advancement) !== null
 })
+
+export const deriveRequiredTermSkillCount = (
+  careerBasics: Pick<CareerBasics, 'Commission'> | null | undefined
+): number => (careerBasics?.Commission === '-' ? 2 : 1)
 
 export const parseCareerRankReward = ({
   ranksAndSkills,

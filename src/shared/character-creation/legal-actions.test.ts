@@ -129,6 +129,87 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('offers SRD term gates in order around commission and advancement', () => {
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeys(
+        createCareerCreationState('COMMISSION', {
+          canCommission: true,
+          canAdvance: true
+        })
+      ),
+      ['rollCommission', 'skipCommission']
+    )
+
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeys(
+        createCareerCreationState('ADVANCEMENT', {
+          canCommission: true,
+          canAdvance: true
+        })
+      ),
+      ['rollAdvancement', 'skipAdvancement']
+    )
+  })
+
+  it('derives legal actions in SRD phase order', () => {
+    const phases = [
+      [createCareerCreationState('CHARACTERISTICS'), {}, ['setCharacteristics']],
+      [createCareerCreationState('HOMEWORLD'), {}, ['completeHomeworld']],
+      [createCareerCreationState('CAREER_SELECTION'), {}, ['selectCareer']],
+      [
+        createCareerCreationState('BASIC_TRAINING'),
+        {},
+        ['completeBasicTraining']
+      ],
+      [createCareerCreationState('SURVIVAL'), {}, ['rollSurvival']],
+      [
+        createCareerCreationState('COMMISSION', {
+          canCommission: true,
+          canAdvance: true
+        }),
+        {},
+        ['rollCommission', 'skipCommission']
+      ],
+      [
+        createCareerCreationState('ADVANCEMENT', {
+          canCommission: true,
+          canAdvance: true
+        }),
+        {},
+        ['rollAdvancement', 'skipAdvancement']
+      ],
+      [createCareerCreationState('SKILLS_TRAINING'), {}, ['completeSkills']],
+      [createCareerCreationState('AGING'), {}, ['resolveAging']],
+      [
+        createCareerCreationState('REENLISTMENT'),
+        { reenlistmentOutcome: 'allowed' },
+        ['reenlist', 'leaveCareer']
+      ],
+      [
+        createCareerCreationState('MUSTERING_OUT'),
+        { canContinueCareer: false },
+        ['finishMustering']
+      ],
+      [
+        createCareerCreationState('ACTIVE'),
+        { canCompleteCreation: true },
+        ['completeCreation']
+      ]
+    ] satisfies readonly [
+      ReturnType<typeof createCareerCreationState>,
+      Parameters<typeof deriveLegalCareerCreationActionKeys>[1],
+      ReturnType<typeof deriveLegalCareerCreationActionKeys>
+    ][]
+
+    for (const [state, context, expectedActions] of phases) {
+      assert.deepEqual(
+        deriveLegalCareerCreationActionKeys(state, context),
+        expectedActions,
+        state.status
+      )
+    }
+  })
+
   it('gates status actions while required decisions are pending', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeys(
@@ -302,6 +383,35 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('keeps non-commission careers in skills training until both term skill rolls are resolved', () => {
+    const creation = projection('SKILLS_TRAINING', {
+      requiredTermSkillCount: 2,
+      terms: [term({ career: 'Scout', skillsAndTraining: ['Pilot-1'] })]
+    })
+
+    assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
+      { key: 'skillTrainingSelection' }
+    ])
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(creation),
+      []
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('SKILLS_TRAINING', {
+          requiredTermSkillCount: 2,
+          terms: [
+            term({
+              career: 'Scout',
+              skillsAndTraining: ['Pilot-1', 'Mechanics-1']
+            })
+          ]
+        })
+      ),
+      ['completeSkills']
+    )
+  })
+
   it('derives pending decisions from unresolved aging losses', () => {
     const creation = projection('AGING', {
       characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
@@ -365,7 +475,7 @@ describe('career creation legal action planner', () => {
       ]
     })
 
-    assert.equal(deriveRemainingCareerCreationBenefits(creation), 3)
+    assert.equal(deriveRemainingCareerCreationBenefits(creation), 4)
     assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
       { key: 'musteringBenefitSelection' }
     ])

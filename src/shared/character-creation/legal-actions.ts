@@ -13,6 +13,7 @@ import type {
 } from './types'
 
 const defaultActionContext = {
+  requiredTermSkillCount: 1,
   remainingMusteringBenefits: 0,
   canContinueCareer: false,
   canCompleteCreation: false,
@@ -94,7 +95,7 @@ export const deriveCareerCreationPendingDecisions = (
   if (
     creation.state.status === 'SKILLS_TRAINING' &&
     term &&
-    term.skillsAndTraining.length === 0
+    term.skillsAndTraining.length < (creation.requiredTermSkillCount ?? 1)
   ) {
     decisions.push({ key: 'skillTrainingSelection' })
   }
@@ -146,6 +147,9 @@ export const deriveCareerCreationActionContext = (
 
   return {
     pendingDecisions,
+    ...(creation.requiredTermSkillCount === undefined
+      ? {}
+      : { requiredTermSkillCount: creation.requiredTermSkillCount }),
     remainingMusteringBenefits,
     canContinueCareer: canOfferNewCareer({
       noOutstandingSelections,
