@@ -12,6 +12,11 @@ import { shouldSaveCheckpoint } from './checkpoint-policy'
 import { deriveEventsForCommand } from './command'
 import { getProjectedGameState } from './projection'
 import {
+  isPublicationRejectedTelemetryCode,
+  noopPublicationTelemetrySink,
+  type PublicationTelemetrySink
+} from './publication-telemetry'
+import {
   appendEvents,
   getEventSeq,
   getOrCreateGameSeed,
@@ -23,6 +28,11 @@ export interface CommandPublication {
   state: GameState
   eventSeq: number
   liveActivities: LiveActivityDescriptor[]
+}
+
+export interface RunCommandPublicationOptions {
+  createdAt?: string
+  telemetrySink?: PublicationTelemetrySink
 }
 
 export class CommandPublicationError extends Error {
@@ -51,12 +61,30 @@ const hasProjectionParity = (
   right: GameState | null
 ): boolean => JSON.stringify(left) === JSON.stringify(right)
 
+const resolvePublicationOptions = (
+  options: string | RunCommandPublicationOptions | undefined
+): Required<RunCommandPublicationOptions> => {
+  if (typeof options === 'string') {
+    return {
+      createdAt: options,
+      telemetrySink: noopPublicationTelemetrySink
+    }
+  }
+
+  return {
+    createdAt: options?.createdAt ?? new Date(Date.now()).toISOString(),
+    telemetrySink: options?.telemetrySink ?? noopPublicationTelemetrySink
+  }
+}
+
 export const runCommandPublication = async (
   storage: DurableObjectStorage,
   gameId: GameId,
   message: Extract<ClientMessage, { type: 'command' }>,
-  createdAt = new Date(Date.now()).toISOString()
+  options?: string | RunCommandPublicationOptions
 ): Promise<Result<CommandPublication, CommandError>> => {
+  const { createdAt, telemetrySink } = resolvePublicationOptions(options)
+
   if (message.command.gameId !== gameId) {
     return err(
       commandError(
@@ -80,7 +108,22 @@ export const runCommandPublication = async (
     gameSeed
   })
 
-  if (!events.ok) return events
+  if (!events.ok) {
+    if (isPublicationRejectedTelemetryCode(events.error.code)) {
+      telemetrySink.recordPublication({
+        type: 'publicationRejected',
+        gameId,
+        requestId: message.requestId,
+        commandType: message.command.type,
+        actorId: message.command.actorId,
+        code: events.error.code,
+        message: events.error.message,
+        currentSeq
+      })
+    }
+
+    return events
+  }
 
   const envelopes = await appendEvents(
     storage,
@@ -92,7 +135,19 @@ export const runCommandPublication = async (
   const nextState = projectGameState(envelopes, currentState)
 
   if (!nextState) {
-    throw internalPublicationError('Command did not project game state')
+    const error = internalPublicationError('Command did not project game state')
+    telemetrySink.recordPublication({
+      type: 'publicationInternalError',
+      gameId,
+      requestId: message.requestId,
+      commandType: message.command.type,
+      actorId: message.command.actorId,
+      code: 'projection_mismatch',
+      message: error.message,
+      currentSeq,
+      eventSeq: envelopes.at(-1)?.seq ?? currentSeq
+    })
+    throw error
   }
 
   if (shouldSaveCheckpoint(nextState, envelopes)) {
@@ -106,10 +161,32 @@ export const runCommandPublication = async (
   const projectedState = await getProjectedGameState(storage, gameId)
 
   if (!hasProjectionParity(projectedState, nextState)) {
-    throw internalPublicationError(
+    const error = internalPublicationError(
       'Stored event stream does not match live projection'
     )
+    telemetrySink.recordPublication({
+      type: 'publicationInternalError',
+      gameId,
+      requestId: message.requestId,
+      commandType: message.command.type,
+      actorId: message.command.actorId,
+      code: 'projection_mismatch',
+      message: error.message,
+      currentSeq,
+      eventSeq: nextState.eventSeq
+    })
+    throw error
   }
+
+  telemetrySink.recordPublication({
+    type: 'publicationAccepted',
+    gameId,
+    requestId: message.requestId,
+    commandType: message.command.type,
+    actorId: message.command.actorId,
+    eventSeq: nextState.eventSeq,
+    eventCount: envelopes.length
+  })
 
   return ok({
     requestId: message.requestId,

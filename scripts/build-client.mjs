@@ -52,6 +52,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/app-location.js',
+    source: join(compiledClientRoot, 'client', 'app', 'app-location.js'),
+    exportName: 'CLIENT_APP_LOCATION_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/app-command-router.js',
     source: join(
       compiledClientRoot,
@@ -148,6 +154,23 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/connectivity-controller.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'connectivity-controller.js'
+    ),
+    exportName: 'CLIENT_CONNECTIVITY_CONTROLLER_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/client/app/connectivity.js',
+    source: join(compiledClientRoot, 'client', 'app', 'connectivity.js'),
+    exportName: 'CLIENT_CONNECTIVITY_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/character-creation-flow.js',
     source: join(
       compiledClientRoot,
@@ -173,6 +196,12 @@ const assets = [
     pathname: '/client/app/dice-overlay.js',
     source: join(compiledClientRoot, 'client', 'app', 'dice-overlay.js'),
     exportName: 'CLIENT_DICE_OVERLAY_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/client/app/dice-reveal-state.js',
+    source: join(compiledClientRoot, 'client', 'app', 'dice-reveal-state.js'),
+    exportName: 'CLIENT_DICE_REVEAL_STATE_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {

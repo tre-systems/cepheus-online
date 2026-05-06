@@ -113,6 +113,7 @@ export interface CareerCreationActionProjection {
   state: CareerCreationState
   terms?: readonly CareerTerm[]
   careers?: readonly CareerRank[]
+  characteristicChanges?: readonly AgingChange[]
   pendingCascadeSkills?: readonly string[]
   creationComplete?: boolean
 }

@@ -1,3 +1,5 @@
+import { buildRoomUrl } from './app-location.js'
+
 export interface RoomMenuElements {
   roomForm: HTMLFormElement
   roomInput: HTMLInputElement
@@ -38,9 +40,7 @@ const updateRoomUrl = (
   locationLike: Pick<Location, 'href'>,
   historyLike: Pick<History, 'replaceState'>
 ) => {
-  const nextUrl = new URL(locationLike.href)
-  nextUrl.searchParams.set('game', identity.roomId)
-  nextUrl.searchParams.set('user', identity.actorId)
+  const nextUrl = buildRoomUrl(locationLike.href, identity)
   historyLike.replaceState(null, '', nextUrl)
 }
 

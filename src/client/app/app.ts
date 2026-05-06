@@ -78,12 +78,7 @@ import {
   uniqueBoardId,
   uniquePieceId
 } from './bootstrap-flow.js'
-import {
-  buildRoomPath,
-  buildViewerQuery,
-  fetchRoomState,
-  postRoomCommand
-} from './room-api.js'
+import { fetchRoomState, postRoomCommand } from './room-api.js'
 import {
   applyServerMessage as applyClientServerMessage,
   buildRollDiceCommand,
@@ -92,8 +87,16 @@ import {
 import { createAppCommandRouter } from './app-command-router.js'
 import { createAppSession } from './app-session.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
+import { createConnectivityController } from './connectivity-controller.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
+import { createDiceRevealState } from './dice-reveal-state.js'
+import {
+  DEFAULT_APP_LOCATION,
+  buildRoomWebSocketUrl,
+  isRefereeViewer,
+  resolveAppLocationIdentity
+} from './app-location.js'
 import { prepareLiveActivityApplication } from './live-activity-client.js'
 import { planCreatePieceCommands } from './piece-command-plan.js'
 import { createPwaInstallController } from './pwa-install.js'
@@ -101,29 +104,26 @@ import { createRoomMenuController } from './room-menu-controller.js'
 import { registerClientServiceWorker } from './service-worker.js'
 import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset.js'
 
-const DEFAULT_GAME_ID = 'demo-room'
-const DEFAULT_ACTOR_ID = 'local-user'
-
-const qs = new URLSearchParams(location.search)
 registerClientServiceWorker()
 
 const els = getAppElements(document)
 
-let roomId = qs.get('game') || DEFAULT_GAME_ID
-let actorId = qs.get('user') || DEFAULT_ACTOR_ID
+const initialIdentity = resolveAppLocationIdentity(location.search)
+let roomId = initialIdentity.roomId
+let actorId = initialIdentity.actorId
 let state = null
 let socket = null
 let firstStateApplied = false
 let latestDiceId = null
-const viewerRole = qs.get('viewer') || 'referee'
-const canSelectBoards = viewerRole.toLowerCase() === 'referee'
+const viewerRole = initialIdentity.viewerRole
+const canSelectBoards = isRefereeViewer(viewerRole)
 const appSession = createAppSession({ roomId, actorId, viewerRole })
 let boardController = null
 let requestCounter = 0
 let diceHideTimer = null
-const revealedDiceIds = new Set()
+let connectivityController = null
+const diceRevealState = createDiceRevealState()
 const animatedDiceRollActivityIds = new Set()
-const diceRevealWaiters = new Map()
 let pendingGeneratedCharacter = null
 let characterCreationFlow = null
 
@@ -179,7 +179,7 @@ const handleServerMessage = (message) => {
   const application = applyClientServerMessage(state, message)
   const liveActivityApplication = prepareLiveActivityApplication(application, {
     animatedDiceRollActivityIds,
-    revealedDiceIds
+    revealedDiceIds: diceRevealState.revealedDiceIds
   })
   const sessionState = appSession.applyServerMessage(application)
   setError(sessionState.requestError || '')
@@ -209,20 +209,11 @@ const handleServerMessage = (message) => {
 }
 
 const resolveDiceReveal = (rollId) => {
-  if (!rollId) return
-  revealedDiceIds.add(rollId)
-  const waiters = diceRevealWaiters.get(rollId) || []
-  diceRevealWaiters.delete(rollId)
-  for (const resolve of waiters) resolve()
+  diceRevealState.markRevealed(rollId)
 }
 
 const waitForDiceReveal = (roll) => {
-  if (!roll?.id || revealedDiceIds.has(roll.id)) return Promise.resolve()
-  return new Promise((resolve) => {
-    const waiters = diceRevealWaiters.get(roll.id) || []
-    waiters.push(resolve)
-    diceRevealWaiters.set(roll.id, waiters)
-  })
+  return diceRevealState.waitForReveal(roll)
 }
 
 const commandRouter = createAppCommandRouter({
@@ -2193,14 +2184,14 @@ const bootstrapScene = async () => {
 
 const connectSocket = () => {
   if (socket) socket.close()
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
   socket = new WebSocket(
-    protocol +
-      '//' +
-      location.host +
-      buildRoomPath(roomId) +
-      '/ws' +
-      buildViewerQuery(viewerRole, actorId)
+    buildRoomWebSocketUrl({
+      protocol: location.protocol,
+      host: location.host,
+      roomId,
+      viewerRole,
+      actorId
+    })
   )
   setStatus('Connecting')
 
@@ -2209,11 +2200,19 @@ const connectSocket = () => {
   })
 
   socket.addEventListener('close', () => {
-    setStatus('HTTP fallback')
+    setStatus(
+      connectivityController?.snapshot().status === 'offline'
+        ? 'Offline'
+        : 'HTTP fallback'
+    )
   })
 
   socket.addEventListener('error', () => {
-    setStatus('HTTP fallback')
+    setStatus(
+      connectivityController?.snapshot().status === 'offline'
+        ? 'Offline'
+        : 'HTTP fallback'
+    )
   })
 
   socket.addEventListener('message', (event) => {
@@ -2224,6 +2223,18 @@ const connectSocket = () => {
     }
   })
 }
+
+connectivityController = createConnectivityController({
+  onChange: (connectivity) => {
+    if (connectivity.status === 'offline') {
+      setStatus('Offline')
+      return
+    }
+
+    connectSocket()
+    fetchState().catch((error) => setError(error.message))
+  }
+})
 
 const applyState = (
   nextState,
@@ -2490,8 +2501,8 @@ createRoomMenuController({
   },
   initialRoomId: roomId,
   initialActorId: actorId,
-  defaultRoomId: DEFAULT_GAME_ID,
-  defaultActorId: DEFAULT_ACTOR_ID,
+  defaultRoomId: DEFAULT_APP_LOCATION.roomId,
+  defaultActorId: DEFAULT_APP_LOCATION.actorId,
   onOpenRoom: (identity) => {
     roomId = identity.roomId
     actorId = identity.actorId
@@ -2638,5 +2649,9 @@ els.roll.addEventListener('click', () => {
 
 window.addEventListener('resize', render)
 
-connectSocket()
-fetchState().catch((error) => setError(error.message))
+if (connectivityController.snapshot().status === 'online') {
+  connectSocket()
+  fetchState().catch((error) => setError(error.message))
+} else {
+  setStatus('Offline')
+}

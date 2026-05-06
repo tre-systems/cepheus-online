@@ -1,14 +1,14 @@
+import { deriveRemainingCareerBenefits } from './benefits'
+import { canCompleteCreation, canOfferNewCareer } from './term-lifecycle'
 import type {
   CareerCreationActionContext,
   CareerCreationActionKey,
   CareerCreationActionProjection,
-  CareerCreationPendingDecisionKey,
   CareerCreationPendingDecision,
+  CareerCreationPendingDecisionKey,
   CareerCreationReenlistmentOutcome,
   CareerCreationState
 } from './types'
-import { deriveRemainingCareerBenefits } from './benefits'
-import { canCompleteCreation, canOfferNewCareer } from './term-lifecycle'
 
 const defaultActionContext = {
   remainingMusteringBenefits: 0,
@@ -74,9 +74,45 @@ export const deriveCareerCreationPendingDecisions = (
   creation: CareerCreationActionProjection
 ): CareerCreationPendingDecision[] => {
   const decisions: CareerCreationPendingDecision[] = []
+  const term = lastTerm(creation)
 
   if ((creation.pendingCascadeSkills?.length ?? 0) > 0) {
     decisions.push({ key: 'cascadeSkillResolution' })
+  }
+
+  if (
+    creation.state.status === 'BASIC_TRAINING' &&
+    term &&
+    !term.completedBasicTraining &&
+    term.skillsAndTraining.length === 0
+  ) {
+    decisions.push({ key: 'basicTrainingSkillSelection' })
+  }
+
+  if (
+    creation.state.status === 'SKILLS_TRAINING' &&
+    term &&
+    term.skillsAndTraining.length === 0
+  ) {
+    decisions.push({ key: 'skillTrainingSelection' })
+  }
+
+  if ((creation.characteristicChanges?.length ?? 0) > 0) {
+    decisions.push({ key: 'agingResolution' })
+  }
+
+  if (
+    creation.state.status === 'REENLISTMENT' &&
+    deriveCareerCreationReenlistmentOutcome(creation) === 'unresolved'
+  ) {
+    decisions.push({ key: 'reenlistmentResolution' })
+  }
+
+  if (
+    creation.state.status === 'MUSTERING_OUT' &&
+    deriveRemainingCareerCreationBenefits(creation) > 0
+  ) {
+    decisions.push({ key: 'musteringBenefitSelection' })
   }
 
   return decisions

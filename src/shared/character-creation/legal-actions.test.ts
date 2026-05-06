@@ -2,8 +2,8 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import {
-  createCareerTerm,
   createCareerCreationState,
+  createCareerTerm,
   deriveCareerCreationActionContext,
   deriveCareerCreationPendingDecisions,
   deriveCareerCreationReenlistmentOutcome,
@@ -187,6 +187,114 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('derives pending decisions from unresolved projected term gates', () => {
+    assert.deepEqual(
+      deriveCareerCreationPendingDecisions(
+        projection('BASIC_TRAINING', {
+          terms: [
+            term({
+              completedBasicTraining: false,
+              skillsAndTraining: []
+            })
+          ]
+        })
+      ),
+      [{ key: 'basicTrainingSkillSelection' }]
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('BASIC_TRAINING', {
+          terms: [
+            term({
+              completedBasicTraining: false,
+              skillsAndTraining: []
+            })
+          ]
+        })
+      ),
+      []
+    )
+    assert.deepEqual(
+      deriveCareerCreationPendingDecisions(
+        projection('BASIC_TRAINING', {
+          terms: [
+            term({
+              completedBasicTraining: false,
+              skillsAndTraining: ['Pilot-0']
+            })
+          ]
+        })
+      ),
+      []
+    )
+    assert.deepEqual(
+      deriveCareerCreationPendingDecisions(
+        projection('SKILLS_TRAINING', {
+          terms: [term({ skillsAndTraining: [] })]
+        })
+      ),
+      [{ key: 'skillTrainingSelection' }]
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('SKILLS_TRAINING', {
+          terms: [term({ skillsAndTraining: ['Pilot-1'] })]
+        })
+      ),
+      ['completeSkills']
+    )
+  })
+
+  it('derives pending decisions from unresolved aging losses', () => {
+    const creation = projection('AGING', {
+      characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+    })
+
+    assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
+      { key: 'agingResolution' }
+    ])
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(creation),
+      []
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('AGING', { characteristicChanges: [] })
+      ),
+      ['resolveAging']
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('REENLISTMENT', {
+          characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }],
+          terms: [term({ reEnlistment: 7 })]
+        })
+      ),
+      []
+    )
+  })
+
+  it('derives pending decisions from unresolved reenlistment', () => {
+    const creation = projection('REENLISTMENT', {
+      terms: [term({ skillsAndTraining: ['Pilot-1'] })]
+    })
+
+    assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
+      { key: 'reenlistmentResolution' }
+    ])
+    assert.deepEqual(deriveCareerCreationActionContext(creation), {
+      pendingDecisions: [{ key: 'reenlistmentResolution' }],
+      remainingMusteringBenefits: 1,
+      canContinueCareer: false,
+      canCompleteCreation: false,
+      reenlistmentOutcome: 'unresolved'
+    })
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(creation),
+      []
+    )
+  })
+
   it('derives remaining projected mustering benefits by career', () => {
     const creation = projection('MUSTERING_OUT', {
       terms: [
@@ -201,9 +309,12 @@ describe('career creation legal action planner', () => {
     })
 
     assert.equal(deriveRemainingCareerCreationBenefits(creation), 3)
+    assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
+      { key: 'musteringBenefitSelection' }
+    ])
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(creation),
-      ['resolveMusteringBenefit']
+      []
     )
   })
 

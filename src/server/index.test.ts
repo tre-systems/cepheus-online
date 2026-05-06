@@ -15,6 +15,7 @@ const clientModules = new Map<
       imports: [
         '/client/app/board-view.js',
         '/client/app/app-elements.js',
+        '/client/app/app-location.js',
         '/client/app/app-command-router.js',
         '/client/app/app-session.js',
         '/client/app/board-controller.js',
@@ -25,7 +26,9 @@ const clientModules = new Map<
         '/client/app/character-creation-view.js',
         '/client/app/character-generator-preview.js',
         '/client/app/character-sheet-controller.js',
+        '/client/app/connectivity-controller.js',
         '/client/app/dice-overlay.js',
+        '/client/app/dice-reveal-state.js',
         '/client/app/door-los-view.js',
         '/client/app/image-assets.js',
         '/client/app/live-activity-client.js',
@@ -40,6 +43,13 @@ const clientModules = new Map<
     }
   ],
   ['/client/app/app-elements.js', { markers: ['getAppElements'] }],
+  [
+    '/client/app/app-location.js',
+    {
+      markers: ['resolveAppLocationIdentity', 'buildRoomWebSocketUrl'],
+      imports: ['/client/app/room-api.js']
+    }
+  ],
   [
     '/client/app/app-command-router.js',
     { markers: ['createAppCommandRouter', 'sequenceCommand'] }
@@ -187,11 +197,23 @@ const clientModules = new Map<
     { markers: ['characteristicRows', 'equipmentDisplayItems'] }
   ],
   [
+    '/client/app/connectivity-controller.js',
+    {
+      markers: ['createConnectivityController'],
+      imports: ['/client/app/connectivity.js']
+    }
+  ],
+  ['/client/app/connectivity.js', { markers: ['createConnectivityState'] }],
+  [
     '/client/app/dice-overlay.js',
     {
       markers: ['appendFaceValue', 'buildDie', 'animateRoll'],
       imports: ['/client/dice.js']
     }
+  ],
+  [
+    '/client/app/dice-reveal-state.js',
+    { markers: ['createDiceRevealState'] }
   ],
   [
     '/client/app/door-los-view.js',
@@ -224,7 +246,10 @@ const clientModules = new Map<
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
   [
     '/client/app/room-menu-controller.js',
-    { markers: ['createRoomMenuController'] }
+    {
+      markers: ['createRoomMenuController'],
+      imports: ['/client/app/app-location.js']
+    }
   ],
   [
     '/client/app/service-worker.js',
