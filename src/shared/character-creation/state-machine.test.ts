@@ -52,6 +52,28 @@ const eventFixtures = {
   SKIP_COMMISSION: [{ type: 'SKIP_COMMISSION' }],
   COMPLETE_ADVANCEMENT: [{ type: 'COMPLETE_ADVANCEMENT' }],
   SKIP_ADVANCEMENT: [{ type: 'SKIP_ADVANCEMENT' }],
+  ROLL_TERM_SKILL: [
+    {
+      type: 'ROLL_TERM_SKILL',
+      termSkill: {
+        career: 'Scout',
+        table: 'serviceSkills',
+        roll: { expression: '1d6', rolls: [1], total: 1 },
+        tableRoll: 1,
+        rawSkill: 'Pilot',
+        skill: 'Pilot-1',
+        characteristic: null,
+        pendingCascadeSkill: null
+      }
+    }
+  ],
+  RESOLVE_TERM_CASCADE_SKILL: [
+    {
+      type: 'RESOLVE_TERM_CASCADE_SKILL',
+      cascadeSkill: 'Gun Combat-1',
+      selection: 'Slug Pistol'
+    }
+  ],
   COMPLETE_SKILLS: [{ type: 'COMPLETE_SKILLS' }],
   COMPLETE_AGING: [{ type: 'COMPLETE_AGING' }],
   REENLIST: [{ type: 'REENLIST' }],

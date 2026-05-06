@@ -18,7 +18,7 @@ export type CareerCreationStatus =
   | 'DECEASED'
 
 export interface CareerCreationDiceFact {
-  expression: '2d6'
+  expression: '1d6' | '2d6'
   rolls: number[]
   total: number
 }
@@ -36,6 +36,26 @@ export interface CareerCreationRankFact {
   newRank: number
   title: string
   bonusSkill: string | null
+}
+
+export type CareerCreationTermSkillTable =
+  | 'personalDevelopment'
+  | 'serviceSkills'
+  | 'specialistSkills'
+  | 'advancedEducation'
+
+export interface CareerCreationTermSkillFact {
+  career: string
+  table: CareerCreationTermSkillTable
+  roll: CareerCreationDiceFact
+  tableRoll: number
+  rawSkill: string
+  skill: string | null
+  characteristic: {
+    key: CharacteristicKey
+    modifier: number
+  } | null
+  pendingCascadeSkill: string | null
 }
 
 export interface CareerCreationAgingFact {
@@ -82,6 +102,12 @@ export type CareerCreationEvent =
       rank?: CareerCreationRankFact | null
     }
   | { type: 'SKIP_ADVANCEMENT' }
+  | { type: 'ROLL_TERM_SKILL'; termSkill: CareerCreationTermSkillFact }
+  | {
+      type: 'RESOLVE_TERM_CASCADE_SKILL'
+      cascadeSkill: string
+      selection: string
+    }
   | { type: 'COMPLETE_SKILLS' }
   | { type: 'COMPLETE_AGING'; aging?: CareerCreationAgingFact }
   | { type: 'REENLIST'; reenlistment?: CareerCreationCheckFact }
@@ -134,6 +160,8 @@ export type CareerCreationServerCommandType =
   | 'ResolveCharacterCreationSurvival'
   | 'ResolveCharacterCreationCommission'
   | 'ResolveCharacterCreationAdvancement'
+  | 'RollCharacterCreationTermSkill'
+  | 'ResolveCharacterCreationTermCascadeSkill'
   | 'StartCharacterCareerTerm'
   | 'FinalizeCharacterCreation'
 
@@ -145,6 +173,7 @@ export type CareerCreationRollRequirementKey =
   | 'mishap'
   | 'commission'
   | 'advancement'
+  | 'termSkill'
   | 'aging'
   | 'reenlistment'
   | 'musteringBenefit'

@@ -484,9 +484,9 @@ Status: in progress. The survival step now has semantic server command/event
 coverage with roll facts and projection support. The shared state machine
 follows the SRD order through commission, advancement, skills, aging,
 reenlistment, mustering, and finalization. SRD data alignment tests cover career
-tables, draft, rank rewards, skill tables, and benefits. The next priority is to
-continue the term loop with semantic commission and advancement facts before
-widening into term skills.
+tables, draft, rank rewards, skill tables, and benefits. Semantic survival,
+commission, advancement, and term skill rolls now use server-derived dice facts.
+The next priority is wiring aging and reenlistment with the same pattern.
 
 Tasks:
 
@@ -496,11 +496,11 @@ Tasks:
 - Keep semantic survival pass/fail events as the pattern for the rest of the
   term loop: command intent, server-derived roll facts, projection-owned gates,
   and replay tests.
-- Add semantic commission events, including skipped commission, roll result,
+- [x] Add semantic commission events, including skipped commission, roll result,
   rank/title changes, and rank bonus skills.
-- Add semantic advancement events, including skipped advancement, roll result,
+- [x] Add semantic advancement events, including skipped advancement, roll result,
   rank/title changes, and rank bonus skills.
-- Add term skill table selection and roll events for service, specialist,
+- [~] Add term skill table selection and roll events for service, specialist,
   personal development, and advanced education tables.
 - Enforce outstanding selection gates for cascade, commission, promotion, and
   term skills before the server accepts the next command.

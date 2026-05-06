@@ -160,6 +160,41 @@
     "expectedSeq": 25
   },
   {
+    "name": "character creation term skill roll command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-roll-term-skill",
+      "command": {
+        "type": "RollCharacterCreationTermSkill",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 26,
+        "characterId": "crew-scout-1",
+        "table": "serviceSkills"
+      }
+    },
+    "commandType": "RollCharacterCreationTermSkill",
+    "expectedSeq": 26
+  },
+  {
+    "name": "character creation term cascade resolution command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-term-cascade",
+      "command": {
+        "type": "ResolveCharacterCreationTermCascadeSkill",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 27,
+        "characterId": "crew-scout-1",
+        "cascadeSkill": "Gun Combat-1",
+        "selection": "Slug Pistol"
+      }
+    },
+    "commandType": "ResolveCharacterCreationTermCascadeSkill",
+    "expectedSeq": 27
+  },
+  {
     "name": "character creation background skill command",
     "message": {
       "type": "command",

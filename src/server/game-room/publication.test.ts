@@ -1039,13 +1039,18 @@ describe('room publication flow', () => {
     assert.equal(storedEvent.advancement.target, 8)
     assert.equal(storedEvent.advancement.characteristic, 'edu')
     assert.equal(storedEvent.advancement.success, storedEvent.passed)
-    assert.deepEqual(storedEvent.rank, {
-      career: 'Merchant',
-      previousRank: 1,
-      newRank: 2,
-      title: 'Fourth Officer',
-      bonusSkill: null
-    })
+    assert.deepEqual(
+      storedEvent.rank,
+      storedEvent.passed
+        ? {
+            career: 'Merchant',
+            previousRank: 1,
+            newRank: 2,
+            title: 'Fourth Officer',
+            bonusSkill: null
+          }
+        : null
+    )
 
     const diceActivity = resolved.value.liveActivities.find(
       (candidate) => candidate.type === 'diceRoll'
@@ -1063,7 +1068,10 @@ describe('room publication flow', () => {
     }
     assert.deepEqual(diceActivity.rolls, storedEvent.advancement.rolls)
     assert.equal(diceActivity.total, storedEvent.advancement.total)
-    assert.equal(activity.transition, 'ADVANCEMENT_PASSED')
+    assert.equal(
+      activity.transition,
+      storedEvent.passed ? 'ADVANCEMENT_PASSED' : 'ADVANCEMENT_FAILED'
+    )
 
     const recovered = await getProjectedGameState(storage, gameId)
     const creation = recovered?.characters[characterId]?.creation
@@ -1072,7 +1080,9 @@ describe('room publication flow', () => {
       creation?.terms.at(-1)?.advancement,
       storedEvent.advancement.total
     )
-    assert.deepEqual(creation?.careers, [{ name: 'Merchant', rank: 2 }])
+    assert.deepEqual(creation?.careers, [
+      { name: 'Merchant', rank: storedEvent.passed ? 2 : 1 }
+    ])
   })
 
   it('persists and replays server-backed homeworld/background decisions', async () => {

@@ -682,6 +682,106 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
+  it('projects semantic term skill rolls into active term history', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Merchant'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'SKILLS_TRAINING',
+            context: {
+              canCommission: true,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Merchant',
+              skills: [],
+              skillsAndTraining: ['Broker-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 7
+            }
+          ],
+          careers: [{ name: 'Merchant', rank: 1 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          pendingCascadeSkills: [],
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationTermSkillRolled',
+        characterId,
+        termSkill: {
+          career: 'Merchant',
+          table: 'serviceSkills',
+          roll: { expression: '1d6', rolls: [1], total: 1 },
+          tableRoll: 1,
+          rawSkill: 'Broker',
+          skill: 'Broker-1',
+          characteristic: null,
+          pendingCascadeSkill: null
+        },
+        termSkills: ['Broker-1'],
+        skillsAndTraining: ['Broker-0', 'Broker-1'],
+        pendingCascadeSkills: [],
+        state: {
+          status: 'AGING',
+          context: {
+            canCommission: true,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'AGING')
+    assert.deepEqual(creation?.terms[0]?.skills, ['Broker-1'])
+    assert.deepEqual(creation?.terms[0]?.skillsAndTraining, [
+      'Broker-0',
+      'Broker-1'
+    ])
+    assert.deepEqual(creation?.history?.at(-1), {
+      type: 'ROLL_TERM_SKILL',
+      termSkill: {
+        career: 'Merchant',
+        table: 'serviceSkills',
+        roll: { expression: '1d6', rolls: [1], total: 1 },
+        tableRoll: 1,
+        rawSkill: 'Broker',
+        skill: 'Broker-1',
+        characteristic: null,
+        pendingCascadeSkill: null
+      }
+    })
+    assert.equal(state?.eventSeq, 4)
+  })
+
   it('projects accepted career facts from semantic term start events', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

@@ -647,10 +647,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.ok, false)
     if (result.ok) return
     assert.equal(result.error.code, 'invalid_command')
-    assert.equal(
-      result.error.message,
-      'COMMISSION is not valid from SURVIVAL'
-    )
+    assert.equal(result.error.message, 'COMMISSION is not valid from SURVIVAL')
   })
 
   it('emits a semantic advancement event with server-derived roll and rank facts', () => {
@@ -740,9 +737,125 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.ok, false)
     if (result.ok) return
     assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'ADVANCEMENT is not valid from SURVIVAL')
+  })
+
+  it('emits a semantic term skill event with a server-derived skill roll', () => {
+    const result = runCommand(
+      {
+        type: 'RollCharacterCreationTermSkill',
+        gameId,
+        actorId,
+        characterId,
+        table: 'serviceSkills'
+      },
+      createCreation('SKILLS_TRAINING', {
+        state: createCareerCreationState('SKILLS_TRAINING', {
+          canCommission: true,
+          canAdvance: false
+        }),
+        terms: [
+          {
+            career: 'Merchant',
+            skills: [],
+            skillsAndTraining: ['Broker-0'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 7
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.length, 2)
+    assert.equal(result.value[0]?.type, 'DiceRolled')
+    if (result.value[0]?.type !== 'DiceRolled') return
+    assert.equal(result.value[0].expression, '1d6')
+    assert.equal(result.value[0].reason, 'Merchant serviceSkills')
+    assert.equal(result.value[1]?.type, 'CharacterCreationTermSkillRolled')
+    if (result.value[1]?.type !== 'CharacterCreationTermSkillRolled') return
+    assert.equal(result.value[1].termSkill.career, 'Merchant')
+    assert.equal(result.value[1].termSkill.table, 'serviceSkills')
+    assert.equal(result.value[1].termSkill.roll.expression, '1d6')
+    assert.equal(result.value[1].termSkill.roll.rolls.length, 1)
+    assert.equal(
+      result.value[1].termSkill.tableRoll,
+      result.value[1].termSkill.roll.total
+    )
+    assert.equal(
+      result.value[1].state.status,
+      result.value[1].pendingCascadeSkills.length > 0
+        ? 'SKILLS_TRAINING'
+        : 'AGING'
+    )
+    assert.equal(result.value[1].skillsAndTraining.length >= 2, true)
+  })
+
+  it('blocks semantic term skill rolls outside skills training', () => {
+    const result = runCommand(
+      {
+        type: 'RollCharacterCreationTermSkill',
+        gameId,
+        actorId,
+        characterId,
+        table: 'serviceSkills'
+      },
+      createCreation('SURVIVAL')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'TERM_SKILL is not valid from SURVIVAL')
+  })
+
+  it('blocks advanced education term skill rolls without EDU 8+', () => {
+    const creation = createCreation('SKILLS_TRAINING', {
+      terms: [
+        {
+          career: 'Merchant',
+          skills: [],
+          skillsAndTraining: [],
+          benefits: [],
+          complete: false,
+          canReenlist: true,
+          completedBasicTraining: true,
+          musteringOut: false,
+          anagathics: false,
+          survival: 7
+        }
+      ]
+    })
+    const state = createState(creation)
+    state.characters[characterId].characteristics.edu = 7
+    const result = deriveEventsForCommand(
+      {
+        type: 'RollCharacterCreationTermSkill',
+        gameId,
+        actorId,
+        characterId,
+        table: 'advancedEducation'
+      },
+      {
+        state,
+        currentSeq: 1,
+        nextSeq: 2,
+        gameSeed: 1234
+      }
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'ADVANCEMENT is not valid from SURVIVAL'
+      'Advanced education requires EDU 8 or higher'
     )
   })
 

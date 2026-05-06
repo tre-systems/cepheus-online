@@ -416,9 +416,10 @@ Acceptance:
 - A failed survival path produces a valid mishap or death outcome.
 - Term history matches the event stream after refresh.
 
-Next priority: implement commission and advancement as semantic term facts, then
-term skill table selection and rolls. Keep mishap/death as the first hard branch
-after the normal pass path is authoritative.
+Next priority: finish the term-skill UI path on top of the semantic server
+facts, then implement aging and reenlistment as semantic events. Keep
+mishap/death as the first hard branch after the normal pass path is
+authoritative.
 
 ## Milestone 5: Aging, Anagathics, And Reenlistment
 
@@ -533,17 +534,18 @@ Acceptance:
 
 ## Suggested Next Slice
 
-Continue Milestone 4 with commission and advancement, then term skill table
-selection and rolls. Use the semantic survival implementation as the template
-for command validation, roll facts, projection gates, live activity, and replay
-tests.
+Continue Milestone 4 by wiring the semantic term-skill command into the mobile
+creation UI, then move aging and reenlistment onto semantic server commands.
+Use the semantic survival implementation as the template for command
+validation, roll facts, projection gates, live activity, and replay tests.
 
 Reason:
 
 - Survival established the right architecture: command validation, semantic
   events, projection recovery, roll facts, live dice, and focused mobile UI.
-- Commission and advancement are the next normal term-loop gates before term
-  skills, aging, and reenlistment.
+- Term skills are now represented as server-backed roll facts, but the browser
+  still needs the table-choice UI and cascade-resolution path to use those
+  commands end to end.
 - Keeping the pass path authoritative first reduces ambiguity before adding the
   mishap/death branch.
 

@@ -117,6 +117,8 @@ type CharacterEventType =
   | 'CharacterCreationSurvivalResolved'
   | 'CharacterCreationCommissionResolved'
   | 'CharacterCreationAdvancementResolved'
+  | 'CharacterCreationTermSkillRolled'
+  | 'CharacterCreationTermCascadeSkillResolved'
   | 'CharacterCreationHomeworldSet'
   | 'CharacterCreationHomeworldCompleted'
   | 'CharacterCreationBackgroundSkillSelected'
@@ -257,7 +259,10 @@ const characterEventHandlers = {
       creationEvent.type === 'COMPLETE_ADVANCEMENT' &&
       creationEvent.advancement
     ) {
-      terms = recordActiveTermAdvancement(terms, creationEvent.advancement.total)
+      terms = recordActiveTermAdvancement(
+        terms,
+        creationEvent.advancement.total
+      )
       if (creationEvent.rank) {
         careers = applyCareerRank(
           careers,
@@ -414,6 +419,87 @@ const characterEventHandlers = {
       history: [
         ...(character.creation.history ?? []),
         structuredClone(creationEvent)
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationTermSkillRolled: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const lastTermIndex = character.creation.terms.length - 1
+    const terms = character.creation.terms.map((term, index) =>
+      index === lastTermIndex
+        ? {
+            ...structuredClone(term),
+            skills: [...event.termSkills],
+            skillsAndTraining: [...event.skillsAndTraining]
+          }
+        : structuredClone(term)
+    )
+    const characteristic = event.termSkill.characteristic
+    const characteristics = characteristic
+      ? {
+          ...character.characteristics,
+          [characteristic.key]:
+            (character.characteristics[characteristic.key] ?? 0) +
+            characteristic.modifier
+        }
+      : character.characteristics
+
+    character.characteristics = characteristics
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      terms,
+      pendingCascadeSkills: [...event.pendingCascadeSkills],
+      history: [
+        ...(character.creation.history ?? []),
+        {
+          type: 'ROLL_TERM_SKILL',
+          termSkill: structuredClone(event.termSkill)
+        }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationTermCascadeSkillResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const lastTermIndex = character.creation.terms.length - 1
+    const terms = character.creation.terms.map((term, index) =>
+      index === lastTermIndex
+        ? {
+            ...structuredClone(term),
+            skills: [...event.termSkills],
+            skillsAndTraining: [...event.skillsAndTraining]
+          }
+        : structuredClone(term)
+    )
+
+    character.creation = {
+      ...character.creation,
+      terms,
+      pendingCascadeSkills: [...event.pendingCascadeSkills],
+      history: [
+        ...(character.creation.history ?? []),
+        {
+          type: 'RESOLVE_TERM_CASCADE_SKILL',
+          cascadeSkill: event.cascadeSkill,
+          selection: event.selection
+        }
       ]
     }
     nextState.eventSeq = envelope.seq

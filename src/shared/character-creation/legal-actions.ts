@@ -111,7 +111,7 @@ export const deriveCareerCreationPendingDecisions = (
   if (
     creation.state.status === 'SKILLS_TRAINING' &&
     term &&
-    term.skillsAndTraining.length < (creation.requiredTermSkillCount ?? 1)
+    term.skills.length < (creation.requiredTermSkillCount ?? 1)
   ) {
     decisions.push({ key: 'skillTrainingSelection' })
   }
@@ -343,7 +343,11 @@ const actionDefinitions = {
     commandTypes: ['AdvanceCharacterCreation']
   },
   completeSkills: {
-    commandTypes: ['AdvanceCharacterCreation']
+    commandTypes: [
+      'RollCharacterCreationTermSkill',
+      'AdvanceCharacterCreation'
+    ],
+    rollRequirement: { key: 'termSkill', dice: '1d6' }
   },
   resolveAging: {
     commandTypes: ['AdvanceCharacterCreation'],

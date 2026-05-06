@@ -1,4 +1,9 @@
-import type { CareerCreationEvent, CareerCreationState, CareerCreationStatus, CareerCreationContext } from './types'
+import type {
+  CareerCreationEvent,
+  CareerCreationState,
+  CareerCreationStatus,
+  CareerCreationContext
+} from './types'
 
 export const CAREER_CREATION_STATUSES = [
   'CHARACTERISTICS',
@@ -97,6 +102,12 @@ const transitionStatus = (
         ? { ...state, status: 'SKILLS_TRAINING' }
         : null
     case 'SKILLS_TRAINING':
+      if (
+        event.type === 'ROLL_TERM_SKILL' ||
+        event.type === 'RESOLVE_TERM_CASCADE_SKILL'
+      ) {
+        return state
+      }
       return event.type === 'COMPLETE_SKILLS'
         ? { ...state, status: 'AGING' }
         : null
@@ -108,8 +119,7 @@ const transitionStatus = (
       if (event.type === 'REENLIST' || event.type === 'FORCED_REENLIST') {
         return { ...state, status: 'SURVIVAL' }
       }
-      return event.type === 'LEAVE_CAREER' ||
-        event.type === 'REENLIST_BLOCKED'
+      return event.type === 'LEAVE_CAREER' || event.type === 'REENLIST_BLOCKED'
         ? { ...state, status: 'MUSTERING_OUT' }
         : null
     case 'MUSTERING_OUT':

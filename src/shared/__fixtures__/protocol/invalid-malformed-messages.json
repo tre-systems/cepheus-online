@@ -135,6 +135,22 @@
     "errorMessage": "characterId must be a string"
   },
   {
+    "name": "malformed character creation term skill table",
+    "message": {
+      "type": "command",
+      "requestId": "bad-term-skill",
+      "command": {
+        "type": "RollCharacterCreationTermSkill",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": "crew-scout-1",
+        "table": "unknown"
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "table is not a supported term skill table"
+  },
+  {
     "name": "empty character creation background skill",
     "message": {
       "type": "command",

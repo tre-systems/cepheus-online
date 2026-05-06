@@ -204,6 +204,8 @@ describe('app command router dispatch', () => {
       ResolveCharacterCreationSurvival: 'characterCreation',
       ResolveCharacterCreationCommission: 'characterCreation',
       ResolveCharacterCreationAdvancement: 'characterCreation',
+      RollCharacterCreationTermSkill: 'characterCreation',
+      ResolveCharacterCreationTermCascadeSkill: 'characterCreation',
       CreateBoard: 'board',
       SelectBoard: 'board',
       SetDoorOpen: 'door',

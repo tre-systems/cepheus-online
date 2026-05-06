@@ -290,6 +290,22 @@ const describeCareerCreationEvent = (
         : 'Advancement earned'
     case 'SKIP_ADVANCEMENT':
       return 'Advancement skipped'
+    case 'ROLL_TERM_SKILL':
+      return [
+        'Term skill rolled',
+        event.termSkill.rawSkill,
+        event.termSkill.skill ? `skill ${event.termSkill.skill}` : null,
+        event.termSkill.characteristic
+          ? `${event.termSkill.characteristic.key.toUpperCase()} +${event.termSkill.characteristic.modifier}`
+          : null,
+        event.termSkill.pendingCascadeSkill
+          ? `cascade ${event.termSkill.pendingCascadeSkill}`
+          : null
+      ]
+        .filter(Boolean)
+        .join('; ')
+    case 'RESOLVE_TERM_CASCADE_SKILL':
+      return `${event.cascadeSkill}: ${event.selection}`
     case 'COMPLETE_SKILLS':
       return 'Skills and training complete'
     case 'COMPLETE_AGING':
@@ -481,9 +497,7 @@ export const deriveLiveActivity = (
         ...baseActivity(envelope),
         type: 'characterCreation',
         characterId: event.characterId,
-        transition: event.passed
-          ? 'COMMISSION_PASSED'
-          : 'COMMISSION_FAILED',
+        transition: event.passed ? 'COMMISSION_PASSED' : 'COMMISSION_FAILED',
         ...compactCharacterCreationDetails(
           commissionDetails({
             passed: event.passed,
@@ -501,9 +515,7 @@ export const deriveLiveActivity = (
         ...baseActivity(envelope),
         type: 'characterCreation',
         characterId: event.characterId,
-        transition: event.passed
-          ? 'ADVANCEMENT_PASSED'
-          : 'ADVANCEMENT_FAILED',
+        transition: event.passed ? 'ADVANCEMENT_PASSED' : 'ADVANCEMENT_FAILED',
         ...compactCharacterCreationDetails(
           advancementDetails({
             passed: event.passed,
@@ -515,6 +527,39 @@ export const deriveLiveActivity = (
         ),
         status: event.state.status,
         creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationTermSkillRolled':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'TERM_SKILL_ROLLED',
+        ...compactCharacterCreationDetails(
+          describeCareerCreationEvent({
+            type: 'ROLL_TERM_SKILL',
+            termSkill: event.termSkill
+          })
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationTermCascadeSkillResolved':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'TERM_CASCADE_SKILL_RESOLVED',
+        ...compactCharacterCreationDetails(
+          describeCareerCreationEvent({
+            type: 'RESOLVE_TERM_CASCADE_SKILL',
+            cascadeSkill: event.cascadeSkill,
+            selection: event.selection
+          })
+        ),
+        status: 'SKILLS_TRAINING',
+        creationComplete: false
       }
 
     case 'CharacterCreationCascadeSkillResolved':

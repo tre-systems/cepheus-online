@@ -9,7 +9,8 @@ import type {
 import type {
   CareerCreationCheckFact,
   CareerCreationEvent,
-  CareerCreationRankFact
+  CareerCreationRankFact,
+  CareerCreationTermSkillFact
 } from './characterCreation'
 import type {
   CharacterCreationSheet,
@@ -94,6 +95,25 @@ export type GameEvent =
       rank: CareerCreationRankFact | null
       state: CharacterCreationProjection['state']
       creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationTermSkillRolled'
+      characterId: CharacterId
+      termSkill: CareerCreationTermSkillFact
+      termSkills: string[]
+      skillsAndTraining: string[]
+      pendingCascadeSkills: string[]
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationTermCascadeSkillResolved'
+      characterId: CharacterId
+      cascadeSkill: string
+      selection: string
+      termSkills: string[]
+      skillsAndTraining: string[]
+      pendingCascadeSkills: string[]
     }
   | {
       type: 'CharacterCreationHomeworldSet'

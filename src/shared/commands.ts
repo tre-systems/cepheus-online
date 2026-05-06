@@ -1,5 +1,8 @@
 import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
-import type { CareerCreationEvent } from './characterCreation'
+import type {
+  CareerCreationEvent,
+  CareerCreationTermSkillTable
+} from './characterCreation'
 import type {
   CharacterCreationSheet,
   CharacterCreationHomeworld,
@@ -94,6 +97,8 @@ export type Command =
   | CharacterCreationSurvivalCommand
   | CharacterCreationCommissionCommand
   | CharacterCreationAdvancementCommand
+  | CharacterCreationTermSkillCommand
+  | CharacterCreationTermCascadeSkillCommand
   | {
       type: 'CreateBoard'
       gameId: GameId
@@ -213,11 +218,32 @@ export type CharacterCreationAdvancementCommand = {
   characterId: CharacterId
 }
 
+export type CharacterCreationTermSkillCommand = {
+  type: 'RollCharacterCreationTermSkill'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+  table: CareerCreationTermSkillTable
+}
+
+export type CharacterCreationTermCascadeSkillCommand = {
+  type: 'ResolveCharacterCreationTermCascadeSkill'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+  cascadeSkill: string
+  selection: string
+}
+
 export type SemanticCommand =
   | CharacterCreationBasicTrainingCommand
   | CharacterCreationHomeworldCommand
   | CharacterCreationSurvivalCommand
   | CharacterCreationCommissionCommand
   | CharacterCreationAdvancementCommand
+  | CharacterCreationTermSkillCommand
+  | CharacterCreationTermCascadeSkillCommand
 
 export type GameCommand = Command | CharacterCreationHomeworldCommand

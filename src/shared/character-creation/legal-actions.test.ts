@@ -494,7 +494,7 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveCareerCreationPendingDecisions(
         projection('SKILLS_TRAINING', {
-          terms: [term({ skillsAndTraining: [] })]
+          terms: [term({ skills: [] })]
         })
       ),
       [{ key: 'skillTrainingSelection' }]
@@ -502,7 +502,7 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(
         projection('SKILLS_TRAINING', {
-          terms: [term({ skillsAndTraining: ['Pilot-1'] })]
+          terms: [term({ skills: ['Pilot-1'] })]
         })
       ),
       ['completeSkills']
@@ -512,7 +512,7 @@ describe('career creation legal action planner', () => {
   it('keeps non-commission careers in skills training until both term skill rolls are resolved', () => {
     const creation = projection('SKILLS_TRAINING', {
       requiredTermSkillCount: 2,
-      terms: [term({ career: 'Scout', skillsAndTraining: ['Pilot-1'] })]
+      terms: [term({ career: 'Scout', skills: ['Pilot-1'] })]
     })
 
     assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
@@ -529,7 +529,7 @@ describe('career creation legal action planner', () => {
           terms: [
             term({
               career: 'Scout',
-              skillsAndTraining: ['Pilot-1', 'Mechanics-1']
+              skills: ['Pilot-1', 'Mechanics-1']
             })
           ]
         })

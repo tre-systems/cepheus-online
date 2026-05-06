@@ -3,6 +3,7 @@ import type {
   CareerCreationCheckFact,
   CareerCreationEvent,
   CareerCreationRankFact,
+  CareerCreationTermSkillTable,
   FailedQualificationOption
 } from './characterCreation'
 import { err, ok, type Result } from './result'
@@ -127,6 +128,24 @@ const parseString = (
   if (!value) return err(invalidCommand(`${label} cannot be empty`))
 
   return ok(value)
+}
+
+const parseCharacterCreationTermSkillTable = (
+  raw: unknown
+): Result<CareerCreationTermSkillTable, CommandError> => {
+  if (!isString(raw)) {
+    return err(invalidCommand('table must be a string'))
+  }
+  if (
+    raw === 'personalDevelopment' ||
+    raw === 'serviceSkills' ||
+    raw === 'specialistSkills' ||
+    raw === 'advancedEducation'
+  ) {
+    return ok(raw)
+  }
+
+  return err(invalidCommand('table is not a supported term skill table'))
 }
 
 const parseOptionalString = (
@@ -934,6 +953,37 @@ export const decodeCommand = (
         type: 'ResolveCharacterCreationAdvancement',
         ...base.value,
         characterId: characterId.value
+      })
+    }
+
+    case 'RollCharacterCreationTermSkill': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const table = parseCharacterCreationTermSkillTable(raw.table)
+      if (!table.ok) return table
+
+      return ok({
+        type: 'RollCharacterCreationTermSkill',
+        ...base.value,
+        characterId: characterId.value,
+        table: table.value
+      })
+    }
+
+    case 'ResolveCharacterCreationTermCascadeSkill': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const cascadeSkill = parseString(raw.cascadeSkill, 'cascadeSkill')
+      if (!cascadeSkill.ok) return cascadeSkill
+      const selection = parseString(raw.selection, 'selection')
+      if (!selection.ok) return selection
+
+      return ok({
+        type: 'ResolveCharacterCreationTermCascadeSkill',
+        ...base.value,
+        characterId: characterId.value,
+        cascadeSkill: cascadeSkill.value,
+        selection: selection.value
       })
     }
 
