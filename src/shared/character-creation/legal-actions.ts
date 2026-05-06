@@ -17,7 +17,9 @@ const defaultActionContext = {
   remainingMusteringBenefits: 0,
   canContinueCareer: false,
   canCompleteCreation: false,
-  reenlistmentOutcome: 'unresolved'
+  reenlistmentOutcome: 'unresolved',
+  failedToQualify: false,
+  canEnterDraft: true
 } satisfies Required<Omit<CareerCreationActionContext, 'pendingDecisions'>>
 
 const hasPendingDecision = (
@@ -28,6 +30,20 @@ const hasPendingDecision = (
 
 const hasAnyPendingDecision = (context: CareerCreationActionContext): boolean =>
   (context.pendingDecisions?.length ?? 0) > 0
+
+const deriveFailedQualificationActionOptions = (
+  canEnterDraft: boolean
+): NonNullable<LegalCareerCreationAction['failedQualificationOptions']> => [
+  { option: 'Drifter' },
+  ...(canEnterDraft
+    ? [
+        {
+          option: 'Draft' as const,
+          rollRequirement: { key: 'draft' as const, dice: '1d6' as const }
+        }
+      ]
+    : [])
+]
 
 const lastTerm = (
   creation: CareerCreationActionProjection
@@ -159,7 +175,13 @@ export const deriveCareerCreationActionContext = (
     canCompleteCreation:
       creation.creationComplete !== true &&
       canCompleteCreation({ noOutstandingSelections, terms }),
-    reenlistmentOutcome: deriveCareerCreationReenlistmentOutcome(creation)
+    reenlistmentOutcome: deriveCareerCreationReenlistmentOutcome(creation),
+    ...(creation.failedToQualify === undefined
+      ? {}
+      : { failedToQualify: creation.failedToQualify }),
+    ...(creation.canEnterDraft === undefined
+      ? {}
+      : { canEnterDraft: creation.canEnterDraft })
   }
 }
 
@@ -184,9 +206,11 @@ export const deriveLegalCareerCreationActionKeys = (
         ? []
         : ['completeHomeworld']
     case 'CAREER_SELECTION':
-      return hasPendingDecision(context, 'careerQualification')
-        ? []
-        : ['selectCareer']
+      if (hasPendingDecision(context, 'careerQualification')) return []
+      if (options.failedToQualify) {
+        return ['selectCareer']
+      }
+      return ['selectCareer']
     case 'BASIC_TRAINING':
       return noPendingDecisions ? ['completeBasicTraining'] : []
     case 'SURVIVAL':
@@ -320,12 +344,31 @@ const actionDefinitions = {
 export const deriveLegalCareerCreationActions = (
   state: CareerCreationState,
   context: CareerCreationActionContext = {}
-): LegalCareerCreationAction[] =>
-  deriveLegalCareerCreationActionKeys(state, context).map((key) => ({
-    key,
-    status: state.status,
-    ...actionDefinitions[key]
-  }))
+): LegalCareerCreationAction[] => {
+  const options = {
+    ...defaultActionContext,
+    ...context
+  }
+
+  return deriveLegalCareerCreationActionKeys(state, context).map((key) => {
+    if (key === 'selectCareer' && options.failedToQualify) {
+      return {
+        key,
+        status: state.status,
+        commandTypes: actionDefinitions.selectCareer.commandTypes,
+        failedQualificationOptions: deriveFailedQualificationActionOptions(
+          options.canEnterDraft
+        )
+      }
+    }
+
+    return {
+      key,
+      status: state.status,
+      ...actionDefinitions[key]
+    }
+  })
+}
 
 export const deriveLegalCareerCreationActionKeysForProjection = (
   creation: CareerCreationActionProjection

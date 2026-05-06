@@ -564,6 +564,297 @@ describe('room publication flow', () => {
     )
   })
 
+  it('records semantic SRD roll facts in character creation transition history', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Merchant'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    const advance = async (
+      creationEvent: Extract<
+        Command,
+        { type: 'AdvanceCharacterCreation' }
+      >['creationEvent']
+    ) => {
+      const result = await publish(storage, {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent
+      })
+
+      assert.equal(result.ok, true)
+      return result
+    }
+
+    await advance({ type: 'SET_CHARACTERISTICS' })
+    await publish(storage, {
+      type: 'SetCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId,
+      homeworld: {
+        name: 'Regina',
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid', 'Industrial']
+      }
+    })
+    await publish(storage, {
+      type: 'ResolveCharacterCreationCascadeSkill',
+      gameId,
+      actorId,
+      characterId,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
+    await advance({ type: 'COMPLETE_HOMEWORLD' })
+    await publish(storage, {
+      type: 'StartCharacterCareerTerm',
+      gameId,
+      actorId,
+      characterId,
+      career: 'Merchant'
+    })
+
+    await advance({
+      type: 'SELECT_CAREER',
+      isNewCareer: true,
+      qualification: {
+        expression: '2d6',
+        rolls: [4, 5],
+        total: 9,
+        characteristic: 'int',
+        modifier: 1,
+        target: 4,
+        success: true
+      }
+    })
+    await advance({ type: 'COMPLETE_BASIC_TRAINING' })
+    await advance({
+      type: 'SURVIVAL_PASSED',
+      canCommission: true,
+      canAdvance: true,
+      survival: {
+        expression: '2d6',
+        rolls: [3, 5],
+        total: 8,
+        characteristic: 'int',
+        modifier: 1,
+        target: 5,
+        success: true
+      }
+    })
+    await advance({
+      type: 'COMPLETE_COMMISSION',
+      commission: {
+        expression: '2d6',
+        rolls: [5, 4],
+        total: 9,
+        characteristic: 'int',
+        modifier: 1,
+        target: 4,
+        success: true
+      }
+    })
+    await advance({
+      type: 'COMPLETE_ADVANCEMENT',
+      advancement: {
+        expression: '2d6',
+        rolls: [4, 4],
+        total: 8,
+        characteristic: 'int',
+        modifier: 1,
+        target: 7,
+        success: true
+      }
+    })
+    await advance({ type: 'COMPLETE_SKILLS' })
+    await advance({
+      type: 'COMPLETE_AGING',
+      aging: {
+        roll: {
+          expression: '2d6',
+          rolls: [2, 3],
+          total: 5
+        },
+        modifier: -1,
+        age: 22,
+        characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+      }
+    })
+    await advance({
+      type: 'REENLIST',
+      reenlistment: {
+        expression: '2d6',
+        rolls: [6, 4],
+        total: 10,
+        characteristic: null,
+        modifier: 0,
+        target: 4,
+        success: true
+      }
+    })
+
+    await advance({
+      type: 'SURVIVAL_PASSED',
+      canCommission: false,
+      canAdvance: false,
+      survival: {
+        expression: '2d6',
+        rolls: [4, 3],
+        total: 7,
+        characteristic: 'int',
+        modifier: 1,
+        target: 5,
+        success: true
+      }
+    })
+    await advance({ type: 'COMPLETE_SKILLS' })
+    await advance({
+      type: 'COMPLETE_AGING',
+      aging: {
+        roll: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8
+        },
+        modifier: -2,
+        age: 26,
+        characteristicChanges: []
+      }
+    })
+    await advance({
+      type: 'REENLIST_BLOCKED',
+      reenlistment: {
+        expression: '2d6',
+        rolls: [1, 2],
+        total: 3,
+        characteristic: null,
+        modifier: 0,
+        target: 4,
+        success: false
+      }
+    })
+    await advance({
+      type: 'FINISH_MUSTERING',
+      musteringBenefit: {
+        career: 'Merchant',
+        kind: 'cash',
+        roll: {
+          expression: '2d6',
+          rolls: [3, 4],
+          total: 7
+        },
+        modifier: 1,
+        tableRoll: 8,
+        value: '20000',
+        credits: 20000
+      }
+    })
+
+    const persistedCreationEvents = (await readEventStream(storage, gameId))
+      .map((envelope) => envelope.event)
+      .filter((event) => event.type === 'CharacterCreationTransitioned')
+      .map((event) => event.creationEvent)
+
+    assert.deepEqual(
+      persistedCreationEvents
+        .filter((event) =>
+          [
+            'SELECT_CAREER',
+            'SURVIVAL_PASSED',
+            'COMPLETE_COMMISSION',
+            'COMPLETE_ADVANCEMENT',
+            'COMPLETE_AGING',
+            'REENLIST',
+            'REENLIST_BLOCKED',
+            'FINISH_MUSTERING'
+          ].includes(event.type)
+        )
+        .map((event) => event.type),
+      [
+        'SELECT_CAREER',
+        'SURVIVAL_PASSED',
+        'COMPLETE_COMMISSION',
+        'COMPLETE_ADVANCEMENT',
+        'COMPLETE_AGING',
+        'REENLIST',
+        'SURVIVAL_PASSED',
+        'COMPLETE_AGING',
+        'REENLIST_BLOCKED',
+        'FINISH_MUSTERING'
+      ]
+    )
+
+    const recovered = await getProjectedGameState(storage, gameId)
+    const history = recovered?.characters[characterId]?.creation?.history ?? []
+
+    assert.deepEqual(
+      history.find((event) => event.type === 'SELECT_CAREER'),
+      persistedCreationEvents.find((event) => event.type === 'SELECT_CAREER')
+    )
+    assert.equal(
+      history.find((event) => event.type === 'SURVIVAL_PASSED')?.survival
+        ?.success,
+      true
+    )
+    assert.equal(
+      history.find((event) => event.type === 'COMPLETE_COMMISSION')?.commission
+        ?.target,
+      4
+    )
+    assert.equal(
+      history.find((event) => event.type === 'COMPLETE_ADVANCEMENT')
+        ?.advancement?.success,
+      true
+    )
+    assert.deepEqual(
+      history.find((event) => event.type === 'COMPLETE_AGING')?.aging
+        ?.characteristicChanges,
+      [{ type: 'PHYSICAL', modifier: -1 }]
+    )
+    assert.equal(
+      history.find((event) => event.type === 'REENLIST')?.reenlistment?.success,
+      true
+    )
+    assert.equal(
+      history.find((event) => event.type === 'REENLIST_BLOCKED')?.reenlistment
+        ?.success,
+      false
+    )
+    assert.deepEqual(
+      history.find((event) => event.type === 'FINISH_MUSTERING')
+        ?.musteringBenefit,
+      {
+        career: 'Merchant',
+        kind: 'cash',
+        roll: {
+          expression: '2d6',
+          rolls: [3, 4],
+          total: 7
+        },
+        modifier: 1,
+        tableRoll: 8,
+        value: '20000',
+        credits: 20000
+      }
+    )
+  })
+
   it('checkpoints when character creation becomes playable', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')

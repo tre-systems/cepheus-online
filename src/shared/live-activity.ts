@@ -93,6 +93,15 @@ const countLabel = (
 const availabilityLabel = (value: boolean): string =>
   value ? 'available' : 'unavailable'
 
+const careerSelectionOutcomeLabel = (
+  event: Extract<CareerCreationEvent, { type: 'SELECT_CAREER' }>
+): string | null => {
+  if (event.drafted === true) return 'drafted after failed qualification'
+  if (event.drafted === false) return 'qualified'
+
+  return null
+}
+
 const describeCareerCreationEvent = (
   event: CareerCreationEvent
 ): string | null => {
@@ -103,7 +112,7 @@ const describeCareerCreationEvent = (
       return 'Homeworld complete'
     case 'SELECT_CAREER': {
       const selection = event.isNewCareer ? 'new career' : 'existing career'
-      const draft = event.drafted === undefined ? null : 'draft resolved'
+      const draft = careerSelectionOutcomeLabel(event)
 
       return ['Career selected', selection, draft].filter(Boolean).join('; ')
     }

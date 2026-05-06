@@ -22,6 +22,7 @@ import {
   deriveCashBenefitRollModifier,
   deriveCareerQualificationDm,
   deriveMaterialBenefitRollModifier,
+  deriveRemainingCashBenefits,
   deriveRemainingCareerBenefits,
   deriveSurvivalPromotionOptions,
   enumerateTermOutcomes,
@@ -41,6 +42,7 @@ import {
   resolveCascadeCareerSkill,
   resolveReenlistment,
   selectAgingEffect,
+  startDraftCareerTerm,
   startCareerTerm,
   tallyCareerSkills,
   transitionCareerCreationState,
@@ -543,6 +545,8 @@ describe('mustering-out and aging helpers', () => {
       2
     )
     assert.equal(deriveMaterialBenefitRollModifier({ currentRank: 5 }), 1)
+    assert.equal(deriveRemainingCashBenefits({ cashBenefitsReceived: 1 }), 2)
+    assert.equal(deriveRemainingCashBenefits({ cashBenefitsReceived: 4 }), 0)
 
     assert.deepEqual(
       resolveCareerBenefit({
@@ -660,6 +664,24 @@ describe('mustering-out and aging helpers', () => {
     assert.equal(drafted.canEnterDraft, false)
     assert.equal(drafted.terms[0].draft, 1)
     assert.deepEqual(drafted.careers, [{ name: 'Marine', rank: 0 }])
+
+    const draftStarted = startDraftCareerTerm({
+      draftTable: [
+        'Aerospace',
+        'Marine',
+        'Maritime Defense',
+        'Navy',
+        'Scout',
+        'Surface Defense'
+      ],
+      roll: 5,
+      terms: [],
+      careers: []
+    })
+    assert.deepEqual(draftStarted?.draft, { roll: 5, career: 'Scout' })
+    assert.equal(draftStarted?.terms[0].career, 'Scout')
+    assert.equal(draftStarted?.terms[0].draft, 1)
+    assert.equal(draftStarted?.canEnterDraft, false)
   })
 
   it('derives aging modifiers and anagathics payment effects', () => {

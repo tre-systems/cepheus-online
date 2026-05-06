@@ -11,12 +11,14 @@ import {
   type CepheusCareerDefinition
 } from '../../shared/character-creation/cepheus-srd-ruleset.js'
 import {
+  canRollCashBenefit,
   deriveCashBenefitRollModifier,
   deriveMaterialBenefitRollModifier,
   deriveRemainingCareerBenefits,
   resolveCareerBenefit
 } from '../../shared/character-creation/benefits.js'
 import { resolveAging } from '../../shared/character-creation/aging.js'
+import { deriveAgingRollModifier } from '../../shared/character-creation/term-lifecycle.js'
 import type {
   AgingChange,
   AgingChangeType,
@@ -105,6 +107,7 @@ export interface CharacterCreationTermSkillRoll {
 export interface CharacterCreationCompletedTerm {
   career: string
   drafted: boolean
+  anagathics?: boolean
   age: number | null
   rank?: number | null
   rankTitle?: string | null
@@ -440,6 +443,7 @@ const cloneCompletedTerms = (
   terms.map((term) => ({
     career: term.career,
     drafted: term.drafted,
+    ...(term.anagathics === true ? { anagathics: true } : {}),
     age: term.age,
     ...(term.rank != null ? { rank: term.rank } : {}),
     ...(term.rankTitle != null ? { rankTitle: term.rankTitle } : {}),
@@ -1346,9 +1350,14 @@ export const deriveNextCharacterCreationReenlistmentRoll = (
   }
 }
 
-const currentCharacterCreationTermCount = (
+const characterCreationAgingTerms = (
   draft: Pick<CharacterCreationDraft, 'completedTerms'>
-): number => draft.completedTerms.length + 1
+): Array<{ anagathics: boolean }> => [
+  ...draft.completedTerms.map((term) => ({
+    anagathics: term.anagathics === true
+  })),
+  { anagathics: false }
+]
 
 export const requiresCharacterCreationAgingRoll = (
   draft: Pick<CharacterCreationDraft, 'age' | 'completedTerms' | 'careerPlan'>
@@ -1373,7 +1382,9 @@ export const deriveNextCharacterCreationAgingRoll = (
   if (flow.draft.pendingAgingChanges.length > 0) return null
   if (!requiresCharacterCreationAgingRoll(flow.draft)) return null
 
-  const modifier = -currentCharacterCreationTermCount(flow.draft)
+  const modifier = deriveAgingRollModifier(
+    characterCreationAgingTerms(flow.draft)
+  )
   return {
     label: 'Roll aging',
     reason: `${flow.draft.name.trim() || 'Character'} aging`,
@@ -1957,12 +1968,11 @@ const benefitsInCareer = (
 ): number =>
   draft.musteringBenefits.filter((benefit) => benefit.career === career).length
 
-const cashBenefitsInCareer = (
-  draft: Pick<CharacterCreationDraft, 'musteringBenefits'>,
-  career: string
+const cashBenefitsReceived = (
+  draft: Pick<CharacterCreationDraft, 'musteringBenefits'>
 ): number =>
   draft.musteringBenefits.filter(
-    (benefit) => benefit.career === career && benefit.kind === 'cash'
+    (benefit) => benefit.kind === 'cash'
   ).length
 
 const rankInCareer = (
@@ -2025,7 +2035,12 @@ export const canRollCharacterCreationMusteringBenefit = ({
 }): boolean => {
   const term = nextMusteringBenefitTerm(draft)
   if (!term) return false
-  if (kind === 'cash' && cashBenefitsInCareer(draft, term.career) >= 3) {
+  if (
+    kind === 'cash' &&
+    !canRollCashBenefit({
+      cashBenefitsReceived: cashBenefitsReceived(draft)
+    })
+  ) {
     return false
   }
   return true

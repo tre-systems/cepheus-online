@@ -20,7 +20,8 @@ import {
   deriveCreationActivityCards,
   deriveCreationActivityCardsFromApplication,
   MAX_CREATION_ACTIVITY_DETAIL_LENGTH,
-  MAX_CREATION_ACTIVITY_TITLE_LENGTH
+  MAX_CREATION_ACTIVITY_TITLE_LENGTH,
+  SRD_CREATION_ACTIVITY_MILESTONE_TRANSITIONS
 } from './creation-activity-view'
 
 const baseActivity = {
@@ -175,6 +176,74 @@ describe('creation activity view model', () => {
         tone: 'success',
         seq: 20
       }
+    )
+  })
+
+  it('has compact cards for SRD character creation milestones', () => {
+    const cards = SRD_CREATION_ACTIVITY_MILESTONE_TRANSITIONS.map(
+      (transition, index) =>
+        deriveCreationActivityCard(
+          characterActivity({
+            seq: 100 + index,
+            transition,
+            details: `${transition} detail`,
+            status: transition === 'FINALIZED' ? 'PLAYABLE' : 'ACTIVE',
+            creationComplete: transition === 'FINALIZED'
+          })
+        )
+    )
+
+    assert.deepEqual(
+      cards.map((card) => card.title),
+      [
+        'Career selected',
+        'Career term started',
+        'Survival passed',
+        'Survival failed',
+        'Commission earned',
+        'Commission skipped',
+        'Advancement earned',
+        'Advancement skipped',
+        'Aging resolved',
+        'Reenlisted',
+        'Left career',
+        'Reenlistment blocked',
+        'Forced reenlistment',
+        'Career continued',
+        'Mustering complete',
+        'Creation complete',
+        'Character finalized'
+      ]
+    )
+    assert.deepEqual(
+      cards.map((card) => card.tone),
+      [
+        'neutral',
+        'neutral',
+        'success',
+        'warning',
+        'success',
+        'neutral',
+        'success',
+        'neutral',
+        'neutral',
+        'neutral',
+        'neutral',
+        'warning',
+        'warning',
+        'neutral',
+        'success',
+        'success',
+        'success'
+      ]
+    )
+    assert.equal(
+      cards.every(
+        (card, index) =>
+          card.detail ===
+          `${SRD_CREATION_ACTIVITY_MILESTONE_TRANSITIONS[index]} detail`
+      ),
+      true
     )
   })
 

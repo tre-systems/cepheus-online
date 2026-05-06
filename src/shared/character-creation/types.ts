@@ -17,25 +17,66 @@ export type CareerCreationStatus =
   | 'PLAYABLE'
   | 'DECEASED'
 
+export interface CareerCreationDiceFact {
+  expression: '2d6'
+  rolls: number[]
+  total: number
+}
+
+export interface CareerCreationCheckFact extends CareerCreationDiceFact {
+  characteristic: CharacteristicKey | null
+  modifier: number
+  target: number
+  success: boolean
+}
+
+export interface CareerCreationAgingFact {
+  roll: CareerCreationDiceFact
+  modifier: number
+  age: number
+  characteristicChanges: AgingChange[]
+}
+
+export interface CareerCreationBenefitFact {
+  career: string
+  kind: BenefitKind
+  roll: CareerCreationDiceFact
+  modifier: number
+  tableRoll: number
+  value: string
+  credits: number
+}
+
 export type CareerCreationEvent =
   | { type: 'SET_CHARACTERISTICS' }
   | { type: 'COMPLETE_HOMEWORLD' }
-  | { type: 'SELECT_CAREER'; isNewCareer: boolean; drafted?: boolean }
+  | {
+      type: 'SELECT_CAREER'
+      isNewCareer: boolean
+      drafted?: boolean
+      qualification?: CareerCreationCheckFact
+      failedQualificationOptions?: FailedQualificationOption[]
+    }
   | { type: 'COMPLETE_BASIC_TRAINING' }
-  | { type: 'SURVIVAL_PASSED'; canCommission: boolean; canAdvance: boolean }
-  | { type: 'SURVIVAL_FAILED' }
-  | { type: 'COMPLETE_COMMISSION' }
+  | {
+      type: 'SURVIVAL_PASSED'
+      canCommission: boolean
+      canAdvance: boolean
+      survival?: CareerCreationCheckFact
+    }
+  | { type: 'SURVIVAL_FAILED'; survival?: CareerCreationCheckFact }
+  | { type: 'COMPLETE_COMMISSION'; commission?: CareerCreationCheckFact }
   | { type: 'SKIP_COMMISSION' }
-  | { type: 'COMPLETE_ADVANCEMENT' }
+  | { type: 'COMPLETE_ADVANCEMENT'; advancement?: CareerCreationCheckFact }
   | { type: 'SKIP_ADVANCEMENT' }
   | { type: 'COMPLETE_SKILLS' }
-  | { type: 'COMPLETE_AGING' }
-  | { type: 'REENLIST' }
+  | { type: 'COMPLETE_AGING'; aging?: CareerCreationAgingFact }
+  | { type: 'REENLIST'; reenlistment?: CareerCreationCheckFact }
   | { type: 'LEAVE_CAREER' }
-  | { type: 'REENLIST_BLOCKED' }
-  | { type: 'FORCED_REENLIST' }
+  | { type: 'REENLIST_BLOCKED'; reenlistment?: CareerCreationCheckFact }
+  | { type: 'FORCED_REENLIST'; reenlistment?: CareerCreationCheckFact }
   | { type: 'CONTINUE_CAREER' }
-  | { type: 'FINISH_MUSTERING' }
+  | { type: 'FINISH_MUSTERING'; musteringBenefit?: CareerCreationBenefitFact }
   | { type: 'CREATION_COMPLETE' }
   | { type: 'DEATH_CONFIRMED' }
   | { type: 'MISHAP_RESOLVED' }
@@ -82,6 +123,7 @@ export type CareerCreationServerCommandType =
 export type CareerCreationRollRequirementKey =
   | 'characteristics'
   | 'careerQualification'
+  | 'draft'
   | 'survival'
   | 'mishap'
   | 'commission'
@@ -92,7 +134,12 @@ export type CareerCreationRollRequirementKey =
 
 export interface CareerCreationRollRequirement {
   key: CareerCreationRollRequirementKey
-  dice: '2d6'
+  dice: '1d6' | '2d6'
+}
+
+export interface FailedQualificationActionOption {
+  option: FailedQualificationOption
+  rollRequirement?: CareerCreationRollRequirement
 }
 
 export interface LegalCareerCreationAction {
@@ -100,6 +147,7 @@ export interface LegalCareerCreationAction {
   status: CareerCreationStatus
   commandTypes: readonly CareerCreationServerCommandType[]
   rollRequirement?: CareerCreationRollRequirement
+  failedQualificationOptions?: readonly FailedQualificationActionOption[]
 }
 
 export type CareerCreationReenlistmentOutcome =
@@ -136,6 +184,8 @@ export interface CareerCreationActionContext {
   canContinueCareer?: boolean
   canCompleteCreation?: boolean
   reenlistmentOutcome?: CareerCreationReenlistmentOutcome
+  failedToQualify?: boolean
+  canEnterDraft?: boolean
 }
 
 export interface CareerCreationActionPlan {
@@ -148,6 +198,8 @@ export interface CareerCreationActionProjection {
   state: CareerCreationState
   terms?: readonly CareerTerm[]
   careers?: readonly CareerRank[]
+  canEnterDraft?: boolean
+  failedToQualify?: boolean
   characteristicChanges?: readonly AgingChange[]
   pendingCascadeSkills?: readonly string[]
   requiredTermSkillCount?: number
@@ -188,6 +240,13 @@ export interface SurvivalPromotionOptions {
 }
 
 export type FailedQualificationOption = 'Drifter' | 'Draft'
+
+export type DraftTable = readonly string[]
+
+export interface DraftResolution {
+  roll: number
+  career: string
+}
 
 export interface CareerRankReward {
   rank: number
@@ -280,6 +339,10 @@ export interface CareerTermStart {
   careers: CareerRank[]
   canEnterDraft: boolean
   failedToQualify: boolean
+}
+
+export interface DraftCareerTermStart extends CareerTermStart {
+  draft: DraftResolution
 }
 
 export type ReenlistmentResolution =

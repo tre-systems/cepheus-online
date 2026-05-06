@@ -56,7 +56,7 @@
       "type": "characterCreation",
       "characterId": "char-1",
       "transition": "SELECT_CAREER",
-      "details": "Career selected; new career; draft resolved",
+      "details": "Career selected; new career; qualified",
       "status": "BASIC_TRAINING",
       "creationComplete": false
     },

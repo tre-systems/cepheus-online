@@ -1,5 +1,7 @@
 import type { BenefitKind, BenefitTables, CareerBenefit } from './types'
 
+export const CEPHEUS_SRD_MAX_CASH_BENEFITS = 3
+
 export const deriveCareerBenefitCount = ({
   termsInCareer,
   currentRank
@@ -22,6 +24,24 @@ export const deriveRemainingCareerBenefits = ({
     0,
     deriveCareerBenefitCount({ termsInCareer, currentRank }) - benefitsReceived
   )
+
+export const deriveRemainingCashBenefits = ({
+  cashBenefitsReceived,
+  maxCashBenefits = CEPHEUS_SRD_MAX_CASH_BENEFITS
+}: {
+  cashBenefitsReceived: number
+  maxCashBenefits?: number
+}): number =>
+  Math.max(0, Math.max(0, maxCashBenefits) - Math.max(0, cashBenefitsReceived))
+
+export const canRollCashBenefit = ({
+  cashBenefitsReceived,
+  maxCashBenefits = CEPHEUS_SRD_MAX_CASH_BENEFITS
+}: {
+  cashBenefitsReceived: number
+  maxCashBenefits?: number
+}): boolean =>
+  deriveRemainingCashBenefits({ cashBenefitsReceived, maxCashBenefits }) > 0
 
 export const deriveCashBenefitRollModifier = ({
   retired = false,

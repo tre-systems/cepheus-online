@@ -960,7 +960,7 @@ describe('character creation flow', () => {
           characteristics: completeDraft().characteristics,
           completedTerms: [
             completedTerm,
-            { ...completedTerm, age: 26 },
+            { ...completedTerm, anagathics: true, age: 26 },
             { ...completedTerm, age: 30 }
           ],
           careerPlan: selectCharacterCreationCareerPlan('Merchant')
@@ -985,7 +985,7 @@ describe('character creation flow', () => {
     assert.deepEqual(deriveNextCharacterCreationAgingRoll(flow), {
       label: 'Roll aging',
       reason: 'Iona Vesh aging',
-      modifier: -4
+      modifier: -3
     })
     assert.equal(deriveNextCharacterCreationReenlistmentRoll(flow), null)
     assert.deepEqual(validateCurrentCharacterCreationStep(flow).errors, [
@@ -1218,7 +1218,7 @@ describe('character creation flow', () => {
         })),
         musteringBenefits: [
           {
-            career: 'Merchant',
+            career: 'Scout',
             kind: 'cash',
             roll: 1,
             value: '1000',
@@ -1242,7 +1242,7 @@ describe('character creation flow', () => {
       })
     }
 
-    assert.equal(remainingMusteringBenefits(flow.draft), 7)
+    assert.equal(remainingMusteringBenefits(flow.draft), 8)
     assert.equal(
       characterCreationMusteringBenefitRollModifier({
         draft: flow.draft,

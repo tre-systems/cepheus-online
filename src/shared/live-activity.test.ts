@@ -175,10 +175,188 @@ describe('live activity derivation', () => {
       type: 'characterCreation',
       characterId,
       transition: 'SELECT_CAREER',
-      details: 'Career selected; new career; draft resolved',
+      details: 'Career selected; new career; qualified',
       status: 'BASIC_TRAINING',
       creationComplete: false
     })
+  })
+
+  it('derives compact activity details for SRD character creation milestones', () => {
+    const activities = deriveLiveActivities([
+      envelope(1, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'SELECT_CAREER',
+          isNewCareer: true,
+          drafted: true
+        },
+        state: {
+          status: 'BASIC_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(2, {
+        type: 'CharacterCareerTermStarted',
+        characterId,
+        career: 'Navy',
+        drafted: true
+      }),
+      envelope(3, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'SURVIVAL_FAILED'
+        },
+        state: {
+          status: 'MISHAP',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(4, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'SURVIVAL_PASSED',
+          canCommission: true,
+          canAdvance: true
+        },
+        state: {
+          status: 'COMMISSION',
+          context: {
+            canCommission: true,
+            canAdvance: true
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(5, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'COMPLETE_COMMISSION'
+        },
+        state: {
+          status: 'ADVANCEMENT',
+          context: {
+            canCommission: true,
+            canAdvance: true
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(6, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'COMPLETE_ADVANCEMENT'
+        },
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: true,
+            canAdvance: true
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(7, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'COMPLETE_AGING'
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(8, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'REENLIST'
+        },
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(9, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'FINISH_MUSTERING'
+        },
+        state: {
+          status: 'ACTIVE',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(10, {
+        type: 'CharacterCreationFinalized',
+        characterId,
+        notes: '',
+        age: 38,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        skills: ['Admin-1'],
+        equipment: [],
+        credits: 5000
+      })
+    ])
+
+    assert.deepEqual(
+      activities.map((activity) =>
+        activity.type === 'characterCreation'
+          ? [activity.transition, activity.details]
+          : null
+      ),
+      [
+        [
+          'SELECT_CAREER',
+          'Career selected; new career; drafted after failed qualification'
+        ],
+        ['CAREER_TERM_STARTED', 'Started Navy term; drafted'],
+        ['SURVIVAL_FAILED', 'Survival failed'],
+        [
+          'SURVIVAL_PASSED',
+          'Survival passed; commission available; advancement available'
+        ],
+        ['COMPLETE_COMMISSION', 'Commission earned'],
+        ['COMPLETE_ADVANCEMENT', 'Advancement earned'],
+        ['COMPLETE_AGING', 'Aging resolved'],
+        ['REENLIST', 'Reenlisted for another term'],
+        ['FINISH_MUSTERING', 'Mustering out complete'],
+        ['FINALIZED', 'Finalized character; age 38; 1 skill; 0 equipment items']
+      ]
+    )
   })
 
   it('derives homeworld and background skill activity details', () => {

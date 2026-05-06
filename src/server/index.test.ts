@@ -144,6 +144,13 @@ const clientModules = new Map<
     }
   ],
   [
+    '/shared/character-creation/term-lifecycle.js',
+    {
+      markers: ['canCompleteCreation', 'canOfferNewCareer'],
+      imports: ['/shared/character-creation/career-rules']
+    }
+  ],
+  [
     '/shared/character-creation/aging.js',
     { markers: ['resolveAging', 'selectAgingEffect'] }
   ],
@@ -167,6 +174,7 @@ const clientModules = new Map<
         '/shared/character-creation/benefits.js',
         '/shared/character-creation/career-rules.js',
         '/shared/character-creation/cepheus-srd-ruleset.js',
+        '/shared/character-creation/term-lifecycle.js',
         '/shared/character-creation/skills.js',
         '/client/game-commands.js',
         '/client/app/bootstrap-flow.js'

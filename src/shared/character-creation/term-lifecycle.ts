@@ -1,6 +1,15 @@
 import type { CharacterCharacteristics } from '../state'
-import { evaluateCareerCheck } from './career-rules'
-import type { AnagathicsPayment, AnagathicsUse, CareerRank, CareerTerm, CareerTermStart, ReenlistmentResolution } from './types'
+import { evaluateCareerCheck, resolveDraftCareer } from './career-rules'
+import type {
+  AnagathicsPayment,
+  AnagathicsUse,
+  CareerRank,
+  CareerTerm,
+  CareerTermStart,
+  DraftCareerTermStart,
+  DraftTable,
+  ReenlistmentResolution
+} from './types'
 
 const cloneCareerTerm = (term: CareerTerm): CareerTerm => ({
   ...term,
@@ -59,6 +68,31 @@ export const startCareerTerm = ({
     careers: nextCareers,
     canEnterDraft: !drafted,
     failedToQualify: false
+  }
+}
+
+export const startDraftCareerTerm = ({
+  draftTable,
+  roll,
+  terms,
+  careers
+}: {
+  draftTable: DraftTable
+  roll: number
+  terms: readonly CareerTerm[]
+  careers: readonly CareerRank[]
+}): DraftCareerTermStart | null => {
+  const draft = resolveDraftCareer({ table: draftTable, roll })
+  if (!draft) return null
+
+  return {
+    ...startCareerTerm({
+      career: draft.career,
+      terms,
+      careers,
+      drafted: true
+    }),
+    draft
   }
 }
 

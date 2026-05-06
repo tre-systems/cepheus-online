@@ -96,6 +96,30 @@ describe('career creation legal action planner', () => {
 
     assert.deepEqual(
       deriveLegalCareerCreationActions(
+        createCareerCreationState('CAREER_SELECTION'),
+        { failedToQualify: true, canEnterDraft: true }
+      ),
+      [
+        {
+          key: 'selectCareer',
+          status: 'CAREER_SELECTION',
+          commandTypes: [
+            'StartCharacterCareerTerm',
+            'AdvanceCharacterCreation'
+          ],
+          failedQualificationOptions: [
+            { option: 'Drifter' },
+            {
+              option: 'Draft',
+              rollRequirement: { key: 'draft', dice: '1d6' }
+            }
+          ]
+        }
+      ]
+    )
+
+    assert.deepEqual(
+      deriveLegalCareerCreationActions(
         createCareerCreationState('MUSTERING_OUT'),
         { canContinueCareer: true }
       ),
@@ -126,6 +150,47 @@ describe('career creation legal action planner', () => {
         createCareerCreationState('ADVANCEMENT', { canAdvance: false })
       ),
       []
+    )
+  })
+
+  it('exposes only Drifter or Draft options after failed qualification', () => {
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(
+        projection('CAREER_SELECTION', {
+          failedToQualify: true,
+          canEnterDraft: true
+        })
+      ),
+      {
+        status: 'CAREER_SELECTION',
+        pendingDecisions: [],
+        legalActions: [
+          {
+            key: 'selectCareer',
+            status: 'CAREER_SELECTION',
+            commandTypes: [
+              'StartCharacterCareerTerm',
+              'AdvanceCharacterCreation'
+            ],
+            failedQualificationOptions: [
+              { option: 'Drifter' },
+              {
+                option: 'Draft',
+                rollRequirement: { key: 'draft', dice: '1d6' }
+              }
+            ]
+          }
+        ]
+      }
+    )
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(
+        projection('CAREER_SELECTION', {
+          failedToQualify: true,
+          canEnterDraft: false
+        })
+      ).legalActions[0]?.failedQualificationOptions,
+      [{ option: 'Drifter' }]
     )
   })
 

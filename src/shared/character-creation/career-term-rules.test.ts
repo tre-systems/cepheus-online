@@ -13,10 +13,13 @@ import {
   deriveFailedQualificationOptions,
   deriveSurvivalPromotionOptions,
   parseCareerCheck,
-  parseCareerRankReward
+  parseCareerRankReward,
+  resolveDraftCareer
 } from './career-rules'
 import { resolveCareerSkillTableRoll } from './skills'
 import {
+  canRollCashBenefit,
+  deriveRemainingCashBenefits,
   deriveCashBenefitRollModifier,
   deriveCareerBenefitCount,
   deriveMaterialBenefitRollModifier,
@@ -94,6 +97,31 @@ describe('SRD career term rules alignment', () => {
       'Scout',
       'Surface Defense'
     ])
+  })
+
+  it('resolves the SRD draft table from a 1d6 roll', () => {
+    assert.deepEqual(
+      CEPHEUS_SRD_RULESET.theDraft.map((_career, index) =>
+        resolveDraftCareer({
+          table: CEPHEUS_SRD_RULESET.theDraft,
+          roll: index + 1
+        })
+      ),
+      [
+        { roll: 1, career: 'Aerospace' },
+        { roll: 2, career: 'Marine' },
+        { roll: 3, career: 'Maritime Defense' },
+        { roll: 4, career: 'Navy' },
+        { roll: 5, career: 'Scout' },
+        { roll: 6, career: 'Surface Defense' }
+      ]
+    )
+
+    assert.deepEqual(
+      resolveDraftCareer({ table: CEPHEUS_SRD_RULESET.theDraft, roll: 9 }),
+      { roll: 6, career: 'Surface Defense' }
+    )
+    assert.equal(resolveDraftCareer({ table: [], roll: 1 }), null)
   })
 
   it('derives basic training from SRD service skill tables', () => {
@@ -238,6 +266,10 @@ describe('SRD career term rules alignment', () => {
     assert.equal(deriveCashBenefitRollModifier({ retired: true }), 1)
     assert.equal(deriveCashBenefitRollModifier({ hasGambling: true }), 1)
     assert.equal(deriveMaterialBenefitRollModifier({ currentRank: 5 }), 1)
+    assert.equal(deriveRemainingCashBenefits({ cashBenefitsReceived: 2 }), 1)
+    assert.equal(deriveRemainingCashBenefits({ cashBenefitsReceived: 3 }), 0)
+    assert.equal(canRollCashBenefit({ cashBenefitsReceived: 2 }), true)
+    assert.equal(canRollCashBenefit({ cashBenefitsReceived: 3 }), false)
 
     assert.deepEqual(
       resolveCareerBenefit({

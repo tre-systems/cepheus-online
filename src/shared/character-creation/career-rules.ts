@@ -6,6 +6,8 @@ import type {
   CareerCheck,
   CareerRankReward,
   CareerRollOutcome,
+  DraftResolution,
+  DraftTable,
   CareerSkillTable,
   FailedQualificationOption,
   SurvivalPromotionOptions
@@ -87,6 +89,20 @@ export const deriveFailedQualificationOptions = ({
   'Drifter',
   ...(canEnterDraft ? (['Draft'] as const) : [])
 ]
+
+export const resolveDraftCareer = ({
+  table,
+  roll
+}: {
+  table: DraftTable
+  roll: number
+}): DraftResolution | null => {
+  if (table.length === 0) return null
+
+  const clampedRoll = Math.max(1, Math.min(table.length, Math.trunc(roll)))
+  const career = table[clampedRoll - 1]
+  return career ? { roll: clampedRoll, career } : null
+}
 
 export const deriveBasicTrainingPlan = ({
   career,
