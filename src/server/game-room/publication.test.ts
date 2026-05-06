@@ -812,6 +812,269 @@ describe('room publication flow', () => {
     )
   })
 
+  it('publishes semantic commission resolution through seeded server dice', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-commission')
+    await appendEvents(
+      storage,
+      gameId,
+      actorId,
+      [
+        {
+          type: 'GameCreated',
+          slug: 'game-1',
+          name: 'Spinward Test',
+          ownerId: actorId
+        },
+        {
+          type: 'CharacterCreated',
+          characterId,
+          ownerId: actorId,
+          characterType: 'PLAYER',
+          name: 'Merchant'
+        },
+        {
+          type: 'CharacterCreationStarted',
+          characterId,
+          creation: {
+            state: {
+              status: 'COMMISSION',
+              context: {
+                canCommission: true,
+                canAdvance: false
+              }
+            },
+            terms: [
+              {
+                career: 'Merchant',
+                skills: [],
+                skillsAndTraining: ['Broker-0'],
+                benefits: [],
+                complete: false,
+                canReenlist: true,
+                completedBasicTraining: true,
+                musteringOut: false,
+                anagathics: false,
+                survival: 7
+              }
+            ],
+            careers: [{ name: 'Merchant', rank: 0 }],
+            canEnterDraft: true,
+            failedToQualify: false,
+            characteristicChanges: [],
+            creationComplete: false,
+            homeworld: null,
+            backgroundSkills: [],
+            pendingCascadeSkills: [],
+            history: []
+          }
+        }
+      ],
+      '2026-05-03T00:00:00.000Z'
+    )
+
+    const resolved = await publish(storage, {
+      type: 'ResolveCharacterCreationCommission',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 3
+    })
+
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    assert.equal(typeof (await storage.get(gameSeedKey(gameId))), 'number')
+    const storedEvents = await readEventStream(storage, gameId)
+    const diceEvent = storedEvents.at(-2)?.event
+    const storedEvent = storedEvents.at(-1)?.event
+    assert.equal(diceEvent?.type, 'DiceRolled')
+    assert.equal(storedEvent?.type, 'CharacterCreationCommissionResolved')
+    if (
+      diceEvent?.type !== 'DiceRolled' ||
+      storedEvent?.type !== 'CharacterCreationCommissionResolved'
+    ) {
+      return
+    }
+    assert.equal(diceEvent.expression, '2d6')
+    assert.equal(diceEvent.reason, 'Merchant commission')
+    assert.deepEqual(diceEvent.rolls, storedEvent.commission.rolls)
+    assert.equal(diceEvent.total, storedEvent.commission.total)
+    assert.equal(storedEvent.commission.expression, '2d6')
+    assert.equal(storedEvent.commission.target, 5)
+    assert.equal(storedEvent.commission.characteristic, 'int')
+    assert.equal(storedEvent.commission.rolls.length, 2)
+    assert.equal(storedEvent.commission.success, storedEvent.passed)
+
+    const diceActivity = resolved.value.liveActivities.find(
+      (candidate) => candidate.type === 'diceRoll'
+    )
+    const activity = resolved.value.liveActivities.find(
+      (candidate) => candidate.type === 'characterCreation'
+    )
+    assert.equal(diceActivity?.type, 'diceRoll')
+    assert.equal(activity?.type, 'characterCreation')
+    if (
+      diceActivity?.type !== 'diceRoll' ||
+      activity?.type !== 'characterCreation'
+    ) {
+      return
+    }
+    assert.deepEqual(diceActivity.rolls, storedEvent.commission.rolls)
+    assert.equal(diceActivity.total, storedEvent.commission.total)
+    assert.equal(
+      activity.transition,
+      storedEvent.passed ? 'COMMISSION_PASSED' : 'COMMISSION_FAILED'
+    )
+
+    const recovered = await getProjectedGameState(storage, gameId)
+    const history = recovered?.characters[characterId]?.creation?.history ?? []
+    const lastHistoryEvent = history.at(-1)
+    assert.equal(lastHistoryEvent?.type, 'COMPLETE_COMMISSION')
+    assert.deepEqual(
+      lastHistoryEvent?.type === 'COMPLETE_COMMISSION'
+        ? lastHistoryEvent.commission
+        : null,
+      storedEvent.commission
+    )
+    assert.equal(
+      recovered?.characters[characterId]?.creation?.state.status,
+      'SKILLS_TRAINING'
+    )
+  })
+
+  it('publishes semantic advancement resolution through seeded server dice', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-advancement')
+    await appendEvents(
+      storage,
+      gameId,
+      actorId,
+      [
+        {
+          type: 'GameCreated',
+          slug: 'game-1',
+          name: 'Spinward Test',
+          ownerId: actorId
+        },
+        {
+          type: 'CharacterCreated',
+          characterId,
+          ownerId: actorId,
+          characterType: 'PLAYER',
+          name: 'Merchant'
+        },
+        {
+          type: 'CharacterSheetUpdated',
+          characterId,
+          characteristics: {
+            edu: 15
+          }
+        },
+        {
+          type: 'CharacterCreationStarted',
+          characterId,
+          creation: {
+            state: {
+              status: 'ADVANCEMENT',
+              context: {
+                canCommission: false,
+                canAdvance: true
+              }
+            },
+            terms: [
+              {
+                career: 'Merchant',
+                skills: [],
+                skillsAndTraining: ['Broker-0'],
+                benefits: [],
+                complete: false,
+                canReenlist: true,
+                completedBasicTraining: true,
+                musteringOut: false,
+                anagathics: false,
+                survival: 7
+              }
+            ],
+            careers: [{ name: 'Merchant', rank: 1 }],
+            canEnterDraft: true,
+            failedToQualify: false,
+            characteristicChanges: [],
+            creationComplete: false,
+            homeworld: null,
+            backgroundSkills: [],
+            pendingCascadeSkills: [],
+            history: []
+          }
+        }
+      ],
+      '2026-05-03T00:00:00.000Z'
+    )
+
+    const resolved = await publish(storage, {
+      type: 'ResolveCharacterCreationAdvancement',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 4
+    })
+
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    const storedEvents = await readEventStream(storage, gameId)
+    const diceEvent = storedEvents.at(-2)?.event
+    const storedEvent = storedEvents.at(-1)?.event
+    assert.equal(diceEvent?.type, 'DiceRolled')
+    assert.equal(storedEvent?.type, 'CharacterCreationAdvancementResolved')
+    if (
+      diceEvent?.type !== 'DiceRolled' ||
+      storedEvent?.type !== 'CharacterCreationAdvancementResolved'
+    ) {
+      return
+    }
+    assert.equal(diceEvent.expression, '2d6')
+    assert.equal(diceEvent.reason, 'Merchant advancement')
+    assert.deepEqual(diceEvent.rolls, storedEvent.advancement.rolls)
+    assert.equal(diceEvent.total, storedEvent.advancement.total)
+    assert.equal(storedEvent.advancement.expression, '2d6')
+    assert.equal(storedEvent.advancement.target, 8)
+    assert.equal(storedEvent.advancement.characteristic, 'edu')
+    assert.equal(storedEvent.advancement.success, storedEvent.passed)
+    assert.deepEqual(storedEvent.rank, {
+      career: 'Merchant',
+      previousRank: 1,
+      newRank: 2,
+      title: 'Fourth Officer',
+      bonusSkill: null
+    })
+
+    const diceActivity = resolved.value.liveActivities.find(
+      (candidate) => candidate.type === 'diceRoll'
+    )
+    const activity = resolved.value.liveActivities.find(
+      (candidate) => candidate.type === 'characterCreation'
+    )
+    assert.equal(diceActivity?.type, 'diceRoll')
+    assert.equal(activity?.type, 'characterCreation')
+    if (
+      diceActivity?.type !== 'diceRoll' ||
+      activity?.type !== 'characterCreation'
+    ) {
+      return
+    }
+    assert.deepEqual(diceActivity.rolls, storedEvent.advancement.rolls)
+    assert.equal(diceActivity.total, storedEvent.advancement.total)
+    assert.equal(activity.transition, 'ADVANCEMENT_PASSED')
+
+    const recovered = await getProjectedGameState(storage, gameId)
+    const creation = recovered?.characters[characterId]?.creation
+    assert.equal(creation?.history?.at(-1)?.type, 'COMPLETE_ADVANCEMENT')
+    assert.equal(
+      creation?.terms.at(-1)?.advancement,
+      storedEvent.advancement.total
+    )
+    assert.deepEqual(creation?.careers, [{ name: 'Merchant', rank: 2 }])
+  })
+
   it('persists and replays server-backed homeworld/background decisions', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-background')

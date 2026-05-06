@@ -12,6 +12,7 @@ import {
   hasBackgroundHomeworld,
   isCascadeCareerSkill,
   normalizeCareerSkill,
+  parseCareerRankReward,
   resolveCascadeCareerSkill,
   transitionCareerCreationState
 } from '../../shared/characterCreation'
@@ -479,6 +480,70 @@ const validateSurvivalResolution = (
   return ok(character.creation)
 }
 
+const validateCommissionResolution = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'COMMISSION') {
+    return err(
+      commandError(
+        'invalid_command',
+        `COMMISSION is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('rollCommission')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'COMMISSION is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
+const validateAdvancementResolution = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'ADVANCEMENT') {
+    return err(
+      commandError(
+        'invalid_command',
+        `ADVANCEMENT is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('rollAdvancement')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'ADVANCEMENT is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
 const currentCareerRank = (
   creation: CharacterCreationProjection,
   career: string
@@ -487,6 +552,16 @@ const currentCareerRank = (
 type CharacterCreationSurvivalResolvedEvent = Extract<
   GameEvent,
   { type: 'CharacterCreationSurvivalResolved' }
+>
+
+type CharacterCreationCommissionResolvedEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationCommissionResolved' }
+>
+
+type CharacterCreationAdvancementResolvedEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationAdvancementResolved' }
 >
 
 const resolveSurvivalCreationEvent = ({
@@ -549,6 +624,131 @@ const resolveSurvivalCreationEvent = ({
     },
     canCommission: promotionOptions.canCommission,
     canAdvance: promotionOptions.canAdvance
+  })
+}
+
+const resolveCommissionCreationEvent = ({
+  character,
+  creation,
+  roll
+}: {
+  character: CharacterState
+  creation: CharacterCreationProjection
+  roll: { expression: '2d6'; rolls: number[]; total: number }
+}): Result<
+  Pick<CharacterCreationCommissionResolvedEvent, 'passed' | 'commission'>,
+  CommandError
+> => {
+  const career = creation.terms.at(-1)?.career
+  if (!career) {
+    return err(
+      commandError('missing_entity', 'No active career term is available')
+    )
+  }
+
+  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  if (!basics) {
+    return err(
+      commandError('invalid_command', `Career ${career} is not supported`)
+    )
+  }
+
+  const outcome = evaluateCareerCheck({
+    check: basics.Commission,
+    characteristics: character.characteristics,
+    roll: roll.total
+  })
+  if (!outcome) {
+    return err(
+      commandError('invalid_command', `Career ${career} has no commission check`)
+    )
+  }
+
+  return ok({
+    passed: outcome.success,
+    commission: {
+      expression: roll.expression,
+      rolls: [...roll.rolls],
+      total: roll.total,
+      characteristic: outcome.check.characteristic,
+      modifier: outcome.modifier,
+      target: outcome.check.target,
+      success: outcome.success
+    }
+  })
+}
+
+const resolveAdvancementCreationEvent = ({
+  character,
+  creation,
+  roll
+}: {
+  character: CharacterState
+  creation: CharacterCreationProjection
+  roll: { expression: '2d6'; rolls: number[]; total: number }
+}): Result<
+  Pick<
+    CharacterCreationAdvancementResolvedEvent,
+    'passed' | 'advancement' | 'rank'
+  >,
+  CommandError
+> => {
+  const career = creation.terms.at(-1)?.career
+  if (!career) {
+    return err(
+      commandError('missing_entity', 'No active career term is available')
+    )
+  }
+
+  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  if (!basics) {
+    return err(
+      commandError('invalid_command', `Career ${career} is not supported`)
+    )
+  }
+
+  const outcome = evaluateCareerCheck({
+    check: basics.Advancement,
+    characteristics: character.characteristics,
+    roll: roll.total
+  })
+  if (!outcome) {
+    return err(
+      commandError(
+        'invalid_command',
+        `Career ${career} has no advancement check`
+      )
+    )
+  }
+
+  const previousRank = currentCareerRank(creation, career)
+  const newRank = outcome.success ? Math.min(previousRank + 1, 6) : previousRank
+  const reward = parseCareerRankReward({
+    ranksAndSkills: CEPHEUS_SRD_RULESET.ranksAndSkills,
+    career,
+    rank: newRank
+  })
+
+  return ok({
+    passed: outcome.success,
+    advancement: {
+      expression: roll.expression,
+      rolls: [...roll.rolls],
+      total: roll.total,
+      characteristic: outcome.check.characteristic,
+      modifier: outcome.modifier,
+      target: outcome.check.target,
+      success: outcome.success
+    },
+    rank: outcome.success
+      ? {
+          career,
+          previousRank,
+          newRank,
+          title: reward.title,
+          bonusSkill: reward.bonusSkill
+        }
+      : null
   })
 }
 
@@ -861,6 +1061,115 @@ export const deriveEventsForCommand = (
         },
         {
           type: 'CharacterCreationSurvivalResolved',
+          characterId: command.characterId,
+          ...resolved.value,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationCommission': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateCommissionResolution(character)
+      if (!creation.ok) return creation
+
+      const rolled = rollDiceExpression(
+        '2d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const resolved = resolveCommissionCreationEvent({
+        character,
+        creation: creation.value,
+        roll: {
+          expression: '2d6',
+          rolls: rolled.value.rolls,
+          total: rolled.value.total
+        }
+      })
+      if (!resolved.ok) return resolved
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'COMPLETE_COMMISSION',
+        commission: resolved.value.commission
+      })
+
+      const career = creation.value.terms.at(-1)?.career ?? 'Career'
+
+      return ok([
+        {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: `${career} commission`,
+          rolls: [...resolved.value.commission.rolls],
+          total: resolved.value.commission.total
+        },
+        {
+          type: 'CharacterCreationCommissionResolved',
+          characterId: command.characterId,
+          ...resolved.value,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationAdvancement': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateAdvancementResolution(character)
+      if (!creation.ok) return creation
+
+      const rolled = rollDiceExpression(
+        '2d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const resolved = resolveAdvancementCreationEvent({
+        character,
+        creation: creation.value,
+        roll: {
+          expression: '2d6',
+          rolls: rolled.value.rolls,
+          total: rolled.value.total
+        }
+      })
+      if (!resolved.ok) return resolved
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'COMPLETE_ADVANCEMENT',
+        advancement: resolved.value.advancement,
+        rank: resolved.value.rank
+      })
+
+      const career = creation.value.terms.at(-1)?.career ?? 'Career'
+
+      return ok([
+        {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: `${career} advancement`,
+          rolls: [...resolved.value.advancement.rolls],
+          total: resolved.value.advancement.total
+        },
+        {
+          type: 'CharacterCreationAdvancementResolved',
           characterId: command.characterId,
           ...resolved.value,
           state: nextState,

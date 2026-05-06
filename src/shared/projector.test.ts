@@ -482,6 +482,206 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
+  it('projects semantic commission resolution into history', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Merchant'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'COMMISSION',
+            context: {
+              canCommission: true,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Merchant',
+              skills: [],
+              skillsAndTraining: ['Broker-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 7
+            }
+          ],
+          careers: [{ name: 'Merchant', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationCommissionResolved',
+        characterId,
+        passed: true,
+        commission: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'int',
+          modifier: 0,
+          target: 5,
+          success: true
+        },
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: true,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'SKILLS_TRAINING')
+    assert.deepEqual(creation?.history, [
+      {
+        type: 'COMPLETE_COMMISSION',
+        commission: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'int',
+          modifier: 0,
+          target: 5,
+          success: true
+        }
+      }
+    ])
+    assert.equal(state?.eventSeq, 4)
+  })
+
+  it('projects semantic advancement resolution into history, term, and career rank', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Merchant'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'ADVANCEMENT',
+            context: {
+              canCommission: false,
+              canAdvance: true
+            }
+          },
+          terms: [
+            {
+              career: 'Merchant',
+              skills: [],
+              skillsAndTraining: ['Broker-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 7
+            }
+          ],
+          careers: [{ name: 'Merchant', rank: 1 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationAdvancementResolved',
+        characterId,
+        passed: true,
+        advancement: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'edu',
+          modifier: 0,
+          target: 8,
+          success: true
+        },
+        rank: {
+          career: 'Merchant',
+          previousRank: 1,
+          newRank: 2,
+          title: 'Fourth Officer',
+          bonusSkill: null
+        },
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: true
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'SKILLS_TRAINING')
+    assert.equal(creation?.terms[0]?.advancement, 8)
+    assert.deepEqual(creation?.careers, [{ name: 'Merchant', rank: 2 }])
+    assert.deepEqual(creation?.history, [
+      {
+        type: 'COMPLETE_ADVANCEMENT',
+        advancement: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'edu',
+          modifier: 0,
+          target: 8,
+          success: true
+        },
+        rank: {
+          career: 'Merchant',
+          previousRank: 1,
+          newRank: 2,
+          title: 'Fourth Officer',
+          bonusSkill: null
+        }
+      }
+    ])
+    assert.equal(state?.eventSeq, 4)
+  })
+
   it('projects accepted career facts from semantic term start events', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

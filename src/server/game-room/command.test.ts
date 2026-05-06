@@ -567,6 +567,185 @@ describe('deriveEventsForCommand error categories', () => {
     )
   })
 
+  it('emits a semantic commission event with server-derived roll facts', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationCommission',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('COMMISSION', {
+        state: createCareerCreationState('COMMISSION', {
+          canCommission: true,
+          canAdvance: false
+        }),
+        terms: [
+          {
+            career: 'Merchant',
+            skills: [],
+            skillsAndTraining: ['Broker-0'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 7
+          }
+        ],
+        careers: [{ name: 'Merchant', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Merchant commission',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationCommissionResolved',
+        characterId,
+        passed: true,
+        commission: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'int',
+          modifier: 0,
+          target: 5,
+          success: true
+        },
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: true,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks semantic commission resolution outside commission', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationCommission',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('SURVIVAL')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMMISSION is not valid from SURVIVAL'
+    )
+  })
+
+  it('emits a semantic advancement event with server-derived roll and rank facts', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAdvancement',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('ADVANCEMENT', {
+        state: createCareerCreationState('ADVANCEMENT', {
+          canCommission: false,
+          canAdvance: true
+        }),
+        terms: [
+          {
+            career: 'Merchant',
+            skills: [],
+            skillsAndTraining: ['Broker-0'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 7
+          }
+        ],
+        careers: [{ name: 'Merchant', rank: 1 }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Merchant advancement',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationAdvancementResolved',
+        characterId,
+        passed: true,
+        advancement: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'edu',
+          modifier: 0,
+          target: 8,
+          success: true
+        },
+        rank: {
+          career: 'Merchant',
+          previousRank: 1,
+          newRank: 2,
+          title: 'Fourth Officer',
+          bonusSkill: null
+        },
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: true
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks semantic advancement resolution outside advancement', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAdvancement',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('SURVIVAL')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'ADVANCEMENT is not valid from SURVIVAL'
+    )
+  })
+
   it('blocks semantic homeworld completion while background choices are unresolved', () => {
     const result = runCommand(
       {

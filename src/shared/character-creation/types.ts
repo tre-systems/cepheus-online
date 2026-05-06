@@ -30,6 +30,14 @@ export interface CareerCreationCheckFact extends CareerCreationDiceFact {
   success: boolean
 }
 
+export interface CareerCreationRankFact {
+  career: string
+  previousRank: number
+  newRank: number
+  title: string
+  bonusSkill: string | null
+}
+
 export interface CareerCreationAgingFact {
   roll: CareerCreationDiceFact
   modifier: number
@@ -68,7 +76,11 @@ export type CareerCreationEvent =
   | { type: 'SURVIVAL_FAILED'; survival?: CareerCreationCheckFact }
   | { type: 'COMPLETE_COMMISSION'; commission?: CareerCreationCheckFact }
   | { type: 'SKIP_COMMISSION' }
-  | { type: 'COMPLETE_ADVANCEMENT'; advancement?: CareerCreationCheckFact }
+  | {
+      type: 'COMPLETE_ADVANCEMENT'
+      advancement?: CareerCreationCheckFact
+      rank?: CareerCreationRankFact | null
+    }
   | { type: 'SKIP_ADVANCEMENT' }
   | { type: 'COMPLETE_SKILLS' }
   | { type: 'COMPLETE_AGING'; aging?: CareerCreationAgingFact }
@@ -120,6 +132,8 @@ export type CareerCreationServerCommandType =
   | 'AdvanceCharacterCreation'
   | 'CompleteCharacterCreationHomeworld'
   | 'ResolveCharacterCreationSurvival'
+  | 'ResolveCharacterCreationCommission'
+  | 'ResolveCharacterCreationAdvancement'
   | 'StartCharacterCareerTerm'
   | 'FinalizeCharacterCreation'
 
@@ -410,6 +424,7 @@ export interface CareerTerm {
   anagathicsCost?: number
   draft?: 1
   survival?: number
+  advancement?: number
   reEnlistment?: number
 }
 

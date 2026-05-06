@@ -41,8 +41,11 @@ export type CharacterCreationCommand = Extract<
       | 'ResolveCharacterCreationCascadeSkill'
       | 'FinalizeCharacterCreation'
       | 'StartCharacterCareerTerm'
+      | 'CompleteCharacterCreationHomeworld'
       | 'CompleteCharacterCreationBasicTraining'
       | 'ResolveCharacterCreationSurvival'
+      | 'ResolveCharacterCreationCommission'
+      | 'ResolveCharacterCreationAdvancement'
       | 'CreatePiece'
   }
 >
@@ -68,6 +71,8 @@ export const appCommandRouteByType = {
   StartCharacterCareerTerm: 'characterCreation',
   CompleteCharacterCreationBasicTraining: 'characterCreation',
   ResolveCharacterCreationSurvival: 'characterCreation',
+  ResolveCharacterCreationCommission: 'characterCreation',
+  ResolveCharacterCreationAdvancement: 'characterCreation',
   CreateBoard: 'board',
   SelectBoard: 'board',
   SetDoorOpen: 'door',

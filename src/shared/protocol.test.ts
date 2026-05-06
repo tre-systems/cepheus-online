@@ -503,6 +503,11 @@ describe('protocol validation', () => {
         selection: 'Slug Rifle'
       },
       {
+        type: 'ResolveCharacterCreationCommission',
+        ...base,
+        characterId: 'char-1'
+      },
+      {
         type: 'FinalizeCharacterCreation',
         ...base,
         characterId: 'char-1',
@@ -725,6 +730,61 @@ describe('protocol validation', () => {
     if (result.value.type !== 'ResolveCharacterCreationSurvival') return
     assert.equal(result.value.characterId, 'char-1')
     assert.equal(result.value.expectedSeq, 7)
+  })
+
+  it('accepts semantic commission resolution commands', () => {
+    const result = decodeCommand({
+      type: 'ResolveCharacterCreationCommission',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      expectedSeq: 7
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'ResolveCharacterCreationCommission')
+    if (result.value.type !== 'ResolveCharacterCreationCommission') return
+    assert.equal(result.value.characterId, 'char-1')
+    assert.equal(result.value.expectedSeq, 7)
+  })
+
+  it('preserves generic commission roll facts for legacy creation commands', () => {
+    const result = decodeCommand({
+      type: 'AdvanceCharacterCreation',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      creationEvent: {
+        type: 'COMPLETE_COMMISSION',
+        commission: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'int',
+          modifier: 0,
+          target: 5,
+          success: true
+        }
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'AdvanceCharacterCreation')
+    if (result.value.type !== 'AdvanceCharacterCreation') return
+    assert.deepEqual(result.value.creationEvent, {
+      type: 'COMPLETE_COMMISSION',
+      commission: {
+        expression: '2d6',
+        rolls: [4, 4],
+        total: 8,
+        characteristic: 'int',
+        modifier: 0,
+        target: 5,
+        success: true
+      }
+    })
   })
 
   it('accepts semantic career term start commands', () => {

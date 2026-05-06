@@ -2,6 +2,7 @@ import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
 import type {
   CareerCreationCheckFact,
   CareerCreationEvent,
+  CareerCreationRankFact,
   FailedQualificationOption
 } from './characterCreation'
 import { err, ok, type Result } from './result'
@@ -578,6 +579,45 @@ const parseOptionalCareerCreationCheckFact = (
   return parseCareerCreationCheckFact(raw, label)
 }
 
+const parseCareerCreationRankFact = (
+  raw: unknown,
+  label: string
+): Result<CareerCreationRankFact, CommandError> => {
+  if (!isObject(raw)) {
+    return err(invalidCommand(`${label} must be an object`))
+  }
+
+  const career = parseString(raw.career, `${label}.career`)
+  if (!career.ok) return career
+  const previousRank = parseNumber(raw.previousRank, `${label}.previousRank`)
+  if (!previousRank.ok) return previousRank
+  const newRank = parseNumber(raw.newRank, `${label}.newRank`)
+  if (!newRank.ok) return newRank
+  if (!isString(raw.title)) {
+    return err(invalidCommand(`${label}.title must be a string`))
+  }
+  const bonusSkill = parseOptionalString(raw.bonusSkill, `${label}.bonusSkill`)
+  if (!bonusSkill.ok) return bonusSkill
+
+  return ok({
+    career: career.value,
+    previousRank: previousRank.value,
+    newRank: newRank.value,
+    title: raw.title,
+    bonusSkill: bonusSkill.value
+  })
+}
+
+const parseOptionalCareerCreationRankFact = (
+  raw: unknown,
+  label: string
+): Result<CareerCreationRankFact | null | undefined, CommandError> => {
+  if (raw === undefined) return ok(undefined)
+  if (raw === null) return ok(null)
+
+  return parseCareerCreationRankFact(raw, label)
+}
+
 const failedQualificationOptions = [
   'Drifter',
   'Draft'
@@ -631,9 +671,7 @@ const parseCareerCreationEvent = (
     case 'COMPLETE_HOMEWORLD':
     case 'COMPLETE_BASIC_TRAINING':
     case 'SURVIVAL_FAILED':
-    case 'COMPLETE_COMMISSION':
     case 'SKIP_COMMISSION':
-    case 'COMPLETE_ADVANCEMENT':
     case 'SKIP_ADVANCEMENT':
     case 'COMPLETE_SKILLS':
     case 'COMPLETE_AGING':
@@ -648,6 +686,21 @@ const parseCareerCreationEvent = (
     case 'MISHAP_RESOLVED':
     case 'RESET':
       return ok({ type: raw.type })
+
+    case 'COMPLETE_COMMISSION': {
+      const commission = parseOptionalCareerCreationCheckFact(
+        raw.commission,
+        'commission'
+      )
+      if (!commission.ok) return commission
+
+      return ok({
+        type: 'COMPLETE_COMMISSION',
+        ...(commission.value === undefined
+          ? {}
+          : { commission: commission.value })
+      })
+    }
 
     case 'SELECT_CAREER': {
       const isNewCareer = parseBoolean(raw.isNewCareer, 'isNewCareer')
@@ -696,6 +749,24 @@ const parseCareerCreationEvent = (
         type: 'SURVIVAL_PASSED',
         canCommission: canCommission.value,
         canAdvance: canAdvance.value
+      })
+    }
+
+    case 'COMPLETE_ADVANCEMENT': {
+      const advancement = parseOptionalCareerCreationCheckFact(
+        raw.advancement,
+        'advancement'
+      )
+      if (!advancement.ok) return advancement
+      const rank = parseOptionalCareerCreationRankFact(raw.rank, 'rank')
+      if (!rank.ok) return rank
+
+      return ok({
+        type: 'COMPLETE_ADVANCEMENT',
+        ...(advancement.value === undefined
+          ? {}
+          : { advancement: advancement.value }),
+        ...(rank.value === undefined ? {} : { rank: rank.value })
       })
     }
 
@@ -839,6 +910,28 @@ export const decodeCommand = (
 
       return ok({
         type: 'ResolveCharacterCreationSurvival',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'ResolveCharacterCreationCommission': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'ResolveCharacterCreationCommission',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'ResolveCharacterCreationAdvancement': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'ResolveCharacterCreationAdvancement',
         ...base.value,
         characterId: characterId.value
       })

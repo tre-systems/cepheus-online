@@ -92,6 +92,8 @@ export type Command =
     }
   | CharacterCreationBasicTrainingCommand
   | CharacterCreationSurvivalCommand
+  | CharacterCreationCommissionCommand
+  | CharacterCreationAdvancementCommand
   | {
       type: 'CreateBoard'
       gameId: GameId
@@ -195,9 +197,27 @@ export type CharacterCreationSurvivalCommand = {
   characterId: CharacterId
 }
 
+export type CharacterCreationCommissionCommand = {
+  type: 'ResolveCharacterCreationCommission'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
+export type CharacterCreationAdvancementCommand = {
+  type: 'ResolveCharacterCreationAdvancement'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
 export type SemanticCommand =
   | CharacterCreationBasicTrainingCommand
   | CharacterCreationHomeworldCommand
   | CharacterCreationSurvivalCommand
+  | CharacterCreationCommissionCommand
+  | CharacterCreationAdvancementCommand
 
 export type GameCommand = Command | CharacterCreationHomeworldCommand

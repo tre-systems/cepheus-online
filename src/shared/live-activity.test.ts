@@ -226,6 +226,48 @@ describe('live activity derivation', () => {
     })
   })
 
+  it('derives compact semantic commission activity', () => {
+    const activity = deriveLiveActivity(
+      envelope(7, {
+        type: 'CharacterCreationCommissionResolved',
+        characterId,
+        passed: true,
+        commission: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'int',
+          modifier: 0,
+          target: 5,
+          success: true
+        },
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: true,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    )
+
+    assert.deepEqual(activity, {
+      id: asEventId('game-1:7'),
+      eventId: asEventId('game-1:7'),
+      gameId,
+      seq: 7,
+      actorId,
+      createdAt: '2026-05-03T00:00:07.000Z',
+      type: 'characterCreation',
+      characterId,
+      transition: 'COMMISSION_PASSED',
+      details: 'Commission earned; total 8; target 5+; DM 0',
+      status: 'SKILLS_TRAINING',
+      creationComplete: false
+    })
+  })
+
   it('derives compact activity details for SRD character creation milestones', () => {
     const activities = deriveLiveActivities([
       envelope(1, {

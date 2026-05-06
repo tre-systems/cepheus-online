@@ -192,6 +192,64 @@ const survivalDetails = ({
     .filter(Boolean)
     .join('; ')
 
+const commissionDetails = ({
+  passed,
+  total,
+  target,
+  modifier
+}: {
+  passed: boolean
+  total: number
+  target: number
+  modifier: number
+}): string =>
+  [
+    passed ? 'Commission earned' : 'Commission not earned',
+    `total ${total}`,
+    `target ${target}+`,
+    `DM ${signedLabel(modifier)}`
+  ].join('; ')
+
+const rankDetails = (
+  rank:
+    | Extract<CareerCreationEvent, { type: 'COMPLETE_ADVANCEMENT' }>['rank']
+    | null
+    | undefined
+): string | null => {
+  if (!rank) return null
+
+  return [
+    `rank ${rank.previousRank}->${rank.newRank}`,
+    rank.title ? `title ${rank.title}` : null,
+    rank.bonusSkill ? `bonus ${rank.bonusSkill}` : null
+  ]
+    .filter(Boolean)
+    .join('; ')
+}
+
+const advancementDetails = ({
+  passed,
+  total,
+  target,
+  modifier,
+  rank
+}: {
+  passed: boolean
+  total: number
+  target: number
+  modifier: number
+  rank?: Extract<CareerCreationEvent, { type: 'COMPLETE_ADVANCEMENT' }>['rank']
+}): string =>
+  [
+    passed ? 'Advancement passed' : 'Advancement failed',
+    `total ${total}`,
+    `target ${target}+`,
+    `DM ${signedLabel(modifier)}`,
+    rankDetails(rank)
+  ]
+    .filter(Boolean)
+    .join('; ')
+
 const describeCareerCreationEvent = (
   event: CareerCreationEvent
 ): string | null => {
@@ -221,7 +279,15 @@ const describeCareerCreationEvent = (
     case 'SKIP_COMMISSION':
       return 'Commission skipped'
     case 'COMPLETE_ADVANCEMENT':
-      return 'Advancement earned'
+      return event.advancement
+        ? advancementDetails({
+            passed: event.advancement.success,
+            total: event.advancement.total,
+            target: event.advancement.target,
+            modifier: event.advancement.modifier,
+            rank: event.rank
+          })
+        : 'Advancement earned'
     case 'SKIP_ADVANCEMENT':
       return 'Advancement skipped'
     case 'COMPLETE_SKILLS':
@@ -404,6 +470,47 @@ export const deriveLiveActivity = (
             modifier: event.survival.modifier,
             canCommission: event.canCommission,
             canAdvance: event.canAdvance
+          })
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationCommissionResolved':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: event.passed
+          ? 'COMMISSION_PASSED'
+          : 'COMMISSION_FAILED',
+        ...compactCharacterCreationDetails(
+          commissionDetails({
+            passed: event.passed,
+            total: event.commission.total,
+            target: event.commission.target,
+            modifier: event.commission.modifier
+          })
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationAdvancementResolved':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: event.passed
+          ? 'ADVANCEMENT_PASSED'
+          : 'ADVANCEMENT_FAILED',
+        ...compactCharacterCreationDetails(
+          advancementDetails({
+            passed: event.passed,
+            total: event.advancement.total,
+            target: event.advancement.target,
+            modifier: event.advancement.modifier,
+            rank: event.rank
           })
         ),
         status: event.state.status,

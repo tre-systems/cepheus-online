@@ -128,6 +128,38 @@
     "expectedSeq": 23
   },
   {
+    "name": "character creation commission resolution command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-resolve-commission",
+      "command": {
+        "type": "ResolveCharacterCreationCommission",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 24,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "ResolveCharacterCreationCommission",
+    "expectedSeq": 24
+  },
+  {
+    "name": "character creation advancement resolution command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-resolve-advancement",
+      "command": {
+        "type": "ResolveCharacterCreationAdvancement",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 25,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "ResolveCharacterCreationAdvancement",
+    "expectedSeq": 25
+  },
+  {
     "name": "character creation background skill command",
     "message": {
       "type": "command",

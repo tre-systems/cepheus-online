@@ -480,19 +480,22 @@ Purpose: complete the Cepheus character creation mini-game end to end.
 
 ### Slice 2A: SRD Career Term Loop
 
-Status: partially done in pure helpers. The shared state machine follows the
-SRD order through survival, commission, advancement, skills, aging,
+Status: in progress. The survival step now has semantic server command/event
+coverage with roll facts and projection support. The shared state machine
+follows the SRD order through commission, advancement, skills, aging,
 reenlistment, mustering, and finalization. SRD data alignment tests cover career
-tables, draft, rank rewards, skill tables, and benefits. The server still needs
-semantic term events and projection fields for each fact.
+tables, draft, rank rewards, skill tables, and benefits. The next priority is to
+continue the term loop with semantic commission and advancement facts before
+widening into term skills.
 
 Tasks:
 
 - Promote term state into server projection: career, rank, title, drafted flag,
   basic training, survival, commission, advancement, term skills, reenlistment,
   and completion.
-- Add semantic survival events for pass/fail, including roll facts and the
-  derived commission/advancement gates.
+- Keep semantic survival pass/fail events as the pattern for the rest of the
+  term loop: command intent, server-derived roll facts, projection-owned gates,
+  and replay tests.
 - Add semantic commission events, including skipped commission, roll result,
   rank/title changes, and rank bonus skills.
 - Add semantic advancement events, including skipped advancement, roll result,

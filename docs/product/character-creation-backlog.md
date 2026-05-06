@@ -135,8 +135,9 @@ tests before it is considered done.
   choose-one basic training decisions still need richer projected state and UI
   affordances.
 - [~] Roll survival from `careerBasics`; on failure, enter mishap/death or legal
-  exit handling. Current legal action: `rollSurvival`. Gap: mishap/death
-  outcome tables and roll facts are not fully projected.
+  exit handling. Current legal action: `rollSurvival`. Semantic survival
+  command/event and roll facts are server-backed. Gap: mishap/death outcome
+  tables remain unresolved.
 - [~] Resolve commission and advancement from `careerBasics` and
   `ranksAndSkills`, including rank titles and bonus skills. Current legal
   actions: `rollCommission`, `skipCommission`, `rollAdvancement`,
@@ -372,6 +373,10 @@ Acceptance:
 
 Goal: implement the main Cepheus term loop end to end.
 
+Status: in progress. Semantic survival is the first server-backed term-loop
+step and should be the architecture pattern for the remaining steps: intent
+commands, fact events, projection-owned gates, and replay tests.
+
 Tasks:
 
 - Promote the current term model into a server-backed projection with:
@@ -391,7 +396,8 @@ Tasks:
   - later first term in a new career grants one selected service skill at level
     0
   - returning to the same career does not repeat basic training
-- Implement survival rolls and survival failure outcomes.
+- Keep survival rolls server-backed and use them as the template for remaining
+  roll-gated term steps.
 - Implement mishap and death handling from the ruleset.
 - Implement commission eligibility, commission roll, commission rank, rank
   title, and any commission skill reward.
@@ -409,6 +415,10 @@ Acceptance:
 - A normal successful term can be completed using only visible legal actions.
 - A failed survival path produces a valid mishap or death outcome.
 - Term history matches the event stream after refresh.
+
+Next priority: implement commission and advancement as semantic term facts, then
+term skill table selection and rolls. Keep mishap/death as the first hard branch
+after the normal pass path is authoritative.
 
 ## Milestone 5: Aging, Anagathics, And Reenlistment
 
@@ -523,22 +533,19 @@ Acceptance:
 
 ## Suggested Next Slice
 
-Build the state-machine and live-roll spine next, then Milestone 2: homeworld
-and background skills with cascade resolution.
+Continue Milestone 4 with commission and advancement, then term skill table
+selection and rolls. Use the semantic survival implementation as the template
+for command validation, roll facts, projection gates, live activity, and replay
+tests.
 
 Reason:
 
-- It removes the biggest source of future bugs: rules progress split between
-  client wizard state and server projection state.
-- It gives every later creation step a consistent place to define legal
-  actions, pending decisions, roll facts, and spectator activity.
-- It is the next missing Cepheus procedure step before career selection.
-- It matches the screenshots and legacy UX the user already likes.
-- It exercises the right architecture: command validation, semantic events,
-  projection recovery, pending selection state, live dice, and focused mobile
-  UI.
-- It is smaller and safer than trying to implement the full multi-term loop in
-  one slice.
+- Survival established the right architecture: command validation, semantic
+  events, projection recovery, roll facts, live dice, and focused mobile UI.
+- Commission and advancement are the next normal term-loop gates before term
+  skills, aging, and reenlistment.
+- Keeping the pass path authoritative first reduces ambiguity before adding the
+  mishap/death branch.
 
 Expected file areas:
 

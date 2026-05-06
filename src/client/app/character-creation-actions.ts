@@ -114,21 +114,12 @@ const actionsForLegalKey = (
       ]
     case 'rollSurvival':
       return [
-        action(
-          'survival-passed',
-          'Pass survival',
-          advanceCommand(identity, character, {
-            type: 'SURVIVAL_PASSED',
-            canCommission: false,
-            canAdvance: true
-          })
-        ),
-        action(
-          'survival-failed',
-          'Fail survival',
-          advanceCommand(identity, character, { type: 'SURVIVAL_FAILED' }),
-          'secondary'
-        )
+        action('roll-survival', 'Roll survival', {
+          type: 'ResolveCharacterCreationSurvival',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
       ]
     case 'resolveMishap':
       return [

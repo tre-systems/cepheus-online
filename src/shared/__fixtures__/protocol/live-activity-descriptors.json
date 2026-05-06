@@ -136,6 +136,93 @@
     "maxSerializedBytes": 450
   },
   {
+    "name": "semantic commission activity",
+    "event": {
+      "type": "CharacterCreationCommissionResolved",
+      "characterId": "char-1",
+      "passed": true,
+      "commission": {
+        "expression": "2d6",
+        "rolls": [4, 4],
+        "total": 8,
+        "characteristic": "int",
+        "modifier": 0,
+        "target": 5,
+        "success": true
+      },
+      "state": {
+        "status": "SKILLS_TRAINING",
+        "context": {
+          "canCommission": true,
+          "canAdvance": false
+        }
+      },
+      "creationComplete": false
+    },
+    "activity": {
+      "id": "game-1:7",
+      "eventId": "game-1:7",
+      "gameId": "game-1",
+      "seq": 7,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:07.000Z",
+      "type": "characterCreation",
+      "characterId": "char-1",
+      "transition": "COMMISSION_PASSED",
+      "details": "Commission earned; total 8; target 5+; DM 0",
+      "status": "SKILLS_TRAINING",
+      "creationComplete": false
+    },
+    "maxSerializedBytes": 420
+  },
+  {
+    "name": "semantic advancement activity",
+    "event": {
+      "type": "CharacterCreationAdvancementResolved",
+      "characterId": "char-1",
+      "passed": true,
+      "advancement": {
+        "expression": "2d6",
+        "rolls": [4, 4],
+        "total": 8,
+        "characteristic": "edu",
+        "modifier": 0,
+        "target": 8,
+        "success": true
+      },
+      "rank": {
+        "career": "Merchant",
+        "previousRank": 1,
+        "newRank": 2,
+        "title": "Fourth Officer",
+        "bonusSkill": null
+      },
+      "state": {
+        "status": "SKILLS_TRAINING",
+        "context": {
+          "canCommission": false,
+          "canAdvance": true
+        }
+      },
+      "creationComplete": false
+    },
+    "activity": {
+      "id": "game-1:8",
+      "eventId": "game-1:8",
+      "gameId": "game-1",
+      "seq": 8,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:08.000Z",
+      "type": "characterCreation",
+      "characterId": "char-1",
+      "transition": "ADVANCEMENT_PASSED",
+      "details": "Advancement passed; total 8; target 8+; DM 0; rank 1->2; title Fourth Officer",
+      "status": "SKILLS_TRAINING",
+      "creationComplete": false
+    },
+    "maxSerializedBytes": 500
+  },
+  {
     "name": "bounded dice roll activity",
     "event": {
       "type": "DiceRolled",

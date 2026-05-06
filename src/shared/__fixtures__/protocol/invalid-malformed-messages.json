@@ -77,6 +77,33 @@
     "errorMessage": "canCommission must be a boolean"
   },
   {
+    "name": "malformed commission roll fact",
+    "message": {
+      "type": "command",
+      "requestId": "bad-commission-fact",
+      "command": {
+        "type": "AdvanceCharacterCreation",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": "crew-scout-1",
+        "creationEvent": {
+          "type": "COMPLETE_COMMISSION",
+          "commission": {
+            "expression": "2d6",
+            "rolls": [4],
+            "total": 4,
+            "characteristic": "int",
+            "modifier": 0,
+            "target": 5,
+            "success": false
+          }
+        }
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "commission.rolls must contain 2 entries"
+  },
+  {
     "name": "malformed character creation homeworld payload",
     "message": {
       "type": "command",
@@ -91,6 +118,21 @@
     },
     "errorCode": "invalid_command",
     "errorMessage": "homeworld must be an object"
+  },
+  {
+    "name": "malformed character creation commission command",
+    "message": {
+      "type": "command",
+      "requestId": "bad-commission",
+      "command": {
+        "type": "ResolveCharacterCreationCommission",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": 42
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "characterId must be a string"
   },
   {
     "name": "empty character creation background skill",

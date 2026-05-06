@@ -1,6 +1,6 @@
 import type { EventEnvelope, GameEvent } from './events'
 import { leaveCareerTerm, startCareerTerm } from './characterCreation'
-import type { CareerTerm } from './characterCreation'
+import type { CareerRank, CareerTerm } from './characterCreation'
 import type {
   CharacterCharacteristics,
   CharacterState,
@@ -54,6 +54,28 @@ const recordMusteringBenefit = (
       : structuredClone(term)
   )
 
+const recordActiveTermAdvancement = (
+  terms: readonly CareerTerm[],
+  advancement: number
+) =>
+  terms.map((term, index) =>
+    index === terms.length - 1
+      ? {
+          ...structuredClone(term),
+          advancement
+        }
+      : structuredClone(term)
+  )
+
+const applyCareerRank = (
+  careers: readonly CareerRank[],
+  career: string,
+  rank: number
+) =>
+  careers.map((entry) =>
+    entry.name === career ? { ...entry, rank } : { ...entry }
+  )
+
 type EventEnvelopeFor<TEvent extends GameEvent> = Omit<
   EventEnvelope,
   'event'
@@ -93,6 +115,8 @@ type CharacterEventType =
   | 'CharacterCreationTransitioned'
   | 'CharacterCreationBasicTrainingCompleted'
   | 'CharacterCreationSurvivalResolved'
+  | 'CharacterCreationCommissionResolved'
+  | 'CharacterCreationAdvancementResolved'
   | 'CharacterCreationHomeworldSet'
   | 'CharacterCreationHomeworldCompleted'
   | 'CharacterCreationBackgroundSkillSelected'
@@ -229,6 +253,18 @@ const characterEventHandlers = {
         creationEvent.musteringBenefit.career,
         creationEvent.musteringBenefit.value
       )
+    } else if (
+      creationEvent.type === 'COMPLETE_ADVANCEMENT' &&
+      creationEvent.advancement
+    ) {
+      terms = recordActiveTermAdvancement(terms, creationEvent.advancement.total)
+      if (creationEvent.rank) {
+        careers = applyCareerRank(
+          careers,
+          creationEvent.rank.career,
+          creationEvent.rank.newRank
+        )
+      }
     }
 
     character.creation = {
@@ -311,6 +347,70 @@ const characterEventHandlers = {
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
       terms,
+      history: [
+        ...(character.creation.history ?? []),
+        structuredClone(creationEvent)
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationCommissionResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const creationEvent = {
+      type: 'COMPLETE_COMMISSION' as const,
+      commission: structuredClone(event.commission)
+    }
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        structuredClone(creationEvent)
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationAdvancementResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const creationEvent = {
+      type: 'COMPLETE_ADVANCEMENT' as const,
+      advancement: structuredClone(event.advancement),
+      rank: event.rank ? structuredClone(event.rank) : null
+    }
+    const terms = recordActiveTermAdvancement(
+      character.creation.terms,
+      event.advancement.total
+    )
+    const careers = event.rank
+      ? applyCareerRank(
+          character.creation.careers,
+          event.rank.career,
+          event.rank.newRank
+        )
+      : character.creation.careers.map((career) => ({ ...career }))
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      terms,
+      careers,
       history: [
         ...(character.creation.history ?? []),
         structuredClone(creationEvent)

@@ -8,7 +8,8 @@ import type {
 } from './ids'
 import type {
   CareerCreationCheckFact,
-  CareerCreationEvent
+  CareerCreationEvent,
+  CareerCreationRankFact
 } from './characterCreation'
 import type {
   CharacterCreationSheet,
@@ -74,6 +75,23 @@ export type GameEvent =
       survival: CareerCreationCheckFact
       canCommission: boolean
       canAdvance: boolean
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationCommissionResolved'
+      characterId: CharacterId
+      passed: boolean
+      commission: CareerCreationCheckFact
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationAdvancementResolved'
+      characterId: CharacterId
+      passed: boolean
+      advancement: CareerCreationCheckFact
+      rank: CareerCreationRankFact | null
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

@@ -165,7 +165,6 @@ describe('character creation actions', () => {
       eventType: string
       overrides: Partial<CharacterCreationProjection>
     }[] = [
-      { status: 'SURVIVAL', eventType: 'SURVIVAL_PASSED', overrides: {} },
       { status: 'ADVANCEMENT', eventType: 'COMPLETE_ADVANCEMENT', overrides: {} },
       { status: 'SKILLS_TRAINING', eventType: 'COMPLETE_SKILLS', overrides: {} },
       { status: 'AGING', eventType: 'COMPLETE_AGING', overrides: {} },
@@ -218,6 +217,25 @@ describe('character creation actions', () => {
       if (command?.type !== 'AdvanceCharacterCreation') continue
       assert.equal(command.creationEvent.type, eventType)
     }
+  })
+
+  it('uses the semantic command for rolling survival', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('SURVIVAL', {
+          terms: [term({ completedBasicTraining: true })]
+        })
+      )
+    )
+
+    assert.equal(plan?.actions[0]?.key, 'roll-survival')
+    assert.deepEqual(plan?.actions[0]?.command, {
+      type: 'ResolveCharacterCreationSurvival',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId
+    })
   })
 
   it('uses the semantic command for completing basic training', () => {

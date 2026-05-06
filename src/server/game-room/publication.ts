@@ -99,7 +99,8 @@ export const runCommandPublication = async (
     currentState?.eventSeq ?? (await getEventSeq(storage, gameId))
   const gameSeed =
     (message.command.type === 'RollDice' ||
-      message.command.type === 'ResolveCharacterCreationSurvival') &&
+      message.command.type === 'ResolveCharacterCreationSurvival' ||
+      message.command.type === 'ResolveCharacterCreationCommission') &&
     currentState
       ? await getOrCreateGameSeed(storage, gameId)
       : 0
