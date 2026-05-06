@@ -111,6 +111,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/character-creation-panel.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'character-creation-panel.js'
+    ),
+    exportName: 'CLIENT_CHARACTER_CREATION_PANEL_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/character-command-plan.js',
     source: join(
       compiledClientRoot,

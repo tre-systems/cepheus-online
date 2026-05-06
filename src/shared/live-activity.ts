@@ -93,13 +93,67 @@ const countLabel = (
 const availabilityLabel = (value: boolean): string =>
   value ? 'available' : 'unavailable'
 
+const signedLabel = (value: number): string =>
+  value > 0 ? `+${value}` : String(value)
+
+const listLabel = (values: readonly string[]): string => {
+  if (values.length === 0) return ''
+  if (values.length === 1) return values[0] ?? ''
+
+  return `${values.slice(0, -1).join(', ')} or ${values[values.length - 1]}`
+}
+
 const careerSelectionOutcomeLabel = (
   event: Extract<CareerCreationEvent, { type: 'SELECT_CAREER' }>
 ): string | null => {
   if (event.drafted === true) return 'drafted after failed qualification'
-  if (event.drafted === false) return 'qualified'
+  if (event.drafted === false) {
+    return event.qualification?.success === false
+      ? 'fallback selected after failed qualification'
+      : 'qualified'
+  }
+  if (event.qualification?.success === false) {
+    const options = listLabel(event.failedQualificationOptions ?? [])
+
+    return options
+      ? `qualification failed; fallback ${options}`
+      : 'qualification failed'
+  }
 
   return null
+}
+
+const agingDetails = (
+  event: Extract<CareerCreationEvent, { type: 'COMPLETE_AGING' }>
+): string => {
+  if (!event.aging) return 'Aging resolved'
+
+  return [
+    'Aging resolved',
+    `age ${event.aging.age}`,
+    `aging/anagathics modifier ${signedLabel(event.aging.modifier)}`,
+    countLabel(
+      event.aging.characteristicChanges.length,
+      'characteristic change'
+    )
+  ].join('; ')
+}
+
+const musteringBenefitDetails = (
+  event: Extract<CareerCreationEvent, { type: 'FINISH_MUSTERING' }>
+): string => {
+  if (!event.musteringBenefit) return 'Mustering out complete'
+
+  const benefit = event.musteringBenefit
+  const value = benefit.kind === 'cash' ? `Cr${benefit.credits}` : benefit.value
+
+  return [
+    'Mustering benefit',
+    benefit.career,
+    benefit.kind,
+    value,
+    `table roll ${benefit.tableRoll}`
+  ].join('; ')
 }
 
 const describeCareerCreationEvent = (
@@ -137,7 +191,7 @@ const describeCareerCreationEvent = (
     case 'COMPLETE_SKILLS':
       return 'Skills and training complete'
     case 'COMPLETE_AGING':
-      return 'Aging resolved'
+      return agingDetails(event)
     case 'REENLIST':
       return 'Reenlisted for another term'
     case 'LEAVE_CAREER':
@@ -149,7 +203,7 @@ const describeCareerCreationEvent = (
     case 'CONTINUE_CAREER':
       return 'Continuing career'
     case 'FINISH_MUSTERING':
-      return 'Mustering out complete'
+      return musteringBenefitDetails(event)
     case 'CREATION_COMPLETE':
       return 'Creation complete'
     case 'DEATH_CONFIRMED':

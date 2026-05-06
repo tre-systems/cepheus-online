@@ -300,6 +300,82 @@ export interface TermOutcome {
   result: TermOutcomeResult
 }
 
+export type SurvivalFailureRollOutcome = 'fail'
+
+export interface SurvivalFailureRollFact {
+  total: number
+  outcome: SurvivalFailureRollOutcome
+}
+
+export interface SurvivalMishapRollFact {
+  total: number
+}
+
+export type SurvivalMishapId =
+  | 'injured_in_action'
+  | 'honorable_discharge'
+  | 'legal_battle_debt'
+  | 'dishonorable_discharge'
+  | 'prison_discharge'
+  | 'medical_discharge'
+
+export type SurvivalMishapDischarge = 'honorable' | 'dishonorable' | 'medical'
+
+export type SurvivalMishapBenefitEffect = 'forfeit_current_term' | 'lose_all'
+
+export type SurvivalMishapInjuryRequirement =
+  | {
+      type: 'fixed'
+      injuryRoll: number
+      alternative: 'roll_twice_take_lower'
+    }
+  | { type: 'roll' }
+
+export interface SurvivalMishapOutcome {
+  career: string
+  roll: number
+  id: SurvivalMishapId
+  description: string
+  discharge: SurvivalMishapDischarge
+  benefitEffect: SurvivalMishapBenefitEffect
+  debtCredits: number
+  extraServiceYears: number
+  injury: SurvivalMishapInjuryRequirement | null
+}
+
+export type SurvivalFailureOutcome =
+  | {
+      type: 'death'
+      career: string
+      survival: SurvivalFailureRollFact
+      reason: 'failed_survival'
+    }
+  | {
+      type: 'mishap'
+      career: string
+      survival: SurvivalFailureRollFact
+      mishap: SurvivalMishapOutcome
+      forcedCareerExit: true
+      servedYears: 2
+      forfeitCurrentTermBenefit: true
+    }
+
+export type InjuryOutcomeId =
+  | 'nearly_killed'
+  | 'severely_injured'
+  | 'missing_eye_or_limb'
+  | 'scarred'
+  | 'injured'
+  | 'lightly_injured'
+
+export interface InjuryOutcome {
+  career: string
+  roll: number
+  id: InjuryOutcomeId
+  description: string
+  crisisRisk: boolean
+}
+
 export interface BenefitTables {
   materialBenefits: Record<string, Record<string, string>>
   cashBenefits: Record<string, Record<string, string | number>>

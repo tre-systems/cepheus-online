@@ -25,6 +25,7 @@ const CLIENT_MODULES = new Map([
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
+        '/client/app/character-creation-panel.js',
         '/client/app/character-command-plan.js',
         '/client/app/character-creation-flow.js',
         '/client/app/character-creation-view.js',
@@ -61,6 +62,10 @@ const CLIENT_MODULES = new Map([
   [
     '/client/app/character-creation-actions.js',
     { markers: ['deriveCharacterCreationActionPlan'] }
+  ],
+  [
+    '/client/app/character-creation-panel.js',
+    { markers: ['createCharacterCreationPanel'] }
   ],
   [
     '/client/app/character-command-plan.js',

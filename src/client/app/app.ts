@@ -13,6 +13,7 @@ import {
 import { getAppElements } from './app-elements.js'
 import { createAppBootstrap } from './app-bootstrap.js'
 import { createBoardController } from './board-controller.js'
+import { createCharacterCreationPanel } from './character-creation-panel.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBasicTraining,
@@ -131,24 +132,6 @@ const diceRevealState = createDiceRevealState()
 const animatedDiceRollActivityIds = new Set()
 let pendingGeneratedCharacter = null
 let characterCreationFlow = null
-
-const isCharacterCreatorOpen = () => !els.characterCreator.hidden
-
-const scrollCharacterCreatorToTop = () => {
-  els.creatorBody?.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-const openCharacterCreatorPanel = () => {
-  els.characterCreator.hidden = false
-  if (els.roomDialog.open) els.roomDialog.close()
-  characterSheetController.setOpen(false)
-  render()
-}
-
-const closeCharacterCreatorPanel = () => {
-  els.characterCreator.hidden = true
-  render()
-}
 
 const setStatus = (text) => {
   els.status.textContent = text
@@ -313,13 +296,32 @@ const characterCreationSeed = () => ({
   notes: ''
 })
 
+const characterCreationPanel = createCharacterCreationPanel({
+  elements: {
+    panel: els.characterCreator,
+    body: els.creatorBody,
+    roomDialog: els.roomDialog,
+    title: els.characterCreatorTitle,
+    startSection: els.creatorStartSection,
+    quickSection: els.creatorQuickSection,
+    startWizardButton: els.startCharacterWizard,
+    wizard: els.characterCreationWizard,
+    steps: els.characterCreationSteps,
+    status: els.characterCreationStatus,
+    fields: els.characterCreationFields,
+    backWizardButton: els.backCharacterWizard,
+    nextWizardButton: els.nextCharacterWizard,
+    actions: els.creatorActions
+  },
+  closeCharacterSheet: () => characterSheetController.setOpen(false),
+  requestRender: () => render()
+})
+
 const startCharacterCreationWizard = () => {
-  if (!isCharacterCreatorOpen()) {
-    els.characterCreator.hidden = false
-  }
+  if (!characterCreationPanel.isOpen()) characterCreationPanel.show()
   if (characterCreationFlow) {
     renderCharacterCreationWizard()
-    scrollCharacterCreatorToTop()
+    characterCreationPanel.scrollToTop()
     return
   }
   const seed = characterCreationSeed()
@@ -344,7 +346,7 @@ const startCharacterCreationWizard = () => {
   pendingGeneratedCharacter = null
   renderGeneratedCharacterPreview()
   renderCharacterCreationWizard()
-  scrollCharacterCreatorToTop()
+  characterCreationPanel.scrollToTop()
 }
 
 const autoAdvanceCharacterCreationSetup = () => {
@@ -379,16 +381,6 @@ const syncCharacterCreationWizardFields = () => {
 }
 
 const renderCharacterCreationWizardControls = () => {
-  if (!characterCreationFlow) {
-    els.backCharacterWizard.disabled = true
-    els.nextCharacterWizard.disabled = true
-    els.backCharacterWizard.hidden = false
-    els.nextCharacterWizard.hidden = false
-    if (els.creatorActions) els.creatorActions.hidden = false
-    els.nextCharacterWizard.title = ''
-    els.nextCharacterWizard.textContent = 'Next'
-    return
-  }
   els.backCharacterWizard.disabled = true
   els.nextCharacterWizard.disabled = true
   els.backCharacterWizard.hidden = true
@@ -403,29 +395,7 @@ const renderCharacterCreationWizard = () => {
     // Keep setup steps linear even when reopening a flow that is already valid.
   }
 
-  els.characterCreatorTitle.textContent =
-    characterCreationFlow?.draft?.name?.trim() || 'Create traveller'
-  els.characterCreator.classList.toggle(
-    'flow-active',
-    Boolean(characterCreationFlow)
-  )
-  els.creatorStartSection.hidden = Boolean(characterCreationFlow)
-  els.creatorQuickSection.hidden = Boolean(characterCreationFlow)
-  els.startCharacterWizard.textContent = 'Begin character creation'
-
-  if (!characterCreationFlow) {
-    els.characterCreationWizard.hidden = true
-    els.characterCreationSteps.replaceChildren()
-    els.characterCreationStatus.replaceChildren()
-    els.characterCreationFields.replaceChildren()
-    els.backCharacterWizard.disabled = true
-    els.nextCharacterWizard.disabled = true
-    els.backCharacterWizard.hidden = false
-    els.nextCharacterWizard.hidden = false
-    if (els.creatorActions) els.creatorActions.hidden = false
-    els.nextCharacterWizard.textContent = 'Next'
-    return
-  }
+  if (!characterCreationPanel.render(characterCreationFlow)) return
 
   const flow = characterCreationFlow
   els.characterCreationSteps.replaceChildren()
@@ -758,7 +728,7 @@ const renderCharacterCreationAnagathicsDecision = (flow) => {
     }).flow
     setError('')
     renderCharacterCreationWizard()
-    scrollCharacterCreatorToTop()
+    characterCreationPanel.scrollToTop()
   })
 
   const skip = document.createElement('button')
@@ -772,7 +742,7 @@ const renderCharacterCreationAnagathicsDecision = (flow) => {
     }).flow
     setError('')
     renderCharacterCreationWizard()
-    scrollCharacterCreatorToTop()
+    characterCreationPanel.scrollToTop()
   })
 
   actions.append(use, skip)
@@ -1138,7 +1108,7 @@ const renderCharacterCreationCareerPicker = (flow) => {
         ).flow
         setError('')
         renderCharacterCreationWizard()
-        scrollCharacterCreatorToTop()
+        characterCreationPanel.scrollToTop()
       })
       list.append(button)
     }
@@ -1230,7 +1200,7 @@ const renderCharacterCreationTermResolution = (flow) => {
       }).flow
       setError('')
       renderCharacterCreationWizard()
-      scrollCharacterCreatorToTop()
+      characterCreationPanel.scrollToTop()
     })
     actions.append(another)
   }
@@ -1246,7 +1216,7 @@ const renderCharacterCreationTermResolution = (flow) => {
     }).flow
     setError('')
     renderCharacterCreationWizard()
-    scrollCharacterCreatorToTop()
+    characterCreationPanel.scrollToTop()
   })
   actions.append(muster)
 
@@ -1339,7 +1309,7 @@ const selectFailedQualificationCareer = (career, drafted) => {
   ).flow
   setError('')
   renderCharacterCreationWizard()
-  scrollCharacterCreatorToTop()
+  characterCreationPanel.scrollToTop()
 }
 
 const renderCharacterCreationDraftFallback = (flow) => {
@@ -1402,7 +1372,7 @@ const renderCharacterCreationCharacteristicRollButton = (flow) => {
     skipButton.addEventListener('click', () => {
       characterCreationFlow = skipCharacterCreationCareerRoll(flow).flow
       renderCharacterCreationWizard()
-      scrollCharacterCreatorToTop()
+      characterCreationPanel.scrollToTop()
     })
     wrapper.append(skipButton)
   }
@@ -1560,7 +1530,7 @@ const rollCharacterCreationCharacteristic = async (
   ).flow
   autoAdvanceCharacterCreationSetup()
   renderCharacterCreationWizard()
-  scrollCharacterCreatorToTop()
+  characterCreationPanel.scrollToTop()
 }
 
 const rollCharacterCreationMusteringBenefit = async (kind) => {
@@ -1611,7 +1581,7 @@ const rollCharacterCreationMusteringBenefit = async (kind) => {
     roll: latestRoll.total
   }).flow
   renderCharacterCreationWizard()
-  scrollCharacterCreatorToTop()
+  characterCreationPanel.scrollToTop()
 }
 
 const rollCharacterCreationTermSkill = async (table) => {
@@ -1653,7 +1623,7 @@ const rollCharacterCreationTermSkill = async (table) => {
     roll: latestRoll.total
   }).flow
   renderCharacterCreationWizard()
-  scrollCharacterCreatorToTop()
+  characterCreationPanel.scrollToTop()
 }
 
 const rollCharacterCreationReenlistment = async () => {
@@ -1694,7 +1664,7 @@ const rollCharacterCreationReenlistment = async () => {
     latestRoll.total
   ).flow
   renderCharacterCreationWizard()
-  scrollCharacterCreatorToTop()
+  characterCreationPanel.scrollToTop()
 }
 
 const rollCharacterCreationAging = async () => {
@@ -1739,7 +1709,7 @@ const rollCharacterCreationAging = async () => {
     latestRoll.total
   ).flow
   renderCharacterCreationWizard()
-  scrollCharacterCreatorToTop()
+  characterCreationPanel.scrollToTop()
 }
 
 const renderCharacterCreationReview = (flow) => {
@@ -1806,7 +1776,7 @@ const rollCharacterCreationCareerCheck = async () => {
     latestRoll.total
   ).flow
   renderCharacterCreationWizard()
-  scrollCharacterCreatorToTop()
+  characterCreationPanel.scrollToTop()
 }
 
 const rollCharacterCreationDraft = async () => {
@@ -1846,7 +1816,7 @@ const rollCharacterCreationDraft = async () => {
     return
   }
   selectFailedQualificationCareer(career, true)
-  scrollCharacterCreatorToTop()
+  characterCreationPanel.scrollToTop()
 }
 
 const renderGeneratedCharacterPreview = () => {
@@ -2047,7 +2017,7 @@ const createCustomCharacter = async () => {
   els.characterNameInput.value = ''
   pendingGeneratedCharacter = null
   renderGeneratedCharacterPreview()
-  closeCharacterCreatorPanel()
+  characterCreationPanel.close()
   characterSheetController.setOpen(true)
   render()
 }
@@ -2135,7 +2105,7 @@ const finishCharacterCreationWizard = async () => {
   els.characterNameInput.value = ''
   characterCreationFlow = null
   renderCharacterCreationWizard()
-  closeCharacterCreatorPanel()
+  characterCreationPanel.close()
   characterSheetController.setOpen(true)
   render()
 }
@@ -2159,7 +2129,7 @@ const advanceCharacterCreationWizard = async () => {
     setError('')
     characterCreationFlow = result.flow
     renderCharacterCreationWizard()
-    scrollCharacterCreatorToTop()
+    characterCreationPanel.scrollToTop()
     return
   }
   renderCharacterCreationWizard()
@@ -2173,7 +2143,7 @@ const backCharacterCreationWizard = () => {
   ).flow
   setError('')
   renderCharacterCreationWizard()
-  scrollCharacterCreatorToTop()
+  characterCreationPanel.scrollToTop()
 }
 
 const rollGeneratedCharacter = () => {
@@ -2221,7 +2191,7 @@ const acceptGeneratedCharacter = async () => {
   els.characterNameInput.value = ''
   pendingGeneratedCharacter = null
   renderGeneratedCharacterPreview()
-  closeCharacterCreatorPanel()
+  characterCreationPanel.close()
   characterSheetController.setOpen(true)
   render()
 }
@@ -2543,7 +2513,7 @@ const render = () => {
 }
 
 const animateRoll = (roll) => {
-  const overlayHost = isCharacterCreatorOpen()
+  const overlayHost = characterCreationPanel.isOpen()
     ? els.characterCreator
     : els.roomDialog.open
       ? els.roomDialog
@@ -2551,7 +2521,10 @@ const animateRoll = (roll) => {
   if (overlayHost && els.diceOverlay.parentElement !== overlayHost) {
     overlayHost.append(els.diceOverlay)
   }
-  els.diceOverlay.classList.toggle('in-creator', isCharacterCreatorOpen())
+  els.diceOverlay.classList.toggle(
+    'in-creator',
+    characterCreationPanel.isOpen()
+  )
   els.diceOverlay.classList.toggle('in-dialog', els.roomDialog.open)
   diceHideTimer = animateDiceRoll({
     roll,
@@ -2608,7 +2581,7 @@ els.sheetButton.addEventListener('click', () => {
     selectPiece(selectedPiece().id)
   }
   if (!currentSelectedPieceId()) {
-    openCharacterCreatorPanel()
+    characterCreationPanel.open()
     return
   }
   characterSheetController.toggleOpen()
@@ -2620,12 +2593,12 @@ els.sheetClose.addEventListener('click', () => {
 })
 
 els.createCharacterRail.addEventListener('click', () => {
-  openCharacterCreatorPanel()
+  characterCreationPanel.open()
   if (!characterCreationFlow) startCharacterCreationWizard()
 })
 
 els.characterCreatorClose.addEventListener('click', () => {
-  closeCharacterCreatorPanel()
+  characterCreationPanel.close()
 })
 
 for (const tab of els.sheetTabs) {

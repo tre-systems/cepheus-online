@@ -22,6 +22,7 @@ const clientModules = new Map<
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
+        '/client/app/character-creation-panel.js',
         '/client/app/character-command-plan.js',
         '/client/app/character-creation-flow.js',
         '/client/app/character-creation-view.js',
@@ -80,6 +81,10 @@ const clientModules = new Map<
       markers: ['deriveCharacterCreationActionPlan'],
       imports: ['/shared/character-creation/legal-actions.js']
     }
+  ],
+  [
+    '/client/app/character-creation-panel.js',
+    { markers: ['createCharacterCreationPanel'] }
   ],
   [
     '/client/app/character-command-plan.js',
@@ -285,10 +290,7 @@ const clientModules = new Map<
   ],
   ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }],
   ['/shared/ids', { markers: ['asGameId', 'asUserId'] }],
-  [
-    '/shared/live-activity.js',
-    { markers: ['deriveLiveDiceRollRevealTarget'] }
-  ],
+  ['/shared/live-activity.js', { markers: ['deriveLiveDiceRollRevealTarget'] }],
   [
     '/shared/mapAssets.js',
     {

@@ -57,6 +57,23 @@ const character = (
   creation: characterCreation
 })
 
+const term = (
+  overrides: Partial<
+    NonNullable<CharacterCreationProjection['terms']>[number]
+  > = {}
+): NonNullable<CharacterCreationProjection['terms']>[number] => ({
+  career: 'Scout',
+  skills: [],
+  skillsAndTraining: [],
+  benefits: [],
+  complete: false,
+  canReenlist: false,
+  completedBasicTraining: false,
+  musteringOut: false,
+  anagathics: false,
+  ...overrides
+})
+
 describe('character creation actions', () => {
   it('starts creation for an existing character without creation state', () => {
     const plan = deriveCharacterCreationActionPlan(identity, character(null))
@@ -109,18 +126,45 @@ describe('character creation actions', () => {
   })
 
   it('offers a complete happy path from basic training to playable', () => {
-    const expectations = [
-      ['BASIC_TRAINING', 'COMPLETE_BASIC_TRAINING'],
-      ['SURVIVAL', 'SURVIVAL_PASSED'],
-      ['ADVANCEMENT', 'COMPLETE_ADVANCEMENT'],
-      ['SKILLS_TRAINING', 'COMPLETE_SKILLS'],
-      ['AGING', 'COMPLETE_AGING'],
-      ['REENLISTMENT', 'LEAVE_CAREER'],
-      ['MUSTERING_OUT', 'FINISH_MUSTERING'],
-      ['ACTIVE', 'CREATION_COMPLETE']
-    ] as const
+    const expectations: {
+      status: CharacterCreationProjection['state']['status']
+      eventType: string
+      overrides: Partial<CharacterCreationProjection>
+    }[] = [
+      { status: 'BASIC_TRAINING', eventType: 'COMPLETE_BASIC_TRAINING', overrides: {} },
+      { status: 'SURVIVAL', eventType: 'SURVIVAL_PASSED', overrides: {} },
+      { status: 'ADVANCEMENT', eventType: 'COMPLETE_ADVANCEMENT', overrides: {} },
+      { status: 'SKILLS_TRAINING', eventType: 'COMPLETE_SKILLS', overrides: {} },
+      { status: 'AGING', eventType: 'COMPLETE_AGING', overrides: {} },
+      {
+        status: 'REENLISTMENT',
+        eventType: 'LEAVE_CAREER',
+        overrides: {
+          terms: [term({ reEnlistment: 7, skillsAndTraining: ['Pilot-1'] })]
+        }
+      },
+      {
+        status: 'MUSTERING_OUT',
+        eventType: 'FINISH_MUSTERING',
+        overrides: {
+          terms: [
+            term({
+              benefits: ['Low Passage'],
+              complete: true,
+              musteringOut: true
+            })
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        }
+      },
+      {
+        status: 'ACTIVE',
+        eventType: 'CREATION_COMPLETE',
+        overrides: { terms: [term({ complete: true })] }
+      }
+    ]
 
-    for (const [status, eventType] of expectations) {
+    for (const { status, eventType, overrides } of expectations) {
       const plan = deriveCharacterCreationActionPlan(
         identity,
         character(
@@ -131,7 +175,8 @@ describe('character creation actions', () => {
                 canCommission: false,
                 canAdvance: status === 'ADVANCEMENT'
               }
-            }
+            },
+            ...overrides
           })
         )
       )
@@ -173,6 +218,35 @@ describe('character creation actions', () => {
     )
 
     assert.equal(plan?.status, 'Skills Training')
+    assert.deepEqual(plan?.actions, [])
+  })
+
+  it('uses the shared planner for projected mustering gates', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('MUSTERING_OUT', {
+          terms: [term({ complete: true, musteringOut: true })],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(plan?.status, 'Mustering Out')
+    assert.deepEqual(plan?.actions, [])
+  })
+
+  it('uses the shared planner for unresolved reenlistment gates', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('REENLISTMENT', {
+          terms: [term({ canReenlist: true, skillsAndTraining: ['Pilot-1'] })]
+        })
+      )
+    )
+
+    assert.equal(plan?.status, 'Reenlistment')
     assert.deepEqual(plan?.actions, [])
   })
 })

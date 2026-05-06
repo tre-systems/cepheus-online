@@ -10,6 +10,7 @@ import {
   asUserId
 } from '../../shared/ids'
 import { LIVE_DICE_RESULT_REVEAL_DELAY_MS } from '../../shared/live-activity'
+import { filterGameStateForViewer } from '../../shared/viewer'
 import { getProjectedGameState } from './projection'
 import { CommandPublicationError, runCommandPublication } from './publication'
 import {
@@ -695,6 +696,85 @@ describe('room publication flow', () => {
     assert.equal(recovered?.eventSeq, 7)
   })
 
+  it('publishes semantic character creation activity into player projections', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-activity')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Free Trader'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+    await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      creationEvent: { type: 'SET_CHARACTERISTICS' }
+    })
+
+    const homeworldSet = await publish(storage, {
+      type: 'SetCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId,
+      homeworld: {
+        name: 'Regina',
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid', 'Industrial']
+      }
+    })
+
+    assert.equal(homeworldSet.ok, true)
+    if (!homeworldSet.ok) return
+    assert.deepEqual(homeworldSet.value.liveActivities, [
+      {
+        id: 'game-1:5',
+        eventId: 'game-1:5',
+        gameId,
+        seq: 5,
+        actorId,
+        createdAt: homeworldSet.value.liveActivities[0]?.createdAt,
+        type: 'characterCreation',
+        characterId,
+        transition: 'HOMEWORLD_SET',
+        details:
+          'Homeworld: Regina; trade codes Asteroid, Industrial; 2 background skills; 1 pending cascade',
+        status: 'HOMEWORLD',
+        creationComplete: false
+      }
+    ])
+
+    const playerProjection = filterGameStateForViewer(
+      homeworldSet.value.state,
+      {
+        userId: asUserId('player-2'),
+        role: 'PLAYER'
+      }
+    )
+    assert.equal(playerProjection.eventSeq, 5)
+    assert.deepEqual(
+      playerProjection.characters[characterId]?.creation?.backgroundSkills,
+      ['Zero-G-0', 'Broker-0']
+    )
+    assert.deepEqual(
+      playerProjection.characters[characterId]?.creation?.pendingCascadeSkills,
+      ['Gun Combat-0']
+    )
+
+    const storedEvent = (await readEventStream(storage, gameId)).at(-1)?.event
+    assert.equal(storedEvent?.type, 'CharacterCreationHomeworldSet')
+  })
+
   it('records semantic SRD roll facts in character creation transition history', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')
@@ -1329,6 +1409,118 @@ describe('room publication flow', () => {
     if (stale.ok) return
     assert.equal(stale.error.code, 'stale_command')
     assert.equal((await readEventStream(storage, gameId)).length, 4)
+  })
+
+  it('rejects stale expected sequence numbers on semantic character creation commands before append', async () => {
+    const assertStale = async (
+      command: Command,
+      expectedEventCount: number
+    ) => {
+      const storage = createMemoryStorage()
+      const characterId = asCharacterId('char-stale')
+      await publish(storage, createGameCommand())
+      await publish(storage, {
+        type: 'CreateCharacter',
+        gameId,
+        actorId,
+        characterId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      })
+      await publish(storage, {
+        type: 'StartCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      })
+      await publish(storage, {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'SET_CHARACTERISTICS' }
+      })
+      await publish(storage, {
+        type: 'SetCharacterCreationHomeworld',
+        gameId,
+        actorId,
+        characterId,
+        homeworld: {
+          name: 'Regina',
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid', 'Industrial']
+        }
+      })
+
+      if (
+        command.type === 'ResolveCharacterCreationCascadeSkill' ||
+        command.type === 'StartCharacterCareerTerm'
+      ) {
+        await publish(storage, {
+          type: 'ResolveCharacterCreationCascadeSkill',
+          gameId,
+          actorId,
+          characterId,
+          cascadeSkill: 'Gun Combat-0',
+          selection: 'Slug Rifle'
+        })
+      }
+
+      if (command.type === 'StartCharacterCareerTerm') {
+        await publish(storage, {
+          type: 'AdvanceCharacterCreation',
+          gameId,
+          actorId,
+          characterId,
+          creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+        })
+      }
+
+      const stale = await publish(storage, command)
+
+      assert.equal(stale.ok, false)
+      if (stale.ok) return
+      assert.equal(stale.error.code, 'stale_command')
+      assert.equal(
+        (await readEventStream(storage, gameId)).length,
+        expectedEventCount
+      )
+    }
+
+    await assertStale(
+      {
+        type: 'SelectCharacterCreationBackgroundSkill',
+        gameId,
+        actorId,
+        characterId: asCharacterId('char-stale'),
+        expectedSeq: 4,
+        skill: 'Admin'
+      },
+      5
+    )
+    await assertStale(
+      {
+        type: 'ResolveCharacterCreationCascadeSkill',
+        gameId,
+        actorId,
+        characterId: asCharacterId('char-stale'),
+        expectedSeq: 5,
+        cascadeSkill: 'Gun Combat-0',
+        selection: 'Slug Rifle'
+      },
+      6
+    )
+    await assertStale(
+      {
+        type: 'StartCharacterCareerTerm',
+        gameId,
+        actorId,
+        characterId: asCharacterId('char-stale'),
+        expectedSeq: 6,
+        career: 'Scout'
+      },
+      7
+    )
   })
 
   it('rejects character creation commands for missing characters', async () => {

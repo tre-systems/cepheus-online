@@ -506,6 +506,115 @@ describe('live activity derivation', () => {
     )
   })
 
+  it('derives failed qualification, anagathics, and mustering benefit details', () => {
+    const activities = deriveLiveActivities([
+      envelope(3, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'SELECT_CAREER',
+          isNewCareer: true,
+          qualification: {
+            expression: '2d6',
+            rolls: [1, 2],
+            total: 3,
+            characteristic: 'edu',
+            modifier: 0,
+            target: 6,
+            success: false
+          },
+          failedQualificationOptions: ['Drifter', 'Draft']
+        },
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(4, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'COMPLETE_AGING',
+          aging: {
+            roll: {
+              expression: '2d6',
+              rolls: [2, 3],
+              total: 5
+            },
+            modifier: -1,
+            age: 34,
+            characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+          }
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(5, {
+        type: 'CharacterCreationTransitioned',
+        characterId,
+        creationEvent: {
+          type: 'FINISH_MUSTERING',
+          musteringBenefit: {
+            career: 'Merchant',
+            kind: 'cash',
+            roll: {
+              expression: '2d6',
+              rolls: [3, 1],
+              total: 4
+            },
+            modifier: 0,
+            tableRoll: 4,
+            value: '20000',
+            credits: 20000
+          }
+        },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    assert.deepEqual(
+      activities.map((activity) =>
+        activity.type === 'characterCreation'
+          ? [activity.transition, activity.details, activity.status]
+          : null
+      ),
+      [
+        [
+          'SELECT_CAREER',
+          'Career selected; new career; qualification failed; fallback Drifter or Draft',
+          'CAREER_SELECTION'
+        ],
+        [
+          'COMPLETE_AGING',
+          'Aging resolved; age 34; aging/anagathics modifier -1; 1 characteristic change',
+          'REENLISTMENT'
+        ],
+        [
+          'FINISH_MUSTERING',
+          'Mustering benefit; Merchant; cash; Cr20000; table roll 4',
+          'MUSTERING_OUT'
+        ]
+      ]
+    )
+  })
+
   it('derives finalization summary without full sheet details', () => {
     const activity = deriveLiveActivity(
       envelope(3, {

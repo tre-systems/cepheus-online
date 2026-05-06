@@ -1,8 +1,9 @@
-import { deriveLegalCareerCreationActionKeys } from '../../shared/character-creation/legal-actions.js'
+import {
+  deriveCareerCreationActionContext,
+  deriveLegalCareerCreationActionKeys
+} from '../../shared/character-creation/legal-actions.js'
 import type {
-  CareerCreationActionContext,
   CareerCreationActionKey,
-  CareerCreationPendingDecision
 } from '../../shared/character-creation/types.js'
 import type { Command } from '../../shared/commands'
 import type {
@@ -57,28 +58,6 @@ const action = (
   label,
   command,
   variant
-})
-
-const derivePendingDecisions = (
-  creation: CharacterCreationProjection
-): CareerCreationPendingDecision[] => {
-  const decisions: CareerCreationPendingDecision[] = []
-
-  if ((creation.pendingCascadeSkills?.length ?? 0) > 0) {
-    decisions.push({ key: 'cascadeSkillResolution' })
-  }
-
-  return decisions
-}
-
-const deriveActionContext = (
-  creation: CharacterCreationProjection
-): CareerCreationActionContext => ({
-  pendingDecisions: derivePendingDecisions(creation),
-  canCompleteCreation: !creation.creationComplete,
-  canContinueCareer: creation.state.status === 'MUSTERING_OUT',
-  reenlistmentOutcome:
-    creation.state.status === 'REENLISTMENT' ? 'allowed' : 'unresolved'
 })
 
 const actionsForLegalKey = (
@@ -305,7 +284,7 @@ const deriveActions = (
   const legalKeys = new Set(
     deriveLegalCareerCreationActionKeys(
       creation.state,
-      deriveActionContext(creation)
+      deriveCareerCreationActionContext(creation)
     )
   )
 
