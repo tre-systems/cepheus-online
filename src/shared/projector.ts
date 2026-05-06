@@ -117,6 +117,7 @@ type CharacterEventType =
   | 'CharacterCreationSurvivalResolved'
   | 'CharacterCreationCommissionResolved'
   | 'CharacterCreationAdvancementResolved'
+  | 'CharacterCreationAgingResolved'
   | 'CharacterCreationTermSkillRolled'
   | 'CharacterCreationTermCascadeSkillResolved'
   | 'CharacterCreationHomeworldSet'
@@ -464,6 +465,33 @@ const characterEventHandlers = {
         {
           type: 'ROLL_TERM_SKILL',
           termSkill: structuredClone(event.termSkill)
+        }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationAgingResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.age = event.aging.age
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      characteristicChanges: event.aging.characteristicChanges.map(
+        (change) => ({ ...change })
+      ),
+      history: [
+        ...(character.creation.history ?? []),
+        {
+          type: 'COMPLETE_AGING',
+          aging: structuredClone(event.aging)
         }
       ]
     }

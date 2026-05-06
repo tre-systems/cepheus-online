@@ -956,6 +956,17 @@ export const decodeCommand = (
       })
     }
 
+    case 'ResolveCharacterCreationAging': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'ResolveCharacterCreationAging',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
     case 'RollCharacterCreationTermSkill': {
       const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
       if (!characterId.ok) return characterId

@@ -3,6 +3,7 @@ import {
   canTransitionCareerCreationState,
   createCareerCreationState,
   careerSkillWithLevel,
+  deriveAgingRollModifier,
   deriveCareerCreationActionContext,
   deriveLegalCareerCreationActionKeysForProjection,
   deriveSurvivalPromotionOptions,
@@ -13,6 +14,7 @@ import {
   isCascadeCareerSkill,
   normalizeCareerSkill,
   parseCareerRankReward,
+  resolveAging,
   resolveCareerSkillTableRoll,
   resolveCascadeCareerSkill,
   transitionCareerCreationState
@@ -546,6 +548,38 @@ const validateAdvancementResolution = (
   return ok(character.creation)
 }
 
+const validateAgingResolution = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'AGING') {
+    return err(
+      commandError(
+        'invalid_command',
+        `AGING is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('resolveAging')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'AGING is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
 const currentCareerRank = (
   creation: CharacterCreationProjection,
   career: string
@@ -564,6 +598,11 @@ type CharacterCreationCommissionResolvedEvent = Extract<
 type CharacterCreationAdvancementResolvedEvent = Extract<
   GameEvent,
   { type: 'CharacterCreationAdvancementResolved' }
+>
+
+type CharacterCreationAgingResolvedEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationAgingResolved' }
 >
 
 type CharacterCreationTermSkillRolledEvent = Extract<
@@ -939,6 +978,49 @@ const resolveAdvancementCreationEvent = ({
         }
       : null
   })
+}
+
+const currentAgingAge = (
+  character: CharacterState,
+  creation: CharacterCreationProjection
+): number | null => {
+  if (character.age !== null) return character.age
+  if (creation.terms.length === 0) return character.age
+
+  return 18 + Math.max(0, creation.terms.length - 1) * 4
+}
+
+const resolveAgingCreationEvent = ({
+  character,
+  creation,
+  roll
+}: {
+  character: CharacterState
+  creation: CharacterCreationProjection
+  roll: { expression: '2d6'; rolls: number[]; total: number }
+}): Pick<CharacterCreationAgingResolvedEvent, 'aging'> => {
+  const modifier = deriveAgingRollModifier(creation.terms)
+  const aging = resolveAging({
+    currentAge: currentAgingAge(character, creation),
+    table: CEPHEUS_SRD_RULESET.aging,
+    roll: roll.total + modifier,
+    years: 4
+  })
+
+  return {
+    aging: {
+      roll: {
+        expression: roll.expression,
+        rolls: [...roll.rolls],
+        total: roll.total
+      },
+      modifier,
+      age: aging.age,
+      characteristicChanges: aging.characteristicChanges.map((change) => ({
+        ...change
+      }))
+    }
+  }
 }
 
 export const deriveEventsForCommand = (
@@ -1361,6 +1443,58 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationAdvancementResolved',
           characterId: command.characterId,
           ...resolved.value,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationAging': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateAgingResolution(character)
+      if (!creation.ok) return creation
+
+      const rolled = rollDiceExpression(
+        '2d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const resolved = resolveAgingCreationEvent({
+        character,
+        creation: creation.value,
+        roll: {
+          expression: '2d6',
+          rolls: rolled.value.rolls,
+          total: rolled.value.total
+        }
+      })
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'COMPLETE_AGING',
+        aging: resolved.aging
+      })
+
+      const career = creation.value.terms.at(-1)?.career ?? 'Career'
+
+      return ok([
+        {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: `${career} aging`,
+          rolls: [...resolved.aging.roll.rolls],
+          total: resolved.aging.roll.total
+        },
+        {
+          type: 'CharacterCreationAgingResolved',
+          characterId: command.characterId,
+          ...resolved,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         }

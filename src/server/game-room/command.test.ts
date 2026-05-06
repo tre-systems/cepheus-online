@@ -740,6 +740,137 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.message, 'ADVANCEMENT is not valid from SURVIVAL')
   })
 
+  it('emits a semantic aging event with server-derived roll facts', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAging',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('AGING', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout aging',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationAgingResolved',
+        characterId,
+        aging: {
+          roll: {
+            expression: '2d6',
+            rolls: [4, 4],
+            total: 8
+          },
+          modifier: -1,
+          age: 22,
+          characteristicChanges: []
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('uses cumulative terms and anagathics for semantic aging modifiers', () => {
+    const scoutTerm = {
+      career: 'Scout',
+      skills: ['Vacc Suit-1'],
+      skillsAndTraining: ['Vacc Suit-1'],
+      benefits: [],
+      complete: true,
+      canReenlist: true,
+      completedBasicTraining: true,
+      musteringOut: false,
+      anagathics: false,
+      survival: 8
+    }
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAging',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('AGING', {
+        terms: [
+          scoutTerm,
+          { ...scoutTerm },
+          { ...scoutTerm, anagathics: true },
+          { ...scoutTerm, complete: false }
+        ]
+      }),
+      { gameSeed: 18 }
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value[1]?.type, 'CharacterCreationAgingResolved')
+    if (result.value[1]?.type !== 'CharacterCreationAgingResolved') return
+    assert.deepEqual(result.value[1].aging, {
+      roll: {
+        expression: '2d6',
+        rolls: [1, 1],
+        total: 2
+      },
+      modifier: -3,
+      age: 34,
+      characteristicChanges: [
+        { type: 'PHYSICAL', modifier: -1 },
+        { type: 'PHYSICAL', modifier: -1 }
+      ]
+    })
+  })
+
+  it('blocks semantic aging resolution outside aging', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAging',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('SKILLS_TRAINING')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'AGING is not valid from SKILLS_TRAINING'
+    )
+  })
+
   it('emits a semantic term skill event with a server-derived skill roll', () => {
     const result = runCommand(
       {

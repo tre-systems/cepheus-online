@@ -8,6 +8,7 @@ import type {
 } from './ids'
 import type {
   CareerCreationCheckFact,
+  CareerCreationAgingFact,
   CareerCreationEvent,
   CareerCreationRankFact,
   CareerCreationTermSkillFact
@@ -93,6 +94,13 @@ export type GameEvent =
       passed: boolean
       advancement: CareerCreationCheckFact
       rank: CareerCreationRankFact | null
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationAgingResolved'
+      characterId: CharacterId
+      aging: CareerCreationAgingFact
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

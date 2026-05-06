@@ -46,6 +46,7 @@ export type CharacterCreationCommand = Extract<
       | 'ResolveCharacterCreationSurvival'
       | 'ResolveCharacterCreationCommission'
       | 'ResolveCharacterCreationAdvancement'
+      | 'ResolveCharacterCreationAging'
       | 'RollCharacterCreationTermSkill'
       | 'ResolveCharacterCreationTermCascadeSkill'
       | 'CreatePiece'
@@ -75,6 +76,7 @@ export const appCommandRouteByType = {
   ResolveCharacterCreationSurvival: 'characterCreation',
   ResolveCharacterCreationCommission: 'characterCreation',
   ResolveCharacterCreationAdvancement: 'characterCreation',
+  ResolveCharacterCreationAging: 'characterCreation',
   RollCharacterCreationTermSkill: 'characterCreation',
   ResolveCharacterCreationTermCascadeSkill: 'characterCreation',
   CreateBoard: 'board',

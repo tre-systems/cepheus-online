@@ -254,6 +254,85 @@ describe('character creation actions', () => {
     )
   })
 
+  it('uses semantic term skill roll commands while term skills are pending', () => {
+    const scout = character(
+      creation('SKILLS_TRAINING', {
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [term({ career: 'Scout', survival: 7 })]
+      })
+    )
+    scout.characteristics.edu = 8
+
+    const plan = deriveCharacterCreationActionPlan(identity, scout)
+
+    assert.deepEqual(
+      plan?.actions.map((availableAction) => availableAction.key),
+      [
+        'roll-personal-development',
+        'roll-service-skills',
+        'roll-specialist-skills',
+        'roll-advanced-education'
+      ]
+    )
+    assert.deepEqual(plan?.actions[1]?.command, {
+      type: 'RollCharacterCreationTermSkill',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId,
+      table: 'serviceSkills'
+    })
+  })
+
+  it('hides advanced education term skill rolls below EDU 8', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('SKILLS_TRAINING', {
+          terms: [term({ career: 'Scout', survival: 7 })]
+        })
+      )
+    )
+
+    assert.deepEqual(
+      plan?.actions.map((availableAction) => availableAction.key),
+      [
+        'roll-personal-development',
+        'roll-service-skills',
+        'roll-specialist-skills'
+      ]
+    )
+  })
+
+  it('keeps complete skills routing after required term skills are rolled', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('SKILLS_TRAINING', {
+          state: {
+            status: 'SKILLS_TRAINING',
+            context: {
+              canCommission: true,
+              canAdvance: false
+            }
+          },
+          terms: [term({ career: 'Scout', survival: 7, skills: ['Pilot-1'] })]
+        })
+      )
+    )
+
+    assert.equal(plan?.actions[0]?.key, 'complete-skills')
+    assert.equal(plan?.actions[0]?.command?.type, 'AdvanceCharacterCreation')
+    const command = plan?.actions[0]?.command
+    if (command?.type !== 'AdvanceCharacterCreation') return
+    assert.deepEqual(command.creationEvent, { type: 'COMPLETE_SKILLS' })
+  })
+
   it('has no action once creation is playable', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,

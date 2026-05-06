@@ -242,6 +242,114 @@ describe('room publication flow', () => {
     assert.equal(activity.reveal.delayMs, LIVE_DICE_RESULT_REVEAL_DELAY_MS)
   })
 
+  it('publishes semantic aging resolution with seeded dice and activity', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-aging')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    const advance = async (
+      creationEvent: Extract<
+        Command,
+        { type: 'AdvanceCharacterCreation' }
+      >['creationEvent']
+    ) => {
+      const result = await publish(storage, {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent
+      })
+
+      assert.equal(result.ok, true)
+    }
+
+    await advance({ type: 'SET_CHARACTERISTICS' })
+    await publish(storage, {
+      type: 'SetCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId,
+      homeworld: {
+        name: 'Regina',
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid', 'Industrial']
+      }
+    })
+    await publish(storage, {
+      type: 'ResolveCharacterCreationCascadeSkill',
+      gameId,
+      actorId,
+      characterId,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
+    await advance({ type: 'COMPLETE_HOMEWORLD' })
+    await publish(storage, {
+      type: 'StartCharacterCareerTerm',
+      gameId,
+      actorId,
+      characterId,
+      career: 'Scout'
+    })
+    await advance({ type: 'SELECT_CAREER', isNewCareer: true })
+    await advance({ type: 'COMPLETE_BASIC_TRAINING' })
+    await advance({
+      type: 'SURVIVAL_PASSED',
+      canCommission: false,
+      canAdvance: false
+    })
+    await advance({ type: 'COMPLETE_SKILLS' })
+
+    const resolved = await publish(storage, {
+      type: 'ResolveCharacterCreationAging',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    const events = (await readEventStream(storage, gameId)).map(
+      (envelope) => envelope.event
+    )
+    assert.deepEqual(
+      events.slice(-2).map((event) => event.type),
+      ['DiceRolled', 'CharacterCreationAgingResolved']
+    )
+    assert.equal(resolved.value.liveActivities.length, 2)
+    assert.equal(resolved.value.liveActivities[0]?.type, 'diceRoll')
+    assert.equal(resolved.value.liveActivities[1]?.type, 'characterCreation')
+    const agingEvent = events.at(-1)
+    assert.equal(agingEvent?.type, 'CharacterCreationAgingResolved')
+    if (agingEvent?.type !== 'CharacterCreationAgingResolved') return
+    assert.equal(
+      resolved.value.state.characters[characterId]?.age,
+      agingEvent.aging.age
+    )
+    assert.deepEqual(
+      resolved.value.state.characters[characterId]?.creation?.history?.at(-1),
+      {
+        type: 'COMPLETE_AGING',
+        aging: agingEvent.aging
+      }
+    )
+  })
+
   it('rejects invalid commands without writing an event stream', async () => {
     const storage = createMemoryStorage()
 

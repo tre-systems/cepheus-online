@@ -160,6 +160,22 @@
     "expectedSeq": 25
   },
   {
+    "name": "character creation aging resolution command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-resolve-aging",
+      "command": {
+        "type": "ResolveCharacterCreationAging",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 26,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "ResolveCharacterCreationAging",
+    "expectedSeq": 26
+  },
+  {
     "name": "character creation term skill roll command",
     "message": {
       "type": "command",

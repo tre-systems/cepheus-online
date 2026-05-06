@@ -529,6 +529,22 @@ export const deriveLiveActivity = (
         creationComplete: event.creationComplete
       }
 
+    case 'CharacterCreationAgingResolved':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'COMPLETE_AGING',
+        ...compactCharacterCreationDetails(
+          agingDetails({
+            type: 'COMPLETE_AGING',
+            aging: event.aging
+          })
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
     case 'CharacterCreationTermSkillRolled':
       return {
         ...baseActivity(envelope),

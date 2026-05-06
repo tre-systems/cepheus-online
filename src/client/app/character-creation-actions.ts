@@ -3,6 +3,7 @@ import {
   deriveLegalCareerCreationActionKeys
 } from '../../shared/character-creation/legal-actions.js'
 import type { CareerCreationActionKey } from '../../shared/character-creation/types.js'
+import type { CareerCreationTermSkillTable } from '../../shared/characterCreation.js'
 import type { Command, GameCommand } from '../../shared/commands'
 import type {
   CharacterCreationProjection,
@@ -57,6 +58,65 @@ const action = (
   command,
   variant
 })
+
+const termSkillTableLabels: Record<CareerCreationTermSkillTable, string> = {
+  personalDevelopment: 'Personal development',
+  serviceSkills: 'Service skills',
+  specialistSkills: 'Specialist skills',
+  advancedEducation: 'Advanced education'
+}
+
+const termSkillActionKeys: Record<CareerCreationTermSkillTable, string> = {
+  personalDevelopment: 'roll-personal-development',
+  serviceSkills: 'roll-service-skills',
+  specialistSkills: 'roll-specialist-skills',
+  advancedEducation: 'roll-advanced-education'
+}
+
+const requiredTermSkillCount = (
+  creation: CharacterCreationProjection & { requiredTermSkillCount?: number }
+): number => {
+  if (creation.requiredTermSkillCount !== undefined) {
+    return creation.requiredTermSkillCount
+  }
+
+  const term = creation.terms.at(-1)
+  if (!term || term.survival === undefined) return 0
+
+  return !creation.state.context.canCommission &&
+    !creation.state.context.canAdvance
+    ? 2
+    : 1
+}
+
+const deriveTermSkillRollActions = (
+  identity: ClientIdentity,
+  character: CharacterState,
+  creation: CharacterCreationProjection
+): CharacterCreationActionViewModel[] => {
+  if (creation.state.status !== 'SKILLS_TRAINING') return []
+  if ((creation.pendingCascadeSkills ?? []).length > 0) return []
+
+  const term = creation.terms.at(-1)
+  if (!term?.career) return []
+  if (term.skills.length >= requiredTermSkillCount(creation)) return []
+
+  return (Object.keys(termSkillTableLabels) as CareerCreationTermSkillTable[])
+    .filter(
+      (table) =>
+        table !== 'advancedEducation' ||
+        (character.characteristics.edu ?? 0) >= 8
+    )
+    .map((table) =>
+      action(termSkillActionKeys[table], termSkillTableLabels[table], {
+        type: 'RollCharacterCreationTermSkill',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: character.id,
+        table
+      })
+    )
+}
 
 const actionsForLegalKey = (
   key: CareerCreationActionKey,
@@ -270,6 +330,13 @@ const deriveActions = (
   character: CharacterState,
   creation: CharacterCreationProjection
 ): CharacterCreationActionViewModel[] => {
+  const termSkillRollActions = deriveTermSkillRollActions(
+    identity,
+    character,
+    creation
+  )
+  if (termSkillRollActions.length > 0) return termSkillRollActions
+
   const legalKeys = new Set(
     deriveLegalCareerCreationActionKeys(
       creation.state,
