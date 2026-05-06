@@ -337,9 +337,8 @@ const derivedCreationNotes = (character: CharacterState): string => {
     notes.push('Rules source: Cepheus Engine SRD.')
     for (const [index, term] of creation.terms.entries()) {
       const survival =
-        creation.history.some(
-          (event) => event.type === 'SURVIVAL_FAILED'
-        ) && index === creation.terms.length - 1
+        creation.history.some((event) => event.type === 'SURVIVAL_FAILED') &&
+        index === creation.terms.length - 1
           ? 'mishap'
           : 'survived'
       notes.push(`Term ${index + 1}: ${term.career}, ${survival}.`)
@@ -459,36 +458,6 @@ const validateCharacterCreationAction = (
   }
 
   return ok(undefined)
-}
-
-const clientAdvanceAllowedEvents = new Set([
-  'SKIP_COMMISSION',
-  'SKIP_ADVANCEMENT',
-  'RESOLVE_AGING_CHANGE',
-  'USE_ANAGATHICS',
-  'DECLINE_ANAGATHICS',
-  'REENLIST',
-  'FORCED_REENLIST',
-  'LEAVE_CAREER',
-  'REENLIST_BLOCKED',
-  'MISHAP_RESOLVED',
-  'CONFIRM_DEATH',
-  'CREATION_COMPLETE'
-] satisfies string[])
-
-const validateClientAdvanceEvent = (
-  command: Extract<Command, { type: 'AdvanceCharacterCreation' }>
-): Result<void, CommandError> => {
-  if (clientAdvanceAllowedEvents.has(command.creationEvent.type)) {
-    return ok(undefined)
-  }
-
-  return err(
-    commandError(
-      'not_allowed',
-      `${command.creationEvent.type} must be resolved by a server command`
-    )
-  )
 }
 
 const validateBasicTrainingCompletion = (
@@ -634,16 +603,16 @@ const validateCareerSelection = (
   return ok(character.creation)
 }
 
-const previousCareerNames = (
-  creation: CharacterCreationProjection
-): string[] => creation.careers.map((career) => career.name)
+const previousCareerNames = (creation: CharacterCreationProjection): string[] =>
+  creation.careers.map((career) => career.name)
 
 const previousCareerCount = (
   creation: CharacterCreationProjection,
   career: string
 ): number =>
   previousCareerNames(creation).filter(
-    (previousCareer) => previousCareer !== 'Drifter' && previousCareer !== career
+    (previousCareer) =>
+      previousCareer !== 'Drifter' && previousCareer !== career
   ).length
 
 const validateCareerCanBeSelected = (
@@ -1304,7 +1273,10 @@ const resolveDraftCreationEvent = ({
   roll
 }: {
   roll: { expression: '1d6'; rolls: number[]; total: number }
-}): Result<Pick<CharacterCreationDraftResolvedEvent, 'draft'>, CommandError> => {
+}): Result<
+  Pick<CharacterCreationDraftResolvedEvent, 'draft'>,
+  CommandError
+> => {
   const draft = resolveDraftCareer({
     table: CEPHEUS_SRD_RULESET.theDraft,
     roll: roll.total
@@ -1700,7 +1672,9 @@ export const deriveEventsForCommand = (
         return err(commandError('missing_entity', 'Character does not exist'))
       }
       if (!canMutateCharacter(state.value, character, command.actorId)) {
-        return notAllowed('Only the character owner or referee can edit a sheet')
+        return notAllowed(
+          'Only the character owner or referee can edit a sheet'
+        )
       }
       const patch = validateCharacterSheetPatch(command)
       if (!patch.ok) return patch
@@ -1813,8 +1787,9 @@ export const deriveEventsForCommand = (
         )
       }
       if (!isReferee(state.value, command.actorId)) {
-        const allowed = validateClientAdvanceEvent(command)
-        if (!allowed.ok) return allowed
+        return notAllowed(
+          'Only the referee can use generic character creation advance'
+        )
       }
       if (!character.creation) {
         return err(
@@ -2034,7 +2009,10 @@ export const deriveEventsForCommand = (
       if (!creation.ok) return creation
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career
-      const selectable = validateCareerCanBeSelected(creation.value, career.value)
+      const selectable = validateCareerCanBeSelected(
+        creation.value,
+        career.value
+      )
       if (!selectable.ok) return selectable
 
       const rolled = rollDiceExpression(
@@ -2101,7 +2079,9 @@ export const deriveEventsForCommand = (
         )
       }
       if (!creation.value.canEnterDraft) {
-        return err(commandError('invalid_command', 'Draft has already been used'))
+        return err(
+          commandError('invalid_command', 'Draft has already been used')
+        )
       }
 
       const rolled = rollDiceExpression(

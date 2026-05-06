@@ -12,6 +12,7 @@ const REQUEST_TIMEOUT_MS = Number(process.env.CEPHEUS_SMOKE_TIMEOUT_MS ?? 15000)
 const RUN_ID = randomUUID().slice(0, 8)
 const GAME_ID = `smoke-${Date.now().toString(36)}-${RUN_ID}`
 const ACTOR_ID = `smoke-ref-${RUN_ID}`
+const ACTOR_SESSION = `smoke-session-${RUN_ID}-123456`
 const BOARD_ID = `smoke-board-${RUN_ID}`
 const PIECE_ID = `smoke-piece-${RUN_ID}`
 const CHARACTER_ID = `smoke-character-${RUN_ID}`
@@ -19,13 +20,17 @@ const CLIENT_MODULES = new Map([
   [
     '/client/app/app.js',
     {
-      markers: ['webSocketConstructor: WebSocket', 'registerClientServiceWorker'],
+      markers: [
+        'webSocketConstructor: WebSocket',
+        'registerClientServiceWorker'
+      ],
       imports: [
         '/client/app/board-view.js',
         '/client/app/app-elements.js',
         '/client/app/app-bootstrap.js',
         '/client/app/app-command-router.js',
         '/client/app/app-session.js',
+        '/client/app/actor-session.js',
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
@@ -52,15 +57,13 @@ const CLIENT_MODULES = new Map([
     }
   ],
   ['/client/app/app-elements.js', { markers: ['getAppElements'] }],
-  [
-    '/client/app/app-bootstrap.js',
-    { markers: ['createAppBootstrap'] }
-  ],
+  ['/client/app/app-bootstrap.js', { markers: ['createAppBootstrap'] }],
   [
     '/client/app/app-command-router.js',
     { markers: ['createAppCommandRouter'] }
   ],
   ['/client/app/app-session.js', { markers: ['createAppSession'] }],
+  ['/client/app/actor-session.js', { markers: ['resolveActorSessionSecret'] }],
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
   [
@@ -201,10 +204,7 @@ const CLIENT_MODULES = new Map([
       imports: ['/client/dice.js']
     }
   ],
-  [
-    '/client/app/dice-reveal-state.js',
-    { markers: ['createDiceRevealState'] }
-  ],
+  ['/client/app/dice-reveal-state.js', { markers: ['createDiceRevealState'] }],
   [
     '/client/app/door-los-view.js',
     {
@@ -442,7 +442,10 @@ const smokeClientModuleGraph = async () => {
 const postCommand = async (command, requestId) =>
   fetchJson(`/rooms/${GAME_ID}/command`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      'x-cepheus-actor-session': ACTOR_SESSION
+    },
     body: JSON.stringify({
       type: 'command',
       requestId,

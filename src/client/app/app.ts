@@ -87,6 +87,7 @@ import {
 } from '../game-commands.js'
 import { createAppCommandRouter } from './app-command-router.js'
 import { createAppSession } from './app-session.js'
+import { resolveActorSessionSecret } from './actor-session.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
 import { createConnectivityController } from './connectivity-controller.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
@@ -113,6 +114,7 @@ const els = getAppElements(document)
 const initialIdentity = resolveAppLocationIdentity(location.search)
 let roomId = initialIdentity.roomId
 let actorId = initialIdentity.actorId
+let actorSessionSecret = resolveActorSessionSecret({ roomId, actorId })
 let state = null
 let firstStateApplied = false
 let latestDiceId = null
@@ -203,7 +205,8 @@ const commandRouter = createAppCommandRouter({
     const response = await postRoomCommand({
       roomId,
       requestId,
-      command
+      command,
+      actorSessionSecret
     })
     handleServerMessage(response.message)
     if (!response.ok) {
@@ -2119,7 +2122,8 @@ const roomSocketController = createRoomSocketController({
     host: location.host,
     roomId,
     viewerRole,
-    actorId
+    actorId,
+    actorSessionSecret
   }),
   isOffline: () => connectivityController?.snapshot().status === 'offline',
   onStatus: setStatus,
@@ -2412,6 +2416,7 @@ createRoomMenuController({
   onOpenRoom: (identity) => {
     roomId = identity.roomId
     actorId = identity.actorId
+    actorSessionSecret = resolveActorSessionSecret({ roomId, actorId })
     appSession.setRoomIdentity({ roomId, actorId })
     firstStateApplied = false
     latestDiceId = null

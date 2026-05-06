@@ -76,6 +76,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/actor-session.js',
+    source: join(compiledClientRoot, 'client', 'app', 'actor-session.js'),
+    exportName: 'CLIENT_ACTOR_SESSION_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/board-geometry.js',
     source: join(compiledClientRoot, 'client', 'app', 'board-geometry.js'),
     exportName: 'CLIENT_BOARD_GEOMETRY_JS',

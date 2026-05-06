@@ -1,4 +1,4 @@
-import { buildRoomPath, buildViewerQuery } from './room-api.js'
+import { buildRoomPath, buildViewerSocketQuery } from './room-api.js'
 
 export interface AppLocationIdentity {
   roomId: string
@@ -20,6 +20,7 @@ export interface RoomUrlIdentity {
 export interface RoomWebSocketUrlOptions extends AppLocationIdentity {
   protocol: string
   host: string
+  actorSessionSecret: string
 }
 
 export const DEFAULT_APP_LOCATION: AppLocationDefaults = {
@@ -60,7 +61,8 @@ export const buildRoomWebSocketUrl = ({
   host,
   roomId,
   viewerRole,
-  actorId
+  actorId,
+  actorSessionSecret
 }: RoomWebSocketUrlOptions): string => {
   const socketProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
   return (
@@ -69,6 +71,6 @@ export const buildRoomWebSocketUrl = ({
     host +
     buildRoomPath(roomId) +
     '/ws' +
-    buildViewerQuery(viewerRole, actorId)
+    buildViewerSocketQuery(viewerRole, actorId, actorSessionSecret)
   )
 }

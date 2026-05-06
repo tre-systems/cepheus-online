@@ -1,4 +1,4 @@
-import type { Command } from '../../shared/commands'
+import type { Command, GameCommand } from '../../shared/commands'
 
 export type BoardCommand = Extract<
   Command,
@@ -29,7 +29,7 @@ export type SheetCommand = Extract<
 >
 
 export type CharacterCreationCommand = Extract<
-  Command,
+  GameCommand,
   {
     type:
       | 'CreateCharacter'
@@ -51,6 +51,7 @@ export type CharacterCreationCommand = Extract<
       | 'ResolveCharacterCreationAdvancement'
       | 'ResolveCharacterCreationAging'
       | 'ResolveCharacterCreationReenlistment'
+      | 'RollCharacterCreationCharacteristic'
       | 'RollCharacterCreationTermSkill'
       | 'ResolveCharacterCreationTermCascadeSkill'
       | 'RollCharacterCreationMusteringBenefit'
@@ -78,6 +79,7 @@ export const appCommandRouteByType = {
   ResolveCharacterCreationCascadeSkill: 'characterCreation',
   FinalizeCharacterCreation: 'characterCreation',
   StartCharacterCareerTerm: 'characterCreation',
+  CompleteCharacterCreationHomeworld: 'characterCreation',
   ResolveCharacterCreationQualification: 'characterCreation',
   ResolveCharacterCreationDraft: 'characterCreation',
   EnterCharacterCreationDrifter: 'characterCreation',
@@ -87,6 +89,7 @@ export const appCommandRouteByType = {
   ResolveCharacterCreationAdvancement: 'characterCreation',
   ResolveCharacterCreationAging: 'characterCreation',
   ResolveCharacterCreationReenlistment: 'characterCreation',
+  RollCharacterCreationCharacteristic: 'characterCreation',
   RollCharacterCreationTermSkill: 'characterCreation',
   ResolveCharacterCreationTermCascadeSkill: 'characterCreation',
   RollCharacterCreationMusteringBenefit: 'characterCreation',
@@ -99,11 +102,11 @@ export const appCommandRouteByType = {
   SetPieceVisibility: 'board',
   SetPieceFreedom: 'board',
   RollDice: 'dice'
-} satisfies Record<Command['type'], AppCommandRoute>
+} satisfies Record<GameCommand['type'], AppCommandRoute>
 
 export interface AppCommandSubmitInput {
   requestId: string
-  command: Command
+  command: GameCommand
 }
 
 export type AppCommandSubmit<TResult = unknown> = (
@@ -113,7 +116,7 @@ export type AppCommandSubmit<TResult = unknown> = (
 export interface CreateAppCommandRouterOptions<TResult = unknown> {
   getEventSeq: () => number | null | undefined
   submit: AppCommandSubmit<TResult>
-  createRequestId?: (command: Command, index: number) => string
+  createRequestId?: (command: GameCommand, index: number) => string
 }
 
 export interface DispatchCommandOptions {
@@ -125,7 +128,7 @@ export interface DispatchCommandBatchOptions {
 }
 
 export interface AppCommandDomainRouter<
-  TCommand extends Command,
+  TCommand extends GameCommand,
   TResult = unknown
 > {
   dispatch: (
@@ -143,9 +146,9 @@ export interface AppCommandDomainRouter<
 }
 
 export interface AppCommandRouter<TResult = unknown>
-  extends AppCommandDomainRouter<Command, TResult> {
-  sequenceCommand: (command: Command, offset?: number) => Command
-  routeFor: (command: Command) => AppCommandRoute
+  extends AppCommandDomainRouter<GameCommand, TResult> {
+  sequenceCommand: (command: GameCommand, offset?: number) => GameCommand
+  routeFor: (command: GameCommand) => AppCommandRoute
   board: AppCommandDomainRouter<BoardCommand, TResult>
   dice: AppCommandDomainRouter<DiceCommand, TResult>
   door: AppCommandDomainRouter<DoorCommand, TResult>
@@ -153,17 +156,17 @@ export interface AppCommandRouter<TResult = unknown>
   characterCreation: AppCommandDomainRouter<CharacterCreationCommand, TResult>
 }
 
-const defaultRequestId = (command: Command, index: number): string =>
+const defaultRequestId = (command: GameCommand, index: number): string =>
   `${command.type}-${index + 1}`
 
-const shouldAddExpectedSeq = (command: Command): boolean =>
+const shouldAddExpectedSeq = (command: GameCommand): boolean =>
   command.type !== 'CreateGame' && command.expectedSeq === undefined
 
 export const sequenceCommand = (
-  command: Command,
+  command: GameCommand,
   eventSeq: number | null | undefined,
   offset = 0
-): Command => {
+): GameCommand => {
   if (eventSeq === null || eventSeq === undefined) return command
   if (!shouldAddExpectedSeq(command)) return command
 
@@ -179,7 +182,7 @@ export const createAppCommandRouter = <TResult = unknown>({
   createRequestId = defaultRequestId
 }: CreateAppCommandRouterOptions<TResult>): AppCommandRouter<TResult> => {
   const routeCommand = (
-    command: Command,
+    command: GameCommand,
     offset: number,
     requestId: string
   ): Promise<TResult> =>
@@ -188,7 +191,7 @@ export const createAppCommandRouter = <TResult = unknown>({
       command: sequenceCommand(command, getEventSeq(), offset)
     })
 
-  const domainRouter = <TCommand extends Command>(): AppCommandDomainRouter<
+  const domainRouter = <TCommand extends GameCommand>(): AppCommandDomainRouter<
     TCommand,
     TResult
   > => ({
@@ -230,7 +233,7 @@ export const createAppCommandRouter = <TResult = unknown>({
     sequenceCommand: (command, offset = 0) =>
       sequenceCommand(command, getEventSeq(), offset),
     routeFor: (command) => appCommandRouteByType[command.type],
-    ...domainRouter<Command>(),
+    ...domainRouter<GameCommand>(),
     board: domainRouter<BoardCommand>(),
     dice: domainRouter<DiceCommand>(),
     door: domainRouter<DoorCommand>(),

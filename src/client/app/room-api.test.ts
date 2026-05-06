@@ -75,6 +75,7 @@ describe('room API helpers', () => {
       roomId: 'demo-room',
       requestId: 'CreateGame-1',
       command: createGameCommand(),
+      actorSessionSecret: 'test-session-token-123456',
       fetch: fetcher
     })
 
@@ -91,7 +92,10 @@ describe('room API helpers', () => {
     assert.equal(requests[0]?.input, '/rooms/demo-room/command')
     assert.deepEqual(requests[0]?.init, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'x-cepheus-actor-session': 'test-session-token-123456'
+      },
       body: JSON.stringify({
         type: 'command',
         requestId: 'CreateGame-1',

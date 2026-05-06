@@ -28,6 +28,13 @@ Friendly campaign links can be short and human-shareable, but permissions
 should be account-backed. A user who has a link should still need a valid role
 for private campaigns.
 
+Until Discord/session auth is implemented, the browser creates a local actor
+session secret and sends it with commands. The room Durable Object binds the
+first secret it sees for a room actor ID and rejects later commands for that
+actor ID from a different secret. This is a development-phase anti-tampering
+guard, not a replacement for authenticated identity: a room actor ID can still
+be claimed by the first browser that uses it.
+
 Suggested role model:
 
 - owner

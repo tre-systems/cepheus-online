@@ -19,6 +19,7 @@ const clientModules = new Map<
         '/client/app/app-command-router.js',
         '/client/app/app-bootstrap.js',
         '/client/app/app-session.js',
+        '/client/app/actor-session.js',
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
@@ -57,6 +58,7 @@ const clientModules = new Map<
   ],
   ['/client/app/app-bootstrap.js', { markers: ['createAppBootstrap'] }],
   ['/client/app/app-session.js', { markers: ['createAppSession'] }],
+  ['/client/app/actor-session.js', { markers: ['resolveActorSessionSecret'] }],
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
   [

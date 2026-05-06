@@ -1,4 +1,4 @@
-import type { Command } from '../../shared/commands'
+import type { GameCommand } from '../../shared/commands'
 import type { ClientMessage, ServerMessage } from '../../shared/protocol'
 
 type FetchResponse = Pick<Response, 'json' | 'ok'>
@@ -16,7 +16,8 @@ export interface FetchRoomStateOptions extends RoomRequestOptions {
 
 export interface PostRoomCommandOptions extends RoomRequestOptions {
   requestId: string
-  command: Command
+  command: GameCommand
+  actorSessionSecret: string
 }
 
 export interface CommandResponse {
@@ -35,9 +36,18 @@ export const buildViewerQuery = (viewerRole: string, actorId: string): string =>
   '&user=' +
   encodeURIComponent(actorId)
 
+export const buildViewerSocketQuery = (
+  viewerRole: string,
+  actorId: string,
+  actorSessionSecret: string
+): string =>
+  buildViewerQuery(viewerRole, actorId) +
+  '&session=' +
+  encodeURIComponent(actorSessionSecret)
+
 export const buildCommandMessage = (
   requestId: string,
-  command: Command
+  command: GameCommand
 ): Extract<ClientMessage, { type: 'command' }> => ({
   type: 'command',
   requestId,
@@ -60,13 +70,17 @@ export const postRoomCommand = async ({
   roomId,
   requestId,
   command,
+  actorSessionSecret,
   fetch: fetcher
 }: PostRoomCommandOptions): Promise<CommandResponse> => {
   const response = await resolveFetch(fetcher)(
     `${buildRoomPath(roomId)}/command`,
     {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'x-cepheus-actor-session': actorSessionSecret
+      },
       body: JSON.stringify(buildCommandMessage(requestId, command))
     }
   )

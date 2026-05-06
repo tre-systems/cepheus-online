@@ -70,9 +70,10 @@ describe('app location helpers', () => {
         host: 'cepheus.test',
         roomId: 'demo room',
         viewerRole: 'player/referee',
-        actorId: 'local user'
+        actorId: 'local user',
+        actorSessionSecret: 'test-session-token-123456'
       }),
-      'wss://cepheus.test/rooms/demo%20room/ws?viewer=player%2Freferee&user=local%20user'
+      'wss://cepheus.test/rooms/demo%20room/ws?viewer=player%2Freferee&user=local%20user&session=test-session-token-123456'
     )
     assert.equal(
       buildRoomWebSocketUrl({
@@ -80,9 +81,10 @@ describe('app location helpers', () => {
         host: 'localhost:8787',
         roomId: 'demo-room',
         viewerRole: 'referee',
-        actorId: 'local-user'
+        actorId: 'local-user',
+        actorSessionSecret: 'test-session-token-123456'
       }),
-      'ws://localhost:8787/rooms/demo-room/ws?viewer=referee&user=local-user'
+      'ws://localhost:8787/rooms/demo-room/ws?viewer=referee&user=local-user&session=test-session-token-123456'
     )
   })
 })

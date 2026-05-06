@@ -75,7 +75,8 @@ describe('room socket controller', () => {
         host: 'cepheus.test',
         roomId: 'room-1',
         viewerRole: 'referee',
-        actorId: 'user-1'
+        actorId: 'user-1',
+        actorSessionSecret: 'test-session-token-123456'
       }),
       onStatus: (status) => statuses.push(status),
       onError: () => {
@@ -89,7 +90,7 @@ describe('room socket controller', () => {
     controller.connect()
     assert.equal(
       FakeRoomSocket.instances[0]?.url,
-      'wss://cepheus.test/rooms/room-1/ws?viewer=referee&user=user-1'
+      'wss://cepheus.test/rooms/room-1/ws?viewer=referee&user=user-1&session=test-session-token-123456'
     )
     FakeRoomSocket.instances[0]?.dispatch('open')
 
@@ -105,7 +106,8 @@ describe('room socket controller', () => {
         host: 'localhost:8787',
         roomId: 'room-1',
         viewerRole: 'player',
-        actorId: 'user-1'
+        actorId: 'user-1',
+        actorSessionSecret: 'test-session-token-123456'
       }),
       onStatus: () => {},
       onError: () => {},
@@ -131,7 +133,8 @@ describe('room socket controller', () => {
         host: 'localhost:8787',
         roomId: 'room-1',
         viewerRole: 'player',
-        actorId: 'user-1'
+        actorId: 'user-1',
+        actorSessionSecret: 'test-session-token-123456'
       }),
       isOffline: () => offline,
       onStatus: (status) => statuses.push(status),
@@ -158,7 +161,8 @@ describe('room socket controller', () => {
         host: 'localhost:8787',
         roomId: 'room-1',
         viewerRole: 'player',
-        actorId: 'user-1'
+        actorId: 'user-1',
+        actorSessionSecret: 'test-session-token-123456'
       }),
       onStatus: () => {},
       onError: (message) => errors.push(message),
@@ -183,7 +187,8 @@ describe('room socket controller', () => {
         host: 'localhost:8787',
         roomId: 'room-1',
         viewerRole: 'player',
-        actorId: 'user-1'
+        actorId: 'user-1',
+        actorSessionSecret: 'test-session-token-123456'
       }),
       onStatus: (status) => statuses.push(status),
       onError: () => {},

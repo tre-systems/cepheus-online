@@ -2432,7 +2432,7 @@ describe('room publication flow', () => {
     assert.equal(forged.error.code, 'not_allowed')
     assert.equal(
       forged.error.message,
-      'SET_CHARACTERISTICS must be resolved by a server command'
+      'Only the referee can use generic character creation advance'
     )
     assert.equal((await readEventStream(storage, gameId)).length, 3)
   })

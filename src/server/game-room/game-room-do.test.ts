@@ -45,17 +45,20 @@ const createRoom = (
     }
   )
 
-const roomSocketTags = (viewer: string, user: string) => [
-  'game:game-1',
-  `viewer:${viewer}`,
-  `user:${user}`
-]
+const roomSocketTags = (
+  viewer: string,
+  user: string,
+  session = 'test-session-token-123456'
+) => ['game:game-1', `viewer:${viewer}`, `user:${user}`, `session:${session}`]
 
 const postCommand = (room: GameRoomDO, body: unknown) =>
   room.fetch(
     new Request('https://cepheus.test/rooms/game-1/command', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'x-cepheus-actor-session': 'test-session-token-123456'
+      },
       body: JSON.stringify(body)
     })
   )
@@ -64,8 +67,29 @@ const postRawCommand = (room: GameRoomDO, body: string) =>
   room.fetch(
     new Request('https://cepheus.test/rooms/game-1/command', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'x-cepheus-actor-session': 'test-session-token-123456'
+      },
       body
+    })
+  )
+
+const postCommandWithSession = (
+  room: GameRoomDO,
+  body: unknown,
+  actorSession: string | null
+) =>
+  room.fetch(
+    new Request('https://cepheus.test/rooms/game-1/command', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(actorSession === null
+          ? {}
+          : { 'x-cepheus-actor-session': actorSession })
+      },
+      body: JSON.stringify(body)
     })
   )
 
@@ -147,6 +171,48 @@ describe('GameRoomDO HTTP skeleton', () => {
     assert.equal(message.type, 'commandAccepted')
     assert.equal(message.eventSeq, 1)
     assert.equal(message.state.name, 'Spinward Test')
+  })
+
+  it('requires an actor session token for command mutation', async () => {
+    const room = createRoom()
+
+    const response = await postCommandWithSession(room, createGameBody(), null)
+    const message = await response.json()
+
+    assert.equal(response.status, 403)
+    assert.equal(message.type, 'commandRejected')
+    assert.equal(message.error.code, 'not_allowed')
+    assert.equal(
+      message.error.message,
+      'Actor session token is required for commands'
+    )
+    assert.equal(message.eventSeq, 0)
+  })
+
+  it('binds actor ids to the first browser session token per room', async () => {
+    const room = createRoom()
+
+    const accepted = await postCommandWithSession(
+      room,
+      createGameBody(),
+      'first-session-token-123456'
+    )
+    const rejected = await postCommandWithSession(
+      room,
+      createBoardBody(),
+      'second-session-token-123456'
+    )
+    const message = await rejected.json()
+
+    assert.equal(accepted.status, 200)
+    assert.equal(rejected.status, 403)
+    assert.equal(message.type, 'commandRejected')
+    assert.equal(message.error.code, 'not_allowed')
+    assert.equal(
+      message.error.message,
+      'Actor id is already bound to another browser session'
+    )
+    assert.equal(message.eventSeq, 1)
   })
 
   it('records accepted publication telemetry through the room boundary', async () => {

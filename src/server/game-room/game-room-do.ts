@@ -89,12 +89,27 @@ const MAX_COMMAND_BODY_BYTES = 64 * 1024
 const MAX_WEBSOCKET_MESSAGE_BYTES = 64 * 1024
 const RATE_LIMIT_WINDOW_MS = 10_000
 const MAX_COMMANDS_PER_WINDOW = 40
+const ACTOR_SESSION_HEADER = 'x-cepheus-actor-session'
+const ACTOR_SESSION_TAG_PREFIX = 'session:'
+const ACTOR_SESSION_PATTERN = /^[A-Za-z0-9_-]{24,128}$/
 const encoder = new TextEncoder()
 
 const byteLength = (value: string): number => encoder.encode(value).length
 
+const actorSessionKey = (gameId: GameId, actorId: string): string =>
+  `actorSession:${gameId}:${actorId}`
+
+const normalizeActorSessionSecret = (value: string | null): string | null => {
+  const trimmed = value?.trim()
+  if (!trimmed || !ACTOR_SESSION_PATTERN.test(trimmed)) return null
+  return trimmed
+}
+
 export class GameRoomDO {
-  private readonly commandWindows = new Map<string, { count: number; resetAt: number }>()
+  private readonly commandWindows = new Map<
+    string,
+    { count: number; resetAt: number }
+  >()
 
   constructor(
     private readonly state: DurableObjectState,
@@ -162,6 +177,50 @@ export class GameRoomDO {
     }
   }
 
+  private actorSessionFromSocket(socket: WebSocket): string | null {
+    const sessionTag = this.getTags(socket).find((tag) =>
+      tag.startsWith(ACTOR_SESSION_TAG_PREFIX)
+    )
+    return normalizeActorSessionSecret(
+      sessionTag?.slice(ACTOR_SESSION_TAG_PREFIX.length) ?? null
+    )
+  }
+
+  private async bindOrVerifyActorSession(
+    gameId: GameId,
+    actorId: string,
+    actorSessionSecret: string | null
+  ): Promise<Result<void, CommandError>> {
+    if (!actorSessionSecret) {
+      return {
+        ok: false,
+        error: commandError(
+          'not_allowed',
+          'Actor session token is required for commands'
+        )
+      }
+    }
+
+    const key = actorSessionKey(gameId, actorId)
+    const existing = await this.state.storage.get<string>(key)
+    if (existing === undefined) {
+      await this.state.storage.put(key, actorSessionSecret)
+      return { ok: true, value: undefined }
+    }
+
+    if (existing !== actorSessionSecret) {
+      return {
+        ok: false,
+        error: commandError(
+          'not_allowed',
+          'Actor id is already bound to another browser session'
+        )
+      }
+    }
+
+    return { ok: true, value: undefined }
+  }
+
   private async buildRoomStateMessage(
     gameId: GameId,
     viewer: GameViewer
@@ -203,7 +262,8 @@ export class GameRoomDO {
 
   private async handleCommandMessage(
     gameId: GameId,
-    message: Extract<ClientMessage, { type: 'command' }>
+    message: Extract<ClientMessage, { type: 'command' }>,
+    actorSessionSecret: string | null
   ): Promise<
     | {
         ok: true
@@ -217,6 +277,24 @@ export class GameRoomDO {
         status: number
       }
   > {
+    const actorSession = await this.bindOrVerifyActorSession(
+      gameId,
+      message.command.actorId,
+      actorSessionSecret
+    )
+    if (!actorSession.ok) {
+      return {
+        ok: false,
+        status: 403,
+        response: {
+          type: 'commandRejected',
+          requestId: message.requestId,
+          error: actorSession.error,
+          eventSeq: await getEventSeq(this.state.storage, gameId)
+        }
+      }
+    }
+
     const rateLimit = this.checkRateLimit(
       `${gameId}:${message.command.actorId}:${message.command.type}`
     )
@@ -293,7 +371,8 @@ export class GameRoomDO {
 
   private async handleJsonMessage(
     raw: unknown,
-    gameId: GameId
+    gameId: GameId,
+    actorSessionSecret: string | null
   ): Promise<
     | {
         ok: true
@@ -332,7 +411,11 @@ export class GameRoomDO {
       }
     }
 
-    const result = await this.handleCommandMessage(gameId, decoded.value)
+    const result = await this.handleCommandMessage(
+      gameId,
+      decoded.value,
+      actorSessionSecret
+    )
     return result.ok
       ? {
           ok: true,
@@ -375,6 +458,12 @@ export class GameRoomDO {
       const server = pair[1]
       const tags = [`game:${route.gameId}`, `viewer:${viewer.role}`]
       if (viewer.userId) tags.push(`user:${viewer.userId}`)
+      const actorSessionSecret = normalizeActorSessionSecret(
+        url.searchParams.get('session')
+      )
+      if (actorSessionSecret) {
+        tags.push(`${ACTOR_SESSION_TAG_PREFIX}${actorSessionSecret}`)
+      }
 
       this.state.acceptWebSocket(server, tags)
       this.send(server, await this.buildRoomStateMessage(route.gameId, viewer))
@@ -396,7 +485,10 @@ export class GameRoomDO {
       let raw: unknown
       const contentLength = Number(request.headers.get('content-length') ?? 0)
       if (contentLength > MAX_COMMAND_BODY_BYTES) {
-        const error = commandError('invalid_message', 'Command body is too large')
+        const error = commandError(
+          'invalid_message',
+          'Command body is too large'
+        )
         return jsonResponse({ type: 'error', error } satisfies ServerMessage, {
           status: 413
         })
@@ -422,7 +514,11 @@ export class GameRoomDO {
         })
       }
 
-      const result = await this.handleJsonMessage(raw, route.gameId)
+      const result = await this.handleJsonMessage(
+        raw,
+        route.gameId,
+        normalizeActorSessionSecret(request.headers.get(ACTOR_SESSION_HEADER))
+      )
 
       if (result.ok && result.state) {
         this.broadcastState(result.state, result.liveActivities ?? [])
@@ -496,7 +592,11 @@ export class GameRoomDO {
       return
     }
 
-    const result = await this.handleCommandMessage(gameId, decoded.value)
+    const result = await this.handleCommandMessage(
+      gameId,
+      decoded.value,
+      this.actorSessionFromSocket(socket)
+    )
 
     if (!result.ok) {
       this.send(socket, result.response)
