@@ -277,11 +277,12 @@ const actionsForLegalKey = (
       ]
     case 'finishMustering':
       return [
-        action(
-          'finish-mustering',
-          'Finish mustering out',
-          advanceCommand(identity, character, { type: 'FINISH_MUSTERING' })
-        )
+        action('finish-mustering', 'Finish mustering out', {
+          type: 'CompleteCharacterCreationMustering',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
       ]
     case 'completeCreation':
       return [
@@ -292,6 +293,14 @@ const actionsForLegalKey = (
         )
       ]
     case 'rollReenlistment':
+      return [
+        action('roll-reenlistment', 'Roll re-enlistment', {
+          type: 'ResolveCharacterCreationReenlistment',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
+      ]
     case 'forcedReenlist':
     case 'resolveMusteringBenefit':
       return []

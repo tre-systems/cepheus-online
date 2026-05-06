@@ -227,6 +227,40 @@
     "expectedSeq": 27
   },
   {
+    "name": "character creation mustering benefit command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-roll-mustering-benefit",
+      "command": {
+        "type": "RollCharacterCreationMusteringBenefit",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 28,
+        "characterId": "crew-scout-1",
+        "career": "Scout",
+        "kind": "material"
+      }
+    },
+    "commandType": "RollCharacterCreationMusteringBenefit",
+    "expectedSeq": 28
+  },
+  {
+    "name": "character creation mustering completion command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-complete-mustering",
+      "command": {
+        "type": "CompleteCharacterCreationMustering",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 29,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "CompleteCharacterCreationMustering",
+    "expectedSeq": 29
+  },
+  {
     "name": "character creation background skill command",
     "message": {
       "type": "command",

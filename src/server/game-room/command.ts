@@ -1,10 +1,14 @@
 import type { Command, GameCommand } from '../../shared/commands'
 import {
+  canRollCashBenefit,
   canTransitionCareerCreationState,
   createCareerCreationState,
   careerSkillWithLevel,
   deriveAgingRollModifier,
+  deriveCashBenefitRollModifier,
   deriveCareerCreationActionContext,
+  deriveRemainingCareerBenefits,
+  deriveMaterialBenefitRollModifier,
   deriveLegalCareerCreationActionKeysForProjection,
   deriveSurvivalPromotionOptions,
   evaluateCareerCheck,
@@ -14,6 +18,7 @@ import {
   isCascadeCareerSkill,
   normalizeCareerSkill,
   parseCareerRankReward,
+  resolveCareerBenefit,
   resolveAging,
   resolveCareerSkillTableRoll,
   resolveCascadeCareerSkill,
@@ -613,10 +618,123 @@ const validateReenlistmentResolution = (
   return ok(character.creation)
 }
 
+const termsInCareer = (
+  creation: CharacterCreationProjection,
+  career: string
+): number => creation.terms.filter((term) => term.career === career).length
+
+const benefitsReceivedInCareer = (
+  creation: CharacterCreationProjection,
+  career: string
+): number =>
+  creation.terms
+    .filter((term) => term.career === career)
+    .reduce((total, term) => total + term.benefits.length, 0)
+
+const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
+  (creation.history ?? []).filter(
+    (event) =>
+      event.type === 'FINISH_MUSTERING' &&
+      event.musteringBenefit?.kind === 'cash'
+  ).length
+
+const hasGamblingSkill = (character: CharacterState): boolean => {
+  const creation = character.creation
+  const creationSkills = [
+    ...(creation?.backgroundSkills ?? []),
+    ...(creation?.terms.flatMap((term) => term.skillsAndTraining) ?? [])
+  ]
+
+  return [...character.skills, ...creationSkills].some((skill) =>
+    /^gambling(?:-|$)/i.test(skill.trim())
+  )
+}
+
 const currentCareerRank = (
   creation: CharacterCreationProjection,
   career: string
 ): number => creation.careers.find((entry) => entry.name === career)?.rank ?? 0
+
+const validateMusteringBenefitRoll = (
+  character: CharacterState,
+  career: string
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'MUSTERING_OUT') {
+    return err(
+      commandError(
+        'invalid_command',
+        `MUSTERING_BENEFIT is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const actionContext = deriveCareerCreationActionContext(character.creation)
+  const blockingDecision = actionContext.pendingDecisions?.find(
+    (decision) => decision.key !== 'musteringBenefitSelection'
+  )
+  if (blockingDecision) {
+    return err(
+      commandError(
+        'invalid_command',
+        'MUSTERING_BENEFIT is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  const remainingInCareer =
+    deriveRemainingCareerBenefits({
+      termsInCareer: termsInCareer(character.creation, career),
+      currentRank: currentCareerRank(character.creation, career),
+      benefitsReceived: benefitsReceivedInCareer(character.creation, career)
+    })
+  if (remainingInCareer <= 0) {
+    return err(
+      commandError(
+        'invalid_command',
+        `No remaining mustering benefits for ${career}`
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
+const validateMusteringCompletion = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'MUSTERING_OUT') {
+    return err(
+      commandError(
+        'invalid_command',
+        `FINISH_MUSTERING is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('finishMustering')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'FINISH_MUSTERING is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
 
 type CharacterCreationSurvivalResolvedEvent = Extract<
   GameEvent,
@@ -646,6 +764,11 @@ type CharacterCreationReenlistmentResolvedEvent = Extract<
 type CharacterCreationTermSkillRolledEvent = Extract<
   GameEvent,
   { type: 'CharacterCreationTermSkillRolled' }
+>
+
+type CharacterCreationMusteringBenefitRolledEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationMusteringBenefitRolled' }
 >
 
 const termSkillTables = {
@@ -1070,10 +1193,7 @@ const resolveReenlistmentCreationEvent = ({
   creation: CharacterCreationProjection
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
-  Pick<
-    CharacterCreationReenlistmentResolvedEvent,
-    'outcome' | 'reenlistment'
-  >,
+  Pick<CharacterCreationReenlistmentResolvedEvent, 'outcome' | 'reenlistment'>,
   CommandError
 > => {
   const term = creation.terms.at(-1)
@@ -1132,6 +1252,71 @@ const resolveReenlistmentCreationEvent = ({
       target: outcome.check.target,
       success: outcome.success,
       outcome: resolution.outcome
+    }
+  })
+}
+
+const resolveMusteringBenefitCreationEvent = ({
+  character,
+  creation,
+  career,
+  kind,
+  roll
+}: {
+  character: CharacterState
+  creation: CharacterCreationProjection
+  career: string
+  kind: CharacterCreationMusteringBenefitRolledEvent['musteringBenefit']['kind']
+  roll: { expression: '2d6'; rolls: number[]; total: number }
+}): Result<
+  Pick<CharacterCreationMusteringBenefitRolledEvent, 'musteringBenefit'>,
+  CommandError
+> => {
+  if (
+    kind === 'cash' &&
+    !canRollCashBenefit({
+      cashBenefitsReceived: cashBenefitsReceived(creation)
+    })
+  ) {
+    return err(
+      commandError(
+        'invalid_command',
+        'Cash mustering benefit limit has been reached'
+      )
+    )
+  }
+
+  const rank = currentCareerRank(creation, career)
+  const modifier =
+    kind === 'cash'
+      ? deriveCashBenefitRollModifier({
+          retired: creation.terms.length >= 7,
+          hasGambling: hasGamblingSkill(character)
+        })
+      : deriveMaterialBenefitRollModifier({ currentRank: rank })
+  const tableRoll = roll.total + modifier
+  const benefit = resolveCareerBenefit({
+    tables: CEPHEUS_SRD_RULESET,
+    career,
+    kind,
+    roll: tableRoll
+  })
+
+  return ok({
+    musteringBenefit: {
+      career,
+      kind,
+      roll: {
+        expression: roll.expression,
+        rolls: [...roll.rolls],
+        total: roll.total
+      },
+      modifier,
+      tableRoll,
+      value: benefit.value,
+      credits: benefit.credits,
+      materialItem:
+        kind === 'material' && benefit.value !== '-' ? benefit.value : null
     }
   })
 }
@@ -1788,6 +1973,86 @@ export const deriveEventsForCommand = (
           termSkills,
           skillsAndTraining,
           pendingCascadeSkills: uniqueSkills(resolution.pendingCascadeSkills)
+        }
+      ])
+    }
+
+    case 'RollCharacterCreationMusteringBenefit': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const career = requireNonEmptyString(command.career, 'career')
+      if (!career.ok) return career
+      const creation = validateMusteringBenefitRoll(character, career.value)
+      if (!creation.ok) return creation
+
+      const rolled = rollDiceExpression(
+        '2d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const resolved = resolveMusteringBenefitCreationEvent({
+        character,
+        creation: creation.value,
+        career: career.value,
+        kind: command.kind,
+        roll: {
+          expression: '2d6',
+          rolls: rolled.value.rolls,
+          total: rolled.value.total
+        }
+      })
+      if (!resolved.ok) return resolved
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'FINISH_MUSTERING',
+        musteringBenefit: resolved.value.musteringBenefit
+      })
+
+      return ok([
+        {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: `${career.value} ${command.kind} mustering benefit`,
+          rolls: [...resolved.value.musteringBenefit.roll.rolls],
+          total: resolved.value.musteringBenefit.roll.total
+        },
+        {
+          type: 'CharacterCreationMusteringBenefitRolled',
+          characterId: command.characterId,
+          ...resolved.value,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'CompleteCharacterCreationMustering': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateMusteringCompletion(character)
+      if (!creation.ok) return creation
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'FINISH_MUSTERING'
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationMusteringCompleted',
+          characterId: command.characterId,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
         }
       ])
     }

@@ -78,6 +78,7 @@ export interface CareerCreationBenefitFact {
   tableRoll: number
   value: string
   credits: number
+  materialItem?: string | null
 }
 
 export type CareerCreationEvent =
@@ -173,6 +174,8 @@ export type CareerCreationServerCommandType =
   | 'ResolveCharacterCreationReenlistment'
   | 'RollCharacterCreationTermSkill'
   | 'ResolveCharacterCreationTermCascadeSkill'
+  | 'RollCharacterCreationMusteringBenefit'
+  | 'CompleteCharacterCreationMustering'
   | 'StartCharacterCareerTerm'
   | 'FinalizeCharacterCreation'
 

@@ -374,14 +374,20 @@ const actionDefinitions = {
     commandTypes: ['AdvanceCharacterCreation']
   },
   resolveMusteringBenefit: {
-    commandTypes: ['AdvanceCharacterCreation'],
+    commandTypes: [
+      'RollCharacterCreationMusteringBenefit',
+      'AdvanceCharacterCreation'
+    ],
     rollRequirement: { key: 'musteringBenefit', dice: '2d6' }
   },
   continueCareer: {
     commandTypes: ['AdvanceCharacterCreation']
   },
   finishMustering: {
-    commandTypes: ['AdvanceCharacterCreation']
+    commandTypes: [
+      'CompleteCharacterCreationMustering',
+      'AdvanceCharacterCreation'
+    ]
   },
   completeCreation: {
     commandTypes: ['AdvanceCharacterCreation', 'FinalizeCharacterCreation']

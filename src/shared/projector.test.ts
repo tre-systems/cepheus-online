@@ -942,6 +942,167 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
+  it('projects semantic mustering benefits onto terms and starting assets', () => {
+    const characterId = asCharacterId('char-1')
+    const musteringBenefit = {
+      career: 'Scout',
+      kind: 'material' as const,
+      roll: {
+        expression: '2d6' as const,
+        rolls: [1, 1],
+        total: 2
+      },
+      modifier: 0,
+      tableRoll: 2,
+      value: 'Low Passage',
+      credits: 0,
+      materialItem: 'Low Passage'
+    }
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'MUSTERING_OUT',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Scout',
+              skills: ['Vacc Suit-1'],
+              skillsAndTraining: ['Vacc Suit-1'],
+              benefits: [],
+              complete: true,
+              canReenlist: false,
+              completedBasicTraining: true,
+              musteringOut: true,
+              anagathics: false
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationMusteringBenefitRolled',
+        characterId,
+        musteringBenefit,
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const character = state?.characters[characterId]
+    assert.deepEqual(character?.creation?.terms[0]?.benefits, ['Low Passage'])
+    assert.deepEqual(character?.equipment, [
+      {
+        name: 'Low Passage',
+        quantity: 1,
+        notes: 'Mustering benefit: Scout'
+      }
+    ])
+    assert.deepEqual(character?.creation?.history?.at(-1), {
+      type: 'FINISH_MUSTERING',
+      musteringBenefit
+    })
+    assert.equal(state?.eventSeq, 4)
+  })
+
+  it('projects semantic mustering completion into active creation state', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'MUSTERING_OUT',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Scout',
+              skills: ['Vacc Suit-1'],
+              skillsAndTraining: ['Vacc Suit-1'],
+              benefits: ['Low Passage'],
+              complete: true,
+              canReenlist: false,
+              completedBasicTraining: true,
+              musteringOut: true,
+              anagathics: false
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationMusteringCompleted',
+        characterId,
+        state: {
+          status: 'ACTIVE',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'ACTIVE')
+    assert.deepEqual(creation?.history?.at(-1), { type: 'FINISH_MUSTERING' })
+    assert.equal(state?.eventSeq, 4)
+  })
+
   it('projects accepted career facts from semantic term start events', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

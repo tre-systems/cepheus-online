@@ -808,6 +808,90 @@ describe('protocol validation', () => {
     assert.equal(result.value.expectedSeq, 7)
   })
 
+  it('accepts semantic mustering benefit and completion commands', () => {
+    const rolled = decodeCommand({
+      type: 'RollCharacterCreationMusteringBenefit',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      career: ' Scout ',
+      kind: 'material',
+      expectedSeq: 7
+    })
+
+    assert.equal(rolled.ok, true)
+    if (!rolled.ok) return
+    assert.equal(rolled.value.type, 'RollCharacterCreationMusteringBenefit')
+    if (rolled.value.type !== 'RollCharacterCreationMusteringBenefit') return
+    assert.equal(rolled.value.characterId, 'char-1')
+    assert.equal(rolled.value.career, 'Scout')
+    assert.equal(rolled.value.kind, 'material')
+    assert.equal(rolled.value.expectedSeq, 7)
+
+    const completed = decodeCommand({
+      type: 'CompleteCharacterCreationMustering',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      expectedSeq: 8
+    })
+
+    assert.equal(completed.ok, true)
+    if (!completed.ok) return
+    assert.equal(completed.value.type, 'CompleteCharacterCreationMustering')
+    if (completed.value.type !== 'CompleteCharacterCreationMustering') return
+    assert.equal(completed.value.characterId, 'char-1')
+    assert.equal(completed.value.expectedSeq, 8)
+  })
+
+  it('preserves generic mustering benefit facts for legacy creation commands', () => {
+    const result = decodeCommand({
+      type: 'AdvanceCharacterCreation',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      creationEvent: {
+        type: 'FINISH_MUSTERING',
+        musteringBenefit: {
+          career: 'Scout',
+          kind: 'cash',
+          roll: {
+            expression: '2d6',
+            rolls: [4, 4],
+            total: 8
+          },
+          modifier: 1,
+          tableRoll: 9,
+          value: '50000',
+          credits: 50000,
+          materialItem: null
+        }
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'AdvanceCharacterCreation')
+    if (result.value.type !== 'AdvanceCharacterCreation') return
+    assert.deepEqual(result.value.creationEvent, {
+      type: 'FINISH_MUSTERING',
+      musteringBenefit: {
+        career: 'Scout',
+        kind: 'cash',
+        roll: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8
+        },
+        modifier: 1,
+        tableRoll: 9,
+        value: '50000',
+        credits: 50000,
+        materialItem: null
+      }
+    })
+  })
+
   it('accepts full character creation finalization commands', () => {
     const result = decodeClientMessage({
       type: 'command',
@@ -911,10 +995,7 @@ describe('protocol validation', () => {
     if (!transition.ok) return
     assert.equal(transition.value.type, 'AdvanceCharacterCreation')
     if (transition.value.type !== 'AdvanceCharacterCreation') return
-    assert.equal(
-      transition.value.creationEvent.type,
-      'RESOLVE_REENLISTMENT'
-    )
+    assert.equal(transition.value.creationEvent.type, 'RESOLVE_REENLISTMENT')
   })
 
   it('accepts character creation homeworld/background commands', () => {

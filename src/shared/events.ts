@@ -9,6 +9,7 @@ import type {
 import type {
   CareerCreationCheckFact,
   CareerCreationAgingFact,
+  CareerCreationBenefitFact,
   CareerCreationEvent,
   CareerCreationRankFact,
   CareerCreationReenlistmentFact,
@@ -131,6 +132,19 @@ export type GameEvent =
       termSkills: string[]
       skillsAndTraining: string[]
       pendingCascadeSkills: string[]
+    }
+  | {
+      type: 'CharacterCreationMusteringBenefitRolled'
+      characterId: CharacterId
+      musteringBenefit: CareerCreationBenefitFact
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationMusteringCompleted'
+      characterId: CharacterId
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
     }
   | {
       type: 'CharacterCreationHomeworldSet'

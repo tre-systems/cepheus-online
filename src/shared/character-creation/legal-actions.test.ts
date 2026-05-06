@@ -151,7 +151,10 @@ describe('career creation legal action planner', () => {
         {
           key: 'finishMustering',
           status: 'MUSTERING_OUT',
-          commandTypes: ['AdvanceCharacterCreation']
+          commandTypes: [
+            'CompleteCharacterCreationMustering',
+            'AdvanceCharacterCreation'
+          ]
         }
       ]
     )

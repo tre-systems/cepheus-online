@@ -1,5 +1,6 @@
 import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
 import type {
+  BenefitKind,
   CareerCreationEvent,
   CareerCreationTermSkillTable
 } from './characterCreation'
@@ -101,6 +102,8 @@ export type Command =
   | CharacterCreationReenlistmentCommand
   | CharacterCreationTermSkillCommand
   | CharacterCreationTermCascadeSkillCommand
+  | CharacterCreationMusteringBenefitCommand
+  | CharacterCreationMusteringCompletionCommand
   | {
       type: 'CreateBoard'
       gameId: GameId
@@ -255,6 +258,24 @@ export type CharacterCreationTermCascadeSkillCommand = {
   selection: string
 }
 
+export type CharacterCreationMusteringBenefitCommand = {
+  type: 'RollCharacterCreationMusteringBenefit'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+  career: string
+  kind: BenefitKind
+}
+
+export type CharacterCreationMusteringCompletionCommand = {
+  type: 'CompleteCharacterCreationMustering'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
 export type SemanticCommand =
   | CharacterCreationBasicTrainingCommand
   | CharacterCreationHomeworldCommand
@@ -265,5 +286,7 @@ export type SemanticCommand =
   | CharacterCreationReenlistmentCommand
   | CharacterCreationTermSkillCommand
   | CharacterCreationTermCascadeSkillCommand
+  | CharacterCreationMusteringBenefitCommand
+  | CharacterCreationMusteringCompletionCommand
 
 export type GameCommand = Command | CharacterCreationHomeworldCommand

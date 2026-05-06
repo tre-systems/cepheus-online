@@ -487,6 +487,140 @@ describe('room publication flow', () => {
     })
   })
 
+  it('publishes semantic mustering benefit and completion events', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-mustering')
+    await appendEvents(
+      storage,
+      gameId,
+      actorId,
+      [
+        {
+          type: 'GameCreated',
+          slug: 'game-1',
+          name: 'Spinward Test',
+          ownerId: actorId
+        },
+        {
+          type: 'CharacterCreated',
+          characterId,
+          ownerId: actorId,
+          characterType: 'PLAYER',
+          name: 'Scout'
+        },
+        {
+          type: 'CharacterCreationStarted',
+          characterId,
+          creation: {
+            state: {
+              status: 'MUSTERING_OUT',
+              context: {
+                canCommission: false,
+                canAdvance: false
+              }
+            },
+            terms: [
+              {
+                career: 'Scout',
+                skills: ['Vacc Suit-1'],
+                skillsAndTraining: ['Vacc Suit-1'],
+                benefits: [],
+                complete: true,
+                canReenlist: false,
+                completedBasicTraining: true,
+                musteringOut: true,
+                anagathics: false
+              }
+            ],
+            careers: [{ name: 'Scout', rank: 0 }],
+            canEnterDraft: true,
+            failedToQualify: false,
+            characteristicChanges: [],
+            creationComplete: false,
+            homeworld: null,
+            backgroundSkills: [],
+            pendingCascadeSkills: [],
+            history: []
+          }
+        }
+      ],
+      '2026-05-03T00:00:00.000Z'
+    )
+    await storage.put(gameSeedKey(gameId), 1234)
+
+    const rolled = await publish(storage, {
+      type: 'RollCharacterCreationMusteringBenefit',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 3,
+      career: 'Scout',
+      kind: 'material'
+    })
+
+    assert.equal(rolled.ok, true)
+    if (!rolled.ok) return
+    const storedEvents = await readEventStream(storage, gameId)
+    const diceEvent = storedEvents.at(-2)?.event
+    const benefitEvent = storedEvents.at(-1)?.event
+    assert.equal(diceEvent?.type, 'DiceRolled')
+    assert.equal(benefitEvent?.type, 'CharacterCreationMusteringBenefitRolled')
+    if (
+      diceEvent?.type !== 'DiceRolled' ||
+      benefitEvent?.type !== 'CharacterCreationMusteringBenefitRolled'
+    ) {
+      return
+    }
+    assert.equal(diceEvent.reason, 'Scout material mustering benefit')
+    assert.deepEqual(diceEvent.rolls, benefitEvent.musteringBenefit.roll.rolls)
+    assert.deepEqual(benefitEvent.musteringBenefit, {
+      career: 'Scout',
+      kind: 'material',
+      roll: {
+        expression: '2d6',
+        rolls: [4, 3],
+        total: 7
+      },
+      modifier: 0,
+      tableRoll: 7,
+      value: '-',
+      credits: 0,
+      materialItem: null
+    })
+    assert.equal(rolled.value.liveActivities.length, 2)
+    assert.equal(rolled.value.liveActivities[1]?.type, 'characterCreation')
+    if (rolled.value.liveActivities[1]?.type !== 'characterCreation') return
+    assert.equal(
+      rolled.value.liveActivities[1].details,
+      'Mustering benefit; Scout; material; -; table roll 7'
+    )
+    assert.deepEqual(
+      rolled.value.state.characters[characterId]?.creation?.terms[0]?.benefits,
+      ['-']
+    )
+
+    const completed = await publish(storage, {
+      type: 'CompleteCharacterCreationMustering',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 5
+    })
+
+    assert.equal(completed.ok, true)
+    if (!completed.ok) return
+    assert.equal(
+      completed.value.state.characters[characterId]?.creation?.state.status,
+      'ACTIVE'
+    )
+    assert.equal(completed.value.liveActivities[0]?.type, 'characterCreation')
+    if (completed.value.liveActivities[0]?.type !== 'characterCreation') return
+    assert.equal(
+      completed.value.liveActivities[0].details,
+      'Mustering out complete'
+    )
+  })
+
   it('rejects invalid commands without writing an event stream', async () => {
     const storage = createMemoryStorage()
 

@@ -121,6 +121,8 @@ type CharacterEventType =
   | 'CharacterCreationReenlistmentResolved'
   | 'CharacterCreationTermSkillRolled'
   | 'CharacterCreationTermCascadeSkillResolved'
+  | 'CharacterCreationMusteringBenefitRolled'
+  | 'CharacterCreationMusteringCompleted'
   | 'CharacterCreationHomeworldSet'
   | 'CharacterCreationHomeworldCompleted'
   | 'CharacterCreationBackgroundSkillSelected'
@@ -564,6 +566,68 @@ const characterEventHandlers = {
           cascadeSkill: event.cascadeSkill,
           selection: event.selection
         }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationMusteringBenefitRolled: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const creationEvent = {
+      type: 'FINISH_MUSTERING' as const,
+      musteringBenefit: structuredClone(event.musteringBenefit)
+    }
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      terms: recordMusteringBenefit(
+        character.creation.terms,
+        event.musteringBenefit.career,
+        event.musteringBenefit.value
+      ),
+      history: [
+        ...(character.creation.history ?? []),
+        structuredClone(creationEvent)
+      ]
+    }
+    if (event.musteringBenefit.kind === 'cash') {
+      character.credits += event.musteringBenefit.credits
+    } else if (event.musteringBenefit.materialItem) {
+      character.equipment = [
+        ...character.equipment,
+        {
+          name: event.musteringBenefit.materialItem,
+          quantity: 1,
+          notes: `Mustering benefit: ${event.musteringBenefit.career}`
+        }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationMusteringCompleted: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        { type: 'FINISH_MUSTERING' }
       ]
     }
     nextState.eventSeq = envelope.seq

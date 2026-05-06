@@ -174,6 +174,225 @@ describe('deriveEventsForCommand error categories', () => {
     )
   })
 
+  it('emits a semantic mustering benefit event with server-derived roll facts', () => {
+    const result = runCommand(
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'material'
+      },
+      createCreation('MUSTERING_OUT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout material mustering benefit',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationMusteringBenefitRolled',
+        characterId,
+        musteringBenefit: {
+          career: 'Scout',
+          kind: 'material',
+          roll: {
+            expression: '2d6',
+            rolls: [4, 4],
+            total: 8
+          },
+          modifier: 0,
+          tableRoll: 8,
+          value: '-',
+          credits: 0,
+          materialItem: null
+        },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks semantic cash mustering benefits after the SRD cash limit', () => {
+    const result = runCommand(
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'cash'
+      },
+      createCreation('MUSTERING_OUT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          },
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          },
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          },
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        history: [
+          {
+            type: 'FINISH_MUSTERING',
+            musteringBenefit: {
+              career: 'Scout',
+              kind: 'cash',
+              roll: { expression: '2d6', rolls: [1, 1], total: 2 },
+              modifier: 0,
+              tableRoll: 2,
+              value: '5000',
+              credits: 5000
+            }
+          },
+          {
+            type: 'FINISH_MUSTERING',
+            musteringBenefit: {
+              career: 'Scout',
+              kind: 'cash',
+              roll: { expression: '2d6', rolls: [2, 2], total: 4 },
+              modifier: 0,
+              tableRoll: 4,
+              value: '10000',
+              credits: 10000
+            }
+          },
+          {
+            type: 'FINISH_MUSTERING',
+            musteringBenefit: {
+              career: 'Scout',
+              kind: 'cash',
+              roll: { expression: '2d6', rolls: [3, 3], total: 6 },
+              modifier: 0,
+              tableRoll: 6,
+              value: '50000',
+              credits: 50000
+            }
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Cash mustering benefit limit has been reached'
+    )
+  })
+
+  it('emits a semantic mustering completion event once benefits are resolved', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationMustering',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('MUSTERING_OUT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Pilot-1'],
+            benefits: ['Low Passage'],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationMusteringCompleted',
+        characterId,
+        state: {
+          status: 'ACTIVE',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
   it('returns not_allowed when setting a homeworld after homeworld selection', () => {
     const result = runCommand(
       {

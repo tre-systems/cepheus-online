@@ -799,6 +799,65 @@ describe('live activity derivation', () => {
     )
   })
 
+  it('derives semantic mustering benefit and completion details', () => {
+    const activities = deriveLiveActivities([
+      envelope(3, {
+        type: 'CharacterCreationMusteringBenefitRolled',
+        characterId,
+        musteringBenefit: {
+          career: 'Scout',
+          kind: 'material',
+          roll: {
+            expression: '2d6',
+            rolls: [4, 4],
+            total: 8
+          },
+          modifier: 0,
+          tableRoll: 8,
+          value: '-',
+          credits: 0,
+          materialItem: null
+        },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(4, {
+        type: 'CharacterCreationMusteringCompleted',
+        characterId,
+        state: {
+          status: 'ACTIVE',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    assert.deepEqual(
+      activities.map((activity) =>
+        activity.type === 'characterCreation'
+          ? [activity.transition, activity.details, activity.status]
+          : null
+      ),
+      [
+        [
+          'FINISH_MUSTERING',
+          'Mustering benefit; Scout; material; -; table roll 8',
+          'MUSTERING_OUT'
+        ],
+        ['FINISH_MUSTERING', 'Mustering out complete', 'ACTIVE']
+      ]
+    )
+  })
+
   it('derives finalization summary without full sheet details', () => {
     const activity = deriveLiveActivity(
       envelope(3, {

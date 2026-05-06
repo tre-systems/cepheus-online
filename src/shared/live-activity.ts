@@ -634,6 +634,33 @@ export const deriveLiveActivity = (
         creationComplete: false
       }
 
+    case 'CharacterCreationMusteringBenefitRolled':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'FINISH_MUSTERING',
+        ...compactCharacterCreationDetails(
+          describeCareerCreationEvent({
+            type: 'FINISH_MUSTERING',
+            musteringBenefit: event.musteringBenefit
+          })
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationMusteringCompleted':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'FINISH_MUSTERING',
+        details: 'Mustering out complete',
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
     case 'CharacterCreationCascadeSkillResolved':
       return {
         ...baseActivity(envelope),

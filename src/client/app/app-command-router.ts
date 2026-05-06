@@ -81,6 +81,8 @@ export const appCommandRouteByType = {
   ResolveCharacterCreationReenlistment: 'characterCreation',
   RollCharacterCreationTermSkill: 'characterCreation',
   ResolveCharacterCreationTermCascadeSkill: 'characterCreation',
+  RollCharacterCreationMusteringBenefit: 'characterCreation',
+  CompleteCharacterCreationMustering: 'characterCreation',
   CreateBoard: 'board',
   SelectBoard: 'board',
   SetDoorOpen: 'door',

@@ -1,6 +1,9 @@
 import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
 import type {
+  BenefitKind,
+  CareerCreationBenefitFact,
   CareerCreationCheckFact,
+  CareerCreationDiceFact,
   CareerCreationEvent,
   CareerCreationRankFact,
   CareerCreationReenlistmentFact,
@@ -539,24 +542,28 @@ const parseCharacteristicKey = (
   return ok(raw as CharacteristicKey)
 }
 
-const parseCareerCreationCheckFact = (
+const parseCareerCreationDiceFact = (
   raw: unknown,
-  label: string
-): Result<CareerCreationCheckFact, CommandError> => {
+  label: string,
+  expression: CareerCreationDiceFact['expression']
+): Result<CareerCreationDiceFact, CommandError> => {
   if (!isObject(raw)) {
     return err(invalidCommand(`${label} must be an object`))
   }
 
-  const expression = parseString(raw.expression, `${label}.expression`)
-  if (!expression.ok) return expression
-  if (expression.value !== '2d6') {
-    return err(invalidCommand(`${label}.expression must be 2d6`))
+  const parsedExpression = parseString(raw.expression, `${label}.expression`)
+  if (!parsedExpression.ok) return parsedExpression
+  if (parsedExpression.value !== expression) {
+    return err(invalidCommand(`${label}.expression must be ${expression}`))
   }
   if (!Array.isArray(raw.rolls)) {
     return err(invalidCommand(`${label}.rolls must be an array`))
   }
-  if (raw.rolls.length !== 2) {
-    return err(invalidCommand(`${label}.rolls must contain 2 entries`))
+  const expectedRollCount = expression === '1d6' ? 1 : 2
+  if (raw.rolls.length !== expectedRollCount) {
+    return err(
+      invalidCommand(`${label}.rolls must contain ${expectedRollCount} entries`)
+    )
   }
   const rolls: number[] = []
   for (const [index, item] of raw.rolls.entries()) {
@@ -567,6 +574,24 @@ const parseCareerCreationCheckFact = (
 
   const total = parseNumber(raw.total, `${label}.total`)
   if (!total.ok) return total
+
+  return ok({
+    expression,
+    rolls,
+    total: total.value
+  })
+}
+
+const parseCareerCreationCheckFact = (
+  raw: unknown,
+  label: string
+): Result<CareerCreationCheckFact, CommandError> => {
+  if (!isObject(raw)) {
+    return err(invalidCommand(`${label} must be an object`))
+  }
+
+  const dice = parseCareerCreationDiceFact(raw, label, '2d6')
+  if (!dice.ok) return dice
   const characteristic = parseCharacteristicKey(
     raw.characteristic,
     `${label}.characteristic`
@@ -580,9 +605,7 @@ const parseCareerCreationCheckFact = (
   if (!success.ok) return success
 
   return ok({
-    expression: '2d6',
-    rolls,
-    total: total.value,
+    ...dice.value,
     characteristic: characteristic.value,
     modifier: modifier.value,
     target: target.value,
@@ -661,6 +684,66 @@ const parseOptionalCareerCreationRankFact = (
   return parseCareerCreationRankFact(raw, label)
 }
 
+const parseBenefitKind = (
+  raw: unknown,
+  label: string
+): Result<BenefitKind, CommandError> => {
+  if (raw === 'cash' || raw === 'material') return ok(raw)
+
+  return err(invalidCommand(`${label} is not supported`))
+}
+
+const parseCareerCreationBenefitFact = (
+  raw: unknown,
+  label: string
+): Result<CareerCreationBenefitFact, CommandError> => {
+  if (!isObject(raw)) {
+    return err(invalidCommand(`${label} must be an object`))
+  }
+
+  const career = parseString(raw.career, `${label}.career`)
+  if (!career.ok) return career
+  const kind = parseBenefitKind(raw.kind, `${label}.kind`)
+  if (!kind.ok) return kind
+  const roll = parseCareerCreationDiceFact(raw.roll, `${label}.roll`, '2d6')
+  if (!roll.ok) return roll
+  const modifier = parseNumber(raw.modifier, `${label}.modifier`)
+  if (!modifier.ok) return modifier
+  const tableRoll = parseNumber(raw.tableRoll, `${label}.tableRoll`)
+  if (!tableRoll.ok) return tableRoll
+  const value = parseString(raw.value, `${label}.value`)
+  if (!value.ok) return value
+  const credits = parseNumber(raw.credits, `${label}.credits`)
+  if (!credits.ok) return credits
+  const materialItem = parseOptionalString(
+    raw.materialItem,
+    `${label}.materialItem`
+  )
+  if (!materialItem.ok) return materialItem
+
+  return ok({
+    career: career.value,
+    kind: kind.value,
+    roll: roll.value,
+    modifier: modifier.value,
+    tableRoll: tableRoll.value,
+    value: value.value,
+    credits: credits.value,
+    ...(raw.materialItem === undefined
+      ? {}
+      : { materialItem: materialItem.value })
+  })
+}
+
+const parseOptionalCareerCreationBenefitFact = (
+  raw: unknown,
+  label: string
+): Result<CareerCreationBenefitFact | undefined, CommandError> => {
+  if (raw === undefined) return ok(undefined)
+
+  return parseCareerCreationBenefitFact(raw, label)
+}
+
 const failedQualificationOptions = [
   'Drifter',
   'Draft'
@@ -720,7 +803,6 @@ const parseCareerCreationEvent = (
     case 'COMPLETE_AGING':
     case 'LEAVE_CAREER':
     case 'CONTINUE_CAREER':
-    case 'FINISH_MUSTERING':
     case 'CREATION_COMPLETE':
     case 'DEATH_CONFIRMED':
     case 'MISHAP_RESOLVED':
@@ -837,6 +919,21 @@ const parseCareerCreationEvent = (
         ...(reenlistment.value === undefined
           ? {}
           : { reenlistment: reenlistment.value })
+      })
+    }
+
+    case 'FINISH_MUSTERING': {
+      const musteringBenefit = parseOptionalCareerCreationBenefitFact(
+        raw.musteringBenefit,
+        'musteringBenefit'
+      )
+      if (!musteringBenefit.ok) return musteringBenefit
+
+      return ok({
+        type: 'FINISH_MUSTERING',
+        ...(musteringBenefit.value === undefined
+          ? {}
+          : { musteringBenefit: musteringBenefit.value })
       })
     }
 
@@ -1057,6 +1154,34 @@ export const decodeCommand = (
         characterId: characterId.value,
         cascadeSkill: cascadeSkill.value,
         selection: selection.value
+      })
+    }
+
+    case 'RollCharacterCreationMusteringBenefit': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const career = parseString(raw.career, 'career')
+      if (!career.ok) return career
+      const kind = parseBenefitKind(raw.kind, 'kind')
+      if (!kind.ok) return kind
+
+      return ok({
+        type: 'RollCharacterCreationMusteringBenefit',
+        ...base.value,
+        characterId: characterId.value,
+        career: career.value,
+        kind: kind.value
+      })
+    }
+
+    case 'CompleteCharacterCreationMustering': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'CompleteCharacterCreationMustering',
+        ...base.value,
+        characterId: characterId.value
       })
     }
 

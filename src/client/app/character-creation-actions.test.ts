@@ -212,6 +212,10 @@ describe('character creation actions', () => {
         )
       )
       const command = plan?.actions[0]?.command
+      if (eventType === 'FINISH_MUSTERING') {
+        assert.equal(command?.type, 'CompleteCharacterCreationMustering')
+        continue
+      }
       assert.equal(command?.type, 'AdvanceCharacterCreation')
       if (command?.type !== 'AdvanceCharacterCreation') continue
       assert.equal(command.creationEvent.type, eventType)
@@ -396,7 +400,33 @@ describe('character creation actions', () => {
     assert.deepEqual(plan?.actions, [])
   })
 
-  it('uses the shared planner for unresolved reenlistment gates', () => {
+  it('uses the semantic command for completing mustering', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('MUSTERING_OUT', {
+          terms: [
+            term({
+              complete: true,
+              musteringOut: true,
+              benefits: ['Low Passage']
+            })
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(plan?.actions[0]?.key, 'finish-mustering')
+    assert.deepEqual(plan?.actions[0]?.command, {
+      type: 'CompleteCharacterCreationMustering',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId
+    })
+  })
+
+  it('uses the semantic command for unresolved reenlistment rolls', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,
       character(
@@ -407,6 +437,12 @@ describe('character creation actions', () => {
     )
 
     assert.equal(plan?.status, 'Reenlistment')
-    assert.deepEqual(plan?.actions, [])
+    assert.equal(plan?.actions[0]?.key, 'roll-reenlistment')
+    assert.deepEqual(plan?.actions[0]?.command, {
+      type: 'ResolveCharacterCreationReenlistment',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId
+    })
   })
 })
