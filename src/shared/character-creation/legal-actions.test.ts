@@ -394,7 +394,7 @@ describe('career creation legal action planner', () => {
       deriveLegalCareerCreationActionKeys(reenlistment, {
         pendingDecisions: [{ key: 'reenlistmentResolution' }]
       }),
-      []
+      ['rollReenlistment']
     )
   })
 
@@ -584,7 +584,7 @@ describe('career creation legal action planner', () => {
     })
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(creation),
-      []
+      ['rollReenlistment']
     )
   })
 
@@ -668,6 +668,14 @@ describe('career creation legal action planner', () => {
   })
 
   it('derives reenlistment outcomes when projected term data is present', () => {
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('REENLISTMENT', {
+          terms: [term()]
+        })
+      ),
+      ['rollReenlistment']
+    )
     assert.equal(
       deriveCareerCreationReenlistmentOutcome(
         projection('REENLISTMENT', {

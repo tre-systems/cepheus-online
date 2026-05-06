@@ -98,6 +98,7 @@ export type Command =
   | CharacterCreationCommissionCommand
   | CharacterCreationAdvancementCommand
   | CharacterCreationAgingCommand
+  | CharacterCreationReenlistmentCommand
   | CharacterCreationTermSkillCommand
   | CharacterCreationTermCascadeSkillCommand
   | {
@@ -227,6 +228,14 @@ export type CharacterCreationAgingCommand = {
   characterId: CharacterId
 }
 
+export type CharacterCreationReenlistmentCommand = {
+  type: 'ResolveCharacterCreationReenlistment'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
 export type CharacterCreationTermSkillCommand = {
   type: 'RollCharacterCreationTermSkill'
   gameId: GameId
@@ -253,6 +262,7 @@ export type SemanticCommand =
   | CharacterCreationCommissionCommand
   | CharacterCreationAdvancementCommand
   | CharacterCreationAgingCommand
+  | CharacterCreationReenlistmentCommand
   | CharacterCreationTermSkillCommand
   | CharacterCreationTermCascadeSkillCommand
 

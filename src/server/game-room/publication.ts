@@ -102,6 +102,7 @@ export const runCommandPublication = async (
     message.command.type === 'ResolveCharacterCreationSurvival' ||
     message.command.type === 'ResolveCharacterCreationCommission' ||
     message.command.type === 'ResolveCharacterCreationAdvancement' ||
+    message.command.type === 'ResolveCharacterCreationReenlistment' ||
     message.command.type === 'RollCharacterCreationTermSkill'
   const gameSeed =
     usesSeededDice && currentState

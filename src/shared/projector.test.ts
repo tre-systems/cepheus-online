@@ -856,6 +856,92 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
+  it('projects semantic reenlistment facts onto the active term', () => {
+    const characterId = asCharacterId('char-1')
+    const reenlistment = {
+      expression: '2d6' as const,
+      rolls: [3, 4],
+      total: 7,
+      characteristic: null,
+      modifier: 0,
+      target: 6,
+      success: true,
+      outcome: 'allowed' as const
+    }
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'REENLISTMENT',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Scout',
+              skills: ['Vacc Suit-1'],
+              skillsAndTraining: ['Vacc Suit-1'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 8
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationReenlistmentResolved',
+        characterId,
+        outcome: 'allowed',
+        reenlistment,
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.terms[0]?.reEnlistment, 7)
+    assert.equal(creation?.terms[0]?.canReenlist, true)
+    assert.equal(creation?.terms[0]?.musteringOut, false)
+    assert.deepEqual(creation?.history?.at(-1), {
+      type: 'RESOLVE_REENLISTMENT',
+      reenlistment
+    })
+    assert.equal(state?.eventSeq, 4)
+  })
+
   it('projects accepted career facts from semantic term start events', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

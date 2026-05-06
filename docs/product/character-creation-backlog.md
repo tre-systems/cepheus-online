@@ -154,7 +154,8 @@ tests before it is considered done.
 - [~] Roll reenlistment from `careerBasics`, handling mandatory retirement
   after seven terms, forced reenlistment on 12, success, failure, and voluntary
   exit. Current legal actions cover unresolved, forced, allowed, and blocked
-  outcomes. Gap: roll facts and exit provenance are not fully wired.
+  outcomes, and `ResolveCharacterCreationReenlistment` persists server-derived
+  roll facts. Gap: exit provenance and UI copy are not fully wired.
 - [~] Muster out using `materialBenefits` and `cashBenefits`, with benefit
   counts, cash limits, rank/Gambling modifiers, and material effects. Current
   planner can block on remaining benefits. Gap: benefit roll commands/events
@@ -435,10 +436,10 @@ Tasks:
 - Persist characteristic changes with term provenance.
 - Implement optional anagathics use, survival check, and cost/payment flow.
 - Implement reenlistment:
-  - retirement required after seven terms
-  - roll of 12 forces reenlistment
-  - success allows reenlistment
-  - failure blocks reenlistment and moves toward mustering out
+  - [x] retirement required after seven terms
+  - [x] roll of 12 forces reenlistment
+  - [x] success allows reenlistment
+  - [x] failure blocks reenlistment and moves toward mustering out
 - Add UI copy for forced reenlistment, blocked reenlistment, retirement, and
   leave-career decisions.
 

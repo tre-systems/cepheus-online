@@ -257,10 +257,14 @@ export const deriveLegalCareerCreationActionKeys = (
     case 'AGING':
       return noPendingDecisions ? ['resolveAging'] : []
     case 'REENLISTMENT':
-      if (!noPendingDecisions) return []
       if (options.reenlistmentOutcome === 'unresolved') {
-        return ['rollReenlistment']
+        return context.pendingDecisions?.every(
+          (decision) => decision.key === 'reenlistmentResolution'
+        ) ?? true
+          ? ['rollReenlistment']
+          : []
       }
+      if (!noPendingDecisions) return []
       if (options.reenlistmentOutcome === 'forced') return ['forcedReenlist']
       if (options.reenlistmentOutcome === 'allowed') {
         return ['reenlist', 'leaveCareer']
@@ -354,7 +358,10 @@ const actionDefinitions = {
     rollRequirement: { key: 'aging', dice: '2d6' }
   },
   rollReenlistment: {
-    commandTypes: ['AdvanceCharacterCreation'],
+    commandTypes: [
+      'ResolveCharacterCreationReenlistment',
+      'AdvanceCharacterCreation'
+    ],
     rollRequirement: { key: 'reenlistment', dice: '2d6' }
   },
   reenlist: {

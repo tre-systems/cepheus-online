@@ -65,6 +65,11 @@ export interface CareerCreationAgingFact {
   characteristicChanges: AgingChange[]
 }
 
+export interface CareerCreationReenlistmentFact
+  extends CareerCreationCheckFact {
+  outcome: 'forced' | 'allowed' | 'blocked'
+}
+
 export interface CareerCreationBenefitFact {
   career: string
   kind: BenefitKind
@@ -110,6 +115,10 @@ export type CareerCreationEvent =
     }
   | { type: 'COMPLETE_SKILLS' }
   | { type: 'COMPLETE_AGING'; aging?: CareerCreationAgingFact }
+  | {
+      type: 'RESOLVE_REENLISTMENT'
+      reenlistment: CareerCreationReenlistmentFact
+    }
   | { type: 'REENLIST'; reenlistment?: CareerCreationCheckFact }
   | { type: 'LEAVE_CAREER' }
   | { type: 'REENLIST_BLOCKED'; reenlistment?: CareerCreationCheckFact }
@@ -160,6 +169,8 @@ export type CareerCreationServerCommandType =
   | 'ResolveCharacterCreationSurvival'
   | 'ResolveCharacterCreationCommission'
   | 'ResolveCharacterCreationAdvancement'
+  | 'ResolveCharacterCreationAging'
+  | 'ResolveCharacterCreationReenlistment'
   | 'RollCharacterCreationTermSkill'
   | 'ResolveCharacterCreationTermCascadeSkill'
   | 'StartCharacterCareerTerm'

@@ -242,11 +242,12 @@ const actionsForLegalKey = (
       ]
     case 'resolveAging':
       return [
-        action(
-          'complete-aging',
-          'Complete aging',
-          advanceCommand(identity, character, { type: 'COMPLETE_AGING' })
-        )
+        action('complete-aging', 'Complete aging', {
+          type: 'ResolveCharacterCreationAging',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
       ]
     case 'reenlist':
       return [

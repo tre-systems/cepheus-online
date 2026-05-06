@@ -167,7 +167,6 @@ describe('character creation actions', () => {
     }[] = [
       { status: 'ADVANCEMENT', eventType: 'COMPLETE_ADVANCEMENT', overrides: {} },
       { status: 'SKILLS_TRAINING', eventType: 'COMPLETE_SKILLS', overrides: {} },
-      { status: 'AGING', eventType: 'COMPLETE_AGING', overrides: {} },
       {
         status: 'REENLISTMENT',
         eventType: 'LEAVE_CAREER',
@@ -331,6 +330,21 @@ describe('character creation actions', () => {
     const command = plan?.actions[0]?.command
     if (command?.type !== 'AdvanceCharacterCreation') return
     assert.deepEqual(command.creationEvent, { type: 'COMPLETE_SKILLS' })
+  })
+
+  it('uses the semantic command for resolving aging', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(creation('AGING'))
+    )
+
+    assert.equal(plan?.actions[0]?.key, 'complete-aging')
+    assert.deepEqual(plan?.actions[0]?.command, {
+      type: 'ResolveCharacterCreationAging',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId
+    })
   })
 
   it('has no action once creation is playable', () => {

@@ -250,6 +250,32 @@ const advancementDetails = ({
     .filter(Boolean)
     .join('; ')
 
+const reenlistmentDetails = ({
+  outcome,
+  total,
+  target,
+  modifier
+}: {
+  outcome: 'forced' | 'allowed' | 'blocked'
+  total: number
+  target: number
+  modifier: number
+}): string => {
+  const label =
+    outcome === 'forced'
+      ? 'Forced reenlistment'
+      : outcome === 'allowed'
+        ? 'Reenlistment allowed'
+        : 'Reenlistment blocked'
+
+  return [
+    label,
+    `total ${total}`,
+    `target ${target}+`,
+    `DM ${signedLabel(modifier)}`
+  ].join('; ')
+}
+
 const describeCareerCreationEvent = (
   event: CareerCreationEvent
 ): string | null => {
@@ -310,6 +336,13 @@ const describeCareerCreationEvent = (
       return 'Skills and training complete'
     case 'COMPLETE_AGING':
       return agingDetails(event)
+    case 'RESOLVE_REENLISTMENT':
+      return reenlistmentDetails({
+        outcome: event.reenlistment.outcome,
+        total: event.reenlistment.total,
+        target: event.reenlistment.target,
+        modifier: event.reenlistment.modifier
+      })
     case 'REENLIST':
       return 'Reenlisted for another term'
     case 'LEAVE_CAREER':
@@ -539,6 +572,29 @@ export const deriveLiveActivity = (
           agingDetails({
             type: 'COMPLETE_AGING',
             aging: event.aging
+          })
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationReenlistmentResolved':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition:
+          event.outcome === 'forced'
+            ? 'REENLIST_FORCED'
+            : event.outcome === 'allowed'
+              ? 'REENLIST_ALLOWED'
+              : 'REENLIST_BLOCKED',
+        ...compactCharacterCreationDetails(
+          reenlistmentDetails({
+            outcome: event.outcome,
+            total: event.reenlistment.total,
+            target: event.reenlistment.target,
+            modifier: event.reenlistment.modifier
           })
         ),
         status: event.state.status,

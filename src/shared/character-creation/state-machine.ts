@@ -116,6 +116,9 @@ const transitionStatus = (
         ? { ...state, status: 'REENLISTMENT' }
         : null
     case 'REENLISTMENT':
+      if (event.type === 'RESOLVE_REENLISTMENT') {
+        return state
+      }
       if (event.type === 'REENLIST' || event.type === 'FORCED_REENLIST') {
         return { ...state, status: 'SURVIVAL' }
       }

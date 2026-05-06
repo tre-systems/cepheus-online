@@ -17,6 +17,7 @@ import {
   resolveAging,
   resolveCareerSkillTableRoll,
   resolveCascadeCareerSkill,
+  resolveReenlistment,
   transitionCareerCreationState
 } from '../../shared/characterCreation'
 import type { CareerCreationTermSkillTable } from '../../shared/characterCreation'
@@ -580,6 +581,38 @@ const validateAgingResolution = (
   return ok(character.creation)
 }
 
+const validateReenlistmentResolution = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'REENLISTMENT') {
+    return err(
+      commandError(
+        'invalid_command',
+        `REENLISTMENT is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('rollReenlistment')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'REENLISTMENT is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
 const currentCareerRank = (
   creation: CharacterCreationProjection,
   career: string
@@ -603,6 +636,11 @@ type CharacterCreationAdvancementResolvedEvent = Extract<
 type CharacterCreationAgingResolvedEvent = Extract<
   GameEvent,
   { type: 'CharacterCreationAgingResolved' }
+>
+
+type CharacterCreationReenlistmentResolvedEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationReenlistmentResolved' }
 >
 
 type CharacterCreationTermSkillRolledEvent = Extract<
@@ -1021,6 +1059,81 @@ const resolveAgingCreationEvent = ({
       }))
     }
   }
+}
+
+const resolveReenlistmentCreationEvent = ({
+  character,
+  creation,
+  roll
+}: {
+  character: CharacterState
+  creation: CharacterCreationProjection
+  roll: { expression: '2d6'; rolls: number[]; total: number }
+}): Result<
+  Pick<
+    CharacterCreationReenlistmentResolvedEvent,
+    'outcome' | 'reenlistment'
+  >,
+  CommandError
+> => {
+  const term = creation.terms.at(-1)
+  const career = term?.career
+  if (!term || !career) {
+    return err(
+      commandError('missing_entity', 'No active career term is available')
+    )
+  }
+
+  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  if (!basics) {
+    return err(
+      commandError('invalid_command', `Career ${career} is not supported`)
+    )
+  }
+
+  const outcome = evaluateCareerCheck({
+    check: basics.ReEnlistment,
+    characteristics: character.characteristics,
+    roll: roll.total
+  })
+  if (!outcome) {
+    return err(
+      commandError(
+        'invalid_command',
+        `Career ${career} has no reenlistment check`
+      )
+    )
+  }
+
+  const resolution = resolveReenlistment({
+    term,
+    termCount: creation.terms.length,
+    roll: roll.total,
+    check: basics.ReEnlistment,
+    characteristics: character.characteristics
+  })
+  if (resolution.outcome === 'retire') {
+    return err(
+      commandError(
+        'invalid_command',
+        'REENLISTMENT is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok({
+    outcome: resolution.outcome,
+    reenlistment: {
+      expression: roll.expression,
+      rolls: [...roll.rolls],
+      total: roll.total,
+      characteristic: outcome.check.characteristic,
+      modifier: outcome.modifier,
+      target: outcome.check.target,
+      success: outcome.success,
+      outcome: resolution.outcome
+    }
+  })
 }
 
 export const deriveEventsForCommand = (
@@ -1495,6 +1608,60 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationAgingResolved',
           characterId: command.characterId,
           ...resolved,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationReenlistment': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateReenlistmentResolution(character)
+      if (!creation.ok) return creation
+
+      const rolled = rollDiceExpression(
+        '2d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const resolved = resolveReenlistmentCreationEvent({
+        character,
+        creation: creation.value,
+        roll: {
+          expression: '2d6',
+          rolls: rolled.value.rolls,
+          total: rolled.value.total
+        }
+      })
+      if (!resolved.ok) return resolved
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'RESOLVE_REENLISTMENT',
+        reenlistment: resolved.value.reenlistment
+      })
+
+      const career = creation.value.terms.at(-1)?.career ?? 'Career'
+
+      return ok([
+        {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: `${career} reenlistment`,
+          rolls: [...resolved.value.reenlistment.rolls],
+          total: resolved.value.reenlistment.total
+        },
+        {
+          type: 'CharacterCreationReenlistmentResolved',
+          characterId: command.characterId,
+          ...resolved.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         }

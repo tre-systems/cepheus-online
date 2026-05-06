@@ -874,6 +874,49 @@ describe('protocol validation', () => {
     assert.equal(result.error.message, 'canCommission must be a boolean')
   })
 
+  it('accepts semantic reenlistment resolution commands and facts', () => {
+    const command = decodeCommand({
+      type: 'ResolveCharacterCreationReenlistment',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      expectedSeq: 11,
+      characterId: 'char-1'
+    })
+    assert.equal(command.ok, true)
+    if (!command.ok) return
+    assert.equal(command.value.type, 'ResolveCharacterCreationReenlistment')
+    if (command.value.type !== 'ResolveCharacterCreationReenlistment') return
+    assert.equal(command.value.expectedSeq, 11)
+
+    const transition = decodeCommand({
+      type: 'AdvanceCharacterCreation',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      creationEvent: {
+        type: 'RESOLVE_REENLISTMENT',
+        reenlistment: {
+          expression: '2d6',
+          rolls: [3, 4],
+          total: 7,
+          characteristic: null,
+          modifier: 0,
+          target: 6,
+          success: true,
+          outcome: 'allowed'
+        }
+      }
+    })
+    assert.equal(transition.ok, true)
+    if (!transition.ok) return
+    assert.equal(transition.value.type, 'AdvanceCharacterCreation')
+    if (transition.value.type !== 'AdvanceCharacterCreation') return
+    assert.equal(
+      transition.value.creationEvent.type,
+      'RESOLVE_REENLISTMENT'
+    )
+  })
+
   it('accepts character creation homeworld/background commands', () => {
     const homeworld = decodeClientMessage({
       type: 'command',

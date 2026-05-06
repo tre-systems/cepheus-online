@@ -76,6 +76,21 @@ const eventFixtures = {
   ],
   COMPLETE_SKILLS: [{ type: 'COMPLETE_SKILLS' }],
   COMPLETE_AGING: [{ type: 'COMPLETE_AGING' }],
+  RESOLVE_REENLISTMENT: [
+    {
+      type: 'RESOLVE_REENLISTMENT',
+      reenlistment: {
+        expression: '2d6',
+        rolls: [3, 4],
+        total: 7,
+        characteristic: null,
+        modifier: 0,
+        target: 6,
+        success: true,
+        outcome: 'allowed'
+      }
+    }
+  ],
   REENLIST: [{ type: 'REENLIST' }],
   LEAVE_CAREER: [{ type: 'LEAVE_CAREER' }],
   REENLIST_BLOCKED: [{ type: 'REENLIST_BLOCKED' }],

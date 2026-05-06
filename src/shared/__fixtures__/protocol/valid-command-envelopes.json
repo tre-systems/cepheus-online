@@ -176,6 +176,22 @@
     "expectedSeq": 26
   },
   {
+    "name": "character creation reenlistment resolution command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-resolve-reenlistment",
+      "command": {
+        "type": "ResolveCharacterCreationReenlistment",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 27,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "ResolveCharacterCreationReenlistment",
+    "expectedSeq": 27
+  },
+  {
     "name": "character creation term skill roll command",
     "message": {
       "type": "command",

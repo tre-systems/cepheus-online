@@ -3,6 +3,7 @@ import type {
   CareerCreationCheckFact,
   CareerCreationEvent,
   CareerCreationRankFact,
+  CareerCreationReenlistmentFact,
   CareerCreationTermSkillTable,
   FailedQualificationOption
 } from './characterCreation'
@@ -598,6 +599,29 @@ const parseOptionalCareerCreationCheckFact = (
   return parseCareerCreationCheckFact(raw, label)
 }
 
+const parseCareerCreationReenlistmentFact = (
+  raw: unknown,
+  label: string
+): Result<CareerCreationReenlistmentFact, CommandError> => {
+  const check = parseCareerCreationCheckFact(raw, label)
+  if (!check.ok) return check
+  if (!isObject(raw)) {
+    return err(invalidCommand(`${label} must be an object`))
+  }
+  if (
+    raw.outcome !== 'forced' &&
+    raw.outcome !== 'allowed' &&
+    raw.outcome !== 'blocked'
+  ) {
+    return err(invalidCommand(`${label}.outcome is not supported`))
+  }
+
+  return ok({
+    ...check.value,
+    outcome: raw.outcome
+  })
+}
+
 const parseCareerCreationRankFact = (
   raw: unknown,
   label: string
@@ -694,10 +718,7 @@ const parseCareerCreationEvent = (
     case 'SKIP_ADVANCEMENT':
     case 'COMPLETE_SKILLS':
     case 'COMPLETE_AGING':
-    case 'REENLIST':
     case 'LEAVE_CAREER':
-    case 'REENLIST_BLOCKED':
-    case 'FORCED_REENLIST':
     case 'CONTINUE_CAREER':
     case 'FINISH_MUSTERING':
     case 'CREATION_COMPLETE':
@@ -786,6 +807,36 @@ const parseCareerCreationEvent = (
           ? {}
           : { advancement: advancement.value }),
         ...(rank.value === undefined ? {} : { rank: rank.value })
+      })
+    }
+
+    case 'RESOLVE_REENLISTMENT': {
+      const reenlistment = parseCareerCreationReenlistmentFact(
+        raw.reenlistment,
+        'reenlistment'
+      )
+      if (!reenlistment.ok) return reenlistment
+
+      return ok({
+        type: 'RESOLVE_REENLISTMENT',
+        reenlistment: reenlistment.value
+      })
+    }
+
+    case 'REENLIST':
+    case 'REENLIST_BLOCKED':
+    case 'FORCED_REENLIST': {
+      const reenlistment = parseOptionalCareerCreationCheckFact(
+        raw.reenlistment,
+        'reenlistment'
+      )
+      if (!reenlistment.ok) return reenlistment
+
+      return ok({
+        type: raw.type,
+        ...(reenlistment.value === undefined
+          ? {}
+          : { reenlistment: reenlistment.value })
       })
     }
 
@@ -962,6 +1013,17 @@ export const decodeCommand = (
 
       return ok({
         type: 'ResolveCharacterCreationAging',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'ResolveCharacterCreationReenlistment': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'ResolveCharacterCreationReenlistment',
         ...base.value,
         characterId: characterId.value
       })

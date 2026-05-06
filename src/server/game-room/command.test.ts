@@ -871,6 +871,161 @@ describe('deriveEventsForCommand error categories', () => {
     )
   })
 
+  it('emits a semantic reenlistment event with server-derived roll facts', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationReenlistment',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('REENLISTMENT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout reenlistment',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationReenlistmentResolved',
+        characterId,
+        outcome: 'allowed',
+        reenlistment: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: null,
+          modifier: 0,
+          target: 6,
+          success: true,
+          outcome: 'allowed'
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits a forced semantic reenlistment outcome on natural 12', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationReenlistment',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('REENLISTMENT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      }),
+      { gameSeed: 75 }
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value[1]?.type, 'CharacterCreationReenlistmentResolved')
+    if (result.value[1]?.type !== 'CharacterCreationReenlistmentResolved') {
+      return
+    }
+    assert.equal(result.value[1].outcome, 'forced')
+    assert.equal(result.value[1].reenlistment.total, 12)
+    assert.equal(result.value[1].reenlistment.outcome, 'forced')
+  })
+
+  it('blocks semantic reenlistment resolution outside reenlistment', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationReenlistment',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('AGING')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'REENLISTMENT is not valid from AGING')
+  })
+
+  it('blocks semantic reenlistment resolution after the roll is resolved', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationReenlistment',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('REENLISTMENT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8,
+            reEnlistment: 8
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'REENLISTMENT is blocked by unresolved character creation decisions'
+    )
+  })
+
   it('emits a semantic term skill event with a server-derived skill roll', () => {
     const result = runCommand(
       {

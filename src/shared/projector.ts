@@ -118,6 +118,7 @@ type CharacterEventType =
   | 'CharacterCreationCommissionResolved'
   | 'CharacterCreationAdvancementResolved'
   | 'CharacterCreationAgingResolved'
+  | 'CharacterCreationReenlistmentResolved'
   | 'CharacterCreationTermSkillRolled'
   | 'CharacterCreationTermCascadeSkillResolved'
   | 'CharacterCreationHomeworldSet'
@@ -492,6 +493,41 @@ const characterEventHandlers = {
         {
           type: 'COMPLETE_AGING',
           aging: structuredClone(event.aging)
+        }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationReenlistmentResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const lastTermIndex = character.creation.terms.length - 1
+    const terms = character.creation.terms.map((term, index) => {
+      if (index !== lastTermIndex) return structuredClone(term)
+
+      return {
+        ...structuredClone(term),
+        canReenlist: event.outcome !== 'blocked',
+        reEnlistment: event.reenlistment.total
+      }
+    })
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      terms,
+      history: [
+        ...(character.creation.history ?? []),
+        {
+          type: 'RESOLVE_REENLISTMENT',
+          reenlistment: structuredClone(event.reenlistment)
         }
       ]
     }

@@ -11,6 +11,7 @@ import type {
   CareerCreationAgingFact,
   CareerCreationEvent,
   CareerCreationRankFact,
+  CareerCreationReenlistmentFact,
   CareerCreationTermSkillFact
 } from './characterCreation'
 import type {
@@ -101,6 +102,14 @@ export type GameEvent =
       type: 'CharacterCreationAgingResolved'
       characterId: CharacterId
       aging: CareerCreationAgingFact
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationReenlistmentResolved'
+      characterId: CharacterId
+      outcome: CareerCreationReenlistmentFact['outcome']
+      reenlistment: CareerCreationReenlistmentFact
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

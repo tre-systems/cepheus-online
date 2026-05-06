@@ -711,6 +711,29 @@ describe('live activity derivation', () => {
         creationComplete: false
       }),
       envelope(6, {
+        type: 'CharacterCreationReenlistmentResolved',
+        characterId,
+        outcome: 'allowed',
+        reenlistment: {
+          expression: '2d6',
+          rolls: [3, 4],
+          total: 7,
+          characteristic: null,
+          modifier: 0,
+          target: 6,
+          success: true,
+          outcome: 'allowed'
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(7, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: {
@@ -760,6 +783,11 @@ describe('live activity derivation', () => {
         [
           'COMPLETE_AGING',
           'Aging resolved; age 38; aging/anagathics modifier -3; 2 characteristic changes',
+          'REENLISTMENT'
+        ],
+        [
+          'REENLIST_ALLOWED',
+          'Reenlistment allowed; total 7; target 6+; DM 0',
           'REENLISTMENT'
         ],
         [
