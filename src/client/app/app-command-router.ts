@@ -29,6 +29,10 @@ export interface AppCommandRouter<TResult = unknown> {
     command: Command,
     options?: DispatchCommandOptions
   ) => Promise<TResult>
+  dispatchSequential: (
+    commands: readonly Command[],
+    options?: DispatchCommandBatchOptions
+  ) => Promise<TResult[]>
   dispatchAll: (
     commands: readonly Command[],
     options?: DispatchCommandBatchOptions
@@ -79,6 +83,19 @@ export const createAppCommandRouter = <TResult = unknown>({
         0,
         options.requestId ?? createRequestId(command, 0)
       ),
+    dispatchSequential: async (commands, options = {}) => {
+      const results: TResult[] = []
+      for (const [index, command] of commands.entries()) {
+        results.push(
+          await routeCommand(
+            command,
+            0,
+            options.requestIds?.[index] ?? createRequestId(command, index)
+          )
+        )
+      }
+      return results
+    },
     dispatchAll: async (commands, options = {}) => {
       const results: TResult[] = []
       for (const [index, command] of commands.entries()) {

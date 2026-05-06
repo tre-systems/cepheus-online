@@ -75,5 +75,64 @@
     },
     "errorCode": "invalid_command",
     "errorMessage": "canCommission must be a boolean"
+  },
+  {
+    "name": "malformed character creation homeworld payload",
+    "message": {
+      "type": "command",
+      "requestId": "bad-homeworld",
+      "command": {
+        "type": "SetCharacterCreationHomeworld",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": "crew-scout-1",
+        "homeworld": "Regina"
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "homeworld must be an object"
+  },
+  {
+    "name": "empty character creation background skill",
+    "message": {
+      "type": "command",
+      "requestId": "bad-background-skill",
+      "command": {
+        "type": "SelectCharacterCreationBackgroundSkill",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": "crew-scout-1",
+        "skill": " "
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "skill cannot be empty"
+  },
+  {
+    "name": "malformed character creation finalization payload",
+    "message": {
+      "type": "command",
+      "requestId": "bad-finalize-creation",
+      "command": {
+        "type": "FinalizeCharacterCreation",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": "crew-scout-1",
+        "age": 34,
+        "characteristics": {
+          "str": 7,
+          "dex": 8,
+          "end": 7,
+          "int": 9,
+          "edu": 8
+        },
+        "skills": ["Pilot-1"],
+        "equipment": [],
+        "credits": 1200,
+        "notes": "Generated character."
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "characteristics.soc is required"
   }
 ]

@@ -111,4 +111,28 @@ describe('app command router dispatch', () => {
       [30, 99, 32]
     )
   })
+
+  it('submits sequential commands against the latest authoritative event sequence', async () => {
+    let eventSeq = 30
+    const submissions: AppCommandSubmitInput[] = []
+    const router = createAppCommandRouter({
+      getEventSeq: () => eventSeq,
+      submit: async (input) => {
+        submissions.push(input)
+        eventSeq += 1
+        return input.requestId
+      }
+    })
+
+    const results = await router.dispatchSequential(
+      [createBoardCommand(), moveCommand({ expectedSeq: 99 }), moveCommand()],
+      { requestIds: ['board-1', 'move-explicit', 'move-2'] }
+    )
+
+    assert.deepEqual(results, ['board-1', 'move-explicit', 'move-2'])
+    assert.deepEqual(
+      submissions.map((submission) => submission.command.expectedSeq),
+      [30, 99, 32]
+    )
+  })
 })

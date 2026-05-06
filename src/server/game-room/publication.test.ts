@@ -10,7 +10,10 @@ import {
   asUserId
 } from '../../shared/ids'
 import { getProjectedGameState } from './projection'
-import { runCommandPublication } from './publication'
+import {
+  CommandPublicationError,
+  runCommandPublication
+} from './publication'
 import { gameSeedKey, readCheckpoint, readEventStream } from './storage'
 import { createMemoryStorage } from './test-support'
 
@@ -48,6 +51,21 @@ const createBoardCommand = (boardId = asBoardId('board-1')): Command => ({
 })
 
 describe('room publication flow', () => {
+  it('returns one state-bearing publication for accepted commands', async () => {
+    const storage = createMemoryStorage()
+
+    const accepted = await publish(storage, createGameCommand())
+
+    assert.equal(accepted.ok, true)
+    if (!accepted.ok) return
+    assert.deepEqual(Object.keys(accepted.value).sort(), [
+      'eventSeq',
+      'requestId',
+      'state'
+    ])
+    assert.equal(accepted.value.eventSeq, accepted.value.state.eventSeq)
+  })
+
   it('rejects invalid commands without writing an event stream', async () => {
     const storage = createMemoryStorage()
 
@@ -64,6 +82,93 @@ describe('room publication flow', () => {
 
     assert.equal(rejected.ok, false)
     assert.equal(storage.records.size, 0)
+  })
+
+  it('throws an internal publication error when checkpoint recovery fails after append', async () => {
+    const storage = createMemoryStorage()
+    const get = storage.get.bind(storage)
+
+    storage.get = async <T = unknown>(key: string): Promise<T | undefined> => {
+      const value = await get<T>(key)
+
+      if (key === `checkpoint:${gameId}` && value) {
+        const checkpoint = value as unknown as {
+          state: {
+            name: string
+          }
+        }
+
+        return {
+          ...checkpoint,
+          state: {
+            ...checkpoint.state,
+            name: `${checkpoint.state.name} (corrupt)`
+          }
+        } as T
+      }
+
+      return value
+    }
+
+    let thrown: unknown = null
+    try {
+      await publish(storage, createGameCommand())
+    } catch (error) {
+      thrown = error
+    }
+
+    assert.equal(thrown instanceof CommandPublicationError, true)
+    assert.equal(
+      (thrown as CommandPublicationError).code,
+      'projection_mismatch'
+    )
+    assert.equal(
+      (thrown as CommandPublicationError).message,
+      'Stored event stream does not match live projection'
+    )
+    assert.equal((await readEventStream(storage, gameId)).length, 1)
+  })
+
+  it('throws an internal publication error when stored event parity fails after append', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+
+    const get = storage.get.bind(storage)
+    let chunkReads = 0
+    storage.get = async <T = unknown>(key: string): Promise<T | undefined> => {
+      if (key === `events:${gameId}:chunk:0`) {
+        chunkReads += 1
+        const chunk = await get<T>(key)
+
+        if (chunkReads >= 3 && Array.isArray(chunk)) {
+          return chunk.filter((envelope) => envelope.seq < 2) as T
+        }
+
+        return chunk
+      }
+
+      return get<T>(key)
+    }
+
+    let thrown: unknown = null
+    try {
+      await publish(storage, createBoardCommand())
+    } catch (error) {
+      thrown = error
+    }
+
+    assert.equal(thrown instanceof CommandPublicationError, true)
+    assert.equal(
+      (thrown as CommandPublicationError).code,
+      'projection_mismatch'
+    )
+    assert.equal(
+      (thrown as CommandPublicationError).message,
+      'Stored event stream does not match live projection'
+    )
+
+    storage.get = get
+    assert.equal((await readEventStream(storage, gameId)).length, 2)
   })
 
   it('creates a game, checkpoints it, and projects tail events from storage', async () => {

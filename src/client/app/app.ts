@@ -2217,9 +2217,7 @@ const createCustomPiece = async () => {
     if (plan.focus === 'name') els.pieceNameInput.focus()
     return
   }
-  for (const command of plan.commands) {
-    await postCommand(command)
-  }
+  await commandRouter.dispatchSequential(plan.commands)
   selectedPieceId = plan.pieceId
   els.pieceNameInput.value = ''
   els.pieceImageInput.value = ''

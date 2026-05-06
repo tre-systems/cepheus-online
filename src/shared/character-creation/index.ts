@@ -1,5 +1,6 @@
 export * from './types'
 export * from './state-machine'
+export * from './legal-actions'
 export * from './career-rules'
 export * from './skills'
 export * from './term-outcomes'

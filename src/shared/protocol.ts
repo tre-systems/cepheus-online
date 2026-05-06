@@ -79,6 +79,9 @@ const invalidCommand = (message: string): CommandError => ({
   message
 })
 
+const MAX_STRING_ARRAY_LENGTH = 100
+const MAX_STRING_ARRAY_ITEM_LENGTH = 200
+
 const parseId = <T>(
   raw: unknown,
   label: string,
@@ -183,11 +186,25 @@ const parseStringArray = (
   if (!Array.isArray(raw)) {
     return err(invalidCommand(`${label} must be an array`))
   }
+  if (raw.length > MAX_STRING_ARRAY_LENGTH) {
+    return err(
+      invalidCommand(
+        `${label} cannot contain more than ${MAX_STRING_ARRAY_LENGTH} entries`
+      )
+    )
+  }
 
   const values: string[] = []
   for (const [index, item] of raw.entries()) {
     const value = parseString(item, `${label}[${index}]`)
     if (!value.ok) return value
+    if (value.value.length > MAX_STRING_ARRAY_ITEM_LENGTH) {
+      return err(
+        invalidCommand(
+          `${label}[${index}] cannot exceed ${MAX_STRING_ARRAY_ITEM_LENGTH} characters`
+        )
+      )
+    }
     values.push(value.value)
   }
 
@@ -354,11 +371,25 @@ const parseHomeworldTradeCodes = (
 ): Result<string[], CommandError> => {
   if (isString(raw)) {
     const value = raw.trim()
+    if (value.length > MAX_STRING_ARRAY_ITEM_LENGTH) {
+      return err(
+        invalidCommand(
+          `${label} cannot exceed ${MAX_STRING_ARRAY_ITEM_LENGTH} characters`
+        )
+      )
+    }
     return ok(value ? [value] : [])
   }
 
   if (!Array.isArray(raw)) {
     return err(invalidCommand(`${label} must be a string or an array`))
+  }
+  if (raw.length > MAX_STRING_ARRAY_LENGTH) {
+    return err(
+      invalidCommand(
+        `${label} cannot contain more than ${MAX_STRING_ARRAY_LENGTH} entries`
+      )
+    )
   }
 
   const values: string[] = []
@@ -366,6 +397,13 @@ const parseHomeworldTradeCodes = (
   for (const [index, item] of raw.entries()) {
     const value = parseString(item, `${label}[${index}]`)
     if (!value.ok) return value
+    if (value.value.length > MAX_STRING_ARRAY_ITEM_LENGTH) {
+      return err(
+        invalidCommand(
+          `${label}[${index}] cannot exceed ${MAX_STRING_ARRAY_ITEM_LENGTH} characters`
+        )
+      )
+    }
     const key = value.value.toLowerCase()
     if (seen.has(key)) continue
     values.push(value.value)

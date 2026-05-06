@@ -51,6 +51,64 @@ export interface CareerCreationState {
   context: CareerCreationContext
 }
 
+export type CareerCreationActionKey =
+  | 'setCharacteristics'
+  | 'completeHomeworld'
+  | 'selectCareer'
+  | 'completeBasicTraining'
+  | 'rollSurvival'
+  | 'resolveMishap'
+  | 'confirmDeath'
+  | 'rollCommission'
+  | 'skipCommission'
+  | 'rollAdvancement'
+  | 'skipAdvancement'
+  | 'completeSkills'
+  | 'resolveAging'
+  | 'rollReenlistment'
+  | 'reenlist'
+  | 'leaveCareer'
+  | 'forcedReenlist'
+  | 'resolveMusteringBenefit'
+  | 'continueCareer'
+  | 'finishMustering'
+  | 'completeCreation'
+
+export type CareerCreationReenlistmentOutcome =
+  | 'unresolved'
+  | 'forced'
+  | 'allowed'
+  | 'blocked'
+  | 'retire'
+
+export type CareerCreationPendingDecisionKey =
+  | 'characteristicAssignment'
+  | 'homeworldSkillSelection'
+  | 'careerQualification'
+  | 'basicTrainingSkillSelection'
+  | 'survivalResolution'
+  | 'mishapResolution'
+  | 'commissionResolution'
+  | 'advancementResolution'
+  | 'skillTrainingSelection'
+  | 'cascadeSkillResolution'
+  | 'agingResolution'
+  | 'anagathicsDecision'
+  | 'reenlistmentResolution'
+  | 'musteringBenefitSelection'
+
+export interface CareerCreationPendingDecision {
+  key: CareerCreationPendingDecisionKey
+}
+
+export interface CareerCreationActionContext {
+  pendingDecisions?: readonly CareerCreationPendingDecision[]
+  remainingMusteringBenefits?: number
+  canContinueCareer?: boolean
+  canCompleteCreation?: boolean
+  reenlistmentOutcome?: CareerCreationReenlistmentOutcome
+}
+
 export interface CareerCheck {
   characteristic: CharacteristicKey | null
   target: number

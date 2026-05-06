@@ -548,6 +548,93 @@ describe('protocol validation', () => {
     assert.equal(result.error.message, 'homeworld.tradeCodes cannot be empty')
   })
 
+  it('rejects oversized character creation trade code arrays', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-homeworld-oversize',
+      command: {
+        type: 'SetCharacterCreationHomeworld',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        homeworld: {
+          lawLevel: 'No Law',
+          tradeCodes: Array.from({ length: 101 }, (_, index) => `Code ${index}`)
+        }
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'homeworld.tradeCodes cannot contain more than 100 entries'
+    )
+  })
+
+  it('rejects oversized character creation skill array entries', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-finalize-oversize-skill',
+      command: {
+        type: 'FinalizeCharacterCreation',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        age: 34,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        skills: ['A'.repeat(201)],
+        equipment: [],
+        credits: 1200,
+        notes: 'Generated character.'
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'skills[0] cannot exceed 200 characters')
+  })
+
+  it('rejects invalid character creation skill array entries', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-finalize-invalid-skill',
+      command: {
+        type: 'FinalizeCharacterCreation',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        age: 34,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        skills: ['Pilot-1', 7],
+        equipment: [],
+        credits: 1200,
+        notes: 'Generated character.'
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'skills[1] must be a string')
+  })
+
   it('accepts door state commands for board occluders', () => {
     const result = decodeClientMessage({
       type: 'command',

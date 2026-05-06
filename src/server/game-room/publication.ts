@@ -20,6 +20,16 @@ export interface CommandPublication {
   eventSeq: number
 }
 
+export class CommandPublicationError extends Error {
+  readonly code: CommandError['code']
+
+  constructor(code: CommandError['code'], message: string) {
+    super(message)
+    this.name = 'CommandPublicationError'
+    this.code = code
+  }
+}
+
 const commandError = (
   code: CommandError['code'],
   message: string
@@ -27,6 +37,9 @@ const commandError = (
   code,
   message
 })
+
+const internalPublicationError = (message: string): CommandPublicationError =>
+  new CommandPublicationError('projection_mismatch', message)
 
 const shouldCheckpoint = (
   state: GameState,
@@ -85,9 +98,7 @@ export const runCommandPublication = async (
   const nextState = projectGameState(envelopes, currentState)
 
   if (!nextState) {
-    return err(
-      commandError('projection_mismatch', 'Command did not project game state')
-    )
+    throw internalPublicationError('Command did not project game state')
   }
 
   if (shouldCheckpoint(nextState, envelopes)) {
@@ -101,11 +112,8 @@ export const runCommandPublication = async (
   const projectedState = await getProjectedGameState(storage, gameId)
 
   if (!hasProjectionParity(projectedState, nextState)) {
-    return err(
-      commandError(
-        'projection_mismatch',
-        'Stored event stream does not match live projection'
-      )
+    throw internalPublicationError(
+      'Stored event stream does not match live projection'
     )
   }
 
