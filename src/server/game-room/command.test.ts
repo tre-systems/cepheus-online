@@ -907,7 +907,7 @@ describe('deriveEventsForCommand error categories', () => {
         canCommission: false,
         canAdvance: false,
         state: {
-          status: 'MISHAP',
+          status: 'DECEASED',
           context: {
             canCommission: false,
             canAdvance: false

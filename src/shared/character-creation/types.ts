@@ -357,7 +357,11 @@ export interface AgingResolution {
 export type PromotionOutcome = 'pass' | 'fail' | 'skip' | 'na'
 export type ReenlistmentOutcome = 'forced' | 'allowed' | 'blocked' | 'retire'
 export type ReenlistmentDecision = 'reenlist' | 'leave' | 'na'
-export type TermOutcomeResult = 'MISHAP' | 'MUSTERING_OUT' | 'NEXT_TERM'
+export type TermOutcomeResult =
+  | 'DECEASED'
+  | 'MISHAP'
+  | 'MUSTERING_OUT'
+  | 'NEXT_TERM'
 
 export interface TermOutcome {
   id: string

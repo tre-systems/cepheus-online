@@ -315,7 +315,7 @@ describe('live activity derivation', () => {
           type: 'SURVIVAL_FAILED'
         },
         state: {
-          status: 'MISHAP',
+          status: 'DECEASED',
           context: {
             canCommission: false,
             canAdvance: false
@@ -450,7 +450,7 @@ describe('live activity derivation', () => {
           'COMPLETE_BASIC_TRAINING',
           'Basic training complete; 1 skill; Vacc Suit-0'
         ],
-        ['SURVIVAL_FAILED', 'Survival failed'],
+        ['SURVIVAL_FAILED', 'Killed in service'],
         [
           'SURVIVAL_PASSED',
           'Survival passed; commission available; advancement available'

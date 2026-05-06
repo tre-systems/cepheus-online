@@ -2473,7 +2473,7 @@ const initialCharacterCreationStateCommands = (
 
   if (completedTerms.length > 0) {
     commands.push(advance({ type: 'COMPLETE_BASIC_TRAINING' }))
-    let endedWithMishap = false
+    let endedWithDeath = false
 
     for (const [index, term] of completedTerms.entries()) {
       commands.push(
@@ -2487,8 +2487,7 @@ const initialCharacterCreationStateCommands = (
       )
 
       if (!term.survivalPassed) {
-        commands.push(advance({ type: 'MISHAP_RESOLVED' }))
-        endedWithMishap = true
+        endedWithDeath = true
         break
       }
 
@@ -2517,11 +2516,13 @@ const initialCharacterCreationStateCommands = (
       }
     }
 
-    if (!endedWithMishap) commands.push(advance({ type: 'LEAVE_CAREER' }))
-    commands.push(
-      advance({ type: 'FINISH_MUSTERING' }),
-      advance({ type: 'CREATION_COMPLETE' })
-    )
+    if (!endedWithDeath) {
+      commands.push(
+        advance({ type: 'LEAVE_CAREER' }),
+        advance({ type: 'FINISH_MUSTERING' }),
+        advance({ type: 'CREATION_COMPLETE' })
+      )
+    }
   }
 
   return commands

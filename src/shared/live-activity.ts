@@ -182,7 +182,7 @@ const survivalDetails = ({
   canAdvance: boolean
 }): string =>
   [
-    passed ? 'Survival passed' : 'Survival failed',
+    passed ? 'Survival passed' : 'Killed in service',
     `total ${total}`,
     `target ${target}+`,
     `DM ${signedLabel(modifier)}`,
@@ -299,7 +299,7 @@ const describeCareerCreationEvent = (
         `advancement ${availabilityLabel(event.canAdvance)}`
       ].join('; ')
     case 'SURVIVAL_FAILED':
-      return 'Survival failed'
+      return 'Killed in service'
     case 'COMPLETE_COMMISSION':
       return 'Commission earned'
     case 'SKIP_COMMISSION':

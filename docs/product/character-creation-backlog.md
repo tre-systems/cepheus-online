@@ -414,13 +414,14 @@ Tasks:
 Acceptance:
 
 - A normal successful term can be completed using only visible legal actions.
-- A failed survival path produces a valid mishap or death outcome.
+- A failed survival path produces a deceased character in the default rules
+  mode.
 - Term history matches the event stream after refresh.
 
 Next priority: finish the term-skill UI path on top of the semantic server
 facts, then implement aging and reenlistment as semantic events. Keep
-mishap/death as the first hard branch after the normal pass path is
-authoritative.
+death as the first hard branch after the normal pass path is authoritative,
+then keep mishaps as an optional variant.
 
 ## Milestone 5: Aging, Anagathics, And Reenlistment
 

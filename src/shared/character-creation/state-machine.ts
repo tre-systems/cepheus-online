@@ -65,7 +65,7 @@ const transitionStatus = (
         : null
     case 'SURVIVAL':
       if (event.type === 'SURVIVAL_FAILED') {
-        return { ...state, status: 'MISHAP' }
+        return { ...state, status: 'DECEASED' }
       }
       if (event.type !== 'SURVIVAL_PASSED') return null
       return {

@@ -175,18 +175,16 @@ describe('career creation state machine helpers', () => {
     )
   })
 
-  it('routes survival failure through mishap and death/retirement outcomes', () => {
-    const mishap = transitionCareerCreationState(
+  it('routes survival failure to death by default and keeps optional mishaps separate', () => {
+    const deceased = transitionCareerCreationState(
       createCareerCreationState('SURVIVAL'),
       { type: 'SURVIVAL_FAILED' }
     )
-    assert.equal(mishap.status, 'MISHAP')
+    assert.equal(deceased.status, 'DECEASED')
     assert.equal(
-      transitionCareerCreationState(mishap, { type: 'DEATH_CONFIRMED' }).status,
-      'DECEASED'
-    )
-    assert.equal(
-      transitionCareerCreationState(mishap, { type: 'MISHAP_RESOLVED' }).status,
+      transitionCareerCreationState(createCareerCreationState('MISHAP'), {
+        type: 'MISHAP_RESOLVED'
+      }).status,
       'MUSTERING_OUT'
     )
   })
@@ -425,7 +423,7 @@ describe('career term outcome helpers', () => {
       advancement: 'na',
       reenlistment: 'blocked',
       decision: 'na',
-      result: 'MISHAP'
+      result: 'DECEASED'
     })
     assert.equal(
       outcomes.some(
@@ -442,7 +440,7 @@ describe('career term outcome helpers', () => {
       enumerateTermOutcomes({ canReenlist: false }).map(
         (outcome) => outcome.result
       ),
-      ['MISHAP', 'MUSTERING_OUT']
+      ['DECEASED', 'MUSTERING_OUT']
     )
     assert.deepEqual(
       enumerateTermOutcomes({ mustRetire: true }).map(

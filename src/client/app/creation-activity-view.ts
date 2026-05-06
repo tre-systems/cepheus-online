@@ -56,7 +56,7 @@ const transitionTitles = {
   CAREER_TERM_STARTED: 'Career term started',
   COMPLETE_BASIC_TRAINING: 'Basic training complete',
   SURVIVAL_PASSED: 'Survival passed',
-  SURVIVAL_FAILED: 'Survival failed',
+  SURVIVAL_FAILED: 'Killed in service',
   MISHAP_RESOLVED: 'Mishap resolved',
   COMPLETE_COMMISSION: 'Commission earned',
   SKIP_COMMISSION: 'Commission skipped',

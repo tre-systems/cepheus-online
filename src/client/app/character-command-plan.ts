@@ -207,13 +207,7 @@ const playableCreationCommands = (
   const commands = [advance({ type: 'COMPLETE_BASIC_TRAINING' })]
 
   if (!outcome.survivalPassed) {
-    return [
-      ...commands,
-      advance({ type: 'SURVIVAL_FAILED' }),
-      advance({ type: 'MISHAP_RESOLVED' }),
-      advance({ type: 'FINISH_MUSTERING' }),
-      advance({ type: 'CREATION_COMPLETE' })
-    ]
+    return [...commands, advance({ type: 'SURVIVAL_FAILED' })]
   }
 
   commands.push(

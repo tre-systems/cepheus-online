@@ -204,7 +204,7 @@ describe('creation activity view model', () => {
         'Career term started',
         'Basic training complete',
         'Survival passed',
-        'Survival failed',
+        'Killed in service',
         'Commission earned',
         'Commission skipped',
         'Advancement earned',
@@ -263,13 +263,13 @@ describe('creation activity view model', () => {
         characterActivity({
           seq: 30,
           transition: 'SURVIVAL_FAILED',
-          details: 'Survival failed',
-          status: 'MISHAP'
+          details: 'Killed in service',
+          status: 'DECEASED'
         })
       ),
       {
-        title: 'Survival failed',
-        detail: 'Survival failed',
+        title: 'Killed in service',
+        detail: 'Killed in service',
         tone: 'warning',
         seq: 30
       }

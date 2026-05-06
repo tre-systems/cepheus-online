@@ -164,7 +164,7 @@ describe('career creation state machine transition matrix', () => {
     {
       from: 'SURVIVAL',
       event: eventFixtures.SURVIVAL_FAILED[0],
-      to: 'MISHAP'
+      to: 'DECEASED'
     },
     {
       from: 'MISHAP',
@@ -379,7 +379,7 @@ describe('career creation state machine transition matrix', () => {
     )
   })
 
-  it('keeps survival failure facts separate from mishap resolution transitions', () => {
+  it('treats failed survival as death by default while keeping optional mishaps separate', () => {
     const death = resolveSurvivalFailureOutcome({
       career: 'Scout',
       survival: { total: 2, outcome: 'fail' }
@@ -390,22 +390,20 @@ describe('career creation state machine transition matrix', () => {
       mishap: { total: 2 }
     })
 
-    for (const outcome of [death, mishap]) {
-      const failed = transitionCareerCreationState(
-        createCareerCreationState('SURVIVAL'),
-        { type: 'SURVIVAL_FAILED' }
-      )
+    assert.equal(death.type, 'death')
+    assert.equal(mishap.type, 'mishap')
 
-      assert.equal(failed.status, 'MISHAP')
-      assert.equal(
-        transitionCareerCreationState(
-          failed,
-          outcome.type === 'death'
-            ? { type: 'DEATH_CONFIRMED' }
-            : { type: 'MISHAP_RESOLVED' }
-        ).status,
-        outcome.type === 'death' ? 'DECEASED' : 'MUSTERING_OUT'
-      )
-    }
+    const failed = transitionCareerCreationState(
+      createCareerCreationState('SURVIVAL'),
+      { type: 'SURVIVAL_FAILED' }
+    )
+
+    assert.equal(failed.status, 'DECEASED')
+    assert.equal(
+      transitionCareerCreationState(createCareerCreationState('MISHAP'), {
+        type: 'MISHAP_RESOLVED'
+      }).status,
+      'MUSTERING_OUT'
+    )
   })
 })

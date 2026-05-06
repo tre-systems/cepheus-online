@@ -1,4 +1,10 @@
-import type { PromotionOutcome, ReenlistmentDecision, ReenlistmentOutcome, TermOutcome, TermOutcomeResult } from './types'
+import type {
+  PromotionOutcome,
+  ReenlistmentDecision,
+  ReenlistmentOutcome,
+  TermOutcome,
+  TermOutcomeResult
+} from './types'
 
 export const enumerateTermOutcomes = ({
   canCommission = false,
@@ -19,7 +25,7 @@ export const enumerateTermOutcomes = ({
       advancement: 'na',
       reenlistment: 'blocked',
       decision: 'na',
-      result: 'MISHAP'
+      result: 'DECEASED'
     }
   ]
 

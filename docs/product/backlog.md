@@ -515,28 +515,28 @@ Done when:
 
 ### Slice 2B: Mishap And Death
 
-Status: skeletal. The status machine already routes failed survival to
-`MISHAP`, then either `DECEASED` or `MUSTERING_OUT`, and legal actions include
-`resolveMishap` and `confirmDeath`. Ruleset-backed mishap/death outcomes and
-their server events are still missing.
+Status: skeletal. The default Classic Traveller-style flow now routes failed
+survival directly to `DECEASED`. The separate `MISHAP` status remains only as
+the placeholder for a future optional mishap variant. Ruleset-backed optional
+mishap outcomes and their server events are still missing.
 
 Tasks:
 
 - Add SRD mishap table data and pure resolution helpers with deterministic
   injected dice.
-- Add semantic mishap events for table roll, outcome text, skill/equipment/stat
-  consequences, career exit, and death when applicable.
-- Add a death confirmation event only for branches where the rules outcome
-  requires it.
-- Project deceased creation state so finalization and mustering gates cannot
-  incorrectly produce a playable character.
+- Add semantic mishap events for optional-variant table roll, outcome text,
+  skill/equipment/stat consequences, career exit, and death when applicable.
+- Keep default failed survival as an immediate deceased state.
+- Keep deceased creation state from finalizing or mustering into a playable
+  character.
 - Add activity cards for mishap and death that reveal outcome after dice timing.
 
 Done when:
 
-- Failed survival produces a valid SRD mishap or death branch.
+- Failed survival produces deceased state in the default rules mode.
 - Death cannot be bypassed into final playable state.
-- Mishap outcomes replay after refresh and are visible to followers.
+- Optional mishap outcomes replay after refresh and are visible to followers
+  once that variant is enabled.
 
 ### Slice 2C: Aging, Anagathics, And Reenlistment
 
@@ -740,8 +740,8 @@ The next batch should run like this, in this order:
    from the current projection.
 4. Complete the SRD term loop on the server projection in rules order:
    survival, commission, advancement, term skill tables, and reenlistment.
-5. Add mishap/death next, because failed survival must not be hidden behind
-   happy-path finalization.
+5. Add death next, because failed survival must not be hidden behind happy-path
+   finalization. Keep mishap tables behind an explicit optional variant.
 6. Add aging/anagathics, then mustering out, then final sheet/export. Each
    slice should add semantic events, projection replay tests, protocol fixtures,
    and compact activity descriptors.
