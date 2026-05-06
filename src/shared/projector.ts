@@ -76,6 +76,32 @@ const applyCareerRank = (
     entry.name === career ? { ...entry, rank } : { ...entry }
   )
 
+const startProjectedCareerTerm = ({
+  character,
+  acceptedCareer,
+  drafted = false
+}: {
+  character: CharacterState
+  acceptedCareer: string
+  drafted?: boolean
+}) => {
+  if (!character.creation) return
+  const result = startCareerTerm({
+    career: acceptedCareer,
+    terms: character.creation.terms,
+    careers: character.creation.careers,
+    drafted
+  })
+
+  character.creation = {
+    ...character.creation,
+    terms: result.terms.map((term) => structuredClone(term)),
+    careers: result.careers.map((career) => ({ ...career })),
+    canEnterDraft: result.canEnterDraft,
+    failedToQualify: result.failedToQualify
+  }
+}
+
 type EventEnvelopeFor<TEvent extends GameEvent> = Omit<
   EventEnvelope,
   'event'
@@ -114,6 +140,9 @@ type CharacterEventType =
   | 'CharacterCreationStarted'
   | 'CharacterCreationTransitioned'
   | 'CharacterCreationBasicTrainingCompleted'
+  | 'CharacterCreationQualificationResolved'
+  | 'CharacterCreationDraftResolved'
+  | 'CharacterCreationDrifterEntered'
   | 'CharacterCreationSurvivalResolved'
   | 'CharacterCreationCommissionResolved'
   | 'CharacterCreationAdvancementResolved'
@@ -317,6 +346,107 @@ const characterEventHandlers = {
       history: [
         ...(character.creation.history ?? []),
         { type: 'COMPLETE_BASIC_TRAINING' }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationQualificationResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const creationEvent = event.passed
+      ? {
+          type: 'SELECT_CAREER' as const,
+          isNewCareer: true,
+          qualification: structuredClone(event.qualification)
+        }
+      : {
+          type: 'SELECT_CAREER' as const,
+          isNewCareer: false,
+          qualification: structuredClone(event.qualification),
+          failedQualificationOptions: [...event.failedQualificationOptions],
+          canEnterDraft: character.creation.canEnterDraft
+        }
+
+    if (event.passed) {
+      startProjectedCareerTerm({
+        character,
+        acceptedCareer: event.career
+      })
+    }
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      failedToQualify: !event.passed,
+      history: [
+        ...(character.creation.history ?? []),
+        structuredClone(creationEvent)
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationDraftResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    startProjectedCareerTerm({
+      character,
+      acceptedCareer: event.draft.acceptedCareer,
+      drafted: true
+    })
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        {
+          type: 'SELECT_CAREER',
+          isNewCareer: true,
+          drafted: true
+        }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationDrifterEntered: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    startProjectedCareerTerm({
+      character,
+      acceptedCareer: event.acceptedCareer
+    })
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        {
+          type: 'SELECT_CAREER',
+          isNewCareer: true,
+          failedQualificationOptions: ['Drifter']
+        }
       ]
     }
     nextState.eventSeq = envelope.seq
@@ -723,20 +853,11 @@ const characterEventHandlers = {
     if (!character?.creation) return nextState
     const acceptedCareer = event.acceptedCareer ?? event.career
 
-    const result = startCareerTerm({
-      career: acceptedCareer,
-      terms: character.creation.terms,
-      careers: character.creation.careers,
+    startProjectedCareerTerm({
+      character,
+      acceptedCareer,
       drafted: event.drafted
     })
-
-    character.creation = {
-      ...character.creation,
-      terms: result.terms.map((term) => structuredClone(term)),
-      careers: result.careers.map((career) => ({ ...career })),
-      canEnterDraft: result.canEnterDraft,
-      failedToQualify: result.failedToQualify
-    }
     nextState.eventSeq = envelope.seq
 
     return nextState

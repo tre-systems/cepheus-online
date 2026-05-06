@@ -10,10 +10,12 @@ import type {
   CareerCreationCheckFact,
   CareerCreationAgingFact,
   CareerCreationBenefitFact,
+  CareerCreationDraftFact,
   CareerCreationEvent,
   CareerCreationRankFact,
   CareerCreationReenlistmentFact,
-  CareerCreationTermSkillFact
+  CareerCreationTermSkillFact,
+  FailedQualificationOption
 } from './characterCreation'
 import type {
   CharacterCreationSheet,
@@ -69,6 +71,31 @@ export type GameEvent =
       type: 'CharacterCreationBasicTrainingCompleted'
       characterId: CharacterId
       trainingSkills: string[]
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationQualificationResolved'
+      characterId: CharacterId
+      career: string
+      passed: boolean
+      qualification: CareerCreationCheckFact
+      previousCareerCount: number
+      failedQualificationOptions: FailedQualificationOption[]
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationDraftResolved'
+      characterId: CharacterId
+      draft: CareerCreationDraftFact
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationDrifterEntered'
+      characterId: CharacterId
+      acceptedCareer: 'Drifter'
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

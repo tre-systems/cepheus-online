@@ -701,9 +701,57 @@ export const deriveLiveActivity = (
         creationComplete: true
       }
 
+    case 'CharacterCreationQualificationResolved':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: event.passed
+          ? 'CAREER_QUALIFICATION_PASSED'
+          : 'CAREER_QUALIFICATION_FAILED',
+        ...compactCharacterCreationDetails(
+          [
+            event.career,
+            `qualification ${event.qualification.total}`,
+            event.passed ? 'accepted' : 'failed',
+            event.failedQualificationOptions.length > 0
+              ? `fallback ${listLabel(event.failedQualificationOptions)}`
+              : null
+          ]
+            .filter(Boolean)
+            .join('; ')
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationDraftResolved':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'DRAFT_RESOLVED',
+        ...compactCharacterCreationDetails(
+          `Draft ${event.draft.tableRoll}; ${event.draft.acceptedCareer}`
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationDrifterEntered':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'DRIFTER_ENTERED',
+        ...compactCharacterCreationDetails('Entered Drifter'),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
     case 'CharacterCareerTermStarted': {
-      const acceptedCareer = event.acceptedCareer ?? event.career
-      const requestedCareer = event.requestedCareer ?? acceptedCareer
+      const acceptedCareer = event.acceptedCareer
+      const requestedCareer = event.requestedCareer
 
       return {
         ...baseActivity(envelope),

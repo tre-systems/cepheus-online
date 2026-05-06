@@ -1071,6 +1071,48 @@ export const decodeCommand = (
       })
     }
 
+    case 'ResolveCharacterCreationQualification': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const career = parseString(raw.career, 'career')
+      if (!career.ok) return career
+
+      return ok({
+        type: 'ResolveCharacterCreationQualification',
+        ...base.value,
+        characterId: characterId.value,
+        career: career.value
+      })
+    }
+
+    case 'ResolveCharacterCreationDraft': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'ResolveCharacterCreationDraft',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'EnterCharacterCreationDrifter': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const option = parseString(raw.option, 'option')
+      if (!option.ok) return option
+      if (option.value !== 'Drifter') {
+        return err(invalidCommand('option must be Drifter'))
+      }
+
+      return ok({
+        type: 'EnterCharacterCreationDrifter',
+        ...base.value,
+        characterId: characterId.value,
+        option: option.value
+      })
+    }
+
     case 'ResolveCharacterCreationSurvival': {
       const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
       if (!characterId.ok) return characterId

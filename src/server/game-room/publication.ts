@@ -99,6 +99,8 @@ export const runCommandPublication = async (
     currentState?.eventSeq ?? (await getEventSeq(storage, gameId))
   const usesSeededDice =
     message.command.type === 'RollDice' ||
+    message.command.type === 'ResolveCharacterCreationQualification' ||
+    message.command.type === 'ResolveCharacterCreationDraft' ||
     message.command.type === 'ResolveCharacterCreationSurvival' ||
     message.command.type === 'ResolveCharacterCreationCommission' ||
     message.command.type === 'ResolveCharacterCreationAdvancement' ||

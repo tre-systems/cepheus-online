@@ -42,6 +42,9 @@ export type CharacterCreationCommand = Extract<
       | 'FinalizeCharacterCreation'
       | 'StartCharacterCareerTerm'
       | 'CompleteCharacterCreationHomeworld'
+      | 'ResolveCharacterCreationQualification'
+      | 'ResolveCharacterCreationDraft'
+      | 'EnterCharacterCreationDrifter'
       | 'CompleteCharacterCreationBasicTraining'
       | 'ResolveCharacterCreationSurvival'
       | 'ResolveCharacterCreationCommission'
@@ -50,6 +53,8 @@ export type CharacterCreationCommand = Extract<
       | 'ResolveCharacterCreationReenlistment'
       | 'RollCharacterCreationTermSkill'
       | 'ResolveCharacterCreationTermCascadeSkill'
+      | 'RollCharacterCreationMusteringBenefit'
+      | 'CompleteCharacterCreationMustering'
       | 'CreatePiece'
   }
 >
@@ -73,6 +78,9 @@ export const appCommandRouteByType = {
   ResolveCharacterCreationCascadeSkill: 'characterCreation',
   FinalizeCharacterCreation: 'characterCreation',
   StartCharacterCareerTerm: 'characterCreation',
+  ResolveCharacterCreationQualification: 'characterCreation',
+  ResolveCharacterCreationDraft: 'characterCreation',
+  EnterCharacterCreationDrifter: 'characterCreation',
   CompleteCharacterCreationBasicTraining: 'characterCreation',
   ResolveCharacterCreationSurvival: 'characterCreation',
   ResolveCharacterCreationCommission: 'characterCreation',

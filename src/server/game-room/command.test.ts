@@ -710,6 +710,87 @@ describe('deriveEventsForCommand error categories', () => {
     ])
   })
 
+  it('emits semantic qualification roll facts from career selection', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationQualification',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout'
+      },
+      createCreation('CAREER_SELECTION')
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value[0]?.type, 'DiceRolled')
+    assert.equal(result.value[1]?.type, 'CharacterCreationQualificationResolved')
+    const qualification = result.value[1]
+    if (qualification?.type !== 'CharacterCreationQualificationResolved') return
+    assert.equal(qualification.characterId, characterId)
+    assert.equal(qualification.career, 'Scout')
+    assert.equal(qualification.qualification.expression, '2d6')
+    assert.equal(qualification.qualification.success, qualification.passed)
+    assert.equal(
+      qualification.state.status,
+      qualification.passed ? 'BASIC_TRAINING' : 'CAREER_SELECTION'
+    )
+  })
+
+  it('emits semantic draft roll facts after failed qualification', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationDraft',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('CAREER_SELECTION', {
+        failedToQualify: true,
+        canEnterDraft: true
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value[0]?.type, 'DiceRolled')
+    assert.equal(result.value[1]?.type, 'CharacterCreationDraftResolved')
+    const draft = result.value[1]
+    if (draft?.type !== 'CharacterCreationDraftResolved') return
+    assert.equal(draft.characterId, characterId)
+    assert.equal(draft.draft.roll.expression, '1d6')
+    assert.equal(draft.state.status, 'BASIC_TRAINING')
+  })
+
+  it('emits semantic Drifter fallback without a roll', () => {
+    const result = runCommand(
+      {
+        type: 'EnterCharacterCreationDrifter',
+        gameId,
+        actorId,
+        characterId,
+        option: 'Drifter'
+      },
+      createCreation('CAREER_SELECTION', {
+        failedToQualify: true,
+        canEnterDraft: true
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationDrifterEntered',
+        characterId,
+        acceptedCareer: 'Drifter',
+        state: createCareerCreationState('BASIC_TRAINING'),
+        creationComplete: false
+      }
+    ])
+  })
+
   it('emits a semantic survival pass event with server-derived roll facts', () => {
     const result = runCommand(
       {

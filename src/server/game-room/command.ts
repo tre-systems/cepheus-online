@@ -5,9 +5,12 @@ import {
   createCareerCreationState,
   careerSkillWithLevel,
   deriveAgingRollModifier,
+  availableCareerNames,
   deriveCashBenefitRollModifier,
   deriveBasicTrainingPlan,
+  deriveCareerQualificationDm,
   deriveCareerCreationActionContext,
+  deriveFailedQualificationOptions,
   deriveRemainingCareerBenefits,
   deriveMaterialBenefitRollModifier,
   deriveLegalCareerCreationActionKeysForProjection,
@@ -23,6 +26,7 @@ import {
   resolveAging,
   resolveCareerSkillTableRoll,
   resolveCascadeCareerSkill,
+  resolveDraftCareer,
   resolveReenlistment,
   transitionCareerCreationState
 } from '../../shared/characterCreation'
@@ -498,6 +502,75 @@ const validateHomeworldCompletion = (
   return ok(character.creation)
 }
 
+const validateCareerSelection = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'CAREER_SELECTION') {
+    return err(
+      commandError(
+        'invalid_command',
+        `CAREER_SELECTION is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+  const actionContext = deriveCareerCreationActionContext(character.creation)
+  if ((actionContext.pendingDecisions?.length ?? 0) > 0) {
+    return err(
+      commandError(
+        'invalid_command',
+        'CAREER_SELECTION is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+  if (character.creation.terms.length >= 7) {
+    return err(commandError('invalid_command', 'Maximum terms reached'))
+  }
+
+  return ok(character.creation)
+}
+
+const previousCareerNames = (
+  creation: CharacterCreationProjection
+): string[] => creation.careers.map((career) => career.name)
+
+const previousCareerCount = (
+  creation: CharacterCreationProjection,
+  career: string
+): number =>
+  previousCareerNames(creation).filter(
+    (previousCareer) => previousCareer !== 'Drifter' && previousCareer !== career
+  ).length
+
+const validateCareerCanBeSelected = (
+  creation: CharacterCreationProjection,
+  career: string
+): Result<void, CommandError> => {
+  if (!CEPHEUS_SRD_RULESET.careerBasics[career]) {
+    return err(
+      commandError('invalid_command', `Career ${career} is not supported`)
+    )
+  }
+  const available = availableCareerNames(
+    CEPHEUS_SRD_RULESET.careerBasics,
+    previousCareerNames(creation)
+  )
+  if (!available.includes(career)) {
+    return err(
+      commandError(
+        'invalid_command',
+        `Career ${career} is not available after prior service`
+      )
+    )
+  }
+
+  return ok(undefined)
+}
+
 const validateSurvivalResolution = (
   character: CharacterState
 ): Result<CharacterCreationProjection, CommandError> => {
@@ -810,6 +883,16 @@ type CharacterCreationMusteringBenefitRolledEvent = Extract<
   { type: 'CharacterCreationMusteringBenefitRolled' }
 >
 
+type CharacterCreationQualificationResolvedEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationQualificationResolved' }
+>
+
+type CharacterCreationDraftResolvedEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationDraftResolved' }
+>
+
 const termSkillTables = {
   personalDevelopment: CEPHEUS_SRD_RULESET.personalDevelopment,
   serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
@@ -1049,6 +1132,97 @@ const resolveSurvivalCreationEvent = ({
     },
     canCommission: promotionOptions.canCommission,
     canAdvance: promotionOptions.canAdvance
+  })
+}
+
+const resolveQualificationCreationEvent = ({
+  character,
+  creation,
+  career,
+  roll
+}: {
+  character: CharacterState
+  creation: CharacterCreationProjection
+  career: string
+  roll: { expression: '2d6'; rolls: number[]; total: number }
+}): Result<
+  Pick<
+    CharacterCreationQualificationResolvedEvent,
+    | 'career'
+    | 'passed'
+    | 'qualification'
+    | 'previousCareerCount'
+    | 'failedQualificationOptions'
+  >,
+  CommandError
+> => {
+  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  if (!basics) {
+    return err(
+      commandError('invalid_command', `Career ${career} is not supported`)
+    )
+  }
+
+  const priorCareerCount = previousCareerCount(creation, career)
+  const outcome = evaluateCareerCheck({
+    check: basics.Qualifications,
+    characteristics: character.characteristics,
+    roll: roll.total,
+    dm: deriveCareerQualificationDm(priorCareerCount)
+  })
+  if (!outcome) {
+    return err(
+      commandError(
+        'invalid_command',
+        `Career ${career} has no qualification check`
+      )
+    )
+  }
+
+  return ok({
+    career,
+    passed: outcome.success,
+    qualification: {
+      expression: roll.expression,
+      rolls: [...roll.rolls],
+      total: roll.total,
+      characteristic: outcome.check.characteristic,
+      modifier: outcome.modifier,
+      target: outcome.check.target,
+      success: outcome.success
+    },
+    previousCareerCount: priorCareerCount,
+    failedQualificationOptions: outcome.success
+      ? []
+      : deriveFailedQualificationOptions({
+          canEnterDraft: creation.canEnterDraft
+        })
+  })
+}
+
+const resolveDraftCreationEvent = ({
+  roll
+}: {
+  roll: { expression: '1d6'; rolls: number[]; total: number }
+}): Result<Pick<CharacterCreationDraftResolvedEvent, 'draft'>, CommandError> => {
+  const draft = resolveDraftCareer({
+    table: CEPHEUS_SRD_RULESET.theDraft,
+    roll: roll.total
+  })
+  if (!draft) {
+    return err(commandError('invalid_command', 'Draft roll did not resolve'))
+  }
+
+  return ok({
+    draft: {
+      roll: {
+        expression: roll.expression,
+        rolls: [...roll.rolls],
+        total: roll.total
+      },
+      tableRoll: draft.roll,
+      acceptedCareer: draft.career
+    }
   })
 }
 
@@ -1618,6 +1792,165 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationHomeworldCompleted',
           characterId: command.characterId,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationQualification': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateCareerSelection(character)
+      if (!creation.ok) return creation
+      const career = requireNonEmptyString(command.career, 'career')
+      if (!career.ok) return career
+      const selectable = validateCareerCanBeSelected(creation.value, career.value)
+      if (!selectable.ok) return selectable
+
+      const rolled = rollDiceExpression(
+        '2d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const resolved = resolveQualificationCreationEvent({
+        character,
+        creation: creation.value,
+        career: career.value,
+        roll: {
+          expression: '2d6',
+          rolls: rolled.value.rolls,
+          total: rolled.value.total
+        }
+      })
+      if (!resolved.ok) return resolved
+
+      const nextState = resolved.value.passed
+        ? transitionCareerCreationState(creation.value.state, {
+            type: 'SELECT_CAREER',
+            isNewCareer: true,
+            qualification: resolved.value.qualification
+          })
+        : creation.value.state
+
+      return ok([
+        {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: `${career.value} qualification`,
+          rolls: [...resolved.value.qualification.rolls],
+          total: resolved.value.qualification.total
+        },
+        {
+          type: 'CharacterCreationQualificationResolved',
+          characterId: command.characterId,
+          ...resolved.value,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationDraft': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateCareerSelection(character)
+      if (!creation.ok) return creation
+      if (!creation.value.failedToQualify) {
+        return err(
+          commandError(
+            'invalid_command',
+            'Draft is only available after failed qualification'
+          )
+        )
+      }
+      if (!creation.value.canEnterDraft) {
+        return err(commandError('invalid_command', 'Draft has already been used'))
+      }
+
+      const rolled = rollDiceExpression(
+        '1d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const resolved = resolveDraftCreationEvent({
+        roll: {
+          expression: '1d6',
+          rolls: rolled.value.rolls,
+          total: rolled.value.total
+        }
+      })
+      if (!resolved.ok) return resolved
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'SELECT_CAREER',
+        isNewCareer: true,
+        drafted: true
+      })
+
+      return ok([
+        {
+          type: 'DiceRolled',
+          expression: '1d6',
+          reason: 'Draft',
+          rolls: [...resolved.value.draft.roll.rolls],
+          total: resolved.value.draft.roll.total
+        },
+        {
+          type: 'CharacterCreationDraftResolved',
+          characterId: command.characterId,
+          ...resolved.value,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'EnterCharacterCreationDrifter': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateCareerSelection(character)
+      if (!creation.ok) return creation
+      if (!creation.value.failedToQualify) {
+        return err(
+          commandError(
+            'invalid_command',
+            'Drifter fallback is only available after failed qualification'
+          )
+        )
+      }
+      if (command.option !== 'Drifter') {
+        return err(commandError('invalid_command', 'option must be Drifter'))
+      }
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'SELECT_CAREER',
+        isNewCareer: true
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationDrifterEntered',
+          characterId: command.characterId,
+          acceptedCareer: 'Drifter',
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         }

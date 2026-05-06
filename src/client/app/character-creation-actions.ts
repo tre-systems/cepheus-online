@@ -244,10 +244,32 @@ const actionsForLegalKey = (
         })
       ]
     case 'selectCareer':
+      if (character.creation?.failedToQualify) {
+        const actions: CharacterCreationActionViewModel[] = [
+          action('enter-drifter', 'Enter Drifter', {
+            type: 'EnterCharacterCreationDrifter',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id,
+            option: 'Drifter'
+          })
+        ]
+        if (character.creation.canEnterDraft) {
+          actions.push(
+            action('roll-draft', 'Roll draft', {
+              type: 'ResolveCharacterCreationDraft',
+              gameId: identity.gameId,
+              actorId: identity.actorId,
+              characterId: character.id
+            })
+          )
+        }
+        return actions
+      }
       if (character.creation?.terms.length === 0) {
         return [
-          action('start-scout-term', 'Start Scout term', {
-            type: 'StartCharacterCareerTerm',
+          action('qualify-scout', 'Qualify for Scout', {
+            type: 'ResolveCharacterCreationQualification',
             gameId: identity.gameId,
             actorId: identity.actorId,
             characterId: character.id,
@@ -258,11 +280,14 @@ const actionsForLegalKey = (
       return [
         action(
           'select-career',
-          'Select career',
-          advanceCommand(identity, character, {
-            type: 'SELECT_CAREER',
-            isNewCareer: true
-          })
+          'Qualify for Scout',
+          {
+            type: 'ResolveCharacterCreationQualification',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id,
+            career: 'Scout'
+          }
         )
       ]
     case 'completeBasicTraining':

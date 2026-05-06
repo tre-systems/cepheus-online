@@ -83,14 +83,17 @@ describe('character creation actions', () => {
     assert.equal(plan?.actions[0]?.command?.type, 'StartCharacterCreation')
   })
 
-  it('starts a career term before selecting a career', () => {
+  it('rolls qualification before selecting a career', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,
       character(creation('CAREER_SELECTION'))
     )
 
     assert.equal(plan?.status, 'Career Selection')
-    assert.equal(plan?.actions[0]?.command?.type, 'StartCharacterCareerTerm')
+    assert.equal(
+      plan?.actions[0]?.command?.type,
+      'ResolveCharacterCreationQualification'
+    )
   })
 
   it('routes complete homeworld legal actions to the semantic command', () => {
@@ -127,7 +130,7 @@ describe('character creation actions', () => {
     assert.deepEqual(command.creationEvent, { type: 'SET_CHARACTERISTICS' })
   })
 
-  it('selects a career after a term has been started', () => {
+  it('rolls qualification for a later career selection', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,
       character(
@@ -150,13 +153,13 @@ describe('character creation actions', () => {
       )
     )
 
-    assert.equal(plan?.actions[0]?.command?.type, 'AdvanceCharacterCreation')
+    assert.equal(
+      plan?.actions[0]?.command?.type,
+      'ResolveCharacterCreationQualification'
+    )
     const command = plan?.actions[0]?.command
-    if (command?.type !== 'AdvanceCharacterCreation') return
-    assert.deepEqual(command.creationEvent, {
-      type: 'SELECT_CAREER',
-      isNewCareer: true
-    })
+    if (command?.type !== 'ResolveCharacterCreationQualification') return
+    assert.equal(command.career, 'Scout')
   })
 
   it('offers a complete happy path from basic training to playable', () => {

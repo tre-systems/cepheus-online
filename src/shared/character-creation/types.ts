@@ -30,6 +30,12 @@ export interface CareerCreationCheckFact extends CareerCreationDiceFact {
   success: boolean
 }
 
+export interface CareerCreationDraftFact {
+  roll: CareerCreationDiceFact
+  tableRoll: number
+  acceptedCareer: string
+}
+
 export interface CareerCreationRankFact {
   career: string
   previousRank: number
@@ -167,6 +173,9 @@ export type CareerCreationActionKey =
 export type CareerCreationServerCommandType =
   | 'AdvanceCharacterCreation'
   | 'CompleteCharacterCreationHomeworld'
+  | 'ResolveCharacterCreationQualification'
+  | 'ResolveCharacterCreationDraft'
+  | 'EnterCharacterCreationDrifter'
   | 'ResolveCharacterCreationSurvival'
   | 'ResolveCharacterCreationCommission'
   | 'ResolveCharacterCreationAdvancement'

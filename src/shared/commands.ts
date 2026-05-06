@@ -1,6 +1,7 @@
 import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
 import type {
   BenefitKind,
+  FailedQualificationOption,
   CareerCreationEvent,
   CareerCreationTermSkillTable
 } from './characterCreation'
@@ -94,6 +95,9 @@ export type Command =
       career: string
       drafted?: boolean
     }
+  | CharacterCreationQualificationCommand
+  | CharacterCreationDraftCommand
+  | CharacterCreationDrifterCommand
   | CharacterCreationBasicTrainingCommand
   | CharacterCreationSurvivalCommand
   | CharacterCreationCommissionCommand
@@ -199,6 +203,32 @@ export type CharacterCreationHomeworldCommand = {
   characterId: CharacterId
 }
 
+export type CharacterCreationQualificationCommand = {
+  type: 'ResolveCharacterCreationQualification'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+  career: string
+}
+
+export type CharacterCreationDraftCommand = {
+  type: 'ResolveCharacterCreationDraft'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
+export type CharacterCreationDrifterCommand = {
+  type: 'EnterCharacterCreationDrifter'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+  option: Extract<FailedQualificationOption, 'Drifter'>
+}
+
 export type CharacterCreationSurvivalCommand = {
   type: 'ResolveCharacterCreationSurvival'
   gameId: GameId
@@ -279,6 +309,9 @@ export type CharacterCreationMusteringCompletionCommand = {
 export type SemanticCommand =
   | CharacterCreationBasicTrainingCommand
   | CharacterCreationHomeworldCommand
+  | CharacterCreationQualificationCommand
+  | CharacterCreationDraftCommand
+  | CharacterCreationDrifterCommand
   | CharacterCreationSurvivalCommand
   | CharacterCreationCommissionCommand
   | CharacterCreationAdvancementCommand

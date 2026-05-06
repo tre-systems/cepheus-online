@@ -307,7 +307,12 @@ const actionDefinitions = {
     commandTypes: ['CompleteCharacterCreationHomeworld']
   },
   selectCareer: {
-    commandTypes: ['StartCharacterCareerTerm', 'AdvanceCharacterCreation'],
+    commandTypes: [
+      'ResolveCharacterCreationQualification',
+      'ResolveCharacterCreationDraft',
+      'EnterCharacterCreationDrifter',
+      'StartCharacterCareerTerm'
+    ],
     rollRequirement: { key: 'careerQualification', dice: '2d6' }
   },
   completeBasicTraining: {
