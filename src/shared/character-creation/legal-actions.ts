@@ -319,10 +319,7 @@ const actionDefinitions = {
     commandTypes: basicTrainingCommandTypes
   },
   rollSurvival: {
-    commandTypes: [
-      'ResolveCharacterCreationSurvival',
-      'AdvanceCharacterCreation'
-    ],
+    commandTypes: ['ResolveCharacterCreationSurvival'],
     rollRequirement: { key: 'survival', dice: '2d6' }
   },
   resolveMishap: {
@@ -358,10 +355,7 @@ const actionDefinitions = {
     rollRequirement: { key: 'aging', dice: '2d6' }
   },
   rollReenlistment: {
-    commandTypes: [
-      'ResolveCharacterCreationReenlistment',
-      'AdvanceCharacterCreation'
-    ],
+    commandTypes: ['ResolveCharacterCreationReenlistment'],
     rollRequirement: { key: 'reenlistment', dice: '2d6' }
   },
   reenlist: {
@@ -374,20 +368,14 @@ const actionDefinitions = {
     commandTypes: ['AdvanceCharacterCreation']
   },
   resolveMusteringBenefit: {
-    commandTypes: [
-      'RollCharacterCreationMusteringBenefit',
-      'AdvanceCharacterCreation'
-    ],
+    commandTypes: ['RollCharacterCreationMusteringBenefit'],
     rollRequirement: { key: 'musteringBenefit', dice: '2d6' }
   },
   continueCareer: {
     commandTypes: ['AdvanceCharacterCreation']
   },
   finishMustering: {
-    commandTypes: [
-      'CompleteCharacterCreationMustering',
-      'AdvanceCharacterCreation'
-    ]
+    commandTypes: ['CompleteCharacterCreationMustering']
   },
   completeCreation: {
     commandTypes: ['AdvanceCharacterCreation', 'FinalizeCharacterCreation']

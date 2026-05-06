@@ -73,10 +73,7 @@ describe('career creation legal action planner', () => {
         {
           key: 'rollSurvival',
           status: 'SURVIVAL',
-          commandTypes: [
-            'ResolveCharacterCreationSurvival',
-            'AdvanceCharacterCreation'
-          ],
+          commandTypes: ['ResolveCharacterCreationSurvival'],
           rollRequirement: { key: 'survival', dice: '2d6' }
         }
       ]
@@ -165,10 +162,7 @@ describe('career creation legal action planner', () => {
         {
           key: 'finishMustering',
           status: 'MUSTERING_OUT',
-          commandTypes: [
-            'CompleteCharacterCreationMustering',
-            'AdvanceCharacterCreation'
-          ]
+          commandTypes: ['CompleteCharacterCreationMustering']
         }
       ]
     )
