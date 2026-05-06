@@ -2008,7 +2008,7 @@ export const completeCharacterCreationCareerTerm = ({
 }): CharacterCreationWizardResult => {
   const completedTerm = completedTermFromPlan(flow.draft)
   if (
-    !completedTerm ||
+    !completedTerm?.survivalPassed ||
     remainingCharacterCreationTermSkillRolls(flow.draft) > 0 ||
     flow.draft.pendingTermCascadeSkills.length > 0 ||
     flow.draft.pendingAgingChanges.length > 0 ||

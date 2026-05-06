@@ -10,11 +10,19 @@ import type {DurableObjectStorage} from '../cloudflare'
 import {getProjectedGameState} from './projection'
 import {getEventSeq} from './storage'
 
-export const parseViewerRole = (raw: string | null): ViewerRole => {
+const isLocalDevHost = (url: URL): boolean =>
+  url.hostname === 'localhost' ||
+  url.hostname === '127.0.0.1' ||
+  url.hostname === '::1'
+
+export const parseViewerRole = (
+  raw: string | null,
+  options: { allowReferee?: boolean } = {}
+): ViewerRole => {
   switch (raw?.trim().toLowerCase()) {
     case 'referee':
     case 'gm':
-      return 'REFEREE'
+      return options.allowReferee ? 'REFEREE' : 'PLAYER'
     case 'player':
       return 'PLAYER'
     default:
@@ -36,7 +44,9 @@ export const parseViewerFromUrl = (url: URL): GameViewer => ({
   userId: parseViewerUserId(
     url.searchParams.get('userId') ?? url.searchParams.get('user')
   ),
-  role: parseViewerRole(url.searchParams.get('viewer'))
+  role: parseViewerRole(url.searchParams.get('viewer'), {
+    allowReferee: isLocalDevHost(url)
+  })
 })
 
 export const viewerFromCommand = (

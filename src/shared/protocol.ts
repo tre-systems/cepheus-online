@@ -95,6 +95,7 @@ const invalidCommand = (message: string): CommandError => ({
 
 const MAX_STRING_ARRAY_LENGTH = 100
 const MAX_STRING_ARRAY_ITEM_LENGTH = 200
+const MAX_STRING_LENGTH = 1000
 
 const parseId = <T>(
   raw: unknown,
@@ -130,6 +131,11 @@ const parseString = (
 
   const value = raw.trim()
   if (!value) return err(invalidCommand(`${label} cannot be empty`))
+  if (value.length > MAX_STRING_LENGTH) {
+    return err(
+      invalidCommand(`${label} cannot exceed ${MAX_STRING_LENGTH} characters`)
+    )
+  }
 
   return ok(value)
 }
@@ -1068,6 +1074,26 @@ export const decodeCommand = (
         type: 'CompleteCharacterCreationHomeworld',
         ...base.value,
         characterId: characterId.value
+      })
+    }
+
+    case 'RollCharacterCreationCharacteristic': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const characteristic = parseCharacteristicKey(
+        raw.characteristic,
+        'characteristic'
+      )
+      if (!characteristic.ok) return characteristic
+      if (characteristic.value === null) {
+        return err(invalidCommand('characteristic cannot be null'))
+      }
+
+      return ok({
+        type: 'RollCharacterCreationCharacteristic',
+        ...base.value,
+        characterId: characterId.value,
+        characteristic: characteristic.value
       })
     }
 

@@ -23,10 +23,8 @@ const clientModules = new Map<
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
         '/client/app/character-creation-panel.js',
-        '/client/app/character-command-plan.js',
         '/client/app/character-creation-flow.js',
         '/client/app/character-creation-view.js',
-        '/client/app/character-generator-preview.js',
         '/client/app/character-sheet-controller.js',
         '/client/app/connectivity-controller.js',
         '/client/app/dice-overlay.js',
@@ -87,28 +85,6 @@ const clientModules = new Map<
   [
     '/client/app/character-creation-panel.js',
     { markers: ['createCharacterCreationPanel'] }
-  ],
-  [
-    '/client/app/character-command-plan.js',
-    {
-      markers: ['planCreatePlayableCharacterCommands'],
-      imports: [
-        '/shared/character-creation/career-rules.js',
-        '/shared/character-creation/cepheus-srd-ruleset.js',
-        '/shared/character-creation/skills.js',
-        '/client/app/bootstrap-flow.js',
-        '/client/app/character-creation-flow.js'
-      ]
-    }
-  ],
-  [
-    '/client/app/character-generator-preview.js',
-    {
-      markers: [
-        'deriveGeneratedCharacterPreview',
-        'formatGeneratedCharacterCharacteristics'
-      ]
-    }
   ],
   [
     '/shared/character-creation/career-rules.js',

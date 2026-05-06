@@ -7,6 +7,8 @@ export type BoardId = Brand<string, 'BoardId'>
 export type PieceId = Brand<string, 'PieceId'>
 export type EventId = Brand<string, 'EventId'>
 
+const MAX_ID_LENGTH = 200
+
 const asNonEmptyString = <T extends string>(
   value: string,
   label: string
@@ -14,6 +16,9 @@ const asNonEmptyString = <T extends string>(
   const normalized = value.trim()
   if (!normalized) {
     throw new Error(`${label} cannot be empty`)
+  }
+  if (normalized.length > MAX_ID_LENGTH) {
+    throw new Error(`${label} cannot exceed ${MAX_ID_LENGTH} characters`)
   }
   return normalized as Brand<string, T>
 }

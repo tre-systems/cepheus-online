@@ -6,6 +6,7 @@ import {
   type CommandError,
   type ServerMessage
 } from '../../shared/protocol'
+import type { Result } from '../../shared/result'
 import type { GameState } from '../../shared/state'
 import { filterGameStateForViewer, type GameViewer } from '../../shared/viewer'
 import type { DurableObjectState, WebSocketResponseInit } from '../cloudflare'
@@ -84,7 +85,17 @@ const serializeMessage = (message: ServerMessage): string =>
 const activityPayload = (liveActivities: readonly LiveActivityDescriptor[]) =>
   liveActivities.length === 0 ? {} : { liveActivities: [...liveActivities] }
 
+const MAX_COMMAND_BODY_BYTES = 64 * 1024
+const MAX_WEBSOCKET_MESSAGE_BYTES = 64 * 1024
+const RATE_LIMIT_WINDOW_MS = 10_000
+const MAX_COMMANDS_PER_WINDOW = 40
+const encoder = new TextEncoder()
+
+const byteLength = (value: string): number => encoder.encode(value).length
+
 export class GameRoomDO {
+  private readonly commandWindows = new Map<string, { count: number; resetAt: number }>()
+
   constructor(
     private readonly state: DurableObjectState,
     _env: Env,
@@ -103,11 +114,35 @@ export class GameRoomDO {
     socket.send(serializeMessage(message))
   }
 
+  private checkRateLimit(key: string): Result<void, CommandError> {
+    const now = Date.now()
+    const current = this.commandWindows.get(key)
+    if (!current || current.resetAt <= now) {
+      this.commandWindows.set(key, {
+        count: 1,
+        resetAt: now + RATE_LIMIT_WINDOW_MS
+      })
+      return { ok: true, value: undefined }
+    }
+
+    if (current.count >= MAX_COMMANDS_PER_WINDOW) {
+      return {
+        ok: false,
+        error: commandError('not_allowed', 'Too many commands; slow down')
+      }
+    }
+
+    current.count += 1
+    return { ok: true, value: undefined }
+  }
+
   private viewerFromSocket(socket: WebSocket): GameViewer {
     const tags = this.getTags(socket)
     const roleTag = tags.find((tag) => tag.startsWith('viewer:'))
     const userTag = tags.find((tag) => tag.startsWith('user:'))
-    const role = parseViewerRole(roleTag?.slice('viewer:'.length) ?? null)
+    const role = parseViewerRole(roleTag?.slice('viewer:'.length) ?? null, {
+      allowReferee: true
+    })
     const rawUserId = userTag?.slice('user:'.length) ?? null
 
     return {
@@ -182,6 +217,22 @@ export class GameRoomDO {
         status: number
       }
   > {
+    const rateLimit = this.checkRateLimit(
+      `${gameId}:${message.command.actorId}:${message.command.type}`
+    )
+    if (!rateLimit.ok) {
+      return {
+        ok: false,
+        status: 429,
+        response: {
+          type: 'commandRejected',
+          requestId: message.requestId,
+          error: rateLimit.error,
+          eventSeq: await getEventSeq(this.state.storage, gameId)
+        }
+      }
+    }
+
     let publication: Awaited<ReturnType<typeof runCommandPublication>>
 
     try {
@@ -343,9 +394,27 @@ export class GameRoomDO {
 
     if (request.method === 'POST' && route.action === 'command') {
       let raw: unknown
+      const contentLength = Number(request.headers.get('content-length') ?? 0)
+      if (contentLength > MAX_COMMAND_BODY_BYTES) {
+        const error = commandError('invalid_message', 'Command body is too large')
+        return jsonResponse({ type: 'error', error } satisfies ServerMessage, {
+          status: 413
+        })
+      }
 
       try {
-        raw = await request.json()
+        const body = await request.text()
+        if (byteLength(body) > MAX_COMMAND_BODY_BYTES) {
+          const error = commandError(
+            'invalid_message',
+            'Command body is too large'
+          )
+          return jsonResponse(
+            { type: 'error', error } satisfies ServerMessage,
+            { status: 413 }
+          )
+        }
+        raw = JSON.parse(body)
       } catch {
         const error = commandError('invalid_message', 'Invalid JSON body')
         return jsonResponse({ type: 'error', error } satisfies ServerMessage, {
@@ -374,6 +443,15 @@ export class GameRoomDO {
 
   async webSocketMessage(socket: WebSocket, message: string): Promise<void> {
     let raw: unknown
+
+    if (byteLength(message) > MAX_WEBSOCKET_MESSAGE_BYTES) {
+      this.send(socket, {
+        type: 'error',
+        error: commandError('invalid_message', 'WebSocket message is too large')
+      })
+      socket.close(1009, 'Message too large')
+      return
+    }
 
     try {
       raw = JSON.parse(message)

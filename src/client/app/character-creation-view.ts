@@ -35,8 +35,11 @@ import {
   characterCreationSteps,
   deriveCharacterCreationBasicTrainingAction,
   deriveCharacterCreationCareerSkipAction,
+  deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationCareerRoll,
   deriveNextCharacterCreationCharacteristicRoll,
+  remainingCharacterCreationTermSkillRolls,
+  requiredCharacterCreationTermSkillRolls,
   validateCurrentCharacterCreationStep
 } from './character-creation-flow.js'
 
@@ -252,6 +255,36 @@ export interface CharacterCreationHomeworldViewModel {
   summary: CharacterCreationHomeworldSummaryViewModel
   backgroundSkills: CharacterCreationBackgroundSkillSummary
   pendingCascadeChoice: CharacterCreationPendingCascadeChoiceViewModel | null
+}
+
+export interface CharacterCreationDeathViewModel {
+  open: boolean
+  title: string
+  detail: string
+  roll: string
+  career: string
+}
+
+export interface CharacterCreationTermSkillRollViewModel {
+  label: string
+  detail: string
+}
+
+export interface CharacterCreationTermSkillTableViewModel {
+  table: string
+  label: string
+  reason: string
+  disabled: boolean
+}
+
+export interface CharacterCreationTermSkillTrainingViewModel {
+  open: boolean
+  title: string
+  prompt: string
+  required: number
+  remaining: number
+  rolled: CharacterCreationTermSkillRollViewModel[]
+  actions: CharacterCreationTermSkillTableViewModel[]
 }
 
 interface CharacterCreationHomeworldDraftFields {
@@ -891,6 +924,9 @@ const characterCreationPrompt = (
       return 'Homeworld and background skills are ready.'
     }
     case 'career':
+      if (deriveCharacterCreationDeathViewModel(flow)) {
+        return 'The survival roll failed. This traveller is dead.'
+      }
       return deriveCharacterCreationCareerRollButton(flow)
         ? 'Resolve the current career term rolls.'
         : 'Choose a career and confirm term results.'
@@ -930,6 +966,64 @@ export const deriveCharacterCreationNextStepViewModel = (
     secondaryAction: buttons.secondary,
     validation,
     stats: deriveCharacterCreationStatStrip(flow)
+  }
+}
+
+export const deriveCharacterCreationDeathViewModel = (
+  flow: Pick<CharacterCreationFlow, 'step' | 'draft'>
+): CharacterCreationDeathViewModel | null => {
+  const plan = flow.draft.careerPlan
+  if (flow.step !== 'career' || plan?.survivalPassed !== false) return null
+
+  const name = flow.draft.name.trim() || 'This traveller'
+  const career = plan.career.trim() || 'career'
+  const roll = plan.survivalRoll === null ? '-' : String(plan.survivalRoll)
+
+  return {
+    open: true,
+    title: 'Killed in service',
+    detail: `${name} failed the ${career} survival roll. Character creation ends here.`,
+    roll,
+    career
+  }
+}
+
+export const deriveCharacterCreationTermSkillTrainingViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationTermSkillTrainingViewModel | null => {
+  if (flow.step !== 'career') return null
+
+  const required = requiredCharacterCreationTermSkillRolls(flow.draft)
+  const remaining = remainingCharacterCreationTermSkillRolls(flow.draft)
+  const actions = deriveCharacterCreationTermSkillTableActions(flow)
+  const rolled =
+    flow.draft.careerPlan?.termSkillRolls?.map((roll) => ({
+      label: roll.skill,
+      detail: `${roll.roll} on ${roll.table}`
+    })) ?? []
+
+  if (required === 0 && remaining === 0 && rolled.length === 0) return null
+
+  return {
+    open: actions.length > 0 || remaining > 0,
+    title: 'Skills and training',
+    prompt:
+      remaining > 0
+        ? `Choose a table and roll ${plural(
+            remaining,
+            'more skill',
+            'more skills'
+          )}.`
+        : 'Term skills are complete.',
+    required,
+    remaining,
+    rolled,
+    actions: actions.map((action) => ({
+      table: action.table,
+      label: action.label,
+      reason: action.reason,
+      disabled: action.disabled
+    }))
   }
 }
 
@@ -1262,7 +1356,7 @@ const termHistoryReviewItems = (
     value: [
       term.career,
       term.drafted ? 'drafted' : null,
-      term.survivalPassed ? 'survived' : 'mishap',
+      term.survivalPassed ? 'survived' : 'killed in service',
       term.commissionPassed === true ? 'commissioned' : null,
       term.advancementPassed === true ? 'advanced' : null,
       term.rankTitle ? `rank ${term.rankTitle}` : null,

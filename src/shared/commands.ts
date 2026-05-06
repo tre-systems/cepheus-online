@@ -8,6 +8,7 @@ import type {
 import type {
   CharacterCreationSheet,
   CharacterCreationHomeworld,
+  CharacteristicKey,
   CharacterSheetPatch,
   CharacterType,
   PieceFreedom,
@@ -203,6 +204,15 @@ export type CharacterCreationHomeworldCommand = {
   characterId: CharacterId
 }
 
+export type CharacterCreationCharacteristicCommand = {
+  type: 'RollCharacterCreationCharacteristic'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+  characteristic: CharacteristicKey
+}
+
 export type CharacterCreationQualificationCommand = {
   type: 'ResolveCharacterCreationQualification'
   gameId: GameId
@@ -307,6 +317,7 @@ export type CharacterCreationMusteringCompletionCommand = {
 }
 
 export type SemanticCommand =
+  | CharacterCreationCharacteristicCommand
   | CharacterCreationBasicTrainingCommand
   | CharacterCreationHomeworldCommand
   | CharacterCreationQualificationCommand
@@ -322,4 +333,4 @@ export type SemanticCommand =
   | CharacterCreationMusteringBenefitCommand
   | CharacterCreationMusteringCompletionCommand
 
-export type GameCommand = Command | CharacterCreationHomeworldCommand
+export type GameCommand = Command | SemanticCommand

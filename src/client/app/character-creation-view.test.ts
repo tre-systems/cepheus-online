@@ -17,6 +17,7 @@ import {
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCtaLabels,
+  deriveCharacterCreationDeathViewModel,
   deriveCharacterCreationFailedQualificationViewModel,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationHomeworldViewModel,
@@ -24,6 +25,7 @@ import {
   deriveCharacterCreationReviewSummary,
   deriveCharacterCreationStatStrip,
   deriveCharacterCreationStepProgressItems,
+  deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary,
   equipmentText,
   parseCharacterCreationDraftPatch
@@ -790,6 +792,43 @@ describe('character creation view helpers', () => {
     )
   })
 
+  it('derives terminal death copy after failed survival', () => {
+    const flow = {
+      step: 'career' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: completeFlow().draft.characteristics,
+        careerPlan: {
+          career: 'Scout',
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 5,
+          survivalPassed: false,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: false,
+          canAdvance: false,
+          drafted: false
+        }
+      })
+    }
+
+    assert.deepEqual(deriveCharacterCreationDeathViewModel(flow), {
+      open: true,
+      title: 'Killed in service',
+      detail:
+        'Iona Vesh failed the Scout survival roll. Character creation ends here.',
+      roll: '5',
+      career: 'Scout'
+    })
+    assert.equal(
+      deriveCharacterCreationNextStepViewModel(flow).prompt,
+      'The survival roll failed. This traveller is dead.'
+    )
+  })
+
   it('derives the basic training button from an empty skills step', () => {
     const flow = {
       step: 'skills' as const,
@@ -1223,6 +1262,69 @@ describe('character creation view helpers', () => {
         skills: []
       }
     )
+  })
+
+  it('derives compact term skill training progress', () => {
+    const flow = {
+      step: 'career' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        careerPlan: {
+          career: 'Merchant',
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          commissionRoll: 8,
+          commissionPassed: true,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: true,
+          canAdvance: false,
+          drafted: false,
+          termSkillRolls: [
+            { table: 'serviceSkills', roll: 1, skill: 'Comms' }
+          ]
+        }
+      })
+    }
+
+    assert.deepEqual(deriveCharacterCreationTermSkillTrainingViewModel(flow), {
+      open: false,
+      title: 'Skills and training',
+      prompt: 'Term skills are complete.',
+      required: 1,
+      remaining: 0,
+      rolled: [{ label: 'Comms', detail: '1 on serviceSkills' }],
+      actions: []
+    })
+
+    const careerPlan = flow.draft.careerPlan
+    if (!careerPlan) throw new Error('Expected career plan')
+    const pending: CharacterCreationFlow = {
+      ...flow,
+      draft: {
+        ...flow.draft,
+        careerPlan: {
+          ...careerPlan,
+          termSkillRolls: []
+        }
+      }
+    }
+
+    const viewModel = deriveCharacterCreationTermSkillTrainingViewModel(pending)
+    assert.equal(viewModel?.open, true)
+    assert.equal(viewModel?.prompt, 'Choose a table and roll 1 more skill.')
+    assert.equal(viewModel?.remaining, 1)
+    assert.equal(viewModel?.actions.length, 4)
   })
 
   it('derives review summaries suitable for display', () => {

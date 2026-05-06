@@ -1120,6 +1120,34 @@ describe('character creation flow', () => {
     })
   })
 
+  it('does not complete a career term after failed survival', () => {
+    const flow = {
+      step: 'career' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        age: 18,
+        characteristics: completeDraft().characteristics,
+        careerPlan: selectCharacterCreationCareerPlan('Scout', {
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 4,
+          survivalPassed: false,
+          canCommission: false,
+          canAdvance: false
+        })
+      })
+    }
+
+    const result = completeCharacterCreationCareerTerm({
+      flow,
+      continueCareer: false
+    })
+
+    assert.equal(result.moved, false)
+    assert.equal(result.flow.step, 'career')
+    assert.equal(result.flow.draft.completedTerms.length, 0)
+  })
+
   it('records a completed career term and starts another term in the same career', () => {
     const resolvedDraft = applyCharacterCreationCareerPlan(
       createInitialCharacterDraft(characterId, {

@@ -14,29 +14,37 @@ const GAME_ID = `smoke-${Date.now().toString(36)}-${RUN_ID}`
 const ACTOR_ID = `smoke-ref-${RUN_ID}`
 const BOARD_ID = `smoke-board-${RUN_ID}`
 const PIECE_ID = `smoke-piece-${RUN_ID}`
+const CHARACTER_ID = `smoke-character-${RUN_ID}`
 const CLIENT_MODULES = new Map([
   [
     '/client/app/app.js',
     {
-      markers: ['new WebSocket', 'registerClientServiceWorker'],
+      markers: ['webSocketConstructor: WebSocket', 'registerClientServiceWorker'],
       imports: [
         '/client/app/board-view.js',
         '/client/app/app-elements.js',
+        '/client/app/app-bootstrap.js',
+        '/client/app/app-command-router.js',
+        '/client/app/app-session.js',
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
         '/client/app/character-creation-panel.js',
-        '/client/app/character-command-plan.js',
         '/client/app/character-creation-flow.js',
         '/client/app/character-creation-view.js',
-        '/client/app/character-generator-preview.js',
         '/client/app/character-sheet-controller.js',
+        '/client/app/connectivity-controller.js',
         '/client/app/dice-overlay.js',
+        '/client/app/dice-reveal-state.js',
         '/client/app/door-los-view.js',
         '/client/app/image-assets.js',
+        '/client/app/live-activity-client.js',
         '/client/app/piece-command-plan.js',
         '/client/app/pwa-install.js',
+        '/client/app/request-id.js',
         '/client/app/room-api.js',
+        '/client/app/room-socket-controller.js',
+        '/client/app/app-location.js',
         '/client/app/room-menu-controller.js',
         '/client/app/service-worker.js',
         '/client/game-commands.js'
@@ -44,6 +52,15 @@ const CLIENT_MODULES = new Map([
     }
   ],
   ['/client/app/app-elements.js', { markers: ['getAppElements'] }],
+  [
+    '/client/app/app-bootstrap.js',
+    { markers: ['createAppBootstrap'] }
+  ],
+  [
+    '/client/app/app-command-router.js',
+    { markers: ['createAppCommandRouter'] }
+  ],
+  ['/client/app/app-session.js', { markers: ['createAppSession'] }],
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
   [
@@ -61,33 +78,17 @@ const CLIENT_MODULES = new Map([
   ['/client/app/bootstrap-flow.js', { markers: ['nextBootstrapCommand'] }],
   [
     '/client/app/character-creation-actions.js',
-    { markers: ['deriveCharacterCreationActionPlan'] }
+    {
+      markers: ['deriveCharacterCreationActionPlan'],
+      imports: [
+        '/shared/character-creation/benefits.js',
+        '/shared/character-creation/legal-actions.js'
+      ]
+    }
   ],
   [
     '/client/app/character-creation-panel.js',
     { markers: ['createCharacterCreationPanel'] }
-  ],
-  [
-    '/client/app/character-command-plan.js',
-    {
-      markers: ['planCreatePlayableCharacterCommands'],
-      imports: [
-        '/shared/character-creation/career-rules.js',
-        '/shared/character-creation/cepheus-srd-ruleset.js',
-        '/shared/character-creation/skills.js',
-        '/client/app/bootstrap-flow.js',
-        '/client/app/character-creation-flow.js'
-      ]
-    }
-  ],
-  [
-    '/client/app/character-generator-preview.js',
-    {
-      markers: [
-        'deriveGeneratedCharacterPreview',
-        'formatGeneratedCharacterCharacteristics'
-      ]
-    }
   ],
   [
     '/shared/character-creation/career-rules.js',
@@ -111,14 +112,45 @@ const CLIENT_MODULES = new Map([
     }
   ],
   [
+    '/shared/character-creation/benefits.js',
+    { markers: ['deriveCareerBenefitCount', 'resolveCareerBenefit'] }
+  ],
+  [
+    '/shared/character-creation/aging.js',
+    { markers: ['selectAgingEffect', 'resolveAging'] }
+  ],
+  [
+    '/shared/character-creation/term-lifecycle.js',
+    {
+      markers: ['createCareerTerm', 'resolveReenlistment'],
+      imports: ['/shared/character-creation/career-rules.js']
+    }
+  ],
+  [
+    '/shared/character-creation/legal-actions.js',
+    {
+      markers: [
+        'deriveCareerCreationActionContext',
+        'deriveLegalCareerCreationActionKeys'
+      ],
+      imports: [
+        '/shared/character-creation/benefits.js',
+        '/shared/character-creation/term-lifecycle.js'
+      ]
+    }
+  ],
+  [
     '/client/app/character-creation-flow.js',
     {
       markers: ['deriveCharacterCreationCommands'],
       imports: [
         '/shared/character-creation/background-skills.js',
+        '/shared/character-creation/benefits.js',
+        '/shared/character-creation/aging.js',
         '/shared/character-creation/career-rules.js',
         '/shared/character-creation/cepheus-srd-ruleset.js',
         '/shared/character-creation/skills.js',
+        '/shared/character-creation/term-lifecycle.js',
         '/client/game-commands.js',
         '/client/app/bootstrap-flow.js'
       ]
@@ -152,11 +184,26 @@ const CLIENT_MODULES = new Map([
     { markers: ['characteristicRows', 'equipmentDisplayItems'] }
   ],
   [
+    '/client/app/connectivity-controller.js',
+    {
+      markers: ['createConnectivityController'],
+      imports: ['/client/app/connectivity.js']
+    }
+  ],
+  [
+    '/client/app/connectivity.js',
+    { markers: ['createConnectivityModel', 'reduceConnectivity'] }
+  ],
+  [
     '/client/app/dice-overlay.js',
     {
       markers: ['appendFaceValue', 'buildDie', 'animateRoll'],
       imports: ['/client/dice.js']
     }
+  ],
+  [
+    '/client/app/dice-reveal-state.js',
+    { markers: ['createDiceRevealState'] }
   ],
   [
     '/client/app/door-los-view.js',
@@ -166,6 +213,10 @@ const CLIENT_MODULES = new Map([
     }
   ],
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
+  [
+    '/client/app/live-activity-client.js',
+    { markers: ['prepareLiveActivityApplication'] }
+  ],
   [
     '/client/app/piece-command-plan.js',
     {
@@ -177,20 +228,51 @@ const CLIENT_MODULES = new Map([
     }
   ],
   ['/client/app/pwa-install.js', { markers: ['createPwaInstallController'] }],
+  ['/client/app/request-id.js', { markers: ['createRequestIdFactory'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
+  [
+    '/client/app/room-socket-controller.js',
+    {
+      markers: ['createRoomSocketController'],
+      imports: ['/client/app/app-location.js']
+    }
+  ],
+  [
+    '/client/app/app-location.js',
+    {
+      markers: ['buildRoomWebSocketUrl', 'resolveAppLocationIdentity'],
+      imports: ['/client/app/room-api.js']
+    }
+  ],
   [
     '/client/app/room-menu-controller.js',
     { markers: ['createRoomMenuController'] }
   ],
   [
     '/client/app/service-worker.js',
-    { markers: ['registerClientServiceWorker'] }
+    {
+      markers: ['registerClientServiceWorker'],
+      imports: ['/client/app/pwa-update-state']
+    }
+  ],
+  [
+    '/client/app/pwa-update-state',
+    { markers: ['createPwaUpdateStateStore', 'transitionPwaUpdateState'] }
   ],
   [
     '/client/game-commands.js',
     {
       markers: ['buildSequencedCommand', 'applyServerMessage'],
-      imports: ['/shared/ids']
+      imports: ['/shared/ids', '/shared/live-activity.js']
+    }
+  ],
+  [
+    '/shared/live-activity.js',
+    {
+      markers: [
+        'deriveLiveDiceRollRevealTarget',
+        'LIVE_DICE_RESULT_REVEAL_DELAY_MS'
+      ]
     }
   ],
   ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }],
@@ -299,7 +381,9 @@ const resolveModulePath = (fromPathname, specifier) => {
     `${fromPathname} imports non-runtime module ${specifier}`
   )
 
-  return new URL(specifier, target(fromPathname)).pathname
+  const pathname = new URL(specifier, target(fromPathname)).pathname
+  const jsPathname = `${pathname}.js`
+  return CLIENT_MODULES.has(jsPathname) ? jsPathname : pathname
 }
 
 const assertSameMembers = (actual, expected, label) => {
@@ -576,6 +660,48 @@ await step('room command flow', async () => {
   assert(
     createPiece.state?.pieces?.[PIECE_ID]?.name === 'Smoke piece',
     'created piece missing from accepted state'
+  )
+})
+
+await step('character creation lifecycle', async () => {
+  const created = await requireAccepted(
+    commandBase('CreateCharacter', {
+      expectedSeq: eventSeq,
+      characterId: CHARACTER_ID,
+      characterType: 'PLAYER',
+      name: 'Smoke traveller'
+    }),
+    'create-character'
+  )
+  eventSeq = created.eventSeq
+
+  const started = await requireAccepted(
+    commandBase('StartCharacterCreation', {
+      expectedSeq: eventSeq,
+      characterId: CHARACTER_ID
+    }),
+    'start-character-creation'
+  )
+  eventSeq = started.eventSeq
+  assert(
+    started.state?.characters?.[CHARACTER_ID]?.creation?.state?.status ===
+      'CHARACTERISTICS',
+    'character creation did not start at characteristics'
+  )
+
+  const advanced = await requireAccepted(
+    commandBase('AdvanceCharacterCreation', {
+      expectedSeq: eventSeq,
+      characterId: CHARACTER_ID,
+      creationEvent: { type: 'SET_CHARACTERISTICS' }
+    }),
+    'advance-character-creation-characteristics'
+  )
+  eventSeq = advanced.eventSeq
+  assert(
+    advanced.state?.characters?.[CHARACTER_ID]?.creation?.state?.status ===
+      'HOMEWORLD',
+    'character creation did not advance to homeworld'
   )
 })
 

@@ -172,6 +172,7 @@ export type CareerCreationActionKey =
 
 export type CareerCreationServerCommandType =
   | 'AdvanceCharacterCreation'
+  | 'RollCharacterCreationCharacteristic'
   | 'CompleteCharacterCreationHomeworld'
   | 'ResolveCharacterCreationQualification'
   | 'ResolveCharacterCreationDraft'

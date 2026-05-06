@@ -105,7 +105,9 @@ export const runCommandPublication = async (
     message.command.type === 'ResolveCharacterCreationCommission' ||
     message.command.type === 'ResolveCharacterCreationAdvancement' ||
     message.command.type === 'ResolveCharacterCreationReenlistment' ||
-    message.command.type === 'RollCharacterCreationTermSkill'
+    message.command.type === 'RollCharacterCreationTermSkill' ||
+    message.command.type === 'RollCharacterCreationMusteringBenefit' ||
+    message.command.type === 'RollCharacterCreationCharacteristic'
   const gameSeed =
     usesSeededDice && currentState
       ? await getOrCreateGameSeed(storage, gameId)

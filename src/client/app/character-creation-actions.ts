@@ -14,6 +14,7 @@ import type { CareerCreationTermSkillTable } from '../../shared/characterCreatio
 import type { Command, GameCommand } from '../../shared/commands'
 import type {
   CharacterCreationProjection,
+  CharacteristicKey,
   CharacterState
 } from '../../shared/state'
 import type { ClientIdentity } from '../game-commands.js'
@@ -84,6 +85,15 @@ const benefitKindLabels: Record<BenefitKind, string> = {
   cash: 'cash',
   material: 'material'
 }
+
+const characteristicKeys: readonly CharacteristicKey[] = [
+  'str',
+  'dex',
+  'end',
+  'int',
+  'edu',
+  'soc'
+]
 
 const requiredTermSkillCount = (
   creation: CharacterCreationProjection & { requiredTermSkillCount?: number }
@@ -227,13 +237,18 @@ const actionsForLegalKey = (
 ): CharacterCreationActionViewModel[] => {
   switch (key) {
     case 'setCharacteristics':
-      return [
-        action(
-          'set-characteristics',
-          'Confirm characteristics',
-          advanceCommand(identity, character, { type: 'SET_CHARACTERISTICS' })
+      return characteristicKeys
+        .filter((key) => character.characteristics[key] === null)
+        .slice(0, 1)
+        .map((key) =>
+          action(`roll-${key}`, `Roll ${key.toUpperCase()}`, {
+            type: 'RollCharacterCreationCharacteristic',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id,
+            characteristic: key
+          })
         )
-      ]
     case 'completeHomeworld':
       return [
         action('complete-homeworld', 'Confirm homeworld', {

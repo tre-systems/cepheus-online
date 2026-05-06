@@ -300,7 +300,7 @@ export const deriveLegalCareerCreationActionKeys = (
 
 const actionDefinitions = {
   setCharacteristics: {
-    commandTypes: ['AdvanceCharacterCreation'],
+    commandTypes: ['RollCharacterCreationCharacteristic'],
     rollRequirement: { key: 'characteristics', dice: '2d6' }
   },
   completeHomeworld: {

@@ -10,7 +10,6 @@ export interface AppElements {
   userInput: HTMLInputElement | null
   bootstrap: HTMLButtonElement | null
   refresh: HTMLButtonElement | null
-  createCharacter: HTMLButtonElement | null
   createCharacterRail: HTMLButtonElement | null
   characterCreator: HTMLElement | null
   creatorBody: HTMLElement | null
@@ -22,26 +21,12 @@ export interface AppElements {
   startCharacterWizard: HTMLButtonElement | null
   backCharacterWizard: HTMLButtonElement | null
   nextCharacterWizard: HTMLButtonElement | null
-  acceptGeneratedCharacter: HTMLButtonElement | null
-  generateCharacter: HTMLButtonElement | null
-  generatedCharacterPreview: HTMLElement | null
   characterCreationWizard: HTMLElement | null
   characterCreationSteps: HTMLElement | null
   characterCreationStatus: HTMLElement | null
   characterCreationFields: HTMLElement | null
   createPiece: HTMLButtonElement | null
   createBoard: HTMLButtonElement | null
-  characterNameInput: HTMLInputElement | null
-  characterAgeInput: HTMLInputElement | null
-  characterStrInput: HTMLInputElement | null
-  characterDexInput: HTMLInputElement | null
-  characterEndInput: HTMLInputElement | null
-  characterIntInput: HTMLInputElement | null
-  characterEduInput: HTMLInputElement | null
-  characterSocInput: HTMLInputElement | null
-  characterSkillsInput: HTMLTextAreaElement | null
-  characterCreditsInput: HTMLInputElement | null
-  characterTokenInput: HTMLInputElement | null
   pieceNameInput: HTMLInputElement | null
   pieceImageInput: HTMLInputElement | null
   pieceImageFileInput: HTMLInputElement | null
@@ -98,7 +83,6 @@ export const getAppElements = (document: AppElementsDocument): AppElements => ({
   userInput: getElement(document, 'userInput'),
   bootstrap: getElement(document, 'bootstrapButton'),
   refresh: getElement(document, 'refreshButton'),
-  createCharacter: getElement(document, 'createCharacterButton'),
   createCharacterRail: getElement(document, 'createCharacterRailButton'),
   characterCreator: getElement(document, 'characterCreator'),
   creatorBody: getElement(document, 'creatorBody'),
@@ -110,29 +94,12 @@ export const getAppElements = (document: AppElementsDocument): AppElements => ({
   startCharacterWizard: getElement(document, 'startCharacterWizardButton'),
   backCharacterWizard: getElement(document, 'backCharacterWizardButton'),
   nextCharacterWizard: getElement(document, 'nextCharacterWizardButton'),
-  acceptGeneratedCharacter: getElement(
-    document,
-    'acceptGeneratedCharacterButton'
-  ),
-  generateCharacter: getElement(document, 'generateCharacterButton'),
-  generatedCharacterPreview: getElement(document, 'generatedCharacterPreview'),
   characterCreationWizard: getElement(document, 'characterCreationWizard'),
   characterCreationSteps: getElement(document, 'characterCreationSteps'),
   characterCreationStatus: getElement(document, 'characterCreationStatus'),
   characterCreationFields: getElement(document, 'characterCreationFields'),
   createPiece: getElement(document, 'createPieceButton'),
   createBoard: getElement(document, 'createBoardButton'),
-  characterNameInput: getElement(document, 'characterNameInput'),
-  characterAgeInput: getElement(document, 'characterAgeInput'),
-  characterStrInput: getElement(document, 'characterStrInput'),
-  characterDexInput: getElement(document, 'characterDexInput'),
-  characterEndInput: getElement(document, 'characterEndInput'),
-  characterIntInput: getElement(document, 'characterIntInput'),
-  characterEduInput: getElement(document, 'characterEduInput'),
-  characterSocInput: getElement(document, 'characterSocInput'),
-  characterSkillsInput: getElement(document, 'characterSkillsInput'),
-  characterCreditsInput: getElement(document, 'characterCreditsInput'),
-  characterTokenInput: getElement(document, 'characterTokenInput'),
   pieceNameInput: getElement(document, 'pieceNameInput'),
   pieceImageInput: getElement(document, 'pieceImageInput'),
   pieceImageFileInput: getElement(document, 'pieceImageFileInput'),

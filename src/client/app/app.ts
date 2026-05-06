@@ -53,20 +53,16 @@ import {
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerOptionViewModels,
   deriveCharacterCreationCascadeSkillChoiceViewModels,
+  deriveCharacterCreationDeathViewModel,
   deriveCharacterCreationFailedQualificationViewModel,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationReviewSummary,
+  deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary,
   parseCharacterCreationDraftPatch
 } from './character-creation-view.js'
-import {
-  generateCharacterPreview,
-  planCreatePlayableCharacterCommands,
-  planGeneratePlayableCharacterCommands
-} from './character-command-plan.js'
-import { deriveGeneratedCharacterPreview } from './character-generator-preview.js'
 import {
   cssUrl,
   readImageDimensions,
@@ -128,7 +124,6 @@ let diceHideTimer = null
 let connectivityController = null
 const diceRevealState = createDiceRevealState()
 const animatedDiceRollActivityIds = new Set()
-let pendingGeneratedCharacter = null
 let characterCreationFlow = null
 
 const setStatus = (text) => {
@@ -265,32 +260,10 @@ const parseNonNegativeIntegerInput = (input, fallback) => {
   return parseNonNegativeIntegerValue(input.value, fallback)
 }
 
-const nullableIntegerInput = (input) => {
-  const text = input.value.trim()
-  if (!text) return null
-  const value = Number.parseInt(text, 10)
-  return Number.isFinite(value) ? value : null
-}
-
-const characterSkillsFromInput = () =>
-  els.characterSkillsInput.value
-    .split(/[\n,]/)
-    .map((skill) => skill.trim())
-    .filter(Boolean)
-
 const characterCreationSeed = () => ({
-  name: els.characterNameInput.value.trim(),
-  characteristics: {
-    str: nullableIntegerInput(els.characterStrInput),
-    dex: nullableIntegerInput(els.characterDexInput),
-    end: nullableIntegerInput(els.characterEndInput),
-    int: nullableIntegerInput(els.characterIntInput),
-    edu: nullableIntegerInput(els.characterEduInput),
-    soc: nullableIntegerInput(els.characterSocInput)
-  },
-  skills: characterSkillsFromInput(),
+  name: '',
   equipment: [],
-  credits: parseNonNegativeIntegerInput(els.characterCreditsInput, 0),
+  credits: 0,
   notes: ''
 })
 
@@ -342,8 +315,6 @@ const startCharacterCreationWizard = () => {
   characterCreationFlow = nextCharacterCreationWizardStep(
     characterCreationFlow
   ).flow
-  pendingGeneratedCharacter = null
-  renderGeneratedCharacterPreview()
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
@@ -463,6 +434,11 @@ const renderCharacterCreationFields = (flow) => {
     return fragment
   }
   if (flow.step === 'career') {
+    const death = renderCharacterCreationDeath(flow)
+    if (death) {
+      fragment.append(death)
+      return fragment
+    }
     const careerRollButton = renderCharacterCreationCareerRollButton(flow)
     if (careerRollButton) fragment.append(careerRollButton)
     fragment.append(renderCharacterCreationAnagathicsDecision(flow))
@@ -567,6 +543,29 @@ const renderCharacterCreationFields = (flow) => {
   return fragment
 }
 
+const renderCharacterCreationDeath = (flow) => {
+  const viewModel = deriveCharacterCreationDeathViewModel(flow)
+  if (!viewModel) return null
+
+  const panel = document.createElement('section')
+  panel.className = 'creation-death-card'
+  const eyebrow = document.createElement('span')
+  eyebrow.textContent = viewModel.career
+  const title = document.createElement('strong')
+  title.textContent = viewModel.title
+  const detail = document.createElement('p')
+  detail.textContent = viewModel.detail
+  const roll = document.createElement('div')
+  roll.className = 'creation-death-roll'
+  const rollLabel = document.createElement('span')
+  rollLabel.textContent = 'Survival roll'
+  const rollValue = document.createElement('b')
+  rollValue.textContent = viewModel.roll
+  roll.append(rollLabel, rollValue)
+  panel.append(eyebrow, title, detail, roll)
+  return panel
+}
+
 const renderCharacterCreationHomeworld = (flow) => {
   const viewModel = deriveCharacterCreationHomeworldViewModel(flow)
   const wrapper = document.createElement('div')
@@ -624,19 +623,33 @@ const renderCharacterCreationHomeworld = (flow) => {
 }
 
 const renderCharacterCreationTermSkillTables = (flow) => {
-  const actions = deriveCharacterCreationTermSkillTableActions(flow)
-  if (actions.length === 0) return document.createDocumentFragment()
+  const viewModel = deriveCharacterCreationTermSkillTrainingViewModel(flow)
+  if (!viewModel) return document.createDocumentFragment()
 
   const panel = document.createElement('div')
   panel.className = 'creation-term-skills'
   const title = document.createElement('strong')
-  title.textContent = 'Skills and training'
+  title.textContent = viewModel.title
   const text = document.createElement('p')
-  text.textContent = 'Choose a skill table, then roll 1D6 for this term.'
+  text.textContent = viewModel.prompt
+  const progress = document.createElement('div')
+  progress.className = 'creation-term-skill-progress'
+  progress.textContent = `${viewModel.required - viewModel.remaining}/${viewModel.required} rolled`
+  const rolled = document.createElement('div')
+  rolled.className = 'creation-term-skill-rolls'
+  for (const roll of viewModel.rolled) {
+    const chip = document.createElement('span')
+    const label = document.createElement('b')
+    label.textContent = roll.label
+    const detail = document.createElement('small')
+    detail.textContent = roll.detail
+    chip.append(label, detail)
+    rolled.append(chip)
+  }
   const buttons = document.createElement('div')
   buttons.className = 'creation-term-actions'
 
-  for (const action of actions) {
+  for (const action of viewModel.actions) {
     const button = document.createElement('button')
     button.type = 'button'
     button.textContent = action.label
@@ -650,7 +663,10 @@ const renderCharacterCreationTermSkillTables = (flow) => {
     buttons.append(button)
   }
 
-  panel.append(title, text, buttons)
+  panel.classList.toggle('complete', !viewModel.open)
+  panel.append(title, text, progress)
+  if (rolled.childElementCount > 0) panel.append(rolled)
+  if (buttons.childElementCount > 0) panel.append(buttons)
   return panel
 }
 
@@ -1210,9 +1226,14 @@ const renderCharacterCreationTermResolution = (flow) => {
   }
 
   const survived = plan.survivalPassed === true
-  text.textContent = survived
-    ? reenlistmentOutcomeText(plan)
-    : 'A mishap ended the term. Muster out to continue character creation.'
+  if (!survived) {
+    text.textContent =
+      'Killed in service. This character cannot muster out or become playable.'
+    panel.append(title, text)
+    return panel
+  }
+
+  text.textContent = reenlistmentOutcomeText(plan)
   const actions = document.createElement('div')
   actions.className = 'creation-term-actions'
 
@@ -1260,7 +1281,7 @@ const renderCharacterCreationTermResolution = (flow) => {
 }
 
 const termSummary = (term, index) => {
-  const result = term.survivalPassed ? 'survived' : 'mishap'
+  const result = term.survivalPassed ? 'survived' : 'killed in service'
   const commission =
     term.commissionRoll === null
       ? ''
@@ -1817,66 +1838,6 @@ const rollCharacterCreationCareerCheck = async () => {
   characterCreationPanel.scrollToTop()
 }
 
-const renderGeneratedCharacterPreview = () => {
-  const preview = deriveGeneratedCharacterPreview(pendingGeneratedCharacter)
-  if (!preview) {
-    els.generatedCharacterPreview.hidden = true
-    els.generatedCharacterPreview.replaceChildren()
-    els.acceptGeneratedCharacter.disabled = true
-    return
-  }
-
-  const title = document.createElement('strong')
-  title.textContent = preview.title
-  const subtitle = document.createElement('p')
-  subtitle.className = 'generated-character-subtitle'
-  subtitle.textContent = preview.subtitle
-  const stats = document.createElement('div')
-  stats.className = 'generated-character-stats'
-  for (const stat of preview.stats) {
-    const element = document.createElement('span')
-    element.className = 'generated-character-stat'
-    const label = document.createElement('b')
-    label.textContent = stat.label
-    const value = document.createElement('span')
-    value.textContent = stat.value
-    element.append(label, value)
-    stats.append(element)
-  }
-  const skills = document.createElement('div')
-  skills.className = 'generated-character-skills'
-  if (preview.skills.length === 0) {
-    const empty = document.createElement('span')
-    empty.className = 'generated-character-skill empty'
-    empty.textContent = 'No skills'
-    skills.append(empty)
-  } else {
-    for (const skill of preview.skills) {
-      const element = document.createElement('span')
-      element.className = 'generated-character-skill'
-      element.textContent = skill.label
-      skills.append(element)
-    }
-  }
-  const chips = document.createElement('div')
-  chips.className = 'generated-character-chips'
-  for (const chip of preview.chips) {
-    const element = document.createElement('span')
-    element.className = `generated-character-chip ${chip.tone}`
-    element.textContent = chip.label
-    chips.append(element)
-  }
-  els.generatedCharacterPreview.replaceChildren(
-    title,
-    subtitle,
-    stats,
-    skills,
-    chips
-  )
-  els.generatedCharacterPreview.hidden = false
-  els.acceptGeneratedCharacter.disabled = !preview.canAccept
-}
-
 const applyBoardFileDimensions = async () => {
   const file = els.boardImageFileInput.files?.[0]
   if (!file) return
@@ -1965,63 +1926,8 @@ const createCustomBoard = async () => {
   render()
 }
 
-const createCustomCharacter = async () => {
-  setError('')
-  if (!state) {
-    await postCommand(
-      createGameCommand({ roomId, actorId }),
-      requestId('create-game-for-character')
-    )
-  }
-  if (els.characterTokenInput.checked && !selectedBoard()) {
-    await postBoardCommand(
-      createBoardCommand({ roomId, actorId }),
-      requestId('create-board-for-character')
-    )
-  }
-
-  const board = selectedBoard()
-  const plan = planCreatePlayableCharacterCommands({
-    identity: clientIdentity(),
-    state,
-    board,
-    name: els.characterNameInput.value,
-    characterType: 'PLAYER',
-    age: nullableIntegerInput(els.characterAgeInput),
-    characteristics: {
-      str: nullableIntegerInput(els.characterStrInput),
-      dex: nullableIntegerInput(els.characterDexInput),
-      end: nullableIntegerInput(els.characterEndInput),
-      int: nullableIntegerInput(els.characterIntInput),
-      edu: nullableIntegerInput(els.characterEduInput),
-      soc: nullableIntegerInput(els.characterSocInput)
-    },
-    skills: characterSkillsFromInput(),
-    equipment: [],
-    credits: parseNonNegativeIntegerInput(els.characterCreditsInput, 0),
-    notes: '',
-    createLinkedPiece: els.characterTokenInput.checked,
-    existingPieceCount: boardPieces().length
-  })
-  if (!plan.ok) {
-    setError(plan.error)
-    if (plan.focus === 'name') els.characterNameInput.focus()
-    if (plan.focus === 'skills') els.characterSkillsInput.focus()
-    return
-  }
-
-  await postCharacterCreationCommands(plan.commands)
-  if (plan.pieceId) selectPiece(plan.pieceId)
-  els.characterNameInput.value = ''
-  pendingGeneratedCharacter = null
-  renderGeneratedCharacterPreview()
-  characterCreationPanel.close()
-  characterSheetController.setOpen(true)
-  render()
-}
-
 const createWizardToken = async () => {
-  if (!characterCreationFlow || !els.characterTokenInput.checked) return
+  if (!characterCreationFlow) return
   if (!selectedBoard()) {
     await postBoardCommand(
       createBoardCommand({ roomId, actorId }),
@@ -2100,7 +2006,6 @@ const finishCharacterCreationWizard = async () => {
   await postCharacterCreationCommands(commands)
 
   await createWizardToken()
-  els.characterNameInput.value = ''
   characterCreationFlow = null
   renderCharacterCreationWizard()
   characterCreationPanel.close()
@@ -2142,56 +2047,6 @@ const backCharacterCreationWizard = () => {
   setError('')
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
-}
-
-const rollGeneratedCharacter = () => {
-  setError('')
-  pendingGeneratedCharacter = generateCharacterPreview({
-    state,
-    name: els.characterNameInput.value
-  })
-  renderGeneratedCharacterPreview()
-}
-
-const acceptGeneratedCharacter = async () => {
-  setError('')
-  if (!pendingGeneratedCharacter) rollGeneratedCharacter()
-  if (!state) {
-    await postCommand(
-      createGameCommand({ roomId, actorId }),
-      requestId('create-game-for-generated-character')
-    )
-  }
-  if (els.characterTokenInput.checked && !selectedBoard()) {
-    await postBoardCommand(
-      createBoardCommand({ roomId, actorId }),
-      requestId('create-board-for-generated-character')
-    )
-  }
-
-  const plan = planGeneratePlayableCharacterCommands({
-    identity: clientIdentity(),
-    state,
-    board: selectedBoard(),
-    generated: pendingGeneratedCharacter,
-    createLinkedPiece: els.characterTokenInput.checked,
-    existingPieceCount: boardPieces().length
-  })
-  if (!plan.ok) {
-    setError(plan.error)
-    if (plan.focus === 'name') els.characterNameInput.focus()
-    if (plan.focus === 'skills') els.characterSkillsInput.focus()
-    return
-  }
-
-  await postCharacterCreationCommands(plan.commands)
-  if (plan.pieceId) selectPiece(plan.pieceId)
-  els.characterNameInput.value = ''
-  pendingGeneratedCharacter = null
-  renderGeneratedCharacterPreview()
-  characterCreationPanel.close()
-  characterSheetController.setOpen(true)
-  render()
 }
 
 const createCustomPiece = async () => {
@@ -2607,10 +2462,6 @@ els.refresh.addEventListener('click', () => {
   fetchState().catch((error) => setError(error.message))
 })
 
-els.createCharacter.addEventListener('click', () => {
-  createCustomCharacter().catch((error) => setError(error.message))
-})
-
 els.startCharacterWizard.addEventListener('click', () => {
   startCharacterCreationWizard()
 })
@@ -2632,14 +2483,6 @@ els.characterCreationFields.addEventListener('change', () => {
 
 els.nextCharacterWizard.addEventListener('click', () => {
   advanceCharacterCreationWizard().catch((error) => setError(error.message))
-})
-
-els.generateCharacter.addEventListener('click', () => {
-  rollGeneratedCharacter()
-})
-
-els.acceptGeneratedCharacter.addEventListener('click', () => {
-  acceptGeneratedCharacter().catch((error) => setError(error.message))
 })
 
 els.createPiece.addEventListener('click', () => {

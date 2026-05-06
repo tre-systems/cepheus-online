@@ -60,6 +60,15 @@ const postCommand = (room: GameRoomDO, body: unknown) =>
     })
   )
 
+const postRawCommand = (room: GameRoomDO, body: string) =>
+  room.fetch(
+    new Request('https://cepheus.test/rooms/game-1/command', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body
+    })
+  )
+
 const commandBody = (requestId: string, command: Record<string, unknown>) => ({
   type: 'command',
   requestId,
@@ -171,6 +180,18 @@ describe('GameRoomDO HTTP skeleton', () => {
     assert.equal(message.requestId, 'create-board')
     assert.equal(message.error.code, 'game_not_found')
     assert.equal(message.eventSeq, 0)
+  })
+
+  it('rejects oversized command bodies before JSON decoding', async () => {
+    const room = createRoom()
+
+    const response = await postRawCommand(room, ' '.repeat(70 * 1024))
+    const message = await response.json()
+
+    assert.equal(response.status, 413)
+    assert.equal(message.type, 'error')
+    assert.equal(message.error.code, 'invalid_message')
+    assert.equal(message.error.message, 'Command body is too large')
   })
 
   it('records commandRejected publication telemetry through the room boundary', async () => {

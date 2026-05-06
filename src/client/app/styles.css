@@ -2065,6 +2065,7 @@ h1 {
   text-align: left;
 }
 
+.creation-death-card,
 .creation-term-skills,
 .creation-term-resolution,
 .creation-term-history,
@@ -2078,8 +2079,70 @@ h1 {
   padding: 9px;
 }
 
+.creation-death-card {
+  gap: 9px;
+  border-color: rgba(255, 226, 114, 0.58);
+  background:
+    linear-gradient(180deg, rgba(255, 226, 114, 0.12), transparent 72%),
+    rgba(72, 255, 173, 0.055);
+  padding: 12px;
+}
+
+.creation-death-card > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.creation-death-card > strong {
+  color: #ffe272;
+  font-size: 19px;
+  font-weight: 860;
+  line-height: 1;
+}
+
+.creation-death-card p {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.creation-death-roll {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 226, 114, 0.28);
+  padding-top: 9px;
+}
+
+.creation-death-roll span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.creation-death-roll b {
+  color: #ffe272;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 14px rgba(255, 226, 114, 0.35);
+}
+
 .creation-term-skills {
-  gap: 8px;
+  gap: 9px;
+}
+
+.creation-term-skills.complete {
+  border-color: rgba(72, 255, 173, 0.34);
+  background:
+    linear-gradient(180deg, rgba(72, 255, 173, 0.06), transparent),
+    rgba(0, 9, 7, 0.42);
 }
 
 .creation-term-skills strong,
@@ -2097,24 +2160,66 @@ h1 {
 .creation-mustering-out p {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.35;
+}
+
+.creation-term-skill-progress {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(72, 255, 173, 0.44);
+  background: rgba(0, 9, 7, 0.42);
+  padding: 3px 7px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 820;
+  line-height: 1.1;
+}
+
+.creation-term-skill-rolls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.creation-term-skill-rolls span {
+  display: inline-grid;
+  gap: 1px;
+  border: 1px solid rgba(72, 255, 173, 0.38);
+  background:
+    linear-gradient(180deg, rgba(244, 255, 248, 0.08), transparent),
+    rgba(0, 9, 7, 0.62);
+  padding: 5px 7px;
+}
+
+.creation-term-skill-rolls b {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 780;
+  line-height: 1.05;
+}
+
+.creation-term-skill-rolls small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.1;
 }
 
 .creation-term-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 5px;
+  gap: 6px;
 }
 
 .creation-term-actions button {
-  min-height: 36px;
+  min-height: 41px;
   border-color: rgba(72, 255, 173, 0.55);
   border-radius: 5px;
   background:
     linear-gradient(180deg, rgba(72, 255, 173, 0.2), rgba(72, 255, 173, 0.06)),
     #06120e;
-  padding: 5px 7px;
+  padding: 7px;
   color: var(--accent-2);
   font-size: 12px;
   font-weight: 760;

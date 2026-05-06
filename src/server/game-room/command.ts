@@ -34,11 +34,13 @@ import type { CareerCreationTermSkillTable } from '../../shared/characterCreatio
 import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
 import { rollDiceExpression } from '../../shared/dice'
 import type { GameEvent } from '../../shared/events'
+import type { PieceId } from '../../shared/ids'
 import { deriveEventRng } from '../../shared/prng'
 import { err, ok, type Result } from '../../shared/result'
 import type {
   CharacterCreationHomeworld,
   CharacterCreationProjection,
+  CharacterCreationSheet,
   CharacterState,
   GameState
 } from '../../shared/state'
@@ -111,6 +113,33 @@ const requireNonEmptyString = (
   }
 
   return ok(value)
+}
+
+const isReferee = (state: GameState, actorId: Command['actorId']): boolean =>
+  state.ownerId === actorId || state.players[actorId]?.role === 'REFEREE'
+
+const canMutateCharacter = (
+  state: GameState,
+  character: CharacterState,
+  actorId: Command['actorId']
+): boolean =>
+  isReferee(state, actorId) ||
+  character.ownerId === null ||
+  character.ownerId === actorId
+
+const canMutatePiece = (
+  state: GameState,
+  pieceId: PieceId,
+  actorId: Command['actorId']
+): boolean => {
+  if (isReferee(state, actorId)) return true
+  const piece = state.pieces[pieceId]
+  if (!piece) return false
+  if (piece.freedom === 'SHARE') return true
+  if (!piece.characterId) return piece.freedom !== 'LOCKED'
+
+  const character = state.characters[piece.characterId]
+  return Boolean(character && canMutateCharacter(state, character, actorId))
 }
 
 const validateExpectedSeq = (
@@ -299,6 +328,47 @@ const uniqueSkills = (skills: readonly string[]): string[] => {
   return unique
 }
 
+const derivedCreationNotes = (character: CharacterState): string => {
+  const creation = character.creation
+  if (!creation) return character.notes
+  const notes = character.notes.trim() ? [character.notes.trim()] : []
+
+  if (creation.history && creation.history.length > 0) {
+    notes.push('Rules source: Cepheus Engine SRD.')
+    for (const [index, term] of creation.terms.entries()) {
+      const survival =
+        creation.history.some(
+          (event) => event.type === 'SURVIVAL_FAILED'
+        ) && index === creation.terms.length - 1
+          ? 'mishap'
+          : 'survived'
+      notes.push(`Term ${index + 1}: ${term.career}, ${survival}.`)
+    }
+  }
+
+  return notes.join('\n')
+}
+
+const deriveCharacterCreationSheet = (
+  character: CharacterState
+): CharacterCreationSheet => {
+  const creation = character.creation
+  const creationSkills = uniqueSkills([
+    ...(creation?.backgroundSkills ?? []),
+    ...(creation?.terms.flatMap((term) => term.skillsAndTraining) ?? []),
+    ...character.skills
+  ])
+
+  return {
+    notes: derivedCreationNotes(character),
+    age: character.age,
+    characteristics: { ...character.characteristics },
+    skills: creationSkills,
+    equipment: character.equipment.map((item) => ({ ...item })),
+    credits: character.credits
+  }
+}
+
 const normalizeBackgroundSkill = (
   skill: string
 ): Result<string, CommandError> => {
@@ -389,6 +459,36 @@ const validateCharacterCreationAction = (
   }
 
   return ok(undefined)
+}
+
+const clientAdvanceAllowedEvents = new Set([
+  'SKIP_COMMISSION',
+  'SKIP_ADVANCEMENT',
+  'RESOLVE_AGING_CHANGE',
+  'USE_ANAGATHICS',
+  'DECLINE_ANAGATHICS',
+  'REENLIST',
+  'FORCED_REENLIST',
+  'LEAVE_CAREER',
+  'REENLIST_BLOCKED',
+  'MISHAP_RESOLVED',
+  'CONFIRM_DEATH',
+  'CREATION_COMPLETE'
+] satisfies string[])
+
+const validateClientAdvanceEvent = (
+  command: Extract<Command, { type: 'AdvanceCharacterCreation' }>
+): Result<void, CommandError> => {
+  if (clientAdvanceAllowedEvents.has(command.creationEvent.type)) {
+    return ok(undefined)
+  }
+
+  return err(
+    commandError(
+      'not_allowed',
+      `${command.creationEvent.type} must be resolved by a server command`
+    )
+  )
 }
 
 const validateBasicTrainingCompletion = (
@@ -1540,6 +1640,23 @@ export const deriveEventsForCommand = (
 ): Result<GameEvent[], CommandError> => {
   const expectedSeq = validateExpectedSeq(command, context.currentSeq)
   if (!expectedSeq.ok) return expectedSeq
+  if (
+    context.state &&
+    'characterId' in command &&
+    command.type !== 'CreateCharacter' &&
+    command.characterId !== null &&
+    command.characterId !== undefined
+  ) {
+    const character = context.state.characters[command.characterId]
+    if (
+      character &&
+      !canMutateCharacter(context.state, character, command.actorId)
+    ) {
+      return notAllowed(
+        'Only the character owner or referee can change this character'
+      )
+    }
+  }
 
   switch (command.type) {
     case 'CreateGame': {
@@ -1578,8 +1695,12 @@ export const deriveEventsForCommand = (
     case 'UpdateCharacterSheet': {
       const state = requireGame(context.state)
       if (!state.ok) return state
-      if (!state.value.characters[command.characterId]) {
+      const character = state.value.characters[command.characterId]
+      if (!character) {
         return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed('Only the character owner or referee can edit a sheet')
       }
       const patch = validateCharacterSheetPatch(command)
       if (!patch.ok) return patch
@@ -1616,19 +1737,23 @@ export const deriveEventsForCommand = (
           )
         )
       }
-      const sheet = validateCharacterCreationSheet(command)
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed(
+          'Only the character owner or referee can finalize character creation'
+        )
+      }
+      const serverSheet = deriveCharacterCreationSheet(character)
+      const sheet = validateCharacterCreationSheet({
+        ...command,
+        ...serverSheet
+      })
       if (!sheet.ok) return sheet
 
       return ok([
         {
           type: 'CharacterCreationFinalized',
           characterId: command.characterId,
-          age: command.age,
-          characteristics: { ...command.characteristics },
-          skills: [...command.skills],
-          equipment: command.equipment.map((item) => ({ ...item })),
-          credits: command.credits,
-          notes: command.notes
+          ...serverSheet
         }
       ])
     }
@@ -1639,6 +1764,11 @@ export const deriveEventsForCommand = (
       const character = state.value.characters[command.characterId]
       if (!character) {
         return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed(
+          'Only the character owner or referee can start character creation'
+        )
       }
       if (character.creation) {
         return err(
@@ -1676,6 +1806,15 @@ export const deriveEventsForCommand = (
       const character = state.value.characters[command.characterId]
       if (!character) {
         return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed(
+          'Only the character owner or referee can advance character creation'
+        )
+      }
+      if (!isReferee(state.value, command.actorId)) {
+        const allowed = validateClientAdvanceEvent(command)
+        if (!allowed.ok) return allowed
       }
       if (!character.creation) {
         return err(
@@ -1745,6 +1884,92 @@ export const deriveEventsForCommand = (
           creationComplete: nextState.status === 'PLAYABLE'
         }
       ])
+    }
+
+    case 'RollCharacterCreationCharacteristic': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed(
+          'Only the character owner or referee can roll character creation'
+        )
+      }
+      if (!character.creation) {
+        return err(
+          commandError(
+            'missing_entity',
+            'Character creation has not been started'
+          )
+        )
+      }
+      if (character.creation.state.status !== 'CHARACTERISTICS') {
+        return err(
+          commandError(
+            'invalid_command',
+            `CHARACTERISTIC_ROLL is not valid from ${character.creation.state.status}`
+          )
+        )
+      }
+      if (character.characteristics[command.characteristic] !== null) {
+        return err(
+          commandError(
+            'invalid_command',
+            `${command.characteristic.toUpperCase()} has already been rolled`
+          )
+        )
+      }
+
+      const rolled = rollDiceExpression(
+        '2d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const characteristics = {
+        ...character.characteristics,
+        [command.characteristic]: rolled.value.total
+      }
+      const complete = Object.values(characteristics).every(
+        (value) => value !== null
+      )
+      const events: GameEvent[] = [
+        {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: `${command.characteristic.toUpperCase()} characteristic`,
+          rolls: [...rolled.value.rolls],
+          total: rolled.value.total
+        },
+        {
+          type: 'CharacterSheetUpdated',
+          characterId: command.characterId,
+          characteristics: {
+            [command.characteristic]: rolled.value.total
+          }
+        }
+      ]
+
+      if (complete) {
+        const nextState = transitionCareerCreationState(
+          character.creation.state,
+          { type: 'SET_CHARACTERISTICS' }
+        )
+        events.push({
+          type: 'CharacterCreationTransitioned',
+          characterId: command.characterId,
+          creationEvent: { type: 'SET_CHARACTERISTICS' },
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        })
+      }
+
+      return ok(events)
     }
 
     case 'CompleteCharacterCreationBasicTraining': {
@@ -2607,6 +2832,9 @@ export const deriveEventsForCommand = (
     case 'CreateBoard': {
       const state = requireGame(context.state)
       if (!state.ok) return state
+      if (!isReferee(state.value, command.actorId)) {
+        return notAllowed('Only a referee can create boards')
+      }
       if (state.value.boards[command.boardId]) {
         return err(commandError('duplicate_entity', 'Board already exists'))
       }
@@ -2634,6 +2862,9 @@ export const deriveEventsForCommand = (
     case 'SelectBoard': {
       const state = requireGame(context.state)
       if (!state.ok) return state
+      if (!isReferee(state.value, command.actorId)) {
+        return notAllowed('Only a referee can select the active board')
+      }
       if (!state.value.boards[command.boardId]) {
         return err(commandError('missing_entity', 'Board does not exist'))
       }
@@ -2649,6 +2880,9 @@ export const deriveEventsForCommand = (
     case 'SetDoorOpen': {
       const state = requireGame(context.state)
       if (!state.ok) return state
+      if (!isReferee(state.value, command.actorId)) {
+        return notAllowed('Only a referee can open or close map doors')
+      }
       if (!state.value.boards[command.boardId]) {
         return err(commandError('missing_entity', 'Board does not exist'))
       }
@@ -2668,6 +2902,9 @@ export const deriveEventsForCommand = (
     case 'CreatePiece': {
       const state = requireGame(context.state)
       if (!state.ok) return state
+      if (!isReferee(state.value, command.actorId)) {
+        return notAllowed('Only a referee can create pieces')
+      }
       if (!state.value.boards[command.boardId]) {
         return err(commandError('missing_entity', 'Board does not exist'))
       }
@@ -2721,6 +2958,9 @@ export const deriveEventsForCommand = (
       if (!state.value.pieces[command.pieceId]) {
         return err(commandError('missing_entity', 'Piece does not exist'))
       }
+      if (!canMutatePiece(state.value, command.pieceId, command.actorId)) {
+        return notAllowed('Only a controller or referee can move this piece')
+      }
       const x = requireFiniteCoordinate(command.x, 'x')
       if (!x.ok) return x
       const y = requireFiniteCoordinate(command.y, 'y')
@@ -2742,6 +2982,9 @@ export const deriveEventsForCommand = (
       if (!state.value.pieces[command.pieceId]) {
         return err(commandError('missing_entity', 'Piece does not exist'))
       }
+      if (!isReferee(state.value, command.actorId)) {
+        return notAllowed('Only a referee can change piece visibility')
+      }
 
       return ok([
         {
@@ -2757,6 +3000,9 @@ export const deriveEventsForCommand = (
       if (!state.ok) return state
       if (!state.value.pieces[command.pieceId]) {
         return err(commandError('missing_entity', 'Piece does not exist'))
+      }
+      if (!isReferee(state.value, command.actorId)) {
+        return notAllowed('Only a referee can change piece control')
       }
 
       return ok([

@@ -2310,9 +2310,13 @@ describe('room publication flow', () => {
     assert.equal(finalized.ok, true)
     if (!finalized.ok) return
     const character = finalized.value.state.characters[characterId]
-    assert.equal(character?.age, 34)
-    assert.deepEqual(character?.skills, ['Pilot-1', 'Vacc Suit-0'])
-    assert.equal(character?.notes, 'Final scout.')
+    assert.equal(character?.age, null)
+    assert.equal(
+      JSON.stringify(character?.skills) !==
+        JSON.stringify(['Pilot-1', 'Vacc Suit-0']),
+      true
+    )
+    assert.equal(character?.notes.includes('Final scout.'), false)
     assert.equal((await readEventStream(storage, gameId)).length, 18)
   })
 
@@ -2356,14 +2360,15 @@ describe('room publication flow', () => {
 
     const recovered = await getProjectedGameState(storage, gameId)
     assert.deepEqual(recovered, finalized.value.state)
-    assert.equal(recovered?.characters[characterId]?.age, 34)
-    assert.deepEqual(recovered?.characters[characterId]?.skills, [
-      'Pilot-1',
-      'Vacc Suit-0'
-    ])
+    assert.equal(recovered?.characters[characterId]?.age, null)
     assert.equal(
-      recovered?.characters[characterId]?.equipment[0]?.name,
-      'Vacc suit'
+      JSON.stringify(recovered?.characters[characterId]?.skills) !==
+        JSON.stringify(['Pilot-1', 'Vacc Suit-0']),
+      true
+    )
+    assert.equal(
+      recovered?.characters[characterId]?.equipment[0]?.name !== 'Vacc suit',
+      true
     )
   })
 
@@ -2392,6 +2397,44 @@ describe('room publication flow', () => {
     if (stale.ok) return
     assert.equal(stale.error.code, 'stale_command')
     assert.equal((await readEventStream(storage, gameId)).length, 2)
+  })
+
+  it('rejects player-forged character creation roll outcomes', async () => {
+    const storage = createMemoryStorage()
+    const playerId = asUserId('player-1')
+    const characterId = asCharacterId('player-scout')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId: playerId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Player Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId: playerId,
+      characterId
+    })
+
+    const forged = await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId: playerId,
+      characterId,
+      creationEvent: { type: 'SET_CHARACTERISTICS' }
+    })
+
+    assert.equal(forged.ok, false)
+    if (forged.ok) return
+    assert.equal(forged.error.code, 'not_allowed')
+    assert.equal(
+      forged.error.message,
+      'SET_CHARACTERISTICS must be resolved by a server command'
+    )
+    assert.equal((await readEventStream(storage, gameId)).length, 3)
   })
 
   it('rejects stale expected sequence numbers on homeworld/background commands', async () => {

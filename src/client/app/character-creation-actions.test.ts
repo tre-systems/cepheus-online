@@ -44,12 +44,12 @@ const character = (
   notes: '',
   age: 30,
   characteristics: {
-    str: 7,
-    dex: 7,
-    end: 7,
-    int: 7,
-    edu: 7,
-    soc: 7
+    str: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7,
+    dex: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7,
+    end: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7,
+    int: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7,
+    edu: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7,
+    soc: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7
   },
   skills: ['Gun Combat-0'],
   equipment: [],
@@ -116,18 +116,21 @@ describe('character creation actions', () => {
     })
   })
 
-  it('keeps generic advance routing for non-semantic legal actions', () => {
+  it('routes characteristic rolls to the semantic server command', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,
       character(creation('CHARACTERISTICS'))
     )
 
     assert.equal(plan?.status, 'Characteristics')
-    assert.equal(plan?.actions[0]?.key, 'set-characteristics')
-    assert.equal(plan?.actions[0]?.command?.type, 'AdvanceCharacterCreation')
+    assert.equal(plan?.actions[0]?.key, 'roll-str')
+    assert.equal(
+      plan?.actions[0]?.command?.type,
+      'RollCharacterCreationCharacteristic'
+    )
     const command = plan?.actions[0]?.command
-    if (command?.type !== 'AdvanceCharacterCreation') return
-    assert.deepEqual(command.creationEvent, { type: 'SET_CHARACTERISTICS' })
+    if (command?.type !== 'RollCharacterCreationCharacteristic') return
+    assert.equal(command.characteristic, 'str')
   })
 
   it('rolls qualification for a later career selection', () => {
