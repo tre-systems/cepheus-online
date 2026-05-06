@@ -18,6 +18,10 @@ export const MAX_CREATION_ACTIVITY_DETAIL_LENGTH = 96
 
 export const SRD_CREATION_ACTIVITY_MILESTONE_TRANSITIONS = [
   'SELECT_CAREER',
+  'CAREER_QUALIFICATION_PASSED',
+  'CAREER_QUALIFICATION_FAILED',
+  'DRAFT_RESOLVED',
+  'DRIFTER_ENTERED',
   'CAREER_TERM_STARTED',
   'COMPLETE_BASIC_TRAINING',
   'SURVIVAL_PASSED',
@@ -45,6 +49,10 @@ const transitionTitles = {
   BACKGROUND_SKILL_SELECTED: 'Background skill selected',
   CASCADE_SKILL_RESOLVED: 'Cascade skill resolved',
   SELECT_CAREER: 'Career selected',
+  CAREER_QUALIFICATION_PASSED: 'Qualification passed',
+  CAREER_QUALIFICATION_FAILED: 'Qualification failed',
+  DRAFT_RESOLVED: 'Draft resolved',
+  DRIFTER_ENTERED: 'Entered Drifter',
   CAREER_TERM_STARTED: 'Career term started',
   COMPLETE_BASIC_TRAINING: 'Basic training complete',
   SURVIVAL_PASSED: 'Survival passed',
@@ -71,6 +79,9 @@ const transitionTitles = {
 const successTransitions = new Set([
   'FINALIZED',
   'CREATION_COMPLETE',
+  'CAREER_QUALIFICATION_PASSED',
+  'DRAFT_RESOLVED',
+  'DRIFTER_ENTERED',
   'SURVIVAL_PASSED',
   'COMPLETE_BASIC_TRAINING',
   'COMPLETE_COMMISSION',
@@ -80,6 +91,7 @@ const successTransitions = new Set([
 
 const warningTransitions = new Set([
   'SURVIVAL_FAILED',
+  'CAREER_QUALIFICATION_FAILED',
   'DEATH_CONFIRMED',
   'REENLIST_BLOCKED',
   'FORCED_REENLIST',

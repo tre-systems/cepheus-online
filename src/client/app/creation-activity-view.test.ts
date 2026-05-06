@@ -197,6 +197,10 @@ describe('creation activity view model', () => {
       cards.map((card) => card.title),
       [
         'Career selected',
+        'Qualification passed',
+        'Qualification failed',
+        'Draft resolved',
+        'Entered Drifter',
         'Career term started',
         'Basic training complete',
         'Survival passed',
@@ -220,6 +224,10 @@ describe('creation activity view model', () => {
       cards.map((card) => card.tone),
       [
         'neutral',
+        'success',
+        'warning',
+        'success',
+        'success',
         'neutral',
         'success',
         'success',
