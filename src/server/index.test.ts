@@ -27,6 +27,7 @@ const clientModules = new Map<
         '/client/app/dice-overlay.js',
         '/client/app/door-los-view.js',
         '/client/app/image-assets.js',
+        '/client/app/live-activity-client.js',
         '/client/app/piece-command-plan.js',
         '/client/app/pwa-install.js',
         '/client/app/room-api.js',
@@ -198,6 +199,15 @@ const clientModules = new Map<
     }
   ],
   ['/client/app/image-assets.js', { markers: ['browserImageUrl'] }],
+  [
+    '/client/app/live-activity-client.js',
+    {
+      markers: [
+        'filterPendingDiceRollActivities',
+        'prepareLiveActivityApplication'
+      ]
+    }
+  ],
   [
     '/client/app/piece-command-plan.js',
     {

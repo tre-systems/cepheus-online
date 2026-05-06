@@ -62,6 +62,26 @@ const liveActivityServerMessageFixtures = loadFixture<
 >('live-activity-server-messages.json')
 
 describe('protocol validation', () => {
+  it('exposes stable command error categories for client branching', () => {
+    const categories = [
+      'stale_command',
+      'invalid_command',
+      'missing_entity',
+      'not_allowed',
+      'duplicate_entity',
+      'game_exists'
+    ] satisfies CommandErrorCode[]
+
+    assert.deepEqual(categories, [
+      'stale_command',
+      'invalid_command',
+      'missing_entity',
+      'not_allowed',
+      'duplicate_entity',
+      'game_exists'
+    ])
+  })
+
   for (const fixture of validCommandEnvelopeFixtures) {
     it(`accepts fixture: ${fixture.name}`, () => {
       const result = decodeClientMessage(fixture.message)

@@ -1,4 +1,7 @@
-import type { CareerCreationStatus } from './characterCreation'
+import type {
+  CareerCreationEvent,
+  CareerCreationStatus
+} from './characterCreation'
 import type { EventEnvelope } from './events'
 import type { CharacterId, EventId, GameId, UserId } from './ids'
 
@@ -36,6 +39,7 @@ export interface CharacterCreationActivityDescriptor extends LiveActivityBase {
   type: 'characterCreation'
   characterId: CharacterId
   transition: string
+  details?: string
   status: CareerCreationStatus
   creationComplete: boolean
 }
@@ -59,6 +63,82 @@ const boundedText = (value: string): string => {
 
   return `${value.slice(0, MAX_LIVE_ACTIVITY_TEXT_LENGTH - 3)}...`
 }
+
+const countLabel = (
+  count: number,
+  singular: string,
+  plural = `${singular}s`
+): string => `${count} ${count === 1 ? singular : plural}`
+
+const availabilityLabel = (value: boolean): string =>
+  value ? 'available' : 'unavailable'
+
+const describeCareerCreationEvent = (
+  event: CareerCreationEvent
+): string | null => {
+  switch (event.type) {
+    case 'SET_CHARACTERISTICS':
+      return 'Characteristics assigned'
+    case 'COMPLETE_HOMEWORLD':
+      return 'Homeworld complete'
+    case 'SELECT_CAREER': {
+      const selection = event.isNewCareer ? 'new career' : 'existing career'
+      const draft = event.drafted === undefined ? null : 'draft resolved'
+
+      return ['Career selected', selection, draft].filter(Boolean).join('; ')
+    }
+    case 'COMPLETE_BASIC_TRAINING':
+      return 'Basic training complete'
+    case 'SURVIVAL_PASSED':
+      return [
+        'Survival passed',
+        `commission ${availabilityLabel(event.canCommission)}`,
+        `advancement ${availabilityLabel(event.canAdvance)}`
+      ].join('; ')
+    case 'SURVIVAL_FAILED':
+      return 'Survival failed'
+    case 'COMPLETE_COMMISSION':
+      return 'Commission earned'
+    case 'SKIP_COMMISSION':
+      return 'Commission skipped'
+    case 'COMPLETE_ADVANCEMENT':
+      return 'Advancement earned'
+    case 'SKIP_ADVANCEMENT':
+      return 'Advancement skipped'
+    case 'COMPLETE_SKILLS':
+      return 'Skills and training complete'
+    case 'COMPLETE_AGING':
+      return 'Aging resolved'
+    case 'REENLIST':
+      return 'Reenlisted for another term'
+    case 'LEAVE_CAREER':
+      return 'Leaving career'
+    case 'REENLIST_BLOCKED':
+      return 'Reenlistment blocked'
+    case 'FORCED_REENLIST':
+      return 'Forced reenlistment'
+    case 'CONTINUE_CAREER':
+      return 'Continuing career'
+    case 'FINISH_MUSTERING':
+      return 'Mustering out complete'
+    case 'CREATION_COMPLETE':
+      return 'Creation complete'
+    case 'DEATH_CONFIRMED':
+      return 'Death confirmed'
+    case 'MISHAP_RESOLVED':
+      return 'Mishap resolved'
+    case 'RESET':
+      return 'Creation reset'
+    default: {
+      const exhaustive: never = event
+      return exhaustive
+    }
+  }
+}
+
+const compactCharacterCreationDetails = (
+  value: string | null
+): { details?: string } => (value ? { details: boundedText(value) } : {})
 
 export const deriveLiveActivity = (
   envelope: EventEnvelope
@@ -91,6 +171,9 @@ export const deriveLiveActivity = (
         type: 'characterCreation',
         characterId: event.characterId,
         transition: event.creationEvent.type,
+        ...compactCharacterCreationDetails(
+          describeCareerCreationEvent(event.creationEvent)
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -101,8 +184,87 @@ export const deriveLiveActivity = (
         type: 'characterCreation',
         characterId: event.characterId,
         transition: 'STARTED',
+        details: 'Started character creation',
         status: event.creation.state.status,
         creationComplete: event.creation.creationComplete
+      }
+
+    case 'CharacterCreationHomeworldSet': {
+      const homeworldName = event.homeworld.name ?? 'Homeworld'
+      const tradeCodes = event.homeworld.tradeCodes.join(', ')
+      const summary = [
+        `Homeworld: ${homeworldName}`,
+        tradeCodes ? `trade codes ${tradeCodes}` : null,
+        countLabel(event.backgroundSkills.length, 'background skill'),
+        event.pendingCascadeSkills.length > 0
+          ? countLabel(
+              event.pendingCascadeSkills.length,
+              'pending cascade',
+              'pending cascades'
+            )
+          : null
+      ]
+        .filter(Boolean)
+        .join('; ')
+
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'HOMEWORLD_SET',
+        ...compactCharacterCreationDetails(summary),
+        status: 'HOMEWORLD',
+        creationComplete: false
+      }
+    }
+
+    case 'CharacterCreationBackgroundSkillSelected':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'BACKGROUND_SKILL_SELECTED',
+        ...compactCharacterCreationDetails(
+          [
+            `Background skill: ${event.skill}`,
+            countLabel(
+              event.backgroundSkills.length,
+              'background skill selected',
+              'background skills selected'
+            ),
+            event.pendingCascadeSkills.length > 0
+              ? countLabel(
+                  event.pendingCascadeSkills.length,
+                  'pending cascade',
+                  'pending cascades'
+                )
+              : null
+          ]
+            .filter(Boolean)
+            .join('; ')
+        ),
+        status: 'HOMEWORLD',
+        creationComplete: false
+      }
+
+    case 'CharacterCreationCascadeSkillResolved':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'CASCADE_SKILL_RESOLVED',
+        ...compactCharacterCreationDetails(
+          [
+            `${event.cascadeSkill}: ${event.selection}`,
+            countLabel(
+              event.pendingCascadeSkills.length,
+              'pending cascade',
+              'pending cascades'
+            )
+          ].join('; ')
+        ),
+        status: 'HOMEWORLD',
+        creationComplete: false
       }
 
     case 'CharacterCreationFinalized':
@@ -111,8 +273,31 @@ export const deriveLiveActivity = (
         type: 'characterCreation',
         characterId: event.characterId,
         transition: 'FINALIZED',
+        ...compactCharacterCreationDetails(
+          [
+            'Finalized character',
+            event.age === null ? null : `age ${event.age}`,
+            countLabel(event.skills.length, 'skill'),
+            countLabel(event.equipment.length, 'equipment item')
+          ]
+            .filter(Boolean)
+            .join('; ')
+        ),
         status: 'PLAYABLE',
         creationComplete: true
+      }
+
+    case 'CharacterCareerTermStarted':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'CAREER_TERM_STARTED',
+        ...compactCharacterCreationDetails(
+          `Started ${event.career} term${event.drafted ? '; drafted' : ''}`
+        ),
+        status: 'CAREER_SELECTION',
+        creationComplete: false
       }
 
     default:

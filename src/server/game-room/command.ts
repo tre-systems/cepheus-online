@@ -39,6 +39,9 @@ const commandError = (
   message
 })
 
+const notAllowed = (message: string): Result<never, CommandError> =>
+  err(commandError('not_allowed', message))
+
 const requireGame = (
   state: GameState | null
 ): Result<GameState, CommandError> =>
@@ -251,15 +254,12 @@ const requireHomeworldCreation = (
     )
   }
   if (character.creation.state.status !== 'HOMEWORLD') {
-    return err(
-      commandError(
-        'invalid_command',
-        `Background choices cannot change from ${character.creation.state.status}`
-      )
+    return notAllowed(
+      `Background choices cannot change from ${character.creation.state.status}`
     )
   }
   if (!character.creation.homeworld) {
-    return err(commandError('missing_entity', 'Homeworld has not been set'))
+    return notAllowed('Homeworld must be set before background choices')
   }
 
   return ok(character.creation)
@@ -501,6 +501,15 @@ export const deriveEventsForCommand = (
           command.creationEvent
         )
       ) {
+        if (
+          character.creation.state.status === 'PLAYABLE' ||
+          character.creation.state.status === 'DECEASED'
+        ) {
+          return notAllowed(
+            `${command.creationEvent.type} is not valid from ${character.creation.state.status}`
+          )
+        }
+
         return err(
           commandError(
             'invalid_command',
@@ -541,11 +550,8 @@ export const deriveEventsForCommand = (
         )
       }
       if (character.creation.state.status !== 'HOMEWORLD') {
-        return err(
-          commandError(
-            'invalid_command',
-            `Homeworld cannot be set from ${character.creation.state.status}`
-          )
+        return notAllowed(
+          `Homeworld cannot be set from ${character.creation.state.status}`
         )
       }
       const homeworld = normalizeHomeworld(command.homeworld)

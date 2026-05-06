@@ -1,7 +1,10 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { CareerCreationEvent, CareerCreationStatus } from './characterCreation'
+import type {
+  CareerCreationEvent,
+  CareerCreationStatus
+} from './characterCreation'
 import type { EventEnvelope } from './events'
 import {
   asBoardId,
@@ -30,6 +33,25 @@ const envelope = (
 })
 
 describe('game state projection', () => {
+  it('rejects unknown event types instead of ignoring them', () => {
+    let thrown: unknown
+
+    try {
+      projectGameState([
+        envelope(1, {
+          type: 'UnknownEvent'
+        } as unknown as EventEnvelope['event'])
+      ])
+    } catch (error) {
+      thrown = error
+    }
+
+    if (!(thrown instanceof Error)) {
+      throw new Error('Expected unknown event projection to throw')
+    }
+    assert.equal(/Unhandled event UnknownEvent/.test(thrown.message), true)
+  })
+
   it('projects explicit board selection over the first created board', () => {
     const state = projectGameState([
       envelope(1, {
@@ -267,7 +289,10 @@ describe('game state projection', () => {
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'PLAYABLE')
     assert.equal(creation?.creationComplete, true)
-    assert.deepEqual(creation?.terms.map((term) => term.career), ['Scout'])
+    assert.deepEqual(
+      creation?.terms.map((term) => term.career),
+      ['Scout']
+    )
     assert.deepEqual(creation?.careers, [{ name: 'Scout', rank: 0 }])
     assert.deepEqual(creation?.history, [
       { type: 'SET_CHARACTERISTICS' },
@@ -349,11 +374,19 @@ describe('game state projection', () => {
         career: 'Scout',
         drafted: false
       }),
-      transition(5, { type: 'SURVIVAL_PASSED', canCommission: false, canAdvance: false }, 'SURVIVAL'),
+      transition(
+        5,
+        { type: 'SURVIVAL_PASSED', canCommission: false, canAdvance: false },
+        'SURVIVAL'
+      ),
       transition(6, { type: 'COMPLETE_SKILLS' }, 'SURVIVAL'),
       transition(7, { type: 'COMPLETE_AGING' }, 'REENLISTMENT'),
       transition(8, { type: 'REENLIST' }, 'SURVIVAL'),
-      transition(9, { type: 'SURVIVAL_PASSED', canCommission: false, canAdvance: false }, 'SURVIVAL'),
+      transition(
+        9,
+        { type: 'SURVIVAL_PASSED', canCommission: false, canAdvance: false },
+        'SURVIVAL'
+      ),
       transition(10, { type: 'COMPLETE_SKILLS' }, 'SURVIVAL'),
       transition(11, { type: 'COMPLETE_AGING' }, 'REENLISTMENT'),
       transition(12, { type: 'LEAVE_CAREER' }, 'MUSTERING_OUT'),
@@ -369,7 +402,10 @@ describe('game state projection', () => {
     assert.equal(terms?.[0]?.complete, true)
     assert.equal(terms?.[1]?.complete, true)
     assert.equal(terms?.[1]?.musteringOut, true)
-    assert.equal(state?.characters[characterId]?.creation?.state.status, 'PLAYABLE')
+    assert.equal(
+      state?.characters[characterId]?.creation?.state.status,
+      'PLAYABLE'
+    )
   })
 
   it('ignores character creation events for missing characters', () => {

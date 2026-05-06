@@ -182,6 +182,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/live-activity-client.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'live-activity-client.js'
+    ),
+    exportName: 'CLIENT_LIVE_ACTIVITY_CLIENT_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/map-asset-library.js',
     source: join(compiledClientRoot, 'client', 'app', 'map-asset-library.js'),
     exportName: 'CLIENT_MAP_ASSET_LIBRARY_JS',

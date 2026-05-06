@@ -93,6 +93,7 @@ import { createAppSession } from './app-session.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
+import { prepareLiveActivityApplication } from './live-activity-client.js'
 import { planCreatePieceCommands } from './piece-command-plan.js'
 import { createPwaInstallController } from './pwa-install.js'
 import { createRoomMenuController } from './room-menu-controller.js'
@@ -260,22 +261,19 @@ const selectPiece = (pieceId) => {
 
 const handleServerMessage = (message) => {
   const application = applyClientServerMessage(state, message)
-  const diceRollActivities = application.diceRollActivities.filter(
-    (activity) =>
-      !animatedDiceRollActivityIds.has(activity.id) &&
-      !revealedDiceIds.has(activity.id)
-  )
+  const liveActivityApplication = prepareLiveActivityApplication(application, {
+    animatedDiceRollActivityIds,
+    revealedDiceIds
+  })
   const sessionState = appSession.applyServerMessage(application)
   setError(sessionState.requestError || '')
   if (application.shouldApplyState) {
     applyState(application.state, {
-      animateLatestDiceLog: application.diceRollActivities.length === 0,
-      deferDiceRevealIds: new Set(
-        diceRollActivities.map((activity) => activity.id)
-      )
+      animateLatestDiceLog: liveActivityApplication.animateLatestDiceLog,
+      deferDiceRevealIds: liveActivityApplication.deferDiceRevealIds
     })
   }
-  for (const activity of diceRollActivities) {
+  for (const activity of liveActivityApplication.diceRollActivities) {
     animatedDiceRollActivityIds.add(activity.id)
     animateRoll(activity)
   }

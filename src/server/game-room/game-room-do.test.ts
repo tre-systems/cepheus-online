@@ -376,6 +376,7 @@ describe('GameRoomDO HTTP skeleton', () => {
       type: 'characterCreation',
       characterId: 'scout',
       transition: 'STARTED',
+      details: 'Started character creation',
       status: 'CHARACTERISTICS',
       creationComplete: false
     })

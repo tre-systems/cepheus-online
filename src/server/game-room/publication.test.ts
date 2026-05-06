@@ -331,6 +331,7 @@ describe('room publication flow', () => {
         type: 'characterCreation',
         characterId,
         transition: 'STARTED',
+        details: 'Started character creation',
         status: 'CHARACTERISTICS',
         creationComplete: false
       }

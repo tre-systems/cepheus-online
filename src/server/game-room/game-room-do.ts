@@ -60,6 +60,8 @@ const statusForError = (error: CommandError): number => {
     case 'game_not_found':
     case 'missing_entity':
       return 404
+    case 'not_allowed':
+      return 403
     case 'stale_command':
     case 'wrong_room':
     case 'game_exists':

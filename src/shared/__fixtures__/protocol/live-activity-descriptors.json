@@ -56,10 +56,11 @@
       "type": "characterCreation",
       "characterId": "char-1",
       "transition": "SELECT_CAREER",
+      "details": "Career selected; new career; draft resolved",
       "status": "BASIC_TRAINING",
       "creationComplete": false
     },
-    "maxSerializedBytes": 320
+    "maxSerializedBytes": 380
   },
   {
     "name": "bounded dice roll activity",

@@ -75,11 +75,12 @@
           "type": "characterCreation",
           "characterId": "char-1",
           "transition": "SELECT_CAREER",
+          "details": "Career selected; new career; draft resolved",
           "status": "BASIC_TRAINING",
           "creationComplete": false
         }
       ]
     },
-    "maxSerializedBytes": 640
+    "maxSerializedBytes": 700
   }
 ]

@@ -24,6 +24,7 @@ export type CommandErrorCode =
   | 'game_not_found'
   | 'duplicate_entity'
   | 'missing_entity'
+  | 'not_allowed'
   | 'stale_command'
   | 'projection_mismatch'
 

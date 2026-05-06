@@ -1,4 +1,4 @@
-import type { EventEnvelope } from './events'
+import type { EventEnvelope, GameEvent } from './events'
 import { leaveCareerTerm, startCareerTerm } from './characterCreation'
 import type {
   CharacterCharacteristics,
@@ -38,6 +38,383 @@ const applyCharacterSheetPatch = (
   if (patch.credits !== undefined) character.credits = patch.credits
 }
 
+type EventEnvelopeFor<TEvent extends GameEvent> = Omit<
+  EventEnvelope,
+  'event'
+> & {
+  event: TEvent
+}
+
+type EventHandler<TEvent extends GameEvent> = (
+  state: GameState | null,
+  envelope: EventEnvelopeFor<TEvent>
+) => GameState | null
+
+type EventHandlerRegistry = {
+  [TType in GameEvent['type']]: EventHandler<
+    Extract<GameEvent, { type: TType }>
+  >
+}
+
+const requireState = (
+  state: GameState | null,
+  eventType: GameEvent['type']
+): GameState => {
+  if (!state) throw new Error(`${eventType} before GameCreated`)
+  return state
+}
+
+const eventHandlers = {
+  GameCreated: (_state, envelope) => {
+    const event = envelope.event
+
+    return {
+      id: envelope.gameId,
+      slug: event.slug,
+      name: event.name,
+      ownerId: event.ownerId,
+      players: {
+        [event.ownerId]: {
+          userId: event.ownerId,
+          role: 'REFEREE'
+        }
+      },
+      characters: {},
+      boards: {},
+      pieces: {},
+      diceLog: [],
+      selectedBoardId: null,
+      eventSeq: envelope.seq
+    }
+  },
+
+  CharacterCreated: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+
+    nextState.characters[event.characterId] = {
+      id: event.characterId,
+      ownerId: event.ownerId,
+      type: event.characterType,
+      name: event.name,
+      active: true,
+      notes: '',
+      age: null,
+      characteristics: defaultCharacteristics(),
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: null
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterSheetUpdated: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character) return nextState
+
+    applyCharacterSheetPatch(character, event)
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationStarted: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character) return nextState
+
+    character.creation = structuredClone(event.creation)
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationTransitioned: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    let terms = character.creation.terms.map((term) => structuredClone(term))
+    let careers = character.creation.careers.map((career) => ({
+      ...career
+    }))
+    const creationEvent = event.creationEvent
+
+    if (
+      creationEvent.type === 'REENLIST' ||
+      creationEvent.type === 'FORCED_REENLIST'
+    ) {
+      const career = terms.at(-1)?.career
+      if (career) {
+        const result = startCareerTerm({
+          career,
+          terms,
+          careers
+        })
+        terms = result.terms.map((term) => structuredClone(term))
+        careers = result.careers.map((entry) => ({ ...entry }))
+      }
+    } else if (
+      creationEvent.type === 'LEAVE_CAREER' ||
+      creationEvent.type === 'REENLIST_BLOCKED' ||
+      creationEvent.type === 'MISHAP_RESOLVED'
+    ) {
+      terms = terms.map((term, index) =>
+        index === terms.length - 1
+          ? leaveCareerTerm(term)
+          : structuredClone(term)
+      )
+    }
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      terms,
+      careers,
+      history: [
+        ...(character.creation.history ?? []),
+        structuredClone(creationEvent)
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationHomeworldSet: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      homeworld: structuredClone(event.homeworld),
+      backgroundSkills: [...event.backgroundSkills],
+      pendingCascadeSkills: [...event.pendingCascadeSkills]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationBackgroundSkillSelected: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      backgroundSkills: [...event.backgroundSkills],
+      pendingCascadeSkills: [...event.pendingCascadeSkills]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationCascadeSkillResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      backgroundSkills: [...event.backgroundSkills],
+      pendingCascadeSkills: [...event.pendingCascadeSkills]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationFinalized: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    applyCharacterSheetPatch(character, event)
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCareerTermStarted: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const result = startCareerTerm({
+      career: event.career,
+      terms: character.creation.terms,
+      careers: character.creation.careers,
+      drafted: event.drafted
+    })
+
+    character.creation = {
+      ...character.creation,
+      terms: result.terms.map((term) => structuredClone(term)),
+      careers: result.careers.map((career) => ({ ...career })),
+      canEnterDraft: result.canEnterDraft,
+      failedToQualify: result.failedToQualify
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  BoardCreated: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+
+    nextState.boards[event.boardId] = {
+      id: event.boardId,
+      name: event.name,
+      imageAssetId: event.imageAssetId,
+      url: event.url,
+      width: event.width,
+      height: event.height,
+      scale: event.scale,
+      doors: {}
+    }
+    nextState.selectedBoardId = nextState.selectedBoardId ?? event.boardId
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  BoardSelected: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    if (!nextState.boards[event.boardId]) return nextState
+
+    nextState.selectedBoardId = event.boardId
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  DoorStateChanged: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    if (!nextState.boards[event.boardId]) return nextState
+
+    nextState.boards[event.boardId].doors[event.doorId] = {
+      id: event.doorId,
+      open: event.open
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  PieceCreated: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+
+    nextState.pieces[event.pieceId] = {
+      id: event.pieceId,
+      boardId: event.boardId,
+      characterId: event.characterId,
+      imageAssetId: event.imageAssetId,
+      name: event.name,
+      x: event.x,
+      y: event.y,
+      z: 0,
+      width: event.width ?? 50,
+      height: event.height ?? 50,
+      scale: event.scale ?? 1,
+      visibility: 'PREVIEW',
+      freedom: 'LOCKED'
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  PieceMoved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const piece = nextState.pieces[event.pieceId]
+    if (!piece) return nextState
+
+    piece.x = event.x
+    piece.y = event.y
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  PieceVisibilityChanged: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const piece = nextState.pieces[event.pieceId]
+    if (!piece) return nextState
+
+    piece.visibility = event.visibility
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  PieceFreedomChanged: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const piece = nextState.pieces[event.pieceId]
+    if (!piece) return nextState
+
+    piece.freedom = event.freedom
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  DiceRolled: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+
+    nextState.diceLog.push({
+      id: envelope.id,
+      actorId: envelope.actorId,
+      createdAt: envelope.createdAt,
+      revealAt: diceRevealAt(envelope.createdAt),
+      expression: event.expression,
+      reason: event.reason,
+      rolls: event.rolls,
+      total: event.total
+    })
+    if (nextState.diceLog.length > 20) {
+      nextState.diceLog.splice(0, nextState.diceLog.length - 20)
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  }
+} satisfies EventHandlerRegistry
+
+const projectEnvelope = <TEvent extends GameEvent>(
+  state: GameState | null,
+  envelope: EventEnvelopeFor<TEvent>
+): GameState | null => {
+  const handler = eventHandlers[envelope.event.type] as EventHandler<TEvent>
+  return handler(state, envelope)
+}
+
+const hasEventHandler = (eventType: string): eventType is GameEvent['type'] =>
+  Object.hasOwn(eventHandlers, eventType)
+
 export const projectGameState = (
   events: readonly EventEnvelope[],
   initialState: GameState | null = null
@@ -47,316 +424,10 @@ export const projectGameState = (
 
   for (const envelope of events) {
     const event = envelope.event
-
-    switch (event.type) {
-      case 'GameCreated':
-        state = {
-          id: envelope.gameId,
-          slug: event.slug,
-          name: event.name,
-          ownerId: event.ownerId,
-          players: {
-            [event.ownerId]: {
-              userId: event.ownerId,
-              role: 'REFEREE'
-            }
-          },
-          characters: {},
-          boards: {},
-          pieces: {},
-          diceLog: [],
-          selectedBoardId: null,
-          eventSeq: envelope.seq
-        }
-        break
-
-      case 'CharacterCreated':
-        if (!state) throw new Error('CharacterCreated before GameCreated')
-        state.characters[event.characterId] = {
-          id: event.characterId,
-          ownerId: event.ownerId,
-          type: event.characterType,
-          name: event.name,
-          active: true,
-          notes: '',
-          age: null,
-          characteristics: defaultCharacteristics(),
-          skills: [],
-          equipment: [],
-          credits: 0,
-          creation: null
-        }
-        state.eventSeq = envelope.seq
-        break
-
-      case 'CharacterSheetUpdated': {
-        if (!state) {
-          throw new Error('CharacterSheetUpdated before GameCreated')
-        }
-        const character = state.characters[event.characterId]
-        if (!character) break
-        applyCharacterSheetPatch(character, event)
-
-        state.eventSeq = envelope.seq
-        break
-      }
-
-      case 'CharacterCreationStarted': {
-        if (!state) {
-          throw new Error('CharacterCreationStarted before GameCreated')
-        }
-        const character = state.characters[event.characterId]
-        if (!character) break
-
-        character.creation = structuredClone(event.creation)
-        state.eventSeq = envelope.seq
-        break
-      }
-
-      case 'CharacterCreationTransitioned': {
-        if (!state) {
-          throw new Error('CharacterCreationTransitioned before GameCreated')
-        }
-        const character = state.characters[event.characterId]
-        if (!character?.creation) break
-        let terms = character.creation.terms.map((term) =>
-          structuredClone(term)
-        )
-        let careers = character.creation.careers.map((career) => ({
-          ...career
-        }))
-        const creationEvent = event.creationEvent
-
-        if (
-          creationEvent.type === 'REENLIST' ||
-          creationEvent.type === 'FORCED_REENLIST'
-        ) {
-          const career = terms.at(-1)?.career
-          if (career) {
-            const result = startCareerTerm({
-              career,
-              terms,
-              careers
-            })
-            terms = result.terms.map((term) => structuredClone(term))
-            careers = result.careers.map((entry) => ({ ...entry }))
-          }
-        } else if (
-          creationEvent.type === 'LEAVE_CAREER' ||
-          creationEvent.type === 'REENLIST_BLOCKED' ||
-          creationEvent.type === 'MISHAP_RESOLVED'
-        ) {
-          terms = terms.map((term, index) =>
-            index === terms.length - 1
-              ? leaveCareerTerm(term)
-              : structuredClone(term)
-          )
-        }
-
-        character.creation = {
-          ...character.creation,
-          state: structuredClone(event.state),
-          creationComplete: event.creationComplete,
-          terms,
-          careers,
-          history: [
-            ...(character.creation.history ?? []),
-            structuredClone(creationEvent)
-          ]
-        }
-        state.eventSeq = envelope.seq
-        break
-      }
-
-      case 'CharacterCreationHomeworldSet': {
-        if (!state) {
-          throw new Error('CharacterCreationHomeworldSet before GameCreated')
-        }
-        const character = state.characters[event.characterId]
-        if (!character?.creation) break
-
-        character.creation = {
-          ...character.creation,
-          homeworld: structuredClone(event.homeworld),
-          backgroundSkills: [...event.backgroundSkills],
-          pendingCascadeSkills: [...event.pendingCascadeSkills]
-        }
-        state.eventSeq = envelope.seq
-        break
-      }
-
-      case 'CharacterCreationBackgroundSkillSelected': {
-        if (!state) {
-          throw new Error(
-            'CharacterCreationBackgroundSkillSelected before GameCreated'
-          )
-        }
-        const character = state.characters[event.characterId]
-        if (!character?.creation) break
-
-        character.creation = {
-          ...character.creation,
-          backgroundSkills: [...event.backgroundSkills],
-          pendingCascadeSkills: [...event.pendingCascadeSkills]
-        }
-        state.eventSeq = envelope.seq
-        break
-      }
-
-      case 'CharacterCreationCascadeSkillResolved': {
-        if (!state) {
-          throw new Error(
-            'CharacterCreationCascadeSkillResolved before GameCreated'
-          )
-        }
-        const character = state.characters[event.characterId]
-        if (!character?.creation) break
-
-        character.creation = {
-          ...character.creation,
-          backgroundSkills: [...event.backgroundSkills],
-          pendingCascadeSkills: [...event.pendingCascadeSkills]
-        }
-        state.eventSeq = envelope.seq
-        break
-      }
-
-      case 'CharacterCreationFinalized': {
-        if (!state) {
-          throw new Error('CharacterCreationFinalized before GameCreated')
-        }
-        const character = state.characters[event.characterId]
-        if (!character?.creation) break
-        applyCharacterSheetPatch(character, event)
-
-        state.eventSeq = envelope.seq
-        break
-      }
-
-      case 'CharacterCareerTermStarted': {
-        if (!state) {
-          throw new Error('CharacterCareerTermStarted before GameCreated')
-        }
-        const character = state.characters[event.characterId]
-        if (!character?.creation) break
-        const result = startCareerTerm({
-          career: event.career,
-          terms: character.creation.terms,
-          careers: character.creation.careers,
-          drafted: event.drafted
-        })
-
-        character.creation = {
-          ...character.creation,
-          terms: result.terms.map((term) => structuredClone(term)),
-          careers: result.careers.map((career) => ({ ...career })),
-          canEnterDraft: result.canEnterDraft,
-          failedToQualify: result.failedToQualify
-        }
-        state.eventSeq = envelope.seq
-        break
-      }
-
-      case 'BoardCreated':
-        if (!state) throw new Error('BoardCreated before GameCreated')
-        state.boards[event.boardId] = {
-          id: event.boardId,
-          name: event.name,
-          imageAssetId: event.imageAssetId,
-          url: event.url,
-          width: event.width,
-          height: event.height,
-          scale: event.scale,
-          doors: {}
-        }
-        state.selectedBoardId = state.selectedBoardId ?? event.boardId
-        state.eventSeq = envelope.seq
-        break
-
-      case 'BoardSelected':
-        if (!state) throw new Error('BoardSelected before GameCreated')
-        if (!state.boards[event.boardId]) break
-        state.selectedBoardId = event.boardId
-        state.eventSeq = envelope.seq
-        break
-
-      case 'DoorStateChanged':
-        if (!state) throw new Error('DoorStateChanged before GameCreated')
-        if (!state.boards[event.boardId]) break
-        state.boards[event.boardId].doors[event.doorId] = {
-          id: event.doorId,
-          open: event.open
-        }
-        state.eventSeq = envelope.seq
-        break
-
-      case 'PieceCreated':
-        if (!state) throw new Error('PieceCreated before GameCreated')
-        state.pieces[event.pieceId] = {
-          id: event.pieceId,
-          boardId: event.boardId,
-          characterId: event.characterId,
-          imageAssetId: event.imageAssetId,
-          name: event.name,
-          x: event.x,
-          y: event.y,
-          z: 0,
-          width: event.width ?? 50,
-          height: event.height ?? 50,
-          scale: event.scale ?? 1,
-          visibility: 'PREVIEW',
-          freedom: 'LOCKED'
-        }
-        state.eventSeq = envelope.seq
-        break
-
-      case 'PieceMoved':
-        if (!state) throw new Error('PieceMoved before GameCreated')
-        if (!state.pieces[event.pieceId]) break
-        state.pieces[event.pieceId].x = event.x
-        state.pieces[event.pieceId].y = event.y
-        state.eventSeq = envelope.seq
-        break
-
-      case 'PieceVisibilityChanged':
-        if (!state) throw new Error('PieceVisibilityChanged before GameCreated')
-        if (!state.pieces[event.pieceId]) break
-        state.pieces[event.pieceId].visibility = event.visibility
-        state.eventSeq = envelope.seq
-        break
-
-      case 'PieceFreedomChanged':
-        if (!state) throw new Error('PieceFreedomChanged before GameCreated')
-        if (!state.pieces[event.pieceId]) break
-        state.pieces[event.pieceId].freedom = event.freedom
-        state.eventSeq = envelope.seq
-        break
-
-      case 'DiceRolled':
-        if (!state) throw new Error('DiceRolled before GameCreated')
-        state.diceLog.push({
-          id: envelope.id,
-          actorId: envelope.actorId,
-          createdAt: envelope.createdAt,
-          revealAt: diceRevealAt(envelope.createdAt),
-          expression: event.expression,
-          reason: event.reason,
-          rolls: event.rolls,
-          total: event.total
-        })
-        if (state.diceLog.length > 20) {
-          state.diceLog.splice(0, state.diceLog.length - 20)
-        }
-        state.eventSeq = envelope.seq
-        break
-
-      default: {
-        const exhaustive: never = event
-        throw new Error(
-          `Unhandled event ${(exhaustive as { type: string }).type}`
-        )
-      }
+    if (!hasEventHandler(event.type)) {
+      throw new Error(`Unhandled event ${(event as { type: string }).type}`)
     }
+    state = projectEnvelope(state, envelope)
   }
 
   return state
