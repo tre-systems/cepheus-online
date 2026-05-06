@@ -34,6 +34,7 @@ const clientModules = new Map<
         '/client/app/live-activity-client.js',
         '/client/app/piece-command-plan.js',
         '/client/app/pwa-install.js',
+        '/client/app/request-id.js',
         '/client/app/room-api.js',
         '/client/app/room-menu-controller.js',
         '/client/app/service-worker.js',
@@ -243,6 +244,7 @@ const clientModules = new Map<
     }
   ],
   ['/client/app/pwa-install.js', { markers: ['createPwaInstallController'] }],
+  ['/client/app/request-id.js', { markers: ['createRequestIdFactory'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
   [
     '/client/app/room-menu-controller.js',

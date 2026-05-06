@@ -5,6 +5,7 @@ import { asGameId } from '../../shared/ids'
 import type { DurableObjectState } from '../cloudflare'
 import type { Env } from '../env'
 import { GameRoomDO } from './game-room-do'
+import type { PublicationTelemetryEvent } from './publication-telemetry'
 import { createMemoryStorage } from './test-support'
 import { readEventStream } from './storage'
 
@@ -29,7 +30,8 @@ const parseMessages = (socket: TestSocket) =>
 const createRoom = (
   webSockets: TestSocket[] = [],
   tags = new Map<WebSocket, string[]>(),
-  storage = createMemoryStorage()
+  storage = createMemoryStorage(),
+  telemetry: PublicationTelemetryEvent[] = []
 ) =>
   new GameRoomDO(
     {
@@ -37,7 +39,10 @@ const createRoom = (
       getWebSockets: () => webSockets,
       getTags: (socket) => tags.get(socket) ?? []
     } satisfies DurableObjectState,
-    {} as Env
+    {} as Env,
+    {
+      recordPublication: (event) => telemetry.push(event)
+    }
   )
 
 const roomSocketTags = (viewer: string, user: string) => [
@@ -135,6 +140,26 @@ describe('GameRoomDO HTTP skeleton', () => {
     assert.equal(message.state.name, 'Spinward Test')
   })
 
+  it('records accepted publication telemetry through the room boundary', async () => {
+    const telemetry: PublicationTelemetryEvent[] = []
+    const room = createRoom([], new Map(), createMemoryStorage(), telemetry)
+
+    const response = await postCommand(room, createGameBody())
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(telemetry, [
+      {
+        type: 'publicationAccepted',
+        gameId: asGameId('game-1'),
+        requestId: 'create-game',
+        commandType: 'CreateGame',
+        actorId: 'user-1',
+        eventSeq: 1,
+        eventCount: 1
+      }
+    ])
+  })
+
   it('returns user validation failures as commandRejected', async () => {
     const room = createRoom()
 
@@ -148,8 +173,45 @@ describe('GameRoomDO HTTP skeleton', () => {
     assert.equal(message.eventSeq, 0)
   })
 
+  it('records commandRejected publication telemetry through the room boundary', async () => {
+    const telemetry: PublicationTelemetryEvent[] = []
+    const room = createRoom([], new Map(), createMemoryStorage(), telemetry)
+    await postCommand(room, createGameBody())
+    telemetry.length = 0
+
+    const response = await postCommand(
+      room,
+      commandBody('create-invalid-board', {
+        type: 'CreateBoard',
+        boardId: 'main-board',
+        name: 'Downport',
+        width: -1,
+        height: 800,
+        scale: 50
+      })
+    )
+    const message = await response.json()
+
+    assert.equal(response.status, 400)
+    assert.equal(message.type, 'commandRejected')
+    assert.equal(message.error.code, 'invalid_command')
+    assert.deepEqual(telemetry, [
+      {
+        type: 'publicationRejected',
+        gameId: asGameId('game-1'),
+        requestId: 'create-invalid-board',
+        commandType: 'CreateBoard',
+        actorId: 'user-1',
+        code: 'invalid_command',
+        message: 'width must be positive',
+        currentSeq: 1
+      }
+    ])
+  })
+
   it('returns internal publication failures as HTTP 500 errors', async () => {
     const storage = createMemoryStorage()
+    const telemetry: PublicationTelemetryEvent[] = []
     const get = storage.get.bind(storage)
     storage.get = async <T = unknown>(key: string): Promise<T | undefined> => {
       const value = await get<T>(key)
@@ -172,7 +234,7 @@ describe('GameRoomDO HTTP skeleton', () => {
 
       return value
     }
-    const room = createRoom([], new Map(), storage)
+    const room = createRoom([], new Map(), storage, telemetry)
 
     const response = await postCommand(room, createGameBody())
     const message = await response.json()
@@ -185,6 +247,19 @@ describe('GameRoomDO HTTP skeleton', () => {
       'Stored event stream does not match live projection'
     )
     assert.equal((await readEventStream(storage, asGameId('game-1'))).length, 1)
+    assert.deepEqual(telemetry, [
+      {
+        type: 'publicationInternalError',
+        gameId: asGameId('game-1'),
+        requestId: 'create-game',
+        commandType: 'CreateGame',
+        actorId: 'user-1',
+        code: 'projection_mismatch',
+        message: 'Stored event stream does not match live projection',
+        currentSeq: 0,
+        eventSeq: 1
+      }
+    ])
   })
 
   it('serves the current room projection', async () => {

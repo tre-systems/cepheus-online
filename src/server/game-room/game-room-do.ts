@@ -13,6 +13,10 @@ import type { Env } from '../env'
 import { jsonResponse } from '../http'
 import { CommandPublicationError, runCommandPublication } from './publication'
 import {
+  noopPublicationTelemetrySink,
+  type PublicationTelemetrySink
+} from './publication-telemetry'
+import {
   buildRoomStateMessage,
   parseViewerFromUrl,
   parseViewerRole,
@@ -83,7 +87,8 @@ const activityPayload = (liveActivities: readonly LiveActivityDescriptor[]) =>
 export class GameRoomDO {
   constructor(
     private readonly state: DurableObjectState,
-    _env: Env
+    _env: Env,
+    private readonly publicationTelemetrySink: PublicationTelemetrySink = noopPublicationTelemetrySink
   ) {}
 
   private getWebSockets(): WebSocket[] {
@@ -183,7 +188,10 @@ export class GameRoomDO {
       publication = await runCommandPublication(
         this.state.storage,
         gameId,
-        message
+        message,
+        {
+          telemetrySink: this.publicationTelemetrySink
+        }
       )
     } catch (error) {
       if (error instanceof CommandPublicationError) {

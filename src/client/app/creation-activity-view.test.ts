@@ -1,15 +1,24 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { asCharacterId, asEventId, asGameId, asUserId } from '../../shared/ids'
+import {
+  asBoardId,
+  asCharacterId,
+  asEventId,
+  asGameId,
+  asUserId
+} from '../../shared/ids'
 import type {
   CharacterCreationActivityDescriptor,
   DiceRollActivityDescriptor,
   LiveActivityDescriptor
 } from '../../shared/live-activity'
+import type { GameState } from '../../shared/state'
+import { applyServerMessage } from '../game-commands'
 import {
   deriveCreationActivityCard,
   deriveCreationActivityCards,
+  deriveCreationActivityCardsFromApplication,
   MAX_CREATION_ACTIVITY_DETAIL_LENGTH,
   MAX_CREATION_ACTIVITY_TITLE_LENGTH
 } from './creation-activity-view'
@@ -18,6 +27,20 @@ const baseActivity = {
   gameId: asGameId('game-1'),
   actorId: asUserId('player-1'),
   createdAt: '2026-05-06T10:00:00.000Z'
+}
+
+const acceptedState: GameState = {
+  id: asGameId('game-1'),
+  slug: 'game-1',
+  name: 'Game 1',
+  ownerId: asUserId('player-1'),
+  players: {},
+  characters: {},
+  boards: {},
+  pieces: {},
+  diceLog: [],
+  selectedBoardId: asBoardId('main-board'),
+  eventSeq: 51
 }
 
 const characterActivity = (
@@ -86,6 +109,40 @@ describe('creation activity view model', () => {
         detail: 'Started Scout term',
         tone: 'neutral',
         seq: 13
+      }
+    ])
+  })
+
+  it('derives transient cards from accepted command live activities', () => {
+    const creation = characterActivity({
+      seq: 50,
+      transition: 'COMPLETE_BASIC_TRAINING',
+      details: 'Basic training complete',
+      status: 'SKILLS_TRAINING'
+    })
+    const dice = diceActivity({ seq: 51, total: 9, rolls: [4, 5] })
+    const application = applyServerMessage(null, {
+      type: 'commandAccepted',
+      requestId: 'req-creation-activity',
+      state: acceptedState,
+      eventSeq: 51,
+      liveActivities: [creation, dice]
+    })
+
+    assert.deepEqual(deriveCreationActivityCardsFromApplication(application), [
+      {
+        title: 'Basic training complete',
+        detail: 'Basic training complete',
+        tone: 'neutral',
+        seq: 50
+      }
+    ])
+    assert.deepEqual(application.diceRollActivities, [
+      {
+        id: 'game-1:51',
+        revealAt: '2026-05-06T10:00:02.500Z',
+        rolls: [4, 5],
+        total: 9
       }
     ])
   })

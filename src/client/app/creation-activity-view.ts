@@ -2,6 +2,7 @@ import type {
   CharacterCreationActivityDescriptor,
   LiveActivityDescriptor
 } from '../../shared/live-activity'
+import type { ClientMessageApplication } from '../game-commands'
 
 export type CreationActivityCardTone = 'neutral' | 'success' | 'warning'
 
@@ -138,3 +139,8 @@ export const deriveCreationActivityCards = (
 
   return cards
 }
+
+export const deriveCreationActivityCardsFromApplication = (
+  application: Pick<ClientMessageApplication, 'liveActivities'>
+): CreationActivityCardViewModel[] =>
+  deriveCreationActivityCards(application.liveActivities)

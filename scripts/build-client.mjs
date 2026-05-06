@@ -257,6 +257,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/request-id.js',
+    source: join(compiledClientRoot, 'client', 'app', 'request-id.js'),
+    exportName: 'CLIENT_REQUEST_ID_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/room-api.js',
     source: join(compiledClientRoot, 'client', 'app', 'room-api.js'),
     exportName: 'CLIENT_ROOM_API_JS',

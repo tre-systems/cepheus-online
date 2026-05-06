@@ -100,6 +100,7 @@ import {
 import { prepareLiveActivityApplication } from './live-activity-client.js'
 import { planCreatePieceCommands } from './piece-command-plan.js'
 import { createPwaInstallController } from './pwa-install.js'
+import { createRequestIdFactory } from './request-id.js'
 import { createRoomMenuController } from './room-menu-controller.js'
 import { registerClientServiceWorker } from './service-worker.js'
 import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset.js'
@@ -119,7 +120,6 @@ const viewerRole = initialIdentity.viewerRole
 const canSelectBoards = isRefereeViewer(viewerRole)
 const appSession = createAppSession({ roomId, actorId, viewerRole })
 let boardController = null
-let requestCounter = 0
 let diceHideTimer = null
 let connectivityController = null
 const diceRevealState = createDiceRevealState()
@@ -161,8 +161,7 @@ createPwaInstallController({
   }
 })
 
-const requestId = (prefix) =>
-  prefix + '-' + Date.now().toString(36) + '-' + (++requestCounter).toString(36)
+const requestId = createRequestIdFactory()
 
 const clientIdentity = () => ({
   gameId: roomId,
