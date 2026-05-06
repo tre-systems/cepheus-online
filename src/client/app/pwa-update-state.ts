@@ -28,6 +28,19 @@ export type PwaUpdateEvent =
   | { readonly type: 'userAcceptedRefresh' }
   | { readonly type: 'failure'; readonly message?: string }
 
+export interface PwaUpdateStateStoreOptions {
+  readonly initialState?: PwaUpdateState
+  readonly onStateChange?: (
+    state: PwaUpdateState,
+    event: PwaUpdateEvent
+  ) => void
+}
+
+export interface PwaUpdateStateStore {
+  getState: () => PwaUpdateState
+  dispatch: (event: PwaUpdateEvent) => PwaUpdateState
+}
+
 export const initialPwaUpdateState: PwaUpdateState = { status: 'idle' }
 
 export const registrationUpdateFound = (
@@ -82,6 +95,39 @@ export const transitionPwaUpdateState = (
     default: {
       const exhaustive: never = event
       return exhaustive
+    }
+  }
+}
+
+export const arePwaUpdateStatesEqual = (
+  left: PwaUpdateState,
+  right: PwaUpdateState
+): boolean => {
+  if (left.status !== right.status) return false
+  if (left.status !== 'refreshFailed' || right.status !== 'refreshFailed') {
+    return true
+  }
+
+  return left.failedFrom === right.failedFrom && left.message === right.message
+}
+
+export const createPwaUpdateStateStore = ({
+  initialState = initialPwaUpdateState,
+  onStateChange
+}: PwaUpdateStateStoreOptions = {}): PwaUpdateStateStore => {
+  let state = initialState
+
+  return {
+    getState: () => state,
+    dispatch: (event) => {
+      const nextState = transitionPwaUpdateState(state, event)
+      if (!arePwaUpdateStatesEqual(state, nextState)) {
+        state = nextState
+        onStateChange?.(state, event)
+      } else {
+        state = nextState
+      }
+      return state
     }
   }
 }

@@ -11,6 +11,7 @@ import {
   pieceImageUrl
 } from './board-view.js'
 import { getAppElements } from './app-elements.js'
+import { createAppBootstrap } from './app-bootstrap.js'
 import { createBoardController } from './board-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
@@ -91,6 +92,7 @@ import { createConnectivityController } from './connectivity-controller.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
 import { createDiceRevealState } from './dice-reveal-state.js'
+import { createRoomSocketController } from './room-socket-controller.js'
 import {
   DEFAULT_APP_LOCATION,
   buildRoomWebSocketUrl,
@@ -113,7 +115,6 @@ const initialIdentity = resolveAppLocationIdentity(location.search)
 let roomId = initialIdentity.roomId
 let actorId = initialIdentity.actorId
 let state = null
-let socket = null
 let firstStateApplied = false
 let latestDiceId = null
 const viewerRole = initialIdentity.viewerRole
@@ -2181,46 +2182,24 @@ const bootstrapScene = async () => {
   await fetchState()
 }
 
+const roomSocketController = createRoomSocketController({
+  webSocketConstructor: WebSocket,
+  buildUrl: buildRoomWebSocketUrl,
+  getUrlInput: () => ({
+    protocol: location.protocol,
+    host: location.host,
+    roomId,
+    viewerRole,
+    actorId
+  }),
+  isOffline: () => connectivityController?.snapshot().status === 'offline',
+  onStatus: setStatus,
+  onError: setError,
+  onMessage: handleServerMessage
+})
+
 const connectSocket = () => {
-  if (socket) socket.close()
-  socket = new WebSocket(
-    buildRoomWebSocketUrl({
-      protocol: location.protocol,
-      host: location.host,
-      roomId,
-      viewerRole,
-      actorId
-    })
-  )
-  setStatus('Connecting')
-
-  socket.addEventListener('open', () => {
-    setStatus('Live')
-  })
-
-  socket.addEventListener('close', () => {
-    setStatus(
-      connectivityController?.snapshot().status === 'offline'
-        ? 'Offline'
-        : 'HTTP fallback'
-    )
-  })
-
-  socket.addEventListener('error', () => {
-    setStatus(
-      connectivityController?.snapshot().status === 'offline'
-        ? 'Offline'
-        : 'HTTP fallback'
-    )
-  })
-
-  socket.addEventListener('message', (event) => {
-    try {
-      handleServerMessage(JSON.parse(event.data))
-    } catch {
-      setError('Received an invalid server message')
-    }
-  })
+  roomSocketController.connect()
 }
 
 connectivityController = createConnectivityController({
@@ -2648,9 +2627,10 @@ els.roll.addEventListener('click', () => {
 
 window.addEventListener('resize', render)
 
-if (connectivityController.snapshot().status === 'online') {
-  connectSocket()
-  fetchState().catch((error) => setError(error.message))
-} else {
-  setStatus('Offline')
-}
+createAppBootstrap({
+  connectivityStatus: connectivityController.snapshot().status,
+  connect: connectSocket,
+  fetchState,
+  setStatus,
+  setError
+})

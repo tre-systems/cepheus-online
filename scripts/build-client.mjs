@@ -59,13 +59,14 @@ const assets = [
   },
   {
     pathname: '/client/app/app-command-router.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'app-command-router.js'
-    ),
+    source: join(compiledClientRoot, 'client', 'app', 'app-command-router.js'),
     exportName: 'CLIENT_APP_COMMAND_ROUTER_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/client/app/app-bootstrap.js',
+    source: join(compiledClientRoot, 'client', 'app', 'app-bootstrap.js'),
+    exportName: 'CLIENT_APP_BOOTSTRAP_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {
@@ -165,6 +166,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/room-socket-controller.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'room-socket-controller.js'
+    ),
+    exportName: 'CLIENT_ROOM_SOCKET_CONTROLLER_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/connectivity.js',
     source: join(compiledClientRoot, 'client', 'app', 'connectivity.js'),
     exportName: 'CLIENT_CONNECTIVITY_JS',
@@ -254,6 +266,12 @@ const assets = [
     pathname: '/client/app/pwa-install.js',
     source: join(compiledClientRoot, 'client', 'app', 'pwa-install.js'),
     exportName: 'CLIENT_PWA_INSTALL_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/client/app/pwa-update-state',
+    source: join(compiledClientRoot, 'client', 'app', 'pwa-update-state.js'),
+    exportName: 'CLIENT_PWA_UPDATE_STATE_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {

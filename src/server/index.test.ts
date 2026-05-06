@@ -11,12 +11,13 @@ const clientModules = new Map<
   [
     '/client/app/app.js',
     {
-      markers: ['new WebSocket', 'registerClientServiceWorker'],
+      markers: ['createRoomSocketController', 'registerClientServiceWorker'],
       imports: [
         '/client/app/board-view.js',
         '/client/app/app-elements.js',
         '/client/app/app-location.js',
         '/client/app/app-command-router.js',
+        '/client/app/app-bootstrap.js',
         '/client/app/app-session.js',
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
@@ -37,6 +38,7 @@ const clientModules = new Map<
         '/client/app/request-id.js',
         '/client/app/room-api.js',
         '/client/app/room-menu-controller.js',
+        '/client/app/room-socket-controller.js',
         '/client/app/service-worker.js',
         '/client/game-commands.js',
         '/shared/character-creation/cepheus-srd-ruleset.js'
@@ -55,6 +57,7 @@ const clientModules = new Map<
     '/client/app/app-command-router.js',
     { markers: ['createAppCommandRouter', 'sequenceCommand'] }
   ],
+  ['/client/app/app-bootstrap.js', { markers: ['createAppBootstrap'] }],
   ['/client/app/app-session.js', { markers: ['createAppSession'] }],
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
@@ -206,16 +209,20 @@ const clientModules = new Map<
   ],
   ['/client/app/connectivity.js', { markers: ['createConnectivityState'] }],
   [
+    '/client/app/room-socket-controller.js',
+    {
+      markers: ['createRoomSocketController'],
+      imports: ['/client/app/app-location.js']
+    }
+  ],
+  [
     '/client/app/dice-overlay.js',
     {
       markers: ['appendFaceValue', 'buildDie', 'animateRoll'],
       imports: ['/client/dice.js']
     }
   ],
-  [
-    '/client/app/dice-reveal-state.js',
-    { markers: ['createDiceRevealState'] }
-  ],
+  ['/client/app/dice-reveal-state.js', { markers: ['createDiceRevealState'] }],
   [
     '/client/app/door-los-view.js',
     {
@@ -244,6 +251,7 @@ const clientModules = new Map<
     }
   ],
   ['/client/app/pwa-install.js', { markers: ['createPwaInstallController'] }],
+  ['/client/app/pwa-update-state', { markers: ['createPwaUpdateStateStore'] }],
   ['/client/app/request-id.js', { markers: ['createRequestIdFactory'] }],
   ['/client/app/room-api.js', { markers: ['postRoomCommand'] }],
   [
@@ -255,7 +263,10 @@ const clientModules = new Map<
   ],
   [
     '/client/app/service-worker.js',
-    { markers: ['registerClientServiceWorker'] }
+    {
+      markers: ['registerClientServiceWorker'],
+      imports: ['/client/app/pwa-update-state']
+    }
   ],
   [
     '/client/game-commands.js',

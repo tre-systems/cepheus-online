@@ -2,7 +2,9 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import {
+  arePwaUpdateStatesEqual,
   controllerChange,
+  createPwaUpdateStateStore,
   initialPwaUpdateState,
   pwaUpdateFailure,
   registrationUpdateFound,
@@ -86,5 +88,45 @@ describe('PWA update state', () => {
     })
 
     assert.deepEqual(registrationUpdateFound(failed), { status: 'installing' })
+  })
+
+  it('compares refresh failure details when checking state equality', () => {
+    assert.equal(
+      arePwaUpdateStatesEqual(
+        { status: 'refreshFailed', failedFrom: 'idle' },
+        { status: 'refreshFailed', failedFrom: 'idle' }
+      ),
+      true
+    )
+    assert.equal(
+      arePwaUpdateStatesEqual(
+        { status: 'refreshFailed', failedFrom: 'idle' },
+        { status: 'refreshFailed', failedFrom: 'installing' }
+      ),
+      false
+    )
+  })
+
+  it('stores update state and calls back only for effective transitions', () => {
+    const states: PwaUpdateState[] = []
+    const store = createPwaUpdateStateStore({
+      onStateChange: (state) => states.push(state)
+    })
+
+    assert.deepEqual(store.getState(), { status: 'idle' })
+    assert.deepEqual(store.dispatch({ type: 'registrationUpdateFound' }), {
+      status: 'installing'
+    })
+    assert.deepEqual(store.dispatch({ type: 'registrationUpdateFound' }), {
+      status: 'installing'
+    })
+    assert.deepEqual(store.dispatch({ type: 'waitingWorkerAvailable' }), {
+      status: 'installedWaiting'
+    })
+
+    assert.deepEqual(states, [
+      { status: 'installing' },
+      { status: 'installedWaiting' }
+    ])
   })
 })

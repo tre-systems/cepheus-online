@@ -921,6 +921,159 @@ describe('room publication flow', () => {
     assert.equal((await readEventStream(storage, gameId)).length, 3)
   })
 
+  it('rejects state-machine illegal character creation transitions without appending events', async () => {
+    const assertRejectedTransition = async (
+      storage: ReturnType<typeof createMemoryStorage>,
+      command: Extract<Command, { type: 'AdvanceCharacterCreation' }>,
+      expectedCode: 'invalid_command' | 'not_allowed',
+      expectedMessage: string
+    ) => {
+      const eventCountBefore = (await readEventStream(storage, gameId)).length
+      const rejected = await publish(storage, command)
+
+      assert.equal(rejected.ok, false)
+      if (rejected.ok) return
+      assert.equal(rejected.error.code, expectedCode)
+      assert.equal(rejected.error.message, expectedMessage)
+      assert.equal(
+        (await readEventStream(storage, gameId)).length,
+        eventCountBefore
+      )
+    }
+
+    {
+      const storage = createMemoryStorage()
+      const characterId = asCharacterId('char-homeworld')
+      await publish(storage, createGameCommand())
+      await publish(storage, {
+        type: 'CreateCharacter',
+        gameId,
+        actorId,
+        characterId,
+        characterType: 'PLAYER',
+        name: 'Homeworld Scout'
+      })
+      await publish(storage, {
+        type: 'StartCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      })
+      await publish(storage, {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'SET_CHARACTERISTICS' }
+      })
+
+      await assertRejectedTransition(
+        storage,
+        {
+          type: 'AdvanceCharacterCreation',
+          gameId,
+          actorId,
+          characterId,
+          creationEvent: { type: 'SELECT_CAREER', isNewCareer: true }
+        },
+        'invalid_command',
+        'SELECT_CAREER is not valid from HOMEWORLD'
+      )
+    }
+
+    {
+      const storage = createMemoryStorage()
+      const characterId = asCharacterId('char-career-selection')
+      await publish(storage, createGameCommand())
+      await publish(storage, {
+        type: 'CreateCharacter',
+        gameId,
+        actorId,
+        characterId,
+        characterType: 'PLAYER',
+        name: 'Career Scout'
+      })
+      await publish(storage, {
+        type: 'StartCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      })
+      await publish(storage, {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'SET_CHARACTERISTICS' }
+      })
+      await publish(storage, {
+        type: 'SetCharacterCreationHomeworld',
+        gameId,
+        actorId,
+        characterId,
+        homeworld: {
+          name: 'Regina',
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid', 'Industrial']
+        }
+      })
+      await publish(storage, {
+        type: 'ResolveCharacterCreationCascadeSkill',
+        gameId,
+        actorId,
+        characterId,
+        cascadeSkill: 'Gun Combat-0',
+        selection: 'Slug Rifle'
+      })
+      const careerSelection = await publish(storage, {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+      })
+      assert.equal(careerSelection.ok, true)
+      if (!careerSelection.ok) return
+      assert.equal(
+        careerSelection.value.state.characters[characterId]?.creation?.state
+          .status,
+        'CAREER_SELECTION'
+      )
+
+      await assertRejectedTransition(
+        storage,
+        {
+          type: 'AdvanceCharacterCreation',
+          gameId,
+          actorId,
+          characterId,
+          creationEvent: { type: 'COMPLETE_BASIC_TRAINING' }
+        },
+        'invalid_command',
+        'COMPLETE_BASIC_TRAINING is not valid from CAREER_SELECTION'
+      )
+    }
+
+    {
+      const storage = createMemoryStorage()
+      const characterId = asCharacterId('char-playable')
+      await publishPlayableCharacterCreation(storage, characterId)
+
+      await assertRejectedTransition(
+        storage,
+        {
+          type: 'AdvanceCharacterCreation',
+          gameId,
+          actorId,
+          characterId,
+          creationEvent: { type: 'SET_CHARACTERISTICS' }
+        },
+        'not_allowed',
+        'SET_CHARACTERISTICS is not valid from PLAYABLE'
+      )
+    }
+  })
+
   it('rejects career selection before background choices are complete', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')

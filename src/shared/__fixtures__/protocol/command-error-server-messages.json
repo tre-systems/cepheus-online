@@ -1,5 +1,29 @@
 [
   {
+    "name": "stale command rejection",
+    "message": {
+      "type": "commandRejected",
+      "requestId": "req-stale-move",
+      "error": {
+        "code": "stale_command",
+        "message": "Command expected seq 12 but current seq is 17"
+      },
+      "eventSeq": 17
+    }
+  },
+  {
+    "name": "invalid command rejection",
+    "message": {
+      "type": "commandRejected",
+      "requestId": "req-invalid-board",
+      "error": {
+        "code": "invalid_command",
+        "message": "width must be positive"
+      },
+      "eventSeq": 17
+    }
+  },
+  {
     "name": "not allowed command rejection",
     "message": {
       "type": "commandRejected",
@@ -9,6 +33,38 @@
         "message": "Only the referee can reveal hidden pieces"
       },
       "eventSeq": 17
+    }
+  },
+  {
+    "name": "missing entity command rejection",
+    "message": {
+      "type": "commandRejected",
+      "requestId": "req-missing-piece",
+      "error": {
+        "code": "missing_entity",
+        "message": "Piece does not exist"
+      },
+      "eventSeq": 17
+    }
+  },
+  {
+    "name": "projection mismatch server error",
+    "message": {
+      "type": "error",
+      "error": {
+        "code": "projection_mismatch",
+        "message": "Stored event stream does not match live projection"
+      }
+    }
+  },
+  {
+    "name": "wrong room server error",
+    "message": {
+      "type": "error",
+      "error": {
+        "code": "wrong_room",
+        "message": "Command targets game-2, not game-1"
+      }
     }
   }
 ]

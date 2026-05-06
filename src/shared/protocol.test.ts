@@ -138,14 +138,66 @@ describe('protocol validation', () => {
     it(`covers command error server message fixture: ${fixture.name}`, () => {
       const { message } = fixture
 
-      assert.equal(message.type, 'commandRejected')
-      if (message.type !== 'commandRejected') return
-      assert.equal(message.error.code, 'not_allowed')
-      assert.equal(typeof message.error.message, 'string')
-      assert.equal(message.error.message.length > 0, true)
-      assert.equal(Number.isInteger(message.eventSeq), true)
+      if (message.type === 'commandRejected') {
+        assert.equal(typeof message.error.message, 'string')
+        assert.equal(message.error.message.length > 0, true)
+        assert.equal(/^req-/.test(message.requestId), true)
+        assert.equal(
+          [
+            'stale_command',
+            'invalid_command',
+            'not_allowed',
+            'missing_entity'
+          ].includes(message.error.code),
+          true
+        )
+        assert.equal(Number.isInteger(message.eventSeq), true)
+        return
+      }
+
+      if (message.type === 'error') {
+        assert.equal(typeof message.error.message, 'string')
+        assert.equal(message.error.message.length > 0, true)
+        assert.equal(
+          ['projection_mismatch', 'wrong_room'].includes(message.error.code),
+          true
+        )
+        return
+      }
+
+      assert.equal(
+        ['commandRejected', 'error'].includes(message.type),
+        true,
+        `Unexpected error fixture message type: ${message.type}`
+      )
     })
   }
+
+  it('covers telemetry-visible command rejection categories in server fixtures', () => {
+    const rejectedCodes = commandErrorServerMessageFixtures.flatMap(
+      ({ message }) =>
+        message.type === 'commandRejected' ? [message.error.code] : []
+    )
+
+    assert.deepEqual(rejectedCodes.sort(), [
+      'invalid_command',
+      'missing_entity',
+      'not_allowed',
+      'stale_command'
+    ])
+  })
+
+  it('covers supported server error categories in server fixtures', () => {
+    const errorCodes = commandErrorServerMessageFixtures.flatMap(
+      ({ message }) => {
+        if (message.type !== 'error') return []
+
+        return [message.error.code]
+      }
+    )
+
+    assert.deepEqual(errorCodes.sort(), ['projection_mismatch', 'wrong_room'])
+  })
 
   it('covers bounded dice activity in server message fixtures', () => {
     const activity = serverFixtureLiveActivities().find(
