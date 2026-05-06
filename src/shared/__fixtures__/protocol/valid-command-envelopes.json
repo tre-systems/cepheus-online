@@ -78,6 +78,22 @@
     "expectedSeq": 20
   },
   {
+    "name": "character creation homeworld completion command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-complete-homeworld",
+      "command": {
+        "type": "CompleteCharacterCreationHomeworld",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 21,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "CompleteCharacterCreationHomeworld",
+    "expectedSeq": 21
+  },
+  {
     "name": "character creation background skill command",
     "message": {
       "type": "command",
@@ -86,13 +102,13 @@
         "type": "SelectCharacterCreationBackgroundSkill",
         "gameId": "cepheus-run",
         "actorId": "referee-1",
-        "expectedSeq": 21,
+        "expectedSeq": 22,
         "characterId": "crew-scout-1",
         "skill": "Admin"
       }
     },
     "commandType": "SelectCharacterCreationBackgroundSkill",
-    "expectedSeq": 21
+    "expectedSeq": 22
   },
   {
     "name": "character creation finalization command",
@@ -103,7 +119,7 @@
         "type": "FinalizeCharacterCreation",
         "gameId": "cepheus-run",
         "actorId": "referee-1",
-        "expectedSeq": 22,
+        "expectedSeq": 23,
         "characterId": "crew-scout-1",
         "age": 34,
         "characteristics": {
@@ -127,7 +143,7 @@
       }
     },
     "commandType": "FinalizeCharacterCreation",
-    "expectedSeq": 22
+    "expectedSeq": 23
   },
   {
     "name": "board setup command with an asset URL",

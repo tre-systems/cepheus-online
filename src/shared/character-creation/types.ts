@@ -117,6 +117,7 @@ export type CareerCreationActionKey =
 
 export type CareerCreationServerCommandType =
   | 'AdvanceCharacterCreation'
+  | 'CompleteCharacterCreationHomeworld'
   | 'StartCharacterCareerTerm'
   | 'FinalizeCharacterCreation'
 

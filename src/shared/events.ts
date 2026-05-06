@@ -72,6 +72,12 @@ export type GameEvent =
       pendingCascadeSkills: string[]
     }
   | {
+      type: 'CharacterCreationHomeworldCompleted'
+      characterId: CharacterId
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
       type: 'CharacterCreationBackgroundSkillSelected'
       characterId: CharacterId
       skill: string

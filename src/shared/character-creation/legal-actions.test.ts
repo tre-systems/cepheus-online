@@ -80,6 +80,20 @@ describe('career creation legal action planner', () => {
     )
 
     assert.deepEqual(
+      deriveLegalCareerCreationActions(createCareerCreationState('HOMEWORLD')),
+      [
+        {
+          key: 'completeHomeworld',
+          status: 'HOMEWORLD',
+          commandTypes: [
+            'CompleteCharacterCreationHomeworld',
+            'AdvanceCharacterCreation'
+          ]
+        }
+      ]
+    )
+
+    assert.deepEqual(
       deriveLegalCareerCreationActions(
         createCareerCreationState('CAREER_SELECTION')
       ),

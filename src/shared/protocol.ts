@@ -1,7 +1,7 @@
 import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
 import type { CareerCreationEvent } from './characterCreation'
 import { err, ok, type Result } from './result'
-import type { Command, GameCommand } from './commands'
+import type { GameCommand } from './commands'
 import type { GameState } from './state'
 import type { LiveActivityDescriptor } from './live-activity'
 import type {
@@ -37,7 +37,7 @@ export type ClientMessage =
   | {
       type: 'command'
       requestId: string
-      command: Command
+      command: GameCommand
     }
   | {
       type: 'ping'
@@ -673,6 +673,17 @@ export const decodeCommand = (
 
       return ok({
         type: 'CompleteCharacterCreationBasicTraining',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'CompleteCharacterCreationHomeworld': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'CompleteCharacterCreationHomeworld',
         ...base.value,
         characterId: characterId.value
       })

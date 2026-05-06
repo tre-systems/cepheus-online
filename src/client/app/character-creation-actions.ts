@@ -2,9 +2,7 @@ import {
   deriveCareerCreationActionContext,
   deriveLegalCareerCreationActionKeys
 } from '../../shared/character-creation/legal-actions.js'
-import type {
-  CareerCreationActionKey,
-} from '../../shared/character-creation/types.js'
+import type { CareerCreationActionKey } from '../../shared/character-creation/types.js'
 import type { Command } from '../../shared/commands'
 import type {
   CharacterCreationProjection,
@@ -106,13 +104,12 @@ const actionsForLegalKey = (
       ]
     case 'completeBasicTraining':
       return [
-        action(
-          'complete-basic-training',
-          'Complete basic training',
-          advanceCommand(identity, character, {
-            type: 'COMPLETE_BASIC_TRAINING'
-          })
-        )
+        action('complete-basic-training', 'Complete basic training', {
+          type: 'CompleteCharacterCreationBasicTraining',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
       ]
     case 'rollSurvival':
       return [

@@ -93,6 +93,7 @@ type CharacterEventType =
   | 'CharacterCreationTransitioned'
   | 'CharacterCreationBasicTrainingCompleted'
   | 'CharacterCreationHomeworldSet'
+  | 'CharacterCreationHomeworldCompleted'
   | 'CharacterCreationBackgroundSkillSelected'
   | 'CharacterCreationCascadeSkillResolved'
   | 'CharacterCreationFinalized'
@@ -288,6 +289,26 @@ const characterEventHandlers = {
       homeworld: structuredClone(event.homeworld),
       backgroundSkills: [...event.backgroundSkills],
       pendingCascadeSkills: [...event.pendingCascadeSkills]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationHomeworldCompleted: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        { type: 'COMPLETE_HOMEWORLD' }
+      ]
     }
     nextState.eventSeq = envelope.seq
 

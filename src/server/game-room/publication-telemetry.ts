@@ -1,4 +1,4 @@
-import type { Command } from '../../shared/commands'
+import type { GameCommand } from '../../shared/commands'
 import type { GameId, UserId } from '../../shared/ids'
 import type { CommandError } from '../../shared/protocol'
 
@@ -10,7 +10,7 @@ export type PublicationRejectedTelemetryCode = Extract<
 interface BasePublicationTelemetryEvent {
   gameId: GameId
   requestId: string
-  commandType: Command['type']
+  commandType: GameCommand['type']
   actorId: UserId | null
 }
 

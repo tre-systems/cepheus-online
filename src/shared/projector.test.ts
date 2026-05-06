@@ -448,6 +448,18 @@ describe('game state projection', () => {
         selection: 'Slug Rifle',
         backgroundSkills: ['Zero-G-0', 'Admin-0', 'Slug Rifle-0'],
         pendingCascadeSkills: []
+      }),
+      envelope(7, {
+        type: 'CharacterCreationHomeworldCompleted',
+        characterId,
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
       })
     ])
 
@@ -463,8 +475,9 @@ describe('game state projection', () => {
       'Slug Rifle-0'
     ])
     assert.deepEqual(creation?.pendingCascadeSkills, [])
-    assert.equal(creation?.state.status, 'HOMEWORLD')
-    assert.equal(state?.eventSeq, 6)
+    assert.equal(creation?.state.status, 'CAREER_SELECTION')
+    assert.deepEqual(creation?.history, [{ type: 'COMPLETE_HOMEWORLD' }])
+    assert.equal(state?.eventSeq, 7)
   })
 
   it('projects reenlistment as a second career term', () => {

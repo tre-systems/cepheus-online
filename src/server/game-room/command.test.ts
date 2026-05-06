@@ -357,4 +357,81 @@ describe('deriveEventsForCommand error categories', () => {
       'COMPLETE_BASIC_TRAINING is not valid from SURVIVAL'
     )
   })
+
+  it('emits a semantic homeworld completion event when setup is resolved', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationHomeworld',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('HOMEWORLD', {
+        homeworld,
+        backgroundSkills: ['Zero-G-0', 'Admin-0', 'Broker-0'],
+        pendingCascadeSkills: []
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationHomeworldCompleted',
+        characterId,
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks semantic homeworld completion while background choices are unresolved', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationHomeworld',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('HOMEWORLD', {
+        homeworld,
+        backgroundSkills: ['Zero-G-0'],
+        pendingCascadeSkills: ['Gun Combat-0']
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Background choices must be complete before career selection'
+    )
+  })
+
+  it('blocks semantic homeworld completion outside homeworld setup', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationHomeworld',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('CAREER_SELECTION', { homeworld })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMPLETE_HOMEWORLD is not valid from CAREER_SELECTION'
+    )
+  })
 })

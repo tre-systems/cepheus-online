@@ -485,6 +485,11 @@ describe('protocol validation', () => {
         }
       },
       {
+        type: 'CompleteCharacterCreationHomeworld',
+        ...base,
+        characterId: 'char-1'
+      },
+      {
         type: 'SelectCharacterCreationBackgroundSkill',
         ...base,
         characterId: 'char-1',
@@ -631,6 +636,23 @@ describe('protocol validation', () => {
     if (!result.ok) return
     assert.equal(result.value.type, 'CompleteCharacterCreationBasicTraining')
     if (result.value.type !== 'CompleteCharacterCreationBasicTraining') return
+    assert.equal(result.value.characterId, 'char-1')
+    assert.equal(result.value.expectedSeq, 7)
+  })
+
+  it('accepts semantic homeworld completion commands', () => {
+    const result = decodeCommand({
+      type: 'CompleteCharacterCreationHomeworld',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      expectedSeq: 7
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'CompleteCharacterCreationHomeworld')
+    if (result.value.type !== 'CompleteCharacterCreationHomeworld') return
     assert.equal(result.value.characterId, 'char-1')
     assert.equal(result.value.expectedSeq, 7)
   })

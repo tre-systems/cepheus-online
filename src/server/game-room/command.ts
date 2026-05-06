@@ -405,6 +405,46 @@ const validateBasicTrainingCompletion = (
   return ok(character.creation)
 }
 
+const validateHomeworldCompletion = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'HOMEWORLD') {
+    return err(
+      commandError(
+        'invalid_command',
+        `COMPLETE_HOMEWORLD is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('completeHomeworld')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'COMPLETE_HOMEWORLD is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+  if (!hasCompleteBackgroundChoices(character)) {
+    return err(
+      commandError(
+        'invalid_command',
+        'Background choices must be complete before career selection'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
 export const deriveEventsForCommand = (
   command: GameCommand,
   context: CommandContext
@@ -556,17 +596,9 @@ export const deriveEventsForCommand = (
           )
         )
       }
-      if (
-        command.creationEvent.type === 'COMPLETE_HOMEWORLD' &&
-        character.creation.homeworld &&
-        !hasCompleteBackgroundChoices(character)
-      ) {
-        return err(
-          commandError(
-            'invalid_command',
-            'Background choices must be complete before career selection'
-          )
-        )
+      if (command.creationEvent.type === 'COMPLETE_HOMEWORLD') {
+        const creation = validateHomeworldCompletion(character)
+        if (!creation.ok) return creation
       }
       if (
         !canTransitionCareerCreationState(
@@ -635,6 +667,30 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationBasicTrainingCompleted',
           characterId: command.characterId,
           trainingSkills,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'CompleteCharacterCreationHomeworld': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateHomeworldCompletion(character)
+      if (!creation.ok) return creation
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'COMPLETE_HOMEWORLD'
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationHomeworldCompleted',
+          characterId: command.characterId,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         }

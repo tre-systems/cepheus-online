@@ -207,6 +207,19 @@ describe('live activity derivation', () => {
         drafted: true
       }),
       envelope(3, {
+        type: 'CharacterCreationBasicTrainingCompleted',
+        characterId,
+        trainingSkills: ['Vacc Suit-0'],
+        state: {
+          status: 'SURVIVAL',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(4, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: {
@@ -221,7 +234,7 @@ describe('live activity derivation', () => {
         },
         creationComplete: false
       }),
-      envelope(4, {
+      envelope(5, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: {
@@ -238,7 +251,7 @@ describe('live activity derivation', () => {
         },
         creationComplete: false
       }),
-      envelope(5, {
+      envelope(6, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: {
@@ -253,7 +266,7 @@ describe('live activity derivation', () => {
         },
         creationComplete: false
       }),
-      envelope(6, {
+      envelope(7, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: {
@@ -268,7 +281,7 @@ describe('live activity derivation', () => {
         },
         creationComplete: false
       }),
-      envelope(7, {
+      envelope(8, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: {
@@ -283,7 +296,7 @@ describe('live activity derivation', () => {
         },
         creationComplete: false
       }),
-      envelope(8, {
+      envelope(9, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: {
@@ -298,7 +311,7 @@ describe('live activity derivation', () => {
         },
         creationComplete: false
       }),
-      envelope(9, {
+      envelope(10, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: {
@@ -313,7 +326,7 @@ describe('live activity derivation', () => {
         },
         creationComplete: false
       }),
-      envelope(10, {
+      envelope(11, {
         type: 'CharacterCreationFinalized',
         characterId,
         notes: '',
@@ -343,7 +356,11 @@ describe('live activity derivation', () => {
           'SELECT_CAREER',
           'Career selected; new career; drafted after failed qualification'
         ],
-        ['CAREER_TERM_STARTED', 'Started Navy term; drafted'],
+        ['CAREER_TERM_STARTED', 'Term started; Navy; drafted'],
+        [
+          'COMPLETE_BASIC_TRAINING',
+          'Basic training complete; 1 skill; Vacc Suit-0'
+        ],
         ['SURVIVAL_FAILED', 'Survival failed'],
         [
           'SURVIVAL_PASSED',
@@ -439,6 +456,19 @@ describe('live activity derivation', () => {
         drafted: true
       }),
       envelope(4, {
+        type: 'CharacterCreationBasicTrainingCompleted',
+        characterId,
+        trainingSkills: ['Vacc Suit-0', 'Pilot-0'],
+        state: {
+          status: 'SURVIVAL',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(5, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: {
@@ -455,7 +485,7 @@ describe('live activity derivation', () => {
         },
         creationComplete: false
       }),
-      envelope(5, {
+      envelope(6, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: { type: 'REENLIST_BLOCKED' },
@@ -468,7 +498,7 @@ describe('live activity derivation', () => {
         },
         creationComplete: false
       }),
-      envelope(6, {
+      envelope(7, {
         type: 'CharacterCreationTransitioned',
         characterId,
         creationEvent: { type: 'FINISH_MUSTERING' },
@@ -492,8 +522,13 @@ describe('live activity derivation', () => {
       [
         [
           'CAREER_TERM_STARTED',
-          'Started Scout term; drafted',
+          'Term started; Scout; drafted',
           'CAREER_SELECTION'
+        ],
+        [
+          'COMPLETE_BASIC_TRAINING',
+          'Basic training complete; 2 skills; Vacc Suit-0, Pilot-0',
+          'SURVIVAL'
         ],
         [
           'SURVIVAL_PASSED',

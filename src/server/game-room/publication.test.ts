@@ -878,6 +878,99 @@ describe('room publication flow', () => {
     assert.equal(storedEvent?.type, 'CharacterCreationHomeworldSet')
   })
 
+  it('publishes semantic homeworld completion into projection history', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-homeworld-complete')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Homeworld Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+    await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      creationEvent: { type: 'SET_CHARACTERISTICS' }
+    })
+    await publish(storage, {
+      type: 'SetCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId,
+      homeworld: {
+        name: 'Regina',
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid', 'Industrial']
+      }
+    })
+    await publish(storage, {
+      type: 'ResolveCharacterCreationCascadeSkill',
+      gameId,
+      actorId,
+      characterId,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
+
+    const completed = await publish(storage, {
+      type: 'CompleteCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    assert.equal(completed.ok, true)
+    if (!completed.ok) return
+    const storedEvent = (await readEventStream(storage, gameId)).at(-1)?.event
+    assert.deepEqual(storedEvent, {
+      type: 'CharacterCreationHomeworldCompleted',
+      characterId,
+      state: {
+        status: 'CAREER_SELECTION',
+        context: {
+          canCommission: false,
+          canAdvance: false
+        }
+      },
+      creationComplete: false
+    })
+    assert.deepEqual(completed.value.liveActivities, [
+      {
+        id: 'game-1:7',
+        eventId: 'game-1:7',
+        gameId,
+        seq: 7,
+        actorId,
+        createdAt: completed.value.liveActivities[0]?.createdAt,
+        type: 'characterCreation',
+        characterId,
+        transition: 'COMPLETE_HOMEWORLD',
+        details: 'Homeworld complete',
+        status: 'CAREER_SELECTION',
+        creationComplete: false
+      }
+    ])
+
+    const creation = completed.value.state.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'CAREER_SELECTION')
+    assert.deepEqual(creation?.history, [
+      { type: 'SET_CHARACTERISTICS' },
+      { type: 'COMPLETE_HOMEWORLD' }
+    ])
+    assert.equal((await readEventStream(storage, gameId)).length, 7)
+  })
+
   it('records semantic SRD roll facts in character creation transition history', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')

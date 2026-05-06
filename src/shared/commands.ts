@@ -178,6 +178,16 @@ export type CharacterCreationBasicTrainingCommand = {
   characterId: CharacterId
 }
 
-export type SemanticCommand = CharacterCreationBasicTrainingCommand
+export type CharacterCreationHomeworldCommand = {
+  type: 'CompleteCharacterCreationHomeworld'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
 
-export type GameCommand = Command
+export type SemanticCommand =
+  | CharacterCreationBasicTrainingCommand
+  | CharacterCreationHomeworldCommand
+
+export type GameCommand = Command | CharacterCreationHomeworldCommand

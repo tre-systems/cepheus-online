@@ -93,7 +93,7 @@ describe('creation activity view model', () => {
       characterActivity({
         seq: 13,
         transition: 'CAREER_TERM_STARTED',
-        details: 'Started Scout term',
+        details: 'Term started; Scout',
         status: 'CAREER_SELECTION'
       })
     ]
@@ -107,7 +107,7 @@ describe('creation activity view model', () => {
       },
       {
         title: 'Career term started',
-        detail: 'Started Scout term',
+        detail: 'Term started; Scout',
         tone: 'neutral',
         seq: 13
       }
@@ -134,7 +134,7 @@ describe('creation activity view model', () => {
       {
         title: 'Basic training complete',
         detail: 'Basic training complete',
-        tone: 'neutral',
+        tone: 'success',
         seq: 50
       }
     ])
@@ -198,6 +198,7 @@ describe('creation activity view model', () => {
       [
         'Career selected',
         'Career term started',
+        'Basic training complete',
         'Survival passed',
         'Survival failed',
         'Commission earned',
@@ -220,6 +221,7 @@ describe('creation activity view model', () => {
       [
         'neutral',
         'neutral',
+        'success',
         'success',
         'warning',
         'success',

@@ -63,6 +63,37 @@
     "maxSerializedBytes": 380
   },
   {
+    "name": "semantic basic training activity",
+    "event": {
+      "type": "CharacterCreationBasicTrainingCompleted",
+      "characterId": "char-1",
+      "trainingSkills": ["Vacc Suit-0", "Pilot-0"],
+      "state": {
+        "status": "SURVIVAL",
+        "context": {
+          "canCommission": false,
+          "canAdvance": false
+        }
+      },
+      "creationComplete": false
+    },
+    "activity": {
+      "id": "game-1:5",
+      "eventId": "game-1:5",
+      "gameId": "game-1",
+      "seq": 5,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:05.000Z",
+      "type": "characterCreation",
+      "characterId": "char-1",
+      "transition": "COMPLETE_BASIC_TRAINING",
+      "details": "Basic training complete; 2 skills; Vacc Suit-0, Pilot-0",
+      "status": "SURVIVAL",
+      "creationComplete": false
+    },
+    "maxSerializedBytes": 420
+  },
+  {
     "name": "bounded dice roll activity",
     "event": {
       "type": "DiceRolled",

@@ -156,6 +156,16 @@ const musteringBenefitDetails = (
   ].join('; ')
 }
 
+const basicTrainingDetails = (trainingSkills: readonly string[]): string => {
+  if (trainingSkills.length === 0) return 'Basic training complete; 0 skills'
+
+  return [
+    'Basic training complete',
+    countLabel(trainingSkills.length, 'skill'),
+    trainingSkills.join(', ')
+  ].join('; ')
+}
+
 const describeCareerCreationEvent = (
   event: CareerCreationEvent
 ): string | null => {
@@ -301,6 +311,17 @@ export const deriveLiveActivity = (
       }
     }
 
+    case 'CharacterCreationHomeworldCompleted':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'COMPLETE_HOMEWORLD',
+        details: 'Homeworld complete',
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
     case 'CharacterCreationBackgroundSkillSelected':
       return {
         ...baseActivity(envelope),
@@ -328,6 +349,19 @@ export const deriveLiveActivity = (
         ),
         status: 'HOMEWORLD',
         creationComplete: false
+      }
+
+    case 'CharacterCreationBasicTrainingCompleted':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'COMPLETE_BASIC_TRAINING',
+        ...compactCharacterCreationDetails(
+          basicTrainingDetails(event.trainingSkills)
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
       }
 
     case 'CharacterCreationCascadeSkillResolved':
@@ -377,7 +411,9 @@ export const deriveLiveActivity = (
         characterId: event.characterId,
         transition: 'CAREER_TERM_STARTED',
         ...compactCharacterCreationDetails(
-          `Started ${event.career} term${event.drafted ? '; drafted' : ''}`
+          ['Term started', event.career, event.drafted ? 'drafted' : null]
+            .filter(Boolean)
+            .join('; ')
         ),
         status: 'CAREER_SELECTION',
         creationComplete: false
