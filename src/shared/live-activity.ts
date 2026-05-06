@@ -404,20 +404,30 @@ export const deriveLiveActivity = (
         creationComplete: true
       }
 
-    case 'CharacterCareerTermStarted':
+    case 'CharacterCareerTermStarted': {
+      const acceptedCareer = event.acceptedCareer ?? event.career
+      const requestedCareer = event.requestedCareer ?? acceptedCareer
+
       return {
         ...baseActivity(envelope),
         type: 'characterCreation',
         characterId: event.characterId,
         transition: 'CAREER_TERM_STARTED',
         ...compactCharacterCreationDetails(
-          ['Term started', event.career, event.drafted ? 'drafted' : null]
+          [
+            'Term started',
+            requestedCareer === acceptedCareer
+              ? acceptedCareer
+              : `${requestedCareer} -> ${acceptedCareer}`,
+            event.drafted ? 'drafted' : null
+          ]
             .filter(Boolean)
             .join('; ')
         ),
         status: 'CAREER_SELECTION',
         creationComplete: false
       }
+    }
 
     default:
       return null

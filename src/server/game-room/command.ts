@@ -845,12 +845,16 @@ export const deriveEventsForCommand = (
       }
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career
+      const acceptedCareer = career.value.trim()
+      const requestedCareer = command.drafted ? 'Draft' : acceptedCareer
 
       return ok([
         {
           type: 'CharacterCareerTermStarted',
           characterId: command.characterId,
-          career: career.value,
+          requestedCareer,
+          acceptedCareer,
+          career: acceptedCareer,
           drafted: command.drafted ?? false
         }
       ])

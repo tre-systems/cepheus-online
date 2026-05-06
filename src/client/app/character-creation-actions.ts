@@ -3,7 +3,7 @@ import {
   deriveLegalCareerCreationActionKeys
 } from '../../shared/character-creation/legal-actions.js'
 import type { CareerCreationActionKey } from '../../shared/character-creation/types.js'
-import type { Command } from '../../shared/commands'
+import type { Command, GameCommand } from '../../shared/commands'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -13,7 +13,7 @@ import type { ClientIdentity } from '../game-commands.js'
 export interface CharacterCreationActionViewModel {
   key: string
   label: string
-  command: Command | null
+  command: GameCommand | null
   variant: 'primary' | 'secondary'
 }
 
@@ -49,7 +49,7 @@ const advanceCommand = (
 const action = (
   key: string,
   label: string,
-  command: Command,
+  command: GameCommand,
   variant: CharacterCreationActionViewModel['variant'] = 'primary'
 ): CharacterCreationActionViewModel => ({
   key,
@@ -74,11 +74,12 @@ const actionsForLegalKey = (
       ]
     case 'completeHomeworld':
       return [
-        action(
-          'complete-homeworld',
-          'Confirm homeworld',
-          advanceCommand(identity, character, { type: 'COMPLETE_HOMEWORLD' })
-        )
+        action('complete-homeworld', 'Confirm homeworld', {
+          type: 'CompleteCharacterCreationHomeworld',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
       ]
     case 'selectCareer':
       if (character.creation?.terms.length === 0) {

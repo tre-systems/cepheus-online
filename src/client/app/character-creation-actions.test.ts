@@ -93,6 +93,40 @@ describe('character creation actions', () => {
     assert.equal(plan?.actions[0]?.command?.type, 'StartCharacterCareerTerm')
   })
 
+  it('routes complete homeworld legal actions to the semantic command', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(creation('HOMEWORLD'))
+    )
+
+    assert.equal(plan?.status, 'Homeworld')
+    assert.equal(plan?.actions[0]?.key, 'complete-homeworld')
+    assert.equal(
+      plan?.actions[0]?.command?.type,
+      'CompleteCharacterCreationHomeworld'
+    )
+    assert.deepEqual(plan?.actions[0]?.command, {
+      type: 'CompleteCharacterCreationHomeworld',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId
+    })
+  })
+
+  it('keeps generic advance routing for non-semantic legal actions', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(creation('CHARACTERISTICS'))
+    )
+
+    assert.equal(plan?.status, 'Characteristics')
+    assert.equal(plan?.actions[0]?.key, 'set-characteristics')
+    assert.equal(plan?.actions[0]?.command?.type, 'AdvanceCharacterCreation')
+    const command = plan?.actions[0]?.command
+    if (command?.type !== 'AdvanceCharacterCreation') return
+    assert.deepEqual(command.creationEvent, { type: 'SET_CHARACTERISTICS' })
+  })
+
   it('selects a career after a term has been started', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,

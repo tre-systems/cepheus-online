@@ -99,6 +99,8 @@ export type GameEvent =
   | {
       type: 'CharacterCareerTermStarted'
       characterId: CharacterId
+      requestedCareer: string
+      acceptedCareer: string
       career: string
       drafted: boolean
     }

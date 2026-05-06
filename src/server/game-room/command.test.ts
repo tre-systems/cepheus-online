@@ -391,6 +391,33 @@ describe('deriveEventsForCommand error categories', () => {
     ])
   })
 
+  it('emits requested and accepted career facts for semantic term start', () => {
+    const result = runCommand(
+      {
+        type: 'StartCharacterCareerTerm',
+        gameId,
+        actorId,
+        characterId,
+        career: ' Scout ',
+        drafted: true
+      },
+      createCreation('CAREER_SELECTION')
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCareerTermStarted',
+        characterId,
+        requestedCareer: 'Draft',
+        acceptedCareer: 'Scout',
+        career: 'Scout',
+        drafted: true
+      }
+    ])
+  })
+
   it('blocks semantic homeworld completion while background choices are unresolved', () => {
     const result = runCommand(
       {

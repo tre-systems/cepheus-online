@@ -250,6 +250,8 @@ describe('game state projection', () => {
       envelope(5, {
         type: 'CharacterCareerTermStarted',
         characterId,
+        requestedCareer: 'Scout',
+        acceptedCareer: 'Scout',
         career: 'Scout',
         drafted: false
       }),
@@ -381,6 +383,65 @@ describe('game state projection', () => {
     assert.deepEqual(creation?.history, [{ type: 'COMPLETE_BASIC_TRAINING' }])
     assert.deepEqual(creation?.terms[0]?.skillsAndTraining, ['Vacc Suit-0'])
     assert.equal(creation?.terms[0]?.completedBasicTraining, true)
+    assert.equal(state?.eventSeq, 4)
+  })
+
+  it('projects accepted career facts from semantic term start events', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'CAREER_SELECTION',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCareerTermStarted',
+        characterId,
+        requestedCareer: 'Draft',
+        acceptedCareer: 'Navy',
+        career: 'Navy',
+        drafted: true
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.deepEqual(
+      creation?.terms.map((term) => ({
+        career: term.career,
+        draft: term.draft
+      })),
+      [{ career: 'Navy', draft: 1 }]
+    )
+    assert.deepEqual(creation?.careers, [{ name: 'Navy', rank: 0 }])
+    assert.equal(creation?.canEnterDraft, false)
     assert.equal(state?.eventSeq, 4)
   })
 
@@ -539,6 +600,8 @@ describe('game state projection', () => {
       envelope(4, {
         type: 'CharacterCareerTermStarted',
         characterId,
+        requestedCareer: 'Scout',
+        acceptedCareer: 'Scout',
         career: 'Scout',
         drafted: false
       }),

@@ -657,6 +657,27 @@ describe('protocol validation', () => {
     assert.equal(result.value.expectedSeq, 7)
   })
 
+  it('accepts semantic career term start commands', () => {
+    const result = decodeCommand({
+      type: 'StartCharacterCareerTerm',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      career: ' Scout ',
+      drafted: true,
+      expectedSeq: 7
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'StartCharacterCareerTerm')
+    if (result.value.type !== 'StartCharacterCareerTerm') return
+    assert.equal(result.value.characterId, 'char-1')
+    assert.equal(result.value.career, 'Scout')
+    assert.equal(result.value.drafted, true)
+    assert.equal(result.value.expectedSeq, 7)
+  })
+
   it('accepts full character creation finalization commands', () => {
     const result = decodeClientMessage({
       type: 'command',

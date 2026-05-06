@@ -94,6 +94,24 @@
     "expectedSeq": 21
   },
   {
+    "name": "character creation career term command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-start-career-term",
+      "command": {
+        "type": "StartCharacterCareerTerm",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 22,
+        "characterId": "crew-scout-1",
+        "career": "Scout",
+        "drafted": false
+      }
+    },
+    "commandType": "StartCharacterCareerTerm",
+    "expectedSeq": 22
+  },
+  {
     "name": "character creation background skill command",
     "message": {
       "type": "command",

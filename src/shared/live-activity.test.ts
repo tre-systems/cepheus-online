@@ -203,6 +203,8 @@ describe('live activity derivation', () => {
       envelope(2, {
         type: 'CharacterCareerTermStarted',
         characterId,
+        requestedCareer: 'Draft',
+        acceptedCareer: 'Navy',
         career: 'Navy',
         drafted: true
       }),
@@ -356,7 +358,7 @@ describe('live activity derivation', () => {
           'SELECT_CAREER',
           'Career selected; new career; drafted after failed qualification'
         ],
-        ['CAREER_TERM_STARTED', 'Term started; Navy; drafted'],
+        ['CAREER_TERM_STARTED', 'Term started; Draft -> Navy; drafted'],
         [
           'COMPLETE_BASIC_TRAINING',
           'Basic training complete; 1 skill; Vacc Suit-0'
@@ -452,6 +454,8 @@ describe('live activity derivation', () => {
       envelope(3, {
         type: 'CharacterCareerTermStarted',
         characterId,
+        requestedCareer: 'Draft',
+        acceptedCareer: 'Scout',
         career: 'Scout',
         drafted: true
       }),
@@ -522,7 +526,7 @@ describe('live activity derivation', () => {
       [
         [
           'CAREER_TERM_STARTED',
-          'Term started; Scout; drafted',
+          'Term started; Draft -> Scout; drafted',
           'CAREER_SELECTION'
         ],
         [

@@ -364,9 +364,10 @@ const characterEventHandlers = {
     const nextState = requireState(state, event.type)
     const character = nextState.characters[event.characterId]
     if (!character?.creation) return nextState
+    const acceptedCareer = event.acceptedCareer ?? event.career
 
     const result = startCareerTerm({
-      career: event.career,
+      career: acceptedCareer,
       terms: character.creation.terms,
       careers: character.creation.careers,
       drafted: event.drafted
