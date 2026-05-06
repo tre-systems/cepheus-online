@@ -56,6 +56,8 @@ export interface AppElements {
   canvas: HTMLCanvasElement | null
   diceStage: HTMLElement | null
   diceOverlay: HTMLElement | null
+  creationActivityFeed: HTMLElement | null
+  creationPresenceDock: HTMLElement | null
   pwaInstallPrompt: HTMLElement | null
   pwaInstallButton: HTMLButtonElement | null
   pwaInstallDismissButton: HTMLButtonElement | null
@@ -129,6 +131,8 @@ export const getAppElements = (document: AppElementsDocument): AppElements => ({
   canvas: getElement(document, 'boardCanvas'),
   diceStage: getElement(document, 'diceStage'),
   diceOverlay: getElement(document, 'diceOverlay'),
+  creationActivityFeed: getElement(document, 'creationActivityFeed'),
+  creationPresenceDock: getElement(document, 'creationPresenceDock'),
   pwaInstallPrompt: getElement(document, 'pwaInstallPrompt'),
   pwaInstallButton: getElement(document, 'pwaInstallButton'),
   pwaInstallDismissButton: getElement(document, 'pwaInstallDismissButton'),

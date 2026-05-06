@@ -544,6 +544,40 @@ describe('GameRoomDO HTTP skeleton', () => {
     })
   })
 
+  it('broadcasts HTTP character creation activity to connected sockets', async () => {
+    const referee = createSocket()
+    const player = createSocket()
+    const tags = new Map<WebSocket, string[]>([
+      [referee, roomSocketTags('referee', 'user-1')],
+      [player, roomSocketTags('player', 'user-2')]
+    ])
+    const room = createRoom([referee, player], tags)
+    await postCommand(room, createGameBody())
+    await postCommand(room, createCharacterBody())
+    referee.sent.length = 0
+    player.sent.length = 0
+
+    const response = await postCommand(room, startCharacterCreationBody())
+    const responseMessage = await response.json()
+
+    assert.equal(response.status, 200)
+    assert.equal(responseMessage.type, 'commandAccepted')
+    for (const message of [
+      ...parseMessages(referee),
+      ...parseMessages(player)
+    ]) {
+      assert.equal(message.type, 'roomState')
+      assert.equal(message.eventSeq, 3)
+      assert.equal(message.liveActivities.length, 1)
+      assert.equal(message.liveActivities[0].type, 'characterCreation')
+      assert.equal(message.liveActivities[0].transition, 'STARTED')
+      assert.equal(
+        message.liveActivities[0].details,
+        'Started character creation'
+      )
+    }
+  })
+
   it('broadcasts WebSocket dice rolls to the sender and peers', async () => {
     const sender = createSocket()
     const peer = createSocket()

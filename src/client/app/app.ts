@@ -14,6 +14,7 @@ import { getAppElements } from './app-elements.js'
 import { createAppBootstrap } from './app-bootstrap.js'
 import { createBoardController } from './board-controller.js'
 import { createCharacterCreationPanel } from './character-creation-panel.js'
+import { deriveCreationActivityCardsFromApplication } from './creation-activity-view.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBasicTraining,
@@ -126,6 +127,7 @@ let diceHideTimer = null
 let connectivityController = null
 const diceRevealState = createDiceRevealState()
 const animatedDiceRollActivityIds = new Set()
+const creationActivityTimers = new Set()
 let characterCreationFlow = null
 
 const setStatus = (text) => {
@@ -134,6 +136,150 @@ const setStatus = (text) => {
 
 const setError = (text) => {
   els.error.textContent = text || ''
+}
+
+const clearCreationActivityFeed = () => {
+  for (const timer of creationActivityTimers) {
+    window.clearTimeout(timer)
+  }
+  creationActivityTimers.clear()
+  els.creationActivityFeed?.replaceChildren()
+}
+
+const scheduleCreationActivityTimer = (callback, delayMs) => {
+  const timer = window.setTimeout(() => {
+    creationActivityTimers.delete(timer)
+    callback()
+  }, delayMs)
+  creationActivityTimers.add(timer)
+  return timer
+}
+
+const renderCreationActivityCard = (card) => {
+  if (!els.creationActivityFeed) return
+
+  const item = document.createElement('article')
+  item.className = `creation-activity-card ${card.tone}`
+  item.setAttribute('role', 'status')
+
+  const title = document.createElement('strong')
+  title.textContent = card.title
+
+  const detail = document.createElement('span')
+  detail.textContent = card.detail
+
+  item.append(title, detail)
+  els.creationActivityFeed.prepend(item)
+
+  while (els.creationActivityFeed.children.length > 3) {
+    els.creationActivityFeed.lastElementChild?.remove()
+  }
+
+  scheduleCreationActivityTimer(() => {
+    item.classList.add('leaving')
+    scheduleCreationActivityTimer(() => item.remove(), 220)
+  }, 5200)
+}
+
+const showCreationActivityCards = (application, delayMs = 0) => {
+  const cards = deriveCreationActivityCardsFromApplication(application)
+  if (cards.length === 0 || !els.creationActivityFeed) return
+
+  const renderCards = () => {
+    for (const card of cards) renderCreationActivityCard(card)
+  }
+
+  if (delayMs > 0) {
+    scheduleCreationActivityTimer(renderCards, delayMs)
+    return
+  }
+
+  renderCards()
+}
+
+const creationActivityRevealDelayMs = (diceRollActivities) => {
+  if (diceRollActivities.length === 0) return 0
+
+  const revealAtMs = Math.max(
+    ...diceRollActivities.map((activity) => Date.parse(activity.revealAt))
+  )
+  if (!Number.isFinite(revealAtMs)) return 0
+
+  return Math.max(0, revealAtMs - Date.now()) + 160
+}
+
+const creationStatusText = (status) =>
+  String(status || 'CREATION')
+    .toLowerCase()
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(' ')
+
+const activeCreationSummaries = () => {
+  if (!state) return []
+
+  return Object.values(state.characters)
+    .filter(
+      (character) =>
+        character.creation &&
+        !character.creation.creationComplete &&
+        character.creation.state.status !== 'PLAYABLE'
+    )
+    .map((character) => {
+      const rolledCharacteristics = Object.values(
+        character.characteristics
+      ).filter((value) => value !== null).length
+
+      return {
+        id: character.id,
+        name: character.name || 'Traveller',
+        ownerId: character.ownerId,
+        status: character.creation.state.status,
+        rolledCharacteristics,
+        terms: character.creation.terms.length
+      }
+    })
+}
+
+const renderCreationPresenceDock = () => {
+  if (!els.creationPresenceDock) return
+
+  const summaries = activeCreationSummaries()
+  if (summaries.length === 0) {
+    els.creationPresenceDock.hidden = true
+    els.creationPresenceDock.replaceChildren()
+    return
+  }
+
+  const heading = document.createElement('div')
+  heading.className = 'creation-presence-heading'
+  const title = document.createElement('strong')
+  title.textContent = 'Creation live'
+  const count = document.createElement('span')
+  count.textContent =
+    summaries.length === 1 ? '1 traveller' : `${summaries.length} travellers`
+  heading.append(title, count)
+
+  const items = summaries.slice(0, 3).map((summary) => {
+    const item = document.createElement('article')
+    item.className = 'creation-presence-card'
+
+    const name = document.createElement('strong')
+    name.textContent = summary.name
+
+    const detail = document.createElement('span')
+    detail.textContent = `${creationStatusText(summary.status)} · ${summary.rolledCharacteristics}/6 stats · ${summary.terms} terms`
+
+    const owner = document.createElement('small')
+    owner.textContent = summary.ownerId ? `by ${summary.ownerId}` : 'unowned'
+
+    item.append(name, detail, owner)
+    return item
+  })
+
+  els.creationPresenceDock.hidden = false
+  els.creationPresenceDock.replaceChildren(heading, ...items)
 }
 
 createPwaInstallController({
@@ -171,6 +317,10 @@ const handleServerMessage = (message) => {
       deferDiceRevealIds: liveActivityApplication.deferDiceRevealIds
     })
   }
+  showCreationActivityCards(
+    application,
+    creationActivityRevealDelayMs(liveActivityApplication.diceRollActivities)
+  )
   for (const activity of liveActivityApplication.diceRollActivities) {
     animatedDiceRollActivityIds.add(activity.id)
     animateRoll(activity)
@@ -2367,6 +2517,7 @@ const render = () => {
   renderBoardControls()
   boardController?.render()
   renderRail()
+  renderCreationPresenceDock()
 }
 
 const animateRoll = (roll) => {
@@ -2420,6 +2571,7 @@ createRoomMenuController({
     appSession.setRoomIdentity({ roomId, actorId })
     firstStateApplied = false
     latestDiceId = null
+    clearCreationActivityFeed()
     selectPiece(null)
     boardController?.clearDrag()
     characterSheetController.setOpen(false)

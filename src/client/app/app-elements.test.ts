@@ -56,6 +56,8 @@ const elementIds = {
   canvas: 'boardCanvas',
   diceStage: 'diceStage',
   diceOverlay: 'diceOverlay',
+  creationActivityFeed: 'creationActivityFeed',
+  creationPresenceDock: 'creationPresenceDock',
   pwaInstallPrompt: 'pwaInstallPrompt',
   pwaInstallButton: 'pwaInstallButton',
   pwaInstallDismissButton: 'pwaInstallDismissButton',

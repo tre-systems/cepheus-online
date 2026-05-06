@@ -232,9 +232,11 @@ Done when:
 
 Status: partially done. Live activity descriptors exist for tactical dice and
 character creation outcomes, protocol fixtures prove bounded viewer-safe
-messages, and publication returns derived activity alongside state. The next
-work is to derive those descriptors from more precise creation events and to
-finish the connected-player following UX.
+messages, publication returns derived activity alongside state, HTTP commands
+broadcast character creation activity to connected sockets, and the browser
+renders transient creation outcome cards without making an in-app log. The next
+work is to derive those descriptors from more precise creation events and widen
+the follow-along coverage as the remaining semantic events land.
 
 Primary write ownership:
 
