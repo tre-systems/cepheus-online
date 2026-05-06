@@ -484,6 +484,38 @@ const renderCharacterCreationFields = (flow) => {
     return fragment
   }
   for (const field of deriveCharacterCreationFieldViewModels(flow)) {
+    if (field.key === 'skills') {
+      const panel = document.createElement('section')
+      panel.className = 'character-creation-field skill-review'
+      const title = document.createElement('span')
+      title.textContent = field.required ? `${field.label} *` : field.label
+      const skills = document.createElement('div')
+      skills.className = 'creation-skill-review-list'
+      const skillValues = flow.draft.skills.length > 0 ? flow.draft.skills : []
+      for (const skill of skillValues) {
+        const chip = document.createElement('span')
+        chip.textContent = skill
+        skills.append(chip)
+      }
+      if (skillValues.length === 0) {
+        const empty = document.createElement('small')
+        empty.textContent = 'No skills recorded yet.'
+        skills.append(empty)
+      }
+      const control = document.createElement('input')
+      control.type = 'hidden'
+      control.dataset.characterCreationField = field.key
+      control.value = field.value
+      panel.append(title, skills, control)
+      if (field.errors.length > 0) {
+        const error = document.createElement('small')
+        error.textContent = field.errors.join(', ')
+        panel.append(error)
+      }
+      fragment.append(panel)
+      continue
+    }
+
     const label = document.createElement('label')
     label.className = `character-creation-field ${field.kind}`
     const name = document.createElement('span')

@@ -943,14 +943,15 @@ h1 {
   bottom: max(8px, env(safe-area-inset-bottom));
   left: 56px;
   z-index: 11;
-  width: min(430px, calc(100vw - 64px));
+  width: min(410px, calc(100vw - 64px));
   margin-left: auto;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  border: 1px solid rgba(72, 255, 173, 0.82);
+  border: 1px solid rgba(72, 255, 173, 0.74);
   background:
-    linear-gradient(180deg, rgba(244, 255, 248, 0.04), transparent 18%),
-    #000;
+    linear-gradient(180deg, rgba(244, 255, 248, 0.035), transparent 18%),
+    radial-gradient(circle at 50% 0, rgba(72, 255, 173, 0.08), transparent 34%),
+    rgba(0, 4, 3, 0.98);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.92),
     0 22px 58px rgba(0, 0, 0, 0.66),
@@ -967,7 +968,7 @@ h1 {
   align-items: start;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 12px 10px;
+  padding: 14px 18px 12px;
   border-bottom: 1px solid var(--line);
   background:
     linear-gradient(180deg, rgba(72, 255, 173, 0.1), transparent),
@@ -977,21 +978,23 @@ h1 {
 .creator-header h2 {
   margin: 0;
   color: var(--accent);
-  font-size: 24px;
-  font-weight: 500;
+  font-size: 26px;
+  font-weight: 650;
   line-height: 1;
 }
 
 .creator-header button {
-  width: 34px;
-  height: 34px;
-  min-height: 34px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
   border-color: rgba(244, 255, 248, 0.2);
-  border-radius: 8px;
-  background: rgba(244, 255, 248, 0.04);
-  padding: 0;
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(244, 255, 248, 0.055), rgba(0, 0, 0, 0.16)),
+    rgba(244, 255, 248, 0.025);
+  padding: 0 0 2px;
   color: rgba(244, 255, 248, 0.7);
-  font-size: 22px;
+  font-size: 25px;
   font-weight: 300;
   line-height: 1;
   box-shadow: none;
@@ -1008,11 +1011,11 @@ h1 {
   min-height: 0;
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 12px;
   overflow: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
-  padding: 10px 10px 14px;
+  padding: 12px 14px 16px;
 }
 
 .creator-section {
@@ -1480,15 +1483,16 @@ h1 {
 .character-creation-wizard {
   grid-column: 1 / -1;
   display: grid;
-  gap: 10px;
-  border: 1px solid rgba(72, 255, 173, 0.38);
+  gap: 12px;
+  border: 1px solid rgba(72, 255, 173, 0.46);
   background:
-    linear-gradient(180deg, rgba(72, 255, 173, 0.1), transparent 46%),
-    rgba(0, 20, 15, 0.72);
-  padding: 14px 10px 10px;
+    linear-gradient(180deg, rgba(72, 255, 173, 0.09), transparent 42%),
+    radial-gradient(circle at 50% 0, rgba(72, 255, 173, 0.09), transparent 42%),
+    rgba(0, 18, 13, 0.68);
+  padding: 16px 16px 14px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 0 24px rgba(72, 255, 173, 0.08);
+    inset 0 0 28px rgba(72, 255, 173, 0.075);
 }
 
 .character-creation-wizard[hidden] {
@@ -1497,7 +1501,7 @@ h1 {
 
 .character-creation-fields {
   display: grid;
-  gap: 7px;
+  gap: 10px;
 }
 
 .character-creation-status p {
@@ -1516,14 +1520,14 @@ h1 {
 
 .creation-next-step {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   border-bottom: 1px solid rgba(72, 255, 173, 0.24);
-  padding-bottom: 9px;
+  padding-bottom: 11px;
 }
 
 .creation-next-step strong {
   color: var(--accent);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 780;
   line-height: 1.15;
 }
@@ -1531,8 +1535,8 @@ h1 {
 .creation-next-step p {
   margin: 0;
   color: var(--muted);
-  font-size: 11px;
-  line-height: 1.35;
+  font-size: 12px;
+  line-height: 1.42;
 }
 
 .creation-next-step-actions {
@@ -1551,7 +1555,7 @@ h1 {
 
 .character-creation-field {
   display: grid;
-  gap: 4px;
+  gap: 7px;
   min-width: 0;
 }
 
@@ -1559,6 +1563,11 @@ h1 {
 .character-creation-field select,
 .character-creation-field textarea {
   min-width: 0;
+}
+
+.character-creation-field textarea {
+  min-height: 92px;
+  resize: vertical;
 }
 
 .character-creation-field select {
@@ -1716,21 +1725,21 @@ h1 {
 .creation-stat-strip {
   display: grid;
   grid-template-columns: repeat(6, minmax(34px, 1fr));
-  gap: 2px;
+  gap: 4px;
   border-top: 1px solid rgba(72, 255, 173, 0.18);
   border-bottom: 1px solid rgba(72, 255, 173, 0.18);
-  padding: 4px 0;
+  padding: 7px 0;
 }
 
 .creation-stat-strip span {
   min-width: 0;
   display: grid;
   justify-items: center;
-  gap: 1px;
+  gap: 2px;
   border: 0;
-  padding: 1px 2px;
+  padding: 1px 2px 2px;
   color: rgba(244, 255, 248, 0.82);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.1;
   text-align: center;
 }
@@ -1738,7 +1747,7 @@ h1 {
 .creation-stat-strip b {
   display: block;
   color: var(--accent);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 760;
 }
 
@@ -1746,7 +1755,44 @@ h1 {
   display: block;
   min-height: 10px;
   color: rgba(72, 255, 173, 0.82);
-  font-size: 8px;
+  font-size: 9px;
+}
+
+.skill-review {
+  border: 1px solid rgba(72, 255, 173, 0.22);
+  background:
+    linear-gradient(180deg, rgba(72, 255, 173, 0.065), transparent 70%),
+    rgba(0, 9, 7, 0.6);
+  padding: 10px;
+}
+
+.creation-skill-review-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 42px;
+  align-content: flex-start;
+}
+
+.creation-skill-review-list span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border: 1px solid rgba(72, 255, 173, 0.48);
+  background:
+    linear-gradient(180deg, rgba(244, 255, 248, 0.07), rgba(72, 255, 173, 0.03)),
+    rgba(0, 0, 0, 0.52);
+  padding: 4px 8px;
+  color: rgba(244, 255, 248, 0.94);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.1;
+  box-shadow: inset 0 1px 0 rgba(244, 255, 248, 0.06);
+}
+
+.creation-skill-review-list small {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .creation-career-picker {
@@ -2443,7 +2489,37 @@ h1 {
   }
 
   .creator-header {
-    padding-top: max(10px, env(safe-area-inset-top));
+    padding: max(10px, env(safe-area-inset-top)) 12px 10px;
+  }
+
+  .creator-header h2 {
+    font-size: 22px;
+  }
+
+  .creator-header button {
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
+    border-radius: 8px;
+    font-size: 22px;
+  }
+
+  .creator-body {
+    padding: 10px 8px 14px;
+  }
+
+  .character-creation-wizard {
+    padding: 12px 10px 10px;
+  }
+
+  .creation-next-step strong {
+    font-size: 15px;
+  }
+
+  .creation-skill-review-list span {
+    min-height: 26px;
+    padding: 4px 7px;
+    font-size: 12px;
   }
 
   .creator-quick-actions {
