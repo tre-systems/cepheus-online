@@ -263,6 +263,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/shared/character-creation/career-rules',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'career-rules.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_CAREER_RULES_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/shared/character-creation/cepheus-srd-ruleset.js',
     source: join(
       compiledClientRoot,
@@ -307,6 +318,17 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/shared/character-creation/benefits',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'benefits.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_BENEFITS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/shared/character-creation/aging.js',
     source: join(
       compiledClientRoot,
@@ -315,6 +337,28 @@ const assets = [
       'aging.js'
     ),
     exportName: 'SHARED_CHARACTER_CREATION_AGING_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/character-creation/term-lifecycle.js',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'term-lifecycle.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_TERM_LIFECYCLE_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/character-creation/term-lifecycle',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'term-lifecycle.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_TERM_LIFECYCLE_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {

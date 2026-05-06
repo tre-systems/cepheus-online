@@ -159,4 +159,34 @@ describe('app session', () => {
     assert.equal(session.snapshot().selectedBoardId, other.id)
     assert.equal(session.snapshot().selectedPieceId, null)
   })
+
+  it('records request errors and recovery flags from server message application results', () => {
+    const session = createAppSession({
+      roomId: 'demo-room',
+      actorId: 'local-user',
+      viewerRole: 'referee'
+    })
+
+    session.applyServerMessage({
+      error: 'Stale command',
+      shouldReload: true
+    })
+
+    assert.equal(session.snapshot().requestError, 'Stale command')
+    assert.deepEqual(session.snapshot().recovery, {
+      shouldReload: true,
+      isRecovering: true
+    })
+
+    session.applyServerMessage({
+      error: null,
+      shouldReload: false
+    })
+
+    assert.equal(session.snapshot().requestError, null)
+    assert.deepEqual(session.snapshot().recovery, {
+      shouldReload: false,
+      isRecovering: false
+    })
+  })
 })

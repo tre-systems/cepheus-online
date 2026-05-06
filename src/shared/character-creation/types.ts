@@ -109,6 +109,14 @@ export interface CareerCreationActionContext {
   reenlistmentOutcome?: CareerCreationReenlistmentOutcome
 }
 
+export interface CareerCreationActionProjection {
+  state: CareerCreationState
+  terms?: readonly CareerTerm[]
+  careers?: readonly CareerRank[]
+  pendingCascadeSkills?: readonly string[]
+  creationComplete?: boolean
+}
+
 export interface CareerCheck {
   characteristic: CharacteristicKey | null
   target: number

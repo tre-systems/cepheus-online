@@ -91,6 +91,10 @@ const clientModules = new Map<
     { markers: ['evaluateCareerCheck', 'parseCareerCheck'] }
   ],
   [
+    '/shared/character-creation/career-rules',
+    { markers: ['evaluateCareerCheck', 'parseCareerCheck'] }
+  ],
+  [
     '/shared/character-creation/cepheus-srd-ruleset.js',
     { markers: ['CEPHEUS_SRD_CAREERS', 'Scout', 'Merchant'] }
   ],
@@ -112,12 +116,29 @@ const clientModules = new Map<
     { markers: ['resolveCareerBenefit', 'deriveRemainingCareerBenefits'] }
   ],
   [
+    '/shared/character-creation/benefits',
+    { markers: ['resolveCareerBenefit', 'deriveRemainingCareerBenefits'] }
+  ],
+  [
+    '/shared/character-creation/term-lifecycle',
+    {
+      markers: ['canCompleteCreation', 'canOfferNewCareer'],
+      imports: ['/shared/character-creation/career-rules']
+    }
+  ],
+  [
     '/shared/character-creation/aging.js',
     { markers: ['resolveAging', 'selectAgingEffect'] }
   ],
   [
     '/shared/character-creation/legal-actions.js',
-    { markers: ['deriveLegalCareerCreationActionKeys'] }
+    {
+      markers: ['deriveLegalCareerCreationActionKeys'],
+      imports: [
+        '/shared/character-creation/benefits',
+        '/shared/character-creation/term-lifecycle'
+      ]
+    }
   ],
   [
     '/client/app/character-creation-flow.js',

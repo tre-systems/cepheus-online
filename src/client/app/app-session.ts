@@ -22,6 +22,11 @@ export interface AppRecoveryFlags {
   isRecovering: boolean
 }
 
+export interface AppServerMessageApplication {
+  error: string | null
+  shouldReload: boolean
+}
+
 export interface AppSessionState {
   room: AppRoomIdentity
   authoritativeState: GameState | null
@@ -53,6 +58,9 @@ export interface AppSession {
   setCreationFlowId: (creationFlowId: string | null) => AppSessionState
   setRequestError: (error: string | null) => AppSessionState
   setRecoveryFlags: (flags: Partial<AppRecoveryFlags>) => AppSessionState
+  applyServerMessage: (
+    application: AppServerMessageApplication
+  ) => AppSessionState
 }
 
 const closedPanels = (): AppPanelState => ({
@@ -195,6 +203,15 @@ export const createAppSession = (
         recovery: {
           ...state.recovery,
           ...flags
+        }
+      }),
+    applyServerMessage: (application) =>
+      replace({
+        ...state,
+        requestError: application.error,
+        recovery: {
+          shouldReload: application.shouldReload,
+          isRecovering: application.shouldReload
         }
       })
   }

@@ -205,6 +205,7 @@ let boardController = null
 let requestCounter = 0
 let diceHideTimer = null
 const revealedDiceIds = new Set()
+const animatedDiceRollActivityIds = new Set()
 const diceRevealWaiters = new Map()
 let pendingGeneratedCharacter = null
 let characterCreationFlow = null
@@ -259,12 +260,37 @@ const selectPiece = (pieceId) => {
 
 const handleServerMessage = (message) => {
   const application = applyClientServerMessage(state, message)
-  setError(application.error || '')
+  const diceRollActivities = application.diceRollActivities.filter(
+    (activity) =>
+      !animatedDiceRollActivityIds.has(activity.id) &&
+      !revealedDiceIds.has(activity.id)
+  )
+  const sessionState = appSession.applyServerMessage(application)
+  setError(sessionState.requestError || '')
   if (application.shouldApplyState) {
-    applyState(application.state)
+    applyState(application.state, {
+      animateLatestDiceLog: application.diceRollActivities.length === 0,
+      deferDiceRevealIds: new Set(
+        diceRollActivities.map((activity) => activity.id)
+      )
+    })
   }
-  if (application.shouldReload) {
-    fetchState().catch((err) => setError(err.message))
+  for (const activity of diceRollActivities) {
+    animatedDiceRollActivityIds.add(activity.id)
+    animateRoll(activity)
+  }
+  if (sessionState.recovery.shouldReload) {
+    fetchState()
+      .catch((err) => {
+        const nextSessionState = appSession.setRequestError(err.message)
+        setError(nextSessionState.requestError || '')
+      })
+      .finally(() => {
+        appSession.setRecoveryFlags({
+          shouldReload: false,
+          isRecovering: false
+        })
+      })
   }
 }
 
@@ -2285,15 +2311,27 @@ const connectSocket = () => {
   })
 }
 
-const applyState = (nextState) => {
+const applyState = (
+  nextState,
+  { animateLatestDiceLog = true, deferDiceRevealIds = new Set() } = {}
+) => {
   const previousDiceId = latestDiceId
   state = appSession.setAuthoritativeState(nextState).authoritativeState
   const latestRoll = state?.diceLog?.[state.diceLog.length - 1] || null
   latestDiceId = latestRoll?.id || null
   render()
-  if (latestRoll && firstStateApplied && latestRoll.id !== previousDiceId) {
+  if (
+    latestRoll &&
+    animateLatestDiceLog &&
+    firstStateApplied &&
+    latestRoll.id !== previousDiceId
+  ) {
     animateRoll(latestRoll)
-  } else if (latestRoll && latestRoll.id !== previousDiceId) {
+  } else if (
+    latestRoll &&
+    latestRoll.id !== previousDiceId &&
+    !deferDiceRevealIds.has(latestRoll.id)
+  ) {
     resolveDiceReveal(latestRoll.id)
   }
   firstStateApplied = true

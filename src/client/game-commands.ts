@@ -12,6 +12,7 @@ import {
   type UserId
 } from '../shared/ids'
 import type { ClientMessage, ServerMessage } from '../shared/protocol'
+import type { LiveActivityDescriptor } from '../shared/live-activity'
 import type {
   CharacterCharacteristics,
   CharacterEquipmentItem,
@@ -36,6 +37,15 @@ export interface ClientMessageApplication {
   shouldApplyState: boolean
   shouldReload: boolean
   error: string | null
+  liveActivities: readonly LiveActivityDescriptor[]
+  diceRollActivities: readonly ClientDiceRollActivity[]
+}
+
+export interface ClientDiceRollActivity {
+  id: string
+  revealAt: string
+  rolls: readonly number[]
+  total: number
 }
 
 export const DEFAULT_GAME_ID = 'demo-room'
@@ -633,17 +643,53 @@ export const buildBootstrapCommands = (
   return []
 }
 
+export const deriveServerMessageLiveActivities = (
+  message: ServerMessage
+): readonly LiveActivityDescriptor[] => {
+  switch (message.type) {
+    case 'roomState':
+    case 'commandAccepted':
+      return message.liveActivities ?? []
+
+    default:
+      return []
+  }
+}
+
+export const deriveServerMessageDiceRollActivities = (
+  message: ServerMessage
+): ClientDiceRollActivity[] => {
+  const diceRolls: ClientDiceRollActivity[] = []
+
+  for (const activity of deriveServerMessageLiveActivities(message)) {
+    if (activity.type !== 'diceRoll') continue
+    diceRolls.push({
+      id: activity.id,
+      revealAt: activity.reveal.revealAt,
+      rolls: activity.rolls,
+      total: activity.total
+    })
+  }
+
+  return diceRolls
+}
+
 export const applyServerMessage = (
   currentState: GameState | null,
   message: ServerMessage
 ): ClientMessageApplication => {
+  const liveActivities = deriveServerMessageLiveActivities(message)
+  const diceRollActivities = deriveServerMessageDiceRollActivities(message)
+
   switch (message.type) {
     case 'roomState':
       return {
         state: message.state,
         shouldApplyState: true,
         shouldReload: false,
-        error: null
+        error: null,
+        liveActivities,
+        diceRollActivities
       }
 
     case 'commandAccepted':
@@ -651,7 +697,9 @@ export const applyServerMessage = (
         state: message.state,
         shouldApplyState: true,
         shouldReload: false,
-        error: null
+        error: null,
+        liveActivities,
+        diceRollActivities
       }
 
     case 'commandRejected':
@@ -659,7 +707,9 @@ export const applyServerMessage = (
         state: currentState,
         shouldApplyState: false,
         shouldReload: message.error.code === 'stale_command',
-        error: message.error.message
+        error: message.error.message,
+        liveActivities,
+        diceRollActivities
       }
 
     case 'error':
@@ -667,7 +717,9 @@ export const applyServerMessage = (
         state: currentState,
         shouldApplyState: false,
         shouldReload: false,
-        error: message.error.message
+        error: message.error.message,
+        liveActivities,
+        diceRollActivities
       }
 
     case 'pong':
@@ -675,7 +727,9 @@ export const applyServerMessage = (
         state: currentState,
         shouldApplyState: false,
         shouldReload: false,
-        error: null
+        error: null,
+        liveActivities,
+        diceRollActivities
       }
 
     default: {
@@ -684,7 +738,9 @@ export const applyServerMessage = (
         state: currentState,
         shouldApplyState: false,
         shouldReload: false,
-        error: `Unhandled message ${(exhaustive as { type: string }).type}`
+        error: `Unhandled message ${(exhaustive as { type: string }).type}`,
+        liveActivities,
+        diceRollActivities
       }
     }
   }

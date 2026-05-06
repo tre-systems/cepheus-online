@@ -22,10 +22,28 @@
             "revealAt": "2026-05-03T00:00:04.500Z",
             "delayMs": 2500
           }
+        },
+        {
+          "id": "game-1:4",
+          "eventId": "game-1:4",
+          "gameId": "game-1",
+          "seq": 4,
+          "actorId": "user-1",
+          "createdAt": "2026-05-03T00:00:04.000Z",
+          "type": "diceRoll",
+          "expression": "2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2d6+2...",
+          "reason": "A very long dice roll reason. A very long dice roll reason. A very long dice roll reason. A very long dice roll reaso...",
+          "rolls": [1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 6, 1, 2],
+          "rollsOmitted": 5,
+          "total": 85,
+          "reveal": {
+            "revealAt": "2026-05-03T00:00:06.500Z",
+            "delayMs": 2500
+          }
         }
       ]
     },
-    "maxSerializedBytes": 400
+    "maxSerializedBytes": 1000
   },
   {
     "name": "command accepted live activity companion",

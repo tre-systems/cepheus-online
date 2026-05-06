@@ -1,9 +1,14 @@
 import type {
   CareerCreationActionContext,
   CareerCreationActionKey,
+  CareerCreationActionProjection,
   CareerCreationPendingDecisionKey,
+  CareerCreationPendingDecision,
+  CareerCreationReenlistmentOutcome,
   CareerCreationState
 } from './types'
+import { deriveRemainingCareerBenefits } from './benefits'
+import { canCompleteCreation, canOfferNewCareer } from './term-lifecycle'
 
 const defaultActionContext = {
   remainingMusteringBenefits: 0,
@@ -20,6 +25,101 @@ const hasPendingDecision = (
 
 const hasAnyPendingDecision = (context: CareerCreationActionContext): boolean =>
   (context.pendingDecisions?.length ?? 0) > 0
+
+const lastTerm = (
+  creation: CareerCreationActionProjection
+): NonNullable<CareerCreationActionProjection['terms']>[number] | null =>
+  creation.terms?.[creation.terms.length - 1] ?? null
+
+const termsInCareer = (
+  creation: CareerCreationActionProjection,
+  career: string
+): number =>
+  creation.terms?.filter((term) => term.career === career).length ?? 0
+
+const benefitsReceivedInCareer = (
+  creation: CareerCreationActionProjection,
+  career: string
+): number =>
+  creation.terms
+    ?.filter((term) => term.career === career)
+    .reduce((total, term) => total + term.benefits.length, 0) ?? 0
+
+const rankInCareer = (
+  creation: CareerCreationActionProjection,
+  career: string
+): number => creation.careers?.find((entry) => entry.name === career)?.rank ?? 0
+
+export const deriveRemainingCareerCreationBenefits = (
+  creation: CareerCreationActionProjection
+): number => {
+  if (!creation.terms) return 0
+
+  let remaining = 0
+  const seen = new Set<string>()
+  for (const term of creation.terms) {
+    if (seen.has(term.career)) continue
+    seen.add(term.career)
+    remaining += deriveRemainingCareerBenefits({
+      termsInCareer: termsInCareer(creation, term.career),
+      currentRank: rankInCareer(creation, term.career),
+      benefitsReceived: benefitsReceivedInCareer(creation, term.career)
+    })
+  }
+
+  return remaining
+}
+
+export const deriveCareerCreationPendingDecisions = (
+  creation: CareerCreationActionProjection
+): CareerCreationPendingDecision[] => {
+  const decisions: CareerCreationPendingDecision[] = []
+
+  if ((creation.pendingCascadeSkills?.length ?? 0) > 0) {
+    decisions.push({ key: 'cascadeSkillResolution' })
+  }
+
+  return decisions
+}
+
+export const deriveCareerCreationReenlistmentOutcome = (
+  creation: CareerCreationActionProjection
+): CareerCreationReenlistmentOutcome => {
+  if (creation.state.status !== 'REENLISTMENT') return 'unresolved'
+
+  const term = lastTerm(creation)
+  if (!term) return 'unresolved'
+  if ((creation.terms?.length ?? 0) >= 7) return 'retire'
+  if (term.reEnlistment === 12) return 'forced'
+  if (term.reEnlistment !== undefined && term.canReenlist) return 'allowed'
+  if (term.musteringOut || !term.canReenlist) return 'blocked'
+
+  return 'unresolved'
+}
+
+export const deriveCareerCreationActionContext = (
+  creation: CareerCreationActionProjection
+): CareerCreationActionContext => {
+  const pendingDecisions = deriveCareerCreationPendingDecisions(creation)
+  const noOutstandingSelections = pendingDecisions.length === 0
+  const remainingMusteringBenefits =
+    deriveRemainingCareerCreationBenefits(creation)
+  const terms = creation.terms ?? []
+
+  return {
+    pendingDecisions,
+    remainingMusteringBenefits,
+    canContinueCareer: canOfferNewCareer({
+      noOutstandingSelections,
+      termCount: terms.length,
+      remainingBenefits: remainingMusteringBenefits
+    }),
+    canCompleteCreation:
+      creation.creationComplete !== true &&
+      canCompleteCreation({ noOutstandingSelections, terms }),
+    reenlistmentOutcome: deriveCareerCreationReenlistmentOutcome(creation)
+  }
+}
 
 export const deriveLegalCareerCreationActionKeys = (
   state: CareerCreationState,
@@ -96,3 +196,11 @@ export const deriveLegalCareerCreationActionKeys = (
     }
   }
 }
+
+export const deriveLegalCareerCreationActionKeysForProjection = (
+  creation: CareerCreationActionProjection
+): CareerCreationActionKey[] =>
+  deriveLegalCareerCreationActionKeys(
+    creation.state,
+    deriveCareerCreationActionContext(creation)
+  )

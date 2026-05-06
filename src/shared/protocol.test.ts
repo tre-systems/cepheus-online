@@ -3,6 +3,10 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { describe, it } from 'node:test'
 
+import {
+  MAX_LIVE_ACTIVITY_ROLLS,
+  MAX_LIVE_ACTIVITY_TEXT_LENGTH
+} from './live-activity'
 import { decodeClientMessage, decodeCommand } from './protocol'
 import type { CommandErrorCode, ServerMessage } from './protocol'
 
@@ -34,6 +38,16 @@ const loadFixture = <T>(name: string): T => {
 
 const serializedBytes = (value: unknown): number =>
   new TextEncoder().encode(JSON.stringify(value)).length
+
+const serverFixtureLiveActivities = () =>
+  liveActivityServerMessageFixtures.flatMap((fixture) => {
+    const { message } = fixture
+    if (message.type !== 'roomState' && message.type !== 'commandAccepted') {
+      return []
+    }
+
+    return message.liveActivities ?? []
+  })
 
 const validCommandEnvelopeFixtures = loadFixture<ValidCommandEnvelopeFixture[]>(
   'valid-command-envelopes.json'
@@ -90,6 +104,36 @@ describe('protocol validation', () => {
       assert.equal(JSON.stringify(message).includes('creationEvent'), false)
     })
   }
+
+  it('covers bounded dice activity in server message fixtures', () => {
+    const activity = serverFixtureLiveActivities().find(
+      (candidate) => candidate.type === 'diceRoll' && candidate.rollsOmitted
+    )
+
+    assert.equal(activity?.type, 'diceRoll')
+    if (activity?.type !== 'diceRoll') return
+    assert.equal(activity.expression.length, MAX_LIVE_ACTIVITY_TEXT_LENGTH)
+    assert.equal(activity.expression.endsWith('...'), true)
+    assert.equal(activity.reason.length, MAX_LIVE_ACTIVITY_TEXT_LENGTH)
+    assert.equal(activity.reason.endsWith('...'), true)
+    assert.equal(activity.rolls.length, MAX_LIVE_ACTIVITY_ROLLS)
+    assert.equal(activity.rollsOmitted, 5)
+  })
+
+  it('covers character creation activity in command accepted fixtures', () => {
+    const commandAcceptedFixture = liveActivityServerMessageFixtures.find(
+      (fixture) => fixture.message.type === 'commandAccepted'
+    )
+
+    assert.equal(commandAcceptedFixture?.message.type, 'commandAccepted')
+    if (commandAcceptedFixture?.message.type !== 'commandAccepted') return
+    assert.equal(
+      commandAcceptedFixture.message.liveActivities?.some(
+        (activity) => activity.type === 'characterCreation'
+      ),
+      true
+    )
+  })
 
   it('accepts a command envelope with a typed command', () => {
     const result = decodeClientMessage({

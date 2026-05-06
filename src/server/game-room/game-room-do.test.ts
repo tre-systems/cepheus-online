@@ -1,10 +1,12 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import { asGameId } from '../../shared/ids'
 import type { DurableObjectState } from '../cloudflare'
 import type { Env } from '../env'
 import { GameRoomDO } from './game-room-do'
 import { createMemoryStorage } from './test-support'
+import { readEventStream } from './storage'
 
 type TestSocket = WebSocket & {
   sent: string[]
@@ -26,11 +28,12 @@ const parseMessages = (socket: TestSocket) =>
 
 const createRoom = (
   webSockets: TestSocket[] = [],
-  tags = new Map<WebSocket, string[]>()
+  tags = new Map<WebSocket, string[]>(),
+  storage = createMemoryStorage()
 ) =>
   new GameRoomDO(
     {
-      storage: createMemoryStorage(),
+      storage,
       getWebSockets: () => webSockets,
       getTags: (socket) => tags.get(socket) ?? []
     } satisfies DurableObjectState,
@@ -130,6 +133,58 @@ describe('GameRoomDO HTTP skeleton', () => {
     assert.equal(message.type, 'commandAccepted')
     assert.equal(message.eventSeq, 1)
     assert.equal(message.state.name, 'Spinward Test')
+  })
+
+  it('returns user validation failures as commandRejected', async () => {
+    const room = createRoom()
+
+    const response = await postCommand(room, createBoardBody())
+    const message = await response.json()
+
+    assert.equal(response.status, 404)
+    assert.equal(message.type, 'commandRejected')
+    assert.equal(message.requestId, 'create-board')
+    assert.equal(message.error.code, 'game_not_found')
+    assert.equal(message.eventSeq, 0)
+  })
+
+  it('returns internal publication failures as HTTP 500 errors', async () => {
+    const storage = createMemoryStorage()
+    const get = storage.get.bind(storage)
+    storage.get = async <T = unknown>(key: string): Promise<T | undefined> => {
+      const value = await get<T>(key)
+
+      if (key === 'checkpoint:game-1' && value) {
+        const checkpoint = value as unknown as {
+          state: {
+            name: string
+          }
+        }
+
+        return {
+          ...checkpoint,
+          state: {
+            ...checkpoint.state,
+            name: `${checkpoint.state.name} (corrupt)`
+          }
+        } as T
+      }
+
+      return value
+    }
+    const room = createRoom([], new Map(), storage)
+
+    const response = await postCommand(room, createGameBody())
+    const message = await response.json()
+
+    assert.equal(response.status, 500)
+    assert.equal(message.type, 'error')
+    assert.equal(message.error.code, 'projection_mismatch')
+    assert.equal(
+      message.error.message,
+      'Stored event stream does not match live projection'
+    )
+    assert.equal((await readEventStream(storage, asGameId('game-1'))).length, 1)
   })
 
   it('serves the current room projection', async () => {

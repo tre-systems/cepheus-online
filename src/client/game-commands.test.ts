@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import {
   asBoardId,
   asCharacterId,
+  asEventId,
   asGameId,
   asPieceId,
   asUserId
@@ -19,6 +20,7 @@ import {
   buildMovePieceCommand,
   buildSequencedCommand,
   buildSetDoorOpenCommand,
+  deriveServerMessageDiceRollActivities,
   formatCharacterEquipmentText,
   normalizeCharacterEquipmentText,
   normalizeCharacterSkillList,
@@ -556,6 +558,97 @@ describe('client command helpers', () => {
     assert.equal(result.shouldApplyState, true)
     assert.equal(result.shouldReload, false)
     assert.equal(result.error, null)
+    assert.deepEqual(result.liveActivities, [])
+    assert.deepEqual(result.diceRollActivities, [])
+  })
+
+  it('surfaces live dice roll activities from accepted messages', () => {
+    const activity = {
+      id: asEventId('game-1:8'),
+      eventId: asEventId('game-1:8'),
+      gameId: identity.gameId,
+      seq: 8,
+      actorId: identity.actorId,
+      createdAt: '2026-05-06T10:00:00.000Z',
+      type: 'diceRoll' as const,
+      expression: '2d6',
+      reason: 'Table roll',
+      rolls: [3, 4],
+      total: 7,
+      reveal: {
+        revealAt: '2026-05-06T10:00:02.500Z',
+        delayMs: 2500
+      }
+    }
+    const result = applyServerMessage(state, {
+      type: 'commandAccepted',
+      requestId: 'req-1',
+      state,
+      eventSeq: 8,
+      liveActivities: [activity]
+    })
+
+    assert.deepEqual(result.liveActivities, [activity])
+    assert.deepEqual(result.diceRollActivities, [
+      {
+        id: 'game-1:8',
+        revealAt: '2026-05-06T10:00:02.500Z',
+        rolls: [3, 4],
+        total: 7
+      }
+    ])
+  })
+
+  it('maps room state dice activity reveal metadata for the overlay', () => {
+    const activities = deriveServerMessageDiceRollActivities({
+      type: 'roomState',
+      state: {
+        ...state,
+        diceLog: []
+      },
+      eventSeq: 8,
+      liveActivities: [
+        {
+          id: asEventId('game-1:8'),
+          eventId: asEventId('game-1:8'),
+          gameId: identity.gameId,
+          seq: 8,
+          actorId: identity.actorId,
+          createdAt: '2026-05-06T10:00:00.000Z',
+          type: 'diceRoll',
+          expression: '2d6',
+          reason: 'Table roll',
+          rolls: [5, 6],
+          total: 11,
+          reveal: {
+            revealAt: '2026-05-06T10:00:02.500Z',
+            delayMs: 2500
+          }
+        },
+        {
+          id: asEventId('game-1:9'),
+          eventId: asEventId('game-1:9'),
+          gameId: identity.gameId,
+          seq: 9,
+          actorId: identity.actorId,
+          createdAt: '2026-05-06T10:01:00.000Z',
+          type: 'characterCreation',
+          characterId,
+          transition: 'STARTED',
+          status: 'CHARACTERISTICS',
+          creationComplete: false
+        }
+      ]
+    })
+
+    assert.deepEqual(activities, [
+      {
+        id: 'game-1:8',
+        revealAt: '2026-05-06T10:00:02.500Z',
+        rolls: [5, 6],
+        total: 11
+      }
+    ])
   })
 
   it('marks stale command rejections for reload', () => {

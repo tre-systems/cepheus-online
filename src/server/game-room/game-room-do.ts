@@ -11,7 +11,7 @@ import { filterGameStateForViewer, type GameViewer } from '../../shared/viewer'
 import type { DurableObjectState, WebSocketResponseInit } from '../cloudflare'
 import type { Env } from '../env'
 import { jsonResponse } from '../http'
-import { runCommandPublication } from './publication'
+import { CommandPublicationError, runCommandPublication } from './publication'
 import {
   buildRoomStateMessage,
   parseViewerFromUrl,
@@ -175,11 +175,28 @@ export class GameRoomDO {
         status: number
       }
   > {
-    const publication = await runCommandPublication(
-      this.state.storage,
-      gameId,
-      message
-    )
+    let publication: Awaited<ReturnType<typeof runCommandPublication>>
+
+    try {
+      publication = await runCommandPublication(
+        this.state.storage,
+        gameId,
+        message
+      )
+    } catch (error) {
+      if (error instanceof CommandPublicationError) {
+        return {
+          ok: false,
+          status: 500,
+          response: {
+            type: 'error',
+            error: commandError(error.code, error.message)
+          }
+        }
+      }
+
+      throw error
+    }
 
     if (!publication.ok) {
       const eventSeq = await getEventSeq(this.state.storage, gameId)
