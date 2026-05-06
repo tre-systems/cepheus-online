@@ -92,6 +92,7 @@ type CharacterEventType =
   | 'CharacterCreationStarted'
   | 'CharacterCreationTransitioned'
   | 'CharacterCreationBasicTrainingCompleted'
+  | 'CharacterCreationSurvivalResolved'
   | 'CharacterCreationHomeworldSet'
   | 'CharacterCreationHomeworldCompleted'
   | 'CharacterCreationBackgroundSkillSelected'
@@ -271,6 +272,48 @@ const characterEventHandlers = {
       history: [
         ...(character.creation.history ?? []),
         { type: 'COMPLETE_BASIC_TRAINING' }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationSurvivalResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const creationEvent = event.passed
+      ? {
+          type: 'SURVIVAL_PASSED' as const,
+          canCommission: event.canCommission,
+          canAdvance: event.canAdvance,
+          survival: structuredClone(event.survival)
+        }
+      : {
+          type: 'SURVIVAL_FAILED' as const,
+          survival: structuredClone(event.survival)
+        }
+    const lastTermIndex = character.creation.terms.length - 1
+    const terms = character.creation.terms.map((term, index) =>
+      index === lastTermIndex
+        ? {
+            ...structuredClone(term),
+            survival: event.survival.total
+          }
+        : structuredClone(term)
+    )
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      terms,
+      history: [
+        ...(character.creation.history ?? []),
+        structuredClone(creationEvent)
       ]
     }
     nextState.eventSeq = envelope.seq

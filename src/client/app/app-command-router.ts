@@ -42,6 +42,7 @@ export type CharacterCreationCommand = Extract<
       | 'FinalizeCharacterCreation'
       | 'StartCharacterCareerTerm'
       | 'CompleteCharacterCreationBasicTraining'
+      | 'ResolveCharacterCreationSurvival'
       | 'CreatePiece'
   }
 >
@@ -66,6 +67,7 @@ export const appCommandRouteByType = {
   FinalizeCharacterCreation: 'characterCreation',
   StartCharacterCareerTerm: 'characterCreation',
   CompleteCharacterCreationBasicTraining: 'characterCreation',
+  ResolveCharacterCreationSurvival: 'characterCreation',
   CreateBoard: 'board',
   SelectBoard: 'board',
   SetDoorOpen: 'door',

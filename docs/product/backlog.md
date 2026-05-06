@@ -335,6 +335,12 @@ Primary write ownership:
 
 ### Slice 1A: Semantic Commands And Events
 
+Status: in progress. Semantic commands/events now cover homeworld completion,
+basic training completion, and career term start facts. Homeworld set,
+background skill, cascade resolution, and finalization already have dedicated
+event families. The remaining high-value gap is replacing roll-backed generic
+transitions with semantic roll facts.
+
 Tasks:
 
 - Keep the current shared status machine and legal-action planner, but stop
@@ -416,9 +422,10 @@ Done when:
 ### Slice 1D: Homeworld, Background Skills, And Cascade Choices
 
 Status: mostly done in shared/client helpers and projector support. The current
-code projects homeworld, background skills, pending cascade skills, and cascade
-resolution. The remaining work is to finish semantic command/event fixtures and
-server validation around every choice.
+code projects homeworld, background skills, pending cascade skills, cascade
+resolution, and semantic homeworld completion. The remaining work is to make
+background allowance and cascade choices fully projection-owned across every
+creation source and to keep tightening server validation around those choices.
 
 Tasks:
 
@@ -444,9 +451,10 @@ Done when:
 
 Status: partially done. SRD career data, qualification penalties, failed
 qualification options, draft table resolution, basic training plans, career
-term start projection, and client flow helpers exist. The remaining work is to
-make server-side events record the exact qualification, draft, and training
-facts.
+term start projection, semantic requested/accepted career facts, semantic basic
+training completion, and client flow helpers exist. The remaining work is to
+make server-side events record exact qualification and draft roll facts, then
+carry richer basic-training choices in projection.
 
 Tasks:
 

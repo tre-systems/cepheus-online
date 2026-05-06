@@ -73,7 +73,10 @@ describe('career creation legal action planner', () => {
         {
           key: 'rollSurvival',
           status: 'SURVIVAL',
-          commandTypes: ['AdvanceCharacterCreation'],
+          commandTypes: [
+            'ResolveCharacterCreationSurvival',
+            'AdvanceCharacterCreation'
+          ],
           rollRequirement: { key: 'survival', dice: '2d6' }
         }
       ]
@@ -272,7 +275,11 @@ describe('career creation legal action planner', () => {
 
   it('derives legal actions in SRD phase order', () => {
     const phases = [
-      [createCareerCreationState('CHARACTERISTICS'), {}, ['setCharacteristics']],
+      [
+        createCareerCreationState('CHARACTERISTICS'),
+        {},
+        ['setCharacteristics']
+      ],
       [createCareerCreationState('HOMEWORLD'), {}, ['completeHomeworld']],
       [createCareerCreationState('CAREER_SELECTION'), {}, ['selectCareer']],
       [

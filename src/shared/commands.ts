@@ -91,6 +91,7 @@ export type Command =
       drafted?: boolean
     }
   | CharacterCreationBasicTrainingCommand
+  | CharacterCreationSurvivalCommand
   | {
       type: 'CreateBoard'
       gameId: GameId
@@ -186,8 +187,17 @@ export type CharacterCreationHomeworldCommand = {
   characterId: CharacterId
 }
 
+export type CharacterCreationSurvivalCommand = {
+  type: 'ResolveCharacterCreationSurvival'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
 export type SemanticCommand =
   | CharacterCreationBasicTrainingCommand
   | CharacterCreationHomeworldCommand
+  | CharacterCreationSurvivalCommand
 
 export type GameCommand = Command | CharacterCreationHomeworldCommand

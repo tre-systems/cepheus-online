@@ -94,6 +94,48 @@
     "maxSerializedBytes": 420
   },
   {
+    "name": "semantic survival activity",
+    "event": {
+      "type": "CharacterCreationSurvivalResolved",
+      "characterId": "char-1",
+      "passed": true,
+      "survival": {
+        "expression": "2d6",
+        "rolls": [4, 4],
+        "total": 8,
+        "characteristic": "end",
+        "modifier": 0,
+        "target": 7,
+        "success": true
+      },
+      "canCommission": false,
+      "canAdvance": false,
+      "state": {
+        "status": "SKILLS_TRAINING",
+        "context": {
+          "canCommission": false,
+          "canAdvance": false
+        }
+      },
+      "creationComplete": false
+    },
+    "activity": {
+      "id": "game-1:6",
+      "eventId": "game-1:6",
+      "gameId": "game-1",
+      "seq": 6,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:06.000Z",
+      "type": "characterCreation",
+      "characterId": "char-1",
+      "transition": "SURVIVAL_PASSED",
+      "details": "Survival passed; total 8; target 7+; DM 0; commission unavailable; advancement unavailable",
+      "status": "SKILLS_TRAINING",
+      "creationComplete": false
+    },
+    "maxSerializedBytes": 450
+  },
+  {
     "name": "bounded dice roll activity",
     "event": {
       "type": "DiceRolled",

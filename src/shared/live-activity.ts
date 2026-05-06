@@ -166,6 +166,32 @@ const basicTrainingDetails = (trainingSkills: readonly string[]): string => {
   ].join('; ')
 }
 
+const survivalDetails = ({
+  passed,
+  total,
+  target,
+  modifier,
+  canCommission,
+  canAdvance
+}: {
+  passed: boolean
+  total: number
+  target: number
+  modifier: number
+  canCommission: boolean
+  canAdvance: boolean
+}): string =>
+  [
+    passed ? 'Survival passed' : 'Survival failed',
+    `total ${total}`,
+    `target ${target}+`,
+    `DM ${signedLabel(modifier)}`,
+    passed ? `commission ${availabilityLabel(canCommission)}` : null,
+    passed ? `advancement ${availabilityLabel(canAdvance)}` : null
+  ]
+    .filter(Boolean)
+    .join('; ')
+
 const describeCareerCreationEvent = (
   event: CareerCreationEvent
 ): string | null => {
@@ -359,6 +385,26 @@ export const deriveLiveActivity = (
         transition: 'COMPLETE_BASIC_TRAINING',
         ...compactCharacterCreationDetails(
           basicTrainingDetails(event.trainingSkills)
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationSurvivalResolved':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: event.passed ? 'SURVIVAL_PASSED' : 'SURVIVAL_FAILED',
+        ...compactCharacterCreationDetails(
+          survivalDetails({
+            passed: event.passed,
+            total: event.survival.total,
+            target: event.survival.target,
+            modifier: event.survival.modifier,
+            canCommission: event.canCommission,
+            canAdvance: event.canAdvance
+          })
         ),
         status: event.state.status,
         creationComplete: event.creationComplete

@@ -623,6 +623,59 @@ describe('protocol validation', () => {
     })
   })
 
+  it('preserves career selection qualification and failed fallback facts', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-career-selection',
+      command: {
+        type: 'AdvanceCharacterCreation',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        creationEvent: {
+          type: 'SELECT_CAREER',
+          isNewCareer: true,
+          drafted: false,
+          canEnterDraft: true,
+          qualification: {
+            expression: '2d6',
+            rolls: [1, 2],
+            total: 3,
+            characteristic: 'int',
+            modifier: 1,
+            target: 4,
+            success: false
+          },
+          failedQualificationOptions: ['Drifter', 'Draft']
+        }
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    const { command } = result.value
+    assert.equal(command.type, 'AdvanceCharacterCreation')
+    if (command.type !== 'AdvanceCharacterCreation') return
+    assert.deepEqual(command.creationEvent, {
+      type: 'SELECT_CAREER',
+      isNewCareer: true,
+      drafted: false,
+      canEnterDraft: true,
+      qualification: {
+        expression: '2d6',
+        rolls: [1, 2],
+        total: 3,
+        characteristic: 'int',
+        modifier: 1,
+        target: 4,
+        success: false
+      },
+      failedQualificationOptions: ['Drifter', 'Draft']
+    })
+  })
+
   it('accepts semantic basic training completion commands', () => {
     const result = decodeCommand({
       type: 'CompleteCharacterCreationBasicTraining',
@@ -653,6 +706,23 @@ describe('protocol validation', () => {
     if (!result.ok) return
     assert.equal(result.value.type, 'CompleteCharacterCreationHomeworld')
     if (result.value.type !== 'CompleteCharacterCreationHomeworld') return
+    assert.equal(result.value.characterId, 'char-1')
+    assert.equal(result.value.expectedSeq, 7)
+  })
+
+  it('accepts semantic survival resolution commands', () => {
+    const result = decodeCommand({
+      type: 'ResolveCharacterCreationSurvival',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      expectedSeq: 7
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'ResolveCharacterCreationSurvival')
+    if (result.value.type !== 'ResolveCharacterCreationSurvival') return
     assert.equal(result.value.characterId, 'char-1')
     assert.equal(result.value.expectedSeq, 7)
   })

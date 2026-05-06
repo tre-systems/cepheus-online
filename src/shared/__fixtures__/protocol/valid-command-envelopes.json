@@ -112,6 +112,22 @@
     "expectedSeq": 22
   },
   {
+    "name": "character creation survival resolution command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-resolve-survival",
+      "command": {
+        "type": "ResolveCharacterCreationSurvival",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 23,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "ResolveCharacterCreationSurvival",
+    "expectedSeq": 23
+  },
+  {
     "name": "character creation background skill command",
     "message": {
       "type": "command",

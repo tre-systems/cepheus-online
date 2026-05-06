@@ -692,6 +692,126 @@ describe('room publication flow', () => {
     )
   })
 
+  it('publishes semantic survival resolution through seeded server dice', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-survival')
+    await appendEvents(
+      storage,
+      gameId,
+      actorId,
+      [
+        {
+          type: 'GameCreated',
+          slug: 'game-1',
+          name: 'Spinward Test',
+          ownerId: actorId
+        },
+        {
+          type: 'CharacterCreated',
+          characterId,
+          ownerId: actorId,
+          characterType: 'PLAYER',
+          name: 'Scout'
+        },
+        {
+          type: 'CharacterCreationStarted',
+          characterId,
+          creation: {
+            state: {
+              status: 'SURVIVAL',
+              context: {
+                canCommission: false,
+                canAdvance: false
+              }
+            },
+            terms: [
+              {
+                career: 'Scout',
+                skills: [],
+                skillsAndTraining: ['Vacc Suit-0'],
+                benefits: [],
+                complete: false,
+                canReenlist: true,
+                completedBasicTraining: true,
+                musteringOut: false,
+                anagathics: false
+              }
+            ],
+            careers: [{ name: 'Scout', rank: 0 }],
+            canEnterDraft: true,
+            failedToQualify: false,
+            characteristicChanges: [],
+            creationComplete: false,
+            homeworld: null,
+            backgroundSkills: [],
+            pendingCascadeSkills: [],
+            history: []
+          }
+        }
+      ],
+      '2026-05-03T00:00:00.000Z'
+    )
+
+    const resolved = await publish(storage, {
+      type: 'ResolveCharacterCreationSurvival',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 3
+    })
+
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    assert.equal(typeof (await storage.get(gameSeedKey(gameId))), 'number')
+    const storedEvents = await readEventStream(storage, gameId)
+    const diceEvent = storedEvents.at(-2)?.event
+    const storedEvent = storedEvents.at(-1)?.event
+    assert.equal(diceEvent?.type, 'DiceRolled')
+    assert.equal(storedEvent?.type, 'CharacterCreationSurvivalResolved')
+    if (
+      diceEvent?.type !== 'DiceRolled' ||
+      storedEvent?.type !== 'CharacterCreationSurvivalResolved'
+    ) {
+      return
+    }
+    assert.equal(diceEvent.expression, '2d6')
+    assert.equal(diceEvent.reason, 'Scout survival')
+    assert.deepEqual(diceEvent.rolls, storedEvent.survival.rolls)
+    assert.equal(diceEvent.total, storedEvent.survival.total)
+    assert.equal(storedEvent.survival.expression, '2d6')
+    assert.equal(storedEvent.survival.rolls.length, 2)
+    assert.equal(storedEvent.survival.success, storedEvent.passed)
+
+    const diceActivity = resolved.value.liveActivities.find(
+      (candidate) => candidate.type === 'diceRoll'
+    )
+    const activity = resolved.value.liveActivities.find(
+      (candidate) => candidate.type === 'characterCreation'
+    )
+    assert.equal(diceActivity?.type, 'diceRoll')
+    assert.equal(activity?.type, 'characterCreation')
+    if (
+      diceActivity?.type !== 'diceRoll' ||
+      activity?.type !== 'characterCreation'
+    ) {
+      return
+    }
+    assert.deepEqual(diceActivity.rolls, storedEvent.survival.rolls)
+    assert.equal(diceActivity.total, storedEvent.survival.total)
+    assert.equal(
+      activity.transition,
+      storedEvent.passed ? 'SURVIVAL_PASSED' : 'SURVIVAL_FAILED'
+    )
+
+    const recovered = await getProjectedGameState(storage, gameId)
+    const history = recovered?.characters[characterId]?.creation?.history ?? []
+    assert.equal(history.at(-1)?.type, activity.transition)
+    assert.equal(
+      recovered?.characters[characterId]?.creation?.terms.at(-1)?.survival,
+      storedEvent.survival.total
+    )
+  })
+
   it('persists and replays server-backed homeworld/background decisions', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-background')

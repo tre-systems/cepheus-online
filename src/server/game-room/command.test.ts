@@ -87,13 +87,15 @@ const createState = (
 
 const runCommand = (
   command: GameCommand,
-  creation: CharacterCreationProjection | null
+  creation: CharacterCreationProjection | null,
+  contextOverrides: Partial<Pick<CommandContext, 'gameSeed' | 'nextSeq'>> = {}
 ) => {
   const context: CommandContext = {
     state: createState(creation),
     currentSeq: 1,
     nextSeq: 2,
-    gameSeed: 1234
+    gameSeed: 1234,
+    ...contextOverrides
   }
 
   return deriveEventsForCommand(command, context)
@@ -416,6 +418,153 @@ describe('deriveEventsForCommand error categories', () => {
         drafted: true
       }
     ])
+  })
+
+  it('emits a semantic survival pass event with server-derived roll facts', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationSurvival',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('SURVIVAL', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Vacc Suit-0'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout survival',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationSurvivalResolved',
+        characterId,
+        passed: true,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: true
+        },
+        canCommission: false,
+        canAdvance: false,
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits a semantic survival failure event with server-derived roll facts', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationSurvival',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('SURVIVAL', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Vacc Suit-0'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      }),
+      { gameSeed: 2 }
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout survival',
+        rolls: [4, 2],
+        total: 6
+      },
+      {
+        type: 'CharacterCreationSurvivalResolved',
+        characterId,
+        passed: false,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 2],
+          total: 6,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: false
+        },
+        canCommission: false,
+        canAdvance: false,
+        state: {
+          status: 'MISHAP',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks semantic survival resolution outside survival', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationSurvival',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('BASIC_TRAINING')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'SURVIVAL is not valid from BASIC_TRAINING'
+    )
   })
 
   it('blocks semantic homeworld completion while background choices are unresolved', () => {

@@ -66,7 +66,8 @@ Already implemented in the rewrite:
 - Shared command, event, and projection types for character sheet creation and
   updates.
 - Event-backed character creation start, coarse status transition,
-  finalization, and first career term start.
+  finalization, semantic homeworld completion, semantic basic training
+  completion, and first career term start with requested/accepted career facts.
 - Pure shared character creation helpers for the status machine, skill
   normalization, cascade skill handling, term outcomes, aging selection,
   benefits, term lifecycle, reenlistment, and anagathics primitives.
@@ -82,14 +83,16 @@ Important remaining gaps:
   actions, roll requirements, or term sub-state.
 - Too much creation behavior still lives in the client wizard/draft flow rather
   than in shared deterministic rules and server-backed events.
-- Homeworld, primary education, and background skills are not fully
-  server-backed.
+- Homeworld, primary education, and background skills are partially
+  server-backed. Completion now uses a semantic command/event, but the
+  remaining pending-choice model still needs to become fully projection-owned.
 - Cascade skill choices are not yet presented as first-class modal steps.
 - Multi-term career play is incomplete.
 - Survival, mishaps, commission, advancement, aging, anagathics, reenlistment,
   mustering out, and final playable sheet projection need end-to-end wiring.
-- Character creation roll semantics need to be connected to shared dice events
-  so all players can see the same creation rolls at the same time.
+- Character creation roll semantics need to become first-class server facts
+  connected to shared dice events so all players can see the same creation
+  rolls at the same time.
 
 ## SRD Procedure Audit Checklist
 
@@ -112,23 +115,25 @@ tests before it is considered done.
   assignment choices, or replayed roll provenance.
 - [~] Set homeworld data and derive background skills from law level, trade
   codes, and primary education options. Current legal action:
-  `completeHomeworld`; pure helpers exist. Gap: no server-backed homeworld
-  projection, background selection commands/events, or refresh-safe pending
-  cascade flow.
+  `completeHomeworld`; semantic completion and pure helpers exist. Gap:
+  background-choice allowance and refresh-safe pending cascade flow are not yet
+  fully projection-owned across every source.
 - [~] Resolve cascade skills whenever SRD table entries use cascade markers.
   Current planner can block on `cascadeSkillResolution`. Gap: cascade choices
   are not yet a first-class server-backed modal step through all creation
   sources.
 - [~] Qualify for a career using `careerBasics`, applying prior-career limits
   and qualification penalties. Current legal action: `selectCareer`. Gap:
-  qualification success/failure is not a persisted roll fact and failed
-  qualification does not yet expose only Drifter or the Draft from shared state.
+  qualification success/failure is not yet a dedicated persisted roll fact,
+  though career-term start now records requested versus accepted career.
 - [ ] Resolve the Draft by rolling the `theDraft` table exactly once when
   eligible, then mark draft use on the term.
 - [~] Apply basic training from `serviceSkills`: all service skills at level 0
   in the first term ever, one selected service skill for a first term in a new
   career, none when returning. Current planner can block on
-  `basicTrainingSkillSelection`. Gap: not yet end-to-end server-backed.
+  `basicTrainingSkillSelection`. Semantic completion is server-backed. Gap:
+  choose-one basic training decisions still need richer projected state and UI
+  affordances.
 - [~] Roll survival from `careerBasics`; on failure, enter mishap/death or legal
   exit handling. Current legal action: `rollSurvival`. Gap: mishap/death
   outcome tables and roll facts are not fully projected.

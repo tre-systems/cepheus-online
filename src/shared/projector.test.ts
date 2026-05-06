@@ -386,6 +386,102 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
+  it('projects semantic survival resolution into history and the active term', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'SURVIVAL',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Scout',
+              skills: [],
+              skillsAndTraining: ['Vacc Suit-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationSurvivalResolved',
+        characterId,
+        passed: true,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: true
+        },
+        canCommission: false,
+        canAdvance: false,
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'SKILLS_TRAINING')
+    assert.equal(creation?.terms[0]?.survival, 8)
+    assert.deepEqual(creation?.history, [
+      {
+        type: 'SURVIVAL_PASSED',
+        canCommission: false,
+        canAdvance: false,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: true
+        }
+      }
+    ])
+    assert.equal(state?.eventSeq, 4)
+  })
+
   it('projects accepted career facts from semantic term start events', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

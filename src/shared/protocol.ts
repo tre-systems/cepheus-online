@@ -1,5 +1,9 @@
 import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
-import type { CareerCreationEvent } from './characterCreation'
+import type {
+  CareerCreationCheckFact,
+  CareerCreationEvent,
+  FailedQualificationOption
+} from './characterCreation'
 import { err, ok, type Result } from './result'
 import type { GameCommand } from './commands'
 import type { GameState } from './state'
@@ -499,6 +503,122 @@ const parseOptionalBoolean = (
   return parseBoolean(raw, label)
 }
 
+const parseCharacteristicKey = (
+  raw: unknown,
+  label: string
+): Result<CharacteristicKey | null, CommandError> => {
+  if (raw === null) return ok(null)
+  if (!isString(raw)) {
+    return err(invalidCommand(`${label} must be a characteristic or null`))
+  }
+  if (!characteristicKeys.includes(raw as CharacteristicKey)) {
+    return err(invalidCommand(`${label} is not supported`))
+  }
+
+  return ok(raw as CharacteristicKey)
+}
+
+const parseCareerCreationCheckFact = (
+  raw: unknown,
+  label: string
+): Result<CareerCreationCheckFact, CommandError> => {
+  if (!isObject(raw)) {
+    return err(invalidCommand(`${label} must be an object`))
+  }
+
+  const expression = parseString(raw.expression, `${label}.expression`)
+  if (!expression.ok) return expression
+  if (expression.value !== '2d6') {
+    return err(invalidCommand(`${label}.expression must be 2d6`))
+  }
+  if (!Array.isArray(raw.rolls)) {
+    return err(invalidCommand(`${label}.rolls must be an array`))
+  }
+  if (raw.rolls.length !== 2) {
+    return err(invalidCommand(`${label}.rolls must contain 2 entries`))
+  }
+  const rolls: number[] = []
+  for (const [index, item] of raw.rolls.entries()) {
+    const roll = parseNumber(item, `${label}.rolls[${index}]`)
+    if (!roll.ok) return roll
+    rolls.push(roll.value)
+  }
+
+  const total = parseNumber(raw.total, `${label}.total`)
+  if (!total.ok) return total
+  const characteristic = parseCharacteristicKey(
+    raw.characteristic,
+    `${label}.characteristic`
+  )
+  if (!characteristic.ok) return characteristic
+  const modifier = parseNumber(raw.modifier, `${label}.modifier`)
+  if (!modifier.ok) return modifier
+  const target = parseNumber(raw.target, `${label}.target`)
+  if (!target.ok) return target
+  const success = parseBoolean(raw.success, `${label}.success`)
+  if (!success.ok) return success
+
+  return ok({
+    expression: '2d6',
+    rolls,
+    total: total.value,
+    characteristic: characteristic.value,
+    modifier: modifier.value,
+    target: target.value,
+    success: success.value
+  })
+}
+
+const parseOptionalCareerCreationCheckFact = (
+  raw: unknown,
+  label: string
+): Result<CareerCreationCheckFact | undefined, CommandError> => {
+  if (raw === undefined) return ok(undefined)
+
+  return parseCareerCreationCheckFact(raw, label)
+}
+
+const failedQualificationOptions = [
+  'Drifter',
+  'Draft'
+] satisfies FailedQualificationOption[]
+
+const parseOptionalFailedQualificationOptions = (
+  raw: unknown,
+  label: string
+): Result<FailedQualificationOption[] | undefined, CommandError> => {
+  if (raw === undefined) return ok(undefined)
+  if (!Array.isArray(raw)) {
+    return err(invalidCommand(`${label} must be an array`))
+  }
+  if (raw.length > failedQualificationOptions.length) {
+    return err(
+      invalidCommand(
+        `${label} cannot contain more than ${failedQualificationOptions.length} entries`
+      )
+    )
+  }
+
+  const options: FailedQualificationOption[] = []
+  for (const [index, item] of raw.entries()) {
+    const option = parseString(item, `${label}[${index}]`)
+    if (!option.ok) return option
+    if (
+      !failedQualificationOptions.includes(
+        option.value as FailedQualificationOption
+      )
+    ) {
+      return err(invalidCommand(`${label}[${index}] is not supported`))
+    }
+    if (options.includes(option.value as FailedQualificationOption)) {
+      return err(invalidCommand(`${label}[${index}] is duplicated`))
+    }
+    options.push(option.value as FailedQualificationOption)
+  }
+
+  return ok(options)
+}
+
 const parseCareerCreationEvent = (
   raw: unknown
 ): Result<CareerCreationEvent, CommandError> => {
@@ -534,11 +654,35 @@ const parseCareerCreationEvent = (
       if (!isNewCareer.ok) return isNewCareer
       const drafted = parseOptionalBoolean(raw.drafted, 'drafted')
       if (!drafted.ok) return drafted
+      const canEnterDraft = parseOptionalBoolean(
+        raw.canEnterDraft,
+        'canEnterDraft'
+      )
+      if (!canEnterDraft.ok) return canEnterDraft
+      const qualification = parseOptionalCareerCreationCheckFact(
+        raw.qualification,
+        'qualification'
+      )
+      if (!qualification.ok) return qualification
+      const failedOptions = parseOptionalFailedQualificationOptions(
+        raw.failedQualificationOptions,
+        'failedQualificationOptions'
+      )
+      if (!failedOptions.ok) return failedOptions
 
       return ok({
         type: 'SELECT_CAREER',
         isNewCareer: isNewCareer.value,
-        ...(drafted.value === undefined ? {} : { drafted: drafted.value })
+        ...(drafted.value === undefined ? {} : { drafted: drafted.value }),
+        ...(canEnterDraft.value === undefined
+          ? {}
+          : { canEnterDraft: canEnterDraft.value }),
+        ...(qualification.value === undefined
+          ? {}
+          : { qualification: qualification.value }),
+        ...(failedOptions.value === undefined
+          ? {}
+          : { failedQualificationOptions: failedOptions.value })
       })
     }
 
@@ -684,6 +828,17 @@ export const decodeCommand = (
 
       return ok({
         type: 'CompleteCharacterCreationHomeworld',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'ResolveCharacterCreationSurvival': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'ResolveCharacterCreationSurvival',
         ...base.value,
         characterId: characterId.value
       })

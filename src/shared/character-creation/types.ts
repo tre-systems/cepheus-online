@@ -54,6 +54,7 @@ export type CareerCreationEvent =
       type: 'SELECT_CAREER'
       isNewCareer: boolean
       drafted?: boolean
+      canEnterDraft?: boolean
       qualification?: CareerCreationCheckFact
       failedQualificationOptions?: FailedQualificationOption[]
     }
@@ -118,6 +119,7 @@ export type CareerCreationActionKey =
 export type CareerCreationServerCommandType =
   | 'AdvanceCharacterCreation'
   | 'CompleteCharacterCreationHomeworld'
+  | 'ResolveCharacterCreationSurvival'
   | 'StartCharacterCareerTerm'
   | 'FinalizeCharacterCreation'
 

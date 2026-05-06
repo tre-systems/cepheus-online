@@ -181,6 +181,51 @@ describe('live activity derivation', () => {
     })
   })
 
+  it('derives compact semantic survival activity', () => {
+    const activity = deriveLiveActivity(
+      envelope(6, {
+        type: 'CharacterCreationSurvivalResolved',
+        characterId,
+        passed: true,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: true
+        },
+        canCommission: false,
+        canAdvance: false,
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    )
+
+    assert.deepEqual(activity, {
+      id: asEventId('game-1:6'),
+      eventId: asEventId('game-1:6'),
+      gameId,
+      seq: 6,
+      actorId,
+      createdAt: '2026-05-03T00:00:06.000Z',
+      type: 'characterCreation',
+      characterId,
+      transition: 'SURVIVAL_PASSED',
+      details:
+        'Survival passed; total 8; target 7+; DM 0; commission unavailable; advancement unavailable',
+      status: 'SKILLS_TRAINING',
+      creationComplete: false
+    })
+  })
+
   it('derives compact activity details for SRD character creation milestones', () => {
     const activities = deriveLiveActivities([
       envelope(1, {

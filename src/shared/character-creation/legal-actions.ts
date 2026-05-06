@@ -309,7 +309,10 @@ const actionDefinitions = {
     commandTypes: ['AdvanceCharacterCreation']
   },
   rollSurvival: {
-    commandTypes: ['AdvanceCharacterCreation'],
+    commandTypes: [
+      'ResolveCharacterCreationSurvival',
+      'AdvanceCharacterCreation'
+    ],
     rollRequirement: { key: 'survival', dice: '2d6' }
   },
   resolveMishap: {

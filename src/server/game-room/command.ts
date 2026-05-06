@@ -5,6 +5,8 @@ import {
   careerSkillWithLevel,
   deriveCareerCreationActionContext,
   deriveLegalCareerCreationActionKeysForProjection,
+  deriveSurvivalPromotionOptions,
+  evaluateCareerCheck,
   deriveBackgroundSkillPlan,
   deriveTotalBackgroundSkillAllowance,
   hasBackgroundHomeworld,
@@ -445,6 +447,111 @@ const validateHomeworldCompletion = (
   return ok(character.creation)
 }
 
+const validateSurvivalResolution = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'SURVIVAL') {
+    return err(
+      commandError(
+        'invalid_command',
+        `SURVIVAL is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('rollSurvival')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'SURVIVAL is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
+const currentCareerRank = (
+  creation: CharacterCreationProjection,
+  career: string
+): number => creation.careers.find((entry) => entry.name === career)?.rank ?? 0
+
+type CharacterCreationSurvivalResolvedEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationSurvivalResolved' }
+>
+
+const resolveSurvivalCreationEvent = ({
+  character,
+  creation,
+  roll
+}: {
+  character: CharacterState
+  creation: CharacterCreationProjection
+  roll: { expression: '2d6'; rolls: number[]; total: number }
+}): Result<
+  Pick<
+    CharacterCreationSurvivalResolvedEvent,
+    'passed' | 'survival' | 'canCommission' | 'canAdvance'
+  >,
+  CommandError
+> => {
+  const career = creation.terms.at(-1)?.career
+  if (!career) {
+    return err(
+      commandError('missing_entity', 'No active career term is available')
+    )
+  }
+
+  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  if (!basics) {
+    return err(
+      commandError('invalid_command', `Career ${career} is not supported`)
+    )
+  }
+
+  const outcome = evaluateCareerCheck({
+    check: basics.Survival,
+    characteristics: character.characteristics,
+    roll: roll.total
+  })
+  if (!outcome) {
+    return err(
+      commandError('invalid_command', `Career ${career} has no survival check`)
+    )
+  }
+
+  const promotionOptions = outcome.success
+    ? deriveSurvivalPromotionOptions(
+        basics,
+        currentCareerRank(creation, career)
+      )
+    : { canCommission: false, canAdvance: false }
+
+  return ok({
+    passed: outcome.success,
+    survival: {
+      expression: roll.expression,
+      rolls: [...roll.rolls],
+      total: roll.total,
+      characteristic: outcome.check.characteristic,
+      modifier: outcome.modifier,
+      target: outcome.check.target,
+      success: outcome.success
+    },
+    canCommission: promotionOptions.canCommission,
+    canAdvance: promotionOptions.canAdvance
+  })
+}
+
 export const deriveEventsForCommand = (
   command: GameCommand,
   context: CommandContext
@@ -691,6 +798,71 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationHomeworldCompleted',
           characterId: command.characterId,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationSurvival': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateSurvivalResolution(character)
+      if (!creation.ok) return creation
+
+      const rolled = rollDiceExpression(
+        '2d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const resolved = resolveSurvivalCreationEvent({
+        character,
+        creation: creation.value,
+        roll: {
+          expression: '2d6',
+          rolls: rolled.value.rolls,
+          total: rolled.value.total
+        }
+      })
+      if (!resolved.ok) return resolved
+
+      const creationEvent = resolved.value.passed
+        ? {
+            type: 'SURVIVAL_PASSED' as const,
+            canCommission: resolved.value.canCommission,
+            canAdvance: resolved.value.canAdvance,
+            survival: resolved.value.survival
+          }
+        : {
+            type: 'SURVIVAL_FAILED' as const,
+            survival: resolved.value.survival
+          }
+      const nextState = transitionCareerCreationState(
+        creation.value.state,
+        creationEvent
+      )
+
+      const career = creation.value.terms.at(-1)?.career ?? 'Career'
+
+      return ok([
+        {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: `${career} survival`,
+          rolls: [...resolved.value.survival.rolls],
+          total: resolved.value.survival.total
+        },
+        {
+          type: 'CharacterCreationSurvivalResolved',
+          characterId: command.characterId,
+          ...resolved.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         }

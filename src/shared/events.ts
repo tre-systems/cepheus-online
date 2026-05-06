@@ -6,7 +6,10 @@ import type {
   PieceId,
   UserId
 } from './ids'
-import type { CareerCreationEvent } from './characterCreation'
+import type {
+  CareerCreationCheckFact,
+  CareerCreationEvent
+} from './characterCreation'
 import type {
   CharacterCreationSheet,
   CharacterCreationHomeworld,
@@ -61,6 +64,16 @@ export type GameEvent =
       type: 'CharacterCreationBasicTrainingCompleted'
       characterId: CharacterId
       trainingSkills: string[]
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationSurvivalResolved'
+      characterId: CharacterId
+      passed: boolean
+      survival: CareerCreationCheckFact
+      canCommission: boolean
+      canAdvance: boolean
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }
