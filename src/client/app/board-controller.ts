@@ -1,4 +1,3 @@
-import type { Command } from '../../shared/commands'
 import type { BoardId, PieceId } from '../../shared/ids'
 import type { BoardState, GameState, PieceState } from '../../shared/state'
 import {
@@ -25,6 +24,7 @@ import {
   loadBrowserImage
 } from './image-assets.js'
 import type { LosOverlaySegmentViewModel } from './door-los-view.js'
+import type { BoardCommand } from './app-command-router.js'
 
 const DRAG_START_SLOP_PX = 6
 
@@ -82,7 +82,7 @@ export interface BoardControllerOptions {
   getIdentity: () => ClientIdentity
   getSelectedPieceId: () => PieceId | null
   setSelectedPieceId: (pieceId: PieceId | null) => void
-  sendCommand: (command: Command) => Promise<unknown>
+  sendCommand: (command: BoardCommand) => Promise<unknown>
   setError: (message: string) => void
   requestRender: () => void
   devicePixelRatio?: () => number
@@ -105,7 +105,7 @@ export const buildCompletedPieceDragMoveCommand = ({
   drag: CompletedPieceDrag
   identity: ClientIdentity
   state: GameState | null
-}): Command | null => {
+}): BoardCommand | null => {
   if (!state || !drag.moved) return null
 
   const x = Math.round(drag.x)
@@ -120,7 +120,7 @@ export const buildCompletedPieceDragMoveCommand = ({
     pieceId: drag.pieceId,
     x,
     y
-  })
+  }) as BoardCommand
 }
 
 export const drawLosOverlaySegments = (

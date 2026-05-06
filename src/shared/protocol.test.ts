@@ -35,6 +35,13 @@ type CommandErrorServerMessageFixture = {
   readonly message: ServerMessage
 }
 
+type ViewerFilteredServerMessageFixture = {
+  readonly name: string
+  readonly viewerRole: 'REFEREE' | 'PLAYER' | 'SPECTATOR'
+  readonly expectedPieceIds: string[]
+  readonly message: ServerMessage
+}
+
 const loadFixture = <T>(name: string): T => {
   const file = path.join('src', 'shared', '__fixtures__', 'protocol', name)
 
@@ -69,6 +76,10 @@ const liveActivityServerMessageFixtures = loadFixture<
 const commandErrorServerMessageFixtures = loadFixture<
   CommandErrorServerMessageFixture[]
 >('command-error-server-messages.json')
+
+const viewerFilteredServerMessageFixtures = loadFixture<
+  ViewerFilteredServerMessageFixture[]
+>('viewer-filtered-server-messages.json')
 
 describe('protocol validation', () => {
   it('exposes stable command error categories for client branching', () => {
@@ -170,6 +181,35 @@ describe('protocol validation', () => {
         true,
         `Unexpected error fixture message type: ${message.type}`
       )
+    })
+  }
+
+  for (const fixture of viewerFilteredServerMessageFixtures) {
+    it(`covers viewer-filtered server message fixture: ${fixture.name}`, () => {
+      const { message } = fixture
+
+      assert.equal(message.type, 'roomState')
+      if (message.type !== 'roomState') return
+      assert.equal(message.state !== null, true)
+      if (!message.state) return
+
+      assert.equal(message.eventSeq, message.state.eventSeq)
+      assert.equal(message.state.selectedBoardId, 'docking-bay')
+      assert.deepEqual(
+        Object.keys(message.state.pieces).sort(),
+        [...fixture.expectedPieceIds].sort()
+      )
+
+      const visibilities = Object.values(message.state.pieces).map(
+        (piece) => piece.visibility
+      )
+      if (fixture.viewerRole === 'PLAYER') {
+        assert.equal(visibilities.includes('HIDDEN'), false)
+        assert.equal(visibilities.includes('PREVIEW'), true)
+      }
+      if (fixture.viewerRole === 'SPECTATOR') {
+        assert.deepEqual(visibilities, ['VISIBLE'])
+      }
     })
   }
 

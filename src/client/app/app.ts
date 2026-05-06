@@ -237,12 +237,31 @@ const postCommand = async (command, id = requestId(command.type)) => {
   return commandRouter.dispatch(command, { requestId: id })
 }
 
-const dispatchCommand = async (command) => {
-  const id = requestId(command.type)
-  await postCommand(command, id)
+const postBoardCommand = async (command, id = requestId(command.type)) => {
+  return commandRouter.board.dispatch(command, { requestId: id })
 }
 
-const sendCommand = dispatchCommand
+const postDiceCommand = async (command, id = requestId(command.type)) => {
+  return commandRouter.dice.dispatch(command, { requestId: id })
+}
+
+const postDoorCommand = async (command, id = requestId(command.type)) => {
+  return commandRouter.door.dispatch(command, { requestId: id })
+}
+
+const postSheetCommand = async (command, id = requestId(command.type)) => {
+  return commandRouter.sheet.dispatch(command, { requestId: id })
+}
+
+const postCharacterCreationCommand = async (
+  command,
+  id = requestId(command.type)
+) => {
+  return commandRouter.characterCreation.dispatch(command, { requestId: id })
+}
+
+const postCharacterCreationCommands = (commands) =>
+  commandRouter.characterCreation.dispatchSequential(commands)
 
 const fetchState = async () => {
   const message = await fetchRoomState({ roomId, viewerRole, actorId })
@@ -1429,7 +1448,7 @@ const rollCharacterCreationCharacteristic = async (characteristicKey = null) => 
     )
   }
 
-  const response = await postCommand(
+  const response = await postDiceCommand(
     buildRollDiceCommand({
       identity: clientIdentity(),
       expression: '2d6',
@@ -1481,7 +1500,7 @@ const rollCharacterCreationMusteringBenefit = async (kind) => {
   })
   const modifierText =
     modifier === 0 ? '' : modifier > 0 ? `+${modifier}` : `${modifier}`
-  const response = await postCommand(
+  const response = await postDiceCommand(
     buildRollDiceCommand({
       identity: clientIdentity(),
       expression: `1d6${modifierText}`,
@@ -1523,7 +1542,7 @@ const rollCharacterCreationTermSkill = async (table) => {
   ).find((candidate) => candidate.table === table)
   if (!action || action.disabled) return
 
-  const response = await postCommand(
+  const response = await postDiceCommand(
     buildRollDiceCommand({
       identity: clientIdentity(),
       expression: '1d6',
@@ -1565,7 +1584,7 @@ const rollCharacterCreationReenlistment = async () => {
   )
   if (!action) return
 
-  const response = await postCommand(
+  const response = await postDiceCommand(
     buildRollDiceCommand({
       identity: clientIdentity(),
       expression: '2d6',
@@ -1610,7 +1629,7 @@ const rollCharacterCreationAging = async () => {
       : action.modifier > 0
         ? `+${action.modifier}`
         : `${action.modifier}`
-  const response = await postCommand(
+  const response = await postDiceCommand(
     buildRollDiceCommand({
       identity: clientIdentity(),
       expression: `2d6${modifier}`,
@@ -1677,7 +1696,7 @@ const rollCharacterCreationCareerCheck = async () => {
     )
   }
 
-  const response = await postCommand(
+  const response = await postDiceCommand(
     buildRollDiceCommand({
       identity: clientIdentity(),
       expression: '2d6',
@@ -1713,7 +1732,7 @@ const rollCharacterCreationDraft = async () => {
     )
   }
 
-  const response = await postCommand(
+  const response = await postDiceCommand(
     buildRollDiceCommand({
       identity: clientIdentity(),
       expression: '1d6',
@@ -1866,7 +1885,7 @@ const createCustomBoard = async () => {
     (await readSelectedImageFileAsDataUrl(els.boardImageFileInput)) ||
     els.boardImageInput.value.trim() ||
     null
-  await sendCommand({
+  await postBoardCommand({
     type: 'CreateBoard',
     gameId: roomId,
     actorId,
@@ -1894,7 +1913,7 @@ const createCustomCharacter = async () => {
     )
   }
   if (els.characterTokenInput.checked && !selectedBoard()) {
-    await postCommand(
+    await postBoardCommand(
       createBoardCommand({ roomId, actorId }),
       requestId('create-board-for-character')
     )
@@ -1930,9 +1949,7 @@ const createCustomCharacter = async () => {
     return
   }
 
-  for (const command of plan.commands) {
-    await postCommand(command)
-  }
+  await postCharacterCreationCommands(plan.commands)
   if (plan.pieceId) selectPiece(plan.pieceId)
   els.characterNameInput.value = ''
   pendingGeneratedCharacter = null
@@ -1945,7 +1962,7 @@ const createCustomCharacter = async () => {
 const createWizardToken = async () => {
   if (!characterCreationFlow || !els.characterTokenInput.checked) return
   if (!selectedBoard()) {
-    await postCommand(
+    await postBoardCommand(
       createBoardCommand({ roomId, actorId }),
       requestId('create-board-for-wizard-character')
     )
@@ -1970,7 +1987,7 @@ const createWizardToken = async () => {
     )
   )
 
-  await postCommand({
+  await postBoardCommand({
     type: 'CreatePiece',
     gameId: roomId,
     actorId,
@@ -2019,9 +2036,7 @@ const finishCharacterCreationWizard = async () => {
     return
   }
 
-  for (const command of commands) {
-    await postCommand(command)
-  }
+  await postCharacterCreationCommands(commands)
 
   await createWizardToken()
   els.characterNameInput.value = ''
@@ -2087,7 +2102,7 @@ const acceptGeneratedCharacter = async () => {
     )
   }
   if (els.characterTokenInput.checked && !selectedBoard()) {
-    await postCommand(
+    await postBoardCommand(
       createBoardCommand({ roomId, actorId }),
       requestId('create-board-for-generated-character')
     )
@@ -2108,9 +2123,7 @@ const acceptGeneratedCharacter = async () => {
     return
   }
 
-  for (const command of plan.commands) {
-    await postCommand(command)
-  }
+  await postCharacterCreationCommands(plan.commands)
   if (plan.pieceId) selectPiece(plan.pieceId)
   els.characterNameInput.value = ''
   pendingGeneratedCharacter = null
@@ -2266,7 +2279,7 @@ const boardDoorActions = (board) => {
     button.title = `${door.label}: ${door.stateLabel}`
     button.addEventListener('click', () => {
       if (!state) return
-      sendCommand(
+      postDoorCommand(
         buildSetDoorOpenCommand({
           identity: clientIdentity(),
           state,
@@ -2293,7 +2306,9 @@ const characterCreationActions = (character) => {
     button.textContent = viewModel.label
     button.className = viewModel.variant === 'primary' ? 'active' : ''
     button.addEventListener('click', () => {
-      sendCommand(viewModel.command).catch((error) => setError(error.message))
+      postCharacterCreationCommand(viewModel.command).catch((error) =>
+        setError(error.message)
+      )
     })
     actions.append(button)
   }
@@ -2317,7 +2332,7 @@ const characterSheetController = createCharacterSheetController({
   getCharacterState: () => state,
   getBoardDoorActions: () => ({ actions: boardDoorActions(selectedBoard()) }),
   sendPatch: (characterId, patch) =>
-    sendCommand({
+    postSheetCommand({
       type: 'UpdateCharacterSheet',
       gameId: roomId,
       actorId,
@@ -2325,7 +2340,7 @@ const characterSheetController = createCharacterSheetController({
       ...patch
     }),
   setVisibility: (piece, visibility) =>
-    sendCommand({
+    postSheetCommand({
       type: 'SetPieceVisibility',
       gameId: roomId,
       actorId,
@@ -2333,7 +2348,7 @@ const characterSheetController = createCharacterSheetController({
       visibility
     }),
   setFreedom: (piece, freedom) =>
-    sendCommand({
+    postSheetCommand({
       type: 'SetPieceFreedom',
       gameId: roomId,
       actorId,
@@ -2341,7 +2356,7 @@ const characterSheetController = createCharacterSheetController({
       freedom
     }),
   rollSkill: (_piece, _character, _skill, reason) =>
-    sendCommand(
+    postSheetCommand(
       buildRollDiceCommand({
         identity: clientIdentity(),
         expression: '2d6',
@@ -2463,7 +2478,7 @@ boardController = createBoardController({
   setSelectedPieceId: (pieceId) => {
     selectPiece(pieceId)
   },
-  sendCommand,
+  sendCommand: postBoardCommand,
   setError,
   requestRender: render
 })
@@ -2591,7 +2606,7 @@ els.boardSelect.addEventListener('change', () => {
     return
   selectPiece(null)
   boardController?.clearDrag()
-  sendCommand({
+  postBoardCommand({
     type: 'SelectBoard',
     gameId: roomId,
     actorId,
@@ -2616,7 +2631,7 @@ els.zoomIn.addEventListener('click', () => {
 })
 
 els.roll.addEventListener('click', () => {
-  sendCommand(
+  postDiceCommand(
     buildRollDiceCommand({
       identity: clientIdentity(),
       expression: els.diceExpression.value.trim() || '2d6',

@@ -272,11 +272,15 @@ const clientModules = new Map<
     '/client/game-commands.js',
     {
       markers: ['buildSequencedCommand', 'applyServerMessage'],
-      imports: ['/shared/ids']
+      imports: ['/shared/ids', '/shared/live-activity.js']
     }
   ],
   ['/client/dice.js', { markers: ['DICE_PIP_SLOTS'] }],
   ['/shared/ids', { markers: ['asGameId', 'asUserId'] }],
+  [
+    '/shared/live-activity.js',
+    { markers: ['deriveLiveDiceRollRevealTarget'] }
+  ],
   [
     '/shared/mapAssets.js',
     {

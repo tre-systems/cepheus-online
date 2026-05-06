@@ -1,5 +1,79 @@
 import type { Command } from '../../shared/commands'
 
+export type BoardCommand = Extract<
+  Command,
+  {
+    type:
+      | 'CreateBoard'
+      | 'SelectBoard'
+      | 'CreatePiece'
+      | 'MovePiece'
+      | 'SetPieceVisibility'
+      | 'SetPieceFreedom'
+  }
+>
+
+export type DiceCommand = Extract<Command, { type: 'RollDice' }>
+
+export type DoorCommand = Extract<Command, { type: 'SetDoorOpen' }>
+
+export type SheetCommand = Extract<
+  Command,
+  {
+    type:
+      | 'UpdateCharacterSheet'
+      | 'SetPieceVisibility'
+      | 'SetPieceFreedom'
+      | 'RollDice'
+  }
+>
+
+export type CharacterCreationCommand = Extract<
+  Command,
+  {
+    type:
+      | 'CreateCharacter'
+      | 'UpdateCharacterSheet'
+      | 'StartCharacterCreation'
+      | 'AdvanceCharacterCreation'
+      | 'SetCharacterCreationHomeworld'
+      | 'SelectCharacterCreationBackgroundSkill'
+      | 'ResolveCharacterCreationCascadeSkill'
+      | 'FinalizeCharacterCreation'
+      | 'StartCharacterCareerTerm'
+      | 'CreatePiece'
+  }
+>
+
+export type AppCommandRoute =
+  | 'game'
+  | 'board'
+  | 'dice'
+  | 'door'
+  | 'sheet'
+  | 'characterCreation'
+
+export const appCommandRouteByType = {
+  CreateGame: 'game',
+  CreateCharacter: 'characterCreation',
+  UpdateCharacterSheet: 'sheet',
+  StartCharacterCreation: 'characterCreation',
+  AdvanceCharacterCreation: 'characterCreation',
+  SetCharacterCreationHomeworld: 'characterCreation',
+  SelectCharacterCreationBackgroundSkill: 'characterCreation',
+  ResolveCharacterCreationCascadeSkill: 'characterCreation',
+  FinalizeCharacterCreation: 'characterCreation',
+  StartCharacterCareerTerm: 'characterCreation',
+  CreateBoard: 'board',
+  SelectBoard: 'board',
+  SetDoorOpen: 'door',
+  CreatePiece: 'board',
+  MovePiece: 'board',
+  SetPieceVisibility: 'board',
+  SetPieceFreedom: 'board',
+  RollDice: 'dice'
+} satisfies Record<Command['type'], AppCommandRoute>
+
 export interface AppCommandSubmitInput {
   requestId: string
   command: Command
@@ -23,20 +97,33 @@ export interface DispatchCommandBatchOptions {
   requestIds?: readonly string[]
 }
 
-export interface AppCommandRouter<TResult = unknown> {
-  sequenceCommand: (command: Command, offset?: number) => Command
+export interface AppCommandDomainRouter<
+  TCommand extends Command,
+  TResult = unknown
+> {
   dispatch: (
-    command: Command,
+    command: TCommand,
     options?: DispatchCommandOptions
   ) => Promise<TResult>
   dispatchSequential: (
-    commands: readonly Command[],
+    commands: readonly TCommand[],
     options?: DispatchCommandBatchOptions
   ) => Promise<TResult[]>
   dispatchAll: (
-    commands: readonly Command[],
+    commands: readonly TCommand[],
     options?: DispatchCommandBatchOptions
   ) => Promise<TResult[]>
+}
+
+export interface AppCommandRouter<TResult = unknown>
+  extends AppCommandDomainRouter<Command, TResult> {
+  sequenceCommand: (command: Command, offset?: number) => Command
+  routeFor: (command: Command) => AppCommandRoute
+  board: AppCommandDomainRouter<BoardCommand, TResult>
+  dice: AppCommandDomainRouter<DiceCommand, TResult>
+  door: AppCommandDomainRouter<DoorCommand, TResult>
+  sheet: AppCommandDomainRouter<SheetCommand, TResult>
+  characterCreation: AppCommandDomainRouter<CharacterCreationCommand, TResult>
 }
 
 const defaultRequestId = (command: Command, index: number): string =>
@@ -74,9 +161,10 @@ export const createAppCommandRouter = <TResult = unknown>({
       command: sequenceCommand(command, getEventSeq(), offset)
     })
 
-  return {
-    sequenceCommand: (command, offset = 0) =>
-      sequenceCommand(command, getEventSeq(), offset),
+  const domainRouter = <TCommand extends Command>(): AppCommandDomainRouter<
+    TCommand,
+    TResult
+  > => ({
     dispatch: (command, options = {}) =>
       routeCommand(
         command,
@@ -109,5 +197,17 @@ export const createAppCommandRouter = <TResult = unknown>({
       }
       return results
     }
+  })
+
+  return {
+    sequenceCommand: (command, offset = 0) =>
+      sequenceCommand(command, getEventSeq(), offset),
+    routeFor: (command) => appCommandRouteByType[command.type],
+    ...domainRouter<Command>(),
+    board: domainRouter<BoardCommand>(),
+    dice: domainRouter<DiceCommand>(),
+    door: domainRouter<DoorCommand>(),
+    sheet: domainRouter<SheetCommand>(),
+    characterCreation: domainRouter<CharacterCreationCommand>()
   }
 }

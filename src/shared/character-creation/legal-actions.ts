@@ -3,11 +3,13 @@ import { canCompleteCreation, canOfferNewCareer } from './term-lifecycle'
 import type {
   CareerCreationActionContext,
   CareerCreationActionKey,
+  CareerCreationActionPlan,
   CareerCreationActionProjection,
   CareerCreationPendingDecision,
   CareerCreationPendingDecisionKey,
   CareerCreationReenlistmentOutcome,
-  CareerCreationState
+  CareerCreationState,
+  LegalCareerCreationAction
 } from './types'
 
 const defaultActionContext = {
@@ -233,6 +235,94 @@ export const deriveLegalCareerCreationActionKeys = (
   }
 }
 
+const actionDefinitions = {
+  setCharacteristics: {
+    commandTypes: ['AdvanceCharacterCreation'],
+    rollRequirement: { key: 'characteristics', dice: '2d6' }
+  },
+  completeHomeworld: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  selectCareer: {
+    commandTypes: ['StartCharacterCareerTerm', 'AdvanceCharacterCreation'],
+    rollRequirement: { key: 'careerQualification', dice: '2d6' }
+  },
+  completeBasicTraining: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  rollSurvival: {
+    commandTypes: ['AdvanceCharacterCreation'],
+    rollRequirement: { key: 'survival', dice: '2d6' }
+  },
+  resolveMishap: {
+    commandTypes: ['AdvanceCharacterCreation'],
+    rollRequirement: { key: 'mishap', dice: '2d6' }
+  },
+  confirmDeath: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  rollCommission: {
+    commandTypes: ['AdvanceCharacterCreation'],
+    rollRequirement: { key: 'commission', dice: '2d6' }
+  },
+  skipCommission: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  rollAdvancement: {
+    commandTypes: ['AdvanceCharacterCreation'],
+    rollRequirement: { key: 'advancement', dice: '2d6' }
+  },
+  skipAdvancement: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  completeSkills: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  resolveAging: {
+    commandTypes: ['AdvanceCharacterCreation'],
+    rollRequirement: { key: 'aging', dice: '2d6' }
+  },
+  rollReenlistment: {
+    commandTypes: ['AdvanceCharacterCreation'],
+    rollRequirement: { key: 'reenlistment', dice: '2d6' }
+  },
+  reenlist: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  leaveCareer: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  forcedReenlist: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  resolveMusteringBenefit: {
+    commandTypes: ['AdvanceCharacterCreation'],
+    rollRequirement: { key: 'musteringBenefit', dice: '2d6' }
+  },
+  continueCareer: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  finishMustering: {
+    commandTypes: ['AdvanceCharacterCreation']
+  },
+  completeCreation: {
+    commandTypes: ['AdvanceCharacterCreation', 'FinalizeCharacterCreation']
+  }
+} satisfies Record<
+  CareerCreationActionKey,
+  Omit<LegalCareerCreationAction, 'key' | 'status'>
+>
+
+export const deriveLegalCareerCreationActions = (
+  state: CareerCreationState,
+  context: CareerCreationActionContext = {}
+): LegalCareerCreationAction[] =>
+  deriveLegalCareerCreationActionKeys(state, context).map((key) => ({
+    key,
+    status: state.status,
+    ...actionDefinitions[key]
+  }))
+
 export const deriveLegalCareerCreationActionKeysForProjection = (
   creation: CareerCreationActionProjection
 ): CareerCreationActionKey[] =>
@@ -240,3 +330,15 @@ export const deriveLegalCareerCreationActionKeysForProjection = (
     creation.state,
     deriveCareerCreationActionContext(creation)
   )
+
+export const deriveCareerCreationActionPlan = (
+  creation: CareerCreationActionProjection
+): CareerCreationActionPlan => {
+  const context = deriveCareerCreationActionContext(creation)
+
+  return {
+    status: creation.state.status,
+    pendingDecisions: context.pendingDecisions ?? [],
+    legalActions: deriveLegalCareerCreationActions(creation.state, context)
+  }
+}

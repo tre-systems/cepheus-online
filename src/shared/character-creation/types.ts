@@ -74,6 +74,34 @@ export type CareerCreationActionKey =
   | 'finishMustering'
   | 'completeCreation'
 
+export type CareerCreationServerCommandType =
+  | 'AdvanceCharacterCreation'
+  | 'StartCharacterCareerTerm'
+  | 'FinalizeCharacterCreation'
+
+export type CareerCreationRollRequirementKey =
+  | 'characteristics'
+  | 'careerQualification'
+  | 'survival'
+  | 'mishap'
+  | 'commission'
+  | 'advancement'
+  | 'aging'
+  | 'reenlistment'
+  | 'musteringBenefit'
+
+export interface CareerCreationRollRequirement {
+  key: CareerCreationRollRequirementKey
+  dice: '2d6'
+}
+
+export interface LegalCareerCreationAction {
+  key: CareerCreationActionKey
+  status: CareerCreationStatus
+  commandTypes: readonly CareerCreationServerCommandType[]
+  rollRequirement?: CareerCreationRollRequirement
+}
+
 export type CareerCreationReenlistmentOutcome =
   | 'unresolved'
   | 'forced'
@@ -107,6 +135,12 @@ export interface CareerCreationActionContext {
   canContinueCareer?: boolean
   canCompleteCreation?: boolean
   reenlistmentOutcome?: CareerCreationReenlistmentOutcome
+}
+
+export interface CareerCreationActionPlan {
+  status: CareerCreationStatus
+  pendingDecisions: readonly CareerCreationPendingDecision[]
+  legalActions: readonly LegalCareerCreationAction[]
 }
 
 export interface CareerCreationActionProjection {

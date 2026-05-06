@@ -5,10 +5,12 @@ import {
   createCareerCreationState,
   createCareerTerm,
   deriveCareerCreationActionContext,
+  deriveCareerCreationActionPlan,
   deriveCareerCreationPendingDecisions,
   deriveCareerCreationReenlistmentOutcome,
   deriveLegalCareerCreationActionKeys,
   deriveLegalCareerCreationActionKeysForProjection,
+  deriveLegalCareerCreationActions,
   deriveRemainingCareerCreationBenefits
 } from './index'
 import type { CareerCreationActionProjection, CareerTerm } from './types'
@@ -59,6 +61,56 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeys(createCareerCreationState('MISHAP')),
       ['resolveMishap', 'confirmDeath']
+    )
+  })
+
+  it('derives structured legal actions with server command and roll requirements', () => {
+    assert.deepEqual(
+      deriveLegalCareerCreationActions(createCareerCreationState('SURVIVAL')),
+      [
+        {
+          key: 'rollSurvival',
+          status: 'SURVIVAL',
+          commandTypes: ['AdvanceCharacterCreation'],
+          rollRequirement: { key: 'survival', dice: '2d6' }
+        }
+      ]
+    )
+
+    assert.deepEqual(
+      deriveLegalCareerCreationActions(
+        createCareerCreationState('CAREER_SELECTION')
+      ),
+      [
+        {
+          key: 'selectCareer',
+          status: 'CAREER_SELECTION',
+          commandTypes: [
+            'StartCharacterCareerTerm',
+            'AdvanceCharacterCreation'
+          ],
+          rollRequirement: { key: 'careerQualification', dice: '2d6' }
+        }
+      ]
+    )
+
+    assert.deepEqual(
+      deriveLegalCareerCreationActions(
+        createCareerCreationState('MUSTERING_OUT'),
+        { canContinueCareer: true }
+      ),
+      [
+        {
+          key: 'continueCareer',
+          status: 'MUSTERING_OUT',
+          commandTypes: ['AdvanceCharacterCreation']
+        },
+        {
+          key: 'finishMustering',
+          status: 'MUSTERING_OUT',
+          commandTypes: ['AdvanceCharacterCreation']
+        }
+      ]
     )
   })
 
@@ -185,6 +237,11 @@ describe('career creation legal action planner', () => {
       deriveLegalCareerCreationActionKeysForProjection(creation),
       []
     )
+    assert.deepEqual(deriveCareerCreationActionPlan(creation), {
+      status: 'SKILLS_TRAINING',
+      pendingDecisions: [{ key: 'cascadeSkillResolution' }],
+      legalActions: []
+    })
   })
 
   it('derives pending decisions from unresolved projected term gates', () => {
@@ -414,6 +471,49 @@ describe('career creation legal action planner', () => {
         })
       ),
       ['leaveCareer']
+    )
+  })
+
+  it('derives a replayable action plan from projected creation state', () => {
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(
+        projection('REENLISTMENT', {
+          terms: [term({ reEnlistment: 12 })]
+        })
+      ),
+      {
+        status: 'REENLISTMENT',
+        pendingDecisions: [],
+        legalActions: [
+          {
+            key: 'forcedReenlist',
+            status: 'REENLISTMENT',
+            commandTypes: ['AdvanceCharacterCreation']
+          }
+        ]
+      }
+    )
+
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(
+        projection('ACTIVE', {
+          terms: [term({ complete: true })]
+        })
+      ),
+      {
+        status: 'ACTIVE',
+        pendingDecisions: [],
+        legalActions: [
+          {
+            key: 'completeCreation',
+            status: 'ACTIVE',
+            commandTypes: [
+              'AdvanceCharacterCreation',
+              'FinalizeCharacterCreation'
+            ]
+          }
+        ]
+      }
     )
   })
 })

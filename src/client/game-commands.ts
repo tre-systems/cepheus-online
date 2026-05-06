@@ -11,8 +11,12 @@ import {
   type PieceId,
   type UserId
 } from '../shared/ids'
+import {
+  deriveLiveDiceRollRevealTarget,
+  type LiveActivityDescriptor,
+  type LiveDiceRollRevealTarget
+} from '../shared/live-activity.js'
 import type { ClientMessage, ServerMessage } from '../shared/protocol'
-import type { LiveActivityDescriptor } from '../shared/live-activity'
 import type {
   CharacterCharacteristics,
   CharacterEquipmentItem,
@@ -41,12 +45,7 @@ export interface ClientMessageApplication {
   diceRollActivities: readonly ClientDiceRollActivity[]
 }
 
-export interface ClientDiceRollActivity {
-  id: string
-  revealAt: string
-  rolls: readonly number[]
-  total: number
-}
+export type ClientDiceRollActivity = LiveDiceRollRevealTarget
 
 export const DEFAULT_GAME_ID = 'demo-room'
 export const DEFAULT_ACTOR_ID = 'local-user'
@@ -662,13 +661,8 @@ export const deriveServerMessageDiceRollActivities = (
   const diceRolls: ClientDiceRollActivity[] = []
 
   for (const activity of deriveServerMessageLiveActivities(message)) {
-    if (activity.type !== 'diceRoll') continue
-    diceRolls.push({
-      id: activity.id,
-      revealAt: activity.reveal.revealAt,
-      rolls: activity.rolls,
-      total: activity.total
-    })
+    const target = deriveLiveDiceRollRevealTarget(activity)
+    if (target) diceRolls.push(target)
   }
 
   return diceRolls

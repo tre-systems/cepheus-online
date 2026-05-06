@@ -56,6 +56,10 @@ type EventHandlerRegistry = {
   >
 }
 
+type EventHandlerMap<TEventType extends GameEvent['type']> = {
+  [TType in TEventType]: EventHandler<Extract<GameEvent, { type: TType }>>
+}
+
 const requireState = (
   state: GameState | null,
   eventType: GameEvent['type']
@@ -64,7 +68,31 @@ const requireState = (
   return state
 }
 
-const eventHandlers = {
+type GameEventType = 'GameCreated'
+
+type CharacterEventType =
+  | 'CharacterCreated'
+  | 'CharacterSheetUpdated'
+  | 'CharacterCreationStarted'
+  | 'CharacterCreationTransitioned'
+  | 'CharacterCreationHomeworldSet'
+  | 'CharacterCreationBackgroundSkillSelected'
+  | 'CharacterCreationCascadeSkillResolved'
+  | 'CharacterCreationFinalized'
+  | 'CharacterCareerTermStarted'
+
+type BoardEventType =
+  | 'BoardCreated'
+  | 'BoardSelected'
+  | 'DoorStateChanged'
+  | 'PieceCreated'
+  | 'PieceMoved'
+  | 'PieceVisibilityChanged'
+  | 'PieceFreedomChanged'
+
+type DiceEventType = 'DiceRolled'
+
+const gameEventHandlers = {
   GameCreated: (_state, envelope) => {
     const event = envelope.event
 
@@ -86,8 +114,10 @@ const eventHandlers = {
       selectedBoardId: null,
       eventSeq: envelope.seq
     }
-  },
+  }
+} satisfies EventHandlerMap<GameEventType>
 
+const characterEventHandlers = {
   CharacterCreated: (state, envelope) => {
     const event = envelope.event
     const nextState = requireState(state, event.type)
@@ -273,8 +303,10 @@ const eventHandlers = {
     nextState.eventSeq = envelope.seq
 
     return nextState
-  },
+  }
+} satisfies EventHandlerMap<CharacterEventType>
 
+const boardEventHandlers = {
   BoardCreated: (state, envelope) => {
     const event = envelope.event
     const nextState = requireState(state, event.type)
@@ -379,8 +411,10 @@ const eventHandlers = {
     nextState.eventSeq = envelope.seq
 
     return nextState
-  },
+  }
+} satisfies EventHandlerMap<BoardEventType>
 
+const diceEventHandlers = {
   DiceRolled: (state, envelope) => {
     const event = envelope.event
     const nextState = requireState(state, event.type)
@@ -402,6 +436,13 @@ const eventHandlers = {
 
     return nextState
   }
+} satisfies EventHandlerMap<DiceEventType>
+
+const eventHandlers = {
+  ...gameEventHandlers,
+  ...characterEventHandlers,
+  ...boardEventHandlers,
+  ...diceEventHandlers
 } satisfies EventHandlerRegistry
 
 const projectEnvelope = <TEvent extends GameEvent>(

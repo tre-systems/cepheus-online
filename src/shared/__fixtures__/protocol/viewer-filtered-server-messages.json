@@ -1,0 +1,248 @@
+[
+  {
+    "name": "referee room state keeps hidden preview and visible pieces",
+    "viewerRole": "REFEREE",
+    "expectedPieceIds": ["hidden-contact", "preview-contact", "visible-contact"],
+    "message": {
+      "type": "roomState",
+      "state": {
+        "id": "cepheus-run",
+        "slug": "cepheus-run",
+        "name": "Cepheus Run",
+        "ownerId": "referee-1",
+        "players": {
+          "referee-1": {
+            "userId": "referee-1",
+            "role": "REFEREE"
+          },
+          "crew-1": {
+            "userId": "crew-1",
+            "role": "PLAYER"
+          },
+          "observer-1": {
+            "userId": "observer-1",
+            "role": "SPECTATOR"
+          }
+        },
+        "characters": {},
+        "boards": {
+          "docking-bay": {
+            "id": "docking-bay",
+            "name": "Docking Bay",
+            "imageAssetId": "docking-bay-map",
+            "url": "/assets/boards/docking-bay.png",
+            "width": 1200,
+            "height": 800,
+            "scale": 50,
+            "doors": {
+              "iris-1": {
+                "id": "iris-1",
+                "open": false
+              }
+            }
+          }
+        },
+        "pieces": {
+          "hidden-contact": {
+            "id": "hidden-contact",
+            "boardId": "docking-bay",
+            "characterId": null,
+            "imageAssetId": null,
+            "name": "Hidden contact",
+            "x": 100,
+            "y": 120,
+            "z": 0,
+            "width": 50,
+            "height": 50,
+            "scale": 1,
+            "visibility": "HIDDEN",
+            "freedom": "LOCKED"
+          },
+          "preview-contact": {
+            "id": "preview-contact",
+            "boardId": "docking-bay",
+            "characterId": null,
+            "imageAssetId": null,
+            "name": "Preview contact",
+            "x": 220,
+            "y": 160,
+            "z": 1,
+            "width": 50,
+            "height": 50,
+            "scale": 1,
+            "visibility": "PREVIEW",
+            "freedom": "SHARE"
+          },
+          "visible-contact": {
+            "id": "visible-contact",
+            "boardId": "docking-bay",
+            "characterId": null,
+            "imageAssetId": "/assets/counters/TroopsBlackOnGreen.png",
+            "name": "Visible contact",
+            "x": 360,
+            "y": 220,
+            "z": 2,
+            "width": 50,
+            "height": 50,
+            "scale": 1,
+            "visibility": "VISIBLE",
+            "freedom": "UNLOCKED"
+          }
+        },
+        "diceLog": [],
+        "selectedBoardId": "docking-bay",
+        "eventSeq": 42
+      },
+      "eventSeq": 42
+    }
+  },
+  {
+    "name": "player room state removes hidden pieces but keeps preview contacts",
+    "viewerRole": "PLAYER",
+    "expectedPieceIds": ["preview-contact", "visible-contact"],
+    "message": {
+      "type": "roomState",
+      "state": {
+        "id": "cepheus-run",
+        "slug": "cepheus-run",
+        "name": "Cepheus Run",
+        "ownerId": "referee-1",
+        "players": {
+          "referee-1": {
+            "userId": "referee-1",
+            "role": "REFEREE"
+          },
+          "crew-1": {
+            "userId": "crew-1",
+            "role": "PLAYER"
+          },
+          "observer-1": {
+            "userId": "observer-1",
+            "role": "SPECTATOR"
+          }
+        },
+        "characters": {},
+        "boards": {
+          "docking-bay": {
+            "id": "docking-bay",
+            "name": "Docking Bay",
+            "imageAssetId": "docking-bay-map",
+            "url": "/assets/boards/docking-bay.png",
+            "width": 1200,
+            "height": 800,
+            "scale": 50,
+            "doors": {
+              "iris-1": {
+                "id": "iris-1",
+                "open": false
+              }
+            }
+          }
+        },
+        "pieces": {
+          "preview-contact": {
+            "id": "preview-contact",
+            "boardId": "docking-bay",
+            "characterId": null,
+            "imageAssetId": null,
+            "name": "Preview contact",
+            "x": 220,
+            "y": 160,
+            "z": 1,
+            "width": 50,
+            "height": 50,
+            "scale": 1,
+            "visibility": "PREVIEW",
+            "freedom": "SHARE"
+          },
+          "visible-contact": {
+            "id": "visible-contact",
+            "boardId": "docking-bay",
+            "characterId": null,
+            "imageAssetId": "/assets/counters/TroopsBlackOnGreen.png",
+            "name": "Visible contact",
+            "x": 360,
+            "y": 220,
+            "z": 2,
+            "width": 50,
+            "height": 50,
+            "scale": 1,
+            "visibility": "VISIBLE",
+            "freedom": "UNLOCKED"
+          }
+        },
+        "diceLog": [],
+        "selectedBoardId": "docking-bay",
+        "eventSeq": 42
+      },
+      "eventSeq": 42
+    }
+  },
+  {
+    "name": "spectator room state only includes visible pieces",
+    "viewerRole": "SPECTATOR",
+    "expectedPieceIds": ["visible-contact"],
+    "message": {
+      "type": "roomState",
+      "state": {
+        "id": "cepheus-run",
+        "slug": "cepheus-run",
+        "name": "Cepheus Run",
+        "ownerId": "referee-1",
+        "players": {
+          "referee-1": {
+            "userId": "referee-1",
+            "role": "REFEREE"
+          },
+          "crew-1": {
+            "userId": "crew-1",
+            "role": "PLAYER"
+          },
+          "observer-1": {
+            "userId": "observer-1",
+            "role": "SPECTATOR"
+          }
+        },
+        "characters": {},
+        "boards": {
+          "docking-bay": {
+            "id": "docking-bay",
+            "name": "Docking Bay",
+            "imageAssetId": "docking-bay-map",
+            "url": "/assets/boards/docking-bay.png",
+            "width": 1200,
+            "height": 800,
+            "scale": 50,
+            "doors": {
+              "iris-1": {
+                "id": "iris-1",
+                "open": false
+              }
+            }
+          }
+        },
+        "pieces": {
+          "visible-contact": {
+            "id": "visible-contact",
+            "boardId": "docking-bay",
+            "characterId": null,
+            "imageAssetId": "/assets/counters/TroopsBlackOnGreen.png",
+            "name": "Visible contact",
+            "x": 360,
+            "y": 220,
+            "z": 2,
+            "width": 50,
+            "height": 50,
+            "scale": 1,
+            "visibility": "VISIBLE",
+            "freedom": "UNLOCKED"
+          }
+        },
+        "diceLog": [],
+        "selectedBoardId": "docking-bay",
+        "eventSeq": 42
+      },
+      "eventSeq": 42
+    }
+  }
+]

@@ -322,6 +322,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/shared/live-activity.js',
+    source: join(compiledClientRoot, 'shared', 'live-activity.js'),
+    exportName: 'SHARED_LIVE_ACTIVITY_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/shared/character-creation/career-rules.js',
     source: join(
       compiledClientRoot,

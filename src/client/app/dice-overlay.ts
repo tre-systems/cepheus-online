@@ -1,20 +1,17 @@
+import type { LiveDiceRollRevealTarget } from '../../shared/live-activity.js'
 import {
+  type DicePipSlot,
   deriveDicePipSlots,
   deriveDiceRollTiming,
   deriveDieFaces,
-  deriveDieTilt,
-  type DicePipSlot
+  deriveDieTilt
 } from '../dice.js'
 
 export type DiceFaceValueContent =
   | { kind: 'pips'; slots: readonly DicePipSlot[] }
   | { kind: 'numeric'; label: string }
 
-export interface BrowserDiceRoll {
-  revealAt?: string | null
-  rolls: readonly number[]
-  total: number
-}
+export type BrowserDiceRoll = LiveDiceRollRevealTarget
 
 export interface AnimateRollOptions {
   roll: BrowserDiceRoll

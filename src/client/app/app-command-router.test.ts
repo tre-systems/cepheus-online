@@ -2,8 +2,15 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import type { Command } from '../../shared/commands'
-import { asBoardId, asGameId, asPieceId, asUserId } from '../../shared/ids'
 import {
+  asBoardId,
+  asCharacterId,
+  asGameId,
+  asPieceId,
+  asUserId
+} from '../../shared/ids'
+import {
+  appCommandRouteByType,
   createAppCommandRouter,
   sequenceCommand,
   type AppCommandSubmitInput
@@ -13,8 +20,20 @@ const identity = {
   gameId: asGameId('demo-room'),
   actorId: asUserId('local-user')
 }
+const characterId = asCharacterId('scout-character')
 
 type MovePieceCommand = Extract<Command, { type: 'MovePiece' }>
+type CreateBoardCommand = Extract<Command, { type: 'CreateBoard' }>
+type RollDiceCommand = Extract<Command, { type: 'RollDice' }>
+type SetDoorOpenCommand = Extract<Command, { type: 'SetDoorOpen' }>
+type UpdateCharacterSheetCommand = Extract<
+  Command,
+  { type: 'UpdateCharacterSheet' }
+>
+type AdvanceCharacterCreationCommand = Extract<
+  Command,
+  { type: 'AdvanceCharacterCreation' }
+>
 
 const moveCommand = (overrides: Partial<MovePieceCommand> = {}): Command => ({
   type: 'MovePiece',
@@ -26,7 +45,7 @@ const moveCommand = (overrides: Partial<MovePieceCommand> = {}): Command => ({
   ...overrides
 })
 
-const createBoardCommand = (): Command => ({
+const createBoardCommand = (): CreateBoardCommand => ({
   type: 'CreateBoard',
   gameId: identity.gameId,
   actorId: identity.actorId,
@@ -35,6 +54,39 @@ const createBoardCommand = (): Command => ({
   width: 1200,
   height: 800,
   scale: 50
+})
+
+const rollDiceCommand = (): RollDiceCommand => ({
+  type: 'RollDice',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  expression: '2d6',
+  reason: 'Table roll'
+})
+
+const doorCommand = (): SetDoorOpenCommand => ({
+  type: 'SetDoorOpen',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  boardId: asBoardId('main'),
+  doorId: 'iris',
+  open: true
+})
+
+const sheetCommand = (): UpdateCharacterSheetCommand => ({
+  type: 'UpdateCharacterSheet',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId,
+  notes: 'Ready'
+})
+
+const characterCreationCommand = (): AdvanceCharacterCreationCommand => ({
+  type: 'AdvanceCharacterCreation',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId,
+  creationEvent: { type: 'COMPLETE_BASIC_TRAINING' }
 })
 
 describe('app command router sequencing', () => {
@@ -133,6 +185,64 @@ describe('app command router dispatch', () => {
     assert.deepEqual(
       submissions.map((submission) => submission.command.expectedSeq),
       [30, 99, 32]
+    )
+  })
+
+  it('routes every command type through the shared route registry', () => {
+    assert.deepEqual(appCommandRouteByType, {
+      CreateGame: 'game',
+      CreateCharacter: 'characterCreation',
+      UpdateCharacterSheet: 'sheet',
+      StartCharacterCreation: 'characterCreation',
+      AdvanceCharacterCreation: 'characterCreation',
+      SetCharacterCreationHomeworld: 'characterCreation',
+      SelectCharacterCreationBackgroundSkill: 'characterCreation',
+      ResolveCharacterCreationCascadeSkill: 'characterCreation',
+      FinalizeCharacterCreation: 'characterCreation',
+      StartCharacterCareerTerm: 'characterCreation',
+      CreateBoard: 'board',
+      SelectBoard: 'board',
+      SetDoorOpen: 'door',
+      CreatePiece: 'board',
+      MovePiece: 'board',
+      SetPieceVisibility: 'board',
+      SetPieceFreedom: 'board',
+      RollDice: 'dice'
+    })
+  })
+
+  it('submits board, dice, door, sheet, and character creation commands through typed domain APIs', async () => {
+    const submissions: AppCommandSubmitInput[] = []
+    const router = createAppCommandRouter({
+      getEventSeq: () => 40,
+      submit: async (input) => {
+        submissions.push(input)
+        return input.command.type
+      }
+    })
+
+    const results = await Promise.all([
+      router.board.dispatch(createBoardCommand()),
+      router.dice.dispatch(rollDiceCommand()),
+      router.door.dispatch(doorCommand()),
+      router.sheet.dispatch(sheetCommand()),
+      router.characterCreation.dispatch(characterCreationCommand())
+    ])
+
+    assert.deepEqual(results, [
+      'CreateBoard',
+      'RollDice',
+      'SetDoorOpen',
+      'UpdateCharacterSheet',
+      'AdvanceCharacterCreation'
+    ])
+    assert.deepEqual(
+      submissions.map((submission) => router.routeFor(submission.command)),
+      ['board', 'dice', 'door', 'sheet', 'characterCreation']
+    )
+    assert.deepEqual(
+      submissions.map((submission) => submission.command.expectedSeq),
+      [40, 40, 40, 40, 40]
     )
   })
 })

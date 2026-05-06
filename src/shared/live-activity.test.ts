@@ -8,10 +8,11 @@ import { asCharacterId, asEventId, asGameId, asUserId } from './ids'
 import {
   deriveLiveActivities,
   deriveLiveActivity,
+  deriveLiveDiceRollRevealTarget,
   LIVE_DICE_RESULT_REVEAL_DELAY_MS,
+  type LiveActivityDescriptor,
   MAX_LIVE_ACTIVITY_ROLLS,
-  MAX_LIVE_ACTIVITY_TEXT_LENGTH,
-  type LiveActivityDescriptor
+  MAX_LIVE_ACTIVITY_TEXT_LENGTH
 } from './live-activity'
 
 const gameId = asGameId('game-1')
@@ -94,6 +95,53 @@ describe('live activity derivation', () => {
         delayMs: LIVE_DICE_RESULT_REVEAL_DELAY_MS
       }
     })
+  })
+
+  it('derives the shared dice reveal target from tactical and creation roll activity', () => {
+    const activities = [
+      deriveLiveActivity(
+        envelope(2, {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: 'Table roll',
+          rolls: [3, 5],
+          total: 8
+        })
+      ),
+      deriveLiveActivity(
+        envelope(3, {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: 'Scout survival',
+          rolls: [4, 4],
+          total: 8
+        })
+      )
+    ]
+
+    assert.deepEqual(
+      activities.map((activity) => activity?.type),
+      ['diceRoll', 'diceRoll']
+    )
+    assert.deepEqual(
+      activities.map((activity) =>
+        activity ? deriveLiveDiceRollRevealTarget(activity) : null
+      ),
+      [
+        {
+          id: 'game-1:2',
+          revealAt: '2026-05-03T00:00:04.500Z',
+          rolls: [3, 5],
+          total: 8
+        },
+        {
+          id: 'game-1:3',
+          revealAt: '2026-05-03T00:00:05.500Z',
+          rolls: [4, 4],
+          total: 8
+        }
+      ]
+    )
   })
 
   it('derives compact character creation transition activity', () => {

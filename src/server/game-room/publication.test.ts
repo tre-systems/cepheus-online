@@ -9,6 +9,7 @@ import {
   asPieceId,
   asUserId
 } from '../../shared/ids'
+import { LIVE_DICE_RESULT_REVEAL_DELAY_MS } from '../../shared/live-activity'
 import { getProjectedGameState } from './projection'
 import { CommandPublicationError, runCommandPublication } from './publication'
 import {
@@ -184,6 +185,35 @@ describe('room publication flow', () => {
       rolled.value.liveActivities[0].total,
       rolled.value.state.diceLog[0]?.total
     )
+  })
+
+  it('publishes character creation dice with the same live reveal contract', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+
+    const rolled = await publish(storage, {
+      type: 'RollDice',
+      gameId,
+      actorId,
+      expression: '2d6',
+      reason: 'Scout survival'
+    })
+
+    assert.equal(rolled.ok, true)
+    if (!rolled.ok) return
+    const persisted = await readEventStream(storage, gameId)
+    assert.equal(persisted.at(-1)?.event.type, 'DiceRolled')
+    assert.equal(rolled.value.liveActivities.length, 1)
+    const activity = rolled.value.liveActivities[0]
+    assert.equal(activity?.type, 'diceRoll')
+    if (activity?.type !== 'diceRoll') return
+    const stateRoll = rolled.value.state.diceLog.at(-1)
+    assert.equal(activity.reason, 'Scout survival')
+    assert.equal(activity.id, stateRoll?.id)
+    assert.deepEqual(activity.rolls, stateRoll?.rolls)
+    assert.equal(activity.total, stateRoll?.total)
+    assert.equal(activity.reveal.revealAt, stateRoll?.revealAt)
+    assert.equal(activity.reveal.delayMs, LIVE_DICE_RESULT_REVEAL_DELAY_MS)
   })
 
   it('rejects invalid commands without writing an event stream', async () => {

@@ -46,6 +46,26 @@ describe('live activity client helpers', () => {
     assert.equal(prepared.animateLatestDiceLog, false)
   })
 
+  it('prepares tactical and character creation dice on the same reveal path', () => {
+    const tactical = activity('game-1:20', 8)
+    const creation = activity('game-1:21', 9)
+
+    const prepared = prepareLiveActivityApplication(
+      { diceRollActivities: [tactical, creation] },
+      {
+        animatedDiceRollActivityIds: new Set(),
+        revealedDiceIds: new Set()
+      }
+    )
+
+    assert.deepEqual(prepared.diceRollActivities, [tactical, creation])
+    assert.deepEqual(
+      [...prepared.deferDiceRevealIds],
+      [tactical.id, creation.id]
+    )
+    assert.equal(prepared.animateLatestDiceLog, false)
+  })
+
   it('allows latest dice log animation when no live dice roll was supplied', () => {
     const prepared = prepareLiveActivityApplication(
       { diceRollActivities: [] },

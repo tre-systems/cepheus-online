@@ -35,6 +35,13 @@ export interface DiceRollActivityDescriptor extends LiveActivityBase {
   }
 }
 
+export interface LiveDiceRollRevealTarget {
+  id: string
+  revealAt: string
+  rolls: readonly number[]
+  total: number
+}
+
 export interface CharacterCreationActivityDescriptor extends LiveActivityBase {
   type: 'characterCreation'
   characterId: CharacterId
@@ -48,6 +55,19 @@ export const deriveLiveActivityRevealAt = (
   createdAt: string,
   delayMs = LIVE_DICE_RESULT_REVEAL_DELAY_MS
 ): string => new Date(Date.parse(createdAt) + delayMs).toISOString()
+
+export const deriveLiveDiceRollRevealTarget = (
+  activity: LiveActivityDescriptor
+): LiveDiceRollRevealTarget | null => {
+  if (activity.type !== 'diceRoll') return null
+
+  return {
+    id: activity.id,
+    revealAt: activity.reveal.revealAt,
+    rolls: activity.rolls,
+    total: activity.total
+  }
+}
 
 const baseActivity = (envelope: EventEnvelope): LiveActivityBase => ({
   id: envelope.id,
