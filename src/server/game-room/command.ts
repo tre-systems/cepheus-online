@@ -6,6 +6,7 @@ import {
   careerSkillWithLevel,
   deriveAgingRollModifier,
   deriveCashBenefitRollModifier,
+  deriveBasicTrainingPlan,
   deriveCareerCreationActionContext,
   deriveRemainingCareerBenefits,
   deriveMaterialBenefitRollModifier,
@@ -403,10 +404,11 @@ const validateBasicTrainingCompletion = (
     )
   }
 
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const actionContext = deriveCareerCreationActionContext(character.creation)
+  const blockingDecision = actionContext.pendingDecisions?.find(
+    (decision) => decision.key !== 'basicTrainingSkillSelection'
   )
-  if (!legalActions.includes('completeBasicTraining')) {
+  if (blockingDecision) {
     return err(
       commandError(
         'invalid_command',
@@ -416,6 +418,44 @@ const validateBasicTrainingCompletion = (
   }
 
   return ok(character.creation)
+}
+
+const deriveBasicTrainingSkills = (
+  creation: CharacterCreationProjection
+): Result<string[], CommandError> => {
+  const currentTerm = creation.terms.at(-1)
+  if (!currentTerm) {
+    return err(commandError('invalid_command', 'No active career term exists'))
+  }
+  if (currentTerm.skillsAndTraining.length > 0) {
+    return ok([...currentTerm.skillsAndTraining])
+  }
+
+  const previousTerms = creation.terms.slice(0, -1)
+  const plan = deriveBasicTrainingPlan({
+    career: currentTerm.career,
+    serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
+    completedTermCount: previousTerms.length,
+    previousCareerNames: previousTerms.map((term) => term.career)
+  })
+
+  if (plan.kind === 'all') {
+    return ok(
+      plan.skills
+        .map((skill) => normalizeCareerSkill(skill, 0))
+        .filter((skill): skill is string => skill !== null)
+    )
+  }
+  if (plan.kind === 'none') {
+    return ok([])
+  }
+
+  return err(
+    commandError(
+      'invalid_command',
+      'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions'
+    )
+  )
 }
 
 const validateHomeworldCompletion = (
@@ -686,12 +726,11 @@ const validateMusteringBenefitRoll = (
     )
   }
 
-  const remainingInCareer =
-    deriveRemainingCareerBenefits({
-      termsInCareer: termsInCareer(character.creation, career),
-      currentRank: currentCareerRank(character.creation, career),
-      benefitsReceived: benefitsReceivedInCareer(character.creation, career)
-    })
+  const remainingInCareer = deriveRemainingCareerBenefits({
+    termsInCareer: termsInCareer(character.creation, career),
+    currentRank: currentCareerRank(character.creation, career),
+    benefitsReceived: benefitsReceivedInCareer(character.creation, career)
+  })
   if (remainingInCareer <= 0) {
     return err(
       commandError(
@@ -1480,6 +1519,14 @@ export const deriveEventsForCommand = (
           )
         )
       }
+      if (command.creationEvent.type === 'COMPLETE_BASIC_TRAINING') {
+        return err(
+          commandError(
+            'invalid_command',
+            'COMPLETE_BASIC_TRAINING must use CompleteCharacterCreationBasicTraining'
+          )
+        )
+      }
       if (
         !canTransitionCareerCreationState(
           character.creation.state,
@@ -1535,18 +1582,18 @@ export const deriveEventsForCommand = (
       }
       const creation = validateBasicTrainingCompletion(character)
       if (!creation.ok) return creation
+      const trainingSkills = deriveBasicTrainingSkills(creation.value)
+      if (!trainingSkills.ok) return trainingSkills
 
       const nextState = transitionCareerCreationState(creation.value.state, {
         type: 'COMPLETE_BASIC_TRAINING'
       })
-      const trainingSkills =
-        creation.value.terms.at(-1)?.skillsAndTraining.slice() ?? []
 
       return ok([
         {
           type: 'CharacterCreationBasicTrainingCompleted',
           characterId: command.characterId,
-          trainingSkills,
+          trainingSkills: trainingSkills.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         }

@@ -1258,6 +1258,217 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 7)
   })
 
+  it('replays semantic character creation milestone events in order', () => {
+    const characterId = asCharacterId('char-1')
+    const creationState = (
+      status: CareerCreationStatus,
+      canCommission = false,
+      canAdvance = false
+    ) => ({
+      status,
+      context: {
+        canCommission,
+        canAdvance
+      }
+    })
+    const survival = {
+      expression: '2d6' as const,
+      rolls: [4, 4],
+      total: 8,
+      characteristic: 'end' as const,
+      modifier: 0,
+      target: 5,
+      success: true
+    }
+    const commission = {
+      expression: '2d6' as const,
+      rolls: [3, 3],
+      total: 6,
+      characteristic: 'int' as const,
+      modifier: 0,
+      target: 5,
+      success: true
+    }
+    const advancement = {
+      expression: '2d6' as const,
+      rolls: [5, 4],
+      total: 9,
+      characteristic: 'edu' as const,
+      modifier: 0,
+      target: 8,
+      success: true
+    }
+    const rank = {
+      career: 'Merchant',
+      previousRank: 0,
+      newRank: 1,
+      title: 'Fourth Officer',
+      bonusSkill: null
+    }
+    const termSkill = {
+      career: 'Merchant',
+      table: 'serviceSkills' as const,
+      roll: { expression: '1d6' as const, rolls: [1], total: 1 },
+      tableRoll: 1,
+      rawSkill: 'Broker',
+      skill: 'Broker-1',
+      characteristic: null,
+      pendingCascadeSkill: null
+    }
+
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Merchant'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: creationState('HOMEWORLD'),
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          homeworld: null,
+          backgroundSkills: [],
+          pendingCascadeSkills: [],
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationHomeworldSet',
+        characterId,
+        homeworld: {
+          name: 'Regina',
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid']
+        },
+        backgroundSkills: ['Zero-G-0'],
+        pendingCascadeSkills: []
+      }),
+      envelope(5, {
+        type: 'CharacterCreationHomeworldCompleted',
+        characterId,
+        state: creationState('CAREER_SELECTION'),
+        creationComplete: false
+      }),
+      envelope(6, {
+        type: 'CharacterCareerTermStarted',
+        characterId,
+        requestedCareer: 'Merchant',
+        acceptedCareer: 'Merchant',
+        career: 'Merchant',
+        drafted: false
+      }),
+      envelope(7, {
+        type: 'CharacterCreationBasicTrainingCompleted',
+        characterId,
+        trainingSkills: ['Broker-0'],
+        state: creationState('SURVIVAL'),
+        creationComplete: false
+      }),
+      envelope(8, {
+        type: 'CharacterCreationSurvivalResolved',
+        characterId,
+        passed: true,
+        survival,
+        canCommission: true,
+        canAdvance: true,
+        state: creationState('COMMISSION', true, true),
+        creationComplete: false
+      }),
+      envelope(9, {
+        type: 'CharacterCreationCommissionResolved',
+        characterId,
+        passed: true,
+        commission,
+        state: creationState('ADVANCEMENT', false, true),
+        creationComplete: false
+      }),
+      envelope(10, {
+        type: 'CharacterCreationAdvancementResolved',
+        characterId,
+        passed: true,
+        advancement,
+        rank,
+        state: creationState('SKILLS_TRAINING'),
+        creationComplete: false
+      }),
+      envelope(11, {
+        type: 'CharacterCreationTermSkillRolled',
+        characterId,
+        termSkill,
+        termSkills: ['Broker-1'],
+        skillsAndTraining: ['Broker-0', 'Broker-1'],
+        pendingCascadeSkills: [],
+        state: creationState('AGING'),
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'AGING')
+    assert.equal(creation?.creationComplete, false)
+    assert.deepEqual(creation?.history, [
+      { type: 'COMPLETE_HOMEWORLD' },
+      { type: 'COMPLETE_BASIC_TRAINING' },
+      {
+        type: 'SURVIVAL_PASSED',
+        canCommission: true,
+        canAdvance: true,
+        survival
+      },
+      {
+        type: 'COMPLETE_COMMISSION',
+        commission
+      },
+      {
+        type: 'COMPLETE_ADVANCEMENT',
+        advancement,
+        rank
+      },
+      {
+        type: 'ROLL_TERM_SKILL',
+        termSkill
+      }
+    ])
+    assert.deepEqual(creation?.terms, [
+      {
+        career: 'Merchant',
+        skills: ['Broker-1'],
+        skillsAndTraining: ['Broker-0', 'Broker-1'],
+        benefits: [],
+        complete: false,
+        canReenlist: true,
+        completedBasicTraining: true,
+        musteringOut: false,
+        anagathics: false,
+        survival: 8,
+        advancement: 9
+      }
+    ])
+    assert.deepEqual(creation?.careers, [{ name: 'Merchant', rank: 1 }])
+    assert.deepEqual(creation?.homeworld, {
+      name: 'Regina',
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid']
+    })
+    assert.equal(creation?.canEnterDraft, true)
+    assert.equal(state?.eventSeq, 11)
+  })
+
   it('projects reenlistment as a second career term', () => {
     const characterId = asCharacterId('char-1')
     const transition = (

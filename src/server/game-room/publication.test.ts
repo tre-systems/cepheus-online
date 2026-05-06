@@ -75,6 +75,17 @@ const scoutLowPassageBenefit = () =>
     >['musteringBenefit']
   >
 
+const publishBasicTrainingCompletion = (
+  storage: ReturnType<typeof createMemoryStorage>,
+  characterId: ReturnType<typeof asCharacterId>
+) =>
+  publish(storage, {
+    type: 'CompleteCharacterCreationBasicTraining',
+    gameId,
+    actorId,
+    characterId
+  })
+
 const publishPlayableCharacterCreation = async (
   storage: ReturnType<typeof createMemoryStorage>,
   characterId = asCharacterId('char-1')
@@ -153,7 +164,11 @@ const publishPlayableCharacterCreation = async (
   assert.equal(termStarted.ok, true)
 
   await advance({ type: 'SELECT_CAREER', isNewCareer: true })
-  await advance({ type: 'COMPLETE_BASIC_TRAINING' })
+  const basicTrainingCompleted = await publishBasicTrainingCompletion(
+    storage,
+    characterId
+  )
+  assert.equal(basicTrainingCompleted.ok, true)
   await advance({
     type: 'SURVIVAL_PASSED',
     canCommission: false,
@@ -319,7 +334,11 @@ describe('room publication flow', () => {
       career: 'Scout'
     })
     await advance({ type: 'SELECT_CAREER', isNewCareer: true })
-    await advance({ type: 'COMPLETE_BASIC_TRAINING' })
+    const basicTrainingCompleted = await publishBasicTrainingCompletion(
+      storage,
+      characterId
+    )
+    assert.equal(basicTrainingCompleted.ok, true)
     await advance({
       type: 'SURVIVAL_PASSED',
       canCommission: false,
@@ -1839,7 +1858,11 @@ describe('room publication flow', () => {
         success: true
       }
     })
-    await advance({ type: 'COMPLETE_BASIC_TRAINING' })
+    const basicTrainingCompleted = await publishBasicTrainingCompletion(
+      storage,
+      characterId
+    )
+    assert.equal(basicTrainingCompleted.ok, true)
     await advance({
       type: 'SURVIVAL_PASSED',
       canCommission: true,
@@ -2119,7 +2142,11 @@ describe('room publication flow', () => {
       career: 'Scout'
     })
     await advance({ type: 'SELECT_CAREER', isNewCareer: true })
-    await advance({ type: 'COMPLETE_BASIC_TRAINING' })
+    const basicTrainingCompleted = await publishBasicTrainingCompletion(
+      storage,
+      characterId
+    )
+    assert.equal(basicTrainingCompleted.ok, true)
     await advance({
       type: 'SURVIVAL_PASSED',
       canCommission: false,
@@ -2240,7 +2267,11 @@ describe('room publication flow', () => {
       career: 'Scout'
     })
     await advance({ type: 'SELECT_CAREER', isNewCareer: true })
-    await advance({ type: 'COMPLETE_BASIC_TRAINING' })
+    const basicTrainingCompleted = await publishBasicTrainingCompletion(
+      storage,
+      characterId
+    )
+    assert.equal(basicTrainingCompleted.ok, true)
     await advance({
       type: 'SURVIVAL_PASSED',
       canCommission: false,
@@ -2701,7 +2732,7 @@ describe('room publication flow', () => {
           creationEvent: { type: 'COMPLETE_BASIC_TRAINING' }
         },
         'invalid_command',
-        'COMPLETE_BASIC_TRAINING is not valid from CAREER_SELECTION'
+        'COMPLETE_BASIC_TRAINING must use CompleteCharacterCreationBasicTraining'
       )
     }
 

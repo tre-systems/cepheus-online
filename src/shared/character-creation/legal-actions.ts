@@ -69,6 +69,10 @@ const rankInCareer = (
   career: string
 ): number => creation.careers?.find((entry) => entry.name === career)?.rank ?? 0
 
+const basicTrainingCommandTypes = [
+  'CompleteCharacterCreationBasicTraining'
+] as unknown as LegalCareerCreationAction['commandTypes']
+
 export const deriveRemainingCareerCreationBenefits = (
   creation: CareerCreationActionProjection
 ): number => {
@@ -258,9 +262,9 @@ export const deriveLegalCareerCreationActionKeys = (
       return noPendingDecisions ? ['resolveAging'] : []
     case 'REENLISTMENT':
       if (options.reenlistmentOutcome === 'unresolved') {
-        return context.pendingDecisions?.every(
+        return (context.pendingDecisions?.every(
           (decision) => decision.key === 'reenlistmentResolution'
-        ) ?? true
+        ) ?? true)
           ? ['rollReenlistment']
           : []
       }
@@ -307,7 +311,7 @@ const actionDefinitions = {
     rollRequirement: { key: 'careerQualification', dice: '2d6' }
   },
   completeBasicTraining: {
-    commandTypes: ['AdvanceCharacterCreation']
+    commandTypes: basicTrainingCommandTypes
   },
   rollSurvival: {
     commandTypes: [

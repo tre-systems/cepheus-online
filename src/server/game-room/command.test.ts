@@ -538,6 +538,17 @@ describe('deriveEventsForCommand error categories', () => {
           {
             career: 'Scout',
             skills: [],
+            skillsAndTraining: ['Vacc Suit-0'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          },
+          {
+            career: 'Merchant',
+            skills: [],
             skillsAndTraining: [],
             benefits: [],
             complete: false,
@@ -576,6 +587,41 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(
       result.error.message,
       'COMPLETE_BASIC_TRAINING is not valid from SURVIVAL'
+    )
+  })
+
+  it('rejects generic basic training completion after semantic migration', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'COMPLETE_BASIC_TRAINING' }
+      },
+      createCreation('BASIC_TRAINING', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Vacc Suit-0'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMPLETE_BASIC_TRAINING must use CompleteCharacterCreationBasicTraining'
     )
   })
 

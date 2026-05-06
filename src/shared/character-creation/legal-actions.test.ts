@@ -136,6 +136,19 @@ describe('career creation legal action planner', () => {
 
     assert.deepEqual(
       deriveLegalCareerCreationActions(
+        createCareerCreationState('BASIC_TRAINING')
+      ),
+      [
+        {
+          key: 'completeBasicTraining',
+          status: 'BASIC_TRAINING',
+          commandTypes: ['CompleteCharacterCreationBasicTraining']
+        }
+      ]
+    )
+
+    assert.deepEqual(
+      deriveLegalCareerCreationActions(
         createCareerCreationState('MUSTERING_OUT'),
         { canContinueCareer: true }
       ),
