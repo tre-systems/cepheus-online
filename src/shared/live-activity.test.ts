@@ -632,6 +632,140 @@ describe('live activity derivation', () => {
     )
   })
 
+  it('derives compact qualification, draft, and Drifter activity details', () => {
+    const activities = deriveLiveActivities([
+      envelope(3, {
+        type: 'CharacterCreationQualificationResolved',
+        characterId,
+        career: 'Scout',
+        passed: false,
+        qualification: {
+          expression: '2d6',
+          rolls: [1, 2],
+          total: 3,
+          characteristic: 'int',
+          modifier: 0,
+          target: 5,
+          success: false
+        },
+        previousCareerCount: 1,
+        failedQualificationOptions: ['Drifter', 'Draft'],
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(4, {
+        type: 'CharacterCreationDraftResolved',
+        characterId,
+        draft: {
+          roll: {
+            expression: '1d6',
+            rolls: [4],
+            total: 4
+          },
+          tableRoll: 4,
+          acceptedCareer: 'Merchant'
+        },
+        state: {
+          status: 'BASIC_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(5, {
+        type: 'CharacterCreationDrifterEntered',
+        characterId,
+        acceptedCareer: 'Drifter',
+        state: {
+          status: 'BASIC_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    assert.deepEqual(activities, [
+      {
+        id: asEventId('game-1:3'),
+        eventId: asEventId('game-1:3'),
+        gameId,
+        seq: 3,
+        actorId,
+        createdAt: '2026-05-03T00:00:03.000Z',
+        type: 'characterCreation',
+        characterId,
+        transition: 'CAREER_QUALIFICATION_FAILED',
+        details: 'Scout; qualification 3; failed; fallback Drifter or Draft',
+        status: 'CAREER_SELECTION',
+        creationComplete: false
+      },
+      {
+        id: asEventId('game-1:4'),
+        eventId: asEventId('game-1:4'),
+        gameId,
+        seq: 4,
+        actorId,
+        createdAt: '2026-05-03T00:00:04.000Z',
+        type: 'characterCreation',
+        characterId,
+        transition: 'DRAFT_RESOLVED',
+        details: 'Draft 4; Merchant',
+        status: 'BASIC_TRAINING',
+        creationComplete: false
+      },
+      {
+        id: asEventId('game-1:5'),
+        eventId: asEventId('game-1:5'),
+        gameId,
+        seq: 5,
+        actorId,
+        createdAt: '2026-05-03T00:00:05.000Z',
+        type: 'characterCreation',
+        characterId,
+        transition: 'DRIFTER_ENTERED',
+        details: 'Entered Drifter',
+        status: 'BASIC_TRAINING',
+        creationComplete: false
+      }
+    ])
+
+    const payload = JSON.stringify(activities)
+    assert.equal(payload.includes('previousCareerCount'), false)
+    assert.equal(payload.includes('rolls'), false)
+    assert.equal(payload.includes('expression'), false)
+    assert.equal(payload.includes('target'), false)
+    assert.equal(payload.includes('context'), false)
+    assert.equal(payload.includes('canCommission'), false)
+    assert.equal(payload.includes('canAdvance'), false)
+    for (const activity of activities) {
+      assert.deepEqual(Object.keys(activity).sort(), [
+        'actorId',
+        'characterId',
+        'createdAt',
+        'creationComplete',
+        'details',
+        'eventId',
+        'gameId',
+        'id',
+        'seq',
+        'status',
+        'transition',
+        'type'
+      ])
+    }
+  })
+
   it('derives failed qualification, anagathics, and mustering benefit details', () => {
     const activities = deriveLiveActivities([
       envelope(3, {

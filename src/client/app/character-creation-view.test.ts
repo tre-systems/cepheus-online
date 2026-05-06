@@ -885,6 +885,7 @@ describe('character creation view helpers', () => {
     }
 
     assert.deepEqual(deriveCharacterCreationCareerRollButton(careerFlow), {
+      key: 'qualificationRoll',
       label: 'Roll qualification',
       reason: 'Iona Vesh Merchant qualification',
       disabled: false,

@@ -278,17 +278,13 @@ const actionsForLegalKey = (
         ]
       }
       return [
-        action(
-          'select-career',
-          'Qualify for Scout',
-          {
-            type: 'ResolveCharacterCreationQualification',
-            gameId: identity.gameId,
-            actorId: identity.actorId,
-            characterId: character.id,
-            career: 'Scout'
-          }
-        )
+        action('select-career', 'Qualify for Scout', {
+          type: 'ResolveCharacterCreationQualification',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id,
+          career: 'Scout'
+        })
       ]
     case 'completeBasicTraining':
       return [
@@ -330,7 +326,12 @@ const actionsForLegalKey = (
         action(
           'complete-commission',
           'Complete commission',
-          advanceCommand(identity, character, { type: 'COMPLETE_COMMISSION' }),
+          {
+            type: 'ResolveCharacterCreationCommission',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id
+          },
           'secondary'
         )
       ]
@@ -344,11 +345,12 @@ const actionsForLegalKey = (
       ]
     case 'rollAdvancement':
       return [
-        action(
-          'complete-advancement',
-          'Complete advancement',
-          advanceCommand(identity, character, { type: 'COMPLETE_ADVANCEMENT' })
-        )
+        action('complete-advancement', 'Complete advancement', {
+          type: 'ResolveCharacterCreationAdvancement',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
       ]
     case 'skipAdvancement':
       return [

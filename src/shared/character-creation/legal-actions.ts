@@ -333,20 +333,14 @@ const actionDefinitions = {
     commandTypes: ['AdvanceCharacterCreation']
   },
   rollCommission: {
-    commandTypes: [
-      'ResolveCharacterCreationCommission',
-      'AdvanceCharacterCreation'
-    ],
+    commandTypes: ['ResolveCharacterCreationCommission'],
     rollRequirement: { key: 'commission', dice: '2d6' }
   },
   skipCommission: {
     commandTypes: ['AdvanceCharacterCreation']
   },
   rollAdvancement: {
-    commandTypes: [
-      'ResolveCharacterCreationAdvancement',
-      'AdvanceCharacterCreation'
-    ],
+    commandTypes: ['ResolveCharacterCreationAdvancement'],
     rollRequirement: { key: 'advancement', dice: '2d6' }
   },
   skipAdvancement: {

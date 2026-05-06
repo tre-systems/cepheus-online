@@ -105,7 +105,7 @@ describe('career creation legal action planner', () => {
             'ResolveCharacterCreationQualification',
             'ResolveCharacterCreationDraft',
             'EnterCharacterCreationDrifter',
-            'StartCharacterCareerTerm',
+            'StartCharacterCareerTerm'
           ],
           rollRequirement: { key: 'careerQualification', dice: '2d6' }
         }
@@ -125,7 +125,7 @@ describe('career creation legal action planner', () => {
             'ResolveCharacterCreationQualification',
             'ResolveCharacterCreationDraft',
             'EnterCharacterCreationDrifter',
-            'StartCharacterCareerTerm',
+            'StartCharacterCareerTerm'
           ],
           failedQualificationOptions: [
             { option: 'Drifter' },
@@ -246,7 +246,7 @@ describe('career creation legal action planner', () => {
               'ResolveCharacterCreationQualification',
               'ResolveCharacterCreationDraft',
               'EnterCharacterCreationDrifter',
-              'StartCharacterCareerTerm',
+              'StartCharacterCareerTerm'
             ],
             failedQualificationOptions: [
               { option: 'Drifter' },
@@ -289,6 +289,50 @@ describe('career creation legal action planner', () => {
         })
       ),
       ['rollAdvancement', 'skipAdvancement']
+    )
+
+    assert.deepEqual(
+      deriveLegalCareerCreationActions(
+        createCareerCreationState('COMMISSION', {
+          canCommission: true,
+          canAdvance: true
+        })
+      ),
+      [
+        {
+          key: 'rollCommission',
+          status: 'COMMISSION',
+          commandTypes: ['ResolveCharacterCreationCommission'],
+          rollRequirement: { key: 'commission', dice: '2d6' }
+        },
+        {
+          key: 'skipCommission',
+          status: 'COMMISSION',
+          commandTypes: ['AdvanceCharacterCreation']
+        }
+      ]
+    )
+
+    assert.deepEqual(
+      deriveLegalCareerCreationActions(
+        createCareerCreationState('ADVANCEMENT', {
+          canCommission: true,
+          canAdvance: true
+        })
+      ),
+      [
+        {
+          key: 'rollAdvancement',
+          status: 'ADVANCEMENT',
+          commandTypes: ['ResolveCharacterCreationAdvancement'],
+          rollRequirement: { key: 'advancement', dice: '2d6' }
+        },
+        {
+          key: 'skipAdvancement',
+          status: 'ADVANCEMENT',
+          commandTypes: ['AdvanceCharacterCreation']
+        }
+      ]
     )
   })
 

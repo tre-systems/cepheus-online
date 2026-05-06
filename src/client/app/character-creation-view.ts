@@ -86,6 +86,7 @@ export interface CharacterCreationButtonStates {
 }
 
 export interface CharacterCreationCareerRollButton {
+  key: string
   label: string
   reason: string
   disabled: boolean
@@ -376,6 +377,7 @@ export const deriveCharacterCreationCareerRollButton = (
   if (!action) return null
 
   return {
+    key: action.key,
     label: action.label,
     reason: action.reason,
     disabled: false,

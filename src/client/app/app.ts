@@ -43,7 +43,6 @@ import {
   nextCharacterCreationWizardStep,
   remainingMusteringBenefits,
   removeCharacterCreationBackgroundSkillSelection,
-  resolveCharacterCreationDraftCareer,
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
   skipCharacterCreationCareerRoll
@@ -110,7 +109,6 @@ import { createPwaInstallController } from './pwa-install.js'
 import { createRequestIdFactory } from './request-id.js'
 import { createRoomMenuController } from './room-menu-controller.js'
 import { registerClientServiceWorker } from './service-worker.js'
-import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset.js'
 
 registerClientServiceWorker()
 
@@ -1105,7 +1103,11 @@ const renderCharacterCreationCareerPicker = (flow) => {
         if (!characterCreationFlow) return
         characterCreationFlow = applyParsedCharacterCreationDraftPatch(
           characterCreationFlow,
-          parseCharacterCreationDraftPatch({ career: career.key })
+          parseCharacterCreationDraftPatch({
+            career: career.key,
+            qualificationRoll: null,
+            qualificationPassed: true
+          })
         ).flow
         setError('')
         renderCharacterCreationWizard()
@@ -1338,7 +1340,9 @@ const renderCharacterCreationDraftFallback = (flow) => {
         selectFailedQualificationCareer('Drifter', false)
         return
       }
-      rollCharacterCreationDraft().catch((error) => setError(error.message))
+      setError(
+        'Draft resolution is handled by the event-backed creator flow; choose Drifter here or restart from the shared creation actions.'
+      )
     })
     list.append(button)
   }
@@ -1383,6 +1387,7 @@ const renderCharacterCreationCharacteristicRollButton = (flow) => {
 const renderCharacterCreationCareerRollButton = (flow) => {
   const viewModel = deriveCharacterCreationCareerRollButton(flow)
   if (!viewModel) return null
+  if (viewModel.key === 'qualificationRoll') return null
 
   const wrapper = document.createElement('div')
   wrapper.className = 'character-creation-roll-action'
@@ -1777,46 +1782,6 @@ const rollCharacterCreationCareerCheck = async () => {
     latestRoll.total
   ).flow
   renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
-
-const rollCharacterCreationDraft = async () => {
-  if (!characterCreationFlow) return
-  setError('')
-  syncCharacterCreationWizardFields()
-
-  if (!state) {
-    await postCommand(
-      createGameCommand({ roomId, actorId }),
-      requestId('create-game-for-draft-roll')
-    )
-  }
-
-  const response = await postDiceCommand(
-    buildRollDiceCommand({
-      identity: clientIdentity(),
-      expression: '1d6',
-      reason: `${characterCreationFlow.draft.name.trim() || 'Character'} draft`
-    }),
-    requestId('draft-roll')
-  )
-  const latestRoll =
-    response.state?.diceLog?.[response.state.diceLog.length - 1]
-  if (!latestRoll) {
-    setError('Draft roll did not return a dice result')
-    return
-  }
-
-  await waitForDiceReveal(latestRoll)
-  const career = resolveCharacterCreationDraftCareer(
-    latestRoll.total,
-    CEPHEUS_SRD_RULESET.theDraft
-  )
-  if (!career) {
-    setError('Draft roll did not resolve a career')
-    return
-  }
-  selectFailedQualificationCareer(career, true)
   characterCreationPanel.scrollToTop()
 }
 

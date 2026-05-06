@@ -169,11 +169,6 @@ describe('character creation actions', () => {
       overrides: Partial<CharacterCreationProjection>
     }[] = [
       {
-        status: 'ADVANCEMENT',
-        eventType: 'COMPLETE_ADVANCEMENT',
-        overrides: {}
-      },
-      {
         status: 'SKILLS_TRAINING',
         eventType: 'COMPLETE_SKILLS',
         overrides: {}
@@ -231,6 +226,60 @@ describe('character creation actions', () => {
       if (command?.type !== 'AdvanceCharacterCreation') continue
       assert.equal(command.creationEvent.type, eventType)
     }
+  })
+
+  it('uses semantic commands for commission and advancement rolls', () => {
+    const commissionPlan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('COMMISSION', {
+          state: {
+            status: 'COMMISSION',
+            context: {
+              canCommission: true,
+              canAdvance: true
+            }
+          }
+        })
+      )
+    )
+    const advancementPlan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('ADVANCEMENT', {
+          state: {
+            status: 'ADVANCEMENT',
+            context: {
+              canCommission: false,
+              canAdvance: true
+            }
+          }
+        })
+      )
+    )
+
+    assert.deepEqual(
+      commissionPlan?.actions.find((availableAction) => {
+        return availableAction.key === 'complete-commission'
+      })?.command,
+      {
+        type: 'ResolveCharacterCreationCommission',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: 'mae' as CharacterId
+      }
+    )
+    assert.deepEqual(
+      advancementPlan?.actions.find((availableAction) => {
+        return availableAction.key === 'complete-advancement'
+      })?.command,
+      {
+        type: 'ResolveCharacterCreationAdvancement',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: 'mae' as CharacterId
+      }
+    )
   })
 
   it('uses the semantic command for rolling survival', () => {
