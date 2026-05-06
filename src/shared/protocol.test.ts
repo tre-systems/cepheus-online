@@ -30,6 +30,11 @@ type LiveActivityServerMessageFixture = {
   readonly maxSerializedBytes: number
 }
 
+type CommandErrorServerMessageFixture = {
+  readonly name: string
+  readonly message: ServerMessage
+}
+
 const loadFixture = <T>(name: string): T => {
   const file = path.join('src', 'shared', '__fixtures__', 'protocol', name)
 
@@ -60,6 +65,10 @@ const invalidMalformedMessageFixtures = loadFixture<
 const liveActivityServerMessageFixtures = loadFixture<
   LiveActivityServerMessageFixture[]
 >('live-activity-server-messages.json')
+
+const commandErrorServerMessageFixtures = loadFixture<
+  CommandErrorServerMessageFixture[]
+>('command-error-server-messages.json')
 
 describe('protocol validation', () => {
   it('exposes stable command error categories for client branching', () => {
@@ -125,6 +134,19 @@ describe('protocol validation', () => {
     })
   }
 
+  for (const fixture of commandErrorServerMessageFixtures) {
+    it(`covers command error server message fixture: ${fixture.name}`, () => {
+      const { message } = fixture
+
+      assert.equal(message.type, 'commandRejected')
+      if (message.type !== 'commandRejected') return
+      assert.equal(message.error.code, 'not_allowed')
+      assert.equal(typeof message.error.message, 'string')
+      assert.equal(message.error.message.length > 0, true)
+      assert.equal(Number.isInteger(message.eventSeq), true)
+    })
+  }
+
   it('covers bounded dice activity in server message fixtures', () => {
     const activity = serverFixtureLiveActivities().find(
       (candidate) => candidate.type === 'diceRoll' && candidate.rollsOmitted
@@ -147,11 +169,15 @@ describe('protocol validation', () => {
 
     assert.equal(commandAcceptedFixture?.message.type, 'commandAccepted')
     if (commandAcceptedFixture?.message.type !== 'commandAccepted') return
+    const activity = commandAcceptedFixture.message.liveActivities?.find(
+      (candidate) => candidate.type === 'characterCreation'
+    )
+
+    assert.equal(activity?.type, 'characterCreation')
+    if (activity?.type !== 'characterCreation') return
     assert.equal(
-      commandAcceptedFixture.message.liveActivities?.some(
-        (activity) => activity.type === 'characterCreation'
-      ),
-      true
+      activity.details,
+      'Career selected; new career; draft resolved'
     )
   })
 

@@ -46,6 +46,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/app-elements.js',
+    source: join(compiledClientRoot, 'client', 'app', 'app-elements.js'),
+    exportName: 'CLIENT_APP_ELEMENTS_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/app-command-router.js',
     source: join(
       compiledClientRoot,

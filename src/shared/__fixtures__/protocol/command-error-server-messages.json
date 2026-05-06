@@ -1,0 +1,14 @@
+[
+  {
+    "name": "not allowed command rejection",
+    "message": {
+      "type": "commandRejected",
+      "requestId": "req-player-hidden-piece",
+      "error": {
+        "code": "not_allowed",
+        "message": "Only the referee can reveal hidden pieces"
+      },
+      "eventSeq": 17
+    }
+  }
+]

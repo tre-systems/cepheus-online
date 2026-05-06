@@ -1,4 +1,3 @@
-import type { EventEnvelope } from '../../shared/events'
 import type { GameId } from '../../shared/ids'
 import {
   deriveLiveActivities,
@@ -9,6 +8,7 @@ import { projectGameState } from '../../shared/projector'
 import { err, ok, type Result } from '../../shared/result'
 import type { GameState } from '../../shared/state'
 import type { DurableObjectStorage } from '../cloudflare'
+import { shouldSaveCheckpoint } from './checkpoint-policy'
 import { deriveEventsForCommand } from './command'
 import { getProjectedGameState } from './projection'
 import {
@@ -45,18 +45,6 @@ const commandError = (
 
 const internalPublicationError = (message: string): CommandPublicationError =>
   new CommandPublicationError('projection_mismatch', message)
-
-const shouldCheckpoint = (
-  state: GameState,
-  envelopes: readonly EventEnvelope[]
-): boolean =>
-  state.eventSeq === 1 ||
-  state.eventSeq % 64 === 0 ||
-  envelopes.some(
-    (envelope) =>
-      envelope.event.type === 'CharacterCreationTransitioned' &&
-      envelope.event.creationComplete
-  )
 
 const hasProjectionParity = (
   left: GameState | null,
@@ -107,7 +95,7 @@ export const runCommandPublication = async (
     throw internalPublicationError('Command did not project game state')
   }
 
-  if (shouldCheckpoint(nextState, envelopes)) {
+  if (shouldSaveCheckpoint(nextState, envelopes)) {
     await saveCheckpoint(storage, nextState, createdAt)
   }
 

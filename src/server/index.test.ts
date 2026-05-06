@@ -14,6 +14,7 @@ const clientModules = new Map<
       markers: ['new WebSocket', 'registerClientServiceWorker'],
       imports: [
         '/client/app/board-view.js',
+        '/client/app/app-elements.js',
         '/client/app/app-command-router.js',
         '/client/app/app-session.js',
         '/client/app/board-controller.js',
@@ -38,6 +39,7 @@ const clientModules = new Map<
       ]
     }
   ],
+  ['/client/app/app-elements.js', { markers: ['getAppElements'] }],
   [
     '/client/app/app-command-router.js',
     { markers: ['createAppCommandRouter', 'sequenceCommand'] }

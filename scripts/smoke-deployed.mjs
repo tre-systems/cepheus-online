@@ -21,6 +21,7 @@ const CLIENT_MODULES = new Map([
       markers: ['new WebSocket', 'registerClientServiceWorker'],
       imports: [
         '/client/app/board-view.js',
+        '/client/app/app-elements.js',
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
@@ -41,6 +42,7 @@ const CLIENT_MODULES = new Map([
       ]
     }
   ],
+  ['/client/app/app-elements.js', { markers: ['getAppElements'] }],
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
   [

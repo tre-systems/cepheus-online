@@ -10,6 +10,7 @@ import {
   selectedBoardPieces,
   pieceImageUrl
 } from './board-view.js'
+import { getAppElements } from './app-elements.js'
 import { createBoardController } from './board-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
@@ -106,92 +107,7 @@ const DEFAULT_ACTOR_ID = 'local-user'
 const qs = new URLSearchParams(location.search)
 registerClientServiceWorker()
 
-const els = {
-  status: document.getElementById('connectionStatus'),
-  roomForm: document.getElementById('roomForm'),
-  roomInput: document.getElementById('roomInput'),
-  userInput: document.getElementById('userInput'),
-  bootstrap: document.getElementById('bootstrapButton'),
-  refresh: document.getElementById('refreshButton'),
-  createCharacter: document.getElementById('createCharacterButton'),
-  createCharacterRail: document.getElementById('createCharacterRailButton'),
-  characterCreator: document.getElementById('characterCreator'),
-  creatorBody: document.getElementById('creatorBody'),
-  creatorActions: document.getElementById('creatorActions'),
-  characterCreatorClose: document.getElementById('characterCreatorCloseButton'),
-  characterCreatorTitle: document.getElementById('characterCreatorTitle'),
-  creatorStartSection: document.getElementById('creatorStartSection'),
-  creatorQuickSection: document.getElementById('creatorQuickSection'),
-  startCharacterWizard: document.getElementById('startCharacterWizardButton'),
-  backCharacterWizard: document.getElementById('backCharacterWizardButton'),
-  nextCharacterWizard: document.getElementById('nextCharacterWizardButton'),
-  acceptGeneratedCharacter: document.getElementById(
-    'acceptGeneratedCharacterButton'
-  ),
-  generateCharacter: document.getElementById('generateCharacterButton'),
-  generatedCharacterPreview: document.getElementById(
-    'generatedCharacterPreview'
-  ),
-  characterCreationWizard: document.getElementById('characterCreationWizard'),
-  characterCreationSteps: document.getElementById('characterCreationSteps'),
-  characterCreationStatus: document.getElementById('characterCreationStatus'),
-  characterCreationFields: document.getElementById('characterCreationFields'),
-  createPiece: document.getElementById('createPieceButton'),
-  createBoard: document.getElementById('createBoardButton'),
-  characterNameInput: document.getElementById('characterNameInput'),
-  characterAgeInput: document.getElementById('characterAgeInput'),
-  characterStrInput: document.getElementById('characterStrInput'),
-  characterDexInput: document.getElementById('characterDexInput'),
-  characterEndInput: document.getElementById('characterEndInput'),
-  characterIntInput: document.getElementById('characterIntInput'),
-  characterEduInput: document.getElementById('characterEduInput'),
-  characterSocInput: document.getElementById('characterSocInput'),
-  characterSkillsInput: document.getElementById('characterSkillsInput'),
-  characterCreditsInput: document.getElementById('characterCreditsInput'),
-  characterTokenInput: document.getElementById('characterTokenInput'),
-  pieceNameInput: document.getElementById('pieceNameInput'),
-  pieceImageInput: document.getElementById('pieceImageInput'),
-  pieceImageFileInput: document.getElementById('pieceImageFileInput'),
-  pieceCropInput: document.getElementById('pieceCropInput'),
-  pieceCropXInput: document.getElementById('pieceCropXInput'),
-  pieceCropYInput: document.getElementById('pieceCropYInput'),
-  pieceCropWidthInput: document.getElementById('pieceCropWidthInput'),
-  pieceCropHeightInput: document.getElementById('pieceCropHeightInput'),
-  pieceWidthInput: document.getElementById('pieceWidthInput'),
-  pieceHeightInput: document.getElementById('pieceHeightInput'),
-  pieceScaleInput: document.getElementById('pieceScaleInput'),
-  pieceSheetInput: document.getElementById('pieceSheetInput'),
-  boardNameInput: document.getElementById('boardNameInput'),
-  boardImageInput: document.getElementById('boardImageInput'),
-  boardImageFileInput: document.getElementById('boardImageFileInput'),
-  boardWidthInput: document.getElementById('boardWidthInput'),
-  boardHeightInput: document.getElementById('boardHeightInput'),
-  boardScaleInput: document.getElementById('boardScaleInput'),
-  roll: document.getElementById('rollButton'),
-  diceExpression: document.getElementById('diceExpression'),
-  error: document.getElementById('errorText'),
-  boardStatus: document.getElementById('boardStatus'),
-  boardSelect: document.getElementById('boardSelect'),
-  zoomOut: document.getElementById('zoomOutButton'),
-  zoomReset: document.getElementById('zoomResetButton'),
-  zoomIn: document.getElementById('zoomInButton'),
-  canvas: document.getElementById('boardCanvas'),
-  diceStage: document.getElementById('diceStage'),
-  diceOverlay: document.getElementById('diceOverlay'),
-  pwaInstallPrompt: document.getElementById('pwaInstallPrompt'),
-  pwaInstallButton: document.getElementById('pwaInstallButton'),
-  pwaInstallDismissButton: document.getElementById('pwaInstallDismissButton'),
-  initiativeRail: document.getElementById('initiativeRail'),
-  sheet: document.getElementById('characterSheet'),
-  sheetButton: document.getElementById('sheetButton'),
-  sheetClose: document.getElementById('sheetCloseButton'),
-  sheetName: document.getElementById('sheetName'),
-  sheetBody: document.getElementById('sheetBody'),
-  sheetTabs: Array.from(document.querySelectorAll('[data-sheet-tab]')),
-  menu: document.getElementById('menuButton'),
-  roomDialog: document.getElementById('roomDialog'),
-  roomCancel: document.getElementById('roomCancelButton')
-}
+const els = getAppElements(document)
 
 let roomId = qs.get('game') || DEFAULT_GAME_ID
 let actorId = qs.get('user') || DEFAULT_ACTOR_ID

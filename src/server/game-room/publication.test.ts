@@ -11,7 +11,12 @@ import {
 } from '../../shared/ids'
 import { getProjectedGameState } from './projection'
 import { CommandPublicationError, runCommandPublication } from './publication'
-import { gameSeedKey, readCheckpoint, readEventStream } from './storage'
+import {
+  gameSeedKey,
+  readCheckpoint,
+  readEventStream,
+  readEventStreamTail
+} from './storage'
 import { createMemoryStorage } from './test-support'
 
 const gameId = asGameId('game-1')
@@ -46,6 +51,91 @@ const createBoardCommand = (boardId = asBoardId('board-1')): Command => ({
   height: 800,
   scale: 50
 })
+
+const publishPlayableCharacterCreation = async (
+  storage: ReturnType<typeof createMemoryStorage>,
+  characterId = asCharacterId('char-1')
+): Promise<void> => {
+  await publish(storage, createGameCommand())
+  await publish(storage, {
+    type: 'CreateCharacter',
+    gameId,
+    actorId,
+    characterId,
+    characterType: 'PLAYER',
+    name: 'Scout'
+  })
+  await publish(storage, {
+    type: 'StartCharacterCreation',
+    gameId,
+    actorId,
+    characterId
+  })
+
+  const advance = async (
+    creationEvent: Extract<
+      Command,
+      { type: 'AdvanceCharacterCreation' }
+    >['creationEvent']
+  ) => {
+    const result = await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      creationEvent
+    })
+
+    assert.equal(result.ok, true)
+  }
+
+  await advance({ type: 'SET_CHARACTERISTICS' })
+  const homeworldSet = await publish(storage, {
+    type: 'SetCharacterCreationHomeworld',
+    gameId,
+    actorId,
+    characterId,
+    homeworld: {
+      name: 'Regina',
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid', 'Industrial']
+    }
+  })
+  assert.equal(homeworldSet.ok, true)
+
+  const cascadeResolved = await publish(storage, {
+    type: 'ResolveCharacterCreationCascadeSkill',
+    gameId,
+    actorId,
+    characterId,
+    cascadeSkill: 'Gun Combat-0',
+    selection: 'Slug Rifle'
+  })
+  assert.equal(cascadeResolved.ok, true)
+
+  await advance({ type: 'COMPLETE_HOMEWORLD' })
+  const termStarted = await publish(storage, {
+    type: 'StartCharacterCareerTerm',
+    gameId,
+    actorId,
+    characterId,
+    career: 'Scout'
+  })
+  assert.equal(termStarted.ok, true)
+
+  await advance({ type: 'SELECT_CAREER', isNewCareer: true })
+  await advance({ type: 'COMPLETE_BASIC_TRAINING' })
+  await advance({
+    type: 'SURVIVAL_PASSED',
+    canCommission: false,
+    canAdvance: false
+  })
+  await advance({ type: 'COMPLETE_SKILLS' })
+  await advance({ type: 'COMPLETE_AGING' })
+  await advance({ type: 'LEAVE_CAREER' })
+  await advance({ type: 'FINISH_MUSTERING' })
+  await advance({ type: 'CREATION_COMPLETE' })
+}
 
 describe('room publication flow', () => {
   it('returns one state-bearing publication for accepted commands', async () => {
@@ -654,6 +744,57 @@ describe('room publication flow', () => {
     assert.equal((await readEventStream(storage, gameId)).length, 17)
   })
 
+  it('recovers finalized character creation from playable checkpoint plus tail', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publishPlayableCharacterCreation(storage, characterId)
+
+    const playableCheckpoint = await readCheckpoint(storage, gameId)
+    assert.equal(playableCheckpoint?.seq, 16)
+
+    const finalized = await publish(storage, {
+      type: 'FinalizeCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      age: 34,
+      characteristics: {
+        str: 7,
+        dex: 8,
+        end: 7,
+        int: 9,
+        edu: 8,
+        soc: 6
+      },
+      skills: ['Pilot-1', 'Vacc Suit-0'],
+      equipment: [{ name: 'Vacc suit', quantity: 1, notes: 'Carried' }],
+      credits: 1200,
+      notes: 'Final scout.'
+    })
+
+    assert.equal(finalized.ok, true)
+    if (!finalized.ok) return
+    assert.equal((await readCheckpoint(storage, gameId))?.seq, 16)
+    assert.deepEqual(
+      (
+        await readEventStreamTail(storage, gameId, playableCheckpoint?.seq ?? 0)
+      ).map((envelope) => envelope.event.type),
+      ['CharacterCreationFinalized']
+    )
+
+    const recovered = await getProjectedGameState(storage, gameId)
+    assert.deepEqual(recovered, finalized.value.state)
+    assert.equal(recovered?.characters[characterId]?.age, 34)
+    assert.deepEqual(recovered?.characters[characterId]?.skills, [
+      'Pilot-1',
+      'Vacc Suit-0'
+    ])
+    assert.equal(
+      recovered?.characters[characterId]?.equipment[0]?.name,
+      'Vacc suit'
+    )
+  })
+
   it('rejects stale expected sequence numbers on character creation commands', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')
@@ -1192,6 +1333,73 @@ describe('room publication flow', () => {
       boardId: asBoardId('board-1'),
       doorId: 'iris-1',
       open: true
+    })
+  })
+
+  it('recovers board selection and door updates from game checkpoint plus tail', async () => {
+    const storage = createMemoryStorage()
+    const boardOneId = asBoardId('board-1')
+    const boardTwoId = asBoardId('board-2')
+    await publish(storage, createGameCommand())
+
+    const gameCheckpoint = await readCheckpoint(storage, gameId)
+    assert.equal(gameCheckpoint?.seq, 1)
+
+    await publish(storage, createBoardCommand(boardOneId))
+    await publish(storage, createBoardCommand(boardTwoId))
+    const selected = await publish(storage, {
+      type: 'SelectBoard',
+      gameId,
+      actorId,
+      boardId: boardTwoId
+    })
+    assert.equal(selected.ok, true)
+
+    const firstDoor = await publish(storage, {
+      type: 'SetDoorOpen',
+      gameId,
+      actorId,
+      boardId: boardTwoId,
+      doorId: 'iris-1',
+      open: true
+    })
+    assert.equal(firstDoor.ok, true)
+    const secondDoor = await publish(storage, {
+      type: 'SetDoorOpen',
+      gameId,
+      actorId,
+      boardId: boardTwoId,
+      doorId: 'iris-2',
+      open: false
+    })
+
+    assert.equal(secondDoor.ok, true)
+    if (!secondDoor.ok) return
+    assert.deepEqual(
+      (
+        await readEventStreamTail(storage, gameId, gameCheckpoint?.seq ?? 0)
+      ).map((envelope) => envelope.event.type),
+      [
+        'BoardCreated',
+        'BoardCreated',
+        'BoardSelected',
+        'DoorStateChanged',
+        'DoorStateChanged'
+      ]
+    )
+
+    const recovered = await getProjectedGameState(storage, gameId)
+    assert.deepEqual(recovered, secondDoor.value.state)
+    assert.equal(recovered?.selectedBoardId, boardTwoId)
+    assert.deepEqual(recovered?.boards[boardTwoId]?.doors, {
+      'iris-1': {
+        id: 'iris-1',
+        open: true
+      },
+      'iris-2': {
+        id: 'iris-2',
+        open: false
+      }
     })
   })
 
