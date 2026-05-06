@@ -25,6 +25,9 @@ The most useful legacy sources are:
 
 - Character creation is a mini-game, not a form. It should be fun to step
   through the procedure and watch the character emerge from the rolls.
+- Character creation is table-visible. Other connected players should be able
+  to watch the important rolls and outcomes live without needing a separate
+  in-app chat log.
 - The UI should expose the next valid rules action, not a large form of possible
   mutations. Invalid choices should mostly be impossible to reach.
 - Every roll should use the shared dice presentation so the player sees the
@@ -62,8 +65,8 @@ Already implemented in the rewrite:
 - Server-ordered room event stream with Durable Object persistence.
 - Shared command, event, and projection types for character sheet creation and
   updates.
-- Event-backed character creation start, state transition, finalization, and
-  first career term start.
+- Event-backed character creation start, coarse status transition,
+  finalization, and first career term start.
 - Pure shared character creation helpers for the status machine, skill
   normalization, cascade skill handling, term outcomes, aging selection,
   benefits, term lifecycle, reenlistment, and anagathics primitives.
@@ -74,6 +77,11 @@ Already implemented in the rewrite:
 Important remaining gaps:
 
 - The browser creation flow is not yet the full Cepheus procedure.
+- The current status machine is only a coarse lifecycle guard. It does not yet
+  own the complete character creation aggregate, pending decisions, legal
+  actions, roll requirements, or term sub-state.
+- Too much creation behavior still lives in the client wizard/draft flow rather
+  than in shared deterministic rules and server-backed events.
 - Homeworld, primary education, and background skills are not fully
   server-backed.
 - Cascade skill choices are not yet presented as first-class modal steps.
@@ -95,6 +103,8 @@ Important remaining gaps:
   deliberately named aggregate command that emits explicit semantic events.
 - Dice rolls should be replayable facts. Character creation events that depend
   on a roll should reference or embed the roll result deterministically.
+- Player-visible creation outcomes should derive transient live activity
+  messages for connected clients and, later, Discord logging.
 - UI components should render from a small step view model: current status,
   current prompt, legal actions, pending selections, recent result, and sheet
   preview.
@@ -111,6 +121,9 @@ the broader [implementation plan](backlog.md):
   render from that model instead of scattering status checks through DOM code.
 - Treat creation rolls as deterministic server facts that also drive the shared
   dice animation for connected players.
+- Derive spectator activity from the same accepted semantic events as the
+  creator's UI. Do not build a parallel feed that can drift from the event
+  stream.
 - Add JSON protocol fixtures for creation commands and events once the
   homeworld/background and term-loop payloads stabilize.
 - Add projection parity tests for every new creation event family.
@@ -118,6 +131,83 @@ the broader [implementation plan](backlog.md):
   projected state, not transient browser-only flags.
 - Keep the final sheet as a projection from creation events plus finalization,
   not a whole-object save that bypasses the creation history.
+
+## State Machine And Domain Model Tasks
+
+Goal: make character creation easier to extend and debug by making the rules
+procedure explicit in shared code instead of spreading it through UI conditions.
+
+Current assessment:
+
+- `src/shared/character-creation/state-machine.ts` provides a useful coarse
+  lifecycle: characteristics, homeworld, career selection, term stages,
+  mustering out, playable, and deceased.
+- That is not yet enough. The main mini-game still needs a richer aggregate
+  state that knows the current term, legal next actions, pending choices, roll
+  requirements, recent result, and final sheet projection.
+- The client should render from a small step view model and dispatch commands;
+  it should not decide which Cepheus rules transitions are valid.
+
+Tasks:
+
+- Define a canonical shared `CharacterCreationState` that includes:
+  - sheet preview
+  - current lifecycle status
+  - current `CareerTermState`
+  - pending decisions
+  - legal next actions
+  - recent roll/result presentation data
+  - creation history entries
+- Define explicit shared value types for:
+  - `CareerTermState`
+  - `PendingDecision`
+  - `LegalCreationAction`
+  - `RollRequirement`
+  - `CreationRollResult`
+  - `CreationHistoryEntry`
+- Move legal-action derivation into shared pure functions. The client may
+  filter actions for layout, but it must not invent or unlock them.
+- Replace broad `AdvanceCharacterCreation` transitions with semantic commands
+  where behavior matters: roll characteristics, set homeworld, select
+  background skill, qualify, draft, apply basic training, survive, resolve
+  mishap, commission, advance, roll term skill, age, reenlist, muster out, and
+  finalize.
+- Make roll events first-class facts. Each roll-gated event should record the
+  roll inputs, dice result, modifiers, target, success/failure, and resulting
+  state transition.
+- Persist pending decisions as projection state:
+  - cascade skill choices
+  - background skill allowances
+  - basic training choose-one skills
+  - commission or promotion bonus skills
+  - term skill table choices
+  - aging characteristic loss choices
+  - mustering-out benefit choices
+- Derive one client `CharacterCreationStepViewModel` from projected creation
+  state plus local form draft. It should contain prompt text, compact stat
+  strip, visible controls, disabled reasons, dice animation request, and sheet
+  preview.
+- Keep manual/generated character shortcuts outside the canonical rules state
+  machine, or make them emit the same semantic creation events when they become
+  production features.
+- Add replay tests that rebuild the creation state and final sheet from events
+  after every milestone.
+- Add negative tests for illegal transitions: skipping pending decisions,
+  rerolling locked characteristics, manually changing age, bypassing failed
+  qualification, skipping aging, and finalizing before mustering out is legal.
+- Add live activity derivation tests for table-visible transitions so other
+  players can see the roll, reveal, and compact outcome at the same time as the
+  creator.
+
+Acceptance:
+
+- A new status or rules step cannot be added without an explicit transition
+  test and legal-action view-model coverage.
+- Refreshing the page restores the same pending decision and next action.
+- The UI has no separate state machine for Cepheus rules, only local display
+  state.
+- Connected viewers see creation rolls and outcome cards through the shared
+  live activity path.
 
 ## Milestone 1: Make The Current Wizard Obvious
 
@@ -359,14 +449,20 @@ Acceptance:
 
 ## Suggested Next Slice
 
-Build Milestone 2 next: homeworld and background skills with cascade resolution.
+Build the state-machine and live-roll spine next, then Milestone 2: homeworld
+and background skills with cascade resolution.
 
 Reason:
 
+- It removes the biggest source of future bugs: rules progress split between
+  client wizard state and server projection state.
+- It gives every later creation step a consistent place to define legal
+  actions, pending decisions, roll facts, and spectator activity.
 - It is the next missing Cepheus procedure step before career selection.
 - It matches the screenshots and legacy UX the user already likes.
 - It exercises the right architecture: command validation, semantic events,
-  projection recovery, pending selection state, and focused mobile UI.
+  projection recovery, pending selection state, live dice, and focused mobile
+  UI.
 - It is smaller and safer than trying to implement the full multi-term loop in
   one slice.
 
@@ -383,11 +479,21 @@ Expected file areas:
 - `src/client/app/app.ts`
 - `test/` or colocated client/shared tests, following current repo patterns
 
+Architecture acceptance for the next slice:
+
+- Character creation has one shared legal-action planner.
+- Characteristic and career rolls are persisted event facts and broadcast as
+  viewer-safe dice activity.
+- The creator and spectators see compatible reveal timing and compact outcome
+  cards.
+- Refresh recovery does not depend on live activity messages having been
+  received.
+
 ## Open Design Questions
 
 - Should dice rolls be independent events referenced by character creation
   events, or should character creation events embed their roll result directly
-  while still broadcasting the dice animation?
+  while also deriving the dice activity message?
 - Should early character creation begin as an authoritative server record
   immediately, or should the first few characteristic rolls remain a local draft
   until the player creates the character in the room?

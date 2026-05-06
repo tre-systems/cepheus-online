@@ -5,7 +5,7 @@ into ordered implementation slices while preserving clear ownership for parallel
 agents. Shipped work belongs in `git log`; this file is for active or future
 work that still needs a named home.
 
-Last reviewed: 2026-05-05.
+Last reviewed: 2026-05-06.
 
 ## North Star
 
@@ -20,6 +20,8 @@ The near-term product target is:
   recover state after refresh
 - a player can create a valid Cepheus character through a step-by-step,
   dice-driven process that feels like the rules procedure
+- other connected players can follow character creation as it happens,
+  including shared dice animations, terse outcome cards, and refresh recovery
 - a referee can use local geomorph/counter assets without committing licensed
   product files
 - the deployed Cloudflare Worker, Durable Object, static client, PWA assets, and
@@ -32,6 +34,9 @@ The near-term product target is:
 - Commands are intent, events are facts, and projections are read models.
 - Every state-changing action should flow through one client command router and
   one server publication path.
+- Character creation should be driven by an explicit shared state machine:
+  commands request legal transitions, events record accepted facts, projections
+  expose current state, and the client renders only legal next actions.
 - Shared rules code must stay deterministic, dependency-free, and free of DOM,
   network, storage, logging, and ambient randomness.
 - The browser may keep local planning state, but authoritative game state is
@@ -60,12 +65,36 @@ Cepheus Online should adopt those patterns where they fit the campaign-tabletop
 product. It should not copy Delta-V game rules, renderer modules, AI, rating,
 leaderboard, or quick-match systems.
 
+## Delivery Order
+
+The backlog is ordered so architectural leverage comes before visible breadth.
+Each wave should make later work simpler, safer, or more testable.
+
+1. Stabilize the seams: one client composition root, one command router, one
+   server publication pipeline, one projection/filter path, and protocol
+   fixtures.
+2. Establish the live activity contract: accepted events produce recoverable
+   state plus optional activity messages for dice, creation outcomes, and later
+   Discord logging.
+3. Promote character creation into a shared state machine and legal-action
+   model before expanding the rules UI.
+4. Complete the Cepheus character creation procedure end to end, with every
+   roll and important outcome visible to other connected players.
+5. Polish the mobile PWA experience once the flow shape is stable.
+6. Expand tactical board, map, LOS, referee, Discord, and rules breadth after
+   the core table loop is solid.
+
+Work should pause before a later wave if the earlier wave reveals an
+architecture issue that would make the next features harder to reason about.
+
 ## Phase 0: Architecture Stabilization
 
 Purpose: make the next feature slices cheaper and safer by tightening the
 client and server seams around the current behavior.
 
-This phase can run in parallel across Agents A, B, C, and E.
+This phase is the priority. Later character creation and tactical work should
+use these seams instead of growing around them. It can run in parallel across
+Agents A, B, C, D, and E.
 
 ### Slice 0A: Client Kernel And Command Router
 
@@ -177,7 +206,52 @@ Done when:
 - User mistakes return typed errors; programmer or corrupt-storage failures are
   the only throw paths.
 
-### Slice 0D: PWA And Release Hygiene
+### Slice 0D: Live Activity And Dice Broadcast Contract
+
+Primary write ownership:
+
+- `src/shared/events.ts`
+- `src/shared/protocol.ts`
+- `src/server/game-room/publication.ts`
+- `src/server/game-room/game-room-do.ts`
+- `src/client/app/dice-overlay.ts`
+- new client live-activity modules under `src/client/app/`
+- server/client live activity tests
+
+Tasks:
+
+- Define a small live activity protocol for accepted event outcomes that should
+  be seen immediately: dice roll starting, dice result revealed, character
+  creation milestone, character creation blocked decision, and tactical board
+  update.
+- Keep the event stream authoritative. Live activity messages are presentation
+  companions derived from accepted events, not a second source of truth.
+- Use one broadcast path for HTTP command acceptance, WebSocket room state, and
+  activity messages so all connected players see compatible state and dice
+  timing.
+- Make character creation rolls use the same shared dice renderer and timing
+  path as tactical dice rolls.
+- Delay revealing roll-dependent creation results until the local dice
+  animation reveal point, while preserving deterministic recovery after refresh.
+- Add compact spectator cards for player-visible creation events:
+  characteristics rolled, homeworld set, background skill chosen, career
+  qualification, draft result, survival, commission, advancement, aging,
+  reenlistment, mustering out, and finalization.
+- Keep Discord as the durable table log target. In-app activity should be
+  transient and focused on dice, outcome, and sheet preview, not chat.
+- Add tests proving a command that emits a roll produces both a persisted event
+  and a viewer-safe live activity message for connected players.
+
+Done when:
+
+- Character creation and tactical dice share one live dice path.
+- Other connected players can follow a character being created without reading
+  a long in-app log.
+- Refresh rebuilds the truth from projection even if transient activity
+  messages were missed.
+- The future Discord logger can consume the same semantic event outcomes.
+
+### Slice 0E: PWA And Release Hygiene
 
 Primary write ownership:
 
@@ -213,12 +287,13 @@ Done when:
 
 ## Phase 1: Character Creation MVP
 
-Purpose: make character creation coherent, visible, and recoverable before
-adding the whole career loop.
+Purpose: make character creation coherent, visible to the table, and
+recoverable before adding the whole career loop.
 
-This phase starts after Slice 0A has established the client command-router
-shape. Shared rules and server event work can begin earlier if it avoids client
-files.
+This phase starts after Slices 0A, 0B, 0C, and 0D have established the client
+kernel, publication path, protocol contracts, and live activity contract. Shared
+rules and server event work can begin earlier if it uses those target seams and
+does not add more client-only creation state.
 
 Primary write ownership:
 
@@ -228,7 +303,44 @@ Primary write ownership:
 - `src/client/app/character-creation-*.ts`
 - character sheet integration tests
 
-### Slice 1A: Wizard Usability
+### Slice 1A: Character Creation State Machine And Domain Model
+
+Tasks:
+
+- Promote the current coarse creation status machine into the canonical
+  server-backed character creation aggregate.
+- Model the domain concepts explicitly in shared code:
+  `CharacterCreationState`, `CareerTermState`, `PendingDecision`,
+  `LegalCreationAction`, `RollRequirement`, `CreationResult`, and
+  `CreationHistoryEntry`.
+- Replace client wizard flags with a pure transition planner that derives legal
+  next actions from projected creation state plus any temporary local form
+  draft.
+- Keep quick/generated characters as a separate shortcut path until the
+  step-by-step rules procedure is complete; it must not bypass the canonical
+  event history for production character creation.
+- Make every roll-gated transition a semantic command/event pair: the event
+  records the dice result and the rules outcome that followed from it.
+- Derive live activity descriptors for every table-visible creation transition
+  so connected players can follow along without a chat log.
+- Persist pending choices such as cascade skills, aging losses, basic training
+  skill picks, term skill table choices, and mustering-out benefit picks as
+  projected state.
+- Add transition tests for every legal and illegal status move, including
+  refresh/replay recovery from the event stream.
+- Add client view-model tests proving the UI cannot expose an action before its
+  prerequisites are met.
+
+Done when:
+
+- Character creation cannot move forward through client-only state.
+- Every visible next action is derived from shared rules and projected state.
+- Table-visible creation events have stable activity descriptors and dice
+  reveal timing.
+- Illegal transitions reject before persistence, and accepted transitions replay
+  to the same sheet and pending-action state.
+
+### Slice 1B: Wizard Usability
 
 Tasks:
 
@@ -238,14 +350,17 @@ Tasks:
 - Show the compact one-line characteristic strip throughout the flow.
 - Surface stale/rejected command recovery as a small actionable message.
 - Ensure every visible roll uses the shared dice renderer.
+- Show table-visible creation outcomes as compact transient cards for all
+  connected viewers.
 
 Done when:
 
 - A new player can understand the next action on a phone-sized viewport.
+- Other connected players can see important creation rolls and outcomes live.
 - No creation action appears before its prerequisites are met.
 - Refresh recovers the current creation state from the room projection.
 
-### Slice 1B: Homeworld, Background Skills, And Cascade Choices
+### Slice 1C: Homeworld, Background Skills, And Cascade Choices
 
 Tasks:
 
@@ -267,7 +382,7 @@ Done when:
 - Skills gained from homeworld/background are visible with provenance.
 - Cascade choices survive refresh and resolve through server events.
 
-### Slice 1C: Career Entry, Draft, And Basic Training
+### Slice 1D: Career Entry, Draft, And Basic Training
 
 Tasks:
 
@@ -448,21 +563,30 @@ Done when:
 
 ## Immediate Execution Plan
 
-The next batch should run like this:
+The next batch should run like this, in this order:
 
-1. Start Slice 0A locally first. It reduces merge risk before character
-   creation grows and gives all later UI work a command-router target.
-2. In parallel, assign Slice 0B and Slice 0C to separate agents because they
-   mostly touch shared/server contracts and tests.
-3. Start Slice 1B shared rules and server event design in parallel, but hold
-   major client wiring until Slice 0A defines the router/session shape.
-4. Keep Slice 0D small and independent: doc-link check, deploy preflight, and
-   PWA update/connectivity work can land without waiting for the character
-   flow.
+1. Agent A owns Slice 0A: shrink `app.ts`, wire `AppSession`, and route every
+   command through one client command router.
+2. Agent B owns Slice 0B: harden command publication, projection parity, and
+   viewer-safe state broadcasting.
+3. Agent C owns Slice 0C: stabilize command/event/protocol fixtures and typed
+   error categories.
+4. Agent D owns Slice 0D: define live activity and shared dice broadcast
+   semantics for tactical rolls and character creation rolls.
+5. Agent E owns Slice 1A shared design only: character creation aggregate,
+   legal actions, pending decisions, and transition tests. It should avoid
+   broad client UI edits until Agent A's client kernel is ready.
+6. After those foundations land, implement Slice 1B and Slice 1C together:
+   mobile wizard clarity plus homeworld/background/cascade choices.
+7. Then implement Slice 1D and Phase 2 in order: career entry, full term loop,
+   aging/reenlistment, mustering out, and final sheet projection.
+8. Run PWA/release work continuously when it does not compete with the core
+   architecture path; make it a hard gate before public play.
 
-The first product-visible milestone after this batch is: homeworld/background
-character creation with cascade resolution, visible dice, refresh recovery, and
-the current board/dice flow still working.
+The first product-visible milestone after this batch is: a connected player can
+start character creation, roll characteristics, set homeworld/background choices
+with cascade resolution, and all connected players see the dice and compact
+outcomes live while refresh still recovers the creation state from storage.
 
 ## Do Not Start Yet
 
