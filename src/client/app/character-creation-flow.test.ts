@@ -7,6 +7,7 @@ import {
   advanceCharacterCreationStep,
   applyCharacterCreationBasicTraining,
   applyCharacterCreationBackgroundSkillSelection,
+  applyCharacterCreationAnagathicsDecision,
   applyCharacterCreationCharacteristicRoll,
   applyCharacterCreationCareerRoll,
   applyCharacterCreationCareerPlan,
@@ -29,6 +30,7 @@ import {
   createManualCharacterCreationFlow,
   deriveCharacterCreationCommands,
   deriveCharacterCreationBasicTrainingAction,
+  deriveCharacterCreationAnagathicsDecision,
   deriveCharacterSheetPatch,
   deriveCreateCharacterCommand,
   deriveCharacterCreationBackgroundSkillPlan,
@@ -257,6 +259,31 @@ describe('character creation flow', () => {
     const updated = applyCharacterCreationCareerPlan(draft, careerPlan)
     assert.deepEqual(updated.careerPlan, evaluated)
     assert.equal(draft.careerPlan, null)
+  })
+
+  it('keeps a failed-qualification Drifter fallback ready for survival', () => {
+    const draft = createInitialCharacterDraft(characterId, {
+      characteristics: completeDraft().characteristics
+    })
+    const drifterPlan = selectCharacterCreationCareerPlan('Drifter', {
+      qualificationRoll: null,
+      qualificationPassed: true,
+      drafted: false
+    })
+    const flow = {
+      step: 'career' as const,
+      draft: applyCharacterCreationCareerPlan(draft, drifterPlan)
+    }
+
+    assert.equal(flow.draft.careerPlan?.career, 'Drifter')
+    assert.equal(flow.draft.careerPlan?.qualificationPassed, true)
+    assert.equal(
+      deriveNextCharacterCreationCareerRoll(flow)?.key,
+      'survivalRoll'
+    )
+    assert.deepEqual(validateCurrentCharacterCreationStep(flow).errors, [
+      'Career term rolls are incomplete'
+    ])
   })
 
   it('walks characteristic rolls one stat at a time from server dice totals', () => {
@@ -851,6 +878,11 @@ describe('character creation flow', () => {
       'Slug Rifle-1'
     ])
 
+    assert.equal(deriveNextCharacterCreationReenlistmentRoll(flow), null)
+    flow = applyCharacterCreationAnagathicsDecision({
+      flow,
+      useAnagathics: false
+    }).flow
     assert.deepEqual(deriveNextCharacterCreationReenlistmentRoll(flow), {
       label: 'Roll reenlistment',
       reason: 'Iona Vesh Merchant reenlistment'
@@ -892,6 +924,21 @@ describe('character creation flow', () => {
       )
     }
 
+    assert.deepEqual(deriveCharacterCreationAnagathicsDecision(flow), {
+      label: 'Decide anagathics',
+      reason: 'Iona Vesh Merchant anagathics'
+    })
+    assert.equal(deriveNextCharacterCreationReenlistmentRoll(flow), null)
+    assert.deepEqual(validateCurrentCharacterCreationStep(flow).errors, [
+      'Career term must be completed',
+      'Anagathics decision is incomplete'
+    ])
+
+    flow = applyCharacterCreationAnagathicsDecision({
+      flow,
+      useAnagathics: false
+    }).flow
+    assert.equal(flow.draft.careerPlan?.anagathics, false)
     assert.deepEqual(deriveNextCharacterCreationReenlistmentRoll(flow), {
       label: 'Roll reenlistment',
       reason: 'Iona Vesh Merchant reenlistment'
@@ -947,7 +994,9 @@ describe('character creation flow', () => {
       canAdvance: false,
       advancementRoll: null,
       advancementPassed: null,
-      termSkillRolls: [{ table: 'serviceSkills' as const, roll: 1, skill: 'Comms' }],
+      termSkillRolls: [
+        { table: 'serviceSkills' as const, roll: 1, skill: 'Comms' }
+      ],
       reenlistmentRoll: 7,
       reenlistmentOutcome: 'allowed' as const
     }
@@ -982,10 +1031,26 @@ describe('character creation flow', () => {
       )
     }
 
+    assert.deepEqual(deriveCharacterCreationAnagathicsDecision(flow), {
+      label: 'Decide anagathics',
+      reason: 'Iona Vesh Merchant anagathics'
+    })
+    assert.equal(deriveNextCharacterCreationAgingRoll(flow), null)
+    assert.equal(deriveNextCharacterCreationReenlistmentRoll(flow), null)
+    assert.deepEqual(validateCurrentCharacterCreationStep(flow).errors, [
+      'Career term must be completed',
+      'Anagathics decision is incomplete'
+    ])
+
+    flow = applyCharacterCreationAnagathicsDecision({
+      flow,
+      useAnagathics: true
+    }).flow
+
     assert.deepEqual(deriveNextCharacterCreationAgingRoll(flow), {
       label: 'Roll aging',
       reason: 'Iona Vesh aging',
-      modifier: -3
+      modifier: -2
     })
     assert.equal(deriveNextCharacterCreationReenlistmentRoll(flow), null)
     assert.deepEqual(validateCurrentCharacterCreationStep(flow).errors, [
@@ -1009,10 +1074,10 @@ describe('character creation flow', () => {
       characteristic: 'str'
     }).flow
     assert.equal(flow.draft.characteristics.str, 6)
-    assert.deepEqual(deriveCharacterCreationAgingChangeOptions(flow)[0].options, [
-      'dex',
-      'end'
-    ])
+    assert.deepEqual(
+      deriveCharacterCreationAgingChangeOptions(flow)[0].options,
+      ['dex', 'end']
+    )
   })
 
   it('stops career roll progression after failed qualification', () => {
@@ -1133,9 +1198,7 @@ describe('character creation flow', () => {
           qualificationRoll: 7,
           survivalRoll: 8,
           commissionRoll: 4,
-          termSkillRolls: [
-            { table: 'serviceSkills', roll: 1, skill: 'Comms' }
-          ],
+          termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Comms' }],
           reenlistmentRoll: 5,
           reenlistmentOutcome: 'blocked'
         })
@@ -1180,6 +1243,7 @@ describe('character creation flow', () => {
     assert.equal(
       patch.notes,
       [
+        'Rules source: Cepheus Engine SRD.',
         'Term 1: Merchant, survived.',
         'Mustering out: Merchant material 3 -> Weapon.'
       ].join('\n')

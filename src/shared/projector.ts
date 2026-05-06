@@ -1,5 +1,6 @@
 import type { EventEnvelope, GameEvent } from './events'
 import { leaveCareerTerm, startCareerTerm } from './characterCreation'
+import type { CareerTerm } from './characterCreation'
 import type {
   CharacterCharacteristics,
   CharacterState,
@@ -37,6 +38,21 @@ const applyCharacterSheetPatch = (
   }
   if (patch.credits !== undefined) character.credits = patch.credits
 }
+
+const recordMusteringBenefit = (
+  terms: readonly CareerTerm[],
+  career: string,
+  benefit: string
+) =>
+  terms.map((term, index) =>
+    term.career === career &&
+    !terms.slice(0, index).some((previous) => previous.career === career)
+      ? {
+          ...term,
+          benefits: [...term.benefits, benefit]
+        }
+      : structuredClone(term)
+  )
 
 type EventEnvelopeFor<TEvent extends GameEvent> = Omit<
   EventEnvelope,
@@ -200,6 +216,15 @@ const characterEventHandlers = {
         index === terms.length - 1
           ? leaveCareerTerm(term)
           : structuredClone(term)
+      )
+    } else if (
+      creationEvent.type === 'FINISH_MUSTERING' &&
+      creationEvent.musteringBenefit
+    ) {
+      terms = recordMusteringBenefit(
+        terms,
+        creationEvent.musteringBenefit.career,
+        creationEvent.musteringBenefit.value
       )
     }
 

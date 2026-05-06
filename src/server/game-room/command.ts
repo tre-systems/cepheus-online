@@ -3,6 +3,8 @@ import {
   canTransitionCareerCreationState,
   createCareerCreationState,
   careerSkillWithLevel,
+  deriveCareerCreationActionContext,
+  deriveLegalCareerCreationActionKeysForProjection,
   deriveBackgroundSkillPlan,
   deriveTotalBackgroundSkillAllowance,
   hasBackgroundHomeworld,
@@ -332,6 +334,45 @@ const validateCharacterCreationSheet = (
   return ok(undefined)
 }
 
+const validateCharacterCreationAction = (
+  character: CharacterState,
+  command: Extract<Command, { type: 'AdvanceCharacterCreation' }>
+): Result<void, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  const actionContext = deriveCareerCreationActionContext(character.creation)
+  const event = command.creationEvent
+  const legal =
+    (event.type === 'FINISH_MUSTERING' &&
+      event.musteringBenefit !== undefined &&
+      character.creation.state.status === 'MUSTERING_OUT' &&
+      actionContext.remainingMusteringBenefits !== undefined &&
+      actionContext.remainingMusteringBenefits > 0) ||
+    (event.type === 'FINISH_MUSTERING' &&
+      event.musteringBenefit === undefined &&
+      legalActions.includes('finishMustering')) ||
+    (event.type === 'CREATION_COMPLETE' &&
+      legalActions.includes('completeCreation'))
+
+  if (!legal) {
+    return err(
+      commandError(
+        'invalid_command',
+        `${event.type} is blocked by unresolved character creation decisions`
+      )
+    )
+  }
+
+  return ok(undefined)
+}
+
 export const deriveEventsForCommand = (
   command: Command,
   context: CommandContext
@@ -516,6 +557,13 @@ export const deriveEventsForCommand = (
             `${command.creationEvent.type} is not valid from ${character.creation.state.status}`
           )
         )
+      }
+      if (
+        command.creationEvent.type === 'FINISH_MUSTERING' ||
+        command.creationEvent.type === 'CREATION_COMPLETE'
+      ) {
+        const action = validateCharacterCreationAction(character, command)
+        if (!action.ok) return action
       }
 
       const nextState = transitionCareerCreationState(

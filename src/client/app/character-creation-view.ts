@@ -4,6 +4,7 @@ import {
 } from '../../shared/character-creation/background-skills.js'
 import {
   characteristicModifier,
+  deriveFailedQualificationOptions,
   parseCareerCheck
 } from '../../shared/character-creation/career-rules.js'
 import {
@@ -17,6 +18,7 @@ import {
   isCascadeCareerSkill,
   parseCareerSkill
 } from '../../shared/character-creation/skills.js'
+import type { FailedQualificationOption } from '../../shared/character-creation/types.js'
 import type {
   CharacterCharacteristics,
   CharacterEquipmentItem,
@@ -123,6 +125,7 @@ export interface CharacterCreationNextStepViewModel {
   step: CharacterCreationViewStep
   phase: string
   prompt: string
+  blockingChoice: CharacterCreationPendingCascadeChoiceViewModel | null
   primaryAction: CharacterCreationButtonState
   secondaryAction: CharacterCreationButtonState | null
   validation: CharacterCreationValidationSummary
@@ -167,6 +170,20 @@ export interface CharacterCreationCareerOptionViewModel {
   survival: CharacterCreationCareerCheckViewModel
   commission: CharacterCreationCareerCheckViewModel
   advancement: CharacterCreationCareerCheckViewModel
+}
+
+export interface CharacterCreationFailedQualificationOptionViewModel {
+  option: FailedQualificationOption
+  label: string
+  actionLabel: string
+  rollRequirement: string | null
+}
+
+export interface CharacterCreationFailedQualificationViewModel {
+  open: boolean
+  title: string
+  message: string
+  options: CharacterCreationFailedQualificationOptionViewModel[]
 }
 
 export interface CharacterCreationHomeworldOptionViewModel {
@@ -485,6 +502,7 @@ const parseCareerPlan = (
   const keys = [
     'career',
     'qualificationRoll',
+    'qualificationPassed',
     'survivalRoll',
     'commissionRoll',
     'advancementRoll',
@@ -498,6 +516,8 @@ const parseCareerPlan = (
     ...emptyCareerPlan(),
     career: valueText(values.career),
     qualificationRoll: parseOptionalNumber(values.qualificationRoll) ?? null,
+    qualificationPassed:
+      parseOptionalBoolean(values.qualificationPassed) ?? null,
     survivalRoll: parseOptionalNumber(values.survivalRoll) ?? null,
     commissionRoll: parseOptionalNumber(values.commissionRoll) ?? null,
     advancementRoll: parseOptionalNumber(values.advancementRoll) ?? null,
@@ -556,7 +576,8 @@ const emptyCareerPlan = (): CharacterCreationCareerPlan => ({
   advancementPassed: null,
   canCommission: null,
   canAdvance: null,
-  drafted: false
+  drafted: false,
+  anagathics: null
 })
 
 const rollErrors = ({
@@ -595,7 +616,12 @@ const careerRollErrors = ({
     ...rollErrors({
       value: careerPlan?.qualificationRoll,
       label: 'Qualification roll',
-      required: careerPlan?.drafted !== true
+      required:
+        careerPlan?.drafted !== true &&
+        !(
+          careerPlan?.qualificationPassed === true &&
+          careerPlan.qualificationRoll === null
+        )
     }),
     ...(careerPlan?.qualificationPassed === false && careerPlan.drafted !== true
       ? ['Qualification failed; choose a different career']
@@ -842,11 +868,16 @@ const characterCreationPrompt = (
         return 'Choose homeworld law level and trade codes.'
       }
       if (summary.pendingCascadeSkills.length > 0) {
-        return `${plural(
-          summary.pendingCascadeSkills.length,
-          'cascade choice',
-          'cascade choices'
-        )} must be resolved.`
+        const choice = pendingCascadeChoiceViewModel(
+          flow.draft.pendingCascadeSkills
+        )
+        return choice
+          ? `Choose a ${choice.label} specialty.`
+          : `${plural(
+              summary.pendingCascadeSkills.length,
+              'cascade choice',
+              'cascade choices'
+            )} must be resolved.`
       }
       if (summary.remainingSelections > 0) {
         return `Choose ${plural(
@@ -883,11 +914,16 @@ export const deriveCharacterCreationNextStepViewModel = (
 ): CharacterCreationNextStepViewModel => {
   const validation = deriveCharacterCreationValidationSummary(flow)
   const buttons = deriveCharacterCreationButtonStates(flow)
+  const blockingChoice =
+    flow.step === 'homeworld'
+      ? pendingCascadeChoiceViewModel(flow.draft.pendingCascadeSkills)
+      : null
 
   return {
     step: flow.step,
     phase: characterCreationStepLabels[flow.step],
     prompt: characterCreationPrompt(flow, validation),
+    blockingChoice,
     primaryAction: buttons.primary,
     secondaryAction: buttons.secondary,
     validation,
@@ -986,7 +1022,12 @@ export const deriveCharacterCreationFieldViewModels = (
           kind: 'number',
           step,
           value: valueText(careerPlan?.qualificationRoll),
-          required: true,
+          required:
+            careerPlan?.drafted !== true &&
+            !(
+              careerPlan?.qualificationPassed === true &&
+              careerPlan.qualificationRoll === null
+            ),
           errors: fieldErrors(validation.errors, 'qualificationRoll')
         },
         {
@@ -1229,6 +1270,7 @@ const termHistoryReviewItems = (
             .map((roll) => `${roll.skill} (${roll.roll})`)
             .join(', ')}`
         : null,
+      term.anagathics === true ? 'anagathics' : null,
       term.agingRoll != null
         ? `aging ${term.agingRoll}${
             term.agingMessage ? ` ${term.agingMessage}` : ''
@@ -1306,6 +1348,32 @@ export const deriveCharacterCreationCareerOptionViewModels = (
       characteristics: draft.characteristics
     })
   }))
+
+export const deriveCharacterCreationFailedQualificationViewModel = (
+  flow: Pick<CharacterCreationFlow, 'step' | 'draft'>
+): CharacterCreationFailedQualificationViewModel => {
+  const plan = flow.draft.careerPlan
+  const open =
+    flow.step === 'career' &&
+    plan?.qualificationPassed === false &&
+    plan.drafted !== true
+  const canEnterDraft = !flow.draft.completedTerms.some((term) => term.drafted)
+  const options = open
+    ? deriveFailedQualificationOptions({ canEnterDraft }).map((option) => ({
+        option,
+        label: option,
+        actionLabel: option === 'Draft' ? 'Roll draft' : 'Become a Drifter',
+        rollRequirement: option === 'Draft' ? '1d6' : null
+      }))
+    : []
+
+  return {
+    open,
+    title: 'Qualification failed',
+    message: 'Choose Drifter or roll for the Draft.',
+    options
+  }
+}
 
 export const deriveCharacterCreationReviewSummary = (
   flow: CharacterCreationFlow

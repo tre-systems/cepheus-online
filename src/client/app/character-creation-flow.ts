@@ -3,7 +3,8 @@ import {
   deriveBasicTrainingPlan,
   evaluateCareerCheck,
   parseCareerRankReward,
-  parseCareerCheck
+  parseCareerCheck,
+  resolveDraftCareer
 } from '../../shared/character-creation/career-rules.js'
 import {
   CEPHEUS_SRD_RULESET,
@@ -18,11 +19,17 @@ import {
   resolveCareerBenefit
 } from '../../shared/character-creation/benefits.js'
 import { resolveAging } from '../../shared/character-creation/aging.js'
-import { deriveAgingRollModifier } from '../../shared/character-creation/term-lifecycle.js'
+import {
+  canOfferAnagathics,
+  createCareerTerm,
+  deriveAgingRollModifier,
+  resolveAnagathicsUse
+} from '../../shared/character-creation/term-lifecycle.js'
 import type {
   AgingChange,
   AgingChangeType,
-  BenefitKind
+  BenefitKind,
+  DraftTable
 } from '../../shared/character-creation/types.js'
 import {
   deriveBackgroundSkillPlan,
@@ -79,6 +86,7 @@ export interface CharacterCreationCareerPlan {
   rankTitle?: string | null
   rankBonusSkill?: string | null
   termSkillRolls?: CharacterCreationTermSkillRoll[]
+  anagathics?: boolean | null
   agingRoll?: number | null
   agingMessage?: string | null
   agingSelections?: CharacterCreationAgingSelection[]
@@ -356,6 +364,7 @@ const createCareerPlan = (
   rankTitle: overrides.rankTitle ?? null,
   rankBonusSkill: overrides.rankBonusSkill ?? null,
   termSkillRolls: cloneTermSkillRolls(overrides.termSkillRolls ?? []),
+  anagathics: overrides.anagathics ?? null,
   agingRoll: overrides.agingRoll ?? null,
   agingMessage: overrides.agingMessage ?? null,
   agingSelections: cloneAgingSelections(overrides.agingSelections ?? []),
@@ -372,9 +381,7 @@ const cloneTermSkillRolls = (
     skill: roll.skill
   }))
 
-const cloneAgingChanges = (
-  changes: readonly AgingChange[]
-): AgingChange[] =>
+const cloneAgingChanges = (changes: readonly AgingChange[]): AgingChange[] =>
   changes.map((change) => ({
     type: change.type,
     modifier: change.modifier
@@ -410,6 +417,7 @@ const cloneCareerPlan = (
         rankTitle: plan.rankTitle ?? null,
         rankBonusSkill: plan.rankBonusSkill ?? null,
         termSkillRolls: cloneTermSkillRolls(plan.termSkillRolls ?? []),
+        anagathics: plan.anagathics ?? null,
         agingRoll: plan.agingRoll ?? null,
         agingMessage: plan.agingMessage ?? null,
         agingSelections: cloneAgingSelections(plan.agingSelections ?? []),
@@ -671,11 +679,14 @@ const validateCareer = (draft: CharacterCreationDraft): string[] => {
     return errors
   }
   const hasStartedTerm =
-    plan.drafted || plan.qualificationRoll !== null
+    plan.drafted ||
+    plan.qualificationRoll !== null ||
+    plan.qualificationPassed === true
   if (hasStartedTerm && deriveNextCharacterCreationCareerRoll({ draft })) {
     errors.push('Career term rolls are incomplete')
   }
-  const termResolved = hasStartedTerm && isCharacterCreationCareerTermResolved(draft)
+  const termResolved =
+    hasStartedTerm && isCharacterCreationCareerTermResolved(draft)
   const termRecorded = draft.completedTerms.some(
     (term) =>
       term.career === plan.career.trim() &&
@@ -687,6 +698,7 @@ const validateCareer = (draft: CharacterCreationDraft): string[] => {
       term.commissionPassed === plan.commissionPassed &&
       term.advancementRoll === plan.advancementRoll &&
       term.advancementPassed === plan.advancementPassed &&
+      (term.anagathics ?? false) === (plan.anagathics === true) &&
       (term.agingRoll ?? null) === (plan.agingRoll ?? null) &&
       term.reenlistmentRoll === (plan.reenlistmentRoll ?? null) &&
       term.reenlistmentOutcome === (plan.reenlistmentOutcome ?? null)
@@ -714,6 +726,20 @@ const validateCareer = (draft: CharacterCreationDraft): string[] => {
     remainingCharacterCreationTermSkillRolls(draft) === 0 &&
     draft.pendingTermCascadeSkills.length === 0 &&
     draft.pendingAgingChanges.length === 0 &&
+    plan.anagathics === null &&
+    deriveCharacterCreationAnagathicsDecision({ step: 'career', draft }) &&
+    plan.survivalPassed === true
+  ) {
+    errors.push('Anagathics decision is incomplete')
+  }
+  if (
+    termResolved &&
+    !termRecorded &&
+    plan.survivalPassed === true &&
+    remainingCharacterCreationTermSkillRolls(draft) === 0 &&
+    draft.pendingTermCascadeSkills.length === 0 &&
+    draft.pendingAgingChanges.length === 0 &&
+    plan.anagathics !== null &&
     requiresCharacterCreationAgingRoll(draft) &&
     plan.agingRoll === null
   ) {
@@ -726,6 +752,7 @@ const validateCareer = (draft: CharacterCreationDraft): string[] => {
     remainingCharacterCreationTermSkillRolls(draft) === 0 &&
     draft.pendingTermCascadeSkills.length === 0 &&
     draft.pendingAgingChanges.length === 0 &&
+    plan.anagathics !== null &&
     (!requiresCharacterCreationAgingRoll(draft) || plan.agingRoll !== null) &&
     plan.reenlistmentOutcome === null &&
     !flowlessTermCountRequiresRetirement(draft)
@@ -880,8 +907,7 @@ export const updateCharacterCreationDraft = (
   const eduChanged =
     patch.characteristics?.edu !== undefined &&
     patch.characteristics.edu !== draft.characteristics.edu
-  const refreshBackgroundPlan =
-    homeworldChanged || eduChanged
+  const refreshBackgroundPlan = homeworldChanged || eduChanged
   const backgroundPlan = refreshBackgroundPlan
     ? deriveCharacterCreationBackgroundSkillPlan({ characteristics, homeworld })
     : null
@@ -1074,7 +1100,8 @@ export const applyCharacterCreationCharacteristicRoll = (
   roll: number,
   characteristic: CharacteristicKey | null = null
 ): CharacterCreationWizardResult => {
-  const key = characteristic ?? deriveNextCharacterCreationCharacteristicRoll(flow)?.key
+  const key =
+    characteristic ?? deriveNextCharacterCreationCharacteristicRoll(flow)?.key
   if (!key || flow.draft.characteristics[key] !== null) {
     const validation = validateCurrentCharacterCreationStep(flow)
     return { flow, validation, moved: false }
@@ -1132,7 +1159,7 @@ export const evaluateCharacterCreationCareerPlan = (
   })
   const resolvedQualificationPassed = normalizedPlan.drafted
     ? true
-    : qualificationPassed
+    : (qualificationPassed ?? normalizedPlan.qualificationPassed)
   const survivalPassed = evaluateOptionalCareerRoll({
     check: careerDefinition.survival,
     characteristics: draft.characteristics,
@@ -1141,7 +1168,8 @@ export const evaluateCharacterCreationCareerPlan = (
   const canCommission =
     survivalPassed === false
       ? false
-      : currentRank === 0 && parseCareerCheck(careerDefinition.commission) !== null
+      : currentRank === 0 &&
+        parseCareerCheck(careerDefinition.commission) !== null
   const canAdvance =
     survivalPassed === false || canCommission
       ? false
@@ -1226,7 +1254,11 @@ export const deriveNextCharacterCreationCareerRoll = (
   if (!careerPlan?.career.trim()) return null
 
   const career = careerPlan.career.trim()
-  if (!careerPlan.drafted && careerPlan.qualificationRoll === null) {
+  if (
+    !careerPlan.drafted &&
+    careerPlan.qualificationPassed !== true &&
+    careerPlan.qualificationRoll === null
+  ) {
     return {
       key: 'qualificationRoll',
       label: 'Roll qualification',
@@ -1337,7 +1369,11 @@ export const deriveNextCharacterCreationReenlistmentRoll = (
   if (remainingCharacterCreationTermSkillRolls(flow.draft) > 0) return null
   if (flow.draft.pendingTermCascadeSkills.length > 0) return null
   if (flow.draft.pendingAgingChanges.length > 0) return null
-  if (requiresCharacterCreationAgingRoll(flow.draft) && plan.agingRoll === null) {
+  if (deriveCharacterCreationAnagathicsDecision(flow)) return null
+  if (
+    requiresCharacterCreationAgingRoll(flow.draft) &&
+    plan.agingRoll === null
+  ) {
     return null
   }
   if (plan.reenlistmentOutcome !== null) return null
@@ -1351,13 +1387,41 @@ export const deriveNextCharacterCreationReenlistmentRoll = (
 }
 
 const characterCreationAgingTerms = (
-  draft: Pick<CharacterCreationDraft, 'completedTerms'>
+  draft: Pick<CharacterCreationDraft, 'completedTerms' | 'careerPlan'>
 ): Array<{ anagathics: boolean }> => [
   ...draft.completedTerms.map((term) => ({
     anagathics: term.anagathics === true
   })),
-  { anagathics: false }
+  { anagathics: draft.careerPlan?.anagathics === true }
 ]
+
+export const deriveCharacterCreationAnagathicsDecision = (
+  flow: CharacterCreationFlow
+): { label: string; reason: string } | null => {
+  if (flow.step !== 'career') return null
+  const plan = flow.draft.careerPlan
+  if (!plan?.career || plan.survivalPassed !== true) return null
+  if (!isCareerPlanTermResolved(plan)) return null
+  if (remainingCharacterCreationTermSkillRolls(flow.draft) > 0) return null
+  if (flow.draft.pendingTermCascadeSkills.length > 0) return null
+  if (flow.draft.pendingAgingChanges.length > 0) return null
+  if (plan.anagathics !== null) return null
+  if (plan.agingRoll !== null || plan.reenlistmentOutcome !== null) return null
+
+  if (
+    !canOfferAnagathics({
+      term: createCareerTerm({ career: plan.career }),
+      hasCareerBasics: Boolean(CEPHEUS_SRD_RULESET.careerBasics[plan.career])
+    })
+  ) {
+    return null
+  }
+
+  return {
+    label: 'Decide anagathics',
+    reason: `${flow.draft.name.trim() || 'Character'} ${plan.career} anagathics`
+  }
+}
 
 export const requiresCharacterCreationAgingRoll = (
   draft: Pick<CharacterCreationDraft, 'age' | 'completedTerms' | 'careerPlan'>
@@ -1380,6 +1444,7 @@ export const deriveNextCharacterCreationAgingRoll = (
   if (remainingCharacterCreationTermSkillRolls(flow.draft) > 0) return null
   if (flow.draft.pendingTermCascadeSkills.length > 0) return null
   if (flow.draft.pendingAgingChanges.length > 0) return null
+  if (deriveCharacterCreationAnagathicsDecision(flow)) return null
   if (!requiresCharacterCreationAgingRoll(flow.draft)) return null
 
   const modifier = deriveAgingRollModifier(
@@ -1389,6 +1454,37 @@ export const deriveNextCharacterCreationAgingRoll = (
     label: 'Roll aging',
     reason: `${flow.draft.name.trim() || 'Character'} aging`,
     modifier
+  }
+}
+
+export const applyCharacterCreationAnagathicsDecision = ({
+  flow,
+  useAnagathics
+}: {
+  flow: CharacterCreationFlow
+  useAnagathics: boolean
+}): CharacterCreationWizardResult => {
+  const action = deriveCharacterCreationAnagathicsDecision(flow)
+  const plan = flow.draft.careerPlan
+  if (!action || !plan) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
+
+  const { term } = resolveAnagathicsUse({
+    term: createCareerTerm({ career: plan.career }),
+    survived: useAnagathics
+  })
+  const updatedFlow = updateCharacterCreationFields(flow, {
+    careerPlan: {
+      ...plan,
+      anagathics: term.anagathics
+    }
+  })
+  return {
+    flow: updatedFlow,
+    validation: validateCurrentCharacterCreationStep(updatedFlow),
+    moved: false
   }
 }
 
@@ -1640,7 +1736,8 @@ const basicTrainingSkillsForCurrentTerm = (
   })
   if (plan.kind === 'none') return []
 
-  const sourceSkills = plan.kind === 'all' ? plan.skills : plan.skills.slice(0, 1)
+  const sourceSkills =
+    plan.kind === 'all' ? plan.skills : plan.skills.slice(0, 1)
   return sourceSkills
     .map((skill) => normalizeCareerSkill(skill, 0))
     .filter((skill): skill is string => skill !== null)
@@ -1660,7 +1757,10 @@ export const applyCharacterCreationTermSkillRoll = ({
     const validation = validateCurrentCharacterCreationStep(flow)
     return { flow, validation, moved: false }
   }
-  if (table === 'advancedEducation' && (flow.draft.characteristics.edu ?? 0) < 8) {
+  if (
+    table === 'advancedEducation' &&
+    (flow.draft.characteristics.edu ?? 0) < 8
+  ) {
     const validation = validateCurrentCharacterCreationStep(flow)
     return { flow, validation, moved: false }
   }
@@ -1769,6 +1869,15 @@ export const applyCharacterCreationCareerRoll = (
   }
 }
 
+export const resolveCharacterCreationDraftCareer = (
+  roll: number,
+  draftTable: DraftTable = CEPHEUS_SRD_RULESET.theDraft
+): string | null =>
+  resolveDraftCareer({
+    table: draftTable,
+    roll
+  })?.career ?? null
+
 export const deriveCharacterCreationCareerSkipAction = (
   flow: Pick<CharacterCreationFlow, 'draft' | 'step'>
 ): CharacterCreationCareerSkipAction | null => {
@@ -1857,6 +1966,7 @@ const completedTermFromPlan = (
     rank: careerRankAfterPlan(draft),
     rankTitle: plan.rankTitle ?? null,
     rankBonusSkill: plan.rankBonusSkill ?? null,
+    ...(plan.anagathics === true ? { anagathics: true } : {}),
     qualificationRoll: plan.qualificationRoll,
     survivalRoll: plan.survivalRoll,
     survivalPassed: plan.survivalPassed === true,
@@ -1903,9 +2013,10 @@ export const completeCharacterCreationCareerTerm = ({
     flow.draft.pendingTermCascadeSkills.length > 0 ||
     flow.draft.pendingAgingChanges.length > 0 ||
     (completedTerm.survivalPassed &&
-      requiresCharacterCreationAgingRoll(flow.draft)) ||
+      deriveCharacterCreationAnagathicsDecision(flow)) ||
     (completedTerm.survivalPassed &&
-      !completedTerm.reenlistmentOutcome)
+      requiresCharacterCreationAgingRoll(flow.draft)) ||
+    (completedTerm.survivalPassed && !completedTerm.reenlistmentOutcome)
   ) {
     const validation = validateCurrentCharacterCreationStep(flow)
     return { flow, validation, moved: false }
@@ -1920,15 +2031,14 @@ export const completeCharacterCreationCareerTerm = ({
     completedTerm.survivalPassed &&
     (completedTerm.reenlistmentOutcome === 'allowed' ||
       completedTerm.reenlistmentOutcome === 'forced')
-  const nextCareerPlan =
-    canContinueCareer
-      ? createCareerPlan({
-          career: completedTerm.career,
-          qualificationRoll: 12,
-          qualificationPassed: true,
-          drafted: false
-        })
-      : flow.draft.careerPlan
+  const nextCareerPlan = canContinueCareer
+    ? createCareerPlan({
+        career: completedTerm.career,
+        qualificationRoll: 12,
+        qualificationPassed: true,
+        drafted: false
+      })
+    : flow.draft.careerPlan
   const nextFlow = updateCharacterCreationFields(flow, {
     age: nextAge,
     careerPlan: nextCareerPlan,
@@ -1936,10 +2046,9 @@ export const completeCharacterCreationCareerTerm = ({
     completedTerms: [...flow.draft.completedTerms, completedTerm]
   })
 
-  const resolvedFlow =
-    canContinueCareer
-      ? nextFlow
-      : { ...nextFlow, step: 'skills' as const }
+  const resolvedFlow = canContinueCareer
+    ? nextFlow
+    : { ...nextFlow, step: 'skills' as const }
   return {
     flow: resolvedFlow,
     validation: validateCurrentCharacterCreationStep(resolvedFlow),
@@ -1948,10 +2057,7 @@ export const completeCharacterCreationCareerTerm = ({
 }
 
 export const remainingMusteringBenefits = (
-  draft: Pick<
-    CharacterCreationDraft,
-    'completedTerms' | 'musteringBenefits'
-  >
+  draft: Pick<CharacterCreationDraft, 'completedTerms' | 'musteringBenefits'>
 ): number => {
   const term = nextMusteringBenefitTerm(draft)
   return term ? remainingMusteringBenefitsForCareer(draft, term.career) : 0
@@ -1960,7 +2066,8 @@ export const remainingMusteringBenefits = (
 const termsInCareer = (
   draft: Pick<CharacterCreationDraft, 'completedTerms'>,
   career: string
-): number => draft.completedTerms.filter((term) => term.career === career).length
+): number =>
+  draft.completedTerms.filter((term) => term.career === career).length
 
 const benefitsInCareer = (
   draft: Pick<CharacterCreationDraft, 'musteringBenefits'>,
@@ -1971,9 +2078,7 @@ const benefitsInCareer = (
 const cashBenefitsReceived = (
   draft: Pick<CharacterCreationDraft, 'musteringBenefits'>
 ): number =>
-  draft.musteringBenefits.filter(
-    (benefit) => benefit.kind === 'cash'
-  ).length
+  draft.musteringBenefits.filter((benefit) => benefit.kind === 'cash').length
 
 const rankInCareer = (
   draft: Pick<CharacterCreationDraft, 'completedTerms'>,
@@ -2015,7 +2120,9 @@ export const characterCreationMusteringBenefitRollModifier = ({
   if (kind === 'cash') {
     return deriveCashBenefitRollModifier({
       retired: draft.completedTerms.length >= 7,
-      hasGambling: draft.skills.some((skill) => parseCareerSkill(skill)?.name === 'Gambling')
+      hasGambling: draft.skills.some(
+        (skill) => parseCareerSkill(skill)?.name === 'Gambling'
+      )
     })
   }
   return deriveMaterialBenefitRollModifier({
@@ -2292,8 +2399,10 @@ const initialCharacterCreationStateCommands = (
   identity: ClientIdentity
 ): Command[] => {
   const careerPlan = draft.careerPlan
-  const firstCareer = draft.completedTerms[0]?.career ?? careerPlan?.career.trim() ?? ''
-  const firstDrafted = draft.completedTerms[0]?.drafted ?? careerPlan?.drafted ?? false
+  const firstCareer =
+    draft.completedTerms[0]?.career ?? careerPlan?.career.trim() ?? ''
+  const firstDrafted =
+    draft.completedTerms[0]?.drafted ?? careerPlan?.drafted ?? false
   const baseCommand = {
     gameId: identity.gameId,
     actorId: identity.actorId,
@@ -2355,7 +2464,9 @@ const initialCharacterCreationStateCommands = (
               canAdvance: careerPlan.canAdvance === true,
               advancementRoll: careerPlan.advancementRoll,
               advancementPassed: careerPlan.advancementPassed,
-              termSkillRolls: cloneTermSkillRolls(careerPlan.termSkillRolls ?? [])
+              termSkillRolls: cloneTermSkillRolls(
+                careerPlan.termSkillRolls ?? []
+              )
             } satisfies CharacterCreationCompletedTerm
           ]
         : []
@@ -2517,6 +2628,10 @@ export const deriveInitialCharacterCreationStateCommands = (
 }
 
 const careerHistoryNotes = (draft: CharacterCreationDraft): string[] => {
+  const provenance =
+    draft.completedTerms.length > 0 || draft.musteringBenefits.length > 0
+      ? ['Rules source: Cepheus Engine SRD.']
+      : []
   const terms = draft.completedTerms.map((term, index) => {
     const survival = term.survivalPassed ? 'survived' : 'mishap'
     const drafted = term.drafted ? ', drafted' : ''
@@ -2526,7 +2641,7 @@ const careerHistoryNotes = (draft: CharacterCreationDraft): string[] => {
     (benefit) =>
       `Mustering out: ${benefit.career} ${benefit.kind} ${benefit.roll} -> ${benefit.value}.`
   )
-  return [...terms, ...benefits]
+  return [...provenance, ...terms, ...benefits]
 }
 
 const deriveCharacterCreationSheet = (

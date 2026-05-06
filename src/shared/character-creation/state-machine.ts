@@ -116,9 +116,10 @@ const transitionStatus = (
       if (event.type === 'CONTINUE_CAREER') {
         return { ...state, status: 'CAREER_SELECTION' }
       }
-      return event.type === 'FINISH_MUSTERING'
-        ? { ...state, status: 'ACTIVE' }
-        : null
+      if (event.type !== 'FINISH_MUSTERING') return null
+      return event.musteringBenefit
+        ? { ...state, status: 'MUSTERING_OUT' }
+        : { ...state, status: 'ACTIVE' }
     case 'ACTIVE':
       return event.type === 'CREATION_COMPLETE'
         ? { ...state, status: 'PLAYABLE' }

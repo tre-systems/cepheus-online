@@ -17,6 +17,7 @@ import { deriveCharacterCreationActionPlan } from './character-creation-actions.
 import {
   applyCharacterCreationBasicTraining,
   applyCharacterCreationBackgroundSkillSelection,
+  applyCharacterCreationAnagathicsDecision,
   applyCharacterCreationAgingChange,
   applyCharacterCreationAgingRoll,
   applyCharacterCreationCharacteristicRoll,
@@ -33,6 +34,7 @@ import {
   createManualCharacterCreationFlow,
   deriveCharacterCreationCommands,
   deriveCharacterCreationAgingChangeOptions,
+  deriveCharacterCreationAnagathicsDecision,
   deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationAgingRoll,
   deriveNextCharacterCreationReenlistmentRoll,
@@ -40,6 +42,7 @@ import {
   nextCharacterCreationWizardStep,
   remainingMusteringBenefits,
   removeCharacterCreationBackgroundSkillSelection,
+  resolveCharacterCreationDraftCareer,
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
   skipCharacterCreationCareerRoll
@@ -50,6 +53,7 @@ import {
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerOptionViewModels,
   deriveCharacterCreationCascadeSkillChoiceViewModels,
+  deriveCharacterCreationFailedQualificationViewModel,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationNextStepViewModel,
@@ -401,7 +405,10 @@ const renderCharacterCreationWizard = () => {
 
   els.characterCreatorTitle.textContent =
     characterCreationFlow?.draft?.name?.trim() || 'Create traveller'
-  els.characterCreator.classList.toggle('flow-active', Boolean(characterCreationFlow))
+  els.characterCreator.classList.toggle(
+    'flow-active',
+    Boolean(characterCreationFlow)
+  )
   els.creatorStartSection.hidden = Boolean(characterCreationFlow)
   els.creatorQuickSection.hidden = Boolean(characterCreationFlow)
   els.startCharacterWizard.textContent = 'Begin character creation'
@@ -464,14 +471,15 @@ const renderCharacterCreationNextStep = (flow) => {
     primary.type = 'button'
     primary.textContent = viewModel.primaryAction.label
     primary.addEventListener('click', () => {
-      advanceCharacterCreationWizard().catch((error) =>
-        setError(error.message)
-      )
+      advanceCharacterCreationWizard().catch((error) => setError(error.message))
     })
     actions.append(primary)
   }
 
   panel.append(heading, prompt)
+  if (viewModel.blockingChoice) {
+    panel.append(renderCharacterCreationCascadeChoice(viewModel.blockingChoice))
+  }
   if (!['characteristics', 'homeworld'].includes(flow.step)) {
     panel.append(stats)
   }
@@ -488,6 +496,7 @@ const renderCharacterCreationFields = (flow) => {
   if (flow.step === 'career') {
     const careerRollButton = renderCharacterCreationCareerRollButton(flow)
     if (careerRollButton) fragment.append(careerRollButton)
+    fragment.append(renderCharacterCreationAnagathicsDecision(flow))
     const agingRollButton = renderCharacterCreationAgingRollButton(flow)
     if (agingRollButton) fragment.append(agingRollButton)
     fragment.append(renderCharacterCreationAgingChoices(flow))
@@ -595,21 +604,19 @@ const renderCharacterCreationHomeworld = (flow) => {
   const grantedCount = viewModel.backgroundSkills.skillOptions.filter(
     (option) => option.preselected
   ).length
-  const pendingCascadeCount = viewModel.backgroundSkills.cascadeSkillChoices.length
+  const pendingCascadeCount =
+    viewModel.backgroundSkills.cascadeSkillChoices.length
   detail.textContent =
     pendingCascadeCount > 0
       ? `Choose ${pendingCascadeCount === 1 ? 'a specialty' : 'specialties'} for the granted cascade skill.`
       : remaining > 0
-      ? `${selectedCount}/${viewModel.backgroundSkills.allowance} selected. Choose ${remaining} more.`
-      : `${selectedCount}/${viewModel.backgroundSkills.allowance} selected. ${
-          grantedCount > 0 ? `${grantedCount} granted by homeworld.` : ''
-        }`
+        ? `${selectedCount}/${viewModel.backgroundSkills.allowance} selected. Choose ${remaining} more.`
+        : `${selectedCount}/${viewModel.backgroundSkills.allowance} selected. ${
+            grantedCount > 0 ? `${grantedCount} granted by homeworld.` : ''
+          }`
   const skillList = renderCharacterCreationBackgroundSkills(viewModel)
 
   summary.append(title, detail)
-  for (const cascade of viewModel.backgroundSkills.cascadeSkillChoices) {
-    summary.append(renderCharacterCreationCascadeChoice(cascade))
-  }
   summary.append(skillList)
   wrapper.append(fieldGrid, summary)
   return wrapper
@@ -725,6 +732,54 @@ const renderCharacterCreationAgingChoices = (flow) => {
   return panel
 }
 
+const renderCharacterCreationAnagathicsDecision = (flow) => {
+  const decision = deriveCharacterCreationAnagathicsDecision(flow)
+  if (!decision) return document.createDocumentFragment()
+
+  const panel = document.createElement('div')
+  panel.className = 'creation-term-resolution'
+  const title = document.createElement('strong')
+  title.textContent = 'Anagathics'
+  const text = document.createElement('p')
+  text.textContent =
+    'Choose whether this term used anagathics before aging and reenlistment.'
+  const actions = document.createElement('div')
+  actions.className = 'creation-term-actions'
+
+  const use = document.createElement('button')
+  use.type = 'button'
+  use.textContent = 'Use anagathics'
+  use.title = decision.reason
+  use.addEventListener('click', () => {
+    if (!characterCreationFlow) return
+    characterCreationFlow = applyCharacterCreationAnagathicsDecision({
+      flow: characterCreationFlow,
+      useAnagathics: true
+    }).flow
+    setError('')
+    renderCharacterCreationWizard()
+    scrollCharacterCreatorToTop()
+  })
+
+  const skip = document.createElement('button')
+  skip.type = 'button'
+  skip.textContent = 'Skip'
+  skip.addEventListener('click', () => {
+    if (!characterCreationFlow) return
+    characterCreationFlow = applyCharacterCreationAnagathicsDecision({
+      flow: characterCreationFlow,
+      useAnagathics: false
+    }).flow
+    setError('')
+    renderCharacterCreationWizard()
+    scrollCharacterCreatorToTop()
+  })
+
+  actions.append(use, skip)
+  panel.append(title, text, actions)
+  return panel
+}
+
 const reenlistmentOutcomeText = (plan) => {
   if (plan?.reenlistmentOutcome === 'forced') {
     return `Reenlistment ${plan.reenlistmentRoll}: mandatory reenlistment.`
@@ -812,13 +867,24 @@ const renderCharacterCreationBackgroundSkills = (viewModel) => {
   return list
 }
 
-const renderCharacterCreationCascadeChoice = (cascade, scope = 'background') => {
+const renderCharacterCreationCascadeChoice = (
+  cascade,
+  scope = 'background'
+) => {
   const panel = document.createElement('div')
   panel.className = 'creation-cascade-choice'
   const title = document.createElement('strong')
-  title.textContent = `${cascade.label}-${cascade.level}`
+  title.textContent = cascade.title || `${cascade.label}-${cascade.level}`
   const options = document.createElement('div')
   options.className = 'creation-background-options'
+
+  if (cascade.prompt) {
+    const prompt = document.createElement('p')
+    prompt.textContent = cascade.prompt
+    panel.append(title, prompt)
+  } else {
+    panel.append(title)
+  }
 
   for (const option of cascade.options) {
     const button = document.createElement('button')
@@ -851,7 +917,7 @@ const renderCharacterCreationCascadeChoice = (cascade, scope = 'background') => 
     options.append(button)
   }
 
-  panel.append(title, options)
+  panel.append(options)
   return panel
 }
 
@@ -1011,6 +1077,11 @@ const renderCharacterCreationCareerPicker = (flow) => {
   for (const [key, value] of Object.entries({
     career: plan?.career ?? '',
     drafted: plan?.drafted ? 'true' : 'false',
+    qualificationPassed:
+      plan?.qualificationPassed === null ||
+      plan?.qualificationPassed === undefined
+        ? ''
+        : String(plan.qualificationPassed),
     qualificationRoll: plan?.qualificationRoll ?? '',
     survivalRoll: plan?.survivalRoll ?? '',
     commissionRoll: plan?.commissionRoll ?? '',
@@ -1038,8 +1109,7 @@ const renderCharacterCreationCareerPicker = (flow) => {
     wrapper.append(renderCharacterCreationDraftFallback(flow))
   }
 
-  const shouldShowCareerList =
-    !plan?.career || (plan.qualificationPassed === false && !plan.drafted)
+  const shouldShowCareerList = !plan?.career
   if (shouldShowCareerList) {
     const list = document.createElement('div')
     list.className = 'creation-career-list'
@@ -1096,13 +1166,22 @@ const renderCharacterCreationTermResolution = (flow) => {
   }
 
   if (deriveCharacterCreationTermSkillTableActions(flow).length > 0) {
-    text.textContent = 'Roll this term’s skills before deciding what happens next.'
+    text.textContent =
+      'Roll this term’s skills before deciding what happens next.'
     panel.append(title, text)
     return panel
   }
 
   if (flow.draft.pendingTermCascadeSkills.length > 0) {
-    text.textContent = 'Choose the rolled skill specialty before deciding what happens next.'
+    text.textContent =
+      'Choose the rolled skill specialty before deciding what happens next.'
+    panel.append(title, text)
+    return panel
+  }
+
+  if (deriveCharacterCreationAnagathicsDecision(flow)) {
+    text.textContent =
+      'Decide whether this term used anagathics before deciding what happens next.'
     panel.append(title, text)
     return panel
   }
@@ -1209,13 +1288,14 @@ const termSummary = (term, index) => {
           term.agingMessage ? ` ${term.agingMessage}` : ''
         }`
       : ''
+  const anagathics = term.anagathics === true ? '; anagathics' : ''
   const reenlistment =
     term.reenlistmentOutcome && term.reenlistmentRoll !== null
       ? `; reenlistment ${term.reenlistmentRoll} ${term.reenlistmentOutcome}`
       : term.reenlistmentOutcome === 'retire'
         ? '; retirement required'
         : ''
-  return `${index + 1}. ${term.career}: ${result}${commission}${advancement}${rank}${bonusSkill}${training}${aging}${reenlistment}`
+  return `${index + 1}. ${term.career}: ${result}${commission}${advancement}${rank}${bonusSkill}${training}${anagathics}${aging}${reenlistment}`
 }
 
 const renderCharacterCreationTermHistory = (flow) => {
@@ -1236,7 +1316,7 @@ const renderCharacterCreationTermHistory = (flow) => {
   return panel
 }
 
-const selectDraftCareer = (career) => {
+const selectFailedQualificationCareer = (career, drafted) => {
   if (!characterCreationFlow) return
   characterCreationFlow = applyParsedCharacterCreationDraftPatch(
     characterCreationFlow,
@@ -1253,7 +1333,7 @@ const selectDraftCareer = (career) => {
         advancementPassed: null,
         canCommission: null,
         canAdvance: null,
-        drafted: true
+        drafted
       }
     }
   ).flow
@@ -1263,31 +1343,36 @@ const selectDraftCareer = (career) => {
 }
 
 const renderCharacterCreationDraftFallback = (flow) => {
+  const viewModel = deriveCharacterCreationFailedQualificationViewModel(flow)
+  if (!viewModel.open) return document.createDocumentFragment()
+
   const panel = document.createElement('div')
   panel.className = 'creation-draft-fallback'
   const title = document.createElement('strong')
-  title.textContent = 'The Draft'
+  title.textContent = viewModel.title
   const note = document.createElement('p')
-  note.textContent = 'Qualification failed. Roll 1D6 or choose a draft service.'
-
-  const rollButton = document.createElement('button')
-  rollButton.type = 'button'
-  rollButton.textContent = 'Roll draft'
-  rollButton.addEventListener('click', () => {
-    rollCharacterCreationDraft(flow).catch((error) => setError(error.message))
-  })
+  note.textContent = viewModel.message
 
   const list = document.createElement('div')
   list.className = 'creation-draft-list'
-  CEPHEUS_SRD_RULESET.theDraft.forEach((career, index) => {
+  for (const option of viewModel.options) {
     const button = document.createElement('button')
     button.type = 'button'
-    button.textContent = `${index + 1} ${career}`
-    button.addEventListener('click', () => selectDraftCareer(career))
+    button.textContent =
+      option.rollRequirement === null
+        ? option.actionLabel
+        : `${option.actionLabel} (${option.rollRequirement})`
+    button.addEventListener('click', () => {
+      if (option.option === 'Drifter') {
+        selectFailedQualificationCareer('Drifter', false)
+        return
+      }
+      rollCharacterCreationDraft().catch((error) => setError(error.message))
+    })
     list.append(button)
-  })
+  }
 
-  panel.append(title, note, rollButton, list)
+  panel.append(title, note, list)
   return panel
 }
 
@@ -1428,7 +1513,9 @@ const renderCharacterCreationMusteringOut = (flow) => {
   return panel
 }
 
-const rollCharacterCreationCharacteristic = async (characteristicKey = null) => {
+const rollCharacterCreationCharacteristic = async (
+  characteristicKey = null
+) => {
   if (!characterCreationFlow) return
   setError('')
   syncCharacterCreationWizardFields()
@@ -1439,7 +1526,9 @@ const rollCharacterCreationCharacteristic = async (characteristicKey = null) => 
   if (!rollAction) return
   const targetKey = characteristicKey ?? rollAction.key ?? null
   const targetLabel =
-    targetKey === null ? rollAction.label.replace('Roll ', '') : targetKey.toUpperCase()
+    targetKey === null
+      ? rollAction.label.replace('Roll ', '')
+      : targetKey.toUpperCase()
 
   if (!state) {
     await postCommand(
@@ -1748,11 +1837,15 @@ const rollCharacterCreationDraft = async () => {
   }
 
   await waitForDiceReveal(latestRoll)
-  const index = Math.max(
-    0,
-    Math.min(CEPHEUS_SRD_RULESET.theDraft.length - 1, latestRoll.total - 1)
+  const career = resolveCharacterCreationDraftCareer(
+    latestRoll.total,
+    CEPHEUS_SRD_RULESET.theDraft
   )
-  selectDraftCareer(CEPHEUS_SRD_RULESET.theDraft[index])
+  if (!career) {
+    setError('Draft roll did not resolve a career')
+    return
+  }
+  selectFailedQualificationCareer(career, true)
   scrollCharacterCreatorToTop()
 }
 

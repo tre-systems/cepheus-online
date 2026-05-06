@@ -17,6 +17,7 @@ import {
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCtaLabels,
+  deriveCharacterCreationFailedQualificationViewModel,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationNextStepViewModel,
@@ -272,7 +273,8 @@ describe('character creation view helpers', () => {
           advancementPassed: null,
           canCommission: true,
           canAdvance: false,
-          drafted: false
+          drafted: false,
+          anagathics: null
         }
       }
     }
@@ -324,6 +326,83 @@ describe('character creation view helpers', () => {
         errors: []
       }
     ])
+  })
+
+  it('derives only failed qualification fallback options from the shared planner', () => {
+    const failedFlow = {
+      step: 'career' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        careerPlan: {
+          career: 'Merchant',
+          qualificationRoll: 2,
+          qualificationPassed: false,
+          survivalRoll: null,
+          survivalPassed: null,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: null,
+          canAdvance: null,
+          drafted: false
+        }
+      })
+    }
+
+    assert.deepEqual(
+      deriveCharacterCreationFailedQualificationViewModel(failedFlow),
+      {
+        open: true,
+        title: 'Qualification failed',
+        message: 'Choose Drifter or roll for the Draft.',
+        options: [
+          {
+            option: 'Drifter',
+            label: 'Drifter',
+            actionLabel: 'Become a Drifter',
+            rollRequirement: null
+          },
+          {
+            option: 'Draft',
+            label: 'Draft',
+            actionLabel: 'Roll draft',
+            rollRequirement: '1d6'
+          }
+        ]
+      }
+    )
+
+    const alreadyDraftedFlow = {
+      ...failedFlow,
+      draft: {
+        ...failedFlow.draft,
+        completedTerms: [
+          {
+            career: 'Scout',
+            drafted: true,
+            age: 22,
+            qualificationRoll: null,
+            survivalRoll: 7,
+            survivalPassed: true,
+            canCommission: false,
+            commissionRoll: null,
+            commissionPassed: null,
+            canAdvance: false,
+            advancementRoll: null,
+            advancementPassed: null,
+            reenlistmentRoll: null,
+            reenlistmentOutcome: null
+          }
+        ]
+      }
+    }
+
+    assert.deepEqual(
+      deriveCharacterCreationFailedQualificationViewModel(
+        alreadyDraftedFlow
+      ).options.map((option) => option.option),
+      ['Drifter']
+    )
   })
 
   it('derives homeworld fields, options, and background skill summary', () => {
@@ -659,7 +738,23 @@ describe('character creation view helpers', () => {
 
     assert.equal(viewModel.step, 'homeworld')
     assert.equal(viewModel.phase, 'Homeworld')
-    assert.equal(viewModel.prompt, '1 cascade choice must be resolved.')
+    assert.equal(viewModel.prompt, 'Choose a Gun Combat specialty.')
+    assert.deepEqual(viewModel.blockingChoice, {
+      open: true,
+      cascadeSkill: 'Gun Combat-0',
+      title: 'Choose Gun Combat',
+      prompt: 'Resolve Gun Combat-0 into a specialty.',
+      label: 'Gun Combat',
+      level: 0,
+      options: [
+        { value: 'Archery-0', label: 'Archery', cascade: false },
+        { value: 'Energy Pistol-0', label: 'Energy Pistol', cascade: false },
+        { value: 'Energy Rifle-0', label: 'Energy Rifle', cascade: false },
+        { value: 'Shotgun-0', label: 'Shotgun', cascade: false },
+        { value: 'Slug Pistol-0', label: 'Slug Pistol', cascade: false },
+        { value: 'Slug Rifle-0', label: 'Slug Rifle', cascade: false }
+      ]
+    })
     assert.deepEqual(viewModel.primaryAction, {
       label: 'Continue to career',
       disabled: true,
@@ -1096,7 +1191,8 @@ describe('character creation view helpers', () => {
           advancementPassed: null,
           canCommission: null,
           canAdvance: null,
-          drafted: true
+          drafted: true,
+          anagathics: null
         },
         homeworld: {
           lawLevel: 'No Law',

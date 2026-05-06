@@ -53,6 +53,26 @@ const createBoardCommand = (boardId = asBoardId('board-1')): Command => ({
   scale: 50
 })
 
+const scoutLowPassageBenefit = () =>
+  ({
+    career: 'Scout',
+    kind: 'material',
+    roll: {
+      expression: '2d6',
+      rolls: [1, 1],
+      total: 2
+    },
+    modifier: 0,
+    tableRoll: 2,
+    value: 'Low Passage',
+    credits: 0
+  }) satisfies NonNullable<
+    Extract<
+      Extract<Command, { type: 'AdvanceCharacterCreation' }>['creationEvent'],
+      { type: 'FINISH_MUSTERING' }
+    >['musteringBenefit']
+  >
+
 const publishPlayableCharacterCreation = async (
   storage: ReturnType<typeof createMemoryStorage>,
   characterId = asCharacterId('char-1')
@@ -134,6 +154,10 @@ const publishPlayableCharacterCreation = async (
   await advance({ type: 'COMPLETE_SKILLS' })
   await advance({ type: 'COMPLETE_AGING' })
   await advance({ type: 'LEAVE_CAREER' })
+  await advance({
+    type: 'FINISH_MUSTERING',
+    musteringBenefit: scoutLowPassageBenefit()
+  })
   await advance({ type: 'FINISH_MUSTERING' })
   await advance({ type: 'CREATION_COMPLETE' })
 }
@@ -564,6 +588,113 @@ describe('room publication flow', () => {
     )
   })
 
+  it('persists and replays server-backed homeworld/background decisions', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-background')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Free Trader'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+    await publish(storage, {
+      type: 'AdvanceCharacterCreation',
+      gameId,
+      actorId,
+      characterId,
+      creationEvent: { type: 'SET_CHARACTERISTICS' }
+    })
+
+    const homeworldSet = await publish(storage, {
+      type: 'SetCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId,
+      homeworld: {
+        name: ' Regina ',
+        lawLevel: ' No Law ',
+        tradeCodes: [' Asteroid ']
+      }
+    })
+    assert.equal(homeworldSet.ok, true)
+
+    const skillSelected = await publish(storage, {
+      type: 'SelectCharacterCreationBackgroundSkill',
+      gameId,
+      actorId,
+      characterId,
+      skill: ' Admin '
+    })
+    assert.equal(skillSelected.ok, true)
+
+    const cascadeResolved = await publish(storage, {
+      type: 'ResolveCharacterCreationCascadeSkill',
+      gameId,
+      actorId,
+      characterId,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
+    assert.equal(cascadeResolved.ok, true)
+
+    const events = await readEventStream(storage, gameId)
+    assert.deepEqual(
+      events.slice(4).map((envelope) => envelope.event),
+      [
+        {
+          type: 'CharacterCreationHomeworldSet',
+          characterId,
+          homeworld: {
+            name: 'Regina',
+            lawLevel: 'No Law',
+            tradeCodes: ['Asteroid']
+          },
+          backgroundSkills: ['Zero-G-0'],
+          pendingCascadeSkills: ['Gun Combat-0']
+        },
+        {
+          type: 'CharacterCreationBackgroundSkillSelected',
+          characterId,
+          skill: 'Admin-0',
+          backgroundSkills: ['Zero-G-0', 'Admin-0'],
+          pendingCascadeSkills: ['Gun Combat-0']
+        },
+        {
+          type: 'CharacterCreationCascadeSkillResolved',
+          characterId,
+          cascadeSkill: 'Gun Combat-0',
+          selection: 'Slug Rifle',
+          backgroundSkills: ['Zero-G-0', 'Admin-0', 'Slug Rifle-0'],
+          pendingCascadeSkills: []
+        }
+      ]
+    )
+
+    const recovered = await getProjectedGameState(storage, gameId)
+    const creation = recovered?.characters[characterId]?.creation
+    assert.deepEqual(creation?.homeworld, {
+      name: 'Regina',
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid']
+    })
+    assert.deepEqual(creation?.backgroundSkills, [
+      'Zero-G-0',
+      'Admin-0',
+      'Slug Rifle-0'
+    ])
+    assert.deepEqual(creation?.pendingCascadeSkills, [])
+    assert.equal(recovered?.eventSeq, 7)
+  })
+
   it('records semantic SRD roll facts in character creation transition history', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')
@@ -926,6 +1057,14 @@ describe('room publication flow', () => {
     await advance({ type: 'COMPLETE_SKILLS' })
     await advance({ type: 'COMPLETE_AGING' })
     await advance({ type: 'LEAVE_CAREER' })
+    const earlyMusteringFinish = await advance({ type: 'FINISH_MUSTERING' })
+    assert.equal(earlyMusteringFinish.ok, false)
+    if (earlyMusteringFinish.ok) return
+    assert.equal(earlyMusteringFinish.error.code, 'invalid_command')
+    await advance({
+      type: 'FINISH_MUSTERING',
+      musteringBenefit: scoutLowPassageBenefit()
+    })
     await advance({ type: 'FINISH_MUSTERING' })
     const completed = await advance({ type: 'CREATION_COMPLETE' })
 
@@ -935,7 +1074,7 @@ describe('room publication flow', () => {
       completed.value.state.characters[characterId]?.creation?.state.status,
       'PLAYABLE'
     )
-    assert.equal((await readCheckpoint(storage, gameId))?.seq, 16)
+    assert.equal((await readCheckpoint(storage, gameId))?.seq, 17)
   })
 
   it('publishes final character creation sheets only after playable', async () => {
@@ -1033,6 +1172,10 @@ describe('room publication flow', () => {
     await advance({ type: 'COMPLETE_SKILLS' })
     await advance({ type: 'COMPLETE_AGING' })
     await advance({ type: 'LEAVE_CAREER' })
+    await advance({
+      type: 'FINISH_MUSTERING',
+      musteringBenefit: scoutLowPassageBenefit()
+    })
     await advance({ type: 'FINISH_MUSTERING' })
     await advance({ type: 'CREATION_COMPLETE' })
 
@@ -1062,7 +1205,7 @@ describe('room publication flow', () => {
     assert.equal(character?.age, 34)
     assert.deepEqual(character?.skills, ['Pilot-1', 'Vacc Suit-0'])
     assert.equal(character?.notes, 'Final scout.')
-    assert.equal((await readEventStream(storage, gameId)).length, 17)
+    assert.equal((await readEventStream(storage, gameId)).length, 18)
   })
 
   it('recovers finalized character creation from playable checkpoint plus tail', async () => {
@@ -1071,7 +1214,7 @@ describe('room publication flow', () => {
     await publishPlayableCharacterCreation(storage, characterId)
 
     const playableCheckpoint = await readCheckpoint(storage, gameId)
-    assert.equal(playableCheckpoint?.seq, 16)
+    assert.equal(playableCheckpoint?.seq, 17)
 
     const finalized = await publish(storage, {
       type: 'FinalizeCharacterCreation',
@@ -1095,7 +1238,7 @@ describe('room publication flow', () => {
 
     assert.equal(finalized.ok, true)
     if (!finalized.ok) return
-    assert.equal((await readCheckpoint(storage, gameId))?.seq, 16)
+    assert.equal((await readCheckpoint(storage, gameId))?.seq, 17)
     assert.deepEqual(
       (
         await readEventStreamTail(storage, gameId, playableCheckpoint?.seq ?? 0)

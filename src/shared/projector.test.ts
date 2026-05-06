@@ -312,6 +312,89 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 7)
   })
 
+  it('replays character creation homeworld and background decisions', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'HOMEWORLD',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          homeworld: null,
+          backgroundSkills: [],
+          pendingCascadeSkills: [],
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationHomeworldSet',
+        characterId,
+        homeworld: {
+          name: 'Regina',
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid']
+        },
+        backgroundSkills: ['Zero-G-0'],
+        pendingCascadeSkills: ['Gun Combat-0']
+      }),
+      envelope(5, {
+        type: 'CharacterCreationBackgroundSkillSelected',
+        characterId,
+        skill: 'Admin-0',
+        backgroundSkills: ['Zero-G-0', 'Admin-0'],
+        pendingCascadeSkills: ['Gun Combat-0']
+      }),
+      envelope(6, {
+        type: 'CharacterCreationCascadeSkillResolved',
+        characterId,
+        cascadeSkill: 'Gun Combat-0',
+        selection: 'Slug Rifle',
+        backgroundSkills: ['Zero-G-0', 'Admin-0', 'Slug Rifle-0'],
+        pendingCascadeSkills: []
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.deepEqual(creation?.homeworld, {
+      name: 'Regina',
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid']
+    })
+    assert.deepEqual(creation?.backgroundSkills, [
+      'Zero-G-0',
+      'Admin-0',
+      'Slug Rifle-0'
+    ])
+    assert.deepEqual(creation?.pendingCascadeSkills, [])
+    assert.equal(creation?.state.status, 'HOMEWORLD')
+    assert.equal(state?.eventSeq, 6)
+  })
+
   it('projects reenlistment as a second career term', () => {
     const characterId = asCharacterId('char-1')
     const transition = (

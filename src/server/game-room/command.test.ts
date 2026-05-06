@@ -100,6 +100,78 @@ const runCommand = (
 }
 
 describe('deriveEventsForCommand error categories', () => {
+  it('blocks creation completion while aging decisions remain unresolved', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'CREATION_COMPLETE' }
+      },
+      createCreation('ACTIVE', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Pilot-1'],
+            benefits: ['Low Passage'],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          }
+        ],
+        characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'CREATION_COMPLETE is blocked by unresolved character creation decisions'
+    )
+  })
+
+  it('blocks mustering completion until projected SRD benefits are resolved', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'FINISH_MUSTERING' }
+      },
+      createCreation('MUSTERING_OUT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Pilot-1'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'FINISH_MUSTERING is blocked by unresolved character creation decisions'
+    )
+  })
+
   it('returns not_allowed when setting a homeworld after homeworld selection', () => {
     const result = runCommand(
       {
