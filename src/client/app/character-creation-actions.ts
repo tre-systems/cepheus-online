@@ -1,5 +1,14 @@
+import { deriveLegalCareerCreationActionKeys } from '../../shared/character-creation/legal-actions.js'
+import type {
+  CareerCreationActionContext,
+  CareerCreationActionKey,
+  CareerCreationPendingDecision
+} from '../../shared/character-creation/types.js'
 import type { Command } from '../../shared/commands'
-import type { CharacterState } from '../../shared/state'
+import type {
+  CharacterCreationProjection,
+  CharacterState
+} from '../../shared/state'
 import type { ClientIdentity } from '../game-commands.js'
 
 export interface CharacterCreationActionViewModel {
@@ -50,6 +59,261 @@ const action = (
   variant
 })
 
+const derivePendingDecisions = (
+  creation: CharacterCreationProjection
+): CareerCreationPendingDecision[] => {
+  const decisions: CareerCreationPendingDecision[] = []
+
+  if ((creation.pendingCascadeSkills?.length ?? 0) > 0) {
+    decisions.push({ key: 'cascadeSkillResolution' })
+  }
+
+  return decisions
+}
+
+const deriveActionContext = (
+  creation: CharacterCreationProjection
+): CareerCreationActionContext => ({
+  pendingDecisions: derivePendingDecisions(creation),
+  canCompleteCreation: !creation.creationComplete,
+  canContinueCareer: creation.state.status === 'MUSTERING_OUT',
+  reenlistmentOutcome:
+    creation.state.status === 'REENLISTMENT' ? 'allowed' : 'unresolved'
+})
+
+const actionsForLegalKey = (
+  key: CareerCreationActionKey,
+  identity: ClientIdentity,
+  character: CharacterState
+): CharacterCreationActionViewModel[] => {
+  switch (key) {
+    case 'setCharacteristics':
+      return [
+        action(
+          'set-characteristics',
+          'Confirm characteristics',
+          advanceCommand(identity, character, { type: 'SET_CHARACTERISTICS' })
+        )
+      ]
+    case 'completeHomeworld':
+      return [
+        action(
+          'complete-homeworld',
+          'Confirm homeworld',
+          advanceCommand(identity, character, { type: 'COMPLETE_HOMEWORLD' })
+        )
+      ]
+    case 'selectCareer':
+      if (character.creation?.terms.length === 0) {
+        return [
+          action('start-scout-term', 'Start Scout term', {
+            type: 'StartCharacterCareerTerm',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id,
+            career: 'Scout'
+          })
+        ]
+      }
+      return [
+        action(
+          'select-career',
+          'Select career',
+          advanceCommand(identity, character, {
+            type: 'SELECT_CAREER',
+            isNewCareer: true
+          })
+        )
+      ]
+    case 'completeBasicTraining':
+      return [
+        action(
+          'complete-basic-training',
+          'Complete basic training',
+          advanceCommand(identity, character, {
+            type: 'COMPLETE_BASIC_TRAINING'
+          })
+        )
+      ]
+    case 'rollSurvival':
+      return [
+        action(
+          'survival-passed',
+          'Pass survival',
+          advanceCommand(identity, character, {
+            type: 'SURVIVAL_PASSED',
+            canCommission: false,
+            canAdvance: true
+          })
+        ),
+        action(
+          'survival-failed',
+          'Fail survival',
+          advanceCommand(identity, character, { type: 'SURVIVAL_FAILED' }),
+          'secondary'
+        )
+      ]
+    case 'resolveMishap':
+      return [
+        action(
+          'resolve-mishap',
+          'Resolve mishap',
+          advanceCommand(identity, character, { type: 'MISHAP_RESOLVED' })
+        )
+      ]
+    case 'confirmDeath':
+      return [
+        action(
+          'death-confirmed',
+          'Confirm death',
+          advanceCommand(identity, character, { type: 'DEATH_CONFIRMED' }),
+          'secondary'
+        )
+      ]
+    case 'rollCommission':
+      return [
+        action(
+          'complete-commission',
+          'Complete commission',
+          advanceCommand(identity, character, { type: 'COMPLETE_COMMISSION' }),
+          'secondary'
+        )
+      ]
+    case 'skipCommission':
+      return [
+        action(
+          'skip-commission',
+          'Skip commission',
+          advanceCommand(identity, character, { type: 'SKIP_COMMISSION' })
+        )
+      ]
+    case 'rollAdvancement':
+      return [
+        action(
+          'complete-advancement',
+          'Complete advancement',
+          advanceCommand(identity, character, { type: 'COMPLETE_ADVANCEMENT' })
+        )
+      ]
+    case 'skipAdvancement':
+      return [
+        action(
+          'skip-advancement',
+          'Skip advancement',
+          advanceCommand(identity, character, { type: 'SKIP_ADVANCEMENT' }),
+          'secondary'
+        )
+      ]
+    case 'completeSkills':
+      return [
+        action(
+          'complete-skills',
+          'Complete skills',
+          advanceCommand(identity, character, { type: 'COMPLETE_SKILLS' })
+        )
+      ]
+    case 'resolveAging':
+      return [
+        action(
+          'complete-aging',
+          'Complete aging',
+          advanceCommand(identity, character, { type: 'COMPLETE_AGING' })
+        )
+      ]
+    case 'reenlist':
+      return [
+        action(
+          'reenlist',
+          'Re-enlist',
+          advanceCommand(identity, character, { type: 'REENLIST' }),
+          'secondary'
+        )
+      ]
+    case 'leaveCareer':
+      return [
+        action(
+          'leave-career',
+          'Leave career',
+          advanceCommand(identity, character, { type: 'LEAVE_CAREER' })
+        )
+      ]
+    case 'continueCareer':
+      return [
+        action(
+          'continue-career',
+          'Continue career',
+          advanceCommand(identity, character, { type: 'CONTINUE_CAREER' }),
+          'secondary'
+        )
+      ]
+    case 'finishMustering':
+      return [
+        action(
+          'finish-mustering',
+          'Finish mustering out',
+          advanceCommand(identity, character, { type: 'FINISH_MUSTERING' })
+        )
+      ]
+    case 'completeCreation':
+      return [
+        action(
+          'creation-complete',
+          'Make playable',
+          advanceCommand(identity, character, { type: 'CREATION_COMPLETE' })
+        )
+      ]
+    case 'rollReenlistment':
+    case 'forcedReenlist':
+    case 'resolveMusteringBenefit':
+      return []
+    default: {
+      const exhaustive: never = key
+      return exhaustive
+    }
+  }
+}
+
+const actionKeyOrder: readonly CareerCreationActionKey[] = [
+  'setCharacteristics',
+  'completeHomeworld',
+  'selectCareer',
+  'completeBasicTraining',
+  'rollSurvival',
+  'resolveMishap',
+  'confirmDeath',
+  'skipCommission',
+  'rollCommission',
+  'rollAdvancement',
+  'skipAdvancement',
+  'completeSkills',
+  'resolveAging',
+  'leaveCareer',
+  'reenlist',
+  'finishMustering',
+  'continueCareer',
+  'completeCreation',
+  'rollReenlistment',
+  'forcedReenlist',
+  'resolveMusteringBenefit'
+]
+
+const deriveActions = (
+  identity: ClientIdentity,
+  character: CharacterState,
+  creation: CharacterCreationProjection
+): CharacterCreationActionViewModel[] => {
+  const legalKeys = new Set(
+    deriveLegalCareerCreationActionKeys(
+      creation.state,
+      deriveActionContext(creation)
+    )
+  )
+
+  return actionKeyOrder
+    .filter((key) => legalKeys.has(key))
+    .flatMap((key) => actionsForLegalKey(key, identity, character))
+}
+
 export const deriveCharacterCreationActionPlan = (
   identity: ClientIdentity,
   character: CharacterState | null
@@ -84,166 +348,6 @@ export const deriveCharacterCreationActionPlan = (
   })
 
   switch (status) {
-    case 'CHARACTERISTICS':
-      return plan([
-        action(
-          'set-characteristics',
-          'Confirm characteristics',
-          advanceCommand(identity, character, { type: 'SET_CHARACTERISTICS' })
-        )
-      ])
-    case 'HOMEWORLD':
-      return plan([
-        action(
-          'complete-homeworld',
-          'Confirm homeworld',
-          advanceCommand(identity, character, { type: 'COMPLETE_HOMEWORLD' })
-        )
-      ])
-    case 'CAREER_SELECTION':
-      if (character.creation.terms.length === 0) {
-        return plan([
-          action('start-scout-term', 'Start Scout term', {
-            type: 'StartCharacterCareerTerm',
-            gameId: identity.gameId,
-            actorId: identity.actorId,
-            characterId: character.id,
-            career: 'Scout'
-          })
-        ])
-      }
-      return plan([
-        action(
-          'select-career',
-          'Select career',
-          advanceCommand(identity, character, {
-            type: 'SELECT_CAREER',
-            isNewCareer: true
-          })
-        )
-      ])
-    case 'BASIC_TRAINING':
-      return plan([
-        action(
-          'complete-basic-training',
-          'Complete basic training',
-          advanceCommand(identity, character, {
-            type: 'COMPLETE_BASIC_TRAINING'
-          })
-        )
-      ])
-    case 'SURVIVAL':
-      return plan([
-        action(
-          'survival-passed',
-          'Pass survival',
-          advanceCommand(identity, character, {
-            type: 'SURVIVAL_PASSED',
-            canCommission: false,
-            canAdvance: true
-          })
-        ),
-        action(
-          'survival-failed',
-          'Fail survival',
-          advanceCommand(identity, character, { type: 'SURVIVAL_FAILED' }),
-          'secondary'
-        )
-      ])
-    case 'MISHAP':
-      return plan([
-        action(
-          'resolve-mishap',
-          'Resolve mishap',
-          advanceCommand(identity, character, { type: 'MISHAP_RESOLVED' })
-        ),
-        action(
-          'death-confirmed',
-          'Confirm death',
-          advanceCommand(identity, character, { type: 'DEATH_CONFIRMED' }),
-          'secondary'
-        )
-      ])
-    case 'COMMISSION':
-      return plan([
-        action(
-          'skip-commission',
-          'Skip commission',
-          advanceCommand(identity, character, { type: 'SKIP_COMMISSION' })
-        ),
-        action(
-          'complete-commission',
-          'Complete commission',
-          advanceCommand(identity, character, { type: 'COMPLETE_COMMISSION' }),
-          'secondary'
-        )
-      ])
-    case 'ADVANCEMENT':
-      return plan([
-        action(
-          'complete-advancement',
-          'Complete advancement',
-          advanceCommand(identity, character, { type: 'COMPLETE_ADVANCEMENT' })
-        ),
-        action(
-          'skip-advancement',
-          'Skip advancement',
-          advanceCommand(identity, character, { type: 'SKIP_ADVANCEMENT' }),
-          'secondary'
-        )
-      ])
-    case 'SKILLS_TRAINING':
-      return plan([
-        action(
-          'complete-skills',
-          'Complete skills',
-          advanceCommand(identity, character, { type: 'COMPLETE_SKILLS' })
-        )
-      ])
-    case 'AGING':
-      return plan([
-        action(
-          'complete-aging',
-          'Complete aging',
-          advanceCommand(identity, character, { type: 'COMPLETE_AGING' })
-        )
-      ])
-    case 'REENLISTMENT':
-      return plan([
-        action(
-          'leave-career',
-          'Leave career',
-          advanceCommand(identity, character, { type: 'LEAVE_CAREER' })
-        ),
-        action(
-          'reenlist',
-          'Re-enlist',
-          advanceCommand(identity, character, { type: 'REENLIST' }),
-          'secondary'
-        )
-      ])
-    case 'MUSTERING_OUT':
-      return plan([
-        action(
-          'finish-mustering',
-          'Finish mustering out',
-          advanceCommand(identity, character, { type: 'FINISH_MUSTERING' })
-        ),
-        action(
-          'continue-career',
-          'Continue career',
-          advanceCommand(identity, character, { type: 'CONTINUE_CAREER' }),
-          'secondary'
-        )
-      ])
-    case 'ACTIVE':
-      return plan([
-        action(
-          'creation-complete',
-          'Make playable',
-          advanceCommand(identity, character, { type: 'CREATION_COMPLETE' })
-        )
-      ])
     case 'PLAYABLE':
       return plan([])
     case 'DECEASED':
@@ -253,6 +357,20 @@ export const deriveCharacterCreationActionPlan = (
         summary: 'Creation ended with this character deceased.',
         actions: []
       }
+    case 'CHARACTERISTICS':
+    case 'HOMEWORLD':
+    case 'CAREER_SELECTION':
+    case 'BASIC_TRAINING':
+    case 'SURVIVAL':
+    case 'MISHAP':
+    case 'COMMISSION':
+    case 'ADVANCEMENT':
+    case 'SKILLS_TRAINING':
+    case 'AGING':
+    case 'REENLISTMENT':
+    case 'MUSTERING_OUT':
+    case 'ACTIVE':
+      return plan(deriveActions(identity, character, character.creation))
     default: {
       const exhaustive: never = status
       return exhaustive

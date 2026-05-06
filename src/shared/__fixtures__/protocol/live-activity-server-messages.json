@@ -1,0 +1,67 @@
+[
+  {
+    "name": "room state live activity companion",
+    "message": {
+      "type": "roomState",
+      "state": null,
+      "eventSeq": 2,
+      "liveActivities": [
+        {
+          "id": "game-1:2",
+          "eventId": "game-1:2",
+          "gameId": "game-1",
+          "seq": 2,
+          "actorId": "user-1",
+          "createdAt": "2026-05-03T00:00:02.000Z",
+          "type": "diceRoll",
+          "expression": "2d6+1",
+          "reason": "Vacc Suit check",
+          "rolls": [3, 5],
+          "total": 9,
+          "reveal": {
+            "revealAt": "2026-05-03T00:00:04.500Z",
+            "delayMs": 2500
+          }
+        }
+      ]
+    },
+    "maxSerializedBytes": 400
+  },
+  {
+    "name": "command accepted live activity companion",
+    "message": {
+      "type": "commandAccepted",
+      "requestId": "req-roll",
+      "state": {
+        "id": "game-1",
+        "slug": "game-1",
+        "name": "Spinward Test",
+        "ownerId": "user-1",
+        "players": {},
+        "characters": {},
+        "boards": {},
+        "pieces": {},
+        "diceLog": [],
+        "selectedBoardId": null,
+        "eventSeq": 3
+      },
+      "eventSeq": 3,
+      "liveActivities": [
+        {
+          "id": "game-1:3",
+          "eventId": "game-1:3",
+          "gameId": "game-1",
+          "seq": 3,
+          "actorId": "user-1",
+          "createdAt": "2026-05-03T00:00:03.000Z",
+          "type": "characterCreation",
+          "characterId": "char-1",
+          "transition": "SELECT_CAREER",
+          "status": "BASIC_TRAINING",
+          "creationComplete": false
+        }
+      ]
+    },
+    "maxSerializedBytes": 640
+  }
+]

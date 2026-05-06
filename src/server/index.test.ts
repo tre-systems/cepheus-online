@@ -15,6 +15,7 @@ const clientModules = new Map<
       imports: [
         '/client/app/board-view.js',
         '/client/app/app-command-router.js',
+        '/client/app/app-session.js',
         '/client/app/board-controller.js',
         '/client/app/bootstrap-flow.js',
         '/client/app/character-creation-actions.js',
@@ -40,6 +41,7 @@ const clientModules = new Map<
     '/client/app/app-command-router.js',
     { markers: ['createAppCommandRouter', 'sequenceCommand'] }
   ],
+  ['/client/app/app-session.js', { markers: ['createAppSession'] }],
   ['/client/app/board-geometry.js', { markers: ['deriveBoardTransform'] }],
   ['/client/app/board-view.js', { markers: ['selectedBoardPieces'] }],
   [
@@ -57,7 +59,10 @@ const clientModules = new Map<
   ['/client/app/bootstrap-flow.js', { markers: ['nextBootstrapCommand'] }],
   [
     '/client/app/character-creation-actions.js',
-    { markers: ['deriveCharacterCreationActionPlan'] }
+    {
+      markers: ['deriveCharacterCreationActionPlan'],
+      imports: ['/shared/character-creation/legal-actions.js']
+    }
   ],
   [
     '/client/app/character-command-plan.js',
@@ -109,6 +114,10 @@ const clientModules = new Map<
   [
     '/shared/character-creation/aging.js',
     { markers: ['resolveAging', 'selectAgingEffect'] }
+  ],
+  [
+    '/shared/character-creation/legal-actions.js',
+    { markers: ['deriveLegalCareerCreationActionKeys'] }
   ],
   [
     '/client/app/character-creation-flow.js',

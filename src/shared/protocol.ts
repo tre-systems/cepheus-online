@@ -3,6 +3,7 @@ import type { CareerCreationEvent } from './characterCreation'
 import { err, ok, type Result } from './result'
 import type { Command } from './commands'
 import type { GameState } from './state'
+import type { LiveActivityDescriptor } from './live-activity'
 import type {
   CharacterCreationSheet,
   CharacterCreationHomeworld,
@@ -47,12 +48,14 @@ export type ServerMessage =
       type: 'roomState'
       state: GameState | null
       eventSeq: number
+      liveActivities?: LiveActivityDescriptor[]
     }
   | {
       type: 'commandAccepted'
       requestId: string
       state: GameState
       eventSeq: number
+      liveActivities?: LiveActivityDescriptor[]
     }
   | {
       type: 'commandRejected'

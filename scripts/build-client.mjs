@@ -57,6 +57,12 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/app-session.js',
+    source: join(compiledClientRoot, 'client', 'app', 'app-session.js'),
+    exportName: 'CLIENT_APP_SESSION_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/board-geometry.js',
     source: join(compiledClientRoot, 'client', 'app', 'board-geometry.js'),
     exportName: 'CLIENT_BOARD_GEOMETRY_JS',
@@ -309,6 +315,17 @@ const assets = [
       'aging.js'
     ),
     exportName: 'SHARED_CHARACTER_CREATION_AGING_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/shared/character-creation/legal-actions.js',
+    source: join(
+      compiledClientRoot,
+      'shared',
+      'character-creation',
+      'legal-actions.js'
+    ),
+    exportName: 'SHARED_CHARACTER_CREATION_LEGAL_ACTIONS_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {

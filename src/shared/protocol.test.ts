@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import { describe, it } from 'node:test'
 
 import { decodeClientMessage, decodeCommand } from './protocol'
-import type { CommandErrorCode } from './protocol'
+import type { CommandErrorCode, ServerMessage } from './protocol'
 
 type ValidCommandEnvelopeFixture = {
   readonly name: string
@@ -20,11 +20,20 @@ type InvalidMalformedMessageFixture = {
   readonly errorMessage: string
 }
 
+type LiveActivityServerMessageFixture = {
+  readonly name: string
+  readonly message: ServerMessage
+  readonly maxSerializedBytes: number
+}
+
 const loadFixture = <T>(name: string): T => {
   const file = path.join('src', 'shared', '__fixtures__', 'protocol', name)
 
   return JSON.parse(fs.readFileSync(file, 'utf8')) as T
 }
+
+const serializedBytes = (value: unknown): number =>
+  new TextEncoder().encode(JSON.stringify(value)).length
 
 const validCommandEnvelopeFixtures = loadFixture<ValidCommandEnvelopeFixture[]>(
   'valid-command-envelopes.json'
@@ -33,6 +42,10 @@ const validCommandEnvelopeFixtures = loadFixture<ValidCommandEnvelopeFixture[]>(
 const invalidMalformedMessageFixtures = loadFixture<
   InvalidMalformedMessageFixture[]
 >('invalid-malformed-messages.json')
+
+const liveActivityServerMessageFixtures = loadFixture<
+  LiveActivityServerMessageFixture[]
+>('live-activity-server-messages.json')
 
 describe('protocol validation', () => {
   for (const fixture of validCommandEnvelopeFixtures) {
@@ -56,6 +69,25 @@ describe('protocol validation', () => {
       if (result.ok) return
       assert.equal(result.error.code, fixture.errorCode)
       assert.equal(result.error.message, fixture.errorMessage)
+    })
+  }
+
+  for (const fixture of liveActivityServerMessageFixtures) {
+    it(`covers server live activity fixture: ${fixture.name}`, () => {
+      const { message } = fixture
+
+      assert.equal(
+        message.type === 'roomState' || message.type === 'commandAccepted',
+        true
+      )
+      if (message.type !== 'roomState' && message.type !== 'commandAccepted') {
+        return
+      }
+
+      assert.equal(Array.isArray(message.liveActivities), true)
+      assert.equal((message.liveActivities?.length ?? 0) > 0, true)
+      assert.equal(serializedBytes(message) <= fixture.maxSerializedBytes, true)
+      assert.equal(JSON.stringify(message).includes('creationEvent'), false)
     })
   }
 

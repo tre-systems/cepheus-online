@@ -3,6 +3,8 @@ import type { EventEnvelope } from './events'
 import type { CharacterId, EventId, GameId, UserId } from './ids'
 
 export const LIVE_DICE_RESULT_REVEAL_DELAY_MS = 2500
+export const MAX_LIVE_ACTIVITY_TEXT_LENGTH = 120
+export const MAX_LIVE_ACTIVITY_ROLLS = 20
 
 export type LiveActivityDescriptor =
   | DiceRollActivityDescriptor
@@ -22,6 +24,7 @@ export interface DiceRollActivityDescriptor extends LiveActivityBase {
   expression: string
   reason: string
   rolls: number[]
+  rollsOmitted?: number
   total: number
   reveal: {
     revealAt: string
@@ -51,25 +54,36 @@ const baseActivity = (envelope: EventEnvelope): LiveActivityBase => ({
   createdAt: envelope.createdAt
 })
 
+const boundedText = (value: string): string => {
+  if (value.length <= MAX_LIVE_ACTIVITY_TEXT_LENGTH) return value
+
+  return `${value.slice(0, MAX_LIVE_ACTIVITY_TEXT_LENGTH - 3)}...`
+}
+
 export const deriveLiveActivity = (
   envelope: EventEnvelope
 ): LiveActivityDescriptor | null => {
   const event = envelope.event
 
   switch (event.type) {
-    case 'DiceRolled':
+    case 'DiceRolled': {
+      const rolls = event.rolls.slice(0, MAX_LIVE_ACTIVITY_ROLLS)
+      const rollsOmitted = event.rolls.length - rolls.length
+
       return {
         ...baseActivity(envelope),
         type: 'diceRoll',
-        expression: event.expression,
-        reason: event.reason,
-        rolls: [...event.rolls],
+        expression: boundedText(event.expression),
+        reason: boundedText(event.reason),
+        rolls,
+        ...(rollsOmitted > 0 ? { rollsOmitted } : {}),
         total: event.total,
         reveal: {
           revealAt: deriveLiveActivityRevealAt(envelope.createdAt),
           delayMs: LIVE_DICE_RESULT_REVEAL_DELAY_MS
         }
       }
+    }
 
     case 'CharacterCreationTransitioned':
       return {

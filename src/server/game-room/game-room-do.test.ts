@@ -1,10 +1,10 @@
 import * as assert from 'node:assert/strict'
-import {describe, it} from 'node:test'
+import { describe, it } from 'node:test'
 
-import type {DurableObjectState} from '../cloudflare'
-import type {Env} from '../env'
-import {GameRoomDO} from './game-room-do'
-import {createMemoryStorage} from './test-support'
+import type { DurableObjectState } from '../cloudflare'
+import type { Env } from '../env'
+import { GameRoomDO } from './game-room-do'
+import { createMemoryStorage } from './test-support'
 
 type TestSocket = WebSocket & {
   sent: string[]
@@ -47,7 +47,7 @@ const postCommand = (room: GameRoomDO, body: unknown) =>
   room.fetch(
     new Request('https://cepheus.test/rooms/game-1/command', {
       method: 'POST',
-      headers: {'content-type': 'application/json'},
+      headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body)
     })
   )
@@ -88,6 +88,21 @@ const createPieceBody = () =>
     imageAssetId: '/assets/counters/TroopsBlackOnGreen.png',
     x: 100,
     y: 150
+  })
+
+const createCharacterBody = () =>
+  commandBody('create-character', {
+    type: 'CreateCharacter',
+    characterId: 'scout',
+    characterType: 'PLAYER',
+    name: 'Scout'
+  })
+
+const startCharacterCreationBody = () =>
+  commandBody('start-character-creation', {
+    type: 'StartCharacterCreation',
+    characterId: 'scout',
+    expectedSeq: 2
   })
 
 describe('GameRoomDO HTTP skeleton', () => {
@@ -263,14 +278,52 @@ describe('GameRoomDO HTTP skeleton', () => {
         reason: 'Table roll'
       })
     )
+    const responseMessage = await response.json()
 
     assert.equal(response.status, 200)
-    for (const message of [...parseMessages(referee), ...parseMessages(player)]) {
+    assert.equal(responseMessage.type, 'commandAccepted')
+    assert.equal(responseMessage.liveActivities.length, 1)
+    assert.equal(responseMessage.liveActivities[0].type, 'diceRoll')
+    assert.equal(responseMessage.liveActivities[0].reason, 'Table roll')
+    for (const message of [
+      ...parseMessages(referee),
+      ...parseMessages(player)
+    ]) {
       assert.equal(message.type, 'roomState')
       assert.equal(message.eventSeq, 2)
       assert.equal(message.state.diceLog.length, 1)
       assert.equal(message.state.diceLog[0].reason, 'Table roll')
+      assert.equal(message.liveActivities.length, 1)
+      assert.equal(message.liveActivities[0].type, 'diceRoll')
+      assert.equal(message.liveActivities[0].reason, 'Table roll')
     }
+  })
+
+  it('returns character creation activity from HTTP commands', async () => {
+    const room = createRoom()
+    await postCommand(room, createGameBody())
+    await postCommand(room, createCharacterBody())
+
+    const response = await postCommand(room, startCharacterCreationBody())
+    const message = await response.json()
+
+    assert.equal(response.status, 200)
+    assert.equal(message.type, 'commandAccepted')
+    assert.equal(message.eventSeq, 3)
+    assert.equal(message.liveActivities.length, 1)
+    assert.deepEqual(message.liveActivities[0], {
+      id: 'game-1:3',
+      eventId: 'game-1:3',
+      gameId: 'game-1',
+      seq: 3,
+      actorId: 'user-1',
+      createdAt: message.liveActivities[0].createdAt,
+      type: 'characterCreation',
+      characterId: 'scout',
+      transition: 'STARTED',
+      status: 'CHARACTERISTICS',
+      creationComplete: false
+    })
   })
 
   it('broadcasts WebSocket dice rolls to the sender and peers', async () => {
@@ -300,15 +353,24 @@ describe('GameRoomDO HTTP skeleton', () => {
     const peerMessages = parseMessages(peer)
     assert.deepEqual(
       senderMessages.map((message) => message.type),
-      ['commandAccepted', 'roomState']
+      ['commandAccepted']
     )
     assert.deepEqual(
       peerMessages.map((message) => message.type),
       ['roomState']
     )
-    assert.equal(senderMessages[1].eventSeq, 2)
-    assert.equal(senderMessages[1].state.diceLog.length, 1)
+    assert.equal(senderMessages[0].requestId, 'roll-dice')
+    assert.equal(senderMessages[0].liveActivities.length, 1)
+    assert.equal(senderMessages[0].liveActivities[0].type, 'diceRoll')
+    assert.equal(senderMessages[0].liveActivities[0].reason, 'Table roll')
+    assert.equal(senderMessages[0].eventSeq, 2)
+    assert.equal(senderMessages[0].state.diceLog.length, 1)
+    assert.equal(senderMessages[0].state.diceLog[0].reason, 'Table roll')
     assert.equal(peerMessages[0].eventSeq, 2)
     assert.equal(peerMessages[0].state.diceLog.length, 1)
+    assert.equal(peerMessages[0].state.diceLog[0].reason, 'Table roll')
+    assert.equal(peerMessages[0].liveActivities.length, 1)
+    assert.equal(peerMessages[0].liveActivities[0].type, 'diceRoll')
+    assert.equal(peerMessages[0].liveActivities[0].reason, 'Table roll')
   })
 })

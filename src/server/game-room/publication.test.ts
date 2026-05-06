@@ -10,10 +10,7 @@ import {
   asUserId
 } from '../../shared/ids'
 import { getProjectedGameState } from './projection'
-import {
-  CommandPublicationError,
-  runCommandPublication
-} from './publication'
+import { CommandPublicationError, runCommandPublication } from './publication'
 import { gameSeedKey, readCheckpoint, readEventStream } from './storage'
 import { createMemoryStorage } from './test-support'
 
@@ -60,10 +57,43 @@ describe('room publication flow', () => {
     if (!accepted.ok) return
     assert.deepEqual(Object.keys(accepted.value).sort(), [
       'eventSeq',
+      'liveActivities',
       'requestId',
       'state'
     ])
     assert.equal(accepted.value.eventSeq, accepted.value.state.eventSeq)
+    assert.deepEqual(accepted.value.liveActivities, [])
+  })
+
+  it('exposes derived dice activity for accepted dice commands', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+
+    const rolled = await publish(storage, {
+      type: 'RollDice',
+      gameId,
+      actorId,
+      expression: '2d6',
+      reason: 'Table roll'
+    })
+
+    assert.equal(rolled.ok, true)
+    if (!rolled.ok) return
+    assert.equal(rolled.value.liveActivities.length, 1)
+    assert.equal(rolled.value.liveActivities[0]?.type, 'diceRoll')
+    assert.equal(rolled.value.liveActivities[0]?.seq, 2)
+    assert.equal(rolled.value.liveActivities[0]?.actorId, actorId)
+    if (rolled.value.liveActivities[0]?.type !== 'diceRoll') return
+    assert.equal(rolled.value.liveActivities[0].expression, '2d6')
+    assert.equal(rolled.value.liveActivities[0].reason, 'Table roll')
+    assert.deepEqual(
+      rolled.value.liveActivities[0].rolls,
+      rolled.value.state.diceLog[0]?.rolls
+    )
+    assert.equal(
+      rolled.value.liveActivities[0].total,
+      rolled.value.state.diceLog[0]?.total
+    )
   })
 
   it('rejects invalid commands without writing an event stream', async () => {
@@ -290,6 +320,21 @@ describe('room publication flow', () => {
 
     assert.equal(started.ok, true)
     if (!started.ok) return
+    assert.deepEqual(started.value.liveActivities, [
+      {
+        id: 'game-1:3',
+        eventId: 'game-1:3',
+        gameId,
+        seq: 3,
+        actorId,
+        createdAt: started.value.liveActivities[0]?.createdAt,
+        type: 'characterCreation',
+        characterId,
+        transition: 'STARTED',
+        status: 'CHARACTERISTICS',
+        creationComplete: false
+      }
+    ])
     assert.equal(
       started.value.state.characters[characterId]?.creation?.state.status,
       'CHARACTERISTICS'

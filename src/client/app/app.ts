@@ -89,6 +89,7 @@ import {
   buildSetDoorOpenCommand
 } from '../game-commands.js'
 import { createAppCommandRouter } from './app-command-router.js'
+import { createAppSession } from './app-session.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
@@ -199,7 +200,7 @@ let firstStateApplied = false
 let latestDiceId = null
 const viewerRole = qs.get('viewer') || 'referee'
 const canSelectBoards = viewerRole.toLowerCase() === 'referee'
-let selectedPieceId = null
+const appSession = createAppSession({ roomId, actorId, viewerRole })
 let boardController = null
 let requestCounter = 0
 let diceHideTimer = null
@@ -249,6 +250,12 @@ const clientIdentity = () => ({
   gameId: roomId,
   actorId
 })
+
+const currentSelectedPieceId = () => appSession.snapshot().selectedPieceId
+
+const selectPiece = (pieceId) => {
+  appSession.selectPiece(pieceId)
+}
 
 const handleServerMessage = (message) => {
   const application = applyClientServerMessage(state, message)
@@ -1995,7 +2002,7 @@ const createCustomCharacter = async () => {
   for (const command of plan.commands) {
     await postCommand(command)
   }
-  if (plan.pieceId) selectedPieceId = plan.pieceId
+  if (plan.pieceId) selectPiece(plan.pieceId)
   els.characterNameInput.value = ''
   pendingGeneratedCharacter = null
   renderGeneratedCharacterPreview()
@@ -2047,7 +2054,7 @@ const createWizardToken = async () => {
     height,
     scale
   })
-  selectedPieceId = pieceId
+  selectPiece(pieceId)
 }
 
 const finishCharacterCreationWizard = async () => {
@@ -2173,7 +2180,7 @@ const acceptGeneratedCharacter = async () => {
   for (const command of plan.commands) {
     await postCommand(command)
   }
-  if (plan.pieceId) selectedPieceId = plan.pieceId
+  if (plan.pieceId) selectPiece(plan.pieceId)
   els.characterNameInput.value = ''
   pendingGeneratedCharacter = null
   renderGeneratedCharacterPreview()
@@ -2218,7 +2225,7 @@ const createCustomPiece = async () => {
     return
   }
   await commandRouter.dispatchSequential(plan.commands)
-  selectedPieceId = plan.pieceId
+  selectPiece(plan.pieceId)
   els.pieceNameInput.value = ''
   els.pieceImageInput.value = ''
   els.pieceImageFileInput.value = ''
@@ -2280,7 +2287,7 @@ const connectSocket = () => {
 
 const applyState = (nextState) => {
   const previousDiceId = latestDiceId
-  state = nextState
+  state = appSession.setAuthoritativeState(nextState).authoritativeState
   const latestRoll = state?.diceLog?.[state.diceLog.length - 1] || null
   latestDiceId = latestRoll?.id || null
   render()
@@ -2427,6 +2434,7 @@ const renderRail = () => {
 
   els.initiativeRail.replaceChildren(
     ...pieces.map((piece, index) => {
+      const selectedPieceId = currentSelectedPieceId()
       const button = document.createElement('button')
       button.className =
         'rail-piece' + (piece.id === selectedPieceId ? ' selected' : '')
@@ -2447,7 +2455,7 @@ const renderRail = () => {
       }
       button.append(score, avatar)
       button.addEventListener('click', () => {
-        selectedPieceId = piece.id
+        selectPiece(piece.id)
         characterSheetController.setOpen(true)
         render()
       })
@@ -2510,9 +2518,9 @@ boardController = createBoardController({
   context: els.canvas.getContext('2d'),
   getState: () => state,
   getIdentity: clientIdentity,
-  getSelectedPieceId: () => selectedPieceId,
+  getSelectedPieceId: currentSelectedPieceId,
   setSelectedPieceId: (pieceId) => {
-    selectedPieceId = pieceId
+    selectPiece(pieceId)
   },
   sendCommand,
   setError,
@@ -2535,9 +2543,10 @@ createRoomMenuController({
   onOpenRoom: (identity) => {
     roomId = identity.roomId
     actorId = identity.actorId
+    appSession.setRoomIdentity({ roomId, actorId })
     firstStateApplied = false
     latestDiceId = null
-    selectedPieceId = null
+    selectPiece(null)
     boardController?.clearDrag()
     characterSheetController.setOpen(false)
     connectSocket()
@@ -2546,8 +2555,10 @@ createRoomMenuController({
 })
 
 els.sheetButton.addEventListener('click', () => {
-  if (!selectedPieceId && selectedPiece()) selectedPieceId = selectedPiece().id
-  if (!selectedPieceId) {
+  if (!currentSelectedPieceId() && selectedPiece()) {
+    selectPiece(selectedPiece().id)
+  }
+  if (!currentSelectedPieceId()) {
     openCharacterCreatorPanel()
     return
   }
@@ -2637,7 +2648,7 @@ els.boardSelect.addEventListener('change', () => {
   const boardId = els.boardSelect.value
   if (!boardId || boardId === currentSelectedBoardId() || !canSelectBoards)
     return
-  selectedPieceId = null
+  selectPiece(null)
   boardController?.clearDrag()
   sendCommand({
     type: 'SelectBoard',

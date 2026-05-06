@@ -123,7 +123,17 @@ describe('character creation actions', () => {
     for (const [status, eventType] of expectations) {
       const plan = deriveCharacterCreationActionPlan(
         identity,
-        character(creation(status))
+        character(
+          creation(status, {
+            state: {
+              status,
+              context: {
+                canCommission: false,
+                canAdvance: status === 'ADVANCEMENT'
+              }
+            }
+          })
+        )
       )
       const command = plan?.actions[0]?.command
       assert.equal(command?.type, 'AdvanceCharacterCreation')
@@ -139,6 +149,30 @@ describe('character creation actions', () => {
     )
 
     assert.equal(plan?.status, 'Playable')
+    assert.deepEqual(plan?.actions, [])
+  })
+
+  it('hides illegal promotion actions through the shared planner', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(creation('COMMISSION'))
+    )
+
+    assert.equal(plan?.status, 'Commission')
+    assert.deepEqual(plan?.actions, [])
+  })
+
+  it('hides pending decision actions through the shared planner', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('SKILLS_TRAINING', {
+          pendingCascadeSkills: ['Gun Combat']
+        })
+      )
+    )
+
+    assert.equal(plan?.status, 'Skills Training')
     assert.deepEqual(plan?.actions, [])
   })
 })

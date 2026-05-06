@@ -1,19 +1,17 @@
-import {asGameId, type GameId} from '../../shared/ids'
+import { asGameId, type GameId } from '../../shared/ids'
+import type { LiveActivityDescriptor } from '../../shared/live-activity'
 import {
   decodeClientMessage,
   type ClientMessage,
   type CommandError,
   type ServerMessage
 } from '../../shared/protocol'
-import type {GameState} from '../../shared/state'
-import {
-  filterGameStateForViewer,
-  type GameViewer
-} from '../../shared/viewer'
-import type {DurableObjectState, WebSocketResponseInit} from '../cloudflare'
-import type {Env} from '../env'
-import {jsonResponse} from '../http'
-import {runCommandPublication} from './publication'
+import type { GameState } from '../../shared/state'
+import { filterGameStateForViewer, type GameViewer } from '../../shared/viewer'
+import type { DurableObjectState, WebSocketResponseInit } from '../cloudflare'
+import type { Env } from '../env'
+import { jsonResponse } from '../http'
+import { runCommandPublication } from './publication'
 import {
   buildRoomStateMessage,
   parseViewerFromUrl,
@@ -21,7 +19,7 @@ import {
   parseViewerUserId,
   viewerFromCommand
 } from './queries'
-import {getEventSeq} from './storage'
+import { getEventSeq } from './storage'
 
 declare const WebSocketPair: {
   new (): {
@@ -77,6 +75,9 @@ const statusForError = (error: CommandError): number => {
 const serializeMessage = (message: ServerMessage): string =>
   JSON.stringify(message)
 
+const activityPayload = (liveActivities: readonly LiveActivityDescriptor[]) =>
+  liveActivities.length === 0 ? {} : { liveActivities: [...liveActivities] }
+
 export class GameRoomDO {
   constructor(
     private readonly state: DurableObjectState,
@@ -128,6 +129,7 @@ export class GameRoomDO {
 
   private broadcastState(
     state: GameState,
+    liveActivities: readonly LiveActivityDescriptor[] = [],
     accepted?: {
       socket: WebSocket
       requestId: string
@@ -142,26 +144,30 @@ export class GameRoomDO {
           type: 'commandAccepted',
           requestId: accepted.requestId,
           state: filtered,
-          eventSeq: filtered.eventSeq
+          eventSeq: filtered.eventSeq,
+          ...activityPayload(liveActivities)
         })
+        continue
       }
 
       this.send(socket, {
         type: 'roomState',
         state: filtered,
-        eventSeq: filtered.eventSeq
+        eventSeq: filtered.eventSeq,
+        ...activityPayload(liveActivities)
       })
     }
   }
 
   private async handleCommandMessage(
     gameId: GameId,
-    message: Extract<ClientMessage, {type: 'command'}>
+    message: Extract<ClientMessage, { type: 'command' }>
   ): Promise<
     | {
         ok: true
         response: ServerMessage
         state: GameState
+        liveActivities: LiveActivityDescriptor[]
       }
     | {
         ok: false
@@ -196,11 +202,13 @@ export class GameRoomDO {
     return {
       ok: true,
       state: publication.value.state,
+      liveActivities: publication.value.liveActivities,
       response: {
         type: 'commandAccepted',
         requestId: publication.value.requestId,
         state: filtered,
-        eventSeq: filtered.eventSeq
+        eventSeq: filtered.eventSeq,
+        ...activityPayload(publication.value.liveActivities)
       }
     }
   }
@@ -213,6 +221,7 @@ export class GameRoomDO {
         ok: true
         message: ServerMessage
         state?: GameState
+        liveActivities?: LiveActivityDescriptor[]
       }
     | {
         ok: false
@@ -240,15 +249,20 @@ export class GameRoomDO {
           type: 'pong',
           ...(decoded.value.requestId === undefined
             ? {}
-            : {requestId: decoded.value.requestId})
+            : { requestId: decoded.value.requestId })
         }
       }
     }
 
     const result = await this.handleCommandMessage(gameId, decoded.value)
     return result.ok
-      ? {ok: true, message: result.response, state: result.state}
-      : {ok: false, message: result.response, status: result.status}
+      ? {
+          ok: true,
+          message: result.response,
+          state: result.state,
+          liveActivities: result.liveActivities
+        }
+      : { ok: false, message: result.response, status: result.status }
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -260,7 +274,7 @@ export class GameRoomDO {
         {
           error: commandError('invalid_message', 'Unknown room route')
         },
-        {status: 404}
+        { status: 404 }
       )
     }
 
@@ -273,7 +287,7 @@ export class GameRoomDO {
               'Durable Object WebSockets are not available'
             )
           },
-          {status: 501}
+          { status: 501 }
         )
       }
 
@@ -295,7 +309,9 @@ export class GameRoomDO {
 
     if (request.method === 'GET' && route.action === 'state') {
       const viewer = parseViewerFromUrl(url)
-      return jsonResponse(await this.buildRoomStateMessage(route.gameId, viewer))
+      return jsonResponse(
+        await this.buildRoomStateMessage(route.gameId, viewer)
+      )
     }
 
     if (request.method === 'POST' && route.action === 'command') {
@@ -305,7 +321,7 @@ export class GameRoomDO {
         raw = await request.json()
       } catch {
         const error = commandError('invalid_message', 'Invalid JSON body')
-        return jsonResponse({type: 'error', error} satisfies ServerMessage, {
+        return jsonResponse({ type: 'error', error } satisfies ServerMessage, {
           status: 400
         })
       }
@@ -313,7 +329,7 @@ export class GameRoomDO {
       const result = await this.handleJsonMessage(raw, route.gameId)
 
       if (result.ok && result.state) {
-        this.broadcastState(result.state)
+        this.broadcastState(result.state, result.liveActivities ?? [])
       }
 
       return jsonResponse(result.message, {
@@ -325,7 +341,7 @@ export class GameRoomDO {
       {
         error: commandError('invalid_message', 'Route not found')
       },
-      {status: 404}
+      { status: 404 }
     )
   }
 
@@ -357,7 +373,7 @@ export class GameRoomDO {
         type: 'pong',
         ...(decoded.value.requestId === undefined
           ? {}
-          : {requestId: decoded.value.requestId})
+          : { requestId: decoded.value.requestId })
       })
       return
     }
@@ -367,7 +383,10 @@ export class GameRoomDO {
     if (!gameId) {
       this.send(socket, {
         type: 'error',
-        error: commandError('invalid_message', 'Socket is missing room identity')
+        error: commandError(
+          'invalid_message',
+          'Socket is missing room identity'
+        )
       })
       return
     }
@@ -379,7 +398,7 @@ export class GameRoomDO {
       return
     }
 
-    this.broadcastState(result.state, {
+    this.broadcastState(result.state, result.liveActivities, {
       socket,
       requestId: decoded.value.requestId
     })

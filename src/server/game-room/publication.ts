@@ -1,5 +1,9 @@
 import type { EventEnvelope } from '../../shared/events'
 import type { GameId } from '../../shared/ids'
+import {
+  deriveLiveActivities,
+  type LiveActivityDescriptor
+} from '../../shared/live-activity'
 import type { ClientMessage, CommandError } from '../../shared/protocol'
 import { projectGameState } from '../../shared/projector'
 import { err, ok, type Result } from '../../shared/result'
@@ -18,6 +22,7 @@ export interface CommandPublication {
   requestId: string
   state: GameState
   eventSeq: number
+  liveActivities: LiveActivityDescriptor[]
 }
 
 export class CommandPublicationError extends Error {
@@ -61,7 +66,7 @@ const hasProjectionParity = (
 export const runCommandPublication = async (
   storage: DurableObjectStorage,
   gameId: GameId,
-  message: Extract<ClientMessage, {type: 'command'}>,
+  message: Extract<ClientMessage, { type: 'command' }>,
   createdAt = new Date(Date.now()).toISOString()
 ): Promise<Result<CommandPublication, CommandError>> => {
   if (message.command.gameId !== gameId) {
@@ -74,7 +79,8 @@ export const runCommandPublication = async (
   }
 
   const currentState = await getProjectedGameState(storage, gameId)
-  const currentSeq = currentState?.eventSeq ?? (await getEventSeq(storage, gameId))
+  const currentSeq =
+    currentState?.eventSeq ?? (await getEventSeq(storage, gameId))
   const gameSeed =
     message.command.type === 'RollDice' && currentState
       ? await getOrCreateGameSeed(storage, gameId)
@@ -120,6 +126,7 @@ export const runCommandPublication = async (
   return ok({
     requestId: message.requestId,
     state: nextState,
-    eventSeq: nextState.eventSeq
+    eventSeq: nextState.eventSeq,
+    liveActivities: deriveLiveActivities(envelopes)
   })
 }

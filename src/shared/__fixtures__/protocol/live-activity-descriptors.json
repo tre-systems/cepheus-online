@@ -1,0 +1,64 @@
+[
+  {
+    "name": "dice roll activity",
+    "event": {
+      "type": "DiceRolled",
+      "expression": "2d6+1",
+      "reason": "Vacc Suit check",
+      "rolls": [3, 5],
+      "total": 9
+    },
+    "activity": {
+      "id": "game-1:2",
+      "eventId": "game-1:2",
+      "gameId": "game-1",
+      "seq": 2,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:02.000Z",
+      "type": "diceRoll",
+      "expression": "2d6+1",
+      "reason": "Vacc Suit check",
+      "rolls": [3, 5],
+      "total": 9,
+      "reveal": {
+        "revealAt": "2026-05-03T00:00:04.500Z",
+        "delayMs": 2500
+      }
+    },
+    "maxSerializedBytes": 320
+  },
+  {
+    "name": "character creation activity",
+    "event": {
+      "type": "CharacterCreationTransitioned",
+      "characterId": "char-1",
+      "creationEvent": {
+        "type": "SELECT_CAREER",
+        "isNewCareer": true,
+        "drafted": false
+      },
+      "state": {
+        "status": "BASIC_TRAINING",
+        "context": {
+          "canCommission": false,
+          "canAdvance": false
+        }
+      },
+      "creationComplete": false
+    },
+    "activity": {
+      "id": "game-1:3",
+      "eventId": "game-1:3",
+      "gameId": "game-1",
+      "seq": 3,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:03.000Z",
+      "type": "characterCreation",
+      "characterId": "char-1",
+      "transition": "SELECT_CAREER",
+      "status": "BASIC_TRAINING",
+      "creationComplete": false
+    },
+    "maxSerializedBytes": 320
+  }
+]
