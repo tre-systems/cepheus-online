@@ -1,7 +1,7 @@
 import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
 import type { CareerCreationEvent } from './characterCreation'
 import { err, ok, type Result } from './result'
-import type { Command } from './commands'
+import type { Command, GameCommand } from './commands'
 import type { GameState } from './state'
 import type { LiveActivityDescriptor } from './live-activity'
 import type {
@@ -565,7 +565,7 @@ const parseCareerCreationEvent = (
 const parseBaseCommand = (
   raw: Record<string, unknown>
 ): Result<
-  Pick<Command, 'gameId' | 'actorId' | 'expectedSeq'>,
+  Pick<GameCommand, 'gameId' | 'actorId' | 'expectedSeq'>,
   CommandError
 > => {
   const gameId = parseId(raw.gameId, 'gameId', asGameId)
@@ -586,7 +586,9 @@ const parseBaseCommand = (
   })
 }
 
-export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
+export const decodeCommand = (
+  raw: unknown
+): Result<GameCommand, CommandError> => {
   if (!isObject(raw) || !isString(raw.type)) {
     return err(invalidCommand('Command must be an object with a type'))
   }
@@ -662,6 +664,17 @@ export const decodeCommand = (raw: unknown): Result<Command, CommandError> => {
         ...base.value,
         characterId: characterId.value,
         creationEvent: creationEvent.value
+      })
+    }
+
+    case 'CompleteCharacterCreationBasicTraining': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'CompleteCharacterCreationBasicTraining',
+        ...base.value,
+        characterId: characterId.value
       })
     }
 
@@ -936,5 +949,5 @@ export const decodeClientMessage = (
     type: 'command',
     requestId: requestId.value,
     command: command.value
-  })
+  } as ClientMessage)
 }

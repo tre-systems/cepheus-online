@@ -4,6 +4,7 @@ export interface CharacterCreationPanelElements {
   panel: HTMLElement
   body: HTMLElement | null
   roomDialog: HTMLDialogElement
+  fallbackOverlayHost: HTMLElement | null
   title: HTMLElement
   startSection: HTMLElement
   quickSection: HTMLElement
@@ -25,6 +26,8 @@ export interface CharacterCreationPanelOptions {
 
 export interface CharacterCreationPanelController {
   isOpen: () => boolean
+  overlayHost: () => HTMLElement | null
+  overlayContext: () => { inCreator: boolean; inDialog: boolean }
   show: () => void
   open: () => void
   close: () => void
@@ -38,6 +41,18 @@ export const createCharacterCreationPanel = ({
   requestRender
 }: CharacterCreationPanelOptions): CharacterCreationPanelController => {
   const isOpen = () => !elements.panel.hidden
+
+  const overlayContext = () => ({
+    inCreator: isOpen(),
+    inDialog: elements.roomDialog.open
+  })
+
+  const overlayHost = () => {
+    const context = overlayContext()
+    if (context.inCreator) return elements.panel
+    if (context.inDialog) return elements.roomDialog
+    return elements.fallbackOverlayHost
+  }
 
   const show = () => {
     elements.panel.hidden = false
@@ -87,6 +102,8 @@ export const createCharacterCreationPanel = ({
 
   return {
     isOpen,
+    overlayHost,
+    overlayContext,
     show,
     open,
     close,

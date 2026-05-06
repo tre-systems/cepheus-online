@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import {
+  deriveSurvivalFailurePendingDecision,
   resolveInjuryOutcome,
   resolveSurvivalFailureOutcome,
   resolveSurvivalMishapOutcome
@@ -9,48 +10,52 @@ import {
 
 describe('survival failure outcomes', () => {
   it('models failed survival as death unless a mishap roll is supplied', () => {
-    assert.deepEqual(
-      resolveSurvivalFailureOutcome({
-        career: 'Scout',
-        survival: { total: 2, outcome: 'fail' }
-      }),
-      {
-        type: 'death',
-        career: 'Scout',
-        survival: { total: 2, outcome: 'fail' },
-        reason: 'failed_survival'
-      }
-    )
+    const outcome = resolveSurvivalFailureOutcome({
+      career: 'Scout',
+      survival: { total: 2, outcome: 'fail' }
+    })
+
+    assert.deepEqual(outcome, {
+      type: 'death',
+      career: 'Scout',
+      survival: { total: 2, outcome: 'fail' },
+      reason: 'failed_survival'
+    })
+    assert.deepEqual(deriveSurvivalFailurePendingDecision(outcome), {
+      key: 'survivalResolution'
+    })
   })
 
   it('models optional SRD mishaps as forced half-term career exits', () => {
-    assert.deepEqual(
-      resolveSurvivalFailureOutcome({
+    const outcome = resolveSurvivalFailureOutcome({
+      career: 'Marine',
+      survival: { total: 5, outcome: 'fail' },
+      mishap: { total: 3 }
+    })
+
+    assert.deepEqual(outcome, {
+      type: 'mishap',
+      career: 'Marine',
+      survival: { total: 5, outcome: 'fail' },
+      mishap: {
         career: 'Marine',
-        survival: { total: 5, outcome: 'fail' },
-        mishap: { total: 3 }
-      }),
-      {
-        type: 'mishap',
-        career: 'Marine',
-        survival: { total: 5, outcome: 'fail' },
-        mishap: {
-          career: 'Marine',
-          roll: 3,
-          id: 'legal_battle_debt',
-          description:
-            'Honorably discharged after a long legal battle, creating Cr10,000 debt.',
-          discharge: 'honorable',
-          benefitEffect: 'forfeit_current_term',
-          debtCredits: 10000,
-          extraServiceYears: 0,
-          injury: null
-        },
-        forcedCareerExit: true,
-        servedYears: 2,
-        forfeitCurrentTermBenefit: true
-      }
-    )
+        roll: 3,
+        id: 'legal_battle_debt',
+        description:
+          'Honorably discharged after a long legal battle, creating Cr10,000 debt.',
+        discharge: 'honorable',
+        benefitEffect: 'forfeit_current_term',
+        debtCredits: 10000,
+        extraServiceYears: 0,
+        injury: null
+      },
+      forcedCareerExit: true,
+      servedYears: 2,
+      forfeitCurrentTermBenefit: true
+    })
+    assert.deepEqual(deriveSurvivalFailurePendingDecision(outcome), {
+      key: 'mishapResolution'
+    })
   })
 
   it('resolves each SRD survival mishap table result', () => {

@@ -312,6 +312,78 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 7)
   })
 
+  it('projects semantic basic training completion like the legacy transition', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'BASIC_TRAINING',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Scout',
+              skills: [],
+              skillsAndTraining: ['Vacc Suit-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: false,
+              musteringOut: false,
+              anagathics: false
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationBasicTrainingCompleted',
+        characterId,
+        trainingSkills: ['Vacc Suit-0'],
+        state: {
+          status: 'SURVIVAL',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'SURVIVAL')
+    assert.equal(creation?.creationComplete, false)
+    assert.deepEqual(creation?.history, [{ type: 'COMPLETE_BASIC_TRAINING' }])
+    assert.deepEqual(creation?.terms[0]?.skillsAndTraining, ['Vacc Suit-0'])
+    assert.equal(creation?.terms[0]?.completedBasicTraining, true)
+    assert.equal(state?.eventSeq, 4)
+  })
+
   it('replays character creation homeworld and background decisions', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

@@ -58,6 +58,13 @@ export type GameEvent =
       creationComplete: boolean
     }
   | {
+      type: 'CharacterCreationBasicTrainingCompleted'
+      characterId: CharacterId
+      trainingSkills: string[]
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
       type: 'CharacterCreationHomeworldSet'
       characterId: CharacterId
       homeworld: CharacterCreationHomeworld

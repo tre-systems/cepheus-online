@@ -54,6 +54,7 @@ const createHarness = () => {
   const panel = new TestElement()
   const body = new TestElement()
   const roomDialog = new TestElement()
+  const fallbackOverlayHost = new TestElement()
   const title = new TestElement()
   const startSection = new TestElement()
   const quickSection = new TestElement()
@@ -73,6 +74,7 @@ const createHarness = () => {
       panel: asElement(panel),
       body: asElement(body),
       roomDialog: asDialog(roomDialog),
+      fallbackOverlayHost: asElement(fallbackOverlayHost),
       title: asElement(title),
       startSection: asElement(startSection),
       quickSection: asElement(quickSection),
@@ -99,6 +101,7 @@ const createHarness = () => {
       panel,
       body,
       roomDialog,
+      fallbackOverlayHost,
       title,
       startSection,
       quickSection,
@@ -200,5 +203,31 @@ describe('character creation panel controller', () => {
     assert.equal(elements.panel.hidden, false)
     assert.deepEqual(elements.body.scrolls, [{ top: 0, behavior: 'smooth' }])
     assert.deepEqual(counts(), { sheetCloseCount: 0, renderCount: 0 })
+  })
+
+  it('chooses the dice overlay host from creator, dialog, then fallback', () => {
+    const { controller, elements } = createHarness()
+
+    elements.panel.hidden = true
+    elements.roomDialog.open = false
+    assert.equal(controller.overlayHost(), asElement(elements.fallbackOverlayHost))
+    assert.deepEqual(controller.overlayContext(), {
+      inCreator: false,
+      inDialog: false
+    })
+
+    elements.roomDialog.open = true
+    assert.equal(controller.overlayHost(), asDialog(elements.roomDialog))
+    assert.deepEqual(controller.overlayContext(), {
+      inCreator: false,
+      inDialog: true
+    })
+
+    elements.panel.hidden = false
+    assert.equal(controller.overlayHost(), asElement(elements.panel))
+    assert.deepEqual(controller.overlayContext(), {
+      inCreator: true,
+      inDialog: true
+    })
   })
 })

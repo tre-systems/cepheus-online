@@ -216,9 +216,36 @@ export const deriveLegalCareerCreationActionKeys = (
     case 'SURVIVAL':
       return noPendingDecisions ? ['rollSurvival'] : []
     case 'MISHAP':
-      return hasPendingDecision(context, 'mishapResolution')
-        ? []
-        : ['resolveMishap', 'confirmDeath']
+      if (hasAnyPendingDecision(context)) {
+        const hasSurvivalResolution = hasPendingDecision(
+          context,
+          'survivalResolution'
+        )
+        const hasMishapResolution = hasPendingDecision(
+          context,
+          'mishapResolution'
+        )
+
+        if (
+          hasSurvivalResolution &&
+          !hasMishapResolution &&
+          context.pendingDecisions?.length === 1
+        ) {
+          return ['confirmDeath']
+        }
+
+        if (
+          hasMishapResolution &&
+          !hasSurvivalResolution &&
+          context.pendingDecisions?.length === 1
+        ) {
+          return ['resolveMishap']
+        }
+
+        return []
+      }
+
+      return ['resolveMishap', 'confirmDeath']
     case 'COMMISSION':
       if (!state.context.canCommission || !noPendingDecisions) return []
       return ['rollCommission', 'skipCommission']

@@ -301,6 +301,7 @@ const characterCreationPanel = createCharacterCreationPanel({
     panel: els.characterCreator,
     body: els.creatorBody,
     roomDialog: els.roomDialog,
+    fallbackOverlayHost: document.querySelector('.app-shell'),
     title: els.characterCreatorTitle,
     startSection: els.creatorStartSection,
     quickSection: els.creatorQuickSection,
@@ -2513,19 +2514,13 @@ const render = () => {
 }
 
 const animateRoll = (roll) => {
-  const overlayHost = characterCreationPanel.isOpen()
-    ? els.characterCreator
-    : els.roomDialog.open
-      ? els.roomDialog
-      : document.querySelector('.app-shell')
+  const overlayHost = characterCreationPanel.overlayHost()
   if (overlayHost && els.diceOverlay.parentElement !== overlayHost) {
     overlayHost.append(els.diceOverlay)
   }
-  els.diceOverlay.classList.toggle(
-    'in-creator',
-    characterCreationPanel.isOpen()
-  )
-  els.diceOverlay.classList.toggle('in-dialog', els.roomDialog.open)
+  const overlayContext = characterCreationPanel.overlayContext()
+  els.diceOverlay.classList.toggle('in-creator', overlayContext.inCreator)
+  els.diceOverlay.classList.toggle('in-dialog', overlayContext.inDialog)
   diceHideTimer = animateDiceRoll({
     roll,
     overlay: els.diceOverlay,

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import {
   createCareerCreationState,
   createCareerTerm,
+  deriveSurvivalFailurePendingDecision,
   deriveCareerCreationActionContext,
   deriveCareerCreationActionPlan,
   deriveCareerCreationPendingDecisions,
@@ -11,7 +12,8 @@ import {
   deriveLegalCareerCreationActionKeys,
   deriveLegalCareerCreationActionKeysForProjection,
   deriveLegalCareerCreationActions,
-  deriveRemainingCareerCreationBenefits
+  deriveRemainingCareerCreationBenefits,
+  resolveSurvivalFailureOutcome
 } from './index'
 import type { CareerCreationActionProjection, CareerTerm } from './types'
 
@@ -150,6 +152,44 @@ describe('career creation legal action planner', () => {
         createCareerCreationState('ADVANCEMENT', { canAdvance: false })
       ),
       []
+    )
+  })
+
+  it('derives mishap legal actions from pending survival failure facts', () => {
+    const death = resolveSurvivalFailureOutcome({
+      career: 'Scout',
+      survival: { total: 2, outcome: 'fail' }
+    })
+    const mishap = resolveSurvivalFailureOutcome({
+      career: 'Marine',
+      survival: { total: 5, outcome: 'fail' },
+      mishap: { total: 4 }
+    })
+
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeys(createCareerCreationState('MISHAP'), {
+        pendingDecisions: [deriveSurvivalFailurePendingDecision(death)]
+      }),
+      ['confirmDeath']
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeys(createCareerCreationState('MISHAP'), {
+        pendingDecisions: [deriveSurvivalFailurePendingDecision(mishap)]
+      }),
+      ['resolveMishap']
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActions(createCareerCreationState('MISHAP'), {
+        pendingDecisions: [deriveSurvivalFailurePendingDecision(mishap)]
+      }),
+      [
+        {
+          key: 'resolveMishap',
+          status: 'MISHAP',
+          commandTypes: ['AdvanceCharacterCreation'],
+          rollRequirement: { key: 'mishap', dice: '2d6' }
+        }
+      ]
     )
   })
 

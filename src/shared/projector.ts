@@ -91,6 +91,7 @@ type CharacterEventType =
   | 'CharacterSheetUpdated'
   | 'CharacterCreationStarted'
   | 'CharacterCreationTransitioned'
+  | 'CharacterCreationBasicTrainingCompleted'
   | 'CharacterCreationHomeworldSet'
   | 'CharacterCreationBackgroundSkillSelected'
   | 'CharacterCreationCascadeSkillResolved'
@@ -237,6 +238,38 @@ const characterEventHandlers = {
       history: [
         ...(character.creation.history ?? []),
         structuredClone(creationEvent)
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationBasicTrainingCompleted: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const lastTermIndex = character.creation.terms.length - 1
+    const terms = character.creation.terms.map((term, index) =>
+      index === lastTermIndex
+        ? {
+            ...structuredClone(term),
+            skillsAndTraining: [...event.trainingSkills],
+            completedBasicTraining: true
+          }
+        : structuredClone(term)
+    )
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      terms,
+      history: [
+        ...(character.creation.history ?? []),
+        { type: 'COMPLETE_BASIC_TRAINING' }
       ]
     }
     nextState.eventSeq = envelope.seq

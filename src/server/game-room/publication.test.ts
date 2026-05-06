@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { Command } from '../../shared/commands'
+import type { Command, GameCommand } from '../../shared/commands'
 import {
   asBoardId,
   asCharacterId,
@@ -14,6 +14,7 @@ import { filterGameStateForViewer } from '../../shared/viewer'
 import { getProjectedGameState } from './projection'
 import { CommandPublicationError, runCommandPublication } from './publication'
 import {
+  appendEvents,
   gameSeedKey,
   readCheckpoint,
   readEventStream,
@@ -26,13 +27,13 @@ const actorId = asUserId('user-1')
 
 const publish = (
   storage: ReturnType<typeof createMemoryStorage>,
-  command: Command,
+  command: GameCommand,
   requestId = `req-${command.type}`
 ) =>
   runCommandPublication(storage, gameId, {
     type: 'command',
     requestId,
-    command
+    command: command as Command
   })
 
 const createGameCommand = (): Command => ({
@@ -586,6 +587,108 @@ describe('room publication flow', () => {
     assert.deepEqual(
       recovered?.characters[characterId]?.creation?.backgroundSkills,
       ['Zero-G-0', 'Broker-0', 'Slug Rifle-0']
+    )
+  })
+
+  it('publishes and replays semantic basic training completion', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-basic-training')
+    await appendEvents(
+      storage,
+      gameId,
+      actorId,
+      [
+        {
+          type: 'GameCreated',
+          slug: 'game-1',
+          name: 'Spinward Test',
+          ownerId: actorId
+        },
+        {
+          type: 'CharacterCreated',
+          characterId,
+          ownerId: actorId,
+          characterType: 'PLAYER',
+          name: 'Scout'
+        },
+        {
+          type: 'CharacterCreationStarted',
+          characterId,
+          creation: {
+            state: {
+              status: 'BASIC_TRAINING',
+              context: {
+                canCommission: false,
+                canAdvance: false
+              }
+            },
+            terms: [
+              {
+                career: 'Scout',
+                skills: [],
+                skillsAndTraining: ['Vacc Suit-0'],
+                benefits: [],
+                complete: false,
+                canReenlist: true,
+                completedBasicTraining: false,
+                musteringOut: false,
+                anagathics: false
+              }
+            ],
+            careers: [{ name: 'Scout', rank: 0 }],
+            canEnterDraft: true,
+            failedToQualify: false,
+            characteristicChanges: [],
+            creationComplete: false,
+            homeworld: null,
+            backgroundSkills: [],
+            pendingCascadeSkills: [],
+            history: []
+          }
+        }
+      ],
+      '2026-05-03T00:00:00.000Z'
+    )
+
+    const completed = await publish(storage, {
+      type: 'CompleteCharacterCreationBasicTraining',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 3
+    })
+
+    assert.equal(completed.ok, true)
+    if (!completed.ok) return
+    assert.equal(
+      completed.value.state.characters[characterId]?.creation?.state.status,
+      'SURVIVAL'
+    )
+
+    const events = await readEventStream(storage, gameId)
+    assert.deepEqual(events.at(-1)?.event, {
+      type: 'CharacterCreationBasicTrainingCompleted',
+      characterId,
+      trainingSkills: ['Vacc Suit-0'],
+      state: {
+        status: 'SURVIVAL',
+        context: {
+          canCommission: false,
+          canAdvance: false
+        }
+      },
+      creationComplete: false
+    })
+
+    const recovered = await getProjectedGameState(storage, gameId)
+    assert.deepEqual(
+      recovered?.characters[characterId]?.creation?.history?.at(-1),
+      { type: 'COMPLETE_BASIC_TRAINING' }
+    )
+    assert.equal(
+      recovered?.characters[characterId]?.creation?.terms.at(-1)
+        ?.completedBasicTraining,
+      true
     )
   })
 

@@ -1,4 +1,4 @@
-import type { Command } from '../../shared/commands'
+import type { Command, GameCommand } from '../../shared/commands'
 import {
   canTransitionCareerCreationState,
   createCareerCreationState,
@@ -96,7 +96,7 @@ const requireNonEmptyString = (
 }
 
 const validateExpectedSeq = (
-  command: Command,
+  command: GameCommand,
   currentSeq: number
 ): Result<void, CommandError> => {
   if (!('expectedSeq' in command) || command.expectedSeq === undefined) {
@@ -373,8 +373,40 @@ const validateCharacterCreationAction = (
   return ok(undefined)
 }
 
+const validateBasicTrainingCompletion = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'BASIC_TRAINING') {
+    return err(
+      commandError(
+        'invalid_command',
+        `COMPLETE_BASIC_TRAINING is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('completeBasicTraining')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
 export const deriveEventsForCommand = (
-  command: Command,
+  command: GameCommand,
   context: CommandContext
 ): Result<GameEvent[], CommandError> => {
   const expectedSeq = validateExpectedSeq(command, context.currentSeq)
@@ -576,6 +608,33 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationTransitioned',
           characterId: command.characterId,
           creationEvent: command.creationEvent,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'CompleteCharacterCreationBasicTraining': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateBasicTrainingCompletion(character)
+      if (!creation.ok) return creation
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'COMPLETE_BASIC_TRAINING'
+      })
+      const trainingSkills =
+        creation.value.terms.at(-1)?.skillsAndTraining.slice() ?? []
+
+      return ok([
+        {
+          type: 'CharacterCreationBasicTrainingCompleted',
+          characterId: command.characterId,
+          trainingSkills,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         }

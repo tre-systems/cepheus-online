@@ -6,6 +6,7 @@ import {
   createCareerCreationState,
   transitionCareerCreationState
 } from './state-machine'
+import { resolveSurvivalFailureOutcome } from './survival-failure'
 import type {
   CareerCreationEvent,
   CareerCreationStatus,
@@ -339,5 +340,35 @@ describe('career creation state machine transition matrix', () => {
       }),
       createCareerCreationState('SURVIVAL')
     )
+  })
+
+  it('keeps survival failure facts separate from mishap resolution transitions', () => {
+    const death = resolveSurvivalFailureOutcome({
+      career: 'Scout',
+      survival: { total: 2, outcome: 'fail' }
+    })
+    const mishap = resolveSurvivalFailureOutcome({
+      career: 'Marine',
+      survival: { total: 5, outcome: 'fail' },
+      mishap: { total: 2 }
+    })
+
+    for (const outcome of [death, mishap]) {
+      const failed = transitionCareerCreationState(
+        createCareerCreationState('SURVIVAL'),
+        { type: 'SURVIVAL_FAILED' }
+      )
+
+      assert.equal(failed.status, 'MISHAP')
+      assert.equal(
+        transitionCareerCreationState(
+          failed,
+          outcome.type === 'death'
+            ? { type: 'DEATH_CONFIRMED' }
+            : { type: 'MISHAP_RESOLVED' }
+        ).status,
+        outcome.type === 'death' ? 'DECEASED' : 'MUSTERING_OUT'
+      )
+    }
   })
 })

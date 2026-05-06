@@ -1,4 +1,5 @@
 import type {
+  CareerCreationPendingDecision,
   InjuryOutcome,
   SurvivalFailureOutcome,
   SurvivalFailureRollFact,
@@ -154,6 +155,12 @@ export const resolveSurvivalFailureOutcome = ({
     forfeitCurrentTermBenefit: true
   }
 }
+
+export const deriveSurvivalFailurePendingDecision = (
+  outcome: SurvivalFailureOutcome
+): CareerCreationPendingDecision => ({
+  key: outcome.type === 'death' ? 'survivalResolution' : 'mishapResolution'
+})
 
 export const resolveInjuryOutcome = ({
   career,

@@ -90,6 +90,7 @@ export type Command =
       career: string
       drafted?: boolean
     }
+  | CharacterCreationBasicTrainingCommand
   | {
       type: 'CreateBoard'
       gameId: GameId
@@ -168,3 +169,15 @@ export type Command =
       expression: string
       reason: string
     }
+
+export type CharacterCreationBasicTrainingCommand = {
+  type: 'CompleteCharacterCreationBasicTraining'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
+export type SemanticCommand = CharacterCreationBasicTrainingCommand
+
+export type GameCommand = Command

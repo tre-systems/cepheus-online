@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { Command } from '../../shared/commands'
+import type { GameCommand } from '../../shared/commands'
 import {
   createCareerCreationState,
   type CareerCreationStatus
@@ -86,7 +86,7 @@ const createState = (
 })
 
 const runCommand = (
-  command: Command,
+  command: GameCommand,
   creation: CharacterCreationProjection | null
 ) => {
   const context: CommandContext = {
@@ -257,6 +257,104 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(
       result.error.message,
       'CREATION_COMPLETE is not valid from PLAYABLE'
+    )
+  })
+
+  it('emits a semantic basic training completion event when choices are resolved', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationBasicTraining',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('BASIC_TRAINING', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Vacc Suit-0'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationBasicTrainingCompleted',
+        characterId,
+        trainingSkills: ['Vacc Suit-0'],
+        state: {
+          status: 'SURVIVAL',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks semantic basic training completion while training choices are unresolved', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationBasicTraining',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('BASIC_TRAINING', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions'
+    )
+  })
+
+  it('blocks semantic basic training completion outside basic training', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationBasicTraining',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('SURVIVAL')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMPLETE_BASIC_TRAINING is not valid from SURVIVAL'
     )
   })
 })

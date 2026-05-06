@@ -200,6 +200,7 @@ describe('app command router dispatch', () => {
       ResolveCharacterCreationCascadeSkill: 'characterCreation',
       FinalizeCharacterCreation: 'characterCreation',
       StartCharacterCareerTerm: 'characterCreation',
+      CompleteCharacterCreationBasicTraining: 'characterCreation',
       CreateBoard: 'board',
       SelectBoard: 'board',
       SetDoorOpen: 'door',
