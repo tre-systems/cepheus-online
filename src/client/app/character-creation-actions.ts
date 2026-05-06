@@ -1,8 +1,15 @@
 import {
+  canRollCashBenefit,
+  deriveRemainingCareerBenefits
+} from '../../shared/character-creation/benefits.js'
+import {
   deriveCareerCreationActionContext,
   deriveLegalCareerCreationActionKeys
 } from '../../shared/character-creation/legal-actions.js'
-import type { CareerCreationActionKey } from '../../shared/character-creation/types.js'
+import type {
+  BenefitKind,
+  CareerCreationActionKey
+} from '../../shared/character-creation/types.js'
 import type { CareerCreationTermSkillTable } from '../../shared/characterCreation.js'
 import type { Command, GameCommand } from '../../shared/commands'
 import type {
@@ -73,6 +80,11 @@ const termSkillActionKeys: Record<CareerCreationTermSkillTable, string> = {
   advancedEducation: 'roll-advanced-education'
 }
 
+const benefitKindLabels: Record<BenefitKind, string> = {
+  cash: 'cash',
+  material: 'material'
+}
+
 const requiredTermSkillCount = (
   creation: CharacterCreationProjection & { requiredTermSkillCount?: number }
 ): number => {
@@ -116,6 +128,96 @@ const deriveTermSkillRollActions = (
         table
       })
     )
+}
+
+const termsInCareer = (
+  creation: CharacterCreationProjection,
+  career: string
+): number => creation.terms.filter((term) => term.career === career).length
+
+const benefitsReceivedInCareer = (
+  creation: CharacterCreationProjection,
+  career: string
+): number =>
+  creation.terms
+    .filter((term) => term.career === career)
+    .reduce((total, term) => total + term.benefits.length, 0)
+
+const currentCareerRank = (
+  creation: CharacterCreationProjection,
+  career: string
+): number => creation.careers.find((entry) => entry.name === career)?.rank ?? 0
+
+const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
+  (creation.history ?? []).filter(
+    (event) =>
+      event.type === 'FINISH_MUSTERING' &&
+      event.musteringBenefit?.kind === 'cash'
+  ).length
+
+const remainingBenefitsInCareer = (
+  creation: CharacterCreationProjection,
+  career: string
+): number =>
+  deriveRemainingCareerBenefits({
+    termsInCareer: termsInCareer(creation, career),
+    currentRank: currentCareerRank(creation, career),
+    benefitsReceived: benefitsReceivedInCareer(creation, career)
+  })
+
+const musteringBenefitCareers = (
+  creation: CharacterCreationProjection
+): string[] => {
+  const careers: string[] = []
+  const seen = new Set<string>()
+  for (const term of creation.terms) {
+    if (seen.has(term.career)) continue
+    seen.add(term.career)
+    if (remainingBenefitsInCareer(creation, term.career) > 0) {
+      careers.push(term.career)
+    }
+  }
+  return careers
+}
+
+const musteringBenefitActionKey = (career: string, kind: BenefitKind): string =>
+  `roll-mustering-${kind}-${career.toLowerCase().replaceAll(' ', '-')}`
+
+const deriveMusteringBenefitRollActions = (
+  identity: ClientIdentity,
+  character: CharacterState,
+  creation: CharacterCreationProjection
+): CharacterCreationActionViewModel[] => {
+  if (creation.state.status !== 'MUSTERING_OUT') return []
+
+  const context = deriveCareerCreationActionContext(creation)
+  const blockingDecision = context.pendingDecisions?.find(
+    (decision) => decision.key !== 'musteringBenefitSelection'
+  )
+  if (blockingDecision || context.remainingMusteringBenefits === 0) return []
+
+  const kinds: BenefitKind[] = canRollCashBenefit({
+    cashBenefitsReceived: cashBenefitsReceived(creation)
+  })
+    ? ['cash', 'material']
+    : ['material']
+
+  return musteringBenefitCareers(creation).flatMap((career) =>
+    kinds.map((kind) =>
+      action(
+        musteringBenefitActionKey(career, kind),
+        `Roll ${career} ${benefitKindLabels[kind]} benefit`,
+        {
+          type: 'RollCharacterCreationMusteringBenefit',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id,
+          career,
+          kind
+        }
+      )
+    )
+  )
 }
 
 const actionsForLegalKey = (
@@ -346,6 +448,15 @@ const deriveActions = (
     creation
   )
   if (termSkillRollActions.length > 0) return termSkillRollActions
+
+  const musteringBenefitRollActions = deriveMusteringBenefitRollActions(
+    identity,
+    character,
+    creation
+  )
+  if (musteringBenefitRollActions.length > 0) {
+    return musteringBenefitRollActions
+  }
 
   const legalKeys = new Set(
     deriveLegalCareerCreationActionKeys(

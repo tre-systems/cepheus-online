@@ -300,10 +300,7 @@ const actionDefinitions = {
     rollRequirement: { key: 'characteristics', dice: '2d6' }
   },
   completeHomeworld: {
-    commandTypes: [
-      'CompleteCharacterCreationHomeworld',
-      'AdvanceCharacterCreation'
-    ]
+    commandTypes: ['CompleteCharacterCreationHomeworld']
   },
   selectCareer: {
     commandTypes: ['StartCharacterCareerTerm', 'AdvanceCharacterCreation'],

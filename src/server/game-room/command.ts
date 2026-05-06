@@ -1473,8 +1473,12 @@ export const deriveEventsForCommand = (
         )
       }
       if (command.creationEvent.type === 'COMPLETE_HOMEWORLD') {
-        const creation = validateHomeworldCompletion(character)
-        if (!creation.ok) return creation
+        return err(
+          commandError(
+            'invalid_command',
+            'COMPLETE_HOMEWORLD must use CompleteCharacterCreationHomeworld'
+          )
+        )
       }
       if (
         !canTransitionCareerCreationState(

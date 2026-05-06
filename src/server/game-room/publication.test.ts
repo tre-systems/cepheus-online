@@ -136,7 +136,13 @@ const publishPlayableCharacterCreation = async (
   })
   assert.equal(cascadeResolved.ok, true)
 
-  await advance({ type: 'COMPLETE_HOMEWORLD' })
+  const homeworldCompleted = await publish(storage, {
+    type: 'CompleteCharacterCreationHomeworld',
+    gameId,
+    actorId,
+    characterId
+  })
+  assert.equal(homeworldCompleted.ok, true)
   const termStarted = await publish(storage, {
     type: 'StartCharacterCareerTerm',
     gameId,
@@ -298,7 +304,13 @@ describe('room publication flow', () => {
       cascadeSkill: 'Gun Combat-0',
       selection: 'Slug Rifle'
     })
-    await advance({ type: 'COMPLETE_HOMEWORLD' })
+    const homeworldCompleted = await publish(storage, {
+      type: 'CompleteCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId
+    })
+    assert.equal(homeworldCompleted.ok, true)
     await publish(storage, {
       type: 'StartCharacterCareerTerm',
       gameId,
@@ -927,12 +939,11 @@ describe('room publication flow', () => {
     )
 
     const homeworld = await publish(storage, {
-      type: 'AdvanceCharacterCreation',
+      type: 'CompleteCharacterCreationHomeworld',
       gameId,
       actorId,
       characterId,
-      expectedSeq: 6,
-      creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+      expectedSeq: 6
     })
 
     assert.equal(homeworld.ok, true)
@@ -1800,7 +1811,13 @@ describe('room publication flow', () => {
       cascadeSkill: 'Gun Combat-0',
       selection: 'Slug Rifle'
     })
-    await advance({ type: 'COMPLETE_HOMEWORLD' })
+    const homeworldCompleted = await publish(storage, {
+      type: 'CompleteCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId
+    })
+    assert.equal(homeworldCompleted.ok, true)
     await publish(storage, {
       type: 'StartCharacterCareerTerm',
       gameId,
@@ -2087,7 +2104,13 @@ describe('room publication flow', () => {
       cascadeSkill: 'Gun Combat-0',
       selection: 'Slug Rifle'
     })
-    await advance({ type: 'COMPLETE_HOMEWORLD' })
+    const homeworldCompleted = await publish(storage, {
+      type: 'CompleteCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId
+    })
+    assert.equal(homeworldCompleted.ok, true)
     await publish(storage, {
       type: 'StartCharacterCareerTerm',
       gameId,
@@ -2202,7 +2225,13 @@ describe('room publication flow', () => {
       cascadeSkill: 'Gun Combat-0',
       selection: 'Slug Rifle'
     })
-    await advance({ type: 'COMPLETE_HOMEWORLD' })
+    const homeworldCompleted = await publish(storage, {
+      type: 'CompleteCharacterCreationHomeworld',
+      gameId,
+      actorId,
+      characterId
+    })
+    assert.equal(homeworldCompleted.ok, true)
     await publish(storage, {
       type: 'StartCharacterCareerTerm',
       gameId,
@@ -2436,11 +2465,10 @@ describe('room publication flow', () => {
 
       if (command.type === 'StartCharacterCareerTerm') {
         await publish(storage, {
-          type: 'AdvanceCharacterCreation',
+          type: 'CompleteCharacterCreationHomeworld',
           gameId,
           actorId,
-          characterId,
-          creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+          characterId
         })
       }
 
@@ -2508,7 +2536,7 @@ describe('room publication flow', () => {
     assert.equal((await readEventStream(storage, gameId)).length, 1)
   })
 
-  it('rejects invalid character creation transitions without mutating storage', async () => {
+  it('rejects generic homeworld completion without mutating storage', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')
     await publish(storage, createGameCommand())
@@ -2540,7 +2568,7 @@ describe('room publication flow', () => {
     assert.equal(rejected.error.code, 'invalid_command')
     assert.equal(
       rejected.error.message,
-      'COMPLETE_HOMEWORLD is not valid from CHARACTERISTICS'
+      'COMPLETE_HOMEWORLD must use CompleteCharacterCreationHomeworld'
     )
     assert.equal((await readEventStream(storage, gameId)).length, 3)
   })
@@ -2650,11 +2678,10 @@ describe('room publication flow', () => {
         selection: 'Slug Rifle'
       })
       const careerSelection = await publish(storage, {
-        type: 'AdvanceCharacterCreation',
+        type: 'CompleteCharacterCreationHomeworld',
         gameId,
         actorId,
-        characterId,
-        creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+        characterId
       })
       assert.equal(careerSelection.ok, true)
       if (!careerSelection.ok) return
@@ -2736,11 +2763,10 @@ describe('room publication flow', () => {
     })
 
     const rejected = await publish(storage, {
-      type: 'AdvanceCharacterCreation',
+      type: 'CompleteCharacterCreationHomeworld',
       gameId,
       actorId,
-      characterId,
-      creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+      characterId
     })
 
     assert.equal(rejected.ok, false)

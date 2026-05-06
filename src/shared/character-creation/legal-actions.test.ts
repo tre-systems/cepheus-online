@@ -88,10 +88,7 @@ describe('career creation legal action planner', () => {
         {
           key: 'completeHomeworld',
           status: 'HOMEWORLD',
-          commandTypes: [
-            'CompleteCharacterCreationHomeworld',
-            'AdvanceCharacterCreation'
-          ]
+          commandTypes: ['CompleteCharacterCreationHomeworld']
         }
       ]
     )

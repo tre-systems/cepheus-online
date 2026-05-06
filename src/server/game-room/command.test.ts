@@ -612,6 +612,31 @@ describe('deriveEventsForCommand error categories', () => {
     ])
   })
 
+  it('rejects generic homeworld completion after semantic migration', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+      },
+      createCreation('HOMEWORLD', {
+        homeworld,
+        backgroundSkills: ['Zero-G-0', 'Admin-0', 'Broker-0'],
+        pendingCascadeSkills: []
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMPLETE_HOMEWORLD must use CompleteCharacterCreationHomeworld'
+    )
+  })
+
   it('emits requested and accepted career facts for semantic term start', () => {
     const result = runCommand(
       {

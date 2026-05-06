@@ -165,8 +165,16 @@ describe('character creation actions', () => {
       eventType: string
       overrides: Partial<CharacterCreationProjection>
     }[] = [
-      { status: 'ADVANCEMENT', eventType: 'COMPLETE_ADVANCEMENT', overrides: {} },
-      { status: 'SKILLS_TRAINING', eventType: 'COMPLETE_SKILLS', overrides: {} },
+      {
+        status: 'ADVANCEMENT',
+        eventType: 'COMPLETE_ADVANCEMENT',
+        overrides: {}
+      },
+      {
+        status: 'SKILLS_TRAINING',
+        eventType: 'COMPLETE_SKILLS',
+        overrides: {}
+      },
       {
         status: 'REENLISTMENT',
         eventType: 'LEAVE_CAREER',
@@ -385,7 +393,7 @@ describe('character creation actions', () => {
     assert.deepEqual(plan?.actions, [])
   })
 
-  it('uses the shared planner for projected mustering gates', () => {
+  it('uses semantic commands for projected mustering benefit rolls', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,
       character(
@@ -397,7 +405,77 @@ describe('character creation actions', () => {
     )
 
     assert.equal(plan?.status, 'Mustering Out')
-    assert.deepEqual(plan?.actions, [])
+    assert.deepEqual(
+      plan?.actions.map((availableAction) => availableAction.key),
+      ['roll-mustering-cash-scout', 'roll-mustering-material-scout']
+    )
+    assert.deepEqual(plan?.actions[0]?.command, {
+      type: 'RollCharacterCreationMusteringBenefit',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId,
+      career: 'Scout',
+      kind: 'cash'
+    })
+    assert.deepEqual(plan?.actions[1]?.command, {
+      type: 'RollCharacterCreationMusteringBenefit',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId,
+      career: 'Scout',
+      kind: 'material'
+    })
+  })
+
+  it('offers only material mustering benefits after the cash limit', () => {
+    const cashBenefit = {
+      career: 'Scout',
+      kind: 'cash' as const,
+      roll: {
+        expression: '2d6' as const,
+        rolls: [1, 2],
+        total: 3
+      },
+      modifier: 0,
+      tableRoll: 3,
+      value: '10000',
+      credits: 10000,
+      materialItem: null
+    }
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('MUSTERING_OUT', {
+          terms: [
+            term({
+              benefits: ['10000', '10000', '10000'],
+              complete: true,
+              musteringOut: true
+            }),
+            term({ complete: true, musteringOut: true })
+          ],
+          careers: [{ name: 'Scout', rank: 4 }],
+          history: [
+            { type: 'FINISH_MUSTERING', musteringBenefit: cashBenefit },
+            { type: 'FINISH_MUSTERING', musteringBenefit: cashBenefit },
+            { type: 'FINISH_MUSTERING', musteringBenefit: cashBenefit }
+          ]
+        })
+      )
+    )
+
+    assert.deepEqual(
+      plan?.actions.map((availableAction) => availableAction.key),
+      ['roll-mustering-material-scout']
+    )
+    assert.deepEqual(plan?.actions[0]?.command, {
+      type: 'RollCharacterCreationMusteringBenefit',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId,
+      career: 'Scout',
+      kind: 'material'
+    })
   })
 
   it('uses the semantic command for completing mustering', () => {

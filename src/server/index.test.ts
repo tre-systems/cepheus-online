@@ -79,7 +79,10 @@ const clientModules = new Map<
     '/client/app/character-creation-actions.js',
     {
       markers: ['deriveCharacterCreationActionPlan'],
-      imports: ['/shared/character-creation/legal-actions.js']
+      imports: [
+        '/shared/character-creation/benefits.js',
+        '/shared/character-creation/legal-actions.js'
+      ]
     }
   ],
   [
