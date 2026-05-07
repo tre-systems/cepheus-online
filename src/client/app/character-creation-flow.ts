@@ -23,6 +23,7 @@ import {
   canOfferAnagathics,
   createCareerTerm,
   deriveAgingRollModifier,
+  mustResolveAging,
   resolveAnagathicsUse
 } from '../../shared/character-creation/term-lifecycle.js'
 import type {
@@ -1429,7 +1430,10 @@ export const requiresCharacterCreationAgingRoll = (
   const plan = draft.careerPlan
   return (
     plan?.survivalPassed === true &&
-    (draft.age ?? CHARACTER_CREATION_STARTING_AGE) >= 30 &&
+    mustResolveAging({
+      age: draft.age,
+      termCount: draft.completedTerms.length + 1
+    }) &&
     plan.agingRoll === null
   )
 }

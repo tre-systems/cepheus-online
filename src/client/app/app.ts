@@ -311,7 +311,9 @@ const renderCreationPresenceDock = () => {
 
     item.append(name, detail, owner)
     item.addEventListener('click', () => {
-      openCharacterCreationFollow(summary.id)
+      openCharacterCreationFollow(summary.id, {
+        readOnly: summary.ownerId !== actorId
+      })
     })
     return item
   })
@@ -474,6 +476,16 @@ const resolveDiceReveal = (rollId) => {
 
 const waitForDiceReveal = (roll) => {
   return diceRevealState.waitForReveal(roll)
+}
+
+const waitForDiceRevealOrDelay = (roll) => {
+  const revealAtMs = Date.parse(roll?.revealAt ?? '')
+  if (!Number.isFinite(revealAtMs)) return waitForDiceReveal(roll)
+  const delayMs = Math.max(0, revealAtMs - Date.now()) + 220
+  return Promise.race([
+    waitForDiceReveal(roll),
+    new Promise((resolve) => window.setTimeout(resolve, delayMs))
+  ])
 }
 
 const commandRouter = createAppCommandRouter({
@@ -942,10 +954,14 @@ const careerPlanFromProjection = (creation) => {
         event.type === 'COMPLETE_ADVANCEMENT' ||
         event.type === 'SKIP_ADVANCEMENT'
     )
+  const aging = [...currentTermHistory]
+    .reverse()
+    .find((event) => event.type === 'COMPLETE_AGING')
   const reenlistment = [...currentTermHistory]
     .reverse()
     .find(
       (event) =>
+        event.type === 'RESOLVE_REENLISTMENT' ||
         event.type === 'REENLIST' ||
         event.type === 'REENLIST_BLOCKED' ||
         event.type === 'FORCED_REENLIST'
@@ -993,13 +1009,20 @@ const careerPlanFromProjection = (creation) => {
     rankBonusSkill: null,
     termSkillRolls,
     anagathics: activeTerm.anagathics ?? null,
-    agingRoll: null,
-    agingMessage: null,
+    agingRoll: aging?.aging?.roll?.total ?? null,
+    agingMessage:
+      aging?.aging?.characteristicChanges?.length > 0
+        ? `${aging.aging.characteristicChanges.length} characteristic changes`
+        : aging?.aging
+          ? 'No aging effects.'
+          : null,
     agingSelections: [],
     reenlistmentRoll:
       reenlistment?.reenlistment?.total ?? activeTerm.reEnlistment ?? null,
     reenlistmentOutcome:
-      reenlistment?.type === 'FORCED_REENLIST'
+      reenlistment?.type === 'RESOLVE_REENLISTMENT'
+        ? (reenlistment.reenlistment.outcome ?? null)
+        : reenlistment?.type === 'FORCED_REENLIST'
         ? 'forced'
         : reenlistment?.type === 'REENLIST'
           ? 'allowed'
@@ -1045,14 +1068,17 @@ const flowFromProjectedCharacter = (character) => {
   }
 }
 
-const openCharacterCreationFollow = (characterId) => {
+const openCharacterCreationFollow = (characterId, { readOnly = true } = {}) => {
   const character = state?.characters[characterId] ?? null
   const flow = character ? flowFromProjectedCharacter(character) : null
   if (!flow) return
 
   selectedCharacterId = characterId
   characterCreationFlow = flow
-  characterCreationReadOnly = true
+  characterCreationReadOnly = readOnly
+  if (!readOnly) {
+    characterSheetController.setOpen(false)
+  }
   characterCreationPanel.open()
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
@@ -1492,6 +1518,20 @@ const renderCharacterCreationHomeworld = (flow) => {
   return wrapper
 }
 
+const bindCharacterCreationActionButton = (button, callback) => {
+  let active = false
+  const run = (event) => {
+    event.preventDefault()
+    if (active) return
+    active = true
+    Promise.resolve(callback()).finally(() => {
+      active = false
+    })
+  }
+  button.addEventListener('pointerdown', run)
+  button.addEventListener('click', run)
+}
+
 const renderCharacterCreationTermSkillTables = (flow) => {
   const viewModel = deriveCharacterCreationTermSkillTrainingViewModel(flow)
   if (!viewModel) return document.createDocumentFragment()
@@ -1525,7 +1565,7 @@ const renderCharacterCreationTermSkillTables = (flow) => {
     button.textContent = action.label
     button.title = action.reason
     button.disabled = action.disabled
-    button.addEventListener('click', () => {
+    bindCharacterCreationActionButton(button, () => {
       rollCharacterCreationTermSkill(action.table).catch((error) =>
         setError(error.message)
       )
@@ -1549,7 +1589,7 @@ const renderCharacterCreationReenlistmentRollButton = (flow) => {
   const button = document.createElement('button')
   button.type = 'button'
   button.textContent = action.label
-  button.addEventListener('click', () => {
+  bindCharacterCreationActionButton(panel, () => {
     rollCharacterCreationReenlistment().catch((error) =>
       setError(error.message)
     )
@@ -1569,7 +1609,7 @@ const renderCharacterCreationAgingRollButton = (flow) => {
   const button = document.createElement('button')
   button.type = 'button'
   button.textContent = action.label
-  button.addEventListener('click', () => {
+  bindCharacterCreationActionButton(panel, () => {
     rollCharacterCreationAging().catch((error) => setError(error.message))
   })
   const note = document.createElement('small')
@@ -2302,7 +2342,7 @@ const resolveCharacterCreationCareerQualification = async (career) => {
     return
   }
 
-  await waitForDiceReveal(latestRoll)
+  await waitForDiceRevealOrDelay(latestRoll)
   const projectedCharacter =
     response.state?.characters?.[flowWithCareer.draft.characterId] ?? null
   const projectedFlow = projectedCharacter
@@ -2531,7 +2571,7 @@ const rollCharacterCreationCharacteristic = async (
     return
   }
 
-  await waitForDiceReveal(latestRoll)
+  await waitForDiceRevealOrDelay(latestRoll)
   characterCreationFlow = applyCharacterCreationCharacteristicRoll(
     characterCreationFlow,
     latestRoll.total,
@@ -2605,7 +2645,7 @@ const rollCharacterCreationMusteringBenefit = async (kind) => {
     return
   }
 
-  await waitForDiceReveal(latestRoll)
+  await waitForDiceRevealOrDelay(latestRoll)
   characterCreationFlow = applyCharacterCreationMusteringBenefit({
     flow: characterCreationFlow,
     kind,
@@ -2644,7 +2684,7 @@ const rollCharacterCreationTermSkill = async (table) => {
     return
   }
 
-  await waitForDiceReveal(latestRoll)
+  await waitForDiceRevealOrDelay(latestRoll)
   const fallbackFlow = applyCharacterCreationTermSkillRoll({
     flow: characterCreationFlow,
     table,
@@ -2659,11 +2699,6 @@ const rollCharacterCreationReenlistment = async () => {
   if (!characterCreationFlow) return
   setError('')
   syncCharacterCreationWizardFields()
-
-  const action = deriveNextCharacterCreationReenlistmentRoll(
-    characterCreationFlow
-  )
-  if (!action) return
 
   await ensureCharacterCreationPublished()
   const characterId = characterCreationFlow.draft.characterId
@@ -2683,7 +2718,7 @@ const rollCharacterCreationReenlistment = async () => {
     return
   }
 
-  await waitForDiceReveal(latestRoll)
+  await waitForDiceRevealOrDelay(latestRoll)
   const fallbackFlow = applyCharacterCreationReenlistmentRoll(
     characterCreationFlow,
     latestRoll.total
@@ -2698,28 +2733,17 @@ const rollCharacterCreationAging = async () => {
   setError('')
   syncCharacterCreationWizardFields()
 
-  if (!state) {
-    await postCommand(
-      createGameCommand({ roomId, actorId }),
-      requestId('create-game-for-aging-roll')
-    )
-  }
-
   const action = deriveNextCharacterCreationAgingRoll(characterCreationFlow)
-  if (!action) return
 
-  const modifier =
-    action.modifier === 0
-      ? ''
-      : action.modifier > 0
-        ? `+${action.modifier}`
-        : `${action.modifier}`
-  const response = await postDiceCommand(
-    buildRollDiceCommand({
-      identity: clientIdentity(),
-      expression: `2d6${modifier}`,
-      reason: action.reason
-    }),
+  await ensureCharacterCreationPublished()
+  const characterId = characterCreationFlow.draft.characterId
+  const response = await postCharacterCreationCommand(
+    {
+      type: 'ResolveCharacterCreationAging',
+      gameId: roomId,
+      actorId,
+      characterId
+    },
     requestId('aging-roll')
   )
   const latestRoll =
@@ -2729,11 +2753,16 @@ const rollCharacterCreationAging = async () => {
     return
   }
 
-  await waitForDiceReveal(latestRoll)
-  characterCreationFlow = applyCharacterCreationAgingRoll(
+  await waitForDiceRevealOrDelay(latestRoll)
+  const fallbackFlow = applyCharacterCreationAgingRoll(
     characterCreationFlow,
-    latestRoll.total
+    latestRoll.total + (action?.modifier ?? 0)
   ).flow
+  syncCharacterCreationFlowFromRoomState(
+    response.state,
+    characterId,
+    fallbackFlow
+  )
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
@@ -2800,7 +2829,7 @@ const rollCharacterCreationCareerCheck = async () => {
     return
   }
 
-  await waitForDiceReveal(latestRoll)
+  await waitForDiceRevealOrDelay(latestRoll)
   const fallbackFlow = applyCharacterCreationCareerRoll(
     characterCreationFlow,
     latestRoll.total

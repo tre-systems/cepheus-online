@@ -883,6 +883,12 @@ describe('character creation flow', () => {
       flow,
       useAnagathics: false
     }).flow
+    assert.deepEqual(deriveNextCharacterCreationAgingRoll(flow), {
+      label: 'Roll aging',
+      reason: 'Iona Vesh aging',
+      modifier: -1
+    })
+    flow = applyCharacterCreationAgingRoll(flow, 7).flow
     assert.deepEqual(deriveNextCharacterCreationReenlistmentRoll(flow), {
       label: 'Roll reenlistment',
       reason: 'Iona Vesh Merchant reenlistment'
@@ -939,6 +945,12 @@ describe('character creation flow', () => {
       useAnagathics: false
     }).flow
     assert.equal(flow.draft.careerPlan?.anagathics, false)
+    assert.deepEqual(deriveNextCharacterCreationAgingRoll(flow), {
+      label: 'Roll aging',
+      reason: 'Iona Vesh aging',
+      modifier: -1
+    })
+    flow = applyCharacterCreationAgingRoll(flow, 7).flow
     assert.deepEqual(deriveNextCharacterCreationReenlistmentRoll(flow), {
       label: 'Roll reenlistment',
       reason: 'Iona Vesh Merchant reenlistment'
@@ -1152,7 +1164,7 @@ describe('character creation flow', () => {
     const resolvedDraft = applyCharacterCreationCareerPlan(
       createInitialCharacterDraft(characterId, {
         name: 'Iona Vesh',
-        age: 18,
+        age: 22,
         characteristics: completeDraft().characteristics
       }),
       selectCharacterCreationCareerPlan('Merchant', {
@@ -1160,6 +1172,8 @@ describe('character creation flow', () => {
         survivalRoll: 8,
         commissionRoll: 4,
         termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Comms' }],
+        agingRoll: 7,
+        agingMessage: 'No aging effects.',
         reenlistmentRoll: 7,
         reenlistmentOutcome: 'allowed'
       })
@@ -1181,7 +1195,7 @@ describe('character creation flow', () => {
     assert.deepEqual(result.flow.draft.completedTerms[0], {
       career: 'Merchant',
       drafted: false,
-      age: 18,
+      age: 22,
       rank: 1,
       rankTitle: 'Deck Cadet',
       qualificationRoll: 7,
@@ -1194,8 +1208,8 @@ describe('character creation flow', () => {
       advancementRoll: null,
       advancementPassed: null,
       termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Comms' }],
-      agingRoll: null,
-      agingMessage: null,
+      agingRoll: 7,
+      agingMessage: 'No aging effects.',
       agingSelections: [],
       reenlistmentRoll: 7,
       reenlistmentOutcome: 'allowed'
@@ -1216,7 +1230,7 @@ describe('character creation flow', () => {
       draft: applyCharacterCreationCareerPlan(
         createInitialCharacterDraft(characterId, {
           name: 'Iona Vesh',
-          age: 18,
+          age: 22,
           characteristics: completeDraft().characteristics,
           homeworld: completeDraft().homeworld,
           backgroundSkills: completeDraft().backgroundSkills,
@@ -1227,6 +1241,8 @@ describe('character creation flow', () => {
           survivalRoll: 8,
           commissionRoll: 4,
           termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Comms' }],
+          agingRoll: 7,
+          agingMessage: 'No aging effects.',
           reenlistmentRoll: 5,
           reenlistmentOutcome: 'blocked'
         })
