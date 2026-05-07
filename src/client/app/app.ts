@@ -33,10 +33,13 @@ import {
   characterCreationMusteringBenefitRollModifier,
   characterCreationCareerNames,
   completeCharacterCreationCareerTerm,
+  createInitialCharacterDraft,
   createManualCharacterCreationFlow,
+  deriveCreateCharacterCommand,
   deriveCharacterCreationCommands,
   deriveCharacterCreationAgingChangeOptions,
   deriveCharacterCreationAnagathicsDecision,
+  deriveStartCharacterCreationCommand,
   deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationAgingRoll,
   deriveNextCharacterCreationReenlistmentRoll,
@@ -119,6 +122,7 @@ let actorSessionSecret = resolveActorSessionSecret({ roomId, actorId })
 let state = null
 let firstStateApplied = false
 let latestDiceId = null
+let selectedCharacterId = null
 const viewerRole = initialIdentity.viewerRole
 const canSelectBoards = isRefereeViewer(viewerRole)
 const appSession = createAppSession({ roomId, actorId, viewerRole })
@@ -128,7 +132,11 @@ let connectivityController = null
 const diceRevealState = createDiceRevealState()
 const animatedDiceRollActivityIds = new Set()
 const creationActivityTimers = new Set()
+const dismissedCreationPresenceIds = new Set()
 let characterCreationFlow = null
+let characterCreationReadOnly = false
+let characterCreationPublishPromise = null
+let characterCreationHomeworldPublishPromise = Promise.resolve()
 
 const setStatus = (text) => {
   els.status.textContent = text
@@ -182,7 +190,11 @@ const renderCreationActivityCard = (card) => {
 }
 
 const showCreationActivityCards = (application, delayMs = 0) => {
-  const cards = deriveCreationActivityCardsFromApplication(application)
+  if (characterCreationPanel.isOpen() && !characterCreationReadOnly) return
+
+  const cards = deriveCreationActivityCardsFromApplication(application, {
+    viewerActorId: actorId
+  })
   if (cards.length === 0 || !els.creationActivityFeed) return
 
   const renderCards = () => {
@@ -224,7 +236,8 @@ const activeCreationSummaries = () => {
       (character) =>
         character.creation &&
         !character.creation.creationComplete &&
-        character.creation.state.status !== 'PLAYABLE'
+        character.creation.state.status !== 'PLAYABLE' &&
+        !dismissedCreationPresenceIds.has(character.id)
     )
     .map((character) => {
       const rolledCharacteristics = Object.values(
@@ -244,6 +257,14 @@ const activeCreationSummaries = () => {
 
 const renderCreationPresenceDock = () => {
   if (!els.creationPresenceDock) return
+  if (
+    (els.characterCreator && !els.characterCreator.hidden) ||
+    els.sheet?.classList.contains('open')
+  ) {
+    els.creationPresenceDock.hidden = true
+    els.creationPresenceDock.replaceChildren()
+    return
+  }
 
   const summaries = activeCreationSummaries()
   if (summaries.length === 0) {
@@ -259,11 +280,25 @@ const renderCreationPresenceDock = () => {
   const count = document.createElement('span')
   count.textContent =
     summaries.length === 1 ? '1 traveller' : `${summaries.length} travellers`
-  heading.append(title, count)
+  const clearButton = document.createElement('button')
+  clearButton.type = 'button'
+  clearButton.className = 'creation-presence-clear'
+  clearButton.textContent = 'Clear'
+  clearButton.title = 'Hide these live creation cards on this screen'
+  clearButton.addEventListener('click', () => {
+    for (const summary of summaries) dismissedCreationPresenceIds.add(summary.id)
+    persistDismissedCreationPresenceIds()
+    renderCreationPresenceDock()
+  })
+  heading.append(title, count, clearButton)
 
-  const items = summaries.slice(0, 3).map((summary) => {
-    const item = document.createElement('article')
+  const list = document.createElement('div')
+  list.className = 'creation-presence-list'
+  const items = summaries.map((summary) => {
+    const item = document.createElement('button')
     item.className = 'creation-presence-card'
+    item.type = 'button'
+    item.title = `Open ${summary.name}`
 
     const name = document.createElement('strong')
     name.textContent = summary.name
@@ -275,11 +310,15 @@ const renderCreationPresenceDock = () => {
     owner.textContent = summary.ownerId ? `by ${summary.ownerId}` : 'unowned'
 
     item.append(name, detail, owner)
+    item.addEventListener('click', () => {
+      openCharacterCreationFollow(summary.id)
+    })
     return item
   })
+  list.append(...items)
 
   els.creationPresenceDock.hidden = false
-  els.creationPresenceDock.replaceChildren(heading, ...items)
+  els.creationPresenceDock.replaceChildren(heading, list)
 }
 
 createPwaInstallController({
@@ -297,10 +336,98 @@ const clientIdentity = () => ({
   actorId
 })
 
+const creationPresenceDismissalStorageKey = () =>
+  `cepheus-online:${roomId}:${actorId}:dismissed-creation-presence`
+
+const hydrateDismissedCreationPresenceIds = () => {
+  try {
+    const rawValue = window.localStorage.getItem(
+      creationPresenceDismissalStorageKey()
+    )
+    const ids = rawValue ? JSON.parse(rawValue) : []
+    if (!Array.isArray(ids)) return
+    dismissedCreationPresenceIds.clear()
+    for (const id of ids) {
+      if (typeof id === 'string' && id.trim()) {
+        dismissedCreationPresenceIds.add(id)
+      }
+    }
+  } catch {
+    dismissedCreationPresenceIds.clear()
+  }
+}
+
+const persistDismissedCreationPresenceIds = () => {
+  try {
+    window.localStorage.setItem(
+      creationPresenceDismissalStorageKey(),
+      JSON.stringify([...dismissedCreationPresenceIds])
+    )
+  } catch {
+    // Local dismissal is a convenience; ignore storage failures.
+  }
+}
+
+hydrateDismissedCreationPresenceIds()
+
 const currentSelectedPieceId = () => appSession.snapshot().selectedPieceId
 
 const selectPiece = (pieceId) => {
+  selectedCharacterId = null
   appSession.selectPiece(pieceId)
+}
+
+const selectedCharacter = () =>
+  selectedCharacterId ? (state?.characters[selectedCharacterId] ?? null) : null
+
+const characterCreationStepOrder = [
+  'basics',
+  'characteristics',
+  'homeworld',
+  'career',
+  'skills',
+  'equipment',
+  'review'
+]
+
+const characterCreationStepIndex = (step) =>
+  characterCreationStepOrder.includes(step)
+    ? characterCreationStepOrder.indexOf(step)
+    : characterCreationStepOrder.length
+
+const currentCharacterCreationProjection = () => {
+  if (!characterCreationFlow) return null
+  return (
+    state?.characters?.[characterCreationFlow.draft.characterId]?.creation ??
+    null
+  )
+}
+
+const reconcileEditableCharacterCreationFlowWithProjection = () => {
+  if (characterCreationReadOnly || !characterCreationFlow) return
+  const creation = currentCharacterCreationProjection()
+  if (!creation) return
+
+  const projectedStep = creationStepFromStatus(creation.state.status)
+  const projectedStepIndex = characterCreationStepIndex(projectedStep)
+  const localStepIndex = characterCreationStepIndex(characterCreationFlow.step)
+  const shouldSyncToProjection =
+    projectedStepIndex < localStepIndex ||
+    (projectedStepIndex > localStepIndex &&
+      characterCreationFlow.step !== 'characteristics') ||
+    (creation.state.status === 'SKILLS_TRAINING' &&
+      JSON.stringify(creation.pendingCascadeSkills ?? []) !==
+        JSON.stringify(characterCreationFlow.draft.pendingTermCascadeSkills)) ||
+    (creation.state.status === 'BASIC_TRAINING' &&
+      characterCreationFlow.step === 'career')
+
+  if (shouldSyncToProjection) {
+    syncCharacterCreationFlowFromRoomState(
+      state,
+      characterCreationFlow.draft.characterId,
+      characterCreationFlow
+    )
+  }
 }
 
 const handleServerMessage = (message) => {
@@ -314,7 +441,8 @@ const handleServerMessage = (message) => {
   if (application.shouldApplyState) {
     applyState(application.state, {
       animateLatestDiceLog: liveActivityApplication.animateLatestDiceLog,
-      deferDiceRevealIds: liveActivityApplication.deferDiceRevealIds
+      deferDiceRevealIds: liveActivityApplication.deferDiceRevealIds,
+      deferFollowedCreationRolls: liveActivityApplication.diceRollActivities
     })
   }
   showCreationActivityCards(
@@ -396,6 +524,322 @@ const postCharacterCreationCommand = async (
 const postCharacterCreationCommands = (commands) =>
   commandRouter.characterCreation.dispatchSequential(commands)
 
+const ensureCharacterCreationPublishedNow = async () => {
+  if (!characterCreationFlow || characterCreationReadOnly) return
+
+  if (!state) {
+    await postCommand(
+      createGameCommand({ roomId, actorId }),
+      requestId('create-game-for-character-creation')
+    )
+  }
+
+  if (!state || !characterCreationFlow) return
+
+  const characterId = characterCreationFlow.draft.characterId
+  const character = state.characters[characterId] ?? null
+  const commands = []
+
+  if (!character) {
+    commands.push(
+      deriveCreateCharacterCommand(characterCreationFlow.draft, {
+        identity: clientIdentity(),
+        state: null
+      })
+    )
+  }
+
+  if (!character?.creation) {
+    commands.push(
+      deriveStartCharacterCreationCommand(characterCreationFlow.draft, {
+        identity: clientIdentity(),
+        state: null
+      })
+    )
+  }
+
+  if (commands.length > 0) {
+    await postCharacterCreationCommands(commands)
+  }
+}
+
+const ensureCharacterCreationPublished = () => {
+  if (!characterCreationPublishPromise) {
+    characterCreationPublishPromise = ensureCharacterCreationPublishedNow()
+      .catch((error) => {
+        setError(error.message)
+        throw error
+      })
+      .finally(() => {
+        characterCreationPublishPromise = null
+      })
+  }
+  return characterCreationPublishPromise
+}
+
+const homeworldForCommand = (homeworld) => ({
+  name: null,
+  lawLevel: homeworld.lawLevel ?? null,
+  tradeCodes: Array.isArray(homeworld.tradeCodes)
+    ? [...homeworld.tradeCodes]
+    : homeworld.tradeCodes
+      ? [homeworld.tradeCodes]
+      : []
+})
+
+const sameHomeworldCommandValue = (left, right) => {
+  if (!left || !right) return false
+  const leftTradeCodes = Array.isArray(left.tradeCodes)
+    ? left.tradeCodes
+    : left.tradeCodes
+      ? [left.tradeCodes]
+      : []
+  const rightTradeCodes = Array.isArray(right.tradeCodes)
+    ? right.tradeCodes
+    : right.tradeCodes
+      ? [right.tradeCodes]
+      : []
+  return (
+    (left.name ?? null) === (right.name ?? null) &&
+    (left.lawLevel ?? null) === (right.lawLevel ?? null) &&
+    leftTradeCodes.length === rightTradeCodes.length &&
+    leftTradeCodes.every((code, index) => code === rightTradeCodes[index])
+  )
+}
+
+const projectedCharacterCreation = (characterId) =>
+  state?.characters[characterId]?.creation ?? null
+
+const syncCharacterCreationFlowFromRoomState = (
+  roomState,
+  characterId,
+  fallbackFlow = null
+) => {
+  const projectedCharacter = roomState?.characters?.[characterId] ?? null
+  const projectedFlow = projectedCharacter
+    ? flowFromProjectedCharacter(projectedCharacter)
+    : null
+  characterCreationFlow = projectedFlow ?? fallbackFlow ?? characterCreationFlow
+  return characterCreationFlow
+}
+
+const backgroundSkillAllowance = (edu) =>
+  3 + (edu == null ? 0 : Math.floor(edu / 3) - 2)
+
+const projectedHomeworldIsComplete = (creation, draft) =>
+  Boolean(
+    creation?.state.status === 'HOMEWORLD' &&
+      (creation.pendingCascadeSkills ?? []).length === 0 &&
+      (creation.backgroundSkills ?? []).length >=
+        backgroundSkillAllowance(draft.characteristics.edu)
+  )
+
+const publishCharacterCreationHomeworldProgressNow = async (flow) => {
+  if (characterCreationReadOnly || !flow || flow.step !== 'homeworld') return
+
+  const { draft } = flow
+  const homeworld = homeworldForCommand(draft.homeworld)
+  if (!homeworld.lawLevel || homeworld.tradeCodes.length === 0) return
+
+  await ensureCharacterCreationPublished()
+
+  let creation = projectedCharacterCreation(draft.characterId)
+  if (!creation || creation.state.status !== 'HOMEWORLD') return
+
+  const baseCommand = {
+    gameId: roomId,
+    actorId,
+    characterId: draft.characterId
+  }
+
+  if (!sameHomeworldCommandValue(creation.homeworld, homeworld)) {
+    await postCharacterCreationCommand(
+      {
+        type: 'SetCharacterCreationHomeworld',
+        ...baseCommand,
+        homeworld
+      },
+      requestId('set-character-homeworld')
+    )
+    creation = projectedCharacterCreation(draft.characterId)
+  }
+
+  if (!creation || creation.state.status !== 'HOMEWORLD') return
+
+  if (projectedHomeworldIsComplete(creation, draft)) {
+    await postCharacterCreationCommand(
+      {
+        type: 'CompleteCharacterCreationHomeworld',
+        ...baseCommand
+      },
+      requestId('complete-character-homeworld')
+    )
+    return
+  }
+
+  const projectedBackgroundSkills = new Set(creation.backgroundSkills ?? [])
+  const projectedPendingCascadeSkills = new Set(
+    creation.pendingCascadeSkills ?? []
+  )
+  for (const skill of draft.backgroundSkills) {
+    if (projectedBackgroundSkills.has(skill)) continue
+    if (projectedPendingCascadeSkills.has(skill)) continue
+    await postCharacterCreationCommand(
+      {
+        type: 'SelectCharacterCreationBackgroundSkill',
+        ...baseCommand,
+        skill
+      },
+      requestId('select-character-background-skill')
+    )
+    creation = projectedCharacterCreation(draft.characterId)
+    if (!creation || creation.state.status !== 'HOMEWORLD') return
+    projectedBackgroundSkills.clear()
+    for (const nextSkill of creation.backgroundSkills ?? []) {
+      projectedBackgroundSkills.add(nextSkill)
+    }
+    projectedPendingCascadeSkills.clear()
+    for (const nextSkill of creation.pendingCascadeSkills ?? []) {
+      projectedPendingCascadeSkills.add(nextSkill)
+    }
+  }
+
+  const validation = deriveCharacterCreationValidationSummary({
+    ...flow,
+    step: 'homeworld'
+  })
+  creation = projectedCharacterCreation(draft.characterId)
+  if (
+    validation.ok &&
+    creation?.state.status === 'HOMEWORLD' &&
+    (creation.pendingCascadeSkills ?? []).length === 0
+  ) {
+    await postCharacterCreationCommand(
+      {
+        type: 'CompleteCharacterCreationHomeworld',
+        ...baseCommand
+      },
+      requestId('complete-character-homeworld')
+    )
+  }
+}
+
+const publishCharacterCreationHomeworldProgress = (flow) => {
+  characterCreationHomeworldPublishPromise =
+    characterCreationHomeworldPublishPromise
+      .catch(() => {
+        // Keep the queue alive after an earlier rejected command.
+      })
+      .then(() => publishCharacterCreationHomeworldProgressNow(flow))
+      .catch((error) => setError(error.message))
+  return characterCreationHomeworldPublishPromise
+}
+
+const publishCharacterCreationBackgroundCascadeSelection = (
+  flow,
+  skill
+) => {
+  characterCreationHomeworldPublishPromise =
+    characterCreationHomeworldPublishPromise
+      .catch(() => {
+        // Keep the queue alive after an earlier rejected command.
+      })
+      .then(async () => {
+        if (characterCreationReadOnly || !flow || flow.step !== 'homeworld') {
+          return
+        }
+        await publishCharacterCreationHomeworldProgressNow(flow)
+        const creation = projectedCharacterCreation(flow.draft.characterId)
+        if (
+          !creation ||
+          creation.state.status !== 'HOMEWORLD' ||
+          (creation.pendingCascadeSkills ?? []).includes(skill)
+        ) {
+          return
+        }
+        await postCharacterCreationCommand(
+          {
+            type: 'SelectCharacterCreationBackgroundSkill',
+            gameId: roomId,
+            actorId,
+            characterId: flow.draft.characterId,
+            skill
+          },
+          requestId('select-character-background-cascade')
+        )
+      })
+      .catch((error) => setError(error.message))
+  return characterCreationHomeworldPublishPromise
+}
+
+const publishCharacterCreationCascadeResolution = (
+  flow,
+  cascadeSkill,
+  selection
+) => {
+  characterCreationHomeworldPublishPromise =
+    characterCreationHomeworldPublishPromise
+      .catch(() => {
+        // Keep the queue alive after an earlier rejected command.
+      })
+      .then(async () => {
+        if (characterCreationReadOnly || !flow || flow.step !== 'homeworld') {
+          return
+        }
+        await ensureCharacterCreationPublished()
+        const creation = projectedCharacterCreation(flow.draft.characterId)
+        if (
+          !creation ||
+          creation.state.status !== 'HOMEWORLD' ||
+          !(creation.pendingCascadeSkills ?? []).includes(cascadeSkill)
+        ) {
+          return
+        }
+        await postCharacterCreationCommand(
+          {
+            type: 'ResolveCharacterCreationCascadeSkill',
+            gameId: roomId,
+            actorId,
+            characterId: flow.draft.characterId,
+            cascadeSkill,
+            selection
+          },
+          requestId('resolve-character-background-cascade')
+        )
+        await publishCharacterCreationHomeworldProgressNow(flow)
+      })
+      .catch((error) => setError(error.message))
+  return characterCreationHomeworldPublishPromise
+}
+
+const publishCharacterCreationTermCascadeResolution = async (
+  flow,
+  cascadeSkill,
+  selection,
+  fallbackFlow
+) => {
+  if (characterCreationReadOnly || !flow || flow.step !== 'career') return
+  await ensureCharacterCreationPublished()
+  const response = await postCharacterCreationCommand(
+    {
+      type: 'ResolveCharacterCreationTermCascadeSkill',
+      gameId: roomId,
+      actorId,
+      characterId: flow.draft.characterId,
+      cascadeSkill,
+      selection
+    },
+    requestId('resolve-character-term-cascade')
+  )
+  syncCharacterCreationFlowFromRoomState(
+    response.state,
+    flow.draft.characterId,
+    fallbackFlow
+  )
+  renderCharacterCreationWizard()
+  characterCreationPanel.scrollToTop()
+}
+
 const fetchState = async () => {
   const message = await fetchRoomState({ roomId, viewerRole, actorId })
   handleServerMessage(message)
@@ -420,6 +864,224 @@ const characterCreationSeed = () => ({
   notes: ''
 })
 
+const creationStepFromStatus = (status) => {
+  switch (status) {
+    case 'CHARACTERISTICS':
+      return 'characteristics'
+    case 'HOMEWORLD':
+      return 'homeworld'
+    case 'BASIC_TRAINING':
+      return 'skills'
+    case 'PLAYABLE':
+      return 'review'
+    default:
+      return 'career'
+  }
+}
+
+const completedTermFromProjection = (term) => ({
+  career: term.career,
+  drafted: term.draft === 1,
+  anagathics: term.anagathics,
+  age: null,
+  rank: null,
+  qualificationRoll: null,
+  survivalRoll: term.survival ?? null,
+  survivalPassed: term.survival == null ? true : term.complete,
+  canCommission: false,
+  commissionRoll: null,
+  commissionPassed: null,
+  canAdvance: false,
+  advancementRoll: term.advancement ?? null,
+  advancementPassed: term.advancement == null ? null : term.complete,
+  termSkillRolls: term.skillsAndTraining.map((skill) => ({
+    table: 'serviceSkills',
+    roll: 0,
+    skill
+  })),
+  reenlistmentRoll: term.reEnlistment ?? null,
+  reenlistmentOutcome: term.canReenlist ? 'allowed' : 'blocked'
+})
+
+const careerPlanFromProjection = (creation) => {
+  const activeTerm = [...creation.terms]
+    .reverse()
+    .find((term) => !term.complete && !term.musteringOut)
+  if (!activeTerm) return null
+
+  const history = creation.history ?? []
+  let selectCareerIndex = -1
+  for (let index = history.length - 1; index >= 0; index -= 1) {
+    if (history[index].type === 'SELECT_CAREER') {
+      selectCareerIndex = index
+      break
+    }
+  }
+  const currentTermHistory =
+    selectCareerIndex >= 0 ? history.slice(selectCareerIndex) : history
+  const selectCareer = [...currentTermHistory]
+    .reverse()
+    .find((event) => event.type === 'SELECT_CAREER')
+  const survival = [...currentTermHistory]
+    .reverse()
+    .find(
+      (event) =>
+        event.type === 'SURVIVAL_PASSED' || event.type === 'SURVIVAL_FAILED'
+    )
+  const commission = [...currentTermHistory]
+    .reverse()
+    .find(
+      (event) =>
+        event.type === 'COMPLETE_COMMISSION' ||
+        event.type === 'SKIP_COMMISSION'
+    )
+  const advancement = [...currentTermHistory]
+    .reverse()
+    .find(
+      (event) =>
+        event.type === 'COMPLETE_ADVANCEMENT' ||
+        event.type === 'SKIP_ADVANCEMENT'
+    )
+  const reenlistment = [...currentTermHistory]
+    .reverse()
+    .find(
+      (event) =>
+        event.type === 'REENLIST' ||
+        event.type === 'REENLIST_BLOCKED' ||
+        event.type === 'FORCED_REENLIST'
+    )
+  const termSkillRolls = currentTermHistory
+    .filter((event) => event.type === 'ROLL_TERM_SKILL')
+    .map((event) => ({
+      table: event.termSkill.table,
+      roll: event.termSkill.roll.total,
+      skill: event.termSkill.skill ?? event.termSkill.rawSkill
+    }))
+
+  return {
+    career: activeTerm.career,
+    qualificationRoll: selectCareer?.qualification?.total ?? null,
+    qualificationPassed: true,
+    survivalRoll: survival?.survival?.total ?? activeTerm.survival ?? null,
+    survivalPassed:
+      survival?.type === 'SURVIVAL_PASSED'
+        ? true
+        : survival?.type === 'SURVIVAL_FAILED'
+          ? false
+          : null,
+    commissionRoll:
+      commission?.type === 'SKIP_COMMISSION'
+        ? -1
+        : (commission?.commission?.total ?? null),
+    commissionPassed:
+      commission?.type === 'SKIP_COMMISSION'
+        ? false
+        : (commission?.commission?.success ?? null),
+    advancementRoll:
+      advancement?.type === 'SKIP_ADVANCEMENT'
+        ? -1
+        : (advancement?.advancement?.total ?? activeTerm.advancement ?? null),
+    advancementPassed:
+      advancement?.type === 'SKIP_ADVANCEMENT'
+        ? false
+        : (advancement?.advancement?.success ?? null),
+    canCommission: creation.state.context?.canCommission ?? null,
+    canAdvance: creation.state.context?.canAdvance ?? null,
+    drafted: activeTerm.draft === 1,
+    rank: null,
+    rankTitle: null,
+    rankBonusSkill: null,
+    termSkillRolls,
+    anagathics: activeTerm.anagathics ?? null,
+    agingRoll: null,
+    agingMessage: null,
+    agingSelections: [],
+    reenlistmentRoll:
+      reenlistment?.reenlistment?.total ?? activeTerm.reEnlistment ?? null,
+    reenlistmentOutcome:
+      reenlistment?.type === 'FORCED_REENLIST'
+        ? 'forced'
+        : reenlistment?.type === 'REENLIST'
+          ? 'allowed'
+          : reenlistment?.type === 'REENLIST_BLOCKED'
+            ? 'blocked'
+            : null
+  }
+}
+
+const flowFromProjectedCharacter = (character) => {
+  const creation = character.creation
+  if (!creation) return null
+
+  const completedTerms = creation.terms
+    .filter((term) => term.complete || term.musteringOut)
+    .map(completedTermFromProjection)
+
+  return {
+    step: creationStepFromStatus(creation.state.status),
+    draft: createInitialCharacterDraft(character.id, {
+      name: character.name,
+      characterType: character.type,
+      age: character.age,
+      characteristics: character.characteristics,
+      homeworld: creation.homeworld ?? undefined,
+      backgroundSkills: creation.backgroundSkills ?? [],
+      pendingCascadeSkills:
+        creation.state.status === 'HOMEWORLD'
+          ? (creation.pendingCascadeSkills ?? [])
+          : [],
+      pendingTermCascadeSkills:
+        creation.state.status === 'SKILLS_TRAINING'
+          ? (creation.pendingCascadeSkills ?? [])
+          : [],
+      pendingAgingChanges: creation.characteristicChanges ?? [],
+      careerPlan: careerPlanFromProjection(creation),
+      completedTerms,
+      skills: character.skills,
+      equipment: character.equipment,
+      credits: character.credits,
+      notes: character.notes
+    })
+  }
+}
+
+const openCharacterCreationFollow = (characterId) => {
+  const character = state?.characters[characterId] ?? null
+  const flow = character ? flowFromProjectedCharacter(character) : null
+  if (!flow) return
+
+  selectedCharacterId = characterId
+  characterCreationFlow = flow
+  characterCreationReadOnly = true
+  characterCreationPanel.open()
+  renderCharacterCreationWizard()
+  characterCreationPanel.scrollToTop()
+}
+
+const refreshFollowedCharacterCreationFlow = () => {
+  if (!characterCreationReadOnly || !selectedCharacterId) return false
+
+  const character = state?.characters[selectedCharacterId] ?? null
+  const flow = character ? flowFromProjectedCharacter(character) : null
+  if (!flow) {
+    characterCreationFlow = null
+    characterCreationReadOnly = false
+    characterCreationPanel.close()
+    return false
+  }
+
+  characterCreationFlow = flow
+  return characterCreationPanel.isOpen()
+}
+
+const shouldRefreshEditableCharacterCreationFlow = ({
+  deferFollowedCreationRolls = []
+} = {}) =>
+  !characterCreationReadOnly &&
+  characterCreationPanel.isOpen() &&
+  Boolean(characterCreationFlow) &&
+  deferFollowedCreationRolls.length === 0
+
 const characterCreationPanel = createCharacterCreationPanel({
   elements: {
     panel: els.characterCreator,
@@ -443,6 +1105,7 @@ const characterCreationPanel = createCharacterCreationPanel({
 })
 
 const startCharacterCreationWizard = () => {
+  characterCreationReadOnly = false
   if (!characterCreationPanel.isOpen()) characterCreationPanel.show()
   if (characterCreationFlow) {
     renderCharacterCreationWizard()
@@ -472,13 +1135,41 @@ const startCharacterCreationWizard = () => {
   characterCreationPanel.scrollToTop()
 }
 
+const startNewCharacterCreationWizard = async () => {
+  characterCreationFlow = null
+  characterCreationReadOnly = false
+  selectedCharacterId = null
+  selectPiece(null)
+  characterSheetController.setOpen(false)
+  characterCreationPanel.open()
+  startCharacterCreationWizard()
+  await ensureCharacterCreationPublished()
+}
+
 const autoAdvanceCharacterCreationSetup = () => {
+  if (characterCreationReadOnly) return false
   if (!characterCreationFlow) return false
   if (
     !['basics', 'characteristics', 'homeworld'].includes(
       characterCreationFlow.step
     )
   ) {
+    return false
+  }
+  if (
+    characterCreationFlow.step === 'homeworld' &&
+    characterCreationStepIndex(
+      creationStepFromStatus(
+        currentCharacterCreationProjection()?.state.status ?? 'HOMEWORLD'
+      )
+    ) <= characterCreationStepIndex('homeworld')
+  ) {
+    const validation = deriveCharacterCreationValidationSummary(
+      characterCreationFlow
+    )
+    if (validation.ok) {
+      publishCharacterCreationHomeworldProgress(characterCreationFlow)
+    }
     return false
   }
 
@@ -514,6 +1205,7 @@ const renderCharacterCreationWizardControls = () => {
 }
 
 const renderCharacterCreationWizard = () => {
+  reconcileEditableCharacterCreationFlowWithProjection()
   while (autoAdvanceCharacterCreationSetup()) {
     // Keep setup steps linear even when reopening a flow that is already valid.
   }
@@ -529,6 +1221,17 @@ const renderCharacterCreationWizard = () => {
       : renderCharacterCreationFields(flow)
   )
   els.characterCreationWizard.hidden = false
+  els.characterCreationWizard.classList.toggle(
+    'read-only',
+    characterCreationReadOnly
+  )
+  if (characterCreationReadOnly) {
+    for (const control of els.characterCreationFields.querySelectorAll(
+      'button, input, select, textarea'
+    )) {
+      control.disabled = true
+    }
+  }
   renderCharacterCreationWizardControls()
 }
 
@@ -716,6 +1419,20 @@ const renderCharacterCreationDeath = (flow) => {
   rollValue.textContent = viewModel.roll
   roll.append(rollLabel, rollValue)
   panel.append(eyebrow, title, detail, roll)
+  if (!characterCreationReadOnly) {
+    const actions = document.createElement('div')
+    actions.className = 'creation-death-actions'
+    const next = document.createElement('button')
+    next.type = 'button'
+    next.textContent = 'Start a new character'
+    next.addEventListener('click', () => {
+      startNewCharacterCreationWizard().catch((error) =>
+        setError(error.message)
+      )
+    })
+    actions.append(next)
+    panel.append(actions)
+  }
   return panel
 }
 
@@ -1016,9 +1733,10 @@ const renderCharacterCreationBackgroundSkills = (viewModel) => {
     button.addEventListener('click', () => {
       if (!characterCreationFlow) return
       syncCharacterCreationWizardFields()
+      const wasSelected = option.selected
       characterCreationFlow = {
         ...characterCreationFlow,
-        draft: option.selected
+        draft: wasSelected
           ? removeCharacterCreationBackgroundSkillSelection(
               characterCreationFlow.draft,
               option.label
@@ -1029,7 +1747,18 @@ const renderCharacterCreationBackgroundSkills = (viewModel) => {
             )
       }
       setError('')
+      const nextFlow = characterCreationFlow
       renderCharacterCreationWizard()
+      if (!wasSelected) {
+        if (option.cascade) {
+          publishCharacterCreationBackgroundCascadeSelection(
+            nextFlow,
+            option.label
+          )
+        } else {
+          publishCharacterCreationHomeworldProgress(nextFlow)
+        }
+      }
     })
     list.append(button)
   }
@@ -1082,7 +1811,22 @@ const renderCharacterCreationCascadeChoice = (
               })
             }
       setError('')
+      const nextFlow = characterCreationFlow
       renderCharacterCreationWizard()
+      if (scope === 'term') {
+        publishCharacterCreationTermCascadeResolution(
+          flow,
+          cascade.cascadeSkill,
+          option.label,
+          nextFlow
+        ).catch((error) => setError(error.message))
+      } else {
+        publishCharacterCreationCascadeResolution(
+          nextFlow,
+          cascade.cascadeSkill,
+          option.label
+        )
+      }
     })
     options.append(button)
   }
@@ -1301,18 +2045,9 @@ const renderCharacterCreationCareerPicker = (flow) => {
       survival.textContent = `Survive ${formatCareerCheckShort(career.survival)}`
       button.append(title, qualification, survival)
       button.addEventListener('click', () => {
-        if (!characterCreationFlow) return
-        characterCreationFlow = applyParsedCharacterCreationDraftPatch(
-          characterCreationFlow,
-          parseCharacterCreationDraftPatch({
-            career: career.key,
-            qualificationRoll: null,
-            qualificationPassed: true
-          })
-        ).flow
-        setError('')
-        renderCharacterCreationWizard()
-        characterCreationPanel.scrollToTop()
+        resolveCharacterCreationCareerQualification(career.key).catch(
+          (error) => setError(error.message)
+        )
       })
       list.append(button)
     }
@@ -1521,6 +2256,71 @@ const selectFailedQualificationCareer = (career, drafted) => {
   characterCreationPanel.scrollToTop()
 }
 
+const resolveCharacterCreationCareerQualification = async (career) => {
+  if (!characterCreationFlow || characterCreationReadOnly) return
+  setError('')
+  syncCharacterCreationWizardFields()
+
+  const flowWithCareer = applyParsedCharacterCreationDraftPatch(
+    characterCreationFlow,
+    parseCharacterCreationDraftPatch({
+      career,
+      qualificationRoll: null,
+      qualificationPassed: null
+    })
+  ).flow
+
+  await characterCreationHomeworldPublishPromise
+  await ensureCharacterCreationPublished()
+
+  let response = null
+  try {
+    response = await postCharacterCreationCommand(
+      {
+        type: 'ResolveCharacterCreationQualification',
+        gameId: roomId,
+        actorId,
+        characterId: flowWithCareer.draft.characterId,
+        career
+      },
+      requestId('resolve-character-qualification')
+    )
+  } catch (error) {
+    syncCharacterCreationFlowFromRoomState(
+      state,
+      flowWithCareer.draft.characterId,
+      characterCreationFlow
+    )
+    renderCharacterCreationWizard()
+    characterCreationPanel.scrollToTop()
+    throw error
+  }
+  const latestRoll =
+    response.state?.diceLog?.[response.state.diceLog.length - 1]
+  if (!latestRoll) {
+    setError('Qualification roll did not return a dice result')
+    return
+  }
+
+  await waitForDiceReveal(latestRoll)
+  const projectedCharacter =
+    response.state?.characters?.[flowWithCareer.draft.characterId] ?? null
+  const projectedFlow = projectedCharacter
+    ? flowFromProjectedCharacter(projectedCharacter)
+    : null
+  const localResolvedFlow = applyCharacterCreationCareerRoll(
+    flowWithCareer,
+    latestRoll.total
+  ).flow
+  characterCreationFlow =
+    projectedFlow?.draft.careerPlan ||
+    projectedCharacter?.creation?.state.status !== 'CAREER_SELECTION'
+      ? (projectedFlow ?? localResolvedFlow)
+      : localResolvedFlow
+  renderCharacterCreationWizard()
+  characterCreationPanel.scrollToTop()
+}
+
 const renderCharacterCreationDraftFallback = (flow) => {
   const viewModel = deriveCharacterCreationFailedQualificationViewModel(flow)
   if (!viewModel.open) return document.createDocumentFragment()
@@ -1623,11 +2423,10 @@ const renderCharacterCreationBasicTrainingButton = (flow) => {
   button.addEventListener('click', () => {
     if (!characterCreationFlow) return
     syncCharacterCreationWizardFields()
-    characterCreationFlow = applyCharacterCreationBasicTraining(
-      characterCreationFlow
-    ).flow
     setError('')
-    renderCharacterCreationWizard()
+    completeCharacterCreationBasicTraining().catch((error) =>
+      setError(error.message)
+    )
   })
   const hint = document.createElement('small')
   hint.textContent = viewModel.reason
@@ -1707,24 +2506,22 @@ const rollCharacterCreationCharacteristic = async (
   )
   if (!rollAction) return
   const targetKey = characteristicKey ?? rollAction.key ?? null
-  const targetLabel =
-    targetKey === null
-      ? rollAction.label.replace('Roll ', '')
-      : targetKey.toUpperCase()
 
-  if (!state) {
-    await postCommand(
-      createGameCommand({ roomId, actorId }),
-      requestId('create-game-for-characteristic-roll')
-    )
+  if (!targetKey) {
+    setError('Choose a characteristic to roll')
+    return
   }
 
-  const response = await postDiceCommand(
-    buildRollDiceCommand({
-      identity: clientIdentity(),
-      expression: '2d6',
-      reason: `${characterCreationFlow.draft.name.trim() || 'Character'} ${targetLabel}`
-    }),
+  await ensureCharacterCreationPublished()
+
+  const response = await postCharacterCreationCommand(
+    {
+      type: 'RollCharacterCreationCharacteristic',
+      gameId: roomId,
+      actorId,
+      characterId: characterCreationFlow.draft.characterId,
+      characteristic: targetKey
+    },
     requestId('characteristic-roll')
   )
   const latestRoll =
@@ -1741,6 +2538,28 @@ const rollCharacterCreationCharacteristic = async (
     targetKey
   ).flow
   autoAdvanceCharacterCreationSetup()
+  renderCharacterCreationWizard()
+  characterCreationPanel.scrollToTop()
+}
+
+const completeCharacterCreationBasicTraining = async () => {
+  if (!characterCreationFlow) return
+  const characterId = characterCreationFlow.draft.characterId
+  const fallbackFlow = applyCharacterCreationBasicTraining(
+    characterCreationFlow
+  ).flow
+
+  await ensureCharacterCreationPublished()
+  const response = await postCharacterCreationCommand(
+    {
+      type: 'CompleteCharacterCreationBasicTraining',
+      gameId: roomId,
+      actorId,
+      characterId
+    },
+    requestId('complete-character-basic-training')
+  )
+  syncCharacterCreationFlowFromRoomState(response.state, characterId, fallbackFlow)
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
@@ -1801,24 +2620,21 @@ const rollCharacterCreationTermSkill = async (table) => {
   setError('')
   syncCharacterCreationWizardFields()
 
-  if (!state) {
-    await postCommand(
-      createGameCommand({ roomId, actorId }),
-      requestId('create-game-for-term-skill-roll')
-    )
-  }
-
   const action = deriveCharacterCreationTermSkillTableActions(
     characterCreationFlow
   ).find((candidate) => candidate.table === table)
   if (!action || action.disabled) return
 
-  const response = await postDiceCommand(
-    buildRollDiceCommand({
-      identity: clientIdentity(),
-      expression: '1d6',
-      reason: action.reason
-    }),
+  await ensureCharacterCreationPublished()
+  const characterId = characterCreationFlow.draft.characterId
+  const response = await postCharacterCreationCommand(
+    {
+      type: 'RollCharacterCreationTermSkill',
+      gameId: roomId,
+      actorId,
+      characterId,
+      table
+    },
     requestId('term-skill-roll')
   )
   const latestRoll =
@@ -1829,11 +2645,12 @@ const rollCharacterCreationTermSkill = async (table) => {
   }
 
   await waitForDiceReveal(latestRoll)
-  characterCreationFlow = applyCharacterCreationTermSkillRoll({
+  const fallbackFlow = applyCharacterCreationTermSkillRoll({
     flow: characterCreationFlow,
     table,
     roll: latestRoll.total
   }).flow
+  syncCharacterCreationFlowFromRoomState(response.state, characterId, fallbackFlow)
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
@@ -1843,24 +2660,20 @@ const rollCharacterCreationReenlistment = async () => {
   setError('')
   syncCharacterCreationWizardFields()
 
-  if (!state) {
-    await postCommand(
-      createGameCommand({ roomId, actorId }),
-      requestId('create-game-for-reenlistment-roll')
-    )
-  }
-
   const action = deriveNextCharacterCreationReenlistmentRoll(
     characterCreationFlow
   )
   if (!action) return
 
-  const response = await postDiceCommand(
-    buildRollDiceCommand({
-      identity: clientIdentity(),
-      expression: '2d6',
-      reason: action.reason
-    }),
+  await ensureCharacterCreationPublished()
+  const characterId = characterCreationFlow.draft.characterId
+  const response = await postCharacterCreationCommand(
+    {
+      type: 'ResolveCharacterCreationReenlistment',
+      gameId: roomId,
+      actorId,
+      characterId
+    },
     requestId('reenlistment-roll')
   )
   const latestRoll =
@@ -1871,10 +2684,11 @@ const rollCharacterCreationReenlistment = async () => {
   }
 
   await waitForDiceReveal(latestRoll)
-  characterCreationFlow = applyCharacterCreationReenlistmentRoll(
+  const fallbackFlow = applyCharacterCreationReenlistmentRoll(
     characterCreationFlow,
     latestRoll.total
   ).flow
+  syncCharacterCreationFlowFromRoomState(response.state, characterId, fallbackFlow)
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
@@ -1960,19 +2774,23 @@ const rollCharacterCreationCareerCheck = async () => {
   )
   if (!rollAction) return
 
-  if (!state) {
-    await postCommand(
-      createGameCommand({ roomId, actorId }),
-      requestId('create-game-for-career-roll')
-    )
-  }
+  await ensureCharacterCreationPublished()
 
-  const response = await postDiceCommand(
-    buildRollDiceCommand({
-      identity: clientIdentity(),
-      expression: '2d6',
-      reason: rollAction.reason
-    }),
+  const commandTypeByRollKey = {
+    survivalRoll: 'ResolveCharacterCreationSurvival',
+    commissionRoll: 'ResolveCharacterCreationCommission',
+    advancementRoll: 'ResolveCharacterCreationAdvancement'
+  }
+  const commandType = commandTypeByRollKey[rollAction.key]
+  if (!commandType) return
+  const characterId = characterCreationFlow.draft.characterId
+  const response = await postCharacterCreationCommand(
+    {
+      type: commandType,
+      gameId: roomId,
+      actorId,
+      characterId
+    },
     requestId('career-roll')
   )
   const latestRoll =
@@ -1983,10 +2801,11 @@ const rollCharacterCreationCareerCheck = async () => {
   }
 
   await waitForDiceReveal(latestRoll)
-  characterCreationFlow = applyCharacterCreationCareerRoll(
+  const fallbackFlow = applyCharacterCreationCareerRoll(
     characterCreationFlow,
     latestRoll.total
   ).flow
+  syncCharacterCreationFlowFromRoomState(response.state, characterId, fallbackFlow)
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
@@ -2299,13 +3118,41 @@ connectivityController = createConnectivityController({
 
 const applyState = (
   nextState,
-  { animateLatestDiceLog = true, deferDiceRevealIds = new Set() } = {}
+  {
+    animateLatestDiceLog = true,
+    deferDiceRevealIds = new Set(),
+    deferFollowedCreationRolls = []
+  } = {}
 ) => {
   const previousDiceId = latestDiceId
   state = appSession.setAuthoritativeState(nextState).authoritativeState
+  const shouldRenderFollowedCreation = refreshFollowedCharacterCreationFlow()
+  const shouldRenderEditableCreation = shouldRefreshEditableCharacterCreationFlow(
+    {
+      deferFollowedCreationRolls
+    }
+  )
   const latestRoll = state?.diceLog?.[state.diceLog.length - 1] || null
   latestDiceId = latestRoll?.id || null
   render()
+  if (shouldRenderFollowedCreation) {
+    if (deferFollowedCreationRolls.length > 0) {
+      Promise.all(
+        deferFollowedCreationRolls.map((roll) => waitForDiceReveal(roll))
+      )
+        .then(() => {
+          if (refreshFollowedCharacterCreationFlow()) {
+            renderCharacterCreationWizard()
+          }
+        })
+        .catch((error) => setError(error.message))
+    } else {
+      renderCharacterCreationWizard()
+    }
+  }
+  if (shouldRenderEditableCreation) {
+    renderCharacterCreationWizard()
+  }
   if (
     latestRoll &&
     animateLatestDiceLog &&
@@ -2398,6 +3245,7 @@ const characterSheetController = createCharacterSheetController({
     sheetTabs: els.sheetTabs
   },
   getSelectedPiece: selectedPiece,
+  getSelectedCharacter: selectedCharacter,
   getSelectedBoard: selectedBoard,
   getCharacterState: () => state,
   getBoardDoorActions: () => ({ actions: boardDoorActions(selectedBoard()) }),
@@ -2443,16 +3291,22 @@ const renderRail = () => {
   const pieces = boardPieces()
   if (pieces.length === 0) {
     const empty = document.createElement('button')
-    empty.className = 'rail-piece'
+    empty.className = 'rail-piece rail-create-piece'
     empty.type = 'button'
-    empty.disabled = true
+    empty.title = 'Create traveller'
+    empty.setAttribute('aria-label', 'Create traveller')
     const score = document.createElement('span')
     score.className = 'rail-score'
-    score.textContent = '-'
+    score.textContent = '+'
     const avatar = document.createElement('span')
     avatar.className = 'rail-avatar'
     avatar.textContent = '+'
     empty.append(score, avatar)
+    empty.addEventListener('click', () => {
+      startNewCharacterCreationWizard().catch((error) =>
+        setError(error.message)
+      )
+    })
     els.initiativeRail.replaceChildren(empty)
     renderSheet()
     return
@@ -2571,6 +3425,7 @@ createRoomMenuController({
     appSession.setRoomIdentity({ roomId, actorId })
     firstStateApplied = false
     latestDiceId = null
+    selectedCharacterId = null
     clearCreationActivityFeed()
     selectPiece(null)
     boardController?.clearDrag()
@@ -2597,12 +3452,17 @@ els.sheetClose.addEventListener('click', () => {
 })
 
 els.createCharacterRail.addEventListener('click', () => {
-  characterCreationPanel.open()
-  if (!characterCreationFlow) startCharacterCreationWizard()
+  startNewCharacterCreationWizard().catch((error) => setError(error.message))
 })
 
 els.characterCreatorClose.addEventListener('click', () => {
   characterCreationPanel.close()
+  if (characterCreationReadOnly) {
+    characterCreationFlow = null
+    characterCreationReadOnly = false
+    selectedCharacterId = null
+  }
+  render()
 })
 
 for (const tab of els.sheetTabs) {
@@ -2620,7 +3480,7 @@ els.refresh.addEventListener('click', () => {
 })
 
 els.startCharacterWizard.addEventListener('click', () => {
-  startCharacterCreationWizard()
+  startNewCharacterCreationWizard().catch((error) => setError(error.message))
 })
 
 els.backCharacterWizard.addEventListener('click', () => {
@@ -2634,6 +3494,10 @@ els.characterCreationFields.addEventListener('input', () => {
 
 els.characterCreationFields.addEventListener('change', () => {
   syncCharacterCreationWizardFields()
+  const nextFlow = characterCreationFlow
+  if (nextFlow?.step === 'homeworld') {
+    publishCharacterCreationHomeworldProgress(nextFlow)
+  }
   autoAdvanceCharacterCreationSetup()
   renderCharacterCreationWizard()
 })

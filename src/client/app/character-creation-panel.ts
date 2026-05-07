@@ -7,7 +7,7 @@ export interface CharacterCreationPanelElements {
   fallbackOverlayHost: HTMLElement | null
   title: HTMLElement
   startSection: HTMLElement
-  quickSection: HTMLElement
+  quickSection: HTMLElement | null
   startWizardButton: HTMLButtonElement
   wizard: HTMLElement
   steps: HTMLElement
@@ -93,7 +93,7 @@ export const createCharacterCreationPanel = ({
     elements.title.textContent = flow?.draft?.name?.trim() || 'Create traveller'
     elements.panel.classList.toggle('flow-active', hasFlow)
     elements.startSection.hidden = hasFlow
-    elements.quickSection.hidden = hasFlow
+    if (elements.quickSection) elements.quickSection.hidden = hasFlow
     elements.startWizardButton.textContent = 'Begin character creation'
 
     if (!hasFlow) resetInactiveWizard()

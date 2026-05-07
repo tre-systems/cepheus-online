@@ -80,7 +80,7 @@ const diceActivity = (
 })
 
 describe('creation activity view model', () => {
-  it('derives cards only for character creation activities', () => {
+  it('derives cards only for milestone character creation activities', () => {
     const activities: readonly LiveActivityDescriptor[] = [
       diceActivity({ seq: 10 }),
       characterActivity({
@@ -100,18 +100,62 @@ describe('creation activity view model', () => {
 
     assert.deepEqual(deriveCreationActivityCards(activities), [
       {
-        title: 'Homeworld selected',
-        detail: 'Homeworld: Regina; trade codes Hi; 3 background skills',
-        tone: 'neutral',
-        seq: 11
-      },
-      {
         title: 'Career term started',
         detail: 'Term started; Scout',
         tone: 'neutral',
         seq: 13
       }
     ])
+  })
+
+  it('suppresses routine setup cards that duplicate the active creation panel', () => {
+    const activities: readonly LiveActivityDescriptor[] = [
+      characterActivity({
+        seq: 20,
+        transition: 'SET_CHARACTERISTICS',
+        details: 'Characteristics assigned',
+        status: 'HOMEWORLD'
+      }),
+      characterActivity({
+        seq: 21,
+        transition: 'BACKGROUND_SKILL_SELECTED',
+        details: 'Background skill selected',
+        status: 'HOMEWORLD'
+      })
+    ]
+
+    assert.deepEqual(deriveCreationActivityCards(activities), [])
+  })
+
+  it('suppresses cards authored by the current viewer actor', () => {
+    const activities: readonly LiveActivityDescriptor[] = [
+      characterActivity({
+        seq: 30,
+        actorId: asUserId('local-user'),
+        transition: 'SURVIVAL_PASSED',
+        details: 'Survival passed',
+        status: 'COMMISSION'
+      }),
+      characterActivity({
+        seq: 31,
+        actorId: asUserId('spectated-user'),
+        transition: 'SURVIVAL_PASSED',
+        details: 'Survival passed',
+        status: 'COMMISSION'
+      })
+    ]
+
+    assert.deepEqual(
+      deriveCreationActivityCards(activities, { viewerActorId: 'local-user' }),
+      [
+        {
+          title: 'Survival passed',
+          detail: 'Survival passed',
+          tone: 'success',
+          seq: 31
+        }
+      ]
+    )
   })
 
   it('derives transient cards from accepted command live activities', () => {

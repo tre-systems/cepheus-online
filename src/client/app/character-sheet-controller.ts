@@ -55,6 +55,7 @@ export interface CharacterSheetControllerOptions {
   elements: CharacterSheetElements
   document?: CharacterSheetDocument
   getSelectedPiece: () => PieceState | null
+  getSelectedCharacter?: () => CharacterState | null
   getSelectedBoard: () => Pick<BoardState, 'name'> | null
   getCharacterState: () => Pick<GameState, 'characters'> | null | undefined
   getBoardDoorActions: () => CharacterSheetDoorActions
@@ -103,6 +104,7 @@ export const createCharacterSheetController = ({
   elements,
   document: documentApi = document,
   getSelectedPiece,
+  getSelectedCharacter,
   getSelectedBoard,
   getCharacterState,
   getBoardDoorActions,
@@ -587,6 +589,66 @@ export const createCharacterSheetController = ({
     else body.append(list)
   }
 
+  const renderCharacterOnlyDetailsTab = (
+    body: HTMLElement,
+    character: CharacterState
+  ) => {
+    body.append(
+      sheetSectionTitle('Profile'),
+      sheetRow('Type', character.type || 'PLAYER'),
+      sheetRow('Age', character.age == null ? '-' : String(character.age)),
+      statStrip(character),
+      ...creationRows(character.creation),
+      sheetSectionTitle('Edit'),
+      editableDetailsForm(null, character),
+      sheetSectionTitle('Skills'),
+      skillChips(deriveCharacterSkills(character))
+    )
+    appendDoorActions(body)
+  }
+
+  const renderCharacterOnlyActionTab = (
+    body: HTMLElement,
+    character: CharacterState
+  ) => {
+    appendCreationActions(body, character)
+    const skills = deriveCharacterSkills(character)
+    if (skills.length > 0) {
+      body.append(sheetSectionTitle('Skills'), skillChips(skills))
+    }
+    body.append(emptySheetText('No board token selected'))
+  }
+
+  const renderCharacterOnlyNotesTab = (
+    body: HTMLElement,
+    character: CharacterState
+  ) => {
+    const form = documentApi.createElement('div')
+    form.className = 'sheet-notes-form'
+    const textarea = documentApi.createElement('textarea')
+    textarea.value = character.notes || ''
+    textarea.placeholder = 'No notes'
+    textarea.spellcheck = true
+    const save = documentApi.createElement('button')
+    save.type = 'button'
+    save.textContent = 'Save'
+    save.addEventListener('click', () => {
+      handleAsyncError(
+        sendCharacterSheetPatch(
+          { characterId: character.id },
+          { notes: textarea.value }
+        )
+      )
+    })
+    form.append(textarea, save)
+    body.append(
+      sheetSectionTitle('Current Notes'),
+      sheetNotePreview(character.notes),
+      sheetSectionTitle('Edit Notes'),
+      form
+    )
+  }
+
   const renderNotesTab = (
     body: HTMLElement,
     piece: PieceState,
@@ -629,7 +691,9 @@ export const createCharacterSheetController = ({
   const render = () => {
     const piece = getSelectedPiece()
     const state = getCharacterState()
-    const character = selectCharacter(state, piece)
+    const character = piece
+      ? selectCharacter(state, piece)
+      : (getSelectedCharacter?.() ?? null)
     elements.sheetName.textContent = characterSheetTitle(piece, character)
     for (const tab of elements.sheetTabs) {
       tab.classList.toggle('active', tab.dataset.sheetTab === activeSheetTab)
@@ -637,7 +701,7 @@ export const createCharacterSheetController = ({
 
     const body = documentApi.createElement('div')
     body.className = 'sheet-grid'
-    if (!piece) {
+    if (!piece && !character) {
       body.append(sheetRow('Status', characterSheetEmptyLabels.noActiveToken))
       body.append(sheetRow('Board', getSelectedBoard()?.name || 'None'))
       appendDoorActions(body)
@@ -645,10 +709,24 @@ export const createCharacterSheetController = ({
       return
     }
 
-    if (activeSheetTab === 'action') renderActionTab(body, piece, character)
+    if (!piece && character) {
+      if (activeSheetTab === 'action') renderCharacterOnlyActionTab(body, character)
+      else if (activeSheetTab === 'items') renderItemsTab(body, character)
+      else if (activeSheetTab === 'notes')
+        renderCharacterOnlyNotesTab(body, character)
+      else renderCharacterOnlyDetailsTab(body, character)
+      elements.sheetBody.replaceChildren(body)
+      return
+    }
+
+    if (!piece) return
+    const selectedPiece = piece
+    if (activeSheetTab === 'action')
+      renderActionTab(body, selectedPiece, character)
     else if (activeSheetTab === 'items') renderItemsTab(body, character)
-    else if (activeSheetTab === 'notes') renderNotesTab(body, piece, character)
-    else renderDetailsTab(body, piece, character)
+    else if (activeSheetTab === 'notes')
+      renderNotesTab(body, selectedPiece, character)
+    else renderDetailsTab(body, selectedPiece, character)
     elements.sheetBody.replaceChildren(body)
   }
 

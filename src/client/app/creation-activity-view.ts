@@ -13,6 +13,10 @@ export interface CreationActivityCardViewModel {
   seq: number
 }
 
+export interface CreationActivityCardOptions {
+  viewerActorId?: string | null
+}
+
 export const MAX_CREATION_ACTIVITY_TITLE_LENGTH = 48
 export const MAX_CREATION_ACTIVITY_DETAIL_LENGTH = 96
 
@@ -40,6 +44,10 @@ export const SRD_CREATION_ACTIVITY_MILESTONE_TRANSITIONS = [
   'CREATION_COMPLETE',
   'FINALIZED'
 ] as const
+
+const creationActivityToastTransitions = new Set<string>(
+  SRD_CREATION_ACTIVITY_MILESTONE_TRANSITIONS
+)
 
 const transitionTitles = {
   STARTED: 'Character creation started',
@@ -162,12 +170,22 @@ export const deriveCreationActivityCard = (
 })
 
 export const deriveCreationActivityCards = (
-  activities: readonly LiveActivityDescriptor[]
+  activities: readonly LiveActivityDescriptor[],
+  { viewerActorId = null }: CreationActivityCardOptions = {}
 ): CreationActivityCardViewModel[] => {
   const cards: CreationActivityCardViewModel[] = []
 
   for (const activity of activities) {
     if (activity.type !== 'characterCreation') continue
+    if (viewerActorId && activity.actorId === viewerActorId) continue
+    if (
+      !activity.creationComplete &&
+      activity.status !== 'DECEASED' &&
+      activity.status !== 'MISHAP' &&
+      !creationActivityToastTransitions.has(activity.transition)
+    ) {
+      continue
+    }
     cards.push(deriveCreationActivityCard(activity))
   }
 
@@ -175,6 +193,7 @@ export const deriveCreationActivityCards = (
 }
 
 export const deriveCreationActivityCardsFromApplication = (
-  application: Pick<ClientMessageApplication, 'liveActivities'>
+  application: Pick<ClientMessageApplication, 'liveActivities'>,
+  options: CreationActivityCardOptions = {}
 ): CreationActivityCardViewModel[] =>
-  deriveCreationActivityCards(application.liveActivities)
+  deriveCreationActivityCards(application.liveActivities, options)

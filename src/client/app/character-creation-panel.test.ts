@@ -193,6 +193,42 @@ describe('character creation panel controller', () => {
     assert.deepEqual(elements.fields.children, [existingField])
   })
 
+  it('renders active flow shell state when the retired quick section is absent', () => {
+    const { elements } = createHarness()
+    const controller = createCharacterCreationPanel({
+      elements: {
+        panel: asElement(elements.panel),
+        body: asElement(elements.body),
+        roomDialog: asDialog(elements.roomDialog),
+        fallbackOverlayHost: asElement(elements.fallbackOverlayHost),
+        title: asElement(elements.title),
+        startSection: asElement(elements.startSection),
+        quickSection: null,
+        startWizardButton: asButton(elements.startWizardButton),
+        wizard: asElement(elements.wizard),
+        steps: asElement(elements.steps),
+        status: asElement(elements.status),
+        fields: asElement(elements.fields),
+        backWizardButton: asButton(elements.backWizardButton),
+        nextWizardButton: asButton(elements.nextWizardButton),
+        actions: asElement(elements.actions)
+      },
+      closeCharacterSheet: () => {},
+      requestRender: () => {}
+    })
+
+    assert.equal(
+      controller.render({
+        draft: { name: 'Character 3' }
+      } as CharacterCreationFlow),
+      true
+    )
+
+    assert.equal(elements.title.textContent, 'Character 3')
+    assert.equal(elements.panel.classList.contains('flow-active'), true)
+    assert.equal(elements.startSection.hidden, true)
+  })
+
   it('can reveal and scroll without requesting a render', () => {
     const { controller, elements, counts } = createHarness()
     elements.panel.hidden = true
