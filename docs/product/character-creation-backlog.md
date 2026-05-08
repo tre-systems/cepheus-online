@@ -65,34 +65,34 @@ Already implemented in the rewrite:
 - Server-ordered room event stream with Durable Object persistence.
 - Shared command, event, and projection types for character sheet creation and
   updates.
-- Event-backed character creation start, coarse status transition,
-  finalization, semantic homeworld completion, semantic basic training
-  completion, and first career term start with requested/accepted career facts.
+- Event-backed character creation start, semantic characteristic rolls,
+  homeworld/background/cascade events, qualification and draft roll events,
+  basic training completion, career term start, survival, commission,
+  advancement, term skill rolls, aging, reenlistment, mustering benefits,
+  mustering completion, and finalization.
 - Pure shared character creation helpers for the status machine, skill
   normalization, cascade skill handling, term outcomes, aging selection,
   benefits, term lifecycle, reenlistment, and anagathics primitives.
 - Mobile-first browser shell with a character creation panel, compact
-  characteristic strip, first career selection, draft fallback, and early skill
-  chip presentation.
+  characteristic strip, career selection, draft fallback, live shared dice,
+  death state, term skills, aging/reenlistment, mustering, and early sheet
+  integration.
 
 Important remaining gaps:
 
-- The browser creation flow is not yet the full Cepheus procedure.
 - The current status machine is only a coarse lifecycle guard. It does not yet
   own the complete character creation aggregate, pending decisions, legal
   actions, roll requirements, or term sub-state.
 - Too much creation behavior still lives in the client wizard/draft flow rather
   than in shared deterministic rules and server-backed events.
-- Homeworld, primary education, and background skills are partially
-  server-backed. Completion now uses a semantic command/event, but the
-  remaining pending-choice model still needs to become fully projection-owned.
-- Cascade skill choices are not yet presented as first-class modal steps.
-- Multi-term career play is incomplete.
-- Survival, mishaps, commission, advancement, aging, anagathics, reenlistment,
-  mustering out, and final playable sheet projection need end-to-end wiring.
-- Character creation roll semantics need to become first-class server facts
-  connected to shared dice events so all players can see the same creation
-  rolls at the same time.
+- Homeworld, primary education, background skills, cascade choices, term skill
+  choices, aging losses, and mustering choices need to become more consistently
+  projection-owned and easier to recover after refresh.
+- Multi-term career play, mustering out, and final sheet/export need browser
+  automation and UX polish.
+- Optional mishaps and anagathics remain unimplemented.
+- Character creation follow mode needs stronger two-tab automation and reveal
+  timing contracts so spectators never see roll-dependent outcomes early.
 
 ## SRD Procedure Audit Checklist
 
@@ -110,9 +110,8 @@ tests before it is considered done.
 
 - [x] Coarse lifecycle statuses exist for characteristics, homeworld, career
   selection, term steps, mustering out, playable, and deceased.
-- [~] Roll characteristics and lock assignments. Current legal action:
-  `setCharacteristics`. Gap: no first-class characteristic roll facts,
-  assignment choices, or replayed roll provenance.
+- [x] Roll characteristics and lock assignments with server-side semantic roll
+  facts and replayed provenance.
 - [~] Set homeworld data and derive background skills from law level, trade
   codes, and primary education options. Current legal action:
   `completeHomeworld`; semantic completion and pure helpers exist. Gap:
@@ -122,12 +121,10 @@ tests before it is considered done.
   Current planner can block on `cascadeSkillResolution`. Gap: cascade choices
   are not yet a first-class server-backed modal step through all creation
   sources.
-- [~] Qualify for a career using `careerBasics`, applying prior-career limits
-  and qualification penalties. Current legal action: `selectCareer`. Gap:
-  qualification success/failure is not yet a dedicated persisted roll fact,
-  though career-term start now records requested versus accepted career.
-- [ ] Resolve the Draft by rolling the `theDraft` table exactly once when
-  eligible, then mark draft use on the term.
+- [x] Qualify for a career using `careerBasics`, applying prior-career limits
+  and qualification penalties, with dedicated persisted roll facts.
+- [x] Resolve the Draft by rolling the `theDraft` table when eligible, then
+  mark draft use on the term.
 - [~] Apply basic training from `serviceSkills`: all service skills at level 0
   in the first term ever, one selected service skill for a first term in a new
   career, none when returning. Current planner can block on
@@ -137,29 +134,27 @@ tests before it is considered done.
 - [~] Roll survival from `careerBasics`; on failure, enter mishap/death or legal
   exit handling. Current legal action: `rollSurvival`. Semantic survival
   command/event and roll facts are server-backed. Gap: mishap/death outcome
-  tables remain unresolved.
+  tables remain unresolved for the optional variant.
 - [~] Resolve commission and advancement from `careerBasics` and
-  `ranksAndSkills`, including rank titles and bonus skills. Current legal
-  actions: `rollCommission`, `skipCommission`, `rollAdvancement`,
-  `skipAdvancement`. Gap: bonus skill decisions and rank provenance are not yet
-  complete.
+  `ranksAndSkills`, including rank titles and bonus skills. Semantic events and
+  server dice facts exist. Gap: bonus skill decisions and rank provenance still
+  need UI/projection polish.
 - [~] Select a term skill table and roll skills from `personalDevelopment`,
-  `serviceSkills`, `specialistSkills`, or `advEducation`. Current planner can
-  block on `skillTrainingSelection`. Gap: table choice, roll result, and skill
-  provenance are not yet persisted end to end.
+  `serviceSkills`, `specialistSkills`, or `advEducation`. Semantic table roll
+  events exist. Gap: table-choice UX, cascade resolution, and provenance need
+  browser-hardening.
 - [~] Resolve aging from the `aging` table, including characteristic loss
-  choices and anagathics modifiers. Current legal action: `resolveAging`; aging
-  loss can block progress. Gap: anagathics and characteristic-choice events are
-  incomplete.
+  choices and anagathics modifiers. Semantic aging facts exist. Gap:
+  anagathics and characteristic-choice UI/projection polish are incomplete.
 - [~] Roll reenlistment from `careerBasics`, handling mandatory retirement
   after seven terms, forced reenlistment on 12, success, failure, and voluntary
   exit. Current legal actions cover unresolved, forced, allowed, and blocked
   outcomes, and `ResolveCharacterCreationReenlistment` persists server-derived
   roll facts. Gap: exit provenance and UI copy are not fully wired.
 - [~] Muster out using `materialBenefits` and `cashBenefits`, with benefit
-  counts, cash limits, rank/Gambling modifiers, and material effects. Current
-  planner can block on remaining benefits. Gap: benefit roll commands/events
-  and final projected credits/materials are incomplete.
+  counts, cash limits, rank/Gambling modifiers, and material effects. Benefit
+  roll commands/events exist. Gap: final projected credits/materials,
+  multi-career continuation, and UI/export polish need completion.
 - [~] Finalize only after at least one legal term or exit, no unresolved pending
   decisions, no unresolved death/mishap branch, and all mustering benefits are
   resolved. Current legal action: `completeCreation`. Gap: final sheet
@@ -241,11 +236,10 @@ Tasks:
   - `CreationHistoryEntry`
 - Move legal-action derivation into shared pure functions. The client may
   filter actions for layout, but it must not invent or unlock them.
-- Replace broad `AdvanceCharacterCreation` transitions with semantic commands
-  where behavior matters: roll characteristics, set homeworld, select
-  background skill, qualify, draft, apply basic training, survive, resolve
-  mishap, commission, advance, roll term skill, age, reenlist, muster out, and
-  finalize.
+- Remove the remaining broad `AdvanceCharacterCreation` transition bridge now
+  that semantic commands exist for the main SRD path. Keep adding semantic
+  commands where behavior still matters, especially optional mishaps,
+  anagathics, multi-career continuation, and final export/provenance.
 - Make roll events first-class facts. Each roll-gated event should record the
   roll inputs, dice result, modifiers, target, success/failure, and resulting
   state transition.
@@ -264,8 +258,8 @@ Tasks:
 - Keep manual/generated character shortcuts outside the canonical rules state
   machine, or make them emit the same semantic creation events when they become
   production features.
-- Add replay tests that rebuild the creation state and final sheet from events
-  after every milestone.
+- Keep expanding replay tests that rebuild the creation state and final sheet
+  from events after every milestone.
 - Add negative tests for illegal transitions: skipping pending decisions,
   rerolling locked characteristics, manually changing age, bypassing failed
   qualification, skipping aging, and finalizing before mustering out is legal.
@@ -374,39 +368,27 @@ Acceptance:
 
 Goal: implement the main Cepheus term loop end to end.
 
-Status: in progress. Semantic survival is the first server-backed term-loop
-step and should be the architecture pattern for the remaining steps: intent
-commands, fact events, projection-owned gates, and replay tests.
+Status: in progress. The main term-loop rolls are server-backed semantic facts:
+survival, commission, advancement, term skills, aging, reenlistment, and
+mustering benefits. The remaining work is to make pending choices,
+multi-term/mustering transitions, provenance, and browser UX robust enough to
+use without manual recovery.
 
 Tasks:
 
-- Promote the current term model into a server-backed projection with:
-  - career
-  - rank
-  - rank title
-  - drafted flag
-  - completed basic training
-  - survival result
-  - commission result
-  - advancement result
-  - skills and training rolls
-  - mishap outcome
-  - term completion
 - Implement basic training:
   - first term ever grants all service skills at level 0
   - later first term in a new career grants one selected service skill at level
     0
   - returning to the same career does not repeat basic training
-- Keep survival rolls server-backed and use them as the template for remaining
-  roll-gated term steps.
 - Implement mishap and death handling from the ruleset.
-- Implement commission eligibility, commission roll, commission rank, rank
-  title, and any commission skill reward.
-- Implement advancement eligibility, advancement roll, promotion rank, rank
-  title, and any promotion skill reward.
-- Implement term skill table selection and roll resolution, including the SRD
-  rule preserved from legacy that careers without commission require two term
-  skill rolls before aging/reenlistment can proceed.
+- Polish commission eligibility, rank title, bonus skill reward, and provenance
+  display.
+- Polish advancement eligibility, rank title, bonus skill reward, and
+  provenance display.
+- Harden term skill table selection and roll resolution in browser automation,
+  including the SRD rule preserved from legacy that careers without commission
+  require two term skill rolls before aging/reenlistment can proceed.
 - Enforce outstanding selection gates for cascade skills, commission skills,
   promotion skills, and term skills.
 - Add term history cards that summarize the term in a compact, readable way.
@@ -430,17 +412,13 @@ and pacing.
 
 Tasks:
 
-- Wire the pure aging helpers into server-backed commands and events.
 - Use the correct aging modifier from term count and anagathics use.
 - Present aging characteristic loss choices only when required, and only for
   legal characteristics.
 - Persist characteristic changes with term provenance.
 - Implement optional anagathics use, survival check, and cost/payment flow.
-- Implement reenlistment:
-  - [x] retirement required after seven terms
-  - [x] roll of 12 forces reenlistment
-  - [x] success allows reenlistment
-  - [x] failure blocks reenlistment and moves toward mustering out
+- Polish reenlistment UI/provenance for retirement after seven terms, forced
+  reenlistment on 12, success, and failure toward mustering out.
 - Add UI copy for forced reenlistment, blocked reenlistment, retirement, and
   leave-career decisions.
 
@@ -456,11 +434,6 @@ Goal: turn career history into a valid playable character.
 
 Tasks:
 
-- Implement benefit count calculation from completed terms and rank.
-- Implement cash and material benefit rolls from the ruleset.
-- Apply cash benefit limits.
-- Apply cash benefit modifiers for retirement and Gambling.
-- Apply material benefit modifiers for high rank.
 - Persist credits, starting credits, and material benefits.
 - Support continuing into a new career after mustering out when rules allow.
 - Implement finalization gates:
@@ -536,20 +509,19 @@ Acceptance:
 
 ## Suggested Next Slice
 
-Continue Milestone 4 by wiring the semantic term-skill command into the mobile
-creation UI, then move aging and reenlistment onto semantic server commands.
-Use the semantic survival implementation as the template for command
-validation, roll facts, projection gates, live activity, and replay tests.
+Build the automated browser regression harness and use it to harden the
+existing server-backed character creation loop across several disposable
+travellers.
 
 Reason:
 
-- Survival established the right architecture: command validation, semantic
-  events, projection recovery, roll facts, live dice, and focused mobile UI.
-- Term skills are now represented as server-backed roll facts, but the browser
-  still needs the table-choice UI and cascade-resolution path to use those
-  commands end to end.
-- Keeping the pass path authoritative first reduces ambiguity before adding the
-  mishap/death branch.
+- The core SRD roll facts now exist on the server, but recent defects were
+  browser orchestration, button-state, reveal-timing, and mobile layout issues.
+- Manual clicking is too slow to keep finding stuck states in multi-term
+  creation.
+- A real-browser smoke should drive the same owner and spectator paths users
+  use, then leave screenshots, DOM state, console errors, and server responses
+  when something breaks.
 
 Expected file areas:
 
@@ -567,10 +539,10 @@ Expected file areas:
 Architecture acceptance for the next slice:
 
 - Character creation has one shared legal-action planner.
-- Characteristic and career rolls are persisted event facts and broadcast as
+- Characteristic and career rolls remain persisted event facts and broadcast as
   viewer-safe dice activity.
 - The creator and spectators see compatible reveal timing and compact outcome
-  cards.
+  cards, verified by repeatable browser tests.
 - Refresh recovery does not depend on live activity messages having been
   received.
 

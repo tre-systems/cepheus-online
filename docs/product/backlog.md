@@ -57,6 +57,7 @@ The reviewed Delta-V sources were strongest in these areas:
 - event projectors split by domain with an exhaustive event registry
 - contract fixtures for protocol shapes
 - deterministic RNG derived from match seed and event sequence
+- dev-only esbuild bundling for the dependency-free browser client
 - zero-framework reactive state used selectively, not as a global store
 - active work streams with explicit write ownership for parallel agents
 - fast local checks plus heavier smoke, accessibility, and simulation gates
@@ -73,16 +74,19 @@ Each wave should make later work simpler, safer, or more testable.
 1. Finish the architecture seams that are already partially present: thin
    client composition root, one command router, one server publication pipeline,
    one projection/filter path, and protocol fixtures.
-2. Replace coarse character creation transition events with semantic
-   commands/events for each rules fact. Commands remain intent, events record
-   accepted facts with dice and outcome data.
-3. Make the server projection the source of truth for every creation gate:
+2. Finish replacing coarse character creation transition events with semantic
+   commands/events where generic transitions still remain. Commands remain
+   intent, events record accepted facts with dice and outcome data.
+3. Keep moving the server projection toward the source of truth for every
+   creation gate:
    pending choices, legal actions, term facts, final sheet fields, and refresh
    recovery.
-4. Complete the SRD career term loop in order: qualification/draft/basic
-   training, survival, commission, advancement, term skills, reenlistment.
-5. Add the hard branches after the normal loop is authoritative: mishap/death,
-   aging/anagathics, mustering out, final playable sheet, and export display.
+4. Complete and harden the SRD career term loop in order: qualification,
+   draft, basic training, survival/death, commission, advancement, term skills,
+   aging, reenlistment, mustering out, and finalization.
+5. Add optional branches after the default loop is authoritative:
+   mishap-variant support, anagathics, multi-career continuations, richer
+   final sheet/export display, and provenance.
 6. Layer live following on top of semantic events so connected players see dice
    and compact outcome cards without creating another source of truth.
 7. Polish the mobile PWA experience once the flow shape is stable.
@@ -107,9 +111,9 @@ Agents A, B, C, D, and E.
 ### Slice 0A: Client Kernel And Command Router
 
 Status: partially done. A typed app command router exists with route coverage
-for board, dice, door, sheet, and character creation commands. `app.ts` is
-still large and still uses `// @ts-nocheck`, so the composition-root extraction
-is not complete.
+for board, dice, door, sheet, and character creation commands. `AppSession`
+exists and `app.ts` is type-checked, but `app.ts` is still too large and still
+owns too much orchestration, so the composition-root extraction is not complete.
 
 Primary write ownership:
 
@@ -126,17 +130,14 @@ Tasks:
 - Finish a `createAppClient()` composition root that wires DOM elements,
   room API, WebSocket, PWA install, board controller, sheet controller, dice
   overlay, and character creation.
-- Add a small `AppSession` aggregate for durable client state: authoritative
-  `GameState`, room identity, viewer role, selected board/piece, open panels,
-  active character creation flow, and transient request state.
 - Keep all command submission on the existing client command router and remove
   direct room API calls from extracted feature modules as `app.ts` shrinks.
 - Split canvas and button input into a three-layer path: DOM/canvas capture,
   pure input interpretation, then command routing.
 - Keep local planning state separate from authoritative state: drag previews,
   open modal state, form drafts, and pending dice animation are discardable.
-- Remove `// @ts-nocheck` from `src/client/app/app.ts` by shrinking the file and
-  giving each extracted module typed dependencies.
+- Keep shrinking `src/client/app/app.ts` into typed dependencies rather than
+  letting it grow as the long-term composition and orchestration file.
 - Ensure each stateful client manager exposes a `dispose()` path when it owns
   listeners, effects, timers, or sockets.
 
@@ -237,9 +238,9 @@ Status: partially done. Live activity descriptors exist for tactical dice and
 character creation outcomes, protocol fixtures prove bounded viewer-safe
 messages, publication returns derived activity alongside state, HTTP commands
 broadcast character creation activity to connected sockets, and the browser
-renders transient creation outcome cards without making an in-app log. The next
-work is to derive those descriptors from more precise creation events and widen
-the follow-along coverage as the remaining semantic events land.
+uses the shared dice renderer for tactical and creation rolls. The next work is
+to harden two-tab follow behavior, keep reveal timing centralized, and widen
+the compact follow cards as the remaining semantic events land.
 
 Primary write ownership:
 
@@ -253,19 +254,12 @@ Primary write ownership:
 
 Tasks:
 
-- Define a small live activity protocol for accepted event outcomes that should
-  be seen immediately: dice roll starting, dice result revealed, character
-  creation milestone, character creation blocked decision, and tactical board
-  update.
-- Keep the event stream authoritative. Live activity messages are presentation
-  companions derived from accepted events, not a second source of truth.
 - Use one broadcast path for HTTP command acceptance, WebSocket room state, and
   activity messages so all connected players see compatible state and dice
   timing.
-- Make character creation rolls use the same shared dice renderer and timing
-  path as tactical dice rolls.
-- Delay revealing roll-dependent creation results until the local dice
-  animation reveal point, while preserving deterministic recovery after refresh.
+- Centralize reveal timing so roll-dependent creation results are not visible
+  before the local dice animation reveal point, while preserving deterministic
+  recovery after refresh.
 - Add compact spectator cards for player-visible creation events:
   characteristics rolled, homeworld set, background skill chosen, career
   qualification, draft result, survival, commission, advancement, aging,
@@ -286,6 +280,13 @@ Done when:
 
 ### Slice 0E: PWA And Release Hygiene
 
+Status: partially done. PWA assets and service worker support exist, docs link
+checking is in `verify:quick`, quick/full verification gates exist, Cloudflare
+deploy validation runs in CI, and deployed smoke covers the Worker shell,
+static bundle, room commands, and WebSocket dice path. Remaining work is mostly
+installed-PWA update behavior, connectivity UX, and mobile install/reload
+checks.
+
 Primary write ownership:
 
 - `src/client/app/service-worker.ts`
@@ -304,11 +305,6 @@ Tasks:
 - Keep the service worker conservative: cache shell assets, serve an offline
   shell fallback, and never cache room commands, state reads, health checks, or
   auth/session routes.
-- Add a documentation link checker or equivalent lightweight doc hygiene gate.
-- Add a deploy-secret preflight script so local and CI deploy failures explain
-  missing Cloudflare configuration clearly.
-- Split verification into quick and full gates once browser smoke tests become
-  heavy enough to justify it.
 - Add mobile PWA manual checks to the testing docs: install, reload, offline
   shell, update, and reconnect.
 
@@ -422,31 +418,26 @@ Primary write ownership:
 
 ### Slice 1A: Semantic Commands And Events
 
-Status: in progress. Semantic commands/events now cover homeworld completion,
-basic training completion, and career term start facts. Homeworld set,
-background skill, cascade resolution, and finalization already have dedicated
-event families. The remaining high-value gap is replacing roll-backed generic
-transitions with semantic roll facts.
+Status: in progress. Semantic commands/events now cover characteristic rolls,
+homeworld set/completion, background skill selection, cascade resolution,
+career qualification, draft resolution, career term start, basic training,
+survival, commission, advancement, term skill rolls, aging, reenlistment,
+mustering benefits, mustering completion, and finalization. The remaining
+high-value gap is removing the remaining generic transition bridge and making
+all pending decisions projection-owned.
 
 Tasks:
 
 - Keep the current shared status machine and legal-action planner, but stop
   treating `AdvanceCharacterCreation` plus `CharacterCreationTransitioned` as
   the long-term event model.
-- Add semantic command/event pairs for the already-modeled first facts:
-  characteristics rolled/assigned, homeworld set, background skill selected,
-  cascade skill resolved, career qualification resolved, draft resolved, career
-  term started, and basic training completed.
-- Include complete roll facts on roll-backed events: expression, rolls, total,
-  characteristic, modifier, target, success, and the SRD outcome derived from
-  them.
 - Keep command payloads intent-shaped. For example, commands request a career,
   a table choice, or a decision; the server derives dice, modifiers, success,
   rank, skill, or benefit facts.
 - Maintain backward compatibility only as a short bridge for the current UI.
   New rules work should add semantic events first, then adapt the UI.
-- Update `deriveLiveActivities()` to read semantic events directly instead of
-  parsing coarse transition payloads where possible.
+- Finish updating `deriveLiveActivities()` to read semantic events directly
+  instead of parsing coarse transition payloads where possible.
 - Add protocol fixtures for every new command, event envelope, accepted
   response, rejected response, and viewer-safe live activity.
 
@@ -508,18 +499,15 @@ Done when:
 
 ### Slice 1D: Homeworld, Background Skills, And Cascade Choices
 
-Status: mostly done in shared/client helpers and projector support. The current
-code projects homeworld, background skills, pending cascade skills, cascade
-resolution, and semantic homeworld completion. The remaining work is to make
-background allowance and cascade choices fully projection-owned across every
-creation source and to keep tightening server validation around those choices.
+Status: mostly done in shared/client helpers, command handlers, and projector
+support. The current code projects homeworld, background skills, pending
+cascade skills, cascade resolution, and semantic homeworld completion. The
+remaining work is to make background allowance and cascade choices fully
+projection-owned across every creation source and to keep tightening server
+validation and UX around those choices.
 
 Tasks:
 
-- Extend character creation projection with homeworld, background skills, and
-  pending cascade selections.
-- Add commands and events for setting homeworld data and resolving background
-  skill selections.
 - Port or confirm pure helpers for primary education, homeworld-derived skills,
   background skill allowance, and cascade resolution.
 - Add mobile UI controls for law level, trade code, primary education, and
@@ -537,20 +525,19 @@ Done when:
 ### Slice 1E: Career Entry, Draft, And Basic Training
 
 Status: partially done. SRD career data, qualification penalties, failed
-qualification options, draft table resolution, basic training plans, career
-term start projection, semantic requested/accepted career facts, semantic basic
-training completion, and client flow helpers exist. The remaining work is to
-make server-side events record exact qualification and draft roll facts, then
-carry richer basic-training choices in projection.
+qualification options, semantic qualification roll facts, semantic draft table
+roll facts, basic training plans, career-term start projection, semantic
+requested/accepted career facts, semantic basic-training completion, and client
+flow helpers exist. The remaining work is to carry richer basic-training
+choices in projection and tighten the browser affordances around failed
+qualification and draft fallback.
 
 Tasks:
 
-- Move career entry onto explicit server-backed commands and events.
 - Prevent normal qualification into careers already left, except for allowed
   Drifter behavior.
 - Apply previous-career qualification penalties.
 - On failed qualification, expose only Drifter or the Draft.
-- Implement the Draft as a 1d6 ruleset table roll.
 - Implement first-term basic training and later new-career basic training.
 - Persist drafted terms and clear draft eligibility after draft use.
 
@@ -567,19 +554,17 @@ Purpose: complete the Cepheus character creation mini-game end to end.
 
 ### Slice 2A: SRD Career Term Loop
 
-Status: in progress. The survival step now has semantic server command/event
-coverage with roll facts and projection support. The shared state machine
-follows the SRD order through commission, advancement, skills, aging,
-reenlistment, mustering, and finalization. SRD data alignment tests cover career
-tables, draft, rank rewards, skill tables, and benefits. Semantic survival,
-commission, advancement, and term skill rolls now use server-derived dice facts.
-The next priority is wiring aging and reenlistment with the same pattern.
+Status: in progress. The shared state machine follows the SRD order through
+commission, advancement, skills, aging, reenlistment, mustering, and
+finalization. SRD data alignment tests cover career tables, draft, rank rewards,
+skill tables, and benefits. Semantic survival, commission, advancement, term
+skill, aging, reenlistment, and mustering rolls now use server-derived dice
+facts. The next priority is hardening pending decisions, provenance, browser
+automation, and multi-term/mustering UX rather than adding more client-only
+flow logic.
 
 Tasks:
 
-- Promote term state into server projection: career, rank, title, drafted flag,
-  basic training, survival, commission, advancement, term skills, reenlistment,
-  and completion.
 - Keep semantic survival pass/fail events as the pattern for the rest of the
   term loop: command intent, server-derived roll facts, projection-owned gates,
   and replay tests.
@@ -587,7 +572,7 @@ Tasks:
   rank/title changes, and rank bonus skills.
 - [x] Add semantic advancement events, including skipped advancement, roll result,
   rank/title changes, and rank bonus skills.
-- [~] Add term skill table selection and roll events for service, specialist,
+- [x] Add term skill table selection and roll events for service, specialist,
   personal development, and advanced education tables.
 - Enforce outstanding selection gates for cascade, commission, promotion, and
   term skills before the server accepts the next command.
@@ -627,20 +612,18 @@ Done when:
 
 ### Slice 2C: Aging, Anagathics, And Reenlistment
 
-Status: partially done in pure helpers and legal-action planning. Aging roll
-modifiers, aging effect selection, anagathics offer/payment, reenlistment
-resolution, seven-term retirement, and forced reenlistment are represented in
-shared code. Server-backed semantic facts and UI decisions still need to be
-completed.
+Status: partially done. Aging roll modifiers, aging effect selection,
+reenlistment resolution, seven-term retirement, forced reenlistment, and
+server-backed semantic aging/reenlistment facts exist. Anagathics and some UI
+decisions/provenance still need completion.
 
 Tasks:
 
-- Wire aging helpers into server-backed commands and events.
 - Use the correct aging modifier from term count and anagathics use.
 - Present legal aging characteristic loss choices only when required.
 - Persist characteristic changes with term provenance.
 - Implement optional anagathics survival and cost/payment flow.
-- Implement reenlistment, including mandatory retirement after seven terms,
+- Polish reenlistment UI/provenance for mandatory retirement after seven terms,
   forced reenlistment on 12, allowed reenlistment, and blocked reenlistment.
 
 Done when:
@@ -651,19 +634,16 @@ Done when:
 
 ### Slice 2D: Mustering Out
 
-Status: partially done in pure helpers. SRD benefit count, cash/material benefit
-roll modifiers, cash limits, and benefit table resolution are covered by tests.
-Server events and projection need to carry benefit choices and payouts as facts.
+Status: partially done. SRD benefit count, cash/material benefit roll
+modifiers, cash limits, benefit table resolution, semantic mustering benefit
+events, and mustering completion events are covered. Remaining work is
+projection/UI polish for benefit choices, payouts, material item presentation,
+multi-career continuation, and final sheet/export quality.
 
 Tasks:
 
-- Implement benefit count calculation from completed terms and rank.
-- Implement cash and material benefit rolls from the ruleset.
-- Apply cash limits and benefit modifiers.
 - Persist credits, starting credits, and material benefits.
 - Support continuing into a new career after mustering out when rules allow.
-- Add semantic benefit events with career, benefit kind, roll facts, table roll,
-  result text, credits, and material item where applicable.
 - Keep remaining benefit count in projection so mustering cannot finish early.
 
 Done when:
@@ -814,39 +794,40 @@ Done when:
 The next batch should run like this, in this order:
 
 1. Finish the remaining architecture work already underway: shrink `app.ts`,
-   wire `AppSession`, split the projector registry by domain, and keep
-   publication parity plus viewer-safe responses on the single publication
-   path.
+   extract the character creation controller/renderer/command adapter, split
+   the projector registry by domain, and keep publication parity plus
+   viewer-safe responses on the single publication path.
 2. Add the automated UX regression slice before more broad creator polish:
    character creation browser smoke, multi-character repeat runner, two-tab
    spectator follow checks, mobile viewport assertions, and a dice reveal
    coordinator contract.
-3. Add semantic character creation commands/events for the earliest SRD facts:
-   characteristics, homeworld/background/cascade, qualification, draft, career
-   term start, and basic training. Update protocol fixtures and live activity
-   descriptors with each event family.
-4. Move legal-action state into server projection: pending decisions, roll
+3. Remove the remaining generic character creation transition bridge by moving
+   pending decisions and finalization details onto semantic commands/events.
+   Update protocol fixtures and live activity descriptors with each event
+   family.
+4. Finish moving legal-action state into server projection: pending decisions,
    requirements, failed-qualification options, remaining term skills, remaining
    mustering benefits, and completion gates. Reject commands that are not legal
    from the current projection.
-5. Complete the SRD term loop on the server projection in rules order:
-   survival, commission, advancement, term skill tables, and reenlistment.
-6. Add death next, because failed survival must not be hidden behind happy-path
-   finalization. Keep mishap tables behind an explicit optional variant.
-7. Add aging/anagathics, then mustering out, then final sheet/export. Each
-   slice should add semantic events, projection replay tests, protocol fixtures,
-   and compact activity descriptors.
-8. Finish live following once semantic facts exist: follower cards, dice reveal
+5. Harden the SRD term loop in browser automation: survival/death, commission,
+   advancement, term skill tables, aging, reenlistment, mustering benefits, and
+   multi-term continuation.
+6. Keep optional mishap tables behind an explicit variant; default failed
+   survival remains Classic Traveller-style death.
+7. Add anagathics, multi-career continuation after mustering, final
+   sheet/export polish, and provenance. Each slice should add semantic events
+   where needed, projection replay tests, protocol fixtures, and compact
+   activity descriptors.
+8. Finish live following on top of semantic facts: follower cards, dice reveal
    timing, refresh recovery, and future Discord-consumable event details.
 9. Run PWA/release work continuously when it does not compete with the core
    architecture path; make it a hard gate before public play.
 
 The first product-visible milestone after this batch is: a connected player can
-start character creation, roll characteristics, set homeworld/background choices
-with cascade resolution, qualify or enter the draft, start a career term, apply
-basic training, and recover the same legal next action after refresh. Connected
-players see dice and compact outcomes live, but the server projection remains
-the source of truth.
+create several valid or deceased travellers through multiple terms, mustering
+out, and finalization on a phone-sized viewport, while connected players see
+dice and compact outcomes live after the reveal boundary. The server projection
+remains the source of truth and refresh recovers the same legal next action.
 
 ## Do Not Start Yet
 
