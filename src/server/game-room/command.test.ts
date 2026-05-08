@@ -1384,6 +1384,79 @@ describe('deriveEventsForCommand error categories', () => {
     )
   })
 
+  it('blocks semantic aging while another pending decision accompanies anagathics', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAging',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('AGING', {
+        pendingCascadeSkills: ['Jack of all Trades'],
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'AGING is blocked by unresolved character creation decisions'
+    )
+  })
+
+  it('blocks anagathics decisions while another pending decision remains', () => {
+    const result = runCommand(
+      {
+        type: 'DecideCharacterCreationAnagathics',
+        gameId,
+        actorId,
+        characterId,
+        useAnagathics: true
+      },
+      createCreation('AGING', {
+        pendingCascadeSkills: ['Jack of all Trades'],
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'ANAGATHICS_DECISION is blocked by unresolved character creation decisions'
+    )
+  })
+
   it('emits a semantic anagathics decision event for the active term', () => {
     const result = runCommand(
       {

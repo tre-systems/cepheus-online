@@ -763,6 +763,22 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('blocks aging actions when anagathics is not the only pending decision', () => {
+    const creation = projection('AGING', {
+      terms: [term({ survival: 8 })],
+      pendingCascadeSkills: ['Jack of all Trades']
+    })
+
+    assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
+      { key: 'cascadeSkillResolution' },
+      { key: 'anagathicsDecision' }
+    ])
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(creation),
+      []
+    )
+  })
+
   it('derives reenlistment outcomes when projected term data is present', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(

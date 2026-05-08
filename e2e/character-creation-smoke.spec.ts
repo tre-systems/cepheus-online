@@ -748,7 +748,8 @@ test.describe('character creation smoke', () => {
     await expect(rollSurvival).toHaveCount(0)
   })
 
-  test('drives a guaranteed one-term career path through survival, training, and mustering choice', async ({
+  test('drives a guaranteed one-term career path through survival, training, aging, and mustering choice', async ({
+    browser,
     page
   }) => {
     test.setTimeout(60_000)
@@ -844,55 +845,100 @@ test.describe('character creation smoke', () => {
       await resolveVisibleCascadeChoices(page)
     }
 
-    const skipAnagathics = page.getByRole('button', { name: 'Skip' })
-    if ((await skipAnagathics.count()) > 0) {
-      const decisionAccepted = page.waitForResponse(
-        (response) =>
-          response.request().method() === 'POST' &&
-          response.url().includes(`/rooms/${roomId}/command`) &&
-          (response.request().postData() ?? '').includes(
-            'DecideCharacterCreationAnagathics'
-          )
-      )
-      await skipAnagathics.click()
-      await expect((await decisionAccepted).ok()).toBe(true)
-    } else {
-      await postCommand(page, roomId, actorId, actorSession, {
-        type: 'DecideCharacterCreationAnagathics',
-        characterId,
-        useAnagathics: false
+    const spectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: 'e2e-spectator',
+        viewer: 'player'
       })
-    }
+      await openOrExpectFollowedCreation(spectator, characterName)
 
-    await expect(page.locator('#characterCreationFields')).toContainText(
-      /Roll aging|Roll reenlistment/,
-      { timeout: 15_000 }
-    )
+      const spectatorFields = spectator.locator('#characterCreationFields')
+      await expect(spectatorFields).toContainText('Anagathics', {
+        timeout: 5_000
+      })
+      await expect(spectatorFields).not.toContainText(/Aging \d+:/, {
+        timeout: 100
+      })
 
-    const rollAging = page.getByRole('button', { name: 'Roll aging' })
-    if (await rollAging.isVisible().catch(() => false)) {
-      const agingAccepted = page.waitForResponse(
-        (response) =>
-          response.request().method() === 'POST' &&
-          response.url().includes(`/rooms/${roomId}/command`) &&
-          (response.request().postData() ?? '').includes(
-            'ResolveCharacterCreationAging'
-          )
-      )
-      await rollAging.click()
-      await expect((await agingAccepted).ok()).toBe(true)
-      await waitForDiceReveal(page)
-      await expect(rollAging).toHaveCount(0, { timeout: 5_000 })
-      for (let index = 0; index < 4; index += 1) {
-        const agingChoice = page.locator('.creation-term-actions button').first()
-        if (
-          (await agingChoice.count()) === 0 ||
-          !(await agingChoice.isVisible())
-        ) {
-          break
-        }
-        await agingChoice.click()
+      const skipAnagathics = page.getByRole('button', { name: 'Skip' })
+      if ((await skipAnagathics.count()) > 0) {
+        const decisionAccepted = page.waitForResponse(
+          (response) =>
+            response.request().method() === 'POST' &&
+            response.url().includes(`/rooms/${roomId}/command`) &&
+            (response.request().postData() ?? '').includes(
+              'DecideCharacterCreationAnagathics'
+            )
+        )
+        await skipAnagathics.click()
+        await expect((await decisionAccepted).ok()).toBe(true)
+      } else {
+        await postCommand(page, roomId, actorId, actorSession, {
+          type: 'DecideCharacterCreationAnagathics',
+          characterId,
+          useAnagathics: false
+        })
       }
+
+      await expect(page.locator('#characterCreationFields')).toContainText(
+        /Roll aging|Roll reenlistment/,
+        { timeout: 15_000 }
+      )
+      await expect(spectatorFields).toContainText(
+        /Roll aging|Roll reenlistment/,
+        { timeout: 15_000 }
+      )
+
+      const rollAging = page.getByRole('button', { name: 'Roll aging' })
+      if (await rollAging.isVisible().catch(() => false)) {
+        const agingAccepted = page.waitForResponse(
+          (response) =>
+            response.request().method() === 'POST' &&
+            response.url().includes(`/rooms/${roomId}/command`) &&
+            (response.request().postData() ?? '').includes(
+              'ResolveCharacterCreationAging'
+            )
+        )
+        await rollAging.click()
+        await expect((await agingAccepted).ok()).toBe(true)
+
+        await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+          timeout: 5_000
+        })
+        await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
+          'Rolling...',
+          { timeout: 100 }
+        )
+        await expect(spectatorFields).not.toContainText(/Aging \d+:/, {
+          timeout: 100
+        })
+
+        await waitForDiceReveal(page)
+        await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
+          'Rolling...',
+          { timeout: 5_000 }
+        )
+        await expect(spectatorFields).toContainText(/Aging \d+:/, {
+          timeout: 5_000
+        })
+        await expect(rollAging).toHaveCount(0, { timeout: 5_000 })
+        for (let index = 0; index < 4; index += 1) {
+          const agingChoice = page
+            .locator('.creation-term-actions button')
+            .first()
+          if (
+            (await agingChoice.count()) === 0 ||
+            !(await agingChoice.isVisible())
+          ) {
+            break
+          }
+          await agingChoice.click()
+        }
+      }
+    } finally {
+      await spectator.close()
     }
 
     let rollReenlistment = page.getByRole('button', {

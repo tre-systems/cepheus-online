@@ -9,13 +9,11 @@ import type { LiveDiceRollRevealTarget } from '../../shared/live-activity'
 import type { ServerMessage } from '../../shared/protocol'
 import type {
   BoardState,
-  CharacterCreationProjection,
   CharacterState,
   DiceRollState,
   GameState,
   PieceState
 } from '../../shared/state'
-import type { GameCommand } from '../../shared/commands'
 import {
   boardList,
   boardOptionLabel,
@@ -101,7 +99,6 @@ import {
   renderCharacterCreationReview as renderCharacterCreationReviewView,
   renderCharacterCreationTermHistory as renderCharacterCreationTermHistoryView
 } from './character-creation-review-view.js'
-import { projectedCharacterCreation as projectedCharacterCreationFromState } from './character-creation-follow.js'
 import {
   cssUrl,
   readImageDimensions,
@@ -124,13 +121,9 @@ import {
   type ClientIdentity,
   buildSetDoorOpenCommand
 } from '../game-commands.js'
-import {
-  createAppCommandRouter,
-  type BoardCommand,
-  type CharacterCreationCommand,
-  type DiceCommand,
-  type DoorCommand,
-  type SheetCommand
+import type {
+  CharacterCreationCommand,
+  DiceCommand
 } from './app-command-router.js'
 import { createAppSession } from './app-session.js'
 import { resolveActorSessionSecret } from './actor-session.js'
@@ -154,6 +147,7 @@ import { planCreatePieceCommands } from './piece-command-plan.js'
 import { createPwaInstallController } from './pwa-install.js'
 import { createRequestIdFactory } from './request-id.js'
 import { createRoomMenuController } from './room-menu-controller.js'
+import { createRoomCommandDispatch } from './room-command-dispatch.js'
 import { registerClientServiceWorker } from './service-worker.js'
 
 registerClientServiceWorker()
@@ -224,13 +218,6 @@ const selectedCharacter = (): CharacterState | null => {
   const characterId = characterCreationController?.selectedCharacterId()
   return characterId ? (state?.characters[characterId] ?? null) : null
 }
-
-const currentCharacterCreationProjection =
-  (): CharacterCreationProjection | null => {
-    const flow = characterCreationController?.flow()
-    if (!flow) return null
-    return projectedCharacterCreationFromState(state, flow.draft.characterId)
-  }
 
 const handleServerMessage = (message: ServerMessage): void => {
   const application = applyClientServerMessage(state, message)
@@ -320,86 +307,25 @@ const applyStateAfterDiceReveal = (
     .catch((error) => setError(error.message))
 }
 
-type CommandAcceptedMessage = Extract<
-  ServerMessage,
-  { type: 'commandAccepted' }
->
-
-const isCommandAcceptedMessage = (
-  message: ServerMessage
-): message is CommandAcceptedMessage => message.type === 'commandAccepted'
-
-const serverMessageErrorText = (message: ServerMessage): string => {
-  if (message.type === 'commandRejected' || message.type === 'error') {
-    return message.error.message
-  }
-  return 'Command failed'
-}
-
-const commandRouter = createAppCommandRouter<CommandAcceptedMessage>({
+const commandDispatch = createRoomCommandDispatch({
   getEventSeq: () => state?.eventSeq ?? null,
-  createRequestId: (command) => requestId(command.type),
-  submit: async ({ requestId, command }) => {
-    const response = await postRoomCommand({
-      roomId,
-      requestId,
-      command,
-      actorSessionSecret
-    })
-    handleServerMessage(response.message)
-    if (!response.ok || !isCommandAcceptedMessage(response.message)) {
-      throw new Error(serverMessageErrorText(response.message))
-    }
-    return response.message
-  }
+  getRoomId: () => roomId,
+  getActorSessionSecret: () => actorSessionSecret,
+  createRequestId: requestId,
+  handleServerMessage,
+  postRoomCommand
 })
 
-const postCommand = async (
-  command: GameCommand,
-  id = requestId(command.type)
-): Promise<CommandAcceptedMessage> => {
-  return commandRouter.dispatch(command, { requestId: id })
-}
-
-const postBoardCommand = async (
-  command: BoardCommand,
-  id = requestId(command.type)
-): Promise<CommandAcceptedMessage> => {
-  return commandRouter.board.dispatch(command, { requestId: id })
-}
-
-const postDiceCommand = async (
-  command: DiceCommand,
-  id = requestId(command.type)
-): Promise<CommandAcceptedMessage> => {
-  return commandRouter.dice.dispatch(command, { requestId: id })
-}
-
-const postDoorCommand = async (
-  command: DoorCommand,
-  id = requestId(command.type)
-): Promise<CommandAcceptedMessage> => {
-  return commandRouter.door.dispatch(command, { requestId: id })
-}
-
-const postSheetCommand = async (
-  command: SheetCommand,
-  id = requestId(command.type)
-): Promise<CommandAcceptedMessage> => {
-  return commandRouter.sheet.dispatch(command, { requestId: id })
-}
-
-const postCharacterCreationCommand = async (
-  command: CharacterCreationCommand,
-  id = requestId(command.type)
-): Promise<CommandAcceptedMessage> => {
-  return commandRouter.characterCreation.dispatch(command, { requestId: id })
-}
-
-const postCharacterCreationCommands = (
-  commands: readonly CharacterCreationCommand[]
-): Promise<CommandAcceptedMessage[]> =>
-  commandRouter.characterCreation.dispatchSequential(commands)
+const {
+  router: commandRouter,
+  postCommand,
+  postBoardCommand,
+  postDiceCommand,
+  postDoorCommand,
+  postSheetCommand,
+  postCharacterCreationCommand,
+  postCharacterCreationCommands
+} = commandDispatch
 
 const characterCreationPublicationController =
   createCharacterCreationPublicationController({
@@ -560,7 +486,7 @@ characterCreationWizardController = createCharacterCreationWizardController({
   panel: characterCreationPanel,
   getState: () => state,
   getSeed: characterCreationSeed,
-  currentProjection: currentCharacterCreationProjection,
+  currentProjection: () => characterCreationController.currentProjection(),
   homeworldPublisher: characterCreationHomeworldPublisher,
   selectPiece,
   closeCharacterSheet: () => characterSheetController.setOpen(false),
@@ -591,7 +517,7 @@ const renderCharacterCreationWizardControls = () => {
 
 const renderCharacterCreationWizard = () => {
   characterCreationController.reconcileEditableWithProjection(
-    currentCharacterCreationProjection()
+    characterCreationController.currentProjection()
   )
   while (autoAdvanceCharacterCreationSetup()) {
     // Keep setup steps linear even when reopening a flow that is already valid.

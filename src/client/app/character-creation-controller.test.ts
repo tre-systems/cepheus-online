@@ -4,11 +4,11 @@ import { describe, it } from 'node:test'
 import { asCharacterId, asGameId, asUserId } from '../../shared/ids'
 import type { CharacterCreationProjection, GameState } from '../../shared/state'
 import { effect } from '../reactive'
-import {
-  createInitialCharacterDraft,
-  type CharacterCreationFlow
-} from './character-creation-flow'
 import { createCharacterCreationController } from './character-creation-controller'
+import {
+  type CharacterCreationFlow,
+  createInitialCharacterDraft
+} from './character-creation-flow'
 
 const gameId = asGameId('demo-room')
 const actorId = asUserId('local-user')
@@ -192,6 +192,21 @@ describe('character creation controller', () => {
       controller.shouldRefreshEditable({ deferredRollCount: 1 }),
       false
     )
+  })
+
+  it('derives the current projection from the active flow character', () => {
+    const projected = creation('BASIC_TRAINING')
+    const controller = createCharacterCreationController({
+      getState: () => stateWithCreation(projected),
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+
+    assert.equal(controller.currentProjection(), null)
+
+    controller.setFlow(localFlow)
+
+    assert.equal(controller.currentProjection(), projected)
   })
 
   it('clears read-only follow state without discarding editable flows', () => {

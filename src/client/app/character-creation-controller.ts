@@ -2,16 +2,17 @@ import type { CharacterId } from '../../shared/ids'
 import type { CharacterCreationProjection, GameState } from '../../shared/state'
 import {
   createDisposalScope,
-  signal,
-  type ReadonlySignal
+  type ReadonlySignal,
+  signal
 } from '../reactive.js'
 import type { CharacterCreationFlow } from './character-creation-flow.js'
-import { flowFromProjectedCharacter } from './character-creation-projection.js'
 import {
+  projectedCharacterCreation,
   refreshFollowedCharacterCreationFlowFromState,
   shouldRefreshEditableCharacterCreationFlow,
   syncCharacterCreationFlowFromRoomState
 } from './character-creation-follow.js'
+import { flowFromProjectedCharacter } from './character-creation-projection.js'
 import { shouldSyncEditableCharacterCreationFlowWithProjection } from './character-creation-sync.js'
 
 export interface CharacterCreationController {
@@ -26,6 +27,7 @@ export interface CharacterCreationController {
   setSelectedCharacterId: (
     characterId: CharacterId | null
   ) => CharacterId | null
+  currentProjection: () => CharacterCreationProjection | null
   openFollow: (
     characterId: CharacterId,
     options?: { readOnly?: boolean }
@@ -88,6 +90,15 @@ export const createCharacterCreationController = ({
     setReadOnly,
     selectedCharacterId: () => selectedCharacterId.value,
     setSelectedCharacterId,
+
+    currentProjection: () => {
+      const currentFlow = flow.value
+      if (!currentFlow) return null
+      return projectedCharacterCreation(
+        getState(),
+        currentFlow.draft.characterId
+      )
+    },
 
     openFollow: (characterId, { readOnly: nextReadOnly = true } = {}) => {
       const character = getState()?.characters[characterId] ?? null
