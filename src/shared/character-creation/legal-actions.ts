@@ -362,8 +362,7 @@ const actionDefinitions = {
     commandTypes: [
       'ResolveCharacterCreationQualification',
       'ResolveCharacterCreationDraft',
-      'EnterCharacterCreationDrifter',
-      'StartCharacterCareerTerm'
+      'EnterCharacterCreationDrifter'
     ],
     rollRequirement: { key: 'careerQualification', dice: '2d6' }
   },

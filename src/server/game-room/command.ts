@@ -3111,6 +3111,11 @@ export const deriveEventsForCommand = (
       if (!character) {
         return err(commandError('missing_entity', 'Character does not exist'))
       }
+      if (!isReferee(state.value, command.actorId)) {
+        return notAllowed(
+          'Only the referee can start character career terms directly'
+        )
+      }
       if (!character.creation) {
         return err(
           commandError(

@@ -101,8 +101,7 @@ describe('career creation legal action planner', () => {
           commandTypes: [
             'ResolveCharacterCreationQualification',
             'ResolveCharacterCreationDraft',
-            'EnterCharacterCreationDrifter',
-            'StartCharacterCareerTerm'
+            'EnterCharacterCreationDrifter'
           ],
           rollRequirement: { key: 'careerQualification', dice: '2d6' }
         }
@@ -121,8 +120,7 @@ describe('career creation legal action planner', () => {
           commandTypes: [
             'ResolveCharacterCreationQualification',
             'ResolveCharacterCreationDraft',
-            'EnterCharacterCreationDrifter',
-            'StartCharacterCareerTerm'
+            'EnterCharacterCreationDrifter'
           ],
           failedQualificationOptions: [
             { option: 'Drifter' },
@@ -251,8 +249,7 @@ describe('career creation legal action planner', () => {
             commandTypes: [
               'ResolveCharacterCreationQualification',
               'ResolveCharacterCreationDraft',
-              'EnterCharacterCreationDrifter',
-              'StartCharacterCareerTerm'
+              'EnterCharacterCreationDrifter'
             ],
             failedQualificationOptions: [
               { option: 'Drifter' },

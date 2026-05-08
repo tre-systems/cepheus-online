@@ -708,6 +708,44 @@ describe('deriveEventsForCommand error categories', () => {
     ])
   })
 
+  it('rejects direct career term starts from character owners who are not referees', () => {
+    const playerId = asUserId('player-1')
+    const refereeId = asUserId('referee-1')
+    const state = createState(createCreation('CAREER_SELECTION'))
+    const character = state.characters[characterId]
+    assert.equal(Boolean(character), true)
+    if (!character) return
+    state.ownerId = refereeId
+    state.characters[characterId] = {
+      ...character,
+      ownerId: playerId
+    }
+
+    const result = deriveEventsForCommand(
+      {
+        type: 'StartCharacterCareerTerm',
+        gameId,
+        actorId: playerId,
+        characterId,
+        career: 'Scout'
+      },
+      {
+        state,
+        currentSeq: 1,
+        nextSeq: 2,
+        gameSeed: 1234
+      }
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'not_allowed')
+    assert.equal(
+      result.error.message,
+      'Only the referee can start character career terms directly'
+    )
+  })
+
   it('emits semantic qualification roll facts from career selection', () => {
     const result = runCommand(
       {
