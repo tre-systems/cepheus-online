@@ -11,6 +11,7 @@ import {
   type CharacterCreationCareerPlan,
   type CharacterCreationCompletedTerm,
   type CharacterCreationFlow,
+  type CharacterCreationMusteringBenefit,
   type CharacterCreationStep
 } from './character-creation-flow.js'
 
@@ -185,6 +186,24 @@ export const flowFromProjectedCharacter = (
   const completedTerms = creation.terms
     .filter((term) => term.complete || term.musteringOut)
     .map(completedTermFromProjection)
+  const musteringBenefits: CharacterCreationMusteringBenefit[] = (
+    creation.history ?? []
+  )
+    .filter((event) => event.type === 'FINISH_MUSTERING')
+    .flatMap((event) => {
+      const benefit = event.musteringBenefit
+      return benefit
+        ? [
+            {
+              career: benefit.career,
+              kind: benefit.kind,
+              roll: benefit.tableRoll,
+              value: benefit.value,
+              credits: benefit.credits
+            }
+          ]
+        : []
+    })
 
   return {
     step: creationStepFromStatus(creation.state.status),
@@ -206,6 +225,7 @@ export const flowFromProjectedCharacter = (
       pendingAgingChanges: creation.characteristicChanges ?? [],
       careerPlan: careerPlanFromProjection(creation),
       completedTerms,
+      musteringBenefits,
       skills: character.skills,
       equipment: character.equipment,
       credits: character.credits,

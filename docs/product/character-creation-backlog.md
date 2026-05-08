@@ -309,6 +309,13 @@ Acceptance:
 Goal: match the Cepheus homeworld/background skill procedure before career
 selection.
 
+Status: mostly done. Homeworld projection fields, semantic commands/events,
+background skill helpers, cascade resolution, mobile controls, and browser
+follow coverage are in place. The remaining work is polish: make every pending
+background/cascade decision first-class in projection, improve provenance on
+the final sheet, and keep expanding refresh/follow tests as later milestones
+consume the same state.
+
 Tasks:
 
 - Extend the shared character creation projection with:
@@ -342,6 +349,11 @@ Acceptance:
 ## Milestone 3: Qualification, Draft, And Drifter
 
 Goal: make career entry follow the rules and feel like a meaningful choice.
+
+Status: mostly done. Qualification, failed-qualification options, Draft,
+Drifter fallback, drafted terms, and visible qualification/draft dice events are
+server-backed. Remaining work is to remove any fallback generic transition
+usage, prove the branch in browser smoke, and tighten copy/provenance.
 
 Tasks:
 
@@ -400,10 +412,10 @@ Acceptance:
   mode.
 - Term history matches the event stream after refresh.
 
-Next priority: finish the term-skill UI path on top of the semantic server
-facts, then implement aging and reenlistment as semantic events. Keep
-death as the first hard branch after the normal pass path is authoritative,
-then keep mishaps as an optional variant.
+Next priority: harden the term-skill, aging, reenlistment, mustering, and
+multi-term browser paths on top of the semantic server facts that now exist.
+Keep death as the first hard branch after the normal pass path is
+authoritative, then keep mishaps as an optional variant.
 
 ## Milestone 5: Aging, Anagathics, And Reenlistment
 

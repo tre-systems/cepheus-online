@@ -69,6 +69,36 @@ const careerFlow = (): CharacterCreationFlow => {
   }
 }
 
+const musteringFlow = (): CharacterCreationFlow => {
+  const flow = careerFlow()
+  return {
+    step: 'career',
+    draft: {
+      ...flow.draft,
+      completedTerms: [
+        {
+          career: 'Scout',
+          drafted: false,
+          age: 22,
+          rank: 0,
+          qualificationRoll: 8,
+          survivalRoll: 9,
+          survivalPassed: true,
+          canCommission: false,
+          commissionRoll: null,
+          commissionPassed: null,
+          canAdvance: false,
+          advancementRoll: null,
+          advancementPassed: null,
+          termSkillRolls: []
+        }
+      ],
+      skills: ['Vacc Suit-1'],
+      musteringBenefits: []
+    }
+  }
+}
+
 describe('character creation command controller', () => {
   it('does not publish when no editable flow exists', async () => {
     const commands: CharacterCreationCommand[] = []
@@ -377,5 +407,127 @@ describe('character creation command controller', () => {
     assert.equal(syncedFallbacks[0], flow)
     assert.equal(rendered, true)
     assert.equal(scrolled, true)
+  })
+
+  it('rolls a semantic mustering benefit, waits for reveal, and syncs fallback flow', async () => {
+    let flow: CharacterCreationFlow | null = musteringFlow()
+    const commands: CharacterCreationCommand[] = []
+    const requestIds: string[] = []
+    const waitedFor: string[] = []
+    const syncedFallbacks: CharacterCreationFlow[] = []
+    const roll = diceRoll(7)
+    let published = 0
+    let renderCount = 0
+    let scrollCount = 0
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: (nextFlow) => {
+        flow = nextFlow
+      },
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command, requestId) => {
+        commands.push(command)
+        requestIds.push(requestId)
+        return { state: stateWithDice(roll) }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async (nextRoll) => {
+        waitedFor.push(nextRoll.id)
+      },
+      syncFlowFromRoomState: (_state, _characterId, fallbackFlow) => {
+        syncedFallbacks.push(fallbackFlow)
+        flow = fallbackFlow
+        return fallbackFlow
+      },
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        renderCount += 1
+      },
+      scrollToTop: () => {
+        scrollCount += 1
+      }
+    })
+
+    await controller.rollMusteringBenefit('material')
+
+    assert.equal(published, 1)
+    assert.equal(commands[0]?.type, 'RollCharacterCreationMusteringBenefit')
+    assert.equal(
+      commands[0]?.type === 'RollCharacterCreationMusteringBenefit'
+        ? commands[0].career
+        : null,
+      'Scout'
+    )
+    assert.equal(
+      commands[0]?.type === 'RollCharacterCreationMusteringBenefit'
+        ? commands[0].kind
+        : null,
+      'material'
+    )
+    assert.deepEqual(requestIds, ['mustering-roll'])
+    assert.deepEqual(waitedFor, ['roll-1'])
+    assert.deepEqual(syncedFallbacks[0]?.draft.musteringBenefits, [
+      {
+        career: 'Scout',
+        kind: 'material',
+        roll: 7,
+        value: '-',
+        credits: 0
+      }
+    ])
+    assert.equal(renderCount, 1)
+    assert.equal(scrollCount, 1)
+  })
+
+  it('reports accepted mustering benefit commands without dice results', async () => {
+    const errors: string[] = []
+    let waited = false
+    let rendered = false
+    let scrolled = false
+    const controller = createCharacterCreationCommandController({
+      getFlow: musteringFlow,
+      setFlow: () => {},
+      setError: (message) => {
+        errors.push(message)
+      },
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => ({ state: null }),
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {
+        waited = true
+      },
+      syncFlowFromRoomState: () => null,
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        rendered = true
+      },
+      scrollToTop: () => {
+        scrolled = true
+      }
+    })
+
+    await controller.rollMusteringBenefit('cash')
+
+    assert.deepEqual(errors, [
+      '',
+      'Mustering roll did not return a dice result'
+    ])
+    assert.equal(waited, false)
+    assert.equal(rendered, false)
+    assert.equal(scrolled, false)
   })
 })

@@ -68,7 +68,7 @@ const postCommand = async (
       }
     }
   )
-  expect(response.ok()).toBe(true)
+  expect(response.ok(), await response.text()).toBe(true)
 }
 
 const activeCreationCharacterId = async (
@@ -558,5 +558,115 @@ test.describe('character creation smoke', () => {
     } finally {
       await spectator.close()
     }
+  })
+
+  test('keeps owner career roll results hidden until reveal and leaves the next action usable', async ({
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const survivalCommands: unknown[] = []
+
+    page.on('request', (request) => {
+      if (
+        request.method() !== 'POST' ||
+        !request.url().includes(`/rooms/${roomId}/command`)
+      ) {
+        return
+      }
+
+      const body = request.postData()
+      if (!body) return
+      const message = JSON.parse(body) as {
+        command?: { type?: string }
+      }
+      if (message.command?.type === 'ResolveCharacterCreationSurvival') {
+        survivalCommands.push(message.command)
+      }
+    })
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'StartCharacterCareerTerm',
+      characterId,
+      career: 'Scout',
+      drafted: true
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'AdvanceCharacterCreation',
+      characterId,
+      creationEvent: {
+        type: 'SELECT_CAREER',
+        isNewCareer: true,
+        drafted: true
+      }
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationBasicTraining',
+      characterId
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    const ownerCard = page
+      .locator('#creationPresenceDock .creation-presence-card')
+      .filter({ hasText: characterName })
+    await expect(ownerCard).toBeVisible({ timeout: 5_000 })
+    await ownerCard.click()
+
+    const fields = page.locator('#characterCreationFields')
+    const survivalRoll = page.locator(
+      '[data-character-creation-field="survivalRoll"]'
+    )
+    const outcome = fields.locator('.creation-career-outcome')
+    const rollSurvival = page.getByRole('button', { name: 'Roll survival' })
+
+    await expect(rollSurvival).toBeVisible({ timeout: 5_000 })
+    await expect(survivalRoll).toHaveValue('')
+    await expect(outcome).not.toContainText(/Survival \d+|survived|failed/i)
+
+    await rollSurvival.evaluate((button) => {
+      button.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true })
+      )
+      button.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true })
+      )
+    })
+
+    await expect.poll(() => survivalCommands.length).toBe(1)
+    await expect(page.locator('#diceOverlay.visible')).toBeVisible({
+      timeout: 5_000
+    })
+    await expect(page.locator('#diceStage .roll-total')).toHaveText(
+      'Rolling...',
+      { timeout: 100 }
+    )
+    await expect(survivalRoll).toHaveValue('', { timeout: 100 })
+    await expect(outcome).not.toContainText(/Survival \d+|survived|failed/i, {
+      timeout: 100
+    })
+
+    await expect(page.locator('#diceStage .roll-total')).not.toHaveText(
+      'Rolling...',
+      { timeout: 5_000 }
+    )
+    await expect(fields).toContainText(
+      /Killed in service|Skills and training|Roll commission|Roll advancement/,
+      { timeout: 5_000 }
+    )
+    await expect(rollSurvival).toHaveCount(0)
   })
 })

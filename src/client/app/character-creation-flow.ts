@@ -2100,6 +2100,10 @@ const nextMusteringBenefitTerm = (
     (term) => remainingMusteringBenefitsForCareer(draft, term.career) > 0
   ) ?? null
 
+export const nextCharacterCreationMusteringBenefitCareer = (
+  draft: Pick<CharacterCreationDraft, 'completedTerms' | 'musteringBenefits'>
+): string | null => nextMusteringBenefitTerm(draft)?.career ?? null
+
 export const characterCreationMusteringBenefitRollModifier = ({
   draft,
   kind

@@ -124,6 +124,59 @@ describe('character creation follow helpers', () => {
     assert.equal(fallback, fallbackFlow)
   })
 
+  it('hydrates mustering benefits from projected semantic history', () => {
+    const projectedFlow = syncCharacterCreationFlowFromRoomState({
+      currentFlow: null,
+      roomState: stateWithCreation({
+        ...creation('MUSTERING_OUT'),
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: ['Low Passage'],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          }
+        ],
+        history: [
+          {
+            type: 'FINISH_MUSTERING',
+            musteringBenefit: {
+              career: 'Scout',
+              kind: 'material',
+              roll: {
+                expression: '2d6',
+                rolls: [5, 6],
+                total: 11
+              },
+              modifier: 0,
+              tableRoll: 11,
+              value: 'Low Passage',
+              credits: 0,
+              materialItem: 'Low Passage'
+            }
+          }
+        ]
+      }),
+      characterId,
+      fallbackFlow
+    })
+
+    assert.deepEqual(projectedFlow?.draft.musteringBenefits, [
+      {
+        career: 'Scout',
+        kind: 'material',
+        roll: 11,
+        value: 'Low Passage',
+        credits: 0
+      }
+    ])
+  })
+
   it('refreshes followed read-only flows and closes missing projections', () => {
     const refreshed = refreshFollowedCharacterCreationFlowFromState({
       state: stateWithCreation(creation('BASIC_TRAINING')),

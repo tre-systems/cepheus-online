@@ -316,12 +316,12 @@ Done when:
 
 ### Slice 0F: Automated UX Regression And Creation Client Architecture
 
-Status: not started. This is the next leverage point for the recent character
-creation UX bugs. The current unit tests cover rules, commands, projectors, and
-view helpers well, but browser-only failures still escape because `app.ts`
-owns too much orchestration and the live creator mixes authoritative projection
-state, local draft state, dice reveal timing, DOM rendering, and async command
-guards.
+Status: partially done. Playwright browser smoke now runs in `npm run
+verify:full`, two-tab follow coverage exists for characteristic,
+homeworld/background, and qualification reveal timing, and the shared
+`diceRevealCoordinator` owns result deferral. The remaining leverage point is
+to broaden the executable scenarios and keep extracting `app.ts` orchestration
+so browser-only failures are caught before manual play.
 
 Primary write ownership:
 
@@ -329,26 +329,26 @@ Primary write ownership:
 - new `src/client/app/character-creation-controller.ts`
 - new `src/client/app/character-creation-renderer.ts`
 - new `src/client/app/character-creation-command-adapter.ts`
-- new `src/client/app/dice-reveal-coordinator.ts`
+- `src/client/app/dice-reveal-coordinator.ts`
 - browser/E2E specs or smoke scripts under `e2e/` or `scripts/`
 - `docs/engineering/testing-strategy.md`
 - `package.json` and CI workflow files if browser automation is added
 
 Tasks:
 
-- Add an executable browser smoke for character creation that drives the real
-  client through the app shell: create traveller, roll six characteristics,
-  complete homeworld/background choices, qualify or enter fallback, apply
-  basic training, roll survival, and report the current phase/action on
-  failure.
+- Extend the executable browser smoke so it drives the real client through a
+  full one-term path: create traveller, roll six characteristics, complete
+  homeworld/background choices, qualify or enter fallback, apply basic
+  training, roll survival, resolve term skills, age, reenlist or muster out,
+  and report the current phase/action on failure.
 - Extend that smoke into a small repeat runner that creates several disposable
   travellers, captures console errors, server response failures, current
   creation status, final sheet summary, and a screenshot or DOM snapshot when
   the flow gets stuck.
-- Add two-tab follow tests for the browser-only contract: the owner can act,
-  the spectator sees the same revealed creation state after dice finish, the
-  spectator cannot click owner-only controls, and refresh recovers from the
-  server projection.
+- Extend two-tab follow tests beyond the covered characteristic,
+  homeworld/background, and qualification paths: survival/death, term skills,
+  aging, reenlistment, mustering out, and finalization should all reveal only
+  after dice finish and recover from server projection on refresh.
 - Add mobile viewport checks for the high-risk creator screens:
   characteristics, homeworld/background skills, career selection, survival or
   death, term skills, reenlistment, mustering out, and spectator follow cards.
@@ -366,9 +366,9 @@ Tasks:
   exposes explicit methods for opening owner mode, opening spectator mode,
   applying authoritative state, submitting choices, and disposing listeners or
   timers.
-- Extract a `diceRevealCoordinator` so roll animation, result deferral,
-  spectator reveal timing, and button unblocking are not reimplemented per
-  button or per view.
+- Keep all roll animation, result deferral, spectator reveal timing, and button
+  unblocking on `diceRevealCoordinator`; add coverage for every new
+  roll-bearing creation action instead of adding local timing code.
 - Make the rendered creation UI consume a single creation view model derived
   from authoritative projection plus local pending choices. Server projection
   owns phase, legal actions, progress, roll facts, and completion gates; local
@@ -797,10 +797,10 @@ The next batch should run like this, in this order:
    extract the character creation controller/renderer/command adapter, split
    the projector registry by domain, and keep publication parity plus
    viewer-safe responses on the single publication path.
-2. Add the automated UX regression slice before more broad creator polish:
-   character creation browser smoke, multi-character repeat runner, two-tab
-   spectator follow checks, mobile viewport assertions, and a dice reveal
-   coordinator contract.
+2. Extend the automated UX regression slice before more broad creator polish:
+   full one-term browser smoke, multi-character repeat runner, later-term
+   two-tab spectator follow checks, mobile viewport assertions, and reveal
+   timing coverage for every roll-bearing action.
 3. Remove the remaining generic character creation transition bridge by moving
    pending decisions and finalization details onto semantic commands/events.
    Update protocol fixtures and live activity descriptors with each event

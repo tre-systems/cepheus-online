@@ -1,5 +1,6 @@
 import type { GameId, UserId } from '../../shared/ids'
 import type { LiveDiceRollRevealTarget } from '../../shared/live-activity'
+import type { BenefitKind } from '../../shared/character-creation/types.js'
 import type {
   CharacteristicKey,
   DiceRollState,
@@ -11,12 +12,14 @@ import {
   applyCharacterCreationBasicTraining,
   applyCharacterCreationCareerRoll,
   applyCharacterCreationCharacteristicRoll,
+  applyCharacterCreationMusteringBenefit,
   applyCharacterCreationReenlistmentRoll,
   applyCharacterCreationTermSkillRoll,
   applyParsedCharacterCreationDraftPatch,
   deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationAgingRoll,
   deriveNextCharacterCreationCharacteristicRoll,
+  nextCharacterCreationMusteringBenefitCareer,
   type CharacterCreationFlow,
   type CharacterCreationTermSkillTable
 } from './character-creation-flow.js'
@@ -44,6 +47,7 @@ export interface CharacterCreationCommandController {
   resolveCareerQualification: (career: string) => Promise<void>
   completeBasicTraining: () => Promise<void>
   rollTermSkill: (table: CharacterCreationTermSkillTable) => Promise<void>
+  rollMusteringBenefit: (kind: BenefitKind) => Promise<void>
   rollReenlistment: () => Promise<void>
   rollAging: () => Promise<void>
   rollCareerCheck: () => Promise<void>
@@ -353,6 +357,43 @@ export const createCharacterCreationCommandController = (
               roll: roll.total
             }),
           'Term skill roll did not return a dice result'
+        )
+      ) {
+        renderWizard()
+        scrollToTop()
+      }
+    },
+
+    rollMusteringBenefit: async (kind) => {
+      const flow = guardEditableFlow()
+      if (!flow) return
+      setError('')
+      syncFields()
+
+      const career = nextCharacterCreationMusteringBenefitCareer(flow.draft)
+      if (!career) return
+
+      await ensurePublished()
+      const response = await postCharacterCreationCommand(
+        {
+          type: 'RollCharacterCreationMusteringBenefit',
+          ...commandIdentity(),
+          characterId: flow.draft.characterId,
+          career,
+          kind
+        },
+        requestId('mustering-roll')
+      )
+      if (
+        await syncDiceFlow(
+          response,
+          (nextFlow, roll) =>
+            applyCharacterCreationMusteringBenefit({
+              flow: nextFlow,
+              kind,
+              roll: roll.total
+            }),
+          'Mustering roll did not return a dice result'
         )
       ) {
         renderWizard()

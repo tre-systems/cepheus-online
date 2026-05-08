@@ -52,12 +52,11 @@ import {
   applyCharacterCreationBackgroundSkillSelection,
   applyCharacterCreationAnagathicsDecision,
   applyCharacterCreationAgingChange,
-  applyCharacterCreationMusteringBenefit,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationWizardStep,
   canRollCharacterCreationMusteringBenefit,
-  characterCreationMusteringBenefitRollModifier,
   characterCreationCareerNames,
+  characterCreationMusteringBenefitRollModifier,
   completeCharacterCreationCareerTerm,
   createManualCharacterCreationFlow,
   deriveCreateCharacterCommand,
@@ -1894,68 +1893,15 @@ const renderCharacterCreationMusteringOut = (
       button.title = `${modifier > 0 ? '+' : ''}${modifier} DM`
     }
     bindAsyncActionButton(button, () =>
-      rollCharacterCreationMusteringBenefit(kind).catch((error) =>
-        setError(error.message)
-      )
+      characterCreationCommandController
+        .rollMusteringBenefit(kind)
+        .catch((error) => setError(error.message))
     )
     actions.append(button)
   }
 
   panel.append(title, summary, benefitList, actions)
   return panel
-}
-
-const rollCharacterCreationMusteringBenefit = async (
-  kind: BenefitKind
-): Promise<void> => {
-  if (!characterCreationFlow) return
-  setError('')
-  syncCharacterCreationWizardFields()
-
-  if (!state) {
-    await postCommand(
-      createGameCommand(bootstrapIdentity()),
-      requestId('create-game-for-mustering-roll')
-    )
-  }
-
-  if (
-    !canRollCharacterCreationMusteringBenefit({
-      draft: characterCreationFlow.draft,
-      kind
-    })
-  ) {
-    return
-  }
-  const modifier = characterCreationMusteringBenefitRollModifier({
-    draft: characterCreationFlow.draft,
-    kind
-  })
-  const modifierText =
-    modifier === 0 ? '' : modifier > 0 ? `+${modifier}` : `${modifier}`
-  const response = await postDiceCommand(
-    buildRollDiceCommand({
-      identity: clientIdentity(),
-      expression: `1d6${modifierText}`,
-      reason: `${characterCreationFlow.draft.name.trim() || 'Character'} mustering out`
-    }) as DiceCommand,
-    requestId('mustering-roll')
-  )
-  const latestRoll =
-    response.state?.diceLog?.[response.state.diceLog.length - 1]
-  if (!latestRoll) {
-    setError('Mustering roll did not return a dice result')
-    return
-  }
-
-  await waitForDiceRevealOrDelay(latestRoll)
-  characterCreationFlow = applyCharacterCreationMusteringBenefit({
-    flow: characterCreationFlow,
-    kind,
-    roll: latestRoll.total
-  }).flow
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
 }
 
 const renderCharacterCreationReview = (
