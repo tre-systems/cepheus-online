@@ -77,6 +77,24 @@
     "errorMessage": "canCommission must be a boolean"
   },
   {
+    "name": "generic mustering completion command",
+    "message": {
+      "type": "command",
+      "requestId": "bad-generic-mustering-completion",
+      "command": {
+        "type": "AdvanceCharacterCreation",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": "crew-scout-1",
+        "creationEvent": {
+          "type": "FINISH_MUSTERING"
+        }
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "FINISH_MUSTERING must use CompleteCharacterCreationMustering"
+  },
+  {
     "name": "malformed commission roll fact",
     "message": {
       "type": "command",

@@ -2525,10 +2525,15 @@ describe('room publication flow', () => {
       true
     )
     assert.equal((await publishCareerLeave(storage, characterId)).ok, true)
-    const earlyMusteringFinish = await advance({ type: 'FINISH_MUSTERING' })
-    assert.equal(earlyMusteringFinish.ok, false)
-    if (earlyMusteringFinish.ok) return
-    assert.equal(earlyMusteringFinish.error.code, 'invalid_command')
+    const earlyMusteringCompletion = await publish(storage, {
+      type: 'CompleteCharacterCreationMustering',
+      gameId,
+      actorId,
+      characterId
+    })
+    assert.equal(earlyMusteringCompletion.ok, false)
+    if (earlyMusteringCompletion.ok) return
+    assert.equal(earlyMusteringCompletion.error.code, 'invalid_command')
     assert.equal(
       (
         await publish(storage, {

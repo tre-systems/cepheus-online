@@ -87,6 +87,7 @@ const assertNoGenericLifecycleAdvance = (
     assert.equal(command.creationEvent.type !== 'LEAVE_CAREER', true)
     assert.equal(command.creationEvent.type !== 'REENLIST_BLOCKED', true)
     assert.equal(command.creationEvent.type !== 'CONTINUE_CAREER', true)
+    assert.equal(command.creationEvent.type !== 'FINISH_MUSTERING', true)
   }
 }
 

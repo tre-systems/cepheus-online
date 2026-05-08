@@ -952,6 +952,26 @@ describe('protocol validation', () => {
     assert.equal(completed.value.expectedSeq, 8)
   })
 
+  it('rejects generic mustering completion commands after semantic migration', () => {
+    const result = decodeCommand({
+      type: 'AdvanceCharacterCreation',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      creationEvent: {
+        type: 'FINISH_MUSTERING'
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'FINISH_MUSTERING must use CompleteCharacterCreationMustering'
+    )
+  })
+
   it('rejects client-authored mustering benefit facts in generic creation commands', () => {
     const result = decodeCommand({
       type: 'AdvanceCharacterCreation',

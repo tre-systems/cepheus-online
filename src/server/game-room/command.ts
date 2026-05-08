@@ -487,7 +487,7 @@ const semanticCommandForGenericCreationEvent = (
     case 'FINISH_MUSTERING':
       return event.musteringBenefit
         ? 'RollCharacterCreationMusteringBenefit'
-        : null
+        : 'CompleteCharacterCreationMustering'
     default:
       return null
   }

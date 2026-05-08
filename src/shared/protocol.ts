@@ -1110,14 +1110,13 @@ export const decodeCommand = (
       if (!characterId.ok) return characterId
       const creationEvent = parseCareerCreationEvent(raw.creationEvent)
       if (!creationEvent.ok) return creationEvent
-      if (
-        creationEvent.value.type === 'FINISH_MUSTERING' &&
-        creationEvent.value.musteringBenefit !== undefined
-      ) {
+      if (creationEvent.value.type === 'FINISH_MUSTERING') {
+        const commandType =
+          creationEvent.value.musteringBenefit === undefined
+            ? 'CompleteCharacterCreationMustering'
+            : 'RollCharacterCreationMusteringBenefit'
         return err(
-          invalidCommand(
-            'FINISH_MUSTERING must use RollCharacterCreationMusteringBenefit'
-          )
+          invalidCommand(`FINISH_MUSTERING must use ${commandType}`)
         )
       }
 

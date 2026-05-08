@@ -139,11 +139,10 @@ describe('deriveEventsForCommand error categories', () => {
   it('blocks mustering completion until projected SRD benefits are resolved', () => {
     const result = runCommand(
       {
-        type: 'AdvanceCharacterCreation',
+        type: 'CompleteCharacterCreationMustering',
         gameId,
         actorId,
-        characterId,
-        creationEvent: { type: 'FINISH_MUSTERING' }
+        characterId
       },
       createCreation('MUSTERING_OUT', {
         terms: [
@@ -169,6 +168,43 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(
       result.error.message,
       'FINISH_MUSTERING is blocked by unresolved character creation decisions'
+    )
+  })
+
+  it('rejects generic mustering completion after semantic migration', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'FINISH_MUSTERING' }
+      },
+      createCreation('MUSTERING_OUT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Pilot-1'],
+            benefits: ['Low Passage'],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(Object.hasOwn(result, 'value'), false)
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'FINISH_MUSTERING must use CompleteCharacterCreationMustering'
     )
   })
 
