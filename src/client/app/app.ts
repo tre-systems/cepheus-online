@@ -8,12 +8,10 @@ import {
 } from '../../shared/ids'
 import type { LiveDiceRollRevealTarget } from '../../shared/live-activity'
 import type { ServerMessage } from '../../shared/protocol'
-import type { BenefitKind } from '../../shared/character-creation/types'
 import type {
   BoardState,
   CharacterCreationProjection,
   CharacterState,
-  CharacteristicKey,
   DiceRollState,
   GameState,
   PieceState
@@ -41,6 +39,7 @@ import {
   createCharacterCreationCommandController,
   type CharacterCreationCommandController
 } from './character-creation-command-controller.js'
+import { renderCharacterCreationCharacteristicGrid as renderCharacterCreationCharacteristicGridView } from './character-creation-characteristics-view.js'
 import {
   createCharacterCreationController,
   type CharacterCreationController
@@ -51,28 +50,26 @@ import {
 } from './creation-activity-feed.js'
 import { createCreationPresenceDock } from './creation-presence-dock.js'
 import { createCharacterCreationHomeworldPublisher } from './character-creation-homeworld-publisher.js'
+import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './character-creation-mustering-view.js'
+import { renderCharacterCreationTermResolution as renderCharacterCreationTermResolutionView } from './character-creation-term-resolution-view.js'
+import {
+  createCharacterCreationWizardController,
+  type CharacterCreationWizardController
+} from './character-creation-wizard-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBackgroundSkillSelection,
   applyCharacterCreationAgingChange,
   applyParsedCharacterCreationDraftPatch,
-  backCharacterCreationWizardStep,
-  canRollCharacterCreationMusteringBenefit,
   characterCreationCareerNames,
-  characterCreationMusteringBenefitRollModifier,
   completeCharacterCreationCareerTerm,
-  createManualCharacterCreationFlow,
   deriveCreateCharacterCommand,
   deriveCharacterCreationCommands,
   deriveCharacterCreationAgingChangeOptions,
   deriveCharacterCreationAnagathicsDecision,
   deriveStartCharacterCreationCommand,
-  deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationAgingRoll,
   deriveNextCharacterCreationReenlistmentRoll,
-  isCharacterCreationCareerTermResolved,
-  nextCharacterCreationWizardStep,
-  remainingMusteringBenefits,
   removeCharacterCreationBackgroundSkillSelection,
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
@@ -99,18 +96,13 @@ import {
   deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary,
   formatCharacterCreationCareerCheckShort,
-  formatCharacterCreationCareerOutcome,
-  formatCharacterCreationCharacteristicModifier,
-  formatCharacterCreationReenlistmentOutcome,
-  parseCharacterCreationDraftPatch
+  formatCharacterCreationCareerOutcome
 } from './character-creation-view.js'
 import {
   renderCharacterCreationReview as renderCharacterCreationReviewView,
   renderCharacterCreationTermHistory as renderCharacterCreationTermHistoryView
 } from './character-creation-review-view.js'
-import { creationStepFromStatus } from './character-creation-projection.js'
 import { projectedCharacterCreation as projectedCharacterCreationFromState } from './character-creation-follow.js'
-import { characterCreationStepIndex } from './character-creation-sync.js'
 import {
   cssUrl,
   readImageDimensions,
@@ -186,6 +178,7 @@ const diceRevealCoordinator = createDiceRevealCoordinator()
 const animatedDiceRollActivityIds = new Set<string>()
 let characterCreationController: CharacterCreationController
 let characterCreationPublishPromise: Promise<void> | null = null
+let characterCreationWizardController: CharacterCreationWizardController
 const setStatus = (text: string): void => {
   els.status.textContent = text
 }
@@ -591,97 +584,30 @@ const creationPresenceDock = createCreationPresenceDock({
 
 creationPresenceDock.hydrate()
 
-const startCharacterCreationWizard = () => {
-  characterCreationController.setReadOnly(false)
-  if (!characterCreationPanel.isOpen()) characterCreationPanel.show()
-  if (characterCreationController.flow()) {
-    renderCharacterCreationWizard()
-    characterCreationPanel.scrollToTop()
-    return
-  }
-  const seed = characterCreationSeed()
-  const flow = createManualCharacterCreationFlow({
-    state,
-    name: seed.name || null,
-    characterType: 'PLAYER'
-  })
-  characterCreationController.setFlow({
-    ...flow,
-    draft: {
-      ...flow.draft,
-      name: seed.name || flow.draft.name,
-      credits: seed.credits,
-      equipment: seed.equipment,
-      notes: seed.notes
-    }
-  })
-  const nextFlow = characterCreationController.flow()
-  if (nextFlow) {
-    characterCreationController.setFlow(
-      nextCharacterCreationWizardStep(nextFlow).flow
-    )
-  }
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
+characterCreationWizardController = createCharacterCreationWizardController({
+  controller: characterCreationController,
+  fieldsRoot: els.characterCreationFields,
+  panel: characterCreationPanel,
+  getState: () => state,
+  getSeed: characterCreationSeed,
+  currentProjection: currentCharacterCreationProjection,
+  homeworldPublisher: characterCreationHomeworldPublisher,
+  selectPiece,
+  closeCharacterSheet: () => characterSheetController.setOpen(false),
+  ensurePublished: ensureCharacterCreationPublished,
+  finish: () => finishCharacterCreationWizard(),
+  renderWizard: () => renderCharacterCreationWizard(),
+  setError
+})
 
-const startNewCharacterCreationWizard = async () => {
-  characterCreationController.resetForNewCreation()
-  selectPiece(null)
-  characterSheetController.setOpen(false)
-  characterCreationPanel.open()
-  startCharacterCreationWizard()
-  await ensureCharacterCreationPublished()
-}
+const startNewCharacterCreationWizard = () =>
+  characterCreationWizardController.startNew()
 
-const autoAdvanceCharacterCreationSetup = () => {
-  const flow = characterCreationController.flow()
-  if (characterCreationController.readOnly()) return false
-  if (!flow) return false
-  if (!['basics', 'characteristics', 'homeworld'].includes(flow.step)) {
-    return false
-  }
-  if (
-    flow.step === 'homeworld' &&
-    characterCreationStepIndex(
-      creationStepFromStatus(
-        currentCharacterCreationProjection()?.state.status ?? 'HOMEWORLD'
-      )
-    ) <= characterCreationStepIndex('homeworld')
-  ) {
-    const validation = deriveCharacterCreationValidationSummary(flow)
-    if (validation.ok) {
-      characterCreationHomeworldPublisher.publishProgress(flow)
-    }
-    return false
-  }
+const autoAdvanceCharacterCreationSetup = () =>
+  characterCreationWizardController.autoAdvanceSetup()
 
-  const result = nextCharacterCreationWizardStep(flow)
-  if (!result.moved) return false
-  characterCreationController.setFlow(result.flow)
-  return true
-}
-
-const syncCharacterCreationWizardFields = () => {
-  const flow = characterCreationController.flow()
-  if (!flow) return
-
-  const values: Record<string, string> = {}
-  for (const field of Array.from(
-    els.characterCreationFields.querySelectorAll<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >('[data-character-creation-field]')
-  )) {
-    const key = field.dataset.characterCreationField
-    if (key) values[key] = field.value
-  }
-  characterCreationController.setFlow(
-    applyParsedCharacterCreationDraftPatch(
-      flow,
-      parseCharacterCreationDraftPatch(values)
-    ).flow
-  )
-}
+const syncCharacterCreationWizardFields = () =>
+  characterCreationWizardController.syncFields()
 
 const renderCharacterCreationWizardControls = () => {
   els.backCharacterWizard.disabled = true
@@ -1402,54 +1328,11 @@ const renderCharacterCreationOptionField = (
 const renderCharacterCreationCharacteristicGrid = (
   flow: CharacterCreationFlow
 ): HTMLElement => {
-  const fields = deriveCharacterCreationFieldViewModels(flow)
-  const grid = document.createElement('div')
-  grid.className = 'creation-stat-grid dice-stat-grid'
-  for (const field of fields) {
-    const cell = document.createElement('div')
-    cell.className = 'creation-stat-cell dice-stat-cell'
-    const name = document.createElement('span')
-    name.textContent = field.label
-    const row = document.createElement('span')
-    row.className = 'creation-stat-value-row'
-    const modifier = document.createElement('small')
-    if (field.value === '' || field.value === null) {
-      const rollButton = document.createElement('button')
-      rollButton.type = 'button'
-      rollButton.className = 'stat-die-button'
-      rollButton.setAttribute('aria-label', `Roll ${field.label}`)
-      rollButton.title = `Roll ${field.label}`
-      for (let index = 0; index < 5; index += 1) {
-        const pip = document.createElement('span')
-        pip.className = 'stat-die-pip'
-        rollButton.append(pip)
-      }
-      const characteristicKey = field.key as CharacteristicKey
-      bindAsyncActionButton(rollButton, () =>
-        characterCreationCommandController
-          .rollCharacteristic(characteristicKey)
-          .catch((error) => setError(error.message))
-      )
-      modifier.textContent = ''
-      row.append(rollButton, modifier)
-    } else {
-      const value = document.createElement('strong')
-      value.textContent = field.value
-      modifier.textContent = formatCharacterCreationCharacteristicModifier(
-        field.value
-      )
-      row.append(value, modifier)
-    }
-    cell.append(name, row)
-    if (field.errors.length > 0 && field.value !== '') {
-      const error = document.createElement('small')
-      error.className = 'creation-stat-error'
-      error.textContent = field.errors.join(', ')
-      cell.append(error)
-    }
-    grid.append(cell)
-  }
-  return grid
+  return renderCharacterCreationCharacteristicGridView(document, flow, {
+    rollCharacteristic: (characteristicKey) =>
+      characterCreationCommandController.rollCharacteristic(characteristicKey),
+    reportError: setError
+  })
 }
 
 const renderCharacterCreationCareerPicker = (
@@ -1530,121 +1413,21 @@ const renderCharacterCreationCareerPicker = (
 const renderCharacterCreationTermResolution = (
   flow: CharacterCreationFlow
 ): HTMLElement | DocumentFragment => {
-  const panel = document.createElement('div')
-  panel.className = 'creation-term-resolution'
-  const plan = flow.draft.careerPlan
-  const title = document.createElement('strong')
-  title.textContent = 'Career term'
-  const text = document.createElement('p')
-
-  if (!plan?.career) {
-    return document.createDocumentFragment()
-  }
-
-  if (!isCharacterCreationCareerTermResolved(flow.draft)) {
-    text.textContent = 'Roll each required check. The next roll appears above.'
-    panel.append(title, text)
-    return panel
-  }
-
-  if (deriveCharacterCreationTermSkillTableActions(flow).length > 0) {
-    text.textContent =
-      'Roll this term’s skills before deciding what happens next.'
-    panel.append(title, text)
-    return panel
-  }
-
-  if (flow.draft.pendingTermCascadeSkills.length > 0) {
-    text.textContent =
-      'Choose the rolled skill specialty before deciding what happens next.'
-    panel.append(title, text)
-    return panel
-  }
-
-  if (deriveCharacterCreationAnagathicsDecision(flow)) {
-    text.textContent =
-      'Decide whether this term used anagathics before deciding what happens next.'
-    panel.append(title, text)
-    return panel
-  }
-
-  if (deriveNextCharacterCreationAgingRoll(flow)) {
-    text.textContent = 'Roll aging before deciding what happens next.'
-    panel.append(title, text)
-    return panel
-  }
-
-  if (flow.draft.pendingAgingChanges.length > 0) {
-    text.textContent = 'Apply aging effects before deciding what happens next.'
-    panel.append(title, text)
-    return panel
-  }
-
-  if (plan.survivalPassed === true && !plan.reenlistmentOutcome) {
-    text.textContent = 'Roll reenlistment before deciding what happens next.'
-    panel.append(title, text)
-    return panel
-  }
-
-  const survived = plan.survivalPassed === true
-  if (!survived) {
-    text.textContent =
-      'Killed in service. This character cannot muster out or become playable.'
-    panel.append(title, text)
-    return panel
-  }
-
-  text.textContent = formatCharacterCreationReenlistmentOutcome(plan)
-  const actions = document.createElement('div')
-  actions.className = 'creation-term-actions'
-
-  if (
-    survived &&
-    (plan.reenlistmentOutcome === 'allowed' ||
-      plan.reenlistmentOutcome === 'forced')
-  ) {
-    const another = document.createElement('button')
-    another.type = 'button'
-    another.textContent =
-      plan.reenlistmentOutcome === 'forced'
-        ? 'Serve required term'
-        : 'Serve another term'
-    another.addEventListener('click', () => {
+  return renderCharacterCreationTermResolutionView(document, flow, {
+    completeTerm: (continueCareer) => {
       const flow = characterCreationController.flow()
       if (!flow) return
       characterCreationController.setFlow(
         completeCharacterCreationCareerTerm({
           flow,
-          continueCareer: true
+          continueCareer
         }).flow
       )
       setError('')
       renderCharacterCreationWizard()
       characterCreationPanel.scrollToTop()
-    })
-    actions.append(another)
-  }
-
-  const muster = document.createElement('button')
-  muster.type = 'button'
-  muster.textContent = 'Muster out'
-  muster.addEventListener('click', () => {
-    const flow = characterCreationController.flow()
-    if (!flow) return
-    characterCreationController.setFlow(
-      completeCharacterCreationCareerTerm({
-        flow,
-        continueCareer: false
-      }).flow
-    )
-    setError('')
-    renderCharacterCreationWizard()
-    characterCreationPanel.scrollToTop()
+    }
   })
-  actions.append(muster)
-
-  panel.append(title, text, actions)
-  return panel
 }
 
 const renderCharacterCreationTermHistory = (
@@ -1803,57 +1586,11 @@ const renderCharacterCreationBasicTrainingButton = (
 const renderCharacterCreationMusteringOut = (
   flow: CharacterCreationFlow
 ): HTMLElement => {
-  const panel = document.createElement('div')
-  panel.className = 'creation-mustering-out'
-  const title = document.createElement('strong')
-  title.textContent = 'Mustering out'
-  const remaining = remainingMusteringBenefits(flow.draft)
-  const summary = document.createElement('p')
-  summary.textContent =
-    flow.draft.completedTerms.length === 0
-      ? 'No career terms completed yet.'
-      : remaining > 0
-        ? `${remaining} benefit ${remaining === 1 ? 'roll' : 'rolls'} remaining.`
-        : 'Benefits complete.'
-
-  const benefitList = document.createElement('div')
-  benefitList.className = 'creation-benefit-list'
-  for (const benefit of flow.draft.musteringBenefits) {
-    const item = document.createElement('span')
-    item.textContent = `${benefit.career}: ${benefit.kind} ${benefit.roll} -> ${benefit.value}`
-    benefitList.append(item)
-  }
-
-  const actions = document.createElement('div')
-  actions.className = 'creation-term-actions'
-  const benefitActions = [
-    ['cash', 'Roll cash'],
-    ['material', 'Roll benefit']
-  ] satisfies readonly [BenefitKind, string][]
-  for (const [kind, label] of benefitActions) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.textContent = label
-    const modifier = characterCreationMusteringBenefitRollModifier({
-      draft: flow.draft,
-      kind
-    })
-    button.disabled =
-      remaining <= 0 ||
-      !canRollCharacterCreationMusteringBenefit({ draft: flow.draft, kind })
-    if (modifier !== 0) {
-      button.title = `${modifier > 0 ? '+' : ''}${modifier} DM`
-    }
-    bindAsyncActionButton(button, () =>
-      characterCreationCommandController
-        .rollMusteringBenefit(kind)
-        .catch((error) => setError(error.message))
-    )
-    actions.append(button)
-  }
-
-  panel.append(title, summary, benefitList, actions)
-  return panel
+  return renderCharacterCreationMusteringOutView(document, flow, {
+    rollMusteringBenefit: (kind) =>
+      characterCreationCommandController.rollMusteringBenefit(kind),
+    reportError: setError
+  })
 }
 
 const renderCharacterCreationReview = (
@@ -2040,45 +1777,11 @@ const finishCharacterCreationWizard = async () => {
 }
 
 const advanceCharacterCreationWizard = async () => {
-  const flow = characterCreationController.flow()
-  if (!flow) {
-    startCharacterCreationWizard()
-    return
-  }
-
-  syncCharacterCreationWizardFields()
-  const syncedFlow = characterCreationController.flow()
-  if (!syncedFlow) return
-  if (syncedFlow.step === 'review') {
-    await finishCharacterCreationWizard()
-    return
-  }
-
-  const result = nextCharacterCreationWizardStep(syncedFlow)
-  if (!result.moved) {
-    setError(result.validation.errors.join(', '))
-  } else {
-    setError('')
-    characterCreationController.setFlow(result.flow)
-    renderCharacterCreationWizard()
-    characterCreationPanel.scrollToTop()
-    return
-  }
-  renderCharacterCreationWizard()
+  await characterCreationWizardController.advance()
 }
 
 const backCharacterCreationWizard = () => {
-  const flow = characterCreationController.flow()
-  if (!flow) return
-  syncCharacterCreationWizardFields()
-  const syncedFlow = characterCreationController.flow()
-  if (!syncedFlow) return
-  characterCreationController.setFlow(
-    backCharacterCreationWizardStep(syncedFlow).flow
-  )
-  setError('')
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
+  characterCreationWizardController.back()
 }
 
 const createCustomPiece = async () => {
