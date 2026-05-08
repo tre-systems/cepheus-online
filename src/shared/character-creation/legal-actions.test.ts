@@ -676,6 +676,23 @@ describe('career creation legal action planner', () => {
     ])
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(creation),
+      ['resolveMusteringBenefit']
+    )
+  })
+
+  it('blocks projected mustering benefit actions behind unrelated pending decisions', () => {
+    const creation = projection('MUSTERING_OUT', {
+      terms: [term({ benefits: [], complete: true, musteringOut: true })],
+      careers: [{ name: 'Scout', rank: 0 }],
+      pendingCascadeSkills: ['Jack of all Trades']
+    })
+
+    assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
+      { key: 'cascadeSkillResolution' },
+      { key: 'musteringBenefitSelection' }
+    ])
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(creation),
       []
     )
   })

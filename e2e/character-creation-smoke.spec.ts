@@ -68,7 +68,9 @@ const postCommand = async (
       }
     }
   )
-  expect(response.ok(), await response.text()).toBe(true)
+  const responseText = await response.text()
+  expect(response.ok(), responseText).toBe(true)
+  expect(JSON.parse(responseText).type, responseText).toBe('commandAccepted')
 }
 
 const activeCreationCharacterId = async (
@@ -862,25 +864,19 @@ test.describe('character creation smoke', () => {
         timeout: 100
       })
 
-      const skipAnagathics = page.getByRole('button', { name: 'Skip' })
-      if ((await skipAnagathics.count()) > 0) {
-        const decisionAccepted = page.waitForResponse(
-          (response) =>
-            response.request().method() === 'POST' &&
-            response.url().includes(`/rooms/${roomId}/command`) &&
-            (response.request().postData() ?? '').includes(
-              'DecideCharacterCreationAnagathics'
-            )
-        )
-        await skipAnagathics.click()
-        await expect((await decisionAccepted).ok()).toBe(true)
-      } else {
-        await postCommand(page, roomId, actorId, actorSession, {
-          type: 'DecideCharacterCreationAnagathics',
-          characterId,
-          useAnagathics: false
-        })
-      }
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'DecideCharacterCreationAnagathics',
+        characterId,
+        useAnagathics: false
+      })
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.locator('#boardCanvas')).toBeVisible()
+      await page
+        .locator('#creationPresenceDock .creation-presence-card')
+        .filter({ hasText: characterName })
+        .click()
+      await spectator.reload({ waitUntil: 'domcontentloaded' })
+      await openOrExpectFollowedCreation(spectator, characterName)
 
       await expect(page.locator('#characterCreationFields')).toContainText(
         /Roll aging|Roll reenlistment/,
@@ -937,27 +933,59 @@ test.describe('character creation smoke', () => {
           await agingChoice.click()
         }
       }
+      let rollReenlistment = page.getByRole('button', {
+        name: 'Roll reenlistment'
+      })
+      if ((await rollReenlistment.count()) === 0) {
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await expect(page.locator('#boardCanvas')).toBeVisible()
+        await page
+          .locator('#creationPresenceDock .creation-presence-card')
+          .filter({ hasText: characterName })
+          .click()
+        await openOrExpectFollowedCreation(spectator, characterName)
+        rollReenlistment = page.getByRole('button', {
+          name: 'Roll reenlistment'
+        })
+      }
+      await expect(rollReenlistment).toBeVisible({ timeout: 15_000 })
+      await expect(spectatorFields).not.toContainText(/Reenlistment \d+:/, {
+        timeout: 100
+      })
+
+      const reenlistmentAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'ResolveCharacterCreationReenlistment'
+          )
+      )
+      await rollReenlistment.click()
+      await expect((await reenlistmentAccepted).ok()).toBe(true)
+
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
+        'Rolling...',
+        { timeout: 100 }
+      )
+      await expect(spectatorFields).not.toContainText(/Reenlistment \d+:/, {
+        timeout: 100
+      })
+
+      await waitForDiceReveal(page)
+      await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
+        'Rolling...',
+        { timeout: 5_000 }
+      )
+      await expect(spectatorFields).toContainText(/Reenlistment \d+:/, {
+        timeout: 5_000
+      })
     } finally {
       await spectator.close()
     }
-
-    let rollReenlistment = page.getByRole('button', {
-      name: 'Roll reenlistment'
-    })
-    if ((await rollReenlistment.count()) === 0) {
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await expect(page.locator('#boardCanvas')).toBeVisible()
-      await page
-        .locator('#creationPresenceDock .creation-presence-card')
-        .filter({ hasText: characterName })
-        .click()
-      rollReenlistment = page.getByRole('button', {
-        name: 'Roll reenlistment'
-      })
-    }
-    await expect(rollReenlistment).toBeVisible({ timeout: 15_000 })
-    await rollReenlistment.click()
-    await waitForDiceReveal(page)
 
     const musterOut = page.getByRole('button', { name: 'Muster out' })
     await expect(musterOut).toBeVisible({ timeout: 5_000 })

@@ -32,6 +32,16 @@ const hasPendingDecision = (
 const hasAnyPendingDecision = (context: CareerCreationActionContext): boolean =>
   (context.pendingDecisions?.length ?? 0) > 0
 
+const hasOnlyPendingDecision = (
+  context: CareerCreationActionContext,
+  key: CareerCreationPendingDecisionKey
+): boolean => {
+  const decisions = context.pendingDecisions ?? []
+  return (
+    decisions.length > 0 && decisions.every((decision) => decision.key === key)
+  )
+}
+
 const deriveFailedQualificationActionOptions = (
   canEnterDraft: boolean
 ): NonNullable<LegalCareerCreationAction['failedQualificationOptions']> => [
@@ -314,10 +324,13 @@ export const deriveLegalCareerCreationActionKeys = (
       }
       return ['leaveCareer']
     case 'MUSTERING_OUT':
-      if (!noPendingDecisions) return []
       if (options.remainingMusteringBenefits > 0) {
-        return ['resolveMusteringBenefit']
+        return noPendingDecisions ||
+          hasOnlyPendingDecision(context, 'musteringBenefitSelection')
+          ? ['resolveMusteringBenefit']
+          : []
       }
+      if (!noPendingDecisions) return []
       return [
         ...(options.canContinueCareer ? ['continueCareer' as const] : []),
         'finishMustering'

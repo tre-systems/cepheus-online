@@ -112,9 +112,12 @@ Agents A, B, C, D, and E.
 ### Slice 0A: Client Kernel And Command Router
 
 Status: partially done. A typed app command router exists with route coverage
-for board, dice, door, sheet, and character creation commands. `AppSession`
-exists and `app.ts` is type-checked, but `app.ts` is still too large and still
-owns too much orchestration, so the composition-root extraction is not complete.
+for board, dice, door, sheet, and character creation commands. Room command
+submission now lives behind `room-command-dispatch`, so request IDs, HTTP
+posting, accepted-message checks, and domain dispatch wrappers are no longer
+embedded directly in `app.ts`. `AppSession` exists and `app.ts` is type-checked,
+but `app.ts` is still too large and still owns too much rendering
+orchestration, so the composition-root extraction is not complete.
 
 Primary write ownership:
 
@@ -319,9 +322,10 @@ Done when:
 
 Status: partially done. Playwright browser smoke now runs in `npm run
 verify:full`, two-tab follow coverage exists for characteristic,
-homeworld/background, and qualification reveal timing, and the shared
-`diceRevealCoordinator` owns result deferral. The remaining leverage point is
-to broaden the executable scenarios and keep extracting `app.ts` orchestration
+homeworld/background, qualification, anagathics, aging, reenlistment, and
+mustering benefit reveal timing, and the shared `diceRevealCoordinator` owns
+result deferral. The remaining leverage point is to broaden the executable
+scenarios into finalization while continuing to extract `app.ts` orchestration
 so browser-only failures are caught before manual play.
 
 Primary write ownership:

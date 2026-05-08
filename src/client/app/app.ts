@@ -30,7 +30,6 @@ import {
   createBoardController,
   type BoardController
 } from './board-controller.js'
-import { bindAsyncActionButton } from './async-action-button.js'
 import { createCharacterCreationPanel } from './character-creation-panel.js'
 import {
   createCharacterCreationCommandController,
@@ -49,7 +48,6 @@ import {
   renderCharacterCreationCareerRollButton as renderCharacterCreationCareerRollButtonView
 } from './character-creation-career-selection-view.js'
 import {
-  renderCharacterCreationCascadeChoice as renderCharacterCreationCascadeChoiceView,
   renderCharacterCreationHomeworld as renderCharacterCreationHomeworldView,
   renderCharacterCreationTermCascadeChoices as renderCharacterCreationTermCascadeChoicesView
 } from './character-creation-homeworld-view.js'
@@ -80,7 +78,6 @@ import {
   applyCharacterCreationBackgroundSkillSelection,
   applyCharacterCreationAgingChange,
   applyParsedCharacterCreationDraftPatch,
-  characterCreationCareerNames,
   completeCharacterCreationCareerTerm,
   removeCharacterCreationBackgroundSkillSelection,
   resolveCharacterCreationCascadeSkill,
@@ -89,12 +86,12 @@ import {
   type CharacterCreationFlow
 } from './character-creation-flow.js'
 import {
-  deriveCharacterCreationBasicTrainingButton,
-  deriveCharacterCreationCharacteristicRollButton,
-  deriveCharacterCreationDeathViewModel,
-  deriveCharacterCreationFieldViewModels,
-  deriveCharacterCreationNextStepViewModel
-} from './character-creation-view.js'
+  renderCharacterCreationBasicTrainingButton as renderCharacterCreationBasicTrainingButtonView,
+  renderCharacterCreationCharacteristicRollButton as renderCharacterCreationCharacteristicRollButtonView,
+  renderCharacterCreationDeath as renderCharacterCreationDeathView,
+  renderCharacterCreationDraftFields as renderCharacterCreationDraftFieldsView,
+  renderCharacterCreationNextStep as renderCharacterCreationNextStepView
+} from './character-creation-renderer.js'
 import {
   renderCharacterCreationReview as renderCharacterCreationReviewView,
   renderCharacterCreationTermHistory as renderCharacterCreationTermHistoryView
@@ -576,66 +573,13 @@ characterCreationCommandController = createCharacterCreationCommandController({
 const renderCharacterCreationNextStep = (
   flow: CharacterCreationFlow
 ): HTMLElement => {
-  const viewModel = deriveCharacterCreationNextStepViewModel(flow)
-  const panel = document.createElement('section')
-  panel.className = 'creation-next-step'
-
-  const heading = document.createElement('strong')
-  heading.textContent = viewModel.phase
-  const prompt = document.createElement('p')
-  prompt.textContent = viewModel.prompt
-  const stats = document.createElement('div')
-  stats.className = 'creation-stat-strip'
-  const actions = document.createElement('div')
-  actions.className = 'creation-next-step-actions'
-
-  for (const stat of viewModel.stats) {
-    const item = document.createElement('span')
-    if (stat.missing) item.classList.add('missing')
-    const label = document.createElement('b')
-    label.textContent = stat.label
-    const value = document.createElement('span')
-    value.textContent = stat.value
-    const modifier = document.createElement('small')
-    modifier.textContent = stat.modifier
-    item.append(label, value, modifier)
-    stats.append(item)
-  }
-
-  if (!viewModel.primaryAction.disabled && flow.step === 'review') {
-    const primary = document.createElement('button')
-    primary.type = 'button'
-    primary.textContent = viewModel.primaryAction.label
-    primary.addEventListener('click', () => {
-      advanceCharacterCreationWizard().catch((error) => setError(error.message))
-    })
-    actions.append(primary)
-  }
-
-  panel.append(heading, prompt)
-  if (viewModel.blockingChoice) {
-    panel.append(
-      renderCharacterCreationCascadeChoiceView(
-        document,
-        viewModel.blockingChoice,
-        'background',
-        {
-          resolveCascadeSkill: ({ scope, cascadeSkill, selection }) => {
-            resolveCharacterCreationCascadeChoice(
-              scope,
-              cascadeSkill,
-              selection
-            )
-          }
-        }
-      )
-    )
-  }
-  if (!['characteristics', 'homeworld'].includes(flow.step)) {
-    panel.append(stats)
-  }
-  if (actions.childElementCount > 0) panel.append(actions)
-  return panel
+  return renderCharacterCreationNextStepView(document, flow, {
+    advanceReview: advanceCharacterCreationWizard,
+    reportError: setError,
+    resolveBackgroundCascadeSkill: ({ scope, cascadeSkill, selection }) => {
+      resolveCharacterCreationCascadeChoice(scope, cascadeSkill, selection)
+    }
+  })
 }
 
 const renderCharacterCreationFields = (
@@ -672,127 +616,26 @@ const renderCharacterCreationFields = (
     fragment.append(renderCharacterCreationHomeworld(flow))
     return fragment
   }
-  for (const field of deriveCharacterCreationFieldViewModels(flow)) {
-    if (field.key === 'skills') {
-      const panel = document.createElement('section')
-      panel.className = 'character-creation-field skill-review'
-      const title = document.createElement('span')
-      title.textContent = field.required ? `${field.label} *` : field.label
-      const skills = document.createElement('div')
-      skills.className = 'creation-skill-review-list'
-      const skillValues = flow.draft.skills.length > 0 ? flow.draft.skills : []
-      for (const skill of skillValues) {
-        const chip = document.createElement('span')
-        chip.textContent = skill
-        skills.append(chip)
-      }
-      if (skillValues.length === 0) {
-        const empty = document.createElement('small')
-        empty.textContent = 'No skills recorded yet.'
-        skills.append(empty)
-      }
-      const control = document.createElement('input')
-      control.type = 'hidden'
-      control.dataset.characterCreationField = field.key
-      control.value = field.value
-      panel.append(title, skills, control)
-      if (field.errors.length > 0) {
-        const error = document.createElement('small')
-        error.textContent = field.errors.join(', ')
-        panel.append(error)
-      }
-      fragment.append(panel)
-      continue
-    }
-
-    const label = document.createElement('label')
-    label.className = `character-creation-field ${field.kind}`
-    const name = document.createElement('span')
-    name.textContent = field.required ? `${field.label} *` : field.label
-
-    let control = null
-    if (field.kind === 'textarea') {
-      control = document.createElement('textarea')
-      control.rows = field.key === 'skills' ? 4 : 3
-    } else if (field.kind === 'select') {
-      control = document.createElement('select')
-      const values =
-        field.key === 'career'
-          ? ['', ...characterCreationCareerNames()]
-          : ['PLAYER', 'NPC', 'ANIMAL', 'ROBOT']
-      for (const value of values) {
-        const option = document.createElement('option')
-        option.value = value
-        option.textContent = value || 'Select career'
-        control.append(option)
-      }
-    } else {
-      control = document.createElement('input')
-      control.type = 'text'
-      if (field.kind === 'number') control.inputMode = 'numeric'
-    }
-    control.dataset.characterCreationField = field.key
-    control.value = field.value
-    control.autocomplete = 'off'
-
-    label.append(name, control)
-    if (field.errors.length > 0) {
-      const error = document.createElement('small')
-      error.textContent = field.errors.join(', ')
-      label.append(error)
-    }
-    fragment.append(label)
-  }
-  const careerRollButton = renderCharacterCreationCareerRollButton(flow)
-  const characteristicRollButton =
-    renderCharacterCreationCharacteristicRollButton(flow)
-  const basicTrainingButton = renderCharacterCreationBasicTrainingButton(flow)
-  if (characteristicRollButton) fragment.append(characteristicRollButton)
-  if (careerRollButton) fragment.append(careerRollButton)
-  if (basicTrainingButton) fragment.append(basicTrainingButton)
-  if (flow.step === 'equipment') {
-    fragment.prepend(renderCharacterCreationMusteringOut(flow))
-  }
+  fragment.append(
+    renderCharacterCreationDraftFieldsView(document, flow, {
+      renderCharacteristicRollButton:
+        renderCharacterCreationCharacteristicRollButton,
+      renderCareerRollButton: renderCharacterCreationCareerRollButton,
+      renderBasicTrainingButton: renderCharacterCreationBasicTrainingButton,
+      renderMusteringOut: renderCharacterCreationMusteringOut
+    })
+  )
   return fragment
 }
 
 const renderCharacterCreationDeath = (
   flow: CharacterCreationFlow
 ): HTMLElement | null => {
-  const viewModel = deriveCharacterCreationDeathViewModel(flow)
-  if (!viewModel) return null
-
-  const panel = document.createElement('section')
-  panel.className = 'creation-death-card'
-  const eyebrow = document.createElement('span')
-  eyebrow.textContent = viewModel.career
-  const title = document.createElement('strong')
-  title.textContent = viewModel.title
-  const detail = document.createElement('p')
-  detail.textContent = viewModel.detail
-  const roll = document.createElement('div')
-  roll.className = 'creation-death-roll'
-  const rollLabel = document.createElement('span')
-  rollLabel.textContent = 'Survival roll'
-  const rollValue = document.createElement('b')
-  rollValue.textContent = viewModel.roll
-  roll.append(rollLabel, rollValue)
-  panel.append(eyebrow, title, detail, roll)
-  if (!characterCreationController.readOnly()) {
-    const actions = document.createElement('div')
-    actions.className = 'creation-death-actions'
-    const next = document.createElement('button')
-    next.type = 'button'
-    next.textContent = 'Start a new character'
-    next.addEventListener('click', () => {
-      startNewCharacterCreationWizard().catch((error) =>
-        setError(error.message)
-      )
-    })
-    actions.append(next)
-    panel.append(actions)
-  }
-  return panel
+  return renderCharacterCreationDeathView(document, flow, {
+    readOnly: () => characterCreationController.readOnly(),
+    startNewCharacter: startNewCharacterCreationWizard,
+    reportError: setError
+  })
 }
 
 const renderCharacterCreationHomeworld = (
@@ -1026,24 +869,11 @@ const selectFailedQualificationCareer = (
 const renderCharacterCreationCharacteristicRollButton = (
   flow: CharacterCreationFlow
 ): HTMLElement | null => {
-  const viewModel = deriveCharacterCreationCharacteristicRollButton(flow)
-  if (!viewModel) return null
-
-  const wrapper = document.createElement('div')
-  wrapper.className = 'character-creation-roll-action'
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.textContent = viewModel.label
-  button.disabled = viewModel.disabled
-  bindAsyncActionButton(button, () =>
-    characterCreationCommandController
-      .rollCharacteristic()
-      .catch((error) => setError(error.message))
-  )
-  const hint = document.createElement('small')
-  hint.textContent = viewModel.reason
-  wrapper.append(button, hint)
-  return wrapper
+  return renderCharacterCreationCharacteristicRollButtonView(document, flow, {
+    rollCharacteristic: () =>
+      characterCreationCommandController.rollCharacteristic(),
+    reportError: setError
+  })
 }
 
 const renderCharacterCreationCareerRollButton = (
@@ -1058,34 +888,13 @@ const renderCharacterCreationCareerRollButton = (
 const renderCharacterCreationBasicTrainingButton = (
   flow: CharacterCreationFlow
 ): HTMLElement | null => {
-  const viewModel = deriveCharacterCreationBasicTrainingButton(flow)
-  if (!viewModel) return null
-
-  const wrapper = document.createElement('div')
-  wrapper.className = 'character-creation-roll-action'
-  const button = document.createElement('button')
-  button.type = 'button'
-  button.textContent = viewModel.label
-  button.disabled = viewModel.disabled
-  bindAsyncActionButton(button, () => {
-    if (!characterCreationController.flow()) return
-    syncCharacterCreationWizardFields()
-    setError('')
-    return characterCreationCommandController
-      .completeBasicTraining()
-      .catch((error) => setError(error.message))
+  return renderCharacterCreationBasicTrainingButtonView(document, flow, {
+    hasFlow: () => Boolean(characterCreationController.flow()),
+    syncFields: syncCharacterCreationWizardFields,
+    completeBasicTraining: () =>
+      characterCreationCommandController.completeBasicTraining(),
+    reportError: setError
   })
-  const hint = document.createElement('small')
-  hint.textContent = viewModel.reason
-  const skills = document.createElement('div')
-  skills.className = 'creation-training-skills'
-  for (const skill of viewModel.skills) {
-    const chip = document.createElement('span')
-    chip.textContent = skill
-    skills.append(chip)
-  }
-  wrapper.append(button, hint, skills)
-  return wrapper
 }
 
 const renderCharacterCreationMusteringOut = (
