@@ -46,14 +46,40 @@ const characteristicFlow = (): CharacterCreationFlow =>
     createManualCharacterCreationFlow({ name: 'Iona Vesh' })
   ).flow
 
+const careerFlow = (): CharacterCreationFlow => {
+  const flow = createManualCharacterCreationFlow({ name: 'Iona Vesh' })
+  return {
+    step: 'career',
+    draft: {
+      ...flow.draft,
+      characteristics: {
+        str: 7,
+        dex: 8,
+        end: 7,
+        int: 9,
+        edu: 8,
+        soc: 6
+      },
+      homeworld: {
+        lawLevel: 'Low Law',
+        tradeCodes: ['Industrial']
+      },
+      backgroundSkills: ['Admin-0', 'Gun Combat-0']
+    }
+  }
+}
+
 describe('character creation command controller', () => {
   it('does not publish when no editable flow exists', async () => {
     const commands: CharacterCreationCommand[] = []
     const controller = createCharacterCreationCommandController({
       getFlow: () => null,
+      setFlow: () => {},
       setError: () => {},
       isReadOnly: () => false,
       syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
       ensurePublished: async () => {},
       postCharacterCreationCommand: async (command) => {
         commands.push(command)
@@ -84,9 +110,14 @@ describe('character creation command controller', () => {
 
     const controller = createCharacterCreationCommandController({
       getFlow: () => flow,
+      setFlow: (nextFlow) => {
+        flow = nextFlow
+      },
       setError: () => {},
       isReadOnly: () => false,
       syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
       ensurePublished: async () => {},
       postCharacterCreationCommand: async (command) => {
         commands.push(command)
@@ -130,11 +161,14 @@ describe('character creation command controller', () => {
     const errors: string[] = []
     const controller = createCharacterCreationCommandController({
       getFlow: characteristicFlow,
+      setFlow: () => {},
       setError: (message) => {
         errors.push(message)
       },
       isReadOnly: () => false,
       syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
       ensurePublished: async () => {},
       postCharacterCreationCommand: async () => ({ state: null }),
       commandIdentity: () => ({ gameId, actorId }),
@@ -152,5 +186,196 @@ describe('character creation command controller', () => {
       '',
       'Characteristic roll did not return a dice result'
     ])
+  })
+
+  it('resolves career qualification, waits for reveal, and applies the fallback flow', async () => {
+    let flow: CharacterCreationFlow | null = careerFlow()
+    const commands: CharacterCreationCommand[] = []
+    const requestIds: string[] = []
+    const waitedFor: string[] = []
+    const roll = diceRoll(7)
+    let published = 0
+    let flushed = 0
+    let renderCount = 0
+    let scrollCount = 0
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: (nextFlow) => {
+        flow = nextFlow
+      },
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {
+        flushed += 1
+      },
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command, requestId) => {
+        commands.push(command)
+        requestIds.push(requestId)
+        return { state: stateWithDice(roll) }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async (nextRoll) => {
+        waitedFor.push(nextRoll.id)
+      },
+      syncFlowFromRoomState: () => null,
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        renderCount += 1
+      },
+      scrollToTop: () => {
+        scrollCount += 1
+      }
+    })
+
+    await controller.resolveCareerQualification('Merchant')
+
+    assert.equal(flushed, 1)
+    assert.equal(published, 1)
+    assert.equal(commands[0]?.type, 'ResolveCharacterCreationQualification')
+    assert.equal(
+      commands[0]?.type === 'ResolveCharacterCreationQualification'
+        ? commands[0].career
+        : null,
+      'Merchant'
+    )
+    assert.deepEqual(requestIds, ['resolve-character-qualification'])
+    assert.deepEqual(waitedFor, ['roll-1'])
+    assert.equal(flow?.draft.careerPlan?.career, 'Merchant')
+    assert.equal(flow?.draft.careerPlan?.qualificationRoll, 7)
+    assert.equal(flow?.draft.careerPlan?.qualificationPassed, true)
+    assert.equal(renderCount, 1)
+    assert.equal(scrollCount, 1)
+  })
+
+  it('keeps failed qualification fallback actions after dice reveal', async () => {
+    let flow: CharacterCreationFlow | null = careerFlow()
+    const roll = diceRoll(2)
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: (nextFlow) => {
+        flow = nextFlow
+      },
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => ({
+        state: stateWithDice(roll)
+      }),
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {},
+      syncFlowFromRoomState: () => null,
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {},
+      scrollToTop: () => {}
+    })
+
+    await controller.resolveCareerQualification('Rogue')
+
+    assert.equal(flow?.draft.careerPlan?.career, 'Rogue')
+    assert.equal(flow?.draft.careerPlan?.qualificationRoll, 2)
+    assert.equal(flow?.draft.careerPlan?.qualificationPassed, false)
+  })
+
+  it('reports accepted qualification commands without dice results', async () => {
+    const errors: string[] = []
+    let waited = false
+    let rendered = false
+    let scrolled = false
+    const controller = createCharacterCreationCommandController({
+      getFlow: careerFlow,
+      setFlow: () => {},
+      setError: (message) => {
+        errors.push(message)
+      },
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => ({ state: null }),
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {
+        waited = true
+      },
+      syncFlowFromRoomState: () => null,
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        rendered = true
+      },
+      scrollToTop: () => {
+        scrolled = true
+      }
+    })
+
+    await controller.resolveCareerQualification('Merchant')
+
+    assert.deepEqual(errors, [
+      '',
+      'Qualification roll did not return a dice result'
+    ])
+    assert.equal(waited, false)
+    assert.equal(rendered, false)
+    assert.equal(scrolled, false)
+  })
+
+  it('syncs current room state and rerenders when qualification is rejected', async () => {
+    const flow = careerFlow()
+    const roomState = stateWithDice(diceRoll(6))
+    const syncedFallbacks: CharacterCreationFlow[] = []
+    let rendered = false
+    let scrolled = false
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: () => {},
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => roomState,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => {
+        throw new Error('not allowed')
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {},
+      syncFlowFromRoomState: (state, characterId, fallbackFlow) => {
+        assert.equal(state, roomState)
+        assert.equal(characterId, flow.draft.characterId)
+        syncedFallbacks.push(fallbackFlow)
+        return fallbackFlow
+      },
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        rendered = true
+      },
+      scrollToTop: () => {
+        scrolled = true
+      }
+    })
+
+    let rejectedMessage = ''
+    try {
+      await controller.resolveCareerQualification('Merchant')
+    } catch (error) {
+      rejectedMessage = error instanceof Error ? error.message : String(error)
+    }
+
+    assert.equal(rejectedMessage, 'not allowed')
+    assert.equal(syncedFallbacks[0], flow)
+    assert.equal(rendered, true)
+    assert.equal(scrolled, true)
   })
 })

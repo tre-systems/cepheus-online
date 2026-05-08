@@ -13,15 +13,18 @@ import {
   applyCharacterCreationCharacteristicRoll,
   applyCharacterCreationReenlistmentRoll,
   applyCharacterCreationTermSkillRoll,
+  applyParsedCharacterCreationDraftPatch,
   deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationAgingRoll,
   deriveNextCharacterCreationCharacteristicRoll,
   type CharacterCreationFlow,
   type CharacterCreationTermSkillTable
 } from './character-creation-flow.js'
+import { flowFromProjectedCharacter } from './character-creation-projection.js'
 import {
   deriveCharacterCreationCareerRollButton,
-  deriveCharacterCreationCharacteristicRollButton
+  deriveCharacterCreationCharacteristicRollButton,
+  parseCharacterCreationDraftPatch
 } from './character-creation-view.js'
 
 export interface CharacterCreationCommandResponse {
@@ -38,6 +41,7 @@ export interface CharacterCreationCommandController {
   rollCharacteristic: (
     characteristicKey?: CharacteristicKey | null
   ) => Promise<void>
+  resolveCareerQualification: (career: string) => Promise<void>
   completeBasicTraining: () => Promise<void>
   rollTermSkill: (table: CharacterCreationTermSkillTable) => Promise<void>
   rollReenlistment: () => Promise<void>
@@ -47,9 +51,12 @@ export interface CharacterCreationCommandController {
 
 export interface CharacterCreationCommandControllerDeps {
   getFlow: () => CharacterCreationFlow | null
+  setFlow: (flow: CharacterCreationFlow | null) => void
   setError: (message: string) => void
   isReadOnly: () => boolean
   syncFields: () => void
+  getState: () => GameState | null
+  flushHomeworldProgress: () => Promise<void>
   ensurePublished: () => Promise<void>
   postCharacterCreationCommand: (
     command: CharacterCreationCommand,
@@ -101,9 +108,12 @@ export const createCharacterCreationCommandController = (
 ): CharacterCreationCommandController => {
   const {
     getFlow,
+    setFlow,
     setError,
     isReadOnly,
     syncFields,
+    getState,
+    flushHomeworldProgress,
     ensurePublished,
     postCharacterCreationCommand,
     commandIdentity,
@@ -220,6 +230,73 @@ export const createCharacterCreationCommandController = (
         return
       }
       autoAdvanceSetup()
+      renderWizard()
+      scrollToTop()
+    },
+
+    resolveCareerQualification: async (career) => {
+      const flow = guardEditableFlow()
+      if (!flow) return
+      setError('')
+      syncFields()
+
+      const flowWithCareer = applyParsedCharacterCreationDraftPatch(
+        flow,
+        parseCharacterCreationDraftPatch({
+          career,
+          qualificationRoll: null,
+          qualificationPassed: null
+        })
+      ).flow
+
+      await flushHomeworldProgress()
+      await ensurePublished()
+
+      let response: CharacterCreationCommandResponse | null = null
+      try {
+        response = await postCharacterCreationCommand(
+          {
+            type: 'ResolveCharacterCreationQualification',
+            ...commandIdentity(),
+            characterId: flowWithCareer.draft.characterId,
+            career
+          },
+          requestId('resolve-character-qualification')
+        )
+      } catch (error) {
+        syncFlowFromRoomState(
+          getState(),
+          flowWithCareer.draft.characterId,
+          flow
+        )
+        renderWizard()
+        scrollToTop()
+        throw error
+      }
+
+      const roll = latestDiceRoll(response)
+      if (!roll) {
+        setError('Qualification roll did not return a dice result')
+        return
+      }
+
+      await waitForDiceRevealOrDelay(roll)
+      const projectedCharacter =
+        response.state?.characters?.[flowWithCareer.draft.characterId] ?? null
+      const projectedFlow = projectedCharacter
+        ? flowFromProjectedCharacter(projectedCharacter)
+        : null
+      const localResolvedFlow = applyCharacterCreationCareerRoll(
+        flowWithCareer,
+        roll.total
+      ).flow
+      const fallbackFlow =
+        projectedFlow?.draft.careerPlan ||
+        projectedCharacter?.creation?.state.status !== 'CAREER_SELECTION'
+          ? (projectedFlow ?? localResolvedFlow)
+          : localResolvedFlow
+
+      setFlow(fallbackFlow)
       renderWizard()
       scrollToTop()
     },

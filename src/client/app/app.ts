@@ -52,7 +52,6 @@ import {
   applyCharacterCreationBackgroundSkillSelection,
   applyCharacterCreationAnagathicsDecision,
   applyCharacterCreationAgingChange,
-  applyCharacterCreationCareerRoll,
   applyCharacterCreationMusteringBenefit,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationWizardStep,
@@ -787,9 +786,14 @@ const renderCharacterCreationWizard = () => {
 
 characterCreationCommandController = createCharacterCreationCommandController({
   getFlow: () => characterCreationFlow,
+  setFlow: (flow) => {
+    characterCreationFlow = flow
+  },
   setError,
   isReadOnly: () => characterCreationReadOnly,
   syncFields: syncCharacterCreationWizardFields,
+  getState: () => state,
+  flushHomeworldProgress: () => characterCreationHomeworldPublisher.flush(),
   ensurePublished: ensureCharacterCreationPublished,
   postCharacterCreationCommand,
   commandIdentity,
@@ -1567,9 +1571,9 @@ const renderCharacterCreationCareerPicker = (
       survival.textContent = `Survive ${formatCharacterCreationCareerCheckShort(career.survival)}`
       button.append(title, qualification, survival)
       button.addEventListener('click', () => {
-        resolveCharacterCreationCareerQualification(career.key).catch((error) =>
-          setError(error.message)
-        )
+        characterCreationCommandController
+          .resolveCareerQualification(career.key)
+          .catch((error) => setError(error.message))
       })
       list.append(button)
     }
@@ -1723,72 +1727,6 @@ const selectFailedQualificationCareer = (
     }
   ).flow
   setError('')
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
-
-const resolveCharacterCreationCareerQualification = async (
-  career: string
-): Promise<void> => {
-  if (!characterCreationFlow || characterCreationReadOnly) return
-  setError('')
-  syncCharacterCreationWizardFields()
-
-  const flowWithCareer = applyParsedCharacterCreationDraftPatch(
-    characterCreationFlow,
-    parseCharacterCreationDraftPatch({
-      career,
-      qualificationRoll: null,
-      qualificationPassed: null
-    })
-  ).flow
-
-  await characterCreationHomeworldPublisher.flush()
-  await ensureCharacterCreationPublished()
-
-  let response = null
-  try {
-    response = await postCharacterCreationCommand(
-      {
-        type: 'ResolveCharacterCreationQualification',
-        ...commandIdentity(),
-        characterId: flowWithCareer.draft.characterId,
-        career
-      },
-      requestId('resolve-character-qualification')
-    )
-  } catch (error) {
-    syncCharacterCreationFlowFromRoomState(
-      state,
-      flowWithCareer.draft.characterId,
-      characterCreationFlow
-    )
-    renderCharacterCreationWizard()
-    characterCreationPanel.scrollToTop()
-    throw error
-  }
-  const latestRoll =
-    response.state?.diceLog?.[response.state.diceLog.length - 1]
-  if (!latestRoll) {
-    setError('Qualification roll did not return a dice result')
-    return
-  }
-
-  await waitForDiceRevealOrDelay(latestRoll)
-  const projectedCharacter =
-    response.state?.characters?.[flowWithCareer.draft.characterId] ?? null
-  const projectedFlow = projectedCharacter
-    ? flowFromProjectedCharacter(projectedCharacter)
-    : null
-  const localResolvedFlow = applyCharacterCreationCareerRoll(
-    flowWithCareer,
-    latestRoll.total
-  ).flow
-  characterCreationFlow =
-    projectedFlow?.draft.careerPlan ||
-    projectedCharacter?.creation?.state.status !== 'CAREER_SELECTION'
-      ? (projectedFlow ?? localResolvedFlow)
-      : localResolvedFlow
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
