@@ -74,32 +74,29 @@ Each wave should make later work simpler, safer, or more testable.
 1. Finish the architecture seams that are already partially present: thin
    client composition root, one command router, one server publication pipeline,
    one projection/filter path, and protocol fixtures.
-2. Close the remaining P0 character creation command-path gaps. Aging loss
-   resolution currently has no server/protocol command path, so it must be
-   added before more aging UI polish can be trusted.
-3. Finish replacing coarse character creation transition events with semantic
+2. Finish replacing coarse character creation transition events with semantic
    commands/events where generic transitions still remain. Commands remain
    intent, events record accepted facts with dice and outcome data, and any
    remaining roll-bearing generic facts are either migrated or rejected with
    stable errors.
-4. Keep moving the server projection toward the source of truth for every
+3. Keep moving the server projection toward the source of truth for every
    creation gate:
    pending choices, legal actions, term facts, final sheet fields, and refresh
    recovery.
-5. Complete and harden the SRD career term loop in order: qualification,
+4. Complete and harden the SRD career term loop in order: qualification,
    draft, basic training, survival/death, commission, advancement, term skills,
    aging, reenlistment, mustering out, and finalization.
-6. Add optional branches after the default loop is authoritative:
+5. Add optional branches after the default loop is authoritative:
    mishap-variant support, full anagathics survival/cost handling,
    multi-career continuations, richer final sheet/export display, and
    provenance.
-7. Layer live following on top of semantic events, a planned viewer-filtering
+6. Layer live following on top of semantic events, a planned viewer-filtering
    contract, and centralized reveal timing so connected players see dice and
    compact outcome cards without creating another source of truth.
-8. Polish the mobile PWA experience once the flow shape is stable.
-9. Expand tactical board, map, LOS, referee, Discord, and rules breadth after
+7. Polish the mobile PWA experience once the flow shape is stable.
+8. Expand tactical board, map, LOS, referee, Discord, and rules breadth after
    the core table loop is solid.
-10. Make high-risk UX flows executable in browser automation before continuing
+9. Make high-risk UX flows executable in browser automation before continuing
    broad UI polish, so stale-state, reveal-timing, and mobile layout bugs are
    found by repeatable runs instead of manual probing.
 
@@ -689,19 +686,14 @@ Done when:
 
 ### Slice 2C: Aging, Anagathics, And Reenlistment
 
-Status: partially done, with one P0 gap. Aging roll modifiers, aging effect
-selection, reenlistment resolution, seven-term retirement, forced reenlistment,
-and server-backed semantic aging/reenlistment facts exist, but aging loss
-resolution still has no server/protocol command path. Anagathics and some UI
-decisions/provenance also need completion.
+Status: partially done. Aging roll modifiers, aging effect selection, required
+aging loss resolution, reenlistment resolution, seven-term retirement, forced
+reenlistment, and server-backed semantic aging/reenlistment facts exist.
+Anagathics and some UI decisions/provenance still need completion.
 
 Tasks:
 
 - Use the correct aging modifier from term count and anagathics use.
-- Add the protocol command, server derivation/validation path, semantic event,
-  projection support, and fixtures for resolving required aging characteristic
-  losses. Until that exists, aging loss choices must not depend on a client-only
-  `AdvanceCharacterCreation` fact.
 - Present legal aging characteristic loss choices only when required.
 - Persist characteristic changes with term provenance.
 - Implement optional anagathics survival and cost/payment flow.
@@ -877,23 +869,20 @@ Done when:
 
 The next batch should run like this, in this order:
 
-1. Close the P0 aging loss resolution gap: add the protocol command, server
-   validation/derivation, semantic event, projection support, fixtures, and
-   stale/illegal rejection tests. Direct player `StartCharacterCareerTerm`
-   bypass is already fixed; keep it covered, but do not treat it as active work.
+1. Remove or fence the remaining generic character creation transition bridge.
+   P1: reject generic `FINISH_MUSTERING` events that carry client-authored
+   mustering benefit facts, migrate any remaining production UI commands for
+   `REENLIST`, `LEAVE_CAREER`, and `CONTINUE_CAREER` to semantic commands or
+   explicit non-roll commands, and keep replay compatibility isolated.
 2. Finish the next architecture cleanup already underway: shrink `app.ts`,
    extract the character creation feature boundary, move rendering toward a
    signal-driven projection-fed model, split the projector registry by domain,
    and keep publication parity plus viewer-safe responses on the single
    publication path.
-3. Remove or fence the remaining generic character creation transition bridge.
-   P1: migrate or reject any remaining roll-bearing
-   `AdvanceCharacterCreation` facts, then update protocol fixtures and live
-   activity descriptors with each semantic event family.
-4. Plan and execute the viewer filtering/reveal timing slice: one filtering
+3. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.
-5. Extend the automated UX regression slice before more broad creator polish:
+4. Extend the automated UX regression slice before more broad creator polish:
    turn the completed finalization smoke into a multi-character repeat runner,
    add death/fallback branches, later-term two-tab spectator follow checks,
    mobile viewport assertions, and reveal timing coverage for every roll-bearing

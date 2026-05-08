@@ -198,11 +198,10 @@ describe('bootstrap flow helpers', () => {
         })
       }),
       {
-        type: 'AdvanceCharacterCreation',
+        type: 'CompleteCharacterCreationHomeworld',
         gameId: roomId,
         actorId,
-        characterId: 'scout' as CharacterId,
-        creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+        characterId: 'scout' as CharacterId
       }
     )
 

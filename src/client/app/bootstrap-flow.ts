@@ -1,4 +1,4 @@
-import type { Command } from '../../shared/commands'
+import type { Command, GameCommand } from '../../shared/commands'
 import type {
   BoardId,
   CharacterId,
@@ -112,12 +112,11 @@ export const setScoutCharacteristicsCreationCommand = ({
 export const completeScoutHomeworldCreationCommand = ({
   roomId,
   actorId
-}: BootstrapCommandContext): Command => ({
-  type: 'AdvanceCharacterCreation',
+}: BootstrapCommandContext): GameCommand => ({
+  type: 'CompleteCharacterCreationHomeworld',
   gameId: roomId,
   actorId,
-  characterId: scoutCharacterId,
-  creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+  characterId: scoutCharacterId
 })
 
 export const startScoutCareerTermCommand = ({
@@ -228,7 +227,7 @@ export const nextBootstrapCommand = ({
   roomId,
   actorId,
   state
-}: BootstrapFlowContext): Command | null => {
+}: BootstrapFlowContext): GameCommand | null => {
   const commandContext = { roomId, actorId }
   if (!state) return createGameCommand(commandContext)
   const boardIds = Object.keys(state.boards || {}) as BoardId[]
