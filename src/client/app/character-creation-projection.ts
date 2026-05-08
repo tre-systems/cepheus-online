@@ -101,6 +101,9 @@ export const careerPlanFromProjection = (
   const aging = [...currentTermHistory]
     .reverse()
     .find((event) => event.type === 'COMPLETE_AGING')
+  const anagathicsDecision = [...currentTermHistory]
+    .reverse()
+    .find((event) => event.type === 'DECIDE_ANAGATHICS')
   const reenlistment = [...currentTermHistory]
     .reverse()
     .find(
@@ -153,7 +156,11 @@ export const careerPlanFromProjection = (
     rankTitle: null,
     rankBonusSkill: null,
     termSkillRolls,
-    anagathics: activeTerm.anagathics ?? null,
+    anagathics:
+      anagathicsDecision?.useAnagathics ??
+      (creation.state.status === 'AGING' && !aging
+        ? null
+        : activeTerm.anagathics),
     agingRoll: agingFact?.roll?.total ?? null,
     agingMessage:
       (agingFact?.characteristicChanges?.length ?? 0) > 0
