@@ -99,26 +99,33 @@ const seedCreationToHomeworld = async (
     actorId,
     actorSession,
     characterId,
-    edu = 12
+    characteristics = {
+      str: 8,
+      dex: 7,
+      end: 6,
+      int: 8,
+      edu: 12,
+      soc: 7
+    }
   }: {
     roomId: string
     actorId: string
     actorSession: string
     characterId: string
-    edu?: number
+    characteristics?: {
+      str: number
+      dex: number
+      end: number
+      int: number
+      edu: number
+      soc: number
+    }
   }
 ): Promise<void> => {
   await postCommand(page, roomId, actorId, actorSession, {
     type: 'UpdateCharacterSheet',
     characterId,
-    characteristics: {
-      str: 8,
-      dex: 7,
-      end: 6,
-      int: 8,
-      edu,
-      soc: 7
-    }
+    characteristics
   })
   await postCommand(page, roomId, actorId, actorSession, {
     type: 'AdvanceCharacterCreation',
@@ -174,6 +181,33 @@ const seedCreationToCareerSelection = async (
     characterId
   })
 }
+
+const waitForDiceReveal = async (page: Page): Promise<void> => {
+  await expect(page.locator('#diceOverlay.visible')).toBeVisible({
+    timeout: 5_000
+  })
+  await expect(page.locator('#diceStage .roll-total')).not.toHaveText(
+    'Rolling...',
+    { timeout: 5_000 }
+  )
+}
+
+const resolveVisibleCascadeChoices = async (page: Page): Promise<void> => {
+  for (let index = 0; index < 6; index += 1) {
+    const choice = page.locator('.creation-cascade-choice').first()
+    if ((await choice.count()) === 0 || !(await choice.isVisible())) return
+    const option = choice.getByRole('button').first()
+    await expect(option).toBeVisible()
+    await option.click()
+  }
+}
+
+const characterCreationCareerButton = (page: Page, career: string) =>
+  page
+    .locator('#characterCreationFields .creation-career-list button')
+    .filter({
+      has: page.locator('.creation-career-title').filter({ hasText: career })
+    })
 
 test.describe('character creation smoke', () => {
   test('opens the creator and rolls the first characteristic through shared dice', async ({
@@ -483,9 +517,7 @@ test.describe('character creation smoke', () => {
     await expect(ownerCard).toBeVisible({ timeout: 5_000 })
     await ownerCard.click()
 
-    const ownerCareerButton = page
-      .locator('#characterCreationFields .creation-career-list button')
-      .filter({ hasText: 'Scout' })
+    const ownerCareerButton = characterCreationCareerButton(page, 'Scout')
     await expect(ownerCareerButton).toBeVisible({ timeout: 5_000 })
 
     const spectator = await browser.newPage()
@@ -668,5 +700,153 @@ test.describe('character creation smoke', () => {
       { timeout: 5_000 }
     )
     await expect(rollSurvival).toHaveCount(0)
+  })
+
+  test('drives a guaranteed one-term career path through survival, training, and mustering choice', async ({
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const postedCommandTypes: string[] = []
+
+    page.on('request', (request) => {
+      if (
+        request.method() !== 'POST' ||
+        !request.url().includes(`/rooms/${roomId}/command`)
+      ) {
+        return
+      }
+      const body = request.postData()
+      if (!body) return
+      const message = JSON.parse(body) as {
+        command?: { type?: string }
+      }
+      if (message.command?.type) postedCommandTypes.push(message.command.type)
+    })
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'StartCharacterCareerTerm',
+      characterId,
+      career: 'Athlete',
+      drafted: true
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'AdvanceCharacterCreation',
+      characterId,
+      creationEvent: {
+        type: 'SELECT_CAREER',
+        isNewCareer: true,
+        drafted: true
+      }
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await page
+      .locator('#creationPresenceDock .creation-presence-card')
+      .filter({ hasText: characterName })
+      .click()
+
+    await resolveVisibleCascadeChoices(page)
+    const applyBasicTraining = page.getByRole('button', {
+      name: 'Apply basic training'
+    })
+    await expect(applyBasicTraining).toBeVisible({ timeout: 5_000 })
+    await applyBasicTraining.click()
+
+    const rollSurvival = page.getByRole('button', { name: 'Roll survival' })
+    await expect(rollSurvival).toBeVisible({ timeout: 5_000 })
+    await rollSurvival.click()
+    await waitForDiceReveal(page)
+    await expect(page.locator('#characterCreationFields')).toContainText(
+      /Skills and training|Personal development|Specialist skills/,
+      { timeout: 5_000 }
+    )
+
+    for (let roll = 0; roll < 2; roll += 1) {
+      const specialistSkills = page.getByRole('button', {
+        name: 'Specialist skills'
+      })
+      await expect(specialistSkills).toBeVisible({ timeout: 5_000 })
+      await specialistSkills.click()
+      await waitForDiceReveal(page)
+      await resolveVisibleCascadeChoices(page)
+    }
+
+    const skipAnagathics = page.getByRole('button', { name: 'Skip' })
+    if ((await skipAnagathics.count()) > 0) {
+      await skipAnagathics.click()
+    }
+
+    const rollAging = page.getByRole('button', { name: 'Roll aging' })
+    if ((await rollAging.count()) > 0) {
+      await expect(rollAging).toBeVisible({ timeout: 5_000 })
+      await rollAging.click()
+      await waitForDiceReveal(page)
+      await expect(rollAging).toHaveCount(0, { timeout: 5_000 })
+      for (let index = 0; index < 4; index += 1) {
+        const agingChoice = page.locator('.creation-term-actions button').first()
+        if (
+          (await agingChoice.count()) === 0 ||
+          !(await agingChoice.isVisible())
+        ) {
+          break
+        }
+        await agingChoice.click()
+      }
+    }
+
+    const rollReenlistment = page.getByRole('button', {
+      name: 'Roll reenlistment'
+    })
+    await expect(rollReenlistment).toBeVisible({ timeout: 5_000 })
+    await rollReenlistment.click()
+    await waitForDiceReveal(page)
+
+    const musterOut = page.getByRole('button', { name: 'Muster out' })
+    await expect(musterOut).toBeVisible({ timeout: 5_000 })
+    await musterOut.click()
+
+    await expect(page.locator('#characterCreationFields')).toContainText(
+      /Skills|Review the skill list/,
+      { timeout: 5_000 }
+    )
+    await expect.poll(() => postedCommandTypes).toContain(
+      'CompleteCharacterCreationBasicTraining'
+    )
+    await expect.poll(() => postedCommandTypes).toContain(
+      'ResolveCharacterCreationSurvival'
+    )
+    await expect.poll(() => postedCommandTypes).toContain(
+      'RollCharacterCreationTermSkill'
+    )
+    await expect.poll(() => postedCommandTypes).toContain(
+      'ResolveCharacterCreationReenlistment'
+    )
   })
 })
