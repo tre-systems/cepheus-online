@@ -3,7 +3,6 @@ import {
   asCharacterId,
   asGameId,
   asUserId,
-  type CharacterId,
   type PieceId
 } from '../../shared/ids'
 import type { LiveDiceRollRevealTarget } from '../../shared/live-activity'
@@ -67,6 +66,7 @@ import {
 import { createCreationPresenceDock } from './creation-presence-dock.js'
 import { createCharacterCreationHomeworldPublisher } from './character-creation-homeworld-publisher.js'
 import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './character-creation-mustering-view.js'
+import { createCharacterCreationLifecycleController } from './character-creation-lifecycle-controller.js'
 import { createCharacterCreationPublicationController } from './character-creation-publication-controller.js'
 import { renderCharacterCreationTermResolution as renderCharacterCreationTermResolutionView } from './character-creation-term-resolution-view.js'
 import {
@@ -174,6 +174,9 @@ let connectivityController: ConnectivityController | null = null
 const diceRevealCoordinator = createDiceRevealCoordinator()
 const animatedDiceRollActivityIds = new Set<string>()
 let characterCreationController: CharacterCreationController
+let characterCreationLifecycleController: ReturnType<
+  typeof createCharacterCreationLifecycleController
+>
 let characterCreationWizardController: CharacterCreationWizardController
 const setStatus = (text: string): void => {
   els.status.textContent = text
@@ -464,34 +467,6 @@ const characterCreationSeed = (): Pick<
   notes: ''
 })
 
-const openCharacterCreationFollow = (
-  characterId: CharacterId,
-  { readOnly = true }: { readOnly?: boolean } = {}
-): void => {
-  const flow = characterCreationController.openFollow(characterId, { readOnly })
-  if (!flow) return
-
-  if (!readOnly) {
-    characterSheetController.setOpen(false)
-  }
-  characterCreationPanel.open()
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
-
-const refreshFollowedCharacterCreationFlow = () => {
-  return characterCreationController.refreshFollowed()
-}
-
-const shouldRefreshEditableCharacterCreationFlow = ({
-  deferFollowedCreationRolls = []
-}: {
-  deferFollowedCreationRolls?: readonly ClientDiceRollActivity[]
-} = {}): boolean =>
-  characterCreationController.shouldRefreshEditable({
-    deferredRollCount: deferFollowedCreationRolls.length
-  })
-
 const characterCreationPanel = createCharacterCreationPanel({
   elements: {
     panel: els.characterCreator,
@@ -520,6 +495,16 @@ characterCreationController = createCharacterCreationController({
   closePanel: () => characterCreationPanel.close()
 })
 
+characterCreationLifecycleController =
+  createCharacterCreationLifecycleController({
+    controller: characterCreationController,
+    panel: characterCreationPanel,
+    closeCharacterSheet: () => characterSheetController.setOpen(false),
+    renderWizard: () => renderCharacterCreationWizard(),
+    waitForDiceReveal,
+    reportError: setError
+  })
+
 const creationActivityFeedController = createCreationActivityFeedController({
   elements: { feed: els.creationActivityFeed },
   getViewerActorId: () => actorId,
@@ -537,7 +522,7 @@ const creationPresenceDock = createCreationPresenceDock({
   },
   getRoomId: () => roomId,
   getActorId: () => actorId,
-  openCharacterCreationFollow,
+  openCharacterCreationFollow: characterCreationLifecycleController.openFollow,
   localStorage: window.localStorage
 })
 
@@ -1462,31 +1447,13 @@ const applyState = (
   const diceRevealApplication =
     diceRevealCoordinator.recordStateApplied(nextState)
   state = appSession.setAuthoritativeState(nextState).authoritativeState
-  const shouldRenderFollowedCreation = refreshFollowedCharacterCreationFlow()
-  const shouldRenderEditableCreation =
-    shouldRefreshEditableCharacterCreationFlow({
+  const creationRefreshPlan =
+    characterCreationLifecycleController.planStateRefresh({
       deferFollowedCreationRolls
     })
   const latestRoll = state?.diceLog?.[state.diceLog.length - 1] || null
   render()
-  if (shouldRenderFollowedCreation) {
-    if (deferFollowedCreationRolls.length > 0) {
-      Promise.all(
-        deferFollowedCreationRolls.map((roll) => waitForDiceReveal(roll))
-      )
-        .then(() => {
-          if (refreshFollowedCharacterCreationFlow()) {
-            renderCharacterCreationWizard()
-          }
-        })
-        .catch((error) => setError(error.message))
-    } else {
-      renderCharacterCreationWizard()
-    }
-  }
-  if (shouldRenderEditableCreation) {
-    renderCharacterCreationWizard()
-  }
+  creationRefreshPlan.renderAfterAppRender()
   if (
     latestRoll &&
     animateLatestDiceLog &&
