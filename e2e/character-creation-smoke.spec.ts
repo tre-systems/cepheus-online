@@ -42,6 +42,13 @@ test.describe('character creation smoke', () => {
         hasText: 'Str'
       })
       .locator('strong')
+    const characteristicRollButtons = page
+      .locator('#characterCreationFields')
+      .getByRole('button', { name: /^Roll (Str|Dex|End|Int|Edu|Soc)$/ })
+
+    await expect(characteristicRollButtons).toHaveCount(6)
+    await expect(page.getByRole('button', { name: 'Roll Str' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Roll Dex' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Roll Str' }).click()
 
@@ -56,6 +63,8 @@ test.describe('character creation smoke', () => {
     expect(rolledStr).toMatch(/\d+/)
     expect(characteristicRollCommands).toHaveLength(1)
     const rollDexButton = page.getByRole('button', { name: 'Roll Dex' })
+    await expect(characteristicRollButtons).toHaveCount(5)
+    await expect(page.getByRole('button', { name: 'Roll Str' })).toHaveCount(0)
     await expect(rollDexButton).toBeVisible()
 
     await rollDexButton.evaluate((button) => {
