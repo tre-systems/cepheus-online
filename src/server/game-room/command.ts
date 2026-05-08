@@ -424,88 +424,8 @@ const validateCharacterCreationSheet = (
   return ok(undefined)
 }
 
-const validateCharacterCreationAction = (
-  character: CharacterState,
-  command: Extract<Command, { type: 'AdvanceCharacterCreation' }>
-): Result<void, CommandError> => {
-  if (!character.creation) {
-    return err(
-      commandError('missing_entity', 'Character creation has not been started')
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
-  )
-  const actionContext = deriveCareerCreationActionContext(character.creation)
-  const event = command.creationEvent
-  const legal =
-    (event.type === 'FINISH_MUSTERING' &&
-      event.musteringBenefit !== undefined &&
-      character.creation.state.status === 'MUSTERING_OUT' &&
-      actionContext.remainingMusteringBenefits !== undefined &&
-      actionContext.remainingMusteringBenefits > 0) ||
-    (event.type === 'FINISH_MUSTERING' &&
-      event.musteringBenefit === undefined &&
-      legalActions.includes('finishMustering')) ||
-    (event.type === 'CREATION_COMPLETE' &&
-      legalActions.includes('completeCreation'))
-
-  if (!legal) {
-    return err(
-      commandError(
-        'invalid_command',
-        `${event.type} is blocked by unresolved character creation decisions`
-      )
-    )
-  }
-
-  return ok(undefined)
-}
-
-const semanticCommandForGenericCreationEvent = (
-  event: Extract<Command, { type: 'AdvanceCharacterCreation' }>['creationEvent']
-): string | null => {
-  switch (event.type) {
-    case 'SET_CHARACTERISTICS':
-      return 'RollCharacterCreationCharacteristic'
-    case 'SELECT_CAREER':
-      return 'ResolveCharacterCreationQualification, ResolveCharacterCreationDraft, or EnterCharacterCreationDrifter'
-    case 'SURVIVAL_PASSED':
-    case 'SURVIVAL_FAILED':
-      return 'ResolveCharacterCreationSurvival'
-    case 'COMPLETE_COMMISSION':
-      return 'ResolveCharacterCreationCommission'
-    case 'COMPLETE_ADVANCEMENT':
-      return 'ResolveCharacterCreationAdvancement'
-    case 'ROLL_TERM_SKILL':
-      return 'RollCharacterCreationTermSkill'
-    case 'RESOLVE_TERM_CASCADE_SKILL':
-      return 'ResolveCharacterCreationTermCascadeSkill'
-    case 'DECIDE_ANAGATHICS':
-      return 'DecideCharacterCreationAnagathics'
-    case 'DEATH_CONFIRMED':
-      return 'ConfirmCharacterCreationDeath'
-    case 'MISHAP_RESOLVED':
-      return 'ResolveCharacterCreationMishap'
-    case 'RESOLVE_REENLISTMENT':
-      return 'ResolveCharacterCreationReenlistment'
-    case 'REENLIST':
-    case 'FORCED_REENLIST':
-      return 'ReenlistCharacterCreationCareer'
-    case 'LEAVE_CAREER':
-    case 'REENLIST_BLOCKED':
-      return 'LeaveCharacterCreationCareer'
-    case 'CONTINUE_CAREER':
-      return 'ContinueCharacterCreationAfterMustering'
-    case 'FINISH_MUSTERING':
-      return event.musteringBenefit
-        ? 'RollCharacterCreationMusteringBenefit'
-        : 'CompleteCharacterCreationMustering'
-    default:
-      return null
-  }
-}
+export const GENERIC_CHARACTER_CREATION_DEPRECATED_MESSAGE =
+  'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
 
 const validateCreationCompletion = (
   character: CharacterState
@@ -2143,122 +2063,12 @@ export const deriveEventsForCommand = (
           )
         )
       }
-      const semanticCommand = semanticCommandForGenericCreationEvent(
-        command.creationEvent
+      return err(
+        commandError(
+          'invalid_command',
+          GENERIC_CHARACTER_CREATION_DEPRECATED_MESSAGE
+        )
       )
-      if (semanticCommand) {
-        return err(
-          commandError(
-            'invalid_command',
-            `${command.creationEvent.type} must use ${semanticCommand}`
-          )
-        )
-      }
-      if (command.creationEvent.type === 'COMPLETE_HOMEWORLD') {
-        return err(
-          commandError(
-            'invalid_command',
-            'COMPLETE_HOMEWORLD must use CompleteCharacterCreationHomeworld'
-          )
-        )
-      }
-      if (command.creationEvent.type === 'COMPLETE_BASIC_TRAINING') {
-        return err(
-          commandError(
-            'invalid_command',
-            'COMPLETE_BASIC_TRAINING must use CompleteCharacterCreationBasicTraining'
-          )
-        )
-      }
-      if (command.creationEvent.type === 'COMPLETE_SKILLS') {
-        return err(
-          commandError(
-            'invalid_command',
-            'COMPLETE_SKILLS must use CompleteCharacterCreationSkills'
-          )
-        )
-      }
-      if (command.creationEvent.type === 'COMPLETE_AGING') {
-        return err(
-          commandError(
-            'invalid_command',
-            'COMPLETE_AGING must use ResolveCharacterCreationAging'
-          )
-        )
-      }
-      if (command.creationEvent.type === 'CREATION_COMPLETE') {
-        return err(
-          commandError(
-            'invalid_command',
-            'CREATION_COMPLETE must use CompleteCharacterCreation'
-          )
-        )
-      }
-      if (command.creationEvent.type === 'SKIP_COMMISSION') {
-        return err(
-          commandError(
-            'invalid_command',
-            'SKIP_COMMISSION must use SkipCharacterCreationCommission'
-          )
-        )
-      }
-      if (command.creationEvent.type === 'SKIP_ADVANCEMENT') {
-        return err(
-          commandError(
-            'invalid_command',
-            'SKIP_ADVANCEMENT must use SkipCharacterCreationAdvancement'
-          )
-        )
-      }
-      if (command.creationEvent.type === 'RESET') {
-        return err(
-          commandError(
-            'invalid_command',
-            'RESET is not available in public character creation'
-          )
-        )
-      }
-      if (
-        !canTransitionCareerCreationState(
-          character.creation.state,
-          command.creationEvent
-        )
-      ) {
-        if (
-          character.creation.state.status === 'PLAYABLE' ||
-          character.creation.state.status === 'DECEASED'
-        ) {
-          return notAllowed(
-            `${command.creationEvent.type} is not valid from ${character.creation.state.status}`
-          )
-        }
-
-        return err(
-          commandError(
-            'invalid_command',
-            `${command.creationEvent.type} is not valid from ${character.creation.state.status}`
-          )
-        )
-      }
-      if (command.creationEvent.type === 'FINISH_MUSTERING') {
-        const action = validateCharacterCreationAction(character, command)
-        if (!action.ok) return action
-      }
-
-      const nextState = transitionCareerCreationState(
-        character.creation.state,
-        command.creationEvent
-      )
-
-      return ok([
-        {
-          type: 'CharacterCreationTransitioned',
-          characterId: command.characterId,
-          creationEvent: command.creationEvent,
-          state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
-        }
-      ])
     }
 
     case 'RollCharacterCreationCharacteristic': {

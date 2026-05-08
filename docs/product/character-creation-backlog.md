@@ -252,10 +252,9 @@ Tasks:
 - Bootstrap/demo creation and custom-piece production paths are now off generic
   `SET_CHARACTERISTICS` and `SELECT_CAREER`. Local draft fallback and the typed
   client character-creation route are also off `AdvanceCharacterCreation`.
-  Server command handling now rejects every current generic transition fact
-  before persistence. The remaining isolation slice is to hard-deprecate the
-  generic command response while keeping historical replay compatibility for old
-  `CharacterCreationTransitioned` events.
+  Server command handling now hard-deprecates the generic command response
+  before persistence while keeping protocol decode stability and historical
+  replay compatibility for old `CharacterCreationTransitioned` events.
 - Make roll events first-class facts. Each roll-gated event should record the
   roll inputs, dice result, modifiers, target, success/failure, and resulting
   state transition.

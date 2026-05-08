@@ -1136,7 +1136,11 @@ describe('room publication flow', () => {
       expectedSeq: 5
     })
 
-    assert.equal(completed.ok, true)
+    assert.equal(
+      completed.ok,
+      true,
+      completed.ok ? undefined : completed.error.message
+    )
     if (!completed.ok) return
     assert.equal(
       completed.value.state.characters[characterId]?.creation?.state.status,
@@ -1562,7 +1566,11 @@ describe('room publication flow', () => {
       expectedSeq: 3
     })
 
-    assert.equal(completed.ok, true)
+    assert.equal(
+      completed.ok,
+      true,
+      completed.ok ? undefined : completed.error.message
+    )
     if (!completed.ok) return
     assert.equal(
       completed.value.state.characters[characterId]?.creation?.state.status,
@@ -2212,14 +2220,45 @@ describe('room publication flow', () => {
       cascadeResolved.ok ? undefined : cascadeResolved.error.message
     )
 
-    const completed = await publish(storage, {
+    let completed = await publish(storage, {
       type: 'CompleteCharacterCreationHomeworld',
       gameId,
       actorId,
       characterId
     })
+    for (const skill of ['Admin', 'Electronics', 'Computer']) {
+      if (
+        completed.ok ||
+        completed.error.message !==
+          'Background choices must be complete before career selection'
+      ) {
+        break
+      }
+      const selected = await publish(storage, {
+        type: 'SelectCharacterCreationBackgroundSkill',
+        gameId,
+        actorId,
+        characterId,
+        skill
+      })
+      assert.equal(
+        selected.ok,
+        true,
+        selected.ok ? undefined : selected.error.message
+      )
+      completed = await publish(storage, {
+        type: 'CompleteCharacterCreationHomeworld',
+        gameId,
+        actorId,
+        characterId
+      })
+    }
 
-    assert.equal(completed.ok, true)
+    assert.equal(
+      completed.ok,
+      true,
+      completed.ok ? undefined : completed.error.message
+    )
     if (!completed.ok) return
     const storedEvent = (await readEventStream(storage, gameId)).at(-1)?.event
     assert.deepEqual(storedEvent, {
@@ -3050,7 +3089,7 @@ describe('room publication flow', () => {
     assert.equal(rejected.error.code, 'invalid_command')
     assert.equal(
       rejected.error.message,
-      'COMPLETE_HOMEWORLD must use CompleteCharacterCreationHomeworld'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
     assert.equal((await readEventStream(storage, gameId)).length, 3)
   })
@@ -3105,7 +3144,7 @@ describe('room publication flow', () => {
           creationEvent: { type: 'SELECT_CAREER', isNewCareer: true }
         },
         'invalid_command',
-        'SELECT_CAREER must use ResolveCharacterCreationQualification, ResolveCharacterCreationDraft, or EnterCharacterCreationDrifter'
+        'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
       )
     }
 
@@ -3171,7 +3210,7 @@ describe('room publication flow', () => {
           creationEvent: { type: 'COMPLETE_BASIC_TRAINING' }
         },
         'invalid_command',
-        'COMPLETE_BASIC_TRAINING must use CompleteCharacterCreationBasicTraining'
+        'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
       )
     }
 
@@ -3190,7 +3229,7 @@ describe('room publication flow', () => {
           creationEvent: { type: 'SET_CHARACTERISTICS' }
         },
         'invalid_command',
-        'SET_CHARACTERISTICS must use RollCharacterCreationCharacteristic'
+        'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
       )
     }
   })

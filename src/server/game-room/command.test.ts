@@ -251,7 +251,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'FINISH_MUSTERING must use CompleteCharacterCreationMustering'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -273,7 +273,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'SET_CHARACTERISTICS must use RollCharacterCreationCharacteristic'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -295,7 +295,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'SELECT_CAREER must use ResolveCharacterCreationQualification, ResolveCharacterCreationDraft, or EnterCharacterCreationDrifter'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -343,7 +343,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'FINISH_MUSTERING must use RollCharacterCreationMusteringBenefit'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -793,7 +793,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'COMPLETE_BASIC_TRAINING must use CompleteCharacterCreationBasicTraining'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -851,7 +851,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'COMPLETE_HOMEWORLD must use CompleteCharacterCreationHomeworld'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -1290,7 +1290,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'SKIP_COMMISSION must use SkipCharacterCreationCommission'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -1328,7 +1328,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'COMPLETE_COMMISSION must use ResolveCharacterCreationCommission'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -1478,7 +1478,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'SKIP_ADVANCEMENT must use SkipCharacterCreationAdvancement'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -1786,7 +1786,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'COMPLETE_AGING must use ResolveCharacterCreationAging'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -2066,11 +2066,11 @@ describe('deriveEventsForCommand error categories', () => {
     const cases = [
       [
         { type: 'MISHAP_RESOLVED' as const },
-        'MISHAP_RESOLVED must use ResolveCharacterCreationMishap'
+        'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
       ],
       [
         { type: 'DEATH_CONFIRMED' as const },
-        'DEATH_CONFIRMED must use ConfirmCharacterCreationDeath'
+        'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
       ]
     ] as const
 
@@ -2242,7 +2242,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'RESOLVE_REENLISTMENT must use ResolveCharacterCreationReenlistment'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -2275,20 +2275,17 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'REENLIST must use ReenlistCharacterCreationCareer'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
   it('rejects generic career lifecycle decisions after semantic migration', () => {
-    for (const [creationEvent, semanticCommand] of [
-      [{ type: 'REENLIST' as const }, 'ReenlistCharacterCreationCareer'],
-      [{ type: 'FORCED_REENLIST' as const }, 'ReenlistCharacterCreationCareer'],
-      [{ type: 'LEAVE_CAREER' as const }, 'LeaveCharacterCreationCareer'],
-      [{ type: 'REENLIST_BLOCKED' as const }, 'LeaveCharacterCreationCareer'],
-      [
-        { type: 'CONTINUE_CAREER' as const },
-        'ContinueCharacterCreationAfterMustering'
-      ]
+    for (const creationEvent of [
+      { type: 'REENLIST' as const },
+      { type: 'FORCED_REENLIST' as const },
+      { type: 'LEAVE_CAREER' as const },
+      { type: 'REENLIST_BLOCKED' as const },
+      { type: 'CONTINUE_CAREER' as const }
     ] as const) {
       const result = runCommand(
         {
@@ -2310,7 +2307,7 @@ describe('deriveEventsForCommand error categories', () => {
       assert.equal(result.error.code, 'invalid_command')
       assert.equal(
         result.error.message,
-        `${creationEvent.type} must use ${semanticCommand}`
+        'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
       )
     }
   })
@@ -2701,7 +2698,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'COMPLETE_SKILLS must use CompleteCharacterCreationSkills'
+      'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
     )
   })
 
@@ -2726,7 +2723,7 @@ describe('deriveEventsForCommand error categories', () => {
           }
         },
         'SKILLS_TRAINING' as const,
-        'ROLL_TERM_SKILL must use RollCharacterCreationTermSkill'
+        'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
       ],
       [
         {
@@ -2735,7 +2732,7 @@ describe('deriveEventsForCommand error categories', () => {
           selection: 'Slug Pistol'
         },
         'SKILLS_TRAINING' as const,
-        'RESOLVE_TERM_CASCADE_SKILL must use ResolveCharacterCreationTermCascadeSkill'
+        'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
       ],
       [
         {
@@ -2744,12 +2741,12 @@ describe('deriveEventsForCommand error categories', () => {
           termIndex: 0
         },
         'AGING' as const,
-        'DECIDE_ANAGATHICS must use DecideCharacterCreationAnagathics'
+        'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
       ],
       [
         { type: 'RESET' as const },
         'SURVIVAL' as const,
-        'RESET is not available in public character creation'
+        'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
       ]
     ]
 

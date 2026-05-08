@@ -493,10 +493,12 @@ fences. The server-persisted generic `SET_CHARACTERISTICS` emitted after the
 sixth characteristic roll has been replaced with
 `CharacterCreationCharacteristicsCompleted`. Bootstrap/demo creation,
 custom-piece production paths, and local draft fallback are now off generic
-`SET_CHARACTERISTICS` and `SELECT_CAREER` bridge commands. The remaining work
-is hard-deprecating the generic command path, keeping historical
-`CharacterCreationTransitioned` replay compatibility, and continuing to move
-read models/live activity onto semantic event facts.
+`SET_CHARACTERISTICS` and `SELECT_CAREER` bridge commands. The generic command
+path now returns one stable deprecated-command rejection before persistence,
+while historical `CharacterCreationTransitioned` replay compatibility remains
+in projection/read-model code. The remaining work is continuing to move read
+models/live activity onto semantic event facts and tightening manual sheet edit
+boundaries.
 
 Tasks:
 
@@ -521,9 +523,8 @@ Tasks:
   4. Done: reject all current generic transition facts server-side before
      persistence, including skill rolls, cascade choices, anagathics, and
      reset.
-  5. Current: replace the per-event generic command branch with a hard
-     deprecated-command response once protocol fixtures and any migration tools
-     no longer depend on specific rejection messages.
+  5. Done: replace the per-event generic command branch with a hard
+     deprecated-command response while keeping protocol decode compatibility.
   6. Keep `CharacterCreationTransitioned` only for historical replay while new
      production rules work emits semantic events.
 - Finish updating `deriveLiveActivities()` to read semantic events directly
@@ -908,10 +909,9 @@ The next batch should run like this, in this order:
    production paths are now off generic `SET_CHARACTERISTICS` and
    `SELECT_CAREER`; local draft fallback is off generic commands; the typed
    client character-creation route excludes `AdvanceCharacterCreation`; and
-   the server rejects every current generic creation fact before persistence.
-   Current slice: hard-deprecate the generic command path while preserving
-   historical replay compatibility for old `CharacterCreationTransitioned`
-   events.
+   the server hard-deprecates the generic command path before persistence while
+   preserving historical replay compatibility for old
+   `CharacterCreationTransitioned` events.
 2. Finish the next architecture cleanup already underway: shrink `app.ts`,
    extract the character creation feature boundary, move rendering toward a
    signal-driven projection-fed model, split the projector registry by domain,
