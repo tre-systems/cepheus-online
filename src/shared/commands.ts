@@ -106,6 +106,7 @@ export type Command =
   | CharacterCreationAgingCommand
   | CharacterCreationReenlistmentCommand
   | CharacterCreationTermSkillCommand
+  | CharacterCreationSkillsCompletionCommand
   | CharacterCreationTermCascadeSkillCommand
   | CharacterCreationMusteringBenefitCommand
   | CharacterCreationMusteringCompletionCommand
@@ -288,6 +289,14 @@ export type CharacterCreationTermSkillCommand = {
   table: CareerCreationTermSkillTable
 }
 
+export type CharacterCreationSkillsCompletionCommand = {
+  type: 'CompleteCharacterCreationSkills'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
 export type CharacterCreationTermCascadeSkillCommand = {
   type: 'ResolveCharacterCreationTermCascadeSkill'
   gameId: GameId
@@ -329,6 +338,7 @@ export type SemanticCommand =
   | CharacterCreationAgingCommand
   | CharacterCreationReenlistmentCommand
   | CharacterCreationTermSkillCommand
+  | CharacterCreationSkillsCompletionCommand
   | CharacterCreationTermCascadeSkillCommand
   | CharacterCreationMusteringBenefitCommand
   | CharacterCreationMusteringCompletionCommand

@@ -53,6 +53,7 @@ export type CharacterCreationCommand = Extract<
       | 'ResolveCharacterCreationReenlistment'
       | 'RollCharacterCreationCharacteristic'
       | 'RollCharacterCreationTermSkill'
+      | 'CompleteCharacterCreationSkills'
       | 'ResolveCharacterCreationTermCascadeSkill'
       | 'RollCharacterCreationMusteringBenefit'
       | 'CompleteCharacterCreationMustering'
@@ -91,6 +92,7 @@ export const appCommandRouteByType = {
   ResolveCharacterCreationReenlistment: 'characterCreation',
   RollCharacterCreationCharacteristic: 'characterCreation',
   RollCharacterCreationTermSkill: 'characterCreation',
+  CompleteCharacterCreationSkills: 'characterCreation',
   ResolveCharacterCreationTermCascadeSkill: 'characterCreation',
   RollCharacterCreationMusteringBenefit: 'characterCreation',
   CompleteCharacterCreationMustering: 'characterCreation',

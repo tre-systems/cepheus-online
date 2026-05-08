@@ -81,7 +81,6 @@ import {
   type CharacterCreationCompletedTerm,
   type CharacterCreationDraft,
   type CharacterCreationFlow,
-  type CharacterCreationStep,
   type CharacterCreationTermSkillTable
 } from './character-creation-flow.js'
 import {
@@ -110,6 +109,10 @@ import {
   creationStepFromStatus,
   flowFromProjectedCharacter
 } from './character-creation-projection.js'
+import {
+  characterCreationStepIndex,
+  shouldSyncEditableCharacterCreationFlowWithProjection
+} from './character-creation-sync.js'
 import {
   cssUrl,
   readImageDimensions,
@@ -188,15 +191,6 @@ let characterCreationFlow: CharacterCreationFlow | null = null
 let characterCreationReadOnly = false
 let characterCreationPublishPromise: Promise<void> | null = null
 let characterCreationHomeworldPublishPromise = Promise.resolve()
-const characterCreationCharacteristicKeys = [
-  'str',
-  'dex',
-  'end',
-  'int',
-  'edu',
-  'soc'
-] satisfies CharacteristicKey[]
-
 const setStatus = (text: string): void => {
   els.status.textContent = text
 }
@@ -241,21 +235,6 @@ const selectPiece = (pieceId: PieceId | null): void => {
 const selectedCharacter = (): CharacterState | null =>
   selectedCharacterId ? (state?.characters[selectedCharacterId] ?? null) : null
 
-const characterCreationStepOrder = [
-  'basics',
-  'characteristics',
-  'homeworld',
-  'career',
-  'skills',
-  'equipment',
-  'review'
-] satisfies CharacterCreationStep[]
-
-const characterCreationStepIndex = (step: string): number =>
-  characterCreationStepOrder.indexOf(step as CharacterCreationStep) >= 0
-    ? characterCreationStepOrder.indexOf(step as CharacterCreationStep)
-    : characterCreationStepOrder.length
-
 const currentCharacterCreationProjection =
   (): CharacterCreationProjection | null => {
     if (!characterCreationFlow) return null
@@ -267,27 +246,16 @@ const currentCharacterCreationProjection =
 
 const reconcileEditableCharacterCreationFlowWithProjection = () => {
   const flow = characterCreationFlow
-  if (characterCreationReadOnly || !flow) return
   const creation = currentCharacterCreationProjection()
-  if (!creation) return
 
-  const projectedStep = creationStepFromStatus(creation.state.status)
-  const projectedStepIndex = characterCreationStepIndex(projectedStep)
-  const localStepIndex = characterCreationStepIndex(flow.step)
-  const localCharacteristicsComplete =
-    characterCreationCharacteristicKeys.every(
-      (key) => flow.draft.characteristics[key] != null
-    )
-  const shouldSyncToProjection =
-    projectedStepIndex < localStepIndex ||
-    (projectedStepIndex > localStepIndex &&
-      (flow.step !== 'characteristics' || localCharacteristicsComplete)) ||
-    (creation.state.status === 'SKILLS_TRAINING' &&
-      JSON.stringify(creation.pendingCascadeSkills ?? []) !==
-        JSON.stringify(flow.draft.pendingTermCascadeSkills)) ||
-    (creation.state.status === 'BASIC_TRAINING' && flow.step === 'career')
-
-  if (shouldSyncToProjection) {
+  if (
+    shouldSyncEditableCharacterCreationFlowWithProjection({
+      flow,
+      creation,
+      readOnly: characterCreationReadOnly
+    }) &&
+    flow
+  ) {
     syncCharacterCreationFlowFromRoomState(state, flow.draft.characterId, flow)
   }
 }

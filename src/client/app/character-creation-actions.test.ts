@@ -221,6 +221,10 @@ describe('character creation actions', () => {
         )
       )
       const command = plan?.actions[0]?.command
+      if (eventType === 'COMPLETE_SKILLS') {
+        assert.equal(command?.type, 'CompleteCharacterCreationSkills')
+        continue
+      }
       if (eventType === 'FINISH_MUSTERING') {
         assert.equal(command?.type, 'CompleteCharacterCreationMustering')
         continue
@@ -393,10 +397,13 @@ describe('character creation actions', () => {
     )
 
     assert.equal(plan?.actions[0]?.key, 'complete-skills')
-    assert.equal(plan?.actions[0]?.command?.type, 'AdvanceCharacterCreation')
+    assert.equal(
+      plan?.actions[0]?.command?.type,
+      'CompleteCharacterCreationSkills'
+    )
     const command = plan?.actions[0]?.command
-    if (command?.type !== 'AdvanceCharacterCreation') return
-    assert.deepEqual(command.creationEvent, { type: 'COMPLETE_SKILLS' })
+    if (command?.type !== 'CompleteCharacterCreationSkills') return
+    assert.equal(command.characterId, 'mae')
   })
 
   it('uses the semantic command for resolving aging', () => {

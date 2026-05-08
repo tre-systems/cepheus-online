@@ -150,6 +150,7 @@ type CharacterEventType =
   | 'CharacterCreationReenlistmentResolved'
   | 'CharacterCreationTermSkillRolled'
   | 'CharacterCreationTermCascadeSkillResolved'
+  | 'CharacterCreationSkillsCompleted'
   | 'CharacterCreationMusteringBenefitRolled'
   | 'CharacterCreationMusteringCompleted'
   | 'CharacterCreationHomeworldSet'
@@ -696,6 +697,26 @@ const characterEventHandlers = {
           cascadeSkill: event.cascadeSkill,
           selection: event.selection
         }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationSkillsCompleted: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        { type: 'COMPLETE_SKILLS' }
       ]
     }
     nextState.eventSeq = envelope.seq

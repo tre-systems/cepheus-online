@@ -533,6 +533,11 @@ describe('protocol validation', () => {
         drafted: false
       },
       {
+        type: 'CompleteCharacterCreationSkills',
+        ...base,
+        characterId: 'char-1'
+      },
+      {
         type: 'CreateBoard',
         ...base,
         boardId: 'board-1',

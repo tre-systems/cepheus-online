@@ -1457,6 +1457,94 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.value[1].skillsAndTraining.length >= 2, true)
   })
 
+  it('emits a semantic skills completion event after required skill rolls', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationSkills',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('SKILLS_TRAINING', {
+        state: createCareerCreationState('SKILLS_TRAINING', {
+          canCommission: true,
+          canAdvance: false
+        }),
+        terms: [
+          {
+            career: 'Merchant',
+            skills: ['Pilot-1'],
+            skillsAndTraining: ['Broker-0', 'Pilot-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 7
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationSkillsCompleted',
+        characterId,
+        state: {
+          status: 'AGING',
+          context: {
+            canCommission: true,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('rejects generic skills completion after semantic migration', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'COMPLETE_SKILLS' }
+      },
+      createCreation('SKILLS_TRAINING', {
+        state: createCareerCreationState('SKILLS_TRAINING', {
+          canCommission: true,
+          canAdvance: false
+        }),
+        terms: [
+          {
+            career: 'Merchant',
+            skills: ['Pilot-1'],
+            skillsAndTraining: ['Broker-0', 'Pilot-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 7
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMPLETE_SKILLS must use CompleteCharacterCreationSkills'
+    )
+  })
+
   it('blocks semantic term skill rolls outside skills training', () => {
     const result = runCommand(
       {

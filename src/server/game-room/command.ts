@@ -1060,6 +1060,45 @@ const validateTermSkillRoll = (
   return ok(character.creation)
 }
 
+const validateSkillsCompletion = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'SKILLS_TRAINING') {
+    return err(
+      commandError(
+        'invalid_command',
+        `COMPLETE_SKILLS is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+  if ((character.creation.pendingCascadeSkills ?? []).length > 0) {
+    return err(
+      commandError(
+        'invalid_command',
+        'COMPLETE_SKILLS is blocked by unresolved cascade skills'
+      )
+    )
+  }
+  if (
+    activeTermSkillCount(character.creation) <
+    requiredTermSkillCount(character.creation)
+  ) {
+    return err(
+      commandError(
+        'invalid_command',
+        'COMPLETE_SKILLS is blocked until required term skills are rolled'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
 const resolveTermSkillCreationEvent = ({
   creation,
   table,
@@ -1815,6 +1854,14 @@ export const deriveEventsForCommand = (
           )
         )
       }
+      if (command.creationEvent.type === 'COMPLETE_SKILLS') {
+        return err(
+          commandError(
+            'invalid_command',
+            'COMPLETE_SKILLS must use CompleteCharacterCreationSkills'
+          )
+        )
+      }
       if (
         !canTransitionCareerCreationState(
           character.creation.state,
@@ -2492,6 +2539,30 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationTermSkillRolled',
           characterId: command.characterId,
           ...resolved.value,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'CompleteCharacterCreationSkills': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateSkillsCompletion(character)
+      if (!creation.ok) return creation
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'COMPLETE_SKILLS'
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationSkillsCompleted',
+          characterId: command.characterId,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         }

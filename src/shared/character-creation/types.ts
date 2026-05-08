@@ -183,6 +183,7 @@ export type CareerCreationServerCommandType =
   | 'ResolveCharacterCreationAging'
   | 'ResolveCharacterCreationReenlistment'
   | 'RollCharacterCreationTermSkill'
+  | 'CompleteCharacterCreationSkills'
   | 'ResolveCharacterCreationTermCascadeSkill'
   | 'RollCharacterCreationMusteringBenefit'
   | 'CompleteCharacterCreationMustering'

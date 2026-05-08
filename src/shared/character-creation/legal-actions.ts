@@ -346,7 +346,7 @@ const actionDefinitions = {
   completeSkills: {
     commandTypes: [
       'RollCharacterCreationTermSkill',
-      'AdvanceCharacterCreation'
+      'CompleteCharacterCreationSkills'
     ],
     rollRequirement: { key: 'termSkill', dice: '1d6' }
   },

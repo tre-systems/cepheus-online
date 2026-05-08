@@ -212,6 +212,7 @@ describe('app command router dispatch', () => {
       ResolveCharacterCreationReenlistment: 'characterCreation',
       RollCharacterCreationCharacteristic: 'characterCreation',
       RollCharacterCreationTermSkill: 'characterCreation',
+      CompleteCharacterCreationSkills: 'characterCreation',
       ResolveCharacterCreationTermCascadeSkill: 'characterCreation',
       RollCharacterCreationMusteringBenefit: 'characterCreation',
       CompleteCharacterCreationMustering: 'characterCreation',

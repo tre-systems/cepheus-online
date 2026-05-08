@@ -381,7 +381,12 @@ const actionsForLegalKey = (
         action(
           'complete-skills',
           'Complete skills',
-          advanceCommand(identity, character, { type: 'COMPLETE_SKILLS' })
+          {
+            type: 'CompleteCharacterCreationSkills',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id
+          }
         )
       ]
     case 'resolveAging':

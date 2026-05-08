@@ -86,6 +86,17 @@ const publishBasicTrainingCompletion = (
     characterId
   })
 
+const publishSkillsCompletion = (
+  storage: ReturnType<typeof createMemoryStorage>,
+  characterId: ReturnType<typeof asCharacterId>
+) =>
+  publish(storage, {
+    type: 'CompleteCharacterCreationSkills',
+    gameId,
+    actorId,
+    characterId
+  })
+
 const publishPlayableCharacterCreation = async (
   storage: ReturnType<typeof createMemoryStorage>,
   characterId = asCharacterId('char-1')
@@ -174,7 +185,7 @@ const publishPlayableCharacterCreation = async (
     canCommission: false,
     canAdvance: false
   })
-  await advance({ type: 'COMPLETE_SKILLS' })
+  assert.equal((await publishSkillsCompletion(storage, characterId)).ok, true)
   await advance({ type: 'COMPLETE_AGING' })
   await advance({ type: 'LEAVE_CAREER' })
   await advance({
@@ -344,7 +355,7 @@ describe('room publication flow', () => {
       canCommission: false,
       canAdvance: false
     })
-    await advance({ type: 'COMPLETE_SKILLS' })
+    assert.equal((await publishSkillsCompletion(storage, characterId)).ok, true)
 
     const resolved = await publish(storage, {
       type: 'ResolveCharacterCreationAging',
@@ -1901,7 +1912,7 @@ describe('room publication flow', () => {
         success: true
       }
     })
-    await advance({ type: 'COMPLETE_SKILLS' })
+    assert.equal((await publishSkillsCompletion(storage, characterId)).ok, true)
     await advance({
       type: 'COMPLETE_AGING',
       aging: {
@@ -1942,7 +1953,7 @@ describe('room publication flow', () => {
         success: true
       }
     })
-    await advance({ type: 'COMPLETE_SKILLS' })
+    assert.equal((await publishSkillsCompletion(storage, characterId)).ok, true)
     await advance({
       type: 'COMPLETE_AGING',
       aging: {
@@ -2152,7 +2163,7 @@ describe('room publication flow', () => {
       canCommission: false,
       canAdvance: false
     })
-    await advance({ type: 'COMPLETE_SKILLS' })
+    assert.equal((await publishSkillsCompletion(storage, characterId)).ok, true)
     await advance({ type: 'COMPLETE_AGING' })
     await advance({ type: 'LEAVE_CAREER' })
     const earlyMusteringFinish = await advance({ type: 'FINISH_MUSTERING' })
@@ -2277,7 +2288,7 @@ describe('room publication flow', () => {
       canCommission: false,
       canAdvance: false
     })
-    await advance({ type: 'COMPLETE_SKILLS' })
+    assert.equal((await publishSkillsCompletion(storage, characterId)).ok, true)
     await advance({ type: 'COMPLETE_AGING' })
     await advance({ type: 'LEAVE_CAREER' })
     await advance({

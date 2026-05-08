@@ -161,6 +161,12 @@ export type GameEvent =
       pendingCascadeSkills: string[]
     }
   | {
+      type: 'CharacterCreationSkillsCompleted'
+      characterId: CharacterId
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
       type: 'CharacterCreationMusteringBenefitRolled'
       characterId: CharacterId
       musteringBenefit: CareerCreationBenefitFact

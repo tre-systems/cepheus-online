@@ -209,6 +209,22 @@
     "expectedSeq": 26
   },
   {
+    "name": "character creation skills completion command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-complete-skills",
+      "command": {
+        "type": "CompleteCharacterCreationSkills",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 27,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "CompleteCharacterCreationSkills",
+    "expectedSeq": 27
+  },
+  {
     "name": "character creation term cascade resolution command",
     "message": {
       "type": "command",
