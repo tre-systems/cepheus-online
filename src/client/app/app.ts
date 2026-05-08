@@ -97,20 +97,8 @@ import {
   renderCharacterCreationReview as renderCharacterCreationReviewView,
   renderCharacterCreationTermHistory as renderCharacterCreationTermHistoryView
 } from './character-creation-review-view.js'
-import {
-  cssUrl,
-  readImageDimensions,
-  readSelectedCroppedImageFileAsDataUrl,
-  readSelectedImageFileAsDataUrl
-} from './image-assets.js'
-import {
-  createGameCommand,
-  nextBootstrapCommand,
-  parseNonNegativeIntegerValue,
-  parsePositiveIntegerValue,
-  parsePositiveNumberValue,
-  uniqueBoardId
-} from './bootstrap-flow.js'
+import { cssUrl } from './image-assets.js'
+import { createGameCommand, nextBootstrapCommand } from './bootstrap-flow.js'
 import { fetchRoomState, postRoomCommand } from './room-api.js'
 import {
   applyServerMessage as applyClientServerMessage,
@@ -120,6 +108,7 @@ import {
   buildSetDoorOpenCommand
 } from '../game-commands.js'
 import type {
+  BoardCommand,
   CharacterCreationCommand,
   DiceCommand
 } from './app-command-router.js'
@@ -141,11 +130,11 @@ import {
   resolveAppLocationIdentity
 } from './app-location.js'
 import { prepareLiveActivityApplication } from './live-activity-client.js'
-import { planCreatePieceCommands } from './piece-command-plan.js'
 import { createPwaInstallController } from './pwa-install.js'
 import { createRequestIdFactory } from './request-id.js'
 import { createRoomMenuController } from './room-menu-controller.js'
 import { createRoomCommandDispatch } from './room-command-dispatch.js'
+import { createRoomAssetCreationController } from './room-asset-creation-controller.js'
 import { registerClientServiceWorker } from './service-worker.js'
 
 registerClientServiceWorker()
@@ -359,27 +348,6 @@ let characterCreationCommandController: CharacterCreationCommandController
 const fetchState = async (): Promise<void> => {
   const message = await fetchRoomState({ roomId, viewerRole, actorId })
   handleServerMessage(message)
-}
-
-const parsePositiveIntegerInput = (
-  input: HTMLInputElement,
-  fallback: number
-): number => {
-  return parsePositiveIntegerValue(input.value, fallback)
-}
-
-const parsePositiveNumberInput = (
-  input: HTMLInputElement,
-  fallback: number
-): number => {
-  return parsePositiveNumberValue(input.value, fallback)
-}
-
-const parseNonNegativeIntegerInput = (
-  input: HTMLInputElement,
-  fallback: number
-): number => {
-  return parseNonNegativeIntegerValue(input.value, fallback)
 }
 
 const characterCreationSeed = (): Pick<
@@ -931,147 +899,12 @@ const renderCharacterCreationReview = (
   return renderCharacterCreationReviewView(document, flow)
 }
 
-const applyBoardFileDimensions = async () => {
-  const file = els.boardImageFileInput.files?.[0]
-  if (!file) return
-  const dimensions = await readImageDimensions(file)
-  els.boardWidthInput.value = String(dimensions.width)
-  els.boardHeightInput.value = String(dimensions.height)
-}
-
-const applyPieceFileDimensions = async () => {
-  const file = els.pieceImageFileInput.files?.[0]
-  if (!file) return
-  const dimensions = await readImageDimensions(file)
-  const shortAxis = Math.min(dimensions.width, dimensions.height)
-  const longAxis = Math.max(dimensions.width, dimensions.height)
-  if (shortAxis > 301 || longAxis / shortAxis > 2.2) return
-
-  const aspectRatio = dimensions.width / dimensions.height
-  if (aspectRatio > 1.45) {
-    els.pieceWidthInput.value = '100'
-    els.pieceHeightInput.value = '50'
-    return
-  }
-  if (aspectRatio < 0.69) {
-    els.pieceWidthInput.value = '50'
-    els.pieceHeightInput.value = '100'
-    return
-  }
-  els.pieceWidthInput.value = '50'
-  els.pieceHeightInput.value = '50'
-}
-
-const selectedPieceImageDataUrl = async () => {
-  const file = els.pieceImageFileInput.files?.[0]
-  if (!file) return els.pieceImageInput.value.trim() || null
-  if (!els.pieceCropInput.checked)
-    return await readSelectedImageFileAsDataUrl(els.pieceImageFileInput)
-
-  return await readSelectedCroppedImageFileAsDataUrl(els.pieceImageFileInput, {
-    x: parseNonNegativeIntegerInput(els.pieceCropXInput, 0),
-    y: parseNonNegativeIntegerInput(els.pieceCropYInput, 0),
-    width: parsePositiveIntegerInput(els.pieceCropWidthInput, 150),
-    height: parsePositiveIntegerInput(els.pieceCropHeightInput, 150)
-  })
-}
-
 const currentBoardList = () => boardList(state)
 
 const currentSelectedBoardId = () => selectSelectedBoardId(state)
 
-const createCustomBoard = async () => {
-  setError('')
-  if (!state) {
-    await postCommand(
-      createGameCommand(bootstrapIdentity()),
-      requestId('create-game-for-board')
-    )
-  }
-
-  const name =
-    els.boardNameInput.value.trim() ||
-    'Board ' + (Object.keys(state?.boards || {}).length + 1)
-  const width = parsePositiveIntegerInput(els.boardWidthInput, 1200)
-  const height = parsePositiveIntegerInput(els.boardHeightInput, 800)
-  const scale = parsePositiveIntegerInput(els.boardScaleInput, 50)
-  const boardId = uniqueBoardId(state, name)
-  const imageUrl =
-    (await readSelectedImageFileAsDataUrl(els.boardImageFileInput)) ||
-    els.boardImageInput.value.trim() ||
-    null
-  await postBoardCommand({
-    type: 'CreateBoard',
-    ...commandIdentity(),
-    boardId,
-    name,
-    imageAssetId: null,
-    url: imageUrl,
-    width,
-    height,
-    scale
-  })
-  els.boardNameInput.value = ''
-  els.boardImageInput.value = ''
-  els.boardImageFileInput.value = ''
-  els.roomDialog.close()
-  render()
-}
-
 const advanceCharacterCreationWizard = async () => {
   await characterCreationWizardController.advance()
-}
-
-const createCustomPiece = async () => {
-  const board = selectedBoard()
-  if (!state || !board) {
-    setError('Bootstrap a board before creating a piece')
-    return
-  }
-
-  const name = els.pieceNameInput.value.trim()
-  if (!name) {
-    setError('Piece name is required')
-    els.pieceNameInput.focus()
-    return
-  }
-
-  const width = parsePositiveIntegerInput(els.pieceWidthInput, 50)
-  const height = parsePositiveIntegerInput(els.pieceHeightInput, 50)
-  const scale = parsePositiveNumberInput(els.pieceScaleInput, 1)
-  const imageAssetId = await selectedPieceImageDataUrl()
-  const plan = planCreatePieceCommands({
-    identity: clientIdentity(),
-    state,
-    board,
-    name,
-    imageAssetId,
-    width,
-    height,
-    scale,
-    existingPieceCount: boardPieces().length,
-    withCharacterSheet: els.pieceSheetInput.checked
-  })
-  if (!plan.ok) {
-    setError(plan.error)
-    if (plan.focus === 'name') els.pieceNameInput.focus()
-    return
-  }
-  await commandRouter.dispatchSequential(plan.commands)
-  selectPiece(plan.pieceId)
-  els.pieceNameInput.value = ''
-  els.pieceImageInput.value = ''
-  els.pieceImageFileInput.value = ''
-  els.pieceCropInput.checked = false
-  els.pieceCropXInput.value = '0'
-  els.pieceCropYInput.value = '0'
-  els.pieceCropWidthInput.value = '150'
-  els.pieceCropHeightInput.value = '150'
-  els.pieceWidthInput.value = '50'
-  els.pieceHeightInput.value = '50'
-  els.pieceScaleInput.value = '1'
-  els.roomDialog.close()
-  render()
 }
 
 const bootstrapScene = async () => {
@@ -1434,6 +1267,45 @@ createRoomMenuController({
   }
 })
 
+createRoomAssetCreationController({
+  elements: {
+    createPiece: els.createPiece,
+    createBoard: els.createBoard,
+    pieceNameInput: els.pieceNameInput,
+    pieceImageInput: els.pieceImageInput,
+    pieceImageFileInput: els.pieceImageFileInput,
+    pieceCropInput: els.pieceCropInput,
+    pieceCropXInput: els.pieceCropXInput,
+    pieceCropYInput: els.pieceCropYInput,
+    pieceCropWidthInput: els.pieceCropWidthInput,
+    pieceCropHeightInput: els.pieceCropHeightInput,
+    pieceWidthInput: els.pieceWidthInput,
+    pieceHeightInput: els.pieceHeightInput,
+    pieceScaleInput: els.pieceScaleInput,
+    pieceSheetInput: els.pieceSheetInput,
+    boardNameInput: els.boardNameInput,
+    boardImageInput: els.boardImageInput,
+    boardImageFileInput: els.boardImageFileInput,
+    boardWidthInput: els.boardWidthInput,
+    boardHeightInput: els.boardHeightInput,
+    boardScaleInput: els.boardScaleInput,
+    roomDialog: els.roomDialog
+  },
+  getState: () => state,
+  getSelectedBoard: selectedBoard,
+  getSelectedBoardPieces: boardPieces,
+  getClientIdentity: clientIdentity,
+  getBootstrapIdentity: bootstrapIdentity,
+  getCommandIdentity: clientIdentity,
+  createRequestId: requestId,
+  postCommand,
+  postBoardCommand: (command) => postBoardCommand(command as BoardCommand),
+  dispatchCommandsSequential: commandRouter.dispatchSequential,
+  selectPiece,
+  requestRender: render,
+  reportError: setError
+})
+
 els.sheetButton.addEventListener('click', () => {
   const piece = selectedPiece()
   if (!currentSelectedPieceId() && piece) {
@@ -1463,22 +1335,6 @@ els.bootstrap.addEventListener('click', () => {
 
 els.refresh.addEventListener('click', () => {
   fetchState().catch((error) => setError(error.message))
-})
-
-els.createPiece.addEventListener('click', () => {
-  createCustomPiece().catch((error) => setError(error.message))
-})
-
-els.pieceImageFileInput.addEventListener('change', () => {
-  applyPieceFileDimensions().catch((error) => setError(error.message))
-})
-
-els.createBoard.addEventListener('click', () => {
-  createCustomBoard().catch((error) => setError(error.message))
-})
-
-els.boardImageFileInput.addEventListener('change', () => {
-  applyBoardFileDimensions().catch((error) => setError(error.message))
 })
 
 els.boardSelect.addEventListener('change', () => {

@@ -1456,6 +1456,7 @@ describe('room publication flow', () => {
       ['Zero-G-0', 'Broker-0', 'Slug Rifle-0']
     )
 
+    const selectedBackgroundSkills: string[] = []
     let homeworld = await publish(storage, {
       type: 'CompleteCharacterCreationHomeworld',
       gameId,
@@ -1463,7 +1464,14 @@ describe('room publication flow', () => {
       characterId,
       expectedSeq: resolvedCascade.value.state.eventSeq
     })
-    for (const skill of ['Admin', 'Electronics', 'Computer']) {
+    for (const skill of [
+      'Admin',
+      'Electronics',
+      'Computer',
+      'Advocate',
+      'Animals',
+      'Carousing'
+    ]) {
       if (
         homeworld.ok ||
         homeworld.error.message !==
@@ -1484,6 +1492,7 @@ describe('room publication flow', () => {
         selected.ok ? undefined : selected.error.message
       )
       if (!selected.ok) return
+      selectedBackgroundSkills.push(`${skill}-0`)
       homeworld = await publish(storage, {
         type: 'CompleteCharacterCreationHomeworld',
         gameId,
@@ -1527,7 +1536,7 @@ describe('room publication flow', () => {
     })
     assert.deepEqual(
       recovered?.characters[characterId]?.creation?.backgroundSkills,
-      ['Zero-G-0', 'Broker-0', 'Slug Rifle-0']
+      ['Zero-G-0', 'Broker-0', 'Slug Rifle-0', ...selectedBackgroundSkills]
     )
   })
 
