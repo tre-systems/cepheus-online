@@ -50,9 +50,12 @@ export const shouldSyncEditableCharacterCreationFlowWithProjection = ({
   const projectedStep = creationStepFromStatus(creation.state.status)
   const projectedStepIndex = characterCreationStepIndex(projectedStep)
   const localStepIndex = characterCreationStepIndex(flow.step)
+  const shouldKeepLocalReviewStep =
+    ['skills', 'equipment', 'review'].includes(flow.step) &&
+    ['MUSTERING_OUT', 'ACTIVE'].includes(creation.state.status)
 
   return (
-    projectedStepIndex < localStepIndex ||
+    (projectedStepIndex < localStepIndex && !shouldKeepLocalReviewStep) ||
     (projectedStepIndex > localStepIndex &&
       (flow.step !== 'characteristics' ||
         characterCreationCharacteristicsComplete(flow))) ||

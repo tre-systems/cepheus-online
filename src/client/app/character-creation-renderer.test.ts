@@ -164,7 +164,7 @@ describe('character creation renderer', () => {
     const events: string[] = []
     const node = asNode(
       renderCharacterCreationNextStep(document, reviewFlow(), {
-        advanceReview: async () => {
+        advanceStep: async () => {
           events.push('advance')
         },
         reportError: (message) => events.push(message),
@@ -179,6 +179,31 @@ describe('character creation renderer', () => {
     await Promise.resolve()
 
     assert.deepEqual(events, ['advance'])
+  })
+
+  it('renders primary step actions for skills and equipment', async () => {
+    const events: string[] = []
+    for (const flow of [completeFlow('skills'), completeFlow('equipment')]) {
+      const node = asNode(
+        renderCharacterCreationNextStep(document, flow, {
+          advanceStep: async () => {
+            events.push(flow.step)
+          },
+          reportError: (message) => events.push(message),
+          resolveBackgroundCascadeSkill: () => {}
+        })
+      )
+
+      const actions = findNode(
+        node,
+        (candidate) => candidate.className === 'creation-next-step-actions'
+      )
+      if (!actions) throw new Error('Expected next-step actions')
+      actions.children[0]?.click()
+      await Promise.resolve()
+    }
+
+    assert.deepEqual(events, ['skills', 'equipment'])
   })
 
   it('renders death restart controls when editable', async () => {

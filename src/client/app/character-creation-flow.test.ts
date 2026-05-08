@@ -1294,6 +1294,87 @@ describe('character creation flow', () => {
     )
   })
 
+  it('does not re-block review on local homeworld bookkeeping after career terms exist', () => {
+    const flow: CharacterCreationFlow = {
+      step: 'review',
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Drafted athlete',
+        age: 22,
+        characteristics: completeDraft().characteristics,
+        homeworld: {
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid']
+        },
+        backgroundSkills: [],
+        pendingCascadeSkills: ['Gun Combat-0'],
+        skills: ['Athletics-0'],
+        careerPlan: selectCharacterCreationCareerPlan('Athlete', {
+          drafted: true,
+          qualificationRoll: null,
+          qualificationPassed: true,
+          survivalRoll: 7,
+          survivalPassed: true,
+          canCommission: false,
+          commissionRoll: null,
+          commissionPassed: null,
+          canAdvance: false,
+          advancementRoll: null,
+          advancementPassed: null,
+          termSkillRolls: [
+            { table: 'specialistSkills', roll: 2, skill: 'Athletics' }
+          ],
+          agingRoll: 6,
+          agingMessage: 'No aging effects.',
+          reenlistmentRoll: 8,
+          reenlistmentOutcome: 'allowed'
+        }),
+        completedTerms: [
+          {
+            career: 'Athlete',
+            drafted: true,
+            age: 22,
+            rank: 0,
+            qualificationRoll: null,
+            survivalRoll: 7,
+            survivalPassed: true,
+            canCommission: false,
+            commissionRoll: null,
+            commissionPassed: null,
+            canAdvance: false,
+            advancementRoll: null,
+            advancementPassed: null,
+            termSkillRolls: [
+              { table: 'specialistSkills', roll: 2, skill: 'Athletics' }
+            ],
+            agingRoll: 6,
+            agingMessage: 'No aging effects.',
+            agingSelections: [],
+            reenlistmentRoll: 8,
+            reenlistmentOutcome: 'allowed'
+          }
+        ],
+        musteringBenefits: [
+          {
+            career: 'Athlete',
+            kind: 'material',
+            roll: 5,
+            value: "Explorers' Society",
+            credits: 0
+          }
+        ],
+        equipment: [
+          {
+            name: "Explorers' Society",
+            quantity: 1,
+            notes: 'Mustering out: Athlete'
+          }
+        ]
+      })
+    }
+
+    assert.deepEqual(validateCurrentCharacterCreationStep(flow).errors, [])
+  })
+
   it('limits cash benefits and applies mustering-out roll modifiers', () => {
     const completedTerm = {
       career: 'Merchant',

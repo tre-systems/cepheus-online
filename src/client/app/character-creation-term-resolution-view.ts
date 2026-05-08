@@ -5,6 +5,7 @@ import {
   isCharacterCreationCareerTermResolved,
   type CharacterCreationFlow
 } from './character-creation-flow.js'
+import { bindAsyncActionButton } from './async-action-button.js'
 import { formatCharacterCreationReenlistmentOutcome } from './character-creation-view.js'
 
 export interface CharacterCreationTermResolutionDocument {
@@ -14,7 +15,7 @@ export interface CharacterCreationTermResolutionDocument {
 }
 
 export interface CharacterCreationTermResolutionViewDeps {
-  completeTerm: (continueCareer: boolean) => void
+  completeTerm: (continueCareer: boolean) => Promise<void> | void
 }
 
 export const renderCharacterCreationTermResolution = (
@@ -101,14 +102,14 @@ export const renderCharacterCreationTermResolution = (
       plan.reenlistmentOutcome === 'forced'
         ? 'Serve required term'
         : 'Serve another term'
-    another.addEventListener('click', () => completeTerm(true))
+    bindAsyncActionButton(another, () => completeTerm(true))
     actions.append(another)
   }
 
   const muster = document.createElement('button')
   muster.type = 'button'
   muster.textContent = 'Muster out'
-  muster.addEventListener('click', () => completeTerm(false))
+  bindAsyncActionButton(muster, () => completeTerm(false))
   actions.append(muster)
 
   panel.append(title, text, actions)

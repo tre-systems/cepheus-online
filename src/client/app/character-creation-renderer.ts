@@ -26,7 +26,7 @@ export interface CharacterCreationRendererDocument {
 }
 
 export interface CharacterCreationNextStepRendererDeps {
-  advanceReview: () => Promise<void>
+  advanceStep: () => Promise<void>
   reportError: (message: string) => void
   resolveBackgroundCascadeSkill: (choice: {
     scope: 'background'
@@ -68,7 +68,7 @@ export const renderCharacterCreationNextStep = (
   document: CharacterCreationRendererDocument,
   flow: CharacterCreationFlow,
   {
-    advanceReview,
+    advanceStep,
     reportError,
     resolveBackgroundCascadeSkill
   }: CharacterCreationNextStepRendererDeps
@@ -99,12 +99,15 @@ export const renderCharacterCreationNextStep = (
     stats.append(item)
   }
 
-  if (!viewModel.primaryAction.disabled && flow.step === 'review') {
+  if (
+    !viewModel.primaryAction.disabled &&
+    ['skills', 'equipment', 'review'].includes(flow.step)
+  ) {
     const primary = document.createElement('button')
     primary.type = 'button'
     primary.textContent = viewModel.primaryAction.label
     primary.addEventListener('click', () => {
-      advanceReview().catch((error) => reportError(error.message))
+      advanceStep().catch((error) => reportError(error.message))
     })
     actions.append(primary)
   }

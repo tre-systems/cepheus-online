@@ -12,6 +12,7 @@ import {
 } from './bootstrap-flow.js'
 import {
   deriveCharacterCreationCommands,
+  deriveFinalizeCharacterCreationCommand,
   type CharacterCreationFlow
 } from './character-creation-flow.js'
 import { deriveCharacterCreationValidationSummary } from './character-creation-view.js'
@@ -47,6 +48,55 @@ export interface CharacterCreationFinalizationControllerDeps {
 export interface CharacterCreationFinalizationController {
   createToken: () => Promise<PieceId | null>
   finish: () => Promise<void>
+}
+
+const deriveServerBackedFinalizationCommands = (
+  flow: CharacterCreationFlow,
+  state: GameState | null,
+  identity: ClientIdentity
+): CharacterCreationCommand[] => {
+  const character = state?.characters[flow.draft.characterId] ?? null
+  if (!character?.creation) {
+    return deriveCharacterCreationCommands(flow, {
+      identity,
+      state
+    }) as CharacterCreationCommand[]
+  }
+
+  const baseCommand = {
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId: flow.draft.characterId
+  }
+  const commands: CharacterCreationCommand[] = []
+
+  if (character.creation.state.status === 'MUSTERING_OUT') {
+    commands.push(
+      {
+        type: 'CompleteCharacterCreationMustering',
+        ...baseCommand
+      },
+      {
+        type: 'CompleteCharacterCreation',
+        ...baseCommand
+      }
+    )
+  } else if (character.creation.state.status === 'ACTIVE') {
+    commands.push({
+      type: 'CompleteCharacterCreation',
+      ...baseCommand
+    })
+  } else if (character.creation.state.status !== 'PLAYABLE') {
+    return []
+  }
+
+  commands.push(
+    deriveFinalizeCharacterCreationCommand(flow.draft, {
+      identity,
+      state: null
+    }) as CharacterCreationCommand
+  )
+  return commands
 }
 
 export const createCharacterCreationFinalizationController = ({
@@ -129,10 +179,11 @@ export const createCharacterCreationFinalizationController = ({
       )
     }
 
-    const commands = deriveCharacterCreationCommands(syncedFlow, {
-      identity: identity(),
-      state: getState()
-    })
+    const commands = deriveServerBackedFinalizationCommands(
+      syncedFlow,
+      getState(),
+      identity()
+    )
     if (commands.length === 0) {
       reportError('Character creation needs the current room state')
       return

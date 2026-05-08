@@ -134,6 +134,33 @@ describe('character creation sync helpers', () => {
     )
   })
 
+  it('keeps local review setup after the server accepts leaving a career', () => {
+    assert.equal(
+      shouldSyncEditableCharacterCreationFlowWithProjection({
+        flow: flow('skills'),
+        creation: creation('MUSTERING_OUT'),
+        readOnly: false
+      }),
+      false
+    )
+    assert.equal(
+      shouldSyncEditableCharacterCreationFlowWithProjection({
+        flow: flow('equipment'),
+        creation: creation('MUSTERING_OUT'),
+        readOnly: false
+      }),
+      false
+    )
+    assert.equal(
+      shouldSyncEditableCharacterCreationFlowWithProjection({
+        flow: flow('skills'),
+        creation: creation('SURVIVAL'),
+        readOnly: false
+      }),
+      true
+    )
+  })
+
   it('syncs pending cascade and basic training projection changes', () => {
     const current = flow('career')
     current.draft.pendingTermCascadeSkills = ['Gun Combat']

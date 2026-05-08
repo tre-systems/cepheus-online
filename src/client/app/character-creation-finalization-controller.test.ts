@@ -8,7 +8,12 @@ import {
   asPieceId,
   asUserId
 } from '../../shared/ids'
-import type { BoardState, GameState, PieceState } from '../../shared/state'
+import type {
+  BoardState,
+  CharacterState,
+  GameState,
+  PieceState
+} from '../../shared/state'
 import type {
   BoardCommand,
   CharacterCreationCommand
@@ -55,6 +60,52 @@ const piece = (id = 'existing-piece'): PieceState => ({
   scale: 1,
   visibility: 'VISIBLE',
   freedom: 'UNLOCKED'
+})
+
+const characterCreation = (
+  status: NonNullable<
+    CharacterState['creation']
+  >['state']['status'] = 'PLAYABLE'
+): NonNullable<CharacterState['creation']> => ({
+  state: {
+    status,
+    context: { canCommission: false, canAdvance: false }
+  },
+  terms: [],
+  careers: [],
+  canEnterDraft: true,
+  failedToQualify: false,
+  characteristicChanges: [],
+  creationComplete: status === 'PLAYABLE',
+  homeworld: null,
+  backgroundSkills: [],
+  pendingCascadeSkills: [],
+  history: []
+})
+
+const character = (
+  overrides: Partial<CharacterState> = {}
+): CharacterState => ({
+  id: characterId,
+  ownerId: actorId,
+  type: 'PLAYER',
+  name: 'Iona Vesh',
+  active: true,
+  notes: '',
+  age: null,
+  characteristics: {
+    str: null,
+    dex: null,
+    end: null,
+    int: null,
+    edu: null,
+    soc: null
+  },
+  skills: [],
+  equipment: [],
+  credits: 0,
+  creation: characterCreation(),
+  ...overrides
 })
 
 const gameState = (overrides: Partial<GameState> = {}): GameState => ({
@@ -261,7 +312,13 @@ describe('character creation finalization controller', () => {
   })
 
   it('posts finalization commands before creating the linked token and closing UI', async () => {
-    const harness = createHarness()
+    const harness = createHarness({
+      currentState: gameState({
+        characters: {
+          [characterId]: character()
+        }
+      })
+    })
 
     await harness.controller.finish()
 
@@ -287,6 +344,29 @@ describe('character creation finalization controller', () => {
       'openCharacterSheet',
       'renderApp'
     ])
+  })
+
+  it('completes server-backed mustering before finalization', async () => {
+    const harness = createHarness({
+      currentState: gameState({
+        characters: {
+          [characterId]: character({
+            creation: characterCreation('MUSTERING_OUT')
+          })
+        }
+      })
+    })
+
+    await harness.controller.finish()
+
+    assert.deepEqual(
+      harness.postedCharacterCommands[0]?.map((command) => command.type),
+      [
+        'CompleteCharacterCreationMustering',
+        'CompleteCharacterCreation',
+        'FinalizeCharacterCreation'
+      ]
+    )
   })
 
   it('creates a missing board before token planning', async () => {

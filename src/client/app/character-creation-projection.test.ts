@@ -151,4 +151,13 @@ describe('character creation projection helpers', () => {
       modifier: -1
     })
   })
+
+  it('hydrates editable skills from projected term training', () => {
+    const flow = flowFromProjectedCharacter(
+      character(agingProjection(resolvedTermSkillHistory))
+    )
+    if (!flow) throw new Error('Expected projected flow')
+
+    assert.deepEqual(flow.draft.skills, ['Pilot-1', 'Survival-0'])
+  })
 })

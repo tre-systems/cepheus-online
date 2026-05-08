@@ -533,7 +533,7 @@ const sameHomeworld = (
   )
 }
 
-const normalizeSkillList = (skills: readonly string[]): string[] => {
+export const normalizeSkillList = (skills: readonly string[]): string[] => {
   const normalized: string[] = []
   const seen = new Set<string>()
 
@@ -784,6 +784,11 @@ const validateEquipment = (draft: CharacterCreationDraft): string[] => {
   return errors
 }
 
+const validateReviewHomeworld = (draft: CharacterCreationDraft): string[] =>
+  draft.completedTerms.length > 0 || draft.careerPlan !== null
+    ? []
+    : validateHomeworld(draft)
+
 const validationErrorsForStep = (
   step: CharacterCreationStep,
   draft: CharacterCreationDraft
@@ -805,7 +810,7 @@ const validationErrorsForStep = (
       return [
         ...validateBasics(draft),
         ...validateCharacteristics(draft),
-        ...validateHomeworld(draft),
+        ...validateReviewHomeworld(draft),
         ...validateCareer(draft),
         ...validateSkills(draft),
         ...validateEquipment(draft)

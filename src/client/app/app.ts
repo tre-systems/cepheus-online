@@ -574,7 +574,7 @@ const renderCharacterCreationNextStep = (
   flow: CharacterCreationFlow
 ): HTMLElement => {
   return renderCharacterCreationNextStepView(document, flow, {
-    advanceReview: advanceCharacterCreationWizard,
+    advanceStep: advanceCharacterCreationWizard,
     reportError: setError,
     resolveBackgroundCascadeSkill: ({ scope, cascadeSkill, selection }) => {
       resolveCharacterCreationCascadeChoice(scope, cascadeSkill, selection)
@@ -815,15 +815,33 @@ const renderCharacterCreationTermResolution = (
   flow: CharacterCreationFlow
 ): HTMLElement | DocumentFragment => {
   return renderCharacterCreationTermResolutionView(document, flow, {
-    completeTerm: (continueCareer) => {
+    completeTerm: async (continueCareer) => {
       const flow = characterCreationController.flow()
       if (!flow) return
-      characterCreationController.setFlow(
-        completeCharacterCreationCareerTerm({
-          flow,
-          continueCareer
-        }).flow
-      )
+      const result = completeCharacterCreationCareerTerm({
+        flow,
+        continueCareer
+      })
+      if (!result.moved) return
+
+      const reenlistmentOutcome = flow.draft.careerPlan?.reenlistmentOutcome
+      const creationEvent = continueCareer
+        ? {
+            type:
+              reenlistmentOutcome === 'forced'
+                ? ('FORCED_REENLIST' as const)
+                : ('REENLIST' as const)
+          }
+        : { type: 'LEAVE_CAREER' as const }
+
+      await ensureCharacterCreationPublished()
+      await postCharacterCreationCommand({
+        type: 'AdvanceCharacterCreation',
+        ...commandIdentity(),
+        characterId: flow.draft.characterId,
+        creationEvent
+      })
+      characterCreationController.setFlow(result.flow)
       setError('')
       renderCharacterCreationWizard()
       characterCreationPanel.scrollToTop()

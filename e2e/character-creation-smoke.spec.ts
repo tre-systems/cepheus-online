@@ -995,6 +995,33 @@ test.describe('character creation smoke', () => {
       /Skills|Review the skill list/,
       { timeout: 5_000 }
     )
+
+    await page.getByRole('button', { name: 'Continue to equipment' }).click()
+    await expect(page.locator('#characterCreationFields')).toContainText(
+      /Equipment|Add starting equipment/,
+      { timeout: 5_000 }
+    )
+    const rollBenefit = page.getByRole('button', { name: 'Roll benefit' })
+    if (await rollBenefit.isVisible().catch(() => false)) {
+      await rollBenefit.click()
+      await waitForDiceReveal(page)
+    }
+    await page.getByRole('button', { name: 'Review character' }).click()
+    await expect(page.locator('#characterCreationFields')).toContainText(
+      /Review|Create character/,
+      { timeout: 5_000 }
+    )
+    await page.getByRole('button', { name: 'Create character' }).click()
+    await expect(page.locator('#characterCreator')).toBeHidden({
+      timeout: 10_000
+    })
+    await expect(page.locator('#characterSheet')).toHaveClass(/open/, {
+      timeout: 10_000
+    })
+    await expect(page.locator('#sheetName')).toContainText(characterName, {
+      timeout: 10_000
+    })
+
     await expect.poll(() => postedCommandTypes).toContain(
       'CompleteCharacterCreationBasicTraining'
     )
@@ -1007,5 +1034,12 @@ test.describe('character creation smoke', () => {
     await expect.poll(() => postedCommandTypes).toContain(
       'ResolveCharacterCreationReenlistment'
     )
+    await expect.poll(() => postedCommandTypes).toContain(
+      'RollCharacterCreationMusteringBenefit'
+    )
+    await expect.poll(() => postedCommandTypes).toContain(
+      'FinalizeCharacterCreation'
+    )
+    await expect.poll(() => postedCommandTypes).toContain('CreatePiece')
   })
 })

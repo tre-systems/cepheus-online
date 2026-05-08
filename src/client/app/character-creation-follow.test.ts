@@ -177,6 +177,21 @@ describe('character creation follow helpers', () => {
     ])
   })
 
+  it('keeps local post-career review setup ahead of an older projection step', () => {
+    const equipmentFlow = {
+      ...fallbackFlow,
+      step: 'equipment' as const
+    }
+    const syncedFlow = syncCharacterCreationFlowFromRoomState({
+      currentFlow: equipmentFlow,
+      roomState: stateWithCreation(creation('MUSTERING_OUT')),
+      characterId,
+      fallbackFlow: equipmentFlow
+    })
+
+    assert.equal(syncedFlow, equipmentFlow)
+  })
+
   it('refreshes followed read-only flows and closes missing projections', () => {
     const refreshed = refreshFollowedCharacterCreationFlowFromState({
       state: stateWithCreation(creation('BASIC_TRAINING')),

@@ -117,7 +117,7 @@ describe('character creation term resolution view', () => {
     assert.equal(dead.children.length, 2)
   })
 
-  it('renders reenlistment and completion actions', () => {
+  it('renders reenlistment and completion actions', async () => {
     const completed: boolean[] = []
     const node = asNode(
       renderCharacterCreationTermResolution(
@@ -125,7 +125,11 @@ describe('character creation term resolution view', () => {
         baseFlow(
           survivedPlan({ reenlistmentRoll: 7, reenlistmentOutcome: 'allowed' })
         ),
-        { completeTerm: (continueCareer) => completed.push(continueCareer) }
+        {
+          completeTerm: (continueCareer) => {
+            completed.push(continueCareer)
+          }
+        }
       )
     )
 
@@ -135,6 +139,7 @@ describe('character creation term resolution view', () => {
 
     actions?.children[0]?.click()
     actions?.children[1]?.click()
+    await Promise.resolve()
 
     assert.deepEqual(completed, [true, false])
   })

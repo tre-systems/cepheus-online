@@ -8,6 +8,7 @@ import type {
 } from '../../shared/state'
 import {
   createInitialCharacterDraft,
+  normalizeSkillList,
   type CharacterCreationCareerPlan,
   type CharacterCreationCompletedTerm,
   type CharacterCreationFlow,
@@ -212,6 +213,11 @@ export const flowFromProjectedCharacter = (
         : []
     })
 
+  const creationSkills = normalizeSkillList([
+    ...character.skills,
+    ...creation.terms.flatMap((term) => term.skillsAndTraining)
+  ])
+
   return {
     step: creationStepFromStatus(creation.state.status),
     draft: createInitialCharacterDraft(character.id, {
@@ -233,7 +239,7 @@ export const flowFromProjectedCharacter = (
       careerPlan: careerPlanFromProjection(creation),
       completedTerms,
       musteringBenefits,
-      skills: character.skills,
+      skills: creationSkills,
       equipment: character.equipment,
       credits: character.credits,
       notes: character.notes

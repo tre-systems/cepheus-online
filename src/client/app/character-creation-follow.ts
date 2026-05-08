@@ -2,6 +2,7 @@ import type { CharacterId } from '../../shared/ids'
 import type { CharacterCreationProjection, GameState } from '../../shared/state'
 import type { CharacterCreationFlow } from './character-creation-flow.js'
 import { flowFromProjectedCharacter } from './character-creation-projection.js'
+import { characterCreationStepIndex } from './character-creation-sync.js'
 
 export const projectedCharacterCreation = (
   state: GameState | null,
@@ -24,6 +25,18 @@ export const syncCharacterCreationFlowFromRoomState = ({
   const projectedFlow = projectedCharacter
     ? flowFromProjectedCharacter(projectedCharacter)
     : null
+  if (
+    projectedFlow &&
+    fallbackFlow &&
+    ['skills', 'equipment', 'review'].includes(fallbackFlow.step) &&
+    ['MUSTERING_OUT', 'ACTIVE'].includes(
+      projectedCharacter?.creation?.state.status ?? ''
+    ) &&
+    characterCreationStepIndex(projectedFlow.step) <
+      characterCreationStepIndex(fallbackFlow.step)
+  ) {
+    return fallbackFlow
+  }
 
   return projectedFlow ?? fallbackFlow ?? currentFlow
 }
