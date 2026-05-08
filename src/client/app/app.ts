@@ -38,6 +38,10 @@ import {
 import { bindAsyncActionButton } from './async-action-button.js'
 import { createCharacterCreationPanel } from './character-creation-panel.js'
 import {
+  createCharacterCreationCommandController,
+  type CharacterCreationCommandController
+} from './character-creation-command-controller.js'
+import {
   createCreationActivityFeedController,
   creationActivityRevealDelayMs
 } from './creation-activity-feed.js'
@@ -45,16 +49,11 @@ import { createCreationPresenceDock } from './creation-presence-dock.js'
 import { createCharacterCreationHomeworldPublisher } from './character-creation-homeworld-publisher.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
-  applyCharacterCreationBasicTraining,
   applyCharacterCreationBackgroundSkillSelection,
   applyCharacterCreationAnagathicsDecision,
   applyCharacterCreationAgingChange,
-  applyCharacterCreationAgingRoll,
-  applyCharacterCreationCharacteristicRoll,
   applyCharacterCreationCareerRoll,
   applyCharacterCreationMusteringBenefit,
-  applyCharacterCreationReenlistmentRoll,
-  applyCharacterCreationTermSkillRoll,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationWizardStep,
   canRollCharacterCreationMusteringBenefit,
@@ -66,7 +65,6 @@ import {
   deriveCharacterCreationCommands,
   deriveCharacterCreationAgingChangeOptions,
   deriveCharacterCreationAnagathicsDecision,
-  deriveNextCharacterCreationCharacteristicRoll,
   deriveStartCharacterCreationCommand,
   deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationAgingRoll,
@@ -77,7 +75,6 @@ import {
   removeCharacterCreationBackgroundSkillSelection,
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
-  type CharacterCreationCareerRollKey,
   type CharacterCreationDraft,
   type CharacterCreationFlow,
   type CharacterCreationTermSkillTable
@@ -517,32 +514,7 @@ const characterCreationHomeworldPublisher =
     setError
   })
 
-const publishCharacterCreationTermCascadeResolution = async (
-  flow: CharacterCreationFlow | null,
-  cascadeSkill: string,
-  selection: string,
-  fallbackFlow: CharacterCreationFlow
-): Promise<void> => {
-  if (characterCreationReadOnly || !flow || flow.step !== 'career') return
-  await ensureCharacterCreationPublished()
-  const response = await postCharacterCreationCommand(
-    {
-      type: 'ResolveCharacterCreationTermCascadeSkill',
-      ...commandIdentity(),
-      characterId: flow.draft.characterId,
-      cascadeSkill,
-      selection
-    },
-    requestId('resolve-character-term-cascade')
-  )
-  syncCharacterCreationFlowFromRoomState(
-    response.state,
-    flow.draft.characterId,
-    fallbackFlow
-  )
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
+let characterCreationCommandController: CharacterCreationCommandController
 
 const fetchState = async (): Promise<void> => {
   const message = await fetchRoomState({ roomId, viewerRole, actorId })
@@ -812,6 +784,22 @@ const renderCharacterCreationWizard = () => {
   }
   renderCharacterCreationWizardControls()
 }
+
+characterCreationCommandController = createCharacterCreationCommandController({
+  getFlow: () => characterCreationFlow,
+  setError,
+  isReadOnly: () => characterCreationReadOnly,
+  syncFields: syncCharacterCreationWizardFields,
+  ensurePublished: ensureCharacterCreationPublished,
+  postCharacterCreationCommand,
+  commandIdentity,
+  requestId,
+  waitForDiceRevealOrDelay,
+  syncFlowFromRoomState: syncCharacterCreationFlowFromRoomState,
+  autoAdvanceSetup: autoAdvanceCharacterCreationSetup,
+  renderWizard: renderCharacterCreationWizard,
+  scrollToTop: () => characterCreationPanel.scrollToTop()
+})
 
 const renderCharacterCreationNextStep = (
   flow: CharacterCreationFlow
@@ -1114,9 +1102,9 @@ const renderCharacterCreationTermSkillTables = (
     button.title = action.reason
     button.disabled = action.disabled
     bindAsyncActionButton(button, () =>
-      rollCharacterCreationTermSkill(
-        action.table as CharacterCreationTermSkillTable
-      ).catch((error) => setError(error.message))
+      characterCreationCommandController
+        .rollTermSkill(action.table as CharacterCreationTermSkillTable)
+        .catch((error) => setError(error.message))
     )
     buttons.append(button)
   }
@@ -1140,9 +1128,9 @@ const renderCharacterCreationReenlistmentRollButton = (
   button.type = 'button'
   button.textContent = action.label
   bindAsyncActionButton(button, () =>
-    rollCharacterCreationReenlistment().catch((error) =>
-      setError(error.message)
-    )
+    characterCreationCommandController
+      .rollReenlistment()
+      .catch((error) => setError(error.message))
   )
   const note = document.createElement('small')
   note.textContent = action.reason
@@ -1162,7 +1150,9 @@ const renderCharacterCreationAgingRollButton = (
   button.type = 'button'
   button.textContent = action.label
   bindAsyncActionButton(button, () =>
-    rollCharacterCreationAging().catch((error) => setError(error.message))
+    characterCreationCommandController
+      .rollAging()
+      .catch((error) => setError(error.message))
   )
   const note = document.createElement('small')
   const modifier = action.modifier === 0 ? '' : ` (${action.modifier})`
@@ -1401,12 +1391,14 @@ const renderCharacterCreationCascadeChoice = (
       const nextFlow = characterCreationFlow
       renderCharacterCreationWizard()
       if (scope === 'term') {
-        publishCharacterCreationTermCascadeResolution(
-          nextFlow,
-          cascade.cascadeSkill,
-          option.label,
-          nextFlow
-        ).catch((error) => setError(error.message))
+        characterCreationCommandController
+          .publishTermCascadeResolution(
+            nextFlow,
+            cascade.cascadeSkill,
+            option.label,
+            nextFlow
+          )
+          .catch((error) => setError(error.message))
       } else {
         characterCreationHomeworldPublisher.publishCascadeResolution(
           nextFlow,
@@ -1485,9 +1477,9 @@ const renderCharacterCreationCharacteristicGrid = (
       }
       const characteristicKey = field.key as CharacteristicKey
       bindAsyncActionButton(rollButton, () =>
-        rollCharacterCreationCharacteristic(characteristicKey).catch((error) =>
-          setError(error.message)
-        )
+        characterCreationCommandController
+          .rollCharacteristic(characteristicKey)
+          .catch((error) => setError(error.message))
       )
       modifier.textContent = ''
       row.append(rollButton, modifier)
@@ -1852,9 +1844,9 @@ const renderCharacterCreationCharacteristicRollButton = (
   button.textContent = viewModel.label
   button.disabled = viewModel.disabled
   bindAsyncActionButton(button, () =>
-    rollCharacterCreationCharacteristic().catch((error) =>
-      setError(error.message)
-    )
+    characterCreationCommandController
+      .rollCharacteristic()
+      .catch((error) => setError(error.message))
   )
   const hint = document.createElement('small')
   hint.textContent = viewModel.reason
@@ -1876,7 +1868,9 @@ const renderCharacterCreationCareerRollButton = (
   button.textContent = viewModel.label
   button.disabled = viewModel.disabled
   bindAsyncActionButton(button, () =>
-    rollCharacterCreationCareerCheck().catch((error) => setError(error.message))
+    characterCreationCommandController
+      .rollCareerCheck()
+      .catch((error) => setError(error.message))
   )
   const hint = document.createElement('small')
   hint.textContent = viewModel.reason
@@ -1900,9 +1894,9 @@ const renderCharacterCreationBasicTrainingButton = (
     if (!characterCreationFlow) return
     syncCharacterCreationWizardFields()
     setError('')
-    return completeCharacterCreationBasicTraining().catch((error) =>
-      setError(error.message)
-    )
+    return characterCreationCommandController
+      .completeBasicTraining()
+      .catch((error) => setError(error.message))
   })
   const hint = document.createElement('small')
   hint.textContent = viewModel.reason
@@ -1973,86 +1967,6 @@ const renderCharacterCreationMusteringOut = (
   return panel
 }
 
-const rollCharacterCreationCharacteristic = async (
-  characteristicKey: CharacteristicKey | null = null
-): Promise<void> => {
-  if (!characterCreationFlow) return
-  setError('')
-  syncCharacterCreationWizardFields()
-
-  const rollAction = deriveCharacterCreationCharacteristicRollButton(
-    characterCreationFlow
-  )
-  if (!rollAction) return
-  const targetKey =
-    characteristicKey ??
-    deriveNextCharacterCreationCharacteristicRoll(characterCreationFlow)?.key ??
-    null
-
-  if (!targetKey) {
-    setError('Choose a characteristic to roll')
-    return
-  }
-
-  await ensureCharacterCreationPublished()
-
-  const response = await postCharacterCreationCommand(
-    {
-      type: 'RollCharacterCreationCharacteristic',
-      ...commandIdentity(),
-      characterId: characterCreationFlow.draft.characterId,
-      characteristic: targetKey
-    },
-    requestId('characteristic-roll')
-  )
-  const latestRoll =
-    response.state?.diceLog?.[response.state.diceLog.length - 1]
-  if (!latestRoll) {
-    setError('Characteristic roll did not return a dice result')
-    return
-  }
-
-  await waitForDiceRevealOrDelay(latestRoll)
-  const fallbackFlow = applyCharacterCreationCharacteristicRoll(
-    characterCreationFlow,
-    latestRoll.total,
-    targetKey
-  ).flow
-  syncCharacterCreationFlowFromRoomState(
-    response.state,
-    characterCreationFlow.draft.characterId,
-    fallbackFlow
-  )
-  autoAdvanceCharacterCreationSetup()
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
-
-const completeCharacterCreationBasicTraining = async () => {
-  if (!characterCreationFlow) return
-  const characterId = characterCreationFlow.draft.characterId
-  const fallbackFlow = applyCharacterCreationBasicTraining(
-    characterCreationFlow
-  ).flow
-
-  await ensureCharacterCreationPublished()
-  const response = await postCharacterCreationCommand(
-    {
-      type: 'CompleteCharacterCreationBasicTraining',
-      ...commandIdentity(),
-      characterId
-    },
-    requestId('complete-character-basic-training')
-  )
-  syncCharacterCreationFlowFromRoomState(
-    response.state,
-    characterId,
-    fallbackFlow
-  )
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
-
 const rollCharacterCreationMusteringBenefit = async (
   kind: BenefitKind
 ): Promise<void> => {
@@ -2106,181 +2020,10 @@ const rollCharacterCreationMusteringBenefit = async (
   characterCreationPanel.scrollToTop()
 }
 
-const rollCharacterCreationTermSkill = async (
-  table: CharacterCreationTermSkillTable
-): Promise<void> => {
-  if (!characterCreationFlow) return
-  setError('')
-  syncCharacterCreationWizardFields()
-
-  const action = deriveCharacterCreationTermSkillTableActions(
-    characterCreationFlow
-  ).find((candidate) => candidate.table === table)
-  if (!action || action.disabled) return
-
-  await ensureCharacterCreationPublished()
-  const characterId = characterCreationFlow.draft.characterId
-  const response = await postCharacterCreationCommand(
-    {
-      type: 'RollCharacterCreationTermSkill',
-      ...commandIdentity(),
-      characterId,
-      table
-    },
-    requestId('term-skill-roll')
-  )
-  const latestRoll =
-    response.state?.diceLog?.[response.state.diceLog.length - 1]
-  if (!latestRoll) {
-    setError('Term skill roll did not return a dice result')
-    return
-  }
-
-  await waitForDiceRevealOrDelay(latestRoll)
-  const fallbackFlow = applyCharacterCreationTermSkillRoll({
-    flow: characterCreationFlow,
-    table,
-    roll: latestRoll.total
-  }).flow
-  syncCharacterCreationFlowFromRoomState(
-    response.state,
-    characterId,
-    fallbackFlow
-  )
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
-
-const rollCharacterCreationReenlistment = async (): Promise<void> => {
-  if (!characterCreationFlow) return
-  setError('')
-  syncCharacterCreationWizardFields()
-
-  await ensureCharacterCreationPublished()
-  const characterId = characterCreationFlow.draft.characterId
-  const response = await postCharacterCreationCommand(
-    {
-      type: 'ResolveCharacterCreationReenlistment',
-      ...commandIdentity(),
-      characterId
-    },
-    requestId('reenlistment-roll')
-  )
-  const latestRoll =
-    response.state?.diceLog?.[response.state.diceLog.length - 1]
-  if (!latestRoll) {
-    setError('Reenlistment roll did not return a dice result')
-    return
-  }
-
-  await waitForDiceRevealOrDelay(latestRoll)
-  const fallbackFlow = applyCharacterCreationReenlistmentRoll(
-    characterCreationFlow,
-    latestRoll.total
-  ).flow
-  syncCharacterCreationFlowFromRoomState(
-    response.state,
-    characterId,
-    fallbackFlow
-  )
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
-
-const rollCharacterCreationAging = async (): Promise<void> => {
-  if (!characterCreationFlow) return
-  setError('')
-  syncCharacterCreationWizardFields()
-
-  const action = deriveNextCharacterCreationAgingRoll(characterCreationFlow)
-
-  await ensureCharacterCreationPublished()
-  const characterId = characterCreationFlow.draft.characterId
-  const response = await postCharacterCreationCommand(
-    {
-      type: 'ResolveCharacterCreationAging',
-      ...commandIdentity(),
-      characterId
-    },
-    requestId('aging-roll')
-  )
-  const latestRoll =
-    response.state?.diceLog?.[response.state.diceLog.length - 1]
-  if (!latestRoll) {
-    setError('Aging roll did not return a dice result')
-    return
-  }
-
-  await waitForDiceRevealOrDelay(latestRoll)
-  const fallbackFlow = applyCharacterCreationAgingRoll(
-    characterCreationFlow,
-    latestRoll.total + (action?.modifier ?? 0)
-  ).flow
-  syncCharacterCreationFlowFromRoomState(
-    response.state,
-    characterId,
-    fallbackFlow
-  )
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
-
 const renderCharacterCreationReview = (
   flow: CharacterCreationFlow
 ): HTMLElement => {
   return renderCharacterCreationReviewView(document, flow)
-}
-
-const rollCharacterCreationCareerCheck = async (): Promise<void> => {
-  if (!characterCreationFlow) return
-  setError('')
-  syncCharacterCreationWizardFields()
-
-  const rollAction = deriveCharacterCreationCareerRollButton(
-    characterCreationFlow
-  )
-  if (!rollAction) return
-
-  await ensureCharacterCreationPublished()
-
-  const commandTypeByRollKey = {
-    survivalRoll: 'ResolveCharacterCreationSurvival',
-    commissionRoll: 'ResolveCharacterCreationCommission',
-    advancementRoll: 'ResolveCharacterCreationAdvancement'
-  } satisfies Partial<
-    Record<CharacterCreationCareerRollKey, GameCommand['type']>
-  >
-  const commandType =
-    commandTypeByRollKey[rollAction.key as keyof typeof commandTypeByRollKey]
-  if (!commandType) return
-  const characterId = characterCreationFlow.draft.characterId
-  const response = await postCharacterCreationCommand(
-    {
-      type: commandType,
-      ...commandIdentity(),
-      characterId
-    },
-    requestId('career-roll')
-  )
-  const latestRoll =
-    response.state?.diceLog?.[response.state.diceLog.length - 1]
-  if (!latestRoll) {
-    setError('Career roll did not return a dice result')
-    return
-  }
-
-  await waitForDiceRevealOrDelay(latestRoll)
-  const fallbackFlow = applyCharacterCreationCareerRoll(
-    characterCreationFlow,
-    latestRoll.total
-  ).flow
-  syncCharacterCreationFlowFromRoomState(
-    response.state,
-    characterId,
-    fallbackFlow
-  )
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
 }
 
 const applyBoardFileDimensions = async () => {
