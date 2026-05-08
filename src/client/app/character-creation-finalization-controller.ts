@@ -1,0 +1,156 @@
+import type { PieceId } from '../../shared/ids.js'
+import type { BoardState, GameState, PieceState } from '../../shared/state.js'
+import type { ClientIdentity } from '../game-commands.js'
+import type {
+  BoardCommand,
+  CharacterCreationCommand
+} from './app-command-router.js'
+import {
+  createBoardCommand,
+  createGameCommand,
+  type BootstrapCommandContext
+} from './bootstrap-flow.js'
+import {
+  deriveCharacterCreationCommands,
+  type CharacterCreationFlow
+} from './character-creation-flow.js'
+import { deriveCharacterCreationValidationSummary } from './character-creation-view.js'
+import { planCreateCharacterTokenCommand } from './piece-command-plan.js'
+
+export interface CharacterCreationFinalizationControllerDeps {
+  getFlow: () => CharacterCreationFlow | null
+  setFlow: (flow: CharacterCreationFlow | null) => void
+  getState: () => GameState | null
+  getSelectedBoard: () => BoardState | null
+  getSelectedBoardPieces: () => readonly PieceState[]
+  identity: () => ClientIdentity
+  bootstrapIdentity: () => BootstrapCommandContext
+  requestId: (scope: string) => string
+  syncFields: () => void
+  reportError: (message: string) => void
+  renderWizard: () => void
+  closePanel: () => void
+  openCharacterSheet: () => void
+  renderApp: () => void
+  selectPiece: (pieceId: PieceId) => void
+  createGame: (
+    command: ReturnType<typeof createGameCommand>,
+    requestId: string
+  ) => Promise<unknown>
+  createBoard: (command: BoardCommand, requestId: string) => Promise<unknown>
+  postCharacterCreationCommands: (
+    commands: readonly CharacterCreationCommand[]
+  ) => Promise<unknown>
+  postBoardCommand: (command: BoardCommand) => Promise<unknown>
+}
+
+export interface CharacterCreationFinalizationController {
+  createToken: () => Promise<PieceId | null>
+  finish: () => Promise<void>
+}
+
+export const createCharacterCreationFinalizationController = ({
+  getFlow,
+  setFlow,
+  getState,
+  getSelectedBoard,
+  getSelectedBoardPieces,
+  identity,
+  bootstrapIdentity,
+  requestId,
+  syncFields,
+  reportError,
+  renderWizard,
+  closePanel,
+  openCharacterSheet,
+  renderApp,
+  selectPiece,
+  createGame,
+  createBoard,
+  postCharacterCreationCommands,
+  postBoardCommand
+}: CharacterCreationFinalizationControllerDeps): CharacterCreationFinalizationController => {
+  const createToken = async (): Promise<PieceId | null> => {
+    const flow = getFlow()
+    if (!flow) return null
+
+    if (!getSelectedBoard()) {
+      await createBoard(
+        createBoardCommand(bootstrapIdentity()) as BoardCommand,
+        requestId('create-board-for-wizard-character')
+      )
+    }
+
+    const state = getState()
+    const board = getSelectedBoard()
+    if (!state || !board) return null
+
+    const plan = planCreateCharacterTokenCommand({
+      identity: identity(),
+      state,
+      board,
+      characterId: flow.draft.characterId,
+      name: flow.draft.name,
+      existingPieceCount: getSelectedBoardPieces().length
+    })
+    if (!plan.ok) {
+      reportError(plan.error)
+      return null
+    }
+
+    await postBoardCommand(plan.command)
+    selectPiece(plan.pieceId)
+    return plan.pieceId
+  }
+
+  const finish = async (): Promise<void> => {
+    const flow = getFlow()
+    if (!flow) return
+
+    reportError('')
+    syncFields()
+    const syncedFlow = getFlow()
+    if (!syncedFlow) return
+
+    const validation = deriveCharacterCreationValidationSummary({
+      ...syncedFlow,
+      step: 'review'
+    })
+    if (!validation.ok) {
+      reportError(validation.errors.join(', '))
+      renderWizard()
+      return
+    }
+
+    if (!getState()) {
+      await createGame(
+        createGameCommand(bootstrapIdentity()),
+        requestId('create-game-for-wizard-character')
+      )
+    }
+
+    const commands = deriveCharacterCreationCommands(syncedFlow, {
+      identity: identity(),
+      state: getState()
+    })
+    if (commands.length === 0) {
+      reportError('Character creation needs the current room state')
+      return
+    }
+
+    await postCharacterCreationCommands(commands as CharacterCreationCommand[])
+
+    await createToken()
+
+    setFlow(null)
+    renderWizard()
+    closePanel()
+    openCharacterSheet()
+    renderApp()
+  }
+
+  return {
+    createToken,
+    finish
+  }
+}

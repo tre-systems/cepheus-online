@@ -68,6 +68,10 @@ import { createCharacterCreationHomeworldPublisher } from './character-creation-
 import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './character-creation-mustering-view.js'
 import { createCharacterCreationLifecycleController } from './character-creation-lifecycle-controller.js'
 import { createCharacterCreationPublicationController } from './character-creation-publication-controller.js'
+import {
+  createCharacterCreationFinalizationController,
+  type CharacterCreationFinalizationController
+} from './character-creation-finalization-controller.js'
 import { renderCharacterCreationTermResolution as renderCharacterCreationTermResolutionView } from './character-creation-term-resolution-view.js'
 import {
   createCharacterCreationWizardController,
@@ -80,7 +84,6 @@ import {
   applyParsedCharacterCreationDraftPatch,
   characterCreationCareerNames,
   completeCharacterCreationCareerTerm,
-  deriveCharacterCreationCommands,
   removeCharacterCreationBackgroundSkillSelection,
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
@@ -92,8 +95,7 @@ import {
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationDeathViewModel,
   deriveCharacterCreationFieldViewModels,
-  deriveCharacterCreationNextStepViewModel,
-  deriveCharacterCreationValidationSummary
+  deriveCharacterCreationNextStepViewModel
 } from './character-creation-view.js'
 import {
   renderCharacterCreationReview as renderCharacterCreationReviewView,
@@ -107,7 +109,6 @@ import {
   readSelectedImageFileAsDataUrl
 } from './image-assets.js'
 import {
-  createBoardCommand,
   createGameCommand,
   nextBootstrapCommand,
   parseNonNegativeIntegerValue,
@@ -149,10 +150,7 @@ import {
   resolveAppLocationIdentity
 } from './app-location.js'
 import { prepareLiveActivityApplication } from './live-activity-client.js'
-import {
-  planCreateCharacterTokenCommand,
-  planCreatePieceCommands
-} from './piece-command-plan.js'
+import { planCreatePieceCommands } from './piece-command-plan.js'
 import { createPwaInstallController } from './pwa-install.js'
 import { createRequestIdFactory } from './request-id.js'
 import { createRoomMenuController } from './room-menu-controller.js'
@@ -179,6 +177,7 @@ let characterCreationController: CharacterCreationController
 let characterCreationLifecycleController: ReturnType<
   typeof createCharacterCreationLifecycleController
 >
+let characterCreationFinalizationController: CharacterCreationFinalizationController
 let characterCreationWizardController: CharacterCreationWizardController
 const setStatus = (text: string): void => {
   els.status.textContent = text
@@ -507,6 +506,31 @@ characterCreationLifecycleController =
     reportError: setError
   })
 
+characterCreationFinalizationController =
+  createCharacterCreationFinalizationController({
+    getFlow: () => characterCreationController.flow(),
+    setFlow: (flow) => {
+      characterCreationController.setFlow(flow)
+    },
+    getState: () => state,
+    getSelectedBoard: () => selectedBoard(),
+    getSelectedBoardPieces: () => boardPieces(),
+    identity: clientIdentity,
+    bootstrapIdentity,
+    requestId,
+    syncFields: () => syncCharacterCreationWizardFields(),
+    reportError: setError,
+    renderWizard: () => renderCharacterCreationWizard(),
+    closePanel: () => characterCreationPanel.close(),
+    openCharacterSheet: () => characterSheetController.setOpen(true),
+    renderApp: () => render(),
+    selectPiece,
+    createGame: postCommand,
+    createBoard: postBoardCommand,
+    postCharacterCreationCommands,
+    postBoardCommand
+  })
+
 const creationActivityFeedController = createCreationActivityFeedController({
   elements: { feed: els.creationActivityFeed },
   getViewerActorId: () => actorId,
@@ -541,7 +565,7 @@ characterCreationWizardController = createCharacterCreationWizardController({
   selectPiece,
   closeCharacterSheet: () => characterSheetController.setOpen(false),
   ensurePublished: ensureCharacterCreationPublished,
-  finish: () => finishCharacterCreationWizard(),
+  finish: () => characterCreationFinalizationController.finish(),
   renderWizard: () => renderCharacterCreationWizard(),
   setError
 })
@@ -1238,80 +1262,6 @@ const createCustomBoard = async () => {
   els.boardImageInput.value = ''
   els.boardImageFileInput.value = ''
   els.roomDialog.close()
-  render()
-}
-
-const createWizardToken = async () => {
-  const flow = characterCreationController.flow()
-  if (!flow) return
-  if (!selectedBoard()) {
-    await postBoardCommand(
-      createBoardCommand(bootstrapIdentity()) as BoardCommand,
-      requestId('create-board-for-wizard-character')
-    )
-  }
-
-  const board = selectedBoard()
-  if (!state || !board) return
-
-  const plan = planCreateCharacterTokenCommand({
-    identity: clientIdentity(),
-    state,
-    board,
-    characterId: flow.draft.characterId,
-    name: flow.draft.name,
-    existingPieceCount: boardPieces().length
-  })
-  if (!plan.ok) {
-    setError(plan.error)
-    return
-  }
-
-  await postBoardCommand(plan.command)
-  selectPiece(plan.pieceId)
-}
-
-const finishCharacterCreationWizard = async () => {
-  const flow = characterCreationController.flow()
-  if (!flow) return
-  setError('')
-  syncCharacterCreationWizardFields()
-  const syncedFlow = characterCreationController.flow()
-  if (!syncedFlow) return
-
-  const validation = deriveCharacterCreationValidationSummary({
-    ...syncedFlow,
-    step: 'review'
-  })
-  if (!validation.ok) {
-    setError(validation.errors.join(', '))
-    renderCharacterCreationWizard()
-    return
-  }
-
-  if (!state) {
-    await postCommand(
-      createGameCommand(bootstrapIdentity()),
-      requestId('create-game-for-wizard-character')
-    )
-  }
-
-  const commands = deriveCharacterCreationCommands(syncedFlow, {
-    identity: clientIdentity(),
-    state
-  })
-  if (commands.length === 0) {
-    setError('Character creation needs the current room state')
-    return
-  }
-
-  await postCharacterCreationCommands(commands as CharacterCreationCommand[])
-
-  await createWizardToken()
-  characterCreationController.setFlow(null)
-  renderCharacterCreationWizard()
-  characterCreationPanel.close()
-  characterSheetController.setOpen(true)
   render()
 }
 
