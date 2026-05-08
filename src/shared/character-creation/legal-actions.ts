@@ -388,11 +388,11 @@ const actionDefinitions = {
     rollRequirement: { key: 'survival', dice: '2d6' }
   },
   resolveMishap: {
-    commandTypes: ['AdvanceCharacterCreation'],
+    commandTypes: ['ResolveCharacterCreationMishap'],
     rollRequirement: { key: 'mishap', dice: '2d6' }
   },
   confirmDeath: {
-    commandTypes: ['AdvanceCharacterCreation']
+    commandTypes: ['ConfirmCharacterCreationDeath']
   },
   rollCommission: {
     commandTypes: ['ResolveCharacterCreationCommission'],

@@ -47,6 +47,8 @@ export type CharacterCreationCommand = Extract<
       | 'EnterCharacterCreationDrifter'
       | 'CompleteCharacterCreationBasicTraining'
       | 'ResolveCharacterCreationSurvival'
+      | 'ResolveCharacterCreationMishap'
+      | 'ConfirmCharacterCreationDeath'
       | 'ResolveCharacterCreationCommission'
       | 'SkipCharacterCreationCommission'
       | 'ResolveCharacterCreationAdvancement'
@@ -94,6 +96,8 @@ export const appCommandRouteByType = {
   EnterCharacterCreationDrifter: 'characterCreation',
   CompleteCharacterCreationBasicTraining: 'characterCreation',
   ResolveCharacterCreationSurvival: 'characterCreation',
+  ResolveCharacterCreationMishap: 'characterCreation',
+  ConfirmCharacterCreationDeath: 'characterCreation',
   ResolveCharacterCreationCommission: 'characterCreation',
   SkipCharacterCreationCommission: 'characterCreation',
   ResolveCharacterCreationAdvancement: 'characterCreation',

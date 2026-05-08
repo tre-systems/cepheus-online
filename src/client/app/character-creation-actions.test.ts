@@ -79,15 +79,25 @@ const assertNoGenericLifecycleAdvance = (
     ReturnType<typeof deriveCharacterCreationActionPlan>
   >['actions']
 ) => {
+  const forbiddenGenericLifecycleEvents = new Set([
+    'REENLIST',
+    'FORCED_REENLIST',
+    'LEAVE_CAREER',
+    'REENLIST_BLOCKED',
+    'CONTINUE_CAREER',
+    'FINISH_MUSTERING',
+    'MISHAP_RESOLVED',
+    'DEATH_CONFIRMED'
+  ])
+
   for (const availableAction of actions) {
     const command = availableAction.command
     if (command?.type !== 'AdvanceCharacterCreation') continue
-    assert.equal(command.creationEvent.type !== 'REENLIST', true)
-    assert.equal(command.creationEvent.type !== 'FORCED_REENLIST', true)
-    assert.equal(command.creationEvent.type !== 'LEAVE_CAREER', true)
-    assert.equal(command.creationEvent.type !== 'REENLIST_BLOCKED', true)
-    assert.equal(command.creationEvent.type !== 'CONTINUE_CAREER', true)
-    assert.equal(command.creationEvent.type !== 'FINISH_MUSTERING', true)
+    assert.equal(
+      forbiddenGenericLifecycleEvents.has(command.creationEvent.type),
+      false,
+      `expected ${command.creationEvent.type} to use a semantic command`
+    )
   }
 }
 
@@ -358,6 +368,31 @@ describe('character creation actions', () => {
       actorId: identity.actorId,
       characterId: 'mae' as CharacterId
     })
+  })
+
+  it('uses semantic commands for mishap resolution and death confirmation', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(creation('MISHAP'))
+    )
+
+    assert.deepEqual(
+      plan?.actions.map((availableAction) => availableAction.key),
+      ['resolve-mishap', 'death-confirmed']
+    )
+    assert.deepEqual(plan?.actions[0]?.command, {
+      type: 'ResolveCharacterCreationMishap',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId
+    })
+    assert.deepEqual(plan?.actions[1]?.command, {
+      type: 'ConfirmCharacterCreationDeath',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId
+    })
+    assertNoGenericLifecycleAdvance(plan?.actions ?? [])
   })
 
   it('uses the semantic command for completing basic training', () => {

@@ -236,6 +236,38 @@
     "expectedSeq": 27
   },
   {
+    "name": "character creation mishap resolution command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-resolve-mishap",
+      "command": {
+        "type": "ResolveCharacterCreationMishap",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 28,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "ResolveCharacterCreationMishap",
+    "expectedSeq": 28
+  },
+  {
+    "name": "character creation death confirmation command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-confirm-death",
+      "command": {
+        "type": "ConfirmCharacterCreationDeath",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 28,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "ConfirmCharacterCreationDeath",
+    "expectedSeq": 28
+  },
+  {
     "name": "character creation reenlistment resolution command",
     "message": {
       "type": "command",

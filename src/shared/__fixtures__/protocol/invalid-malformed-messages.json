@@ -95,6 +95,42 @@
     "errorMessage": "FINISH_MUSTERING must use CompleteCharacterCreationMustering"
   },
   {
+    "name": "generic mishap resolution command",
+    "message": {
+      "type": "command",
+      "requestId": "bad-generic-mishap-resolution",
+      "command": {
+        "type": "AdvanceCharacterCreation",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": "crew-scout-1",
+        "creationEvent": {
+          "type": "MISHAP_RESOLVED"
+        }
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "MISHAP_RESOLVED must use ResolveCharacterCreationMishap"
+  },
+  {
+    "name": "generic death confirmation command",
+    "message": {
+      "type": "command",
+      "requestId": "bad-generic-death-confirmation",
+      "command": {
+        "type": "AdvanceCharacterCreation",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": "crew-scout-1",
+        "creationEvent": {
+          "type": "DEATH_CONFIRMED"
+        }
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "DEATH_CONFIRMED must use ConfirmCharacterCreationDeath"
+  },
+  {
     "name": "malformed commission roll fact",
     "message": {
       "type": "command",

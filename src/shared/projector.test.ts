@@ -1957,6 +1957,141 @@ describe('game state projection', () => {
     )
   })
 
+  it('projects semantic mishap resolution with legacy history compatibility', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Mara Vale'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'MISHAP',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Scout',
+              skills: ['Vacc Suit-1'],
+              skillsAndTraining: ['Vacc Suit-1'],
+              benefits: [],
+              complete: false,
+              canReenlist: false,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 3
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          homeworld: null,
+          backgroundSkills: [],
+          pendingCascadeSkills: [],
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationMishapResolved',
+        characterId,
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+
+    assert.deepEqual(creation?.history, [{ type: 'MISHAP_RESOLVED' }])
+    assert.deepEqual(creation?.state.status, 'MUSTERING_OUT')
+    assert.equal(creation?.terms[0]?.complete, true)
+    assert.equal(creation?.terms[0]?.musteringOut, true)
+    assert.equal(state?.eventSeq, 4)
+  })
+
+  it('projects semantic death confirmation with legacy history compatibility', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Mara Vale'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'MISHAP',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          homeworld: null,
+          backgroundSkills: [],
+          pendingCascadeSkills: [],
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationDeathConfirmed',
+        characterId,
+        state: {
+          status: 'DECEASED',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+
+    assert.deepEqual(creation?.history, [{ type: 'DEATH_CONFIRMED' }])
+    assert.deepEqual(creation?.state.status, 'DECEASED')
+    assert.equal(state?.eventSeq, 4)
+  })
+
   it('ignores character creation events for missing characters', () => {
     const missingCharacterId = asCharacterId('missing-character')
     const state = projectGameState([

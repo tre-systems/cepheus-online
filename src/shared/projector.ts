@@ -164,6 +164,8 @@ type CharacterEventType =
   | 'CharacterCreationAdvancementSkipped'
   | 'CharacterCreationAgingResolved'
   | 'CharacterCreationAgingLossesResolved'
+  | 'CharacterCreationMishapResolved'
+  | 'CharacterCreationDeathConfirmed'
   | 'CharacterCreationAnagathicsDecided'
   | 'CharacterCreationReenlistmentResolved'
   | 'CharacterCreationCareerReenlisted'
@@ -337,6 +339,52 @@ const characterEventHandlers = {
       history: [
         ...(character.creation.history ?? []),
         structuredClone(creationEvent)
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationMishapResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const lastTermIndex = character.creation.terms.length - 1
+    const terms = character.creation.terms.map((term, index) =>
+      index === lastTermIndex ? leaveCareerTerm(term) : structuredClone(term)
+    )
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      terms,
+      history: [
+        ...(character.creation.history ?? []),
+        { type: 'MISHAP_RESOLVED' }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationDeathConfirmed: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        { type: 'DEATH_CONFIRMED' }
       ]
     }
     nextState.eventSeq = envelope.seq

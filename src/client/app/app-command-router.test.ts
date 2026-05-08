@@ -234,6 +234,8 @@ describe('app command router dispatch', () => {
       EnterCharacterCreationDrifter: 'characterCreation',
       CompleteCharacterCreationBasicTraining: 'characterCreation',
       ResolveCharacterCreationSurvival: 'characterCreation',
+      ResolveCharacterCreationMishap: 'characterCreation',
+      ConfirmCharacterCreationDeath: 'characterCreation',
       ResolveCharacterCreationCommission: 'characterCreation',
       SkipCharacterCreationCommission: 'characterCreation',
       ResolveCharacterCreationAdvancement: 'characterCreation',

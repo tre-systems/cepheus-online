@@ -1898,6 +1898,110 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.message, 'No pending aging losses to resolve')
   })
 
+  it('emits semantic mishap resolution with server-derived transition', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationMishap',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('MISHAP', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 3
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationMishapResolved',
+        characterId,
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits semantic death confirmation with server-derived transition', () => {
+    const result = runCommand(
+      {
+        type: 'ConfirmCharacterCreationDeath',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('MISHAP')
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationDeathConfirmed',
+        characterId,
+        state: {
+          status: 'DECEASED',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('rejects generic mishap and death transitions', () => {
+    const cases = [
+      [
+        { type: 'MISHAP_RESOLVED' as const },
+        'MISHAP_RESOLVED must use ResolveCharacterCreationMishap'
+      ],
+      [
+        { type: 'DEATH_CONFIRMED' as const },
+        'DEATH_CONFIRMED must use ConfirmCharacterCreationDeath'
+      ]
+    ] as const
+
+    for (const [creationEvent, message] of cases) {
+      const result = runCommand(
+        {
+          type: 'AdvanceCharacterCreation',
+          gameId,
+          actorId,
+          characterId,
+          creationEvent
+        },
+        createCreation('MISHAP')
+      )
+
+      assert.equal(result.ok, false)
+      if (result.ok) continue
+      assert.equal(result.error.code, 'invalid_command')
+      assert.equal(result.error.message, message)
+    }
+  })
+
   it('emits a semantic reenlistment event with server-derived roll facts', () => {
     const result = runCommand(
       {

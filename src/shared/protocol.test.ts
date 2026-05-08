@@ -656,6 +656,66 @@ describe('protocol validation', () => {
     })
   })
 
+  it('accepts semantic mishap and death character creation commands', () => {
+    const commands = [
+      'ResolveCharacterCreationMishap',
+      'ConfirmCharacterCreationDeath'
+    ] as const
+
+    for (const type of commands) {
+      const result = decodeClientMessage({
+        type: 'command',
+        requestId: `req-${type}`,
+        command: {
+          type,
+          gameId: 'game-1',
+          actorId: 'user-1',
+          expectedSeq: 7,
+          characterId: 'char-1'
+        }
+      })
+
+      assert.equal(result.ok, true)
+      if (!result.ok) continue
+      assert.equal(result.value.type, 'command')
+      if (result.value.type !== 'command') continue
+      assert.equal(result.value.command.type, type)
+      assert.equal(result.value.command.expectedSeq, 7)
+    }
+  })
+
+  it('rejects generic mishap and death character creation transitions', () => {
+    const cases = [
+      [
+        { type: 'MISHAP_RESOLVED' },
+        'MISHAP_RESOLVED must use ResolveCharacterCreationMishap'
+      ],
+      [
+        { type: 'DEATH_CONFIRMED' },
+        'DEATH_CONFIRMED must use ConfirmCharacterCreationDeath'
+      ]
+    ] as const
+
+    for (const [creationEvent, message] of cases) {
+      const result = decodeClientMessage({
+        type: 'command',
+        requestId: `req-${creationEvent.type}`,
+        command: {
+          type: 'AdvanceCharacterCreation',
+          gameId: 'game-1',
+          actorId: 'user-1',
+          characterId: 'char-1',
+          creationEvent
+        }
+      })
+
+      assert.equal(result.ok, false)
+      if (result.ok) continue
+      assert.equal(result.error.code, 'invalid_command')
+      assert.equal(result.error.message, message)
+    }
+  })
+
   it('preserves career selection qualification and failed fallback facts', () => {
     const result = decodeClientMessage({
       type: 'command',

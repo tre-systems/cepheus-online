@@ -11,13 +11,20 @@ import type {
   CareerCreationActionKey
 } from '../../shared/character-creation/types.js'
 import type { CareerCreationTermSkillTable } from '../../shared/characterCreation.js'
-import type { Command, GameCommand } from '../../shared/commands'
+import type { GameCommand } from '../../shared/commands'
 import type {
   CharacterCreationProjection,
   CharacteristicKey,
   CharacterState
 } from '../../shared/state'
 import type { ClientIdentity } from '../game-commands.js'
+
+type CharacterCreationFairnessCommand = Extract<
+  GameCommand,
+  {
+    type: 'ResolveCharacterCreationMishap' | 'ConfirmCharacterCreationDeath'
+  }
+>
 
 export interface CharacterCreationActionViewModel {
   key: string
@@ -40,19 +47,15 @@ const statusLabel = (status: string): string =>
     .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
     .join(' ')
 
-const advanceCommand = (
+const fairnessCommand = (
   identity: ClientIdentity,
   character: CharacterState,
-  creationEvent: Extract<
-    Command,
-    { type: 'AdvanceCharacterCreation' }
-  >['creationEvent']
-): Command => ({
-  type: 'AdvanceCharacterCreation',
+  type: CharacterCreationFairnessCommand['type']
+): CharacterCreationFairnessCommand => ({
+  type,
   gameId: identity.gameId,
   actorId: identity.actorId,
-  characterId: character.id,
-  creationEvent
+  characterId: character.id
 })
 
 const action = (
@@ -325,7 +328,7 @@ const actionsForLegalKey = (
         action(
           'resolve-mishap',
           'Resolve mishap',
-          advanceCommand(identity, character, { type: 'MISHAP_RESOLVED' })
+          fairnessCommand(identity, character, 'ResolveCharacterCreationMishap')
         )
       ]
     case 'confirmDeath':
@@ -333,7 +336,7 @@ const actionsForLegalKey = (
         action(
           'death-confirmed',
           'Confirm death',
-          advanceCommand(identity, character, { type: 'DEATH_CONFIRMED' }),
+          fairnessCommand(identity, character, 'ConfirmCharacterCreationDeath'),
           'secondary'
         )
       ]

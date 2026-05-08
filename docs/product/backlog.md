@@ -486,12 +486,12 @@ survival, commission, advancement, term skill rolls, aging, reenlistment,
 career reenlistment, career exit, post-mustering continuation, mustering
 benefits, mustering completion, and finalization. `AdvanceCharacterCreation`
 is referee-only and now rejects the fact-bearing reenlistment, leave-career,
-continue-career, and mustering-benefit payloads that have semantic commands.
-The remaining high-value gap is removing the rest of the generic transition
-bridge and making all pending decisions projection-owned. P1: any remaining
-roll-bearing or rules-bearing `AdvanceCharacterCreation` facts should be
-rejected or migrated because dice and outcome facts must come from semantic
-server commands/events.
+continue-career, mustering-benefit, and no-benefit `FINISH_MUSTERING` payloads
+that have semantic commands. The remaining high-value gap is migrating or
+fencing the death/mishap transition facts and making all pending decisions
+projection-owned. P1: any remaining roll-bearing or rules-bearing
+`AdvanceCharacterCreation` facts should be rejected or migrated because dice
+and outcome facts must come from semantic server commands/events.
 
 Tasks:
 
@@ -504,17 +504,14 @@ Tasks:
 - Maintain backward compatibility only as a short bridge for the current UI.
   New rules work should add semantic events first, then adapt the UI.
 - Finish the remaining `AdvanceCharacterCreation` migration in this order:
-  1. Replace generic `FINISH_MUSTERING` without a benefit payload with
-     `CompleteCharacterCreationMustering` everywhere, then reject the generic
-     payload outside replay compatibility.
-  2. Add explicit optional-variant commands/events for `MISHAP_RESOLVED` and
+  1. Add explicit optional-variant commands/events for `MISHAP_RESOLVED` and
      `DEATH_CONFIRMED`, or keep them fenced until the mishap variant is
      implemented. These are the highest-value remaining rules-bearing generic
      payloads.
-  3. Remove development/bootstrap reliance on generic `SET_CHARACTERISTICS`
+  2. Remove development/bootstrap reliance on generic `SET_CHARACTERISTICS`
      and `SELECT_CAREER`, or isolate it as referee-only fixture/backfill code
      with tests proving production UI cannot use it.
-  4. Keep `CharacterCreationTransitioned` only for historical replay while new
+  3. Keep `CharacterCreationTransitioned` only for historical replay while new
      production rules work emits semantic events.
 - Finish updating `deriveLiveActivities()` to read semantic events directly
   instead of parsing coarse transition payloads where possible.
@@ -887,11 +884,11 @@ The next batch should run like this, in this order:
 
 1. Remove or fence the remaining generic character creation transition bridge.
    Done: generic reenlist, forced-reenlist, leave-career, blocked-reenlist,
-   continue-career, and mustering-benefit fact payloads now point at semantic
-   commands. Next: migrate/reject generic `FINISH_MUSTERING` without a benefit
-   payload, add or fence semantic death/mishap resolution commands, and isolate
-   the remaining generic `SET_CHARACTERISTICS`/`SELECT_CAREER` bootstrap or
-   fixture paths away from production UI.
+   continue-career, mustering-benefit, and no-benefit `FINISH_MUSTERING` fact
+   payloads now point at semantic commands. Next: add or fence semantic
+   death/mishap resolution commands, then isolate the remaining generic
+   `SET_CHARACTERISTICS`/`SELECT_CAREER` bootstrap or fixture paths away from
+   production UI.
 2. Finish the next architecture cleanup already underway: shrink `app.ts`,
    extract the character creation feature boundary, move rendering toward a
    signal-driven projection-fed model, split the projector registry by domain,

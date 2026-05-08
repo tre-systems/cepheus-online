@@ -474,6 +474,10 @@ const semanticCommandForGenericCreationEvent = (
       return 'ResolveCharacterCreationCommission'
     case 'COMPLETE_ADVANCEMENT':
       return 'ResolveCharacterCreationAdvancement'
+    case 'DEATH_CONFIRMED':
+      return 'ConfirmCharacterCreationDeath'
+    case 'MISHAP_RESOLVED':
+      return 'ResolveCharacterCreationMishap'
     case 'RESOLVE_REENLISTMENT':
       return 'ResolveCharacterCreationReenlistment'
     case 'REENLIST':
@@ -2841,6 +2845,96 @@ export const deriveEventsForCommand = (
           characteristicPatch: resolved.value.characteristicPatch,
           state: creation.value.state,
           creationComplete: creation.value.creationComplete
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationMishap': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!character.creation) {
+        return err(
+          commandError(
+            'missing_entity',
+            'Character creation has not been started'
+          )
+        )
+      }
+      const creationEvent = { type: 'MISHAP_RESOLVED' } as const
+      if (
+        !canTransitionCareerCreationState(
+          character.creation.state,
+          creationEvent
+        )
+      ) {
+        return err(
+          commandError(
+            'invalid_command',
+            `MISHAP_RESOLVED is not valid from ${character.creation.state.status}`
+          )
+        )
+      }
+
+      const nextState = transitionCareerCreationState(
+        character.creation.state,
+        creationEvent
+      )
+
+      return ok([
+        {
+          type: 'CharacterCreationMishapResolved',
+          characterId: command.characterId,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'ConfirmCharacterCreationDeath': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!character.creation) {
+        return err(
+          commandError(
+            'missing_entity',
+            'Character creation has not been started'
+          )
+        )
+      }
+      const creationEvent = { type: 'DEATH_CONFIRMED' } as const
+      if (
+        !canTransitionCareerCreationState(
+          character.creation.state,
+          creationEvent
+        )
+      ) {
+        return err(
+          commandError(
+            'invalid_command',
+            `DEATH_CONFIRMED is not valid from ${character.creation.state.status}`
+          )
+        )
+      }
+
+      const nextState = transitionCareerCreationState(
+        character.creation.state,
+        creationEvent
+      )
+
+      return ok([
+        {
+          type: 'CharacterCreationDeathConfirmed',
+          characterId: command.characterId,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
         }
       ])
     }

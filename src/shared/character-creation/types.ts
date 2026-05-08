@@ -186,6 +186,8 @@ export type CareerCreationServerCommandType =
   | 'SkipCharacterCreationAdvancement'
   | 'ResolveCharacterCreationAging'
   | 'ResolveCharacterCreationAgingLosses'
+  | 'ResolveCharacterCreationMishap'
+  | 'ConfirmCharacterCreationDeath'
   | 'ResolveCharacterCreationReenlistment'
   | 'ReenlistCharacterCreationCareer'
   | 'LeaveCharacterCreationCareer'

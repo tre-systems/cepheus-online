@@ -110,7 +110,9 @@ const forbiddenGenericLifecycleEvents = new Set([
   'LEAVE_CAREER',
   'REENLIST_BLOCKED',
   'CONTINUE_CAREER',
-  'FINISH_MUSTERING'
+  'FINISH_MUSTERING',
+  'MISHAP_RESOLVED',
+  'DEATH_CONFIRMED'
 ])
 
 const assertNoGenericLifecycleAdvance = (

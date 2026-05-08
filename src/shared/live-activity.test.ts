@@ -97,6 +97,47 @@ describe('live activity derivation', () => {
     })
   })
 
+  it('derives semantic mishap and death character creation activity', () => {
+    const activities = deriveLiveActivities([
+      envelope(3, {
+        type: 'CharacterCreationMishapResolved',
+        characterId,
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(4, {
+        type: 'CharacterCreationDeathConfirmed',
+        characterId,
+        state: {
+          status: 'DECEASED',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    assert.deepEqual(
+      activities.map((activity) =>
+        activity.type === 'characterCreation'
+          ? [activity.transition, activity.details, activity.status]
+          : null
+      ),
+      [
+        ['MISHAP_RESOLVED', 'Mishap resolved', 'MUSTERING_OUT'],
+        ['DEATH_CONFIRMED', 'Death confirmed', 'DECEASED']
+      ]
+    )
+  })
+
   it('derives the shared dice reveal target from tactical and creation roll activity', () => {
     const activities = [
       deriveLiveActivity(

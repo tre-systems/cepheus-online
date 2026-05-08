@@ -156,6 +156,18 @@ export type GameEvent =
       creationComplete: boolean
     }
   | {
+      type: 'CharacterCreationMishapResolved'
+      characterId: CharacterId
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationDeathConfirmed'
+      characterId: CharacterId
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
       type: 'CharacterCreationAnagathicsDecided'
       characterId: CharacterId
       useAnagathics: boolean

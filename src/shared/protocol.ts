@@ -1110,14 +1110,26 @@ export const decodeCommand = (
       if (!characterId.ok) return characterId
       const creationEvent = parseCareerCreationEvent(raw.creationEvent)
       if (!creationEvent.ok) return creationEvent
+      if (creationEvent.value.type === 'MISHAP_RESOLVED') {
+        return err(
+          invalidCommand(
+            'MISHAP_RESOLVED must use ResolveCharacterCreationMishap'
+          )
+        )
+      }
+      if (creationEvent.value.type === 'DEATH_CONFIRMED') {
+        return err(
+          invalidCommand(
+            'DEATH_CONFIRMED must use ConfirmCharacterCreationDeath'
+          )
+        )
+      }
       if (creationEvent.value.type === 'FINISH_MUSTERING') {
         const commandType =
           creationEvent.value.musteringBenefit === undefined
             ? 'CompleteCharacterCreationMustering'
             : 'RollCharacterCreationMusteringBenefit'
-        return err(
-          invalidCommand(`FINISH_MUSTERING must use ${commandType}`)
-        )
+        return err(invalidCommand(`FINISH_MUSTERING must use ${commandType}`))
       }
 
       return ok({
@@ -1292,6 +1304,28 @@ export const decodeCommand = (
         ...base.value,
         characterId: characterId.value,
         selectedLosses: selectedLosses.value
+      })
+    }
+
+    case 'ResolveCharacterCreationMishap': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'ResolveCharacterCreationMishap',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'ConfirmCharacterCreationDeath': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'ConfirmCharacterCreationDeath',
+        ...base.value,
+        characterId: characterId.value
       })
     }
 

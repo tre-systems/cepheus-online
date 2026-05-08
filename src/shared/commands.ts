@@ -304,6 +304,22 @@ export type CharacterCreationAgingLossesCommand = {
   selectedLosses: AgingLossSelection[]
 }
 
+export type CharacterCreationMishapResolutionCommand = {
+  type: 'ResolveCharacterCreationMishap'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
+export type CharacterCreationDeathConfirmationCommand = {
+  type: 'ConfirmCharacterCreationDeath'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
 export type CharacterCreationAnagathicsCommand = {
   type: 'DecideCharacterCreationAnagathics'
   gameId: GameId
@@ -412,6 +428,8 @@ export type SemanticCommand =
   | CharacterCreationAdvancementSkipCommand
   | CharacterCreationAgingCommand
   | CharacterCreationAgingLossesCommand
+  | CharacterCreationMishapResolutionCommand
+  | CharacterCreationDeathConfirmationCommand
   | CharacterCreationAnagathicsCommand
   | CharacterCreationReenlistmentCommand
   | CharacterCreationCareerReenlistmentCommand
