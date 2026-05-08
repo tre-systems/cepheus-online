@@ -172,6 +172,54 @@ describe('deriveEventsForCommand error categories', () => {
     )
   })
 
+  it('rejects generic mustering benefit facts after semantic migration', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: {
+          type: 'FINISH_MUSTERING',
+          musteringBenefit: {
+            career: 'Scout',
+            kind: 'cash',
+            roll: { expression: '2d6', rolls: [4, 4], total: 8 },
+            modifier: 1,
+            tableRoll: 9,
+            value: '50000',
+            credits: 50000
+          }
+        }
+      },
+      createCreation('MUSTERING_OUT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Pilot-1'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(Object.hasOwn(result, 'value'), false)
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'FINISH_MUSTERING must use RollCharacterCreationMusteringBenefit'
+    )
+  })
+
   it('emits a semantic mustering benefit event with server-derived roll facts', () => {
     const result = runCommand(
       {

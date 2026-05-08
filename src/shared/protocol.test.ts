@@ -937,7 +937,7 @@ describe('protocol validation', () => {
     assert.equal(completed.value.expectedSeq, 8)
   })
 
-  it('preserves generic mustering benefit facts for legacy creation commands', () => {
+  it('rejects client-authored mustering benefit facts in generic creation commands', () => {
     const result = decodeCommand({
       type: 'AdvanceCharacterCreation',
       gameId: 'game-1',
@@ -962,27 +962,13 @@ describe('protocol validation', () => {
       }
     })
 
-    assert.equal(result.ok, true)
-    if (!result.ok) return
-    assert.equal(result.value.type, 'AdvanceCharacterCreation')
-    if (result.value.type !== 'AdvanceCharacterCreation') return
-    assert.deepEqual(result.value.creationEvent, {
-      type: 'FINISH_MUSTERING',
-      musteringBenefit: {
-        career: 'Scout',
-        kind: 'cash',
-        roll: {
-          expression: '2d6',
-          rolls: [4, 4],
-          total: 8
-        },
-        modifier: 1,
-        tableRoll: 9,
-        value: '50000',
-        credits: 50000,
-        materialItem: null
-      }
-    })
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'FINISH_MUSTERING must use RollCharacterCreationMusteringBenefit'
+    )
   })
 
   it('accepts full character creation finalization commands', () => {

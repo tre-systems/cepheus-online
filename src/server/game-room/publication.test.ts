@@ -69,26 +69,6 @@ const createBoardCommand = (boardId = asBoardId('board-1')): Command => ({
   scale: 50
 })
 
-const scoutLowPassageBenefit = () =>
-  ({
-    career: 'Scout',
-    kind: 'material',
-    roll: {
-      expression: '2d6',
-      rolls: [1, 1],
-      total: 2
-    },
-    modifier: 0,
-    tableRoll: 2,
-    value: 'Low Passage',
-    credits: 0
-  }) satisfies NonNullable<
-    Extract<
-      Extract<Command, { type: 'AdvanceCharacterCreation' }>['creationEvent'],
-      { type: 'FINISH_MUSTERING' }
-    >['musteringBenefit']
-  >
-
 const publishBasicTrainingCompletion = (
   storage: ReturnType<typeof createMemoryStorage>,
   characterId: ReturnType<typeof asCharacterId>
@@ -333,11 +313,30 @@ const publishPlayableCharacterCreation = async (
   assert.equal((await publishAnagathicsDecline(storage, characterId)).ok, true)
   assert.equal((await publishAgingResolution(storage, characterId)).ok, true)
   await advance({ type: 'LEAVE_CAREER' })
-  await advance({
-    type: 'FINISH_MUSTERING',
-    musteringBenefit: scoutLowPassageBenefit()
-  })
-  await advance({ type: 'FINISH_MUSTERING' })
+  assert.equal(
+    (
+      await publish(storage, {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'material'
+      })
+    ).ok,
+    true
+  )
+  assert.equal(
+    (
+      await publish(storage, {
+        type: 'CompleteCharacterCreationMustering',
+        gameId,
+        actorId,
+        characterId
+      })
+    ).ok,
+    true
+  )
   assert.equal((await publishCreationCompletion(storage, characterId)).ok, true)
 }
 
@@ -2300,22 +2299,42 @@ describe('room publication flow', () => {
       true
     )
     await advance({ type: 'LEAVE_CAREER' })
-    await advance({
-      type: 'FINISH_MUSTERING',
-      musteringBenefit: {
-        career: 'Scout',
-        kind: 'cash',
-        roll: {
-          expression: '2d6',
-          rolls: [3, 4],
-          total: 7
-        },
-        modifier: 1,
-        tableRoll: 8,
-        value: '20000',
-        credits: 20000
-      }
-    })
+    await appendEvents(
+      storage,
+      gameId,
+      actorId,
+      [
+        {
+          type: 'CharacterCreationTransitioned',
+          characterId,
+          creationEvent: {
+            type: 'FINISH_MUSTERING',
+            musteringBenefit: {
+              career: 'Scout',
+              kind: 'cash',
+              roll: {
+                expression: '2d6',
+                rolls: [3, 4],
+                total: 7
+              },
+              modifier: 1,
+              tableRoll: 8,
+              value: '20000',
+              credits: 20000
+            }
+          },
+          state: {
+            status: 'MUSTERING_OUT',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          creationComplete: false
+        }
+      ],
+      new Date().toISOString()
+    )
 
     const persistedEvents = (await readEventStream(storage, gameId)).map(
       (envelope) => envelope.event
@@ -2473,11 +2492,30 @@ describe('room publication flow', () => {
     assert.equal(earlyMusteringFinish.ok, false)
     if (earlyMusteringFinish.ok) return
     assert.equal(earlyMusteringFinish.error.code, 'invalid_command')
-    await advance({
-      type: 'FINISH_MUSTERING',
-      musteringBenefit: scoutLowPassageBenefit()
-    })
-    await advance({ type: 'FINISH_MUSTERING' })
+    assert.equal(
+      (
+        await publish(storage, {
+          type: 'RollCharacterCreationMusteringBenefit',
+          gameId,
+          actorId,
+          characterId,
+          career: 'Scout',
+          kind: 'material'
+        })
+      ).ok,
+      true
+    )
+    assert.equal(
+      (
+        await publish(storage, {
+          type: 'CompleteCharacterCreationMustering',
+          gameId,
+          actorId,
+          characterId
+        })
+      ).ok,
+      true
+    )
     const completed = await publishCreationCompletion(storage, characterId)
 
     assert.equal(completed.ok, true)
@@ -2486,7 +2524,7 @@ describe('room publication flow', () => {
       completed.value.state.characters[characterId]?.creation?.state.status,
       'PLAYABLE'
     )
-    assert.equal((await readCheckpoint(storage, gameId))?.seq, 23)
+    assert.equal((await readCheckpoint(storage, gameId))?.seq, 24)
   })
 
   it('publishes final character creation sheets only after playable', async () => {
@@ -2601,11 +2639,30 @@ describe('room publication flow', () => {
     )
     assert.equal((await publishAgingResolution(storage, characterId)).ok, true)
     await advance({ type: 'LEAVE_CAREER' })
-    await advance({
-      type: 'FINISH_MUSTERING',
-      musteringBenefit: scoutLowPassageBenefit()
-    })
-    await advance({ type: 'FINISH_MUSTERING' })
+    assert.equal(
+      (
+        await publish(storage, {
+          type: 'RollCharacterCreationMusteringBenefit',
+          gameId,
+          actorId,
+          characterId,
+          career: 'Scout',
+          kind: 'material'
+        })
+      ).ok,
+      true
+    )
+    assert.equal(
+      (
+        await publish(storage, {
+          type: 'CompleteCharacterCreationMustering',
+          gameId,
+          actorId,
+          characterId
+        })
+      ).ok,
+      true
+    )
     assert.equal(
       (await publishCreationCompletion(storage, characterId)).ok,
       true
@@ -2641,7 +2698,7 @@ describe('room publication flow', () => {
       true
     )
     assert.equal(character?.notes.includes('Final scout.'), false)
-    assert.equal((await readEventStream(storage, gameId)).length, 24)
+    assert.equal((await readEventStream(storage, gameId)).length, 25)
   })
 
   it('recovers finalized character creation from playable checkpoint plus tail', async () => {
@@ -2650,7 +2707,7 @@ describe('room publication flow', () => {
     await publishPlayableCharacterCreation(storage, characterId)
 
     const playableCheckpoint = await readCheckpoint(storage, gameId)
-    assert.equal(playableCheckpoint?.seq, 23)
+    assert.equal(playableCheckpoint?.seq, 24)
 
     const finalized = await publish(storage, {
       type: 'FinalizeCharacterCreation',
@@ -2674,7 +2731,7 @@ describe('room publication flow', () => {
 
     assert.equal(finalized.ok, true)
     if (!finalized.ok) return
-    assert.equal((await readCheckpoint(storage, gameId))?.seq, 23)
+    assert.equal((await readCheckpoint(storage, gameId))?.seq, 24)
     assert.deepEqual(
       (
         await readEventStreamTail(storage, gameId, playableCheckpoint?.seq ?? 0)

@@ -479,6 +479,10 @@ const semanticCommandForGenericCreationEvent = (
       return 'ResolveCharacterCreationReenlistment'
     case 'REENLIST':
       return event.reenlistment ? 'ResolveCharacterCreationReenlistment' : null
+    case 'FINISH_MUSTERING':
+      return event.musteringBenefit
+        ? 'RollCharacterCreationMusteringBenefit'
+        : null
     default:
       return null
   }

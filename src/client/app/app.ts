@@ -73,6 +73,7 @@ import {
   createCharacterCreationWizardController,
   type CharacterCreationWizardController
 } from './character-creation-wizard-controller.js'
+import { createCharacterCreationDomController } from './character-creation-dom-controller.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBackgroundSkillSelection,
@@ -569,6 +570,25 @@ characterCreationCommandController = createCharacterCreationCommandController({
   scrollToTop: () => characterCreationPanel.scrollToTop()
 })
 
+createCharacterCreationDomController({
+  elements: {
+    createCharacterRail: els.createCharacterRail,
+    characterCreatorClose: els.characterCreatorClose,
+    startCharacterWizard: els.startCharacterWizard,
+    backCharacterWizard: els.backCharacterWizard,
+    nextCharacterWizard: els.nextCharacterWizard,
+    characterCreationFields: els.characterCreationFields
+  },
+  controller: characterCreationController,
+  wizard: characterCreationWizardController,
+  panel: characterCreationPanel,
+  homeworldPublisher: characterCreationHomeworldPublisher,
+  renderWizardControls: renderCharacterCreationWizardControls,
+  renderWizard: renderCharacterCreationWizard,
+  renderApp: () => render(),
+  reportError: setError
+})
+
 const renderCharacterCreationNextStep = (
   flow: CharacterCreationFlow
 ): HTMLElement => {
@@ -1010,10 +1030,6 @@ const advanceCharacterCreationWizard = async () => {
   await characterCreationWizardController.advance()
 }
 
-const backCharacterCreationWizard = () => {
-  characterCreationWizardController.back()
-}
-
 const createCustomPiece = async () => {
   const board = selectedBoard()
   if (!state || !board) {
@@ -1442,16 +1458,6 @@ els.sheetClose.addEventListener('click', () => {
   characterSheetController.setOpen(false)
 })
 
-els.createCharacterRail.addEventListener('click', () => {
-  startNewCharacterCreationWizard().catch((error) => setError(error.message))
-})
-
-els.characterCreatorClose.addEventListener('click', () => {
-  characterCreationPanel.close()
-  characterCreationController.clearReadOnlyFollow()
-  render()
-})
-
 for (const tab of els.sheetTabs) {
   tab.addEventListener('click', () => {
     characterSheetController.selectTab(tab.dataset.sheetTab)
@@ -1464,33 +1470,6 @@ els.bootstrap.addEventListener('click', () => {
 
 els.refresh.addEventListener('click', () => {
   fetchState().catch((error) => setError(error.message))
-})
-
-els.startCharacterWizard.addEventListener('click', () => {
-  startNewCharacterCreationWizard().catch((error) => setError(error.message))
-})
-
-els.backCharacterWizard.addEventListener('click', () => {
-  backCharacterCreationWizard()
-})
-
-els.characterCreationFields.addEventListener('input', () => {
-  syncCharacterCreationWizardFields()
-  renderCharacterCreationWizardControls()
-})
-
-els.characterCreationFields.addEventListener('change', () => {
-  syncCharacterCreationWizardFields()
-  const nextFlow = characterCreationController.flow()
-  if (nextFlow?.step === 'homeworld') {
-    characterCreationHomeworldPublisher.publishProgress(nextFlow)
-  }
-  autoAdvanceCharacterCreationSetup()
-  renderCharacterCreationWizard()
-})
-
-els.nextCharacterWizard.addEventListener('click', () => {
-  advanceCharacterCreationWizard().catch((error) => setError(error.message))
 })
 
 els.createPiece.addEventListener('click', () => {
