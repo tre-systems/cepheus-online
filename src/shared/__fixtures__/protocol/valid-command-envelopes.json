@@ -252,6 +252,38 @@
     "expectedSeq": 28
   },
   {
+    "name": "character creation career reenlist command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-reenlist-career",
+      "command": {
+        "type": "ReenlistCharacterCreationCareer",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 29,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "ReenlistCharacterCreationCareer",
+    "expectedSeq": 29
+  },
+  {
+    "name": "character creation leave career command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-leave-career",
+      "command": {
+        "type": "LeaveCharacterCreationCareer",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 30,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "LeaveCharacterCreationCareer",
+    "expectedSeq": 30
+  },
+  {
     "name": "character creation term skill roll command",
     "message": {
       "type": "command",
@@ -335,6 +367,22 @@
     },
     "commandType": "CompleteCharacterCreationMustering",
     "expectedSeq": 29
+  },
+  {
+    "name": "character creation after mustering continuation command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-continue-after-mustering",
+      "command": {
+        "type": "ContinueCharacterCreationAfterMustering",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 30,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "ContinueCharacterCreationAfterMustering",
+    "expectedSeq": 30
   },
   {
     "name": "character creation background skill command",

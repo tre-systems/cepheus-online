@@ -151,6 +151,51 @@
     "errorMessage": "table is not a supported term skill table"
   },
   {
+    "name": "malformed character creation career reenlist command",
+    "message": {
+      "type": "command",
+      "requestId": "bad-reenlist-career",
+      "command": {
+        "type": "ReenlistCharacterCreationCareer",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": 42
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "characterId must be a string"
+  },
+  {
+    "name": "malformed character creation leave career command",
+    "message": {
+      "type": "command",
+      "requestId": "bad-leave-career",
+      "command": {
+        "type": "LeaveCharacterCreationCareer",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": 42
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "characterId must be a string"
+  },
+  {
+    "name": "malformed character creation after mustering continuation command",
+    "message": {
+      "type": "command",
+      "requestId": "bad-continue-after-mustering",
+      "command": {
+        "type": "ContinueCharacterCreationAfterMustering",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "characterId": 42
+      }
+    },
+    "errorCode": "invalid_command",
+    "errorMessage": "characterId must be a string"
+  },
+  {
     "name": "empty character creation background skill",
     "message": {
       "type": "command",

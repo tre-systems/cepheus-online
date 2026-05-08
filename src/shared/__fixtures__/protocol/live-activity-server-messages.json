@@ -82,5 +82,71 @@
       ]
     },
     "maxSerializedBytes": 700
+  },
+  {
+    "name": "semantic career lifecycle live activity companion",
+    "message": {
+      "type": "commandAccepted",
+      "requestId": "req-career-lifecycle",
+      "state": {
+        "id": "game-1",
+        "slug": "game-1",
+        "name": "Spinward Test",
+        "ownerId": "user-1",
+        "players": {},
+        "characters": {},
+        "boards": {},
+        "pieces": {},
+        "diceLog": [],
+        "selectedBoardId": null,
+        "eventSeq": 9
+      },
+      "eventSeq": 9,
+      "liveActivities": [
+        {
+          "id": "game-1:9",
+          "eventId": "game-1:9",
+          "gameId": "game-1",
+          "seq": 9,
+          "actorId": "user-1",
+          "createdAt": "2026-05-03T00:00:09.000Z",
+          "type": "characterCreation",
+          "characterId": "char-1",
+          "transition": "REENLIST",
+          "details": "Reenlisted for another term",
+          "status": "SURVIVAL",
+          "creationComplete": false
+        },
+        {
+          "id": "game-1:10",
+          "eventId": "game-1:10",
+          "gameId": "game-1",
+          "seq": 10,
+          "actorId": "user-1",
+          "createdAt": "2026-05-03T00:00:10.000Z",
+          "type": "characterCreation",
+          "characterId": "char-1",
+          "transition": "LEAVE_CAREER",
+          "details": "Leaving career",
+          "status": "MUSTERING_OUT",
+          "creationComplete": false
+        },
+        {
+          "id": "game-1:11",
+          "eventId": "game-1:11",
+          "gameId": "game-1",
+          "seq": 11,
+          "actorId": "user-1",
+          "createdAt": "2026-05-03T00:00:11.000Z",
+          "type": "characterCreation",
+          "characterId": "char-1",
+          "transition": "CONTINUE_CAREER",
+          "details": "Continuing career",
+          "status": "CAREER_SELECTION",
+          "creationComplete": false
+        }
+      ]
+    },
+    "maxSerializedBytes": 1600
   }
 ]

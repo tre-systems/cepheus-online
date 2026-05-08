@@ -440,16 +440,12 @@ const actionsForLegalKey = (
       ]
     case 'leaveCareer':
       return [
-        action(
-          'leave-career',
-          'Leave career',
-          {
-            type: 'LeaveCharacterCreationCareer',
-            gameId: identity.gameId,
-            actorId: identity.actorId,
-            characterId: character.id
-          }
-        )
+        action('leave-career', 'Leave career', {
+          type: 'LeaveCharacterCreationCareer',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
       ]
     case 'continueCareer':
       return [
@@ -493,6 +489,19 @@ const actionsForLegalKey = (
         })
       ]
     case 'forcedReenlist':
+      return [
+        action(
+          'reenlist',
+          'Serve required term',
+          {
+            type: 'ReenlistCharacterCreationCareer',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id
+          },
+          'secondary'
+        )
+      ]
     case 'resolveMusteringBenefit':
       return []
     default: {
@@ -517,13 +526,13 @@ const actionKeyOrder: readonly CareerCreationActionKey[] = [
   'completeSkills',
   'decideAnagathics',
   'resolveAging',
-  'leaveCareer',
   'reenlist',
-  'finishMustering',
-  'continueCareer',
-  'completeCreation',
   'rollReenlistment',
   'forcedReenlist',
+  'leaveCareer',
+  'continueCareer',
+  'finishMustering',
+  'completeCreation',
   'resolveMusteringBenefit'
 ]
 

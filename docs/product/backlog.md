@@ -483,11 +483,15 @@ Status: in progress. Semantic commands/events now cover characteristic rolls,
 homeworld set/completion, background skill selection, cascade resolution,
 career qualification, draft resolution, career term start, basic training,
 survival, commission, advancement, term skill rolls, aging, reenlistment,
-mustering benefits, mustering completion, and finalization. The remaining
-high-value gap is removing the remaining generic transition bridge and making
-all pending decisions projection-owned. P1: any remaining roll-bearing
-`AdvanceCharacterCreation` facts should be rejected or migrated because dice
-and outcome facts must come from semantic server commands/events.
+career reenlistment, career exit, post-mustering continuation, mustering
+benefits, mustering completion, and finalization. `AdvanceCharacterCreation`
+is referee-only and now rejects the fact-bearing reenlistment, leave-career,
+continue-career, and mustering-benefit payloads that have semantic commands.
+The remaining high-value gap is removing the rest of the generic transition
+bridge and making all pending decisions projection-owned. P1: any remaining
+roll-bearing or rules-bearing `AdvanceCharacterCreation` facts should be
+rejected or migrated because dice and outcome facts must come from semantic
+server commands/events.
 
 Tasks:
 
@@ -499,10 +503,19 @@ Tasks:
   rank, skill, or benefit facts.
 - Maintain backward compatibility only as a short bridge for the current UI.
   New rules work should add semantic events first, then adapt the UI.
-- Audit the remaining `AdvanceCharacterCreation` payloads and split them into
-  two groups: non-roll bridge payloads with a temporary compatibility owner,
-  and roll-bearing payloads that must be migrated to semantic commands/events
-  or rejected with stable `invalid_command` errors.
+- Finish the remaining `AdvanceCharacterCreation` migration in this order:
+  1. Replace generic `FINISH_MUSTERING` without a benefit payload with
+     `CompleteCharacterCreationMustering` everywhere, then reject the generic
+     payload outside replay compatibility.
+  2. Add explicit optional-variant commands/events for `MISHAP_RESOLVED` and
+     `DEATH_CONFIRMED`, or keep them fenced until the mishap variant is
+     implemented. These are the highest-value remaining rules-bearing generic
+     payloads.
+  3. Remove development/bootstrap reliance on generic `SET_CHARACTERISTICS`
+     and `SELECT_CAREER`, or isolate it as referee-only fixture/backfill code
+     with tests proving production UI cannot use it.
+  4. Keep `CharacterCreationTransitioned` only for historical replay while new
+     production rules work emits semantic events.
 - Finish updating `deriveLiveActivities()` to read semantic events directly
   instead of parsing coarse transition payloads where possible.
 - Add protocol fixtures for every new command, event envelope, accepted
@@ -688,8 +701,9 @@ Done when:
 
 Status: partially done. Aging roll modifiers, aging effect selection, required
 aging loss resolution, reenlistment resolution, seven-term retirement, forced
-reenlistment, and server-backed semantic aging/reenlistment facts exist.
-Anagathics and some UI decisions/provenance still need completion.
+reenlistment, allowed/blocked career decisions, voluntary career exit, and
+server-backed semantic aging/reenlistment facts exist. Anagathics and some UI
+decisions/provenance still need completion.
 
 Tasks:
 
@@ -698,7 +712,9 @@ Tasks:
 - Persist characteristic changes with term provenance.
 - Implement optional anagathics survival and cost/payment flow.
 - Polish reenlistment UI/provenance for mandatory retirement after seven terms,
-  forced reenlistment on 12, allowed reenlistment, and blocked reenlistment.
+  forced reenlistment on 12, allowed reenlistment, blocked reenlistment, and
+  voluntary career exit. The server command/event split is done; this is now
+  presentation, history, and browser-regression work.
 
 Done when:
 
@@ -870,10 +886,12 @@ Done when:
 The next batch should run like this, in this order:
 
 1. Remove or fence the remaining generic character creation transition bridge.
-   P1: reject generic `FINISH_MUSTERING` events that carry client-authored
-   mustering benefit facts, migrate any remaining production UI commands for
-   `REENLIST`, `LEAVE_CAREER`, and `CONTINUE_CAREER` to semantic commands or
-   explicit non-roll commands, and keep replay compatibility isolated.
+   Done: generic reenlist, forced-reenlist, leave-career, blocked-reenlist,
+   continue-career, and mustering-benefit fact payloads now point at semantic
+   commands. Next: migrate/reject generic `FINISH_MUSTERING` without a benefit
+   payload, add or fence semantic death/mishap resolution commands, and isolate
+   the remaining generic `SET_CHARACTERISTICS`/`SELECT_CAREER` bootstrap or
+   fixture paths away from production UI.
 2. Finish the next architecture cleanup already underway: shrink `app.ts`,
    extract the character creation feature boundary, move rendering toward a
    signal-driven projection-fed model, split the projector registry by domain,

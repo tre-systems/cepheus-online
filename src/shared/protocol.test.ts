@@ -546,6 +546,21 @@ describe('protocol validation', () => {
         ]
       },
       {
+        type: 'ReenlistCharacterCreationCareer',
+        ...base,
+        characterId: 'char-1'
+      },
+      {
+        type: 'LeaveCharacterCreationCareer',
+        ...base,
+        characterId: 'char-1'
+      },
+      {
+        type: 'ContinueCharacterCreationAfterMustering',
+        ...base,
+        characterId: 'char-1'
+      },
+      {
         type: 'CreateBoard',
         ...base,
         boardId: 'board-1',

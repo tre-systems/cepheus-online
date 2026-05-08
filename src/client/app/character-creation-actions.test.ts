@@ -74,6 +74,22 @@ const term = (
   ...overrides
 })
 
+const assertNoGenericLifecycleAdvance = (
+  actions: NonNullable<
+    ReturnType<typeof deriveCharacterCreationActionPlan>
+  >['actions']
+) => {
+  for (const availableAction of actions) {
+    const command = availableAction.command
+    if (command?.type !== 'AdvanceCharacterCreation') continue
+    assert.equal(command.creationEvent.type !== 'REENLIST', true)
+    assert.equal(command.creationEvent.type !== 'FORCED_REENLIST', true)
+    assert.equal(command.creationEvent.type !== 'LEAVE_CAREER', true)
+    assert.equal(command.creationEvent.type !== 'REENLIST_BLOCKED', true)
+    assert.equal(command.creationEvent.type !== 'CONTINUE_CAREER', true)
+  }
+}
+
 describe('character creation actions', () => {
   it('starts creation for an existing character without creation state', () => {
     const plan = deriveCharacterCreationActionPlan(identity, character(null))
@@ -226,7 +242,12 @@ describe('character creation actions', () => {
         continue
       }
       if (eventType === 'FINISH_MUSTERING') {
-        assert.equal(command?.type, 'CompleteCharacterCreationMustering')
+        assert.equal(
+          plan?.actions.find(
+            (availableAction) => availableAction.key === 'finish-mustering'
+          )?.command?.type,
+          'CompleteCharacterCreationMustering'
+        )
         continue
       }
       if (eventType === 'CREATION_COMPLETE') {
@@ -630,8 +651,10 @@ describe('character creation actions', () => {
       )
     )
 
-    assert.equal(plan?.actions[0]?.key, 'finish-mustering')
-    assert.deepEqual(plan?.actions[0]?.command, {
+    const finishMustering = plan?.actions.find(
+      (availableAction) => availableAction.key === 'finish-mustering'
+    )
+    assert.deepEqual(finishMustering?.command, {
       type: 'CompleteCharacterCreationMustering',
       gameId: identity.gameId,
       actorId: identity.actorId,
@@ -657,5 +680,188 @@ describe('character creation actions', () => {
       actorId: identity.actorId,
       characterId: 'mae' as CharacterId
     })
+  })
+
+  it('uses semantic commands for allowed reenlistment decisions', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('REENLISTMENT', {
+          terms: [
+            term({
+              canReenlist: true,
+              reEnlistment: 7,
+              survival: 8,
+              skillsAndTraining: ['Pilot-1']
+            })
+          ]
+        })
+      )
+    )
+
+    assert.equal(plan?.status, 'Reenlistment')
+    assert.deepEqual(
+      [...(plan?.actions ?? [])]
+        .map((availableAction) => availableAction.key)
+        .sort(),
+      ['leave-career', 'reenlist']
+    )
+    assert.deepEqual(
+      plan?.actions.find((availableAction) => {
+        return availableAction.key === 'reenlist'
+      })?.command,
+      {
+        type: 'ReenlistCharacterCreationCareer',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: 'mae' as CharacterId
+      }
+    )
+    assert.deepEqual(
+      plan?.actions.find((availableAction) => {
+        return availableAction.key === 'leave-career'
+      })?.command,
+      {
+        type: 'LeaveCharacterCreationCareer',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: 'mae' as CharacterId
+      }
+    )
+    assertNoGenericLifecycleAdvance(plan?.actions ?? [])
+  })
+
+  it('uses the semantic reenlist command for forced reenlistment projections', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('REENLISTMENT', {
+          terms: [
+            term({
+              canReenlist: true,
+              reEnlistment: 12,
+              survival: 8,
+              skillsAndTraining: ['Pilot-1']
+            })
+          ]
+        })
+      )
+    )
+
+    assert.equal(plan?.status, 'Reenlistment')
+    assert.deepEqual(plan?.actions, [
+      {
+        key: 'reenlist',
+        label: 'Serve required term',
+        command: {
+          type: 'ReenlistCharacterCreationCareer',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: 'mae' as CharacterId
+        },
+        variant: 'secondary'
+      }
+    ])
+    assertNoGenericLifecycleAdvance(plan?.actions ?? [])
+  })
+
+  it('uses the semantic leave command when reenlistment is blocked or retired', () => {
+    const blocked = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('REENLISTMENT', {
+          terms: [
+            term({
+              canReenlist: false,
+              reEnlistment: 4,
+              survival: 8,
+              skillsAndTraining: ['Pilot-1']
+            })
+          ]
+        })
+      )
+    )
+    const retired = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('REENLISTMENT', {
+          terms: Array.from({ length: 7 }, () =>
+            term({
+              canReenlist: true,
+              reEnlistment: 7,
+              survival: 8,
+              skillsAndTraining: ['Pilot-1']
+            })
+          )
+        })
+      )
+    )
+
+    for (const plan of [blocked, retired]) {
+      assert.deepEqual(
+        plan?.actions.map((availableAction) => availableAction.key),
+        ['leave-career']
+      )
+      assert.deepEqual(plan?.actions[0]?.command, {
+        type: 'LeaveCharacterCreationCareer',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: 'mae' as CharacterId
+      })
+      assertNoGenericLifecycleAdvance(plan?.actions ?? [])
+    }
+  })
+
+  it('uses the semantic continuation command after mustering out', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('MUSTERING_OUT', {
+          terms: [
+            term({
+              benefits: ['Low Passage'],
+              complete: true,
+              musteringOut: true
+            }),
+            term({
+              benefits: ['Low Passage'],
+              complete: true,
+              musteringOut: true
+            })
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.deepEqual(
+      [...(plan?.actions ?? [])]
+        .map((availableAction) => availableAction.key)
+        .sort(),
+      ['continue-career', 'finish-mustering']
+    )
+    assert.deepEqual(
+      plan?.actions.find((availableAction) => {
+        return availableAction.key === 'continue-career'
+      })?.command,
+      {
+        type: 'ContinueCharacterCreationAfterMustering',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: 'mae' as CharacterId
+      }
+    )
+    assert.deepEqual(
+      plan?.actions.find((availableAction) => {
+        return availableAction.key === 'finish-mustering'
+      })?.command,
+      {
+        type: 'CompleteCharacterCreationMustering',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: 'mae' as CharacterId
+      }
+    )
+    assertNoGenericLifecycleAdvance(plan?.actions ?? [])
   })
 })

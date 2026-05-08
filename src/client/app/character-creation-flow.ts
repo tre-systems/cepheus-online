@@ -292,6 +292,10 @@ type AdvanceCharacterCreationCommand = Extract<
   Command,
   { type: 'AdvanceCharacterCreation' }
 >
+type CompleteCharacterCreationBasicTrainingCommand = Extract<
+  Command,
+  { type: 'CompleteCharacterCreationBasicTraining' }
+>
 type ResolveCharacterCreationAgingCommand = Extract<
   Command,
   { type: 'ResolveCharacterCreationAging' }
@@ -311,6 +315,14 @@ type ReenlistCharacterCreationCareerCommand = Extract<
 type LeaveCharacterCreationCareerCommand = Extract<
   Command,
   { type: 'LeaveCharacterCreationCareer' }
+>
+type CompleteCharacterCreationSkillsCommand = Extract<
+  Command,
+  { type: 'CompleteCharacterCreationSkills' }
+>
+type CompleteCharacterCreationMusteringCommand = Extract<
+  Command,
+  { type: 'CompleteCharacterCreationMustering' }
 >
 type CompleteCharacterCreationHomeworldCommand =
   CharacterCreationHomeworldCommand
@@ -2439,6 +2451,11 @@ const initialCharacterCreationStateCommands = (
     ...baseCommand,
     creationEvent
   })
+  const completeBasicTrainingCommand =
+    (): CompleteCharacterCreationBasicTrainingCommand => ({
+      type: 'CompleteCharacterCreationBasicTraining',
+      ...baseCommand
+    })
   const resolveAgingCommand = (): ResolveCharacterCreationAgingCommand => ({
     type: 'ResolveCharacterCreationAging',
     ...baseCommand
@@ -2463,6 +2480,15 @@ const initialCharacterCreationStateCommands = (
     type: 'LeaveCharacterCreationCareer',
     ...baseCommand
   })
+  const completeSkillsCommand = (): CompleteCharacterCreationSkillsCommand => ({
+    type: 'CompleteCharacterCreationSkills',
+    ...baseCommand
+  })
+  const completeMusteringCommand =
+    (): CompleteCharacterCreationMusteringCommand => ({
+      type: 'CompleteCharacterCreationMustering',
+      ...baseCommand
+    })
   const completeCreationCommand = (): CompleteCharacterCreationCommand => ({
     type: 'CompleteCharacterCreation',
     ...baseCommand
@@ -2530,7 +2556,7 @@ const initialCharacterCreationStateCommands = (
         : []
 
   if (completedTerms.length > 0) {
-    commands.push(advance({ type: 'COMPLETE_BASIC_TRAINING' }))
+    commands.push(completeBasicTrainingCommand())
     let endedWithDeath = false
 
     for (const [index, term] of completedTerms.entries()) {
@@ -2567,7 +2593,7 @@ const initialCharacterCreationStateCommands = (
         )
       }
 
-      commands.push(advance({ type: 'COMPLETE_SKILLS' }))
+      commands.push(completeSkillsCommand())
       commands.push(decideAnagathicsCommand(term.anagathics === true))
       commands.push(resolveAgingCommand())
       if (index < completedTerms.length - 1) {
@@ -2579,7 +2605,7 @@ const initialCharacterCreationStateCommands = (
       commands.push(
         resolveReenlistmentCommand(),
         leaveCareerCommand(),
-        advance({ type: 'FINISH_MUSTERING' }),
+        completeMusteringCommand(),
         completeCreationCommand()
       )
     }

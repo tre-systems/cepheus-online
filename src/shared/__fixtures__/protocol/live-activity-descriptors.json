@@ -223,6 +223,101 @@
     "maxSerializedBytes": 500
   },
   {
+    "name": "semantic career reenlistment activity",
+    "event": {
+      "type": "CharacterCreationCareerReenlisted",
+      "characterId": "char-1",
+      "outcome": "allowed",
+      "career": "Scout",
+      "forced": false,
+      "state": {
+        "status": "SURVIVAL",
+        "context": {
+          "canCommission": false,
+          "canAdvance": false
+        }
+      },
+      "creationComplete": false
+    },
+    "activity": {
+      "id": "game-1:9",
+      "eventId": "game-1:9",
+      "gameId": "game-1",
+      "seq": 9,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:09.000Z",
+      "type": "characterCreation",
+      "characterId": "char-1",
+      "transition": "REENLIST",
+      "details": "Reenlisted for another term",
+      "status": "SURVIVAL",
+      "creationComplete": false
+    },
+    "maxSerializedBytes": 380
+  },
+  {
+    "name": "semantic career leave activity",
+    "event": {
+      "type": "CharacterCreationCareerLeft",
+      "characterId": "char-1",
+      "outcome": "blocked",
+      "retirement": false,
+      "state": {
+        "status": "MUSTERING_OUT",
+        "context": {
+          "canCommission": false,
+          "canAdvance": false
+        }
+      },
+      "creationComplete": false
+    },
+    "activity": {
+      "id": "game-1:9",
+      "eventId": "game-1:9",
+      "gameId": "game-1",
+      "seq": 9,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:09.000Z",
+      "type": "characterCreation",
+      "characterId": "char-1",
+      "transition": "REENLIST_BLOCKED",
+      "details": "Reenlistment blocked",
+      "status": "MUSTERING_OUT",
+      "creationComplete": false
+    },
+    "maxSerializedBytes": 380
+  },
+  {
+    "name": "semantic after mustering continuation activity",
+    "event": {
+      "type": "CharacterCreationAfterMusteringContinued",
+      "characterId": "char-1",
+      "state": {
+        "status": "CAREER_SELECTION",
+        "context": {
+          "canCommission": false,
+          "canAdvance": false
+        }
+      },
+      "creationComplete": false
+    },
+    "activity": {
+      "id": "game-1:9",
+      "eventId": "game-1:9",
+      "gameId": "game-1",
+      "seq": 9,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:09.000Z",
+      "type": "characterCreation",
+      "characterId": "char-1",
+      "transition": "CONTINUE_CAREER",
+      "details": "Continuing career",
+      "status": "CAREER_SELECTION",
+      "creationComplete": false
+    },
+    "maxSerializedBytes": 360
+  },
+  {
     "name": "bounded dice roll activity",
     "event": {
       "type": "DiceRolled",

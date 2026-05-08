@@ -104,6 +104,27 @@ const completeDraft = () =>
     notes: 'Detached scout.'
   })
 
+const forbiddenGenericLifecycleEvents = new Set([
+  'REENLIST',
+  'FORCED_REENLIST',
+  'LEAVE_CAREER',
+  'REENLIST_BLOCKED',
+  'CONTINUE_CAREER'
+])
+
+const assertNoGenericLifecycleAdvance = (
+  commands: ReturnType<typeof deriveInitialCharacterCreationStateCommands>
+) => {
+  for (const command of commands) {
+    if (command.type !== 'AdvanceCharacterCreation') continue
+    assert.equal(
+      forbiddenGenericLifecycleEvents.has(command.creationEvent.type),
+      false,
+      `expected ${command.creationEvent.type} to use a semantic command`
+    )
+  }
+}
+
 describe('character creation flow', () => {
   it('creates a blank player draft at the basics step', () => {
     const flow = createCharacterCreationFlow(characterId)
@@ -1792,18 +1813,19 @@ describe('character creation flow', () => {
         'CompleteCharacterCreationHomeworld',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation',
+        'CompleteCharacterCreationBasicTraining',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
-        'AdvanceCharacterCreation',
-        'AdvanceCharacterCreation',
+        'CompleteCharacterCreationSkills',
         'DecideCharacterCreationAnagathics',
         'ResolveCharacterCreationAging',
         'ResolveCharacterCreationReenlistment',
         'LeaveCharacterCreationCareer',
-        'AdvanceCharacterCreation',
+        'CompleteCharacterCreationMustering',
         'CompleteCharacterCreation'
       ]
     )
+    assertNoGenericLifecycleAdvance(commands)
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
       Array.from({ length: commands.length }, () => undefined)
@@ -1827,12 +1849,15 @@ describe('character creation flow', () => {
     assert.deepEqual(events, [
       { type: 'SET_CHARACTERISTICS' },
       { type: 'SELECT_CAREER', isNewCareer: true, drafted: true },
-      { type: 'COMPLETE_BASIC_TRAINING' },
       { type: 'SURVIVAL_PASSED', canCommission: true, canAdvance: false },
-      { type: 'SKIP_COMMISSION' },
-      { type: 'COMPLETE_SKILLS' },
-      { type: 'FINISH_MUSTERING' }
+      { type: 'SKIP_COMMISSION' }
     ])
+    assert.equal(
+      commands.find(
+        (command) => command.type === 'LeaveCharacterCreationCareer'
+      )?.type,
+      'LeaveCharacterCreationCareer'
+    )
     assert.equal(
       commands.find(
         (command) => command.type === 'DecideCharacterCreationAnagathics'
@@ -1844,6 +1869,97 @@ describe('character creation flow', () => {
         (command) => command.type === 'ResolveCharacterCreationAging'
       )?.type,
       'ResolveCharacterCreationAging'
+    )
+  })
+
+  it('derives semantic reenlist commands between multiple owner-created terms', () => {
+    const base = completeDraft()
+    const completedTerm = {
+      career: 'Merchant',
+      drafted: false,
+      age: 22,
+      qualificationRoll: 8,
+      survivalRoll: 8,
+      survivalPassed: true,
+      canCommission: false,
+      commissionRoll: null,
+      commissionPassed: null,
+      canAdvance: false,
+      advancementRoll: null,
+      advancementPassed: null,
+      termSkillRolls: [
+        { table: 'serviceSkills' as const, roll: 1, skill: 'Comms' }
+      ],
+      anagathics: false,
+      agingRoll: 7,
+      reenlistmentRoll: 7,
+      reenlistmentOutcome: 'allowed' as const
+    }
+    const draft = createInitialCharacterDraft(characterId, {
+      name: base.name,
+      age: 26,
+      characteristics: base.characteristics,
+      homeworld: base.homeworld,
+      backgroundSkills: base.backgroundSkills,
+      pendingCascadeSkills: [],
+      completedTerms: [
+        completedTerm,
+        {
+          ...completedTerm,
+          age: 26,
+          reenlistmentRoll: 12,
+          reenlistmentOutcome: 'forced' as const
+        }
+      ],
+      careerPlan: null
+    })
+
+    const commands = deriveInitialCharacterCreationStateCommands(draft, {
+      identity,
+      state
+    })
+
+    assertNoGenericLifecycleAdvance(commands)
+    assert.equal(
+      commands.filter(
+        (command) => command.type === 'ReenlistCharacterCreationCareer'
+      ).length,
+      1
+    )
+    assert.equal(
+      commands.find(
+        (command) => command.type === 'LeaveCharacterCreationCareer'
+      )?.type,
+      'LeaveCharacterCreationCareer'
+    )
+    assert.deepEqual(
+      commands
+        .filter((command) => command.type === 'AdvanceCharacterCreation')
+        .map((command) => command.creationEvent.type),
+      [
+        'SET_CHARACTERISTICS',
+        'SELECT_CAREER',
+        'SURVIVAL_PASSED',
+        'SURVIVAL_PASSED'
+      ]
+    )
+    assert.equal(
+      commands.find(
+        (command) => command.type === 'CompleteCharacterCreationBasicTraining'
+      )?.type,
+      'CompleteCharacterCreationBasicTraining'
+    )
+    assert.equal(
+      commands.filter(
+        (command) => command.type === 'CompleteCharacterCreationSkills'
+      ).length,
+      2
+    )
+    assert.equal(
+      commands.find(
+        (command) => command.type === 'CompleteCharacterCreationMustering'
+      )?.type,
+      'CompleteCharacterCreationMustering'
     )
   })
 
@@ -1930,6 +2046,7 @@ describe('character creation flow', () => {
       { identity, state }
     )
     assert.equal(playableCommands.length, 20)
+    assertNoGenericLifecycleAdvance(playableCommands)
     assert.deepEqual(
       playableCommands
         .filter((command) => command.type === 'AdvanceCharacterCreation')
@@ -1941,11 +2058,8 @@ describe('character creation flow', () => {
       [
         'SET_CHARACTERISTICS',
         'SELECT_CAREER',
-        'COMPLETE_BASIC_TRAINING',
         'SURVIVAL_PASSED',
-        'COMPLETE_COMMISSION',
-        'COMPLETE_SKILLS',
-        'FINISH_MUSTERING'
+        'COMPLETE_COMMISSION'
       ]
     )
     assert.equal(

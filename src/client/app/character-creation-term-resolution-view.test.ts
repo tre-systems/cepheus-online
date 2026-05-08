@@ -145,13 +145,18 @@ describe('character creation term resolution view', () => {
   })
 
   it('uses required-term copy for forced reenlistment', () => {
+    const completed: boolean[] = []
     const node = asNode(
       renderCharacterCreationTermResolution(
         document,
         baseFlow(
           survivedPlan({ reenlistmentRoll: 12, reenlistmentOutcome: 'forced' })
         ),
-        { completeTerm: () => {} }
+        {
+          completeTerm: (continueCareer) => {
+            completed.push(continueCareer)
+          }
+        }
       )
     )
 
@@ -159,5 +164,7 @@ describe('character creation term resolution view', () => {
       node.children[2]?.children[0]?.textContent,
       'Serve required term'
     )
+    node.children[2]?.children[0]?.click()
+    assert.deepEqual(completed, [true])
   })
 })

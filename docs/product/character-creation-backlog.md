@@ -152,8 +152,10 @@ tests before it is considered done.
 - [~] Roll reenlistment from `careerBasics`, handling mandatory retirement
   after seven terms, forced reenlistment on 12, success, failure, and voluntary
   exit. Current legal actions cover unresolved, forced, allowed, and blocked
-  outcomes, and `ResolveCharacterCreationReenlistment` persists server-derived
-  roll facts. Gap: exit provenance and UI copy are not fully wired.
+  outcomes. `ResolveCharacterCreationReenlistment`,
+  `ReenlistCharacterCreationCareer`, and `LeaveCharacterCreationCareer`
+  persist server-derived roll facts and server-derived career decisions. Gap:
+  exit provenance and UI copy are not fully wired.
 - [~] Muster out using `materialBenefits` and `cashBenefits`, with benefit
   counts, cash limits, rank/Gambling modifiers, and material effects. Benefit
   roll commands/events exist. Gap: final projected credits/materials,
@@ -243,6 +245,10 @@ Tasks:
   that semantic commands exist for the main SRD path. Keep adding semantic
   commands where behavior still matters, especially optional mishaps,
   anagathics, multi-career continuation, and final export/provenance.
+- The next highest-value generic bridge payloads to migrate or fence are:
+  generic `FINISH_MUSTERING` without a benefit payload, `MISHAP_RESOLVED`,
+  `DEATH_CONFIRMED`, and the remaining bootstrap/test uses of
+  `SET_CHARACTERISTICS` and `SELECT_CAREER`.
 - Make roll events first-class facts. Each roll-gated event should record the
   roll inputs, dice result, modifiers, target, success/failure, and resulting
   state transition.
@@ -373,9 +379,10 @@ Goal: implement the main Cepheus term loop end to end.
 
 Status: in progress. The main term-loop rolls are server-backed semantic facts:
 survival, commission, advancement, term skills, aging, reenlistment, and
-mustering benefits. The remaining work is to make pending choices,
-multi-term/mustering transitions, provenance, and browser UX robust enough to
-use without manual recovery.
+mustering benefits. Career re-enlistment, career exit, and post-mustering
+continuation now have semantic commands/events instead of generic transition
+payloads. The remaining work is to make pending choices, mustering completion,
+provenance, and browser UX robust enough to use without manual recovery.
 
 Tasks:
 
@@ -399,10 +406,10 @@ Acceptance:
   mode.
 - Term history matches the event stream after refresh.
 
-Next priority: harden the term-skill, aging, reenlistment, mustering, and
-multi-term browser paths on top of the semantic server facts that now exist.
-Keep death as the first hard branch after the normal pass path is
-authoritative, then keep mishaps as an optional variant.
+Next priority: harden the term-skill, aging, mustering, and multi-term browser
+paths on top of the semantic server facts that now exist. Keep death as the
+first hard branch after the normal pass path is authoritative, then keep
+mishaps as an optional variant.
 
 ## Milestone 5: Aging, Anagathics, And Reenlistment
 
@@ -418,7 +425,9 @@ Tasks:
 - Complete optional anagathics survival check, cost/payment flow, and
   provenance on top of the server-owned use/skip decision.
 - Polish reenlistment UI/provenance for retirement after seven terms, forced
-  reenlistment on 12, success, and failure toward mustering out.
+  reenlistment on 12, success, failure toward mustering out, and voluntary
+  career exit. The semantic command/event split is done; this is now
+  presentation and regression coverage.
 - Add UI copy for forced reenlistment, blocked reenlistment, retirement, and
   leave-career decisions.
 
@@ -436,6 +445,9 @@ Tasks:
 
 - Persist credits, starting credits, and material benefits.
 - Support continuing into a new career after mustering out when rules allow.
+- Use `ContinueCharacterCreationAfterMustering` as the production command for
+  multi-career continuation; keep generic `CONTINUE_CAREER` fenced for replay
+  compatibility only.
 - Implement finalization gates:
   - at least one term
   - current term complete or character has legally exited
