@@ -11,7 +11,6 @@ import type { ServerMessage } from '../../shared/protocol'
 import type { BenefitKind } from '../../shared/character-creation/types'
 import type {
   BoardState,
-  CharacterCreationHomeworld,
   CharacterCreationProjection,
   CharacterState,
   CharacteristicKey,
@@ -43,6 +42,7 @@ import {
   creationActivityRevealDelayMs
 } from './creation-activity-feed.js'
 import { createCreationPresenceDock } from './creation-presence-dock.js'
+import { createCharacterCreationHomeworldPublisher } from './character-creation-homeworld-publisher.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBasicTraining,
@@ -201,7 +201,6 @@ const animatedDiceRollActivityIds = new Set<string>()
 let characterCreationFlow: CharacterCreationFlow | null = null
 let characterCreationReadOnly = false
 let characterCreationPublishPromise: Promise<void> | null = null
-let characterCreationHomeworldPublishPromise = Promise.resolve()
 const setStatus = (text: string): void => {
   els.status.textContent = text
 }
@@ -507,233 +506,16 @@ const ensureCharacterCreationPublished = () => {
   return characterCreationPublishPromise
 }
 
-const homeworldForCommand = (
-  homeworld: CharacterCreationDraft['homeworld']
-): CharacterCreationHomeworld => ({
-  name: null,
-  lawLevel: homeworld.lawLevel ?? null,
-  tradeCodes: Array.isArray(homeworld.tradeCodes)
-    ? [...homeworld.tradeCodes]
-    : homeworld.tradeCodes
-      ? [homeworld.tradeCodes]
-      : []
-})
-
-const sameHomeworldCommandValue = (
-  left: CharacterCreationHomeworld | null | undefined,
-  right: CharacterCreationHomeworld
-): boolean => {
-  if (!left || !right) return false
-  const leftTradeCodes = Array.isArray(left.tradeCodes)
-    ? left.tradeCodes
-    : left.tradeCodes
-      ? [left.tradeCodes]
-      : []
-  const rightTradeCodes = Array.isArray(right.tradeCodes)
-    ? right.tradeCodes
-    : right.tradeCodes
-      ? [right.tradeCodes]
-      : []
-  return (
-    (left.name ?? null) === (right.name ?? null) &&
-    (left.lawLevel ?? null) === (right.lawLevel ?? null) &&
-    leftTradeCodes.length === rightTradeCodes.length &&
-    leftTradeCodes.every((code, index) => code === rightTradeCodes[index])
-  )
-}
-
-const backgroundSkillAllowance = (edu: number | null): number =>
-  3 + (edu == null ? 0 : Math.floor(edu / 3) - 2)
-
-const projectedHomeworldIsComplete = (
-  creation: CharacterCreationProjection | null,
-  draft: CharacterCreationDraft
-): boolean =>
-  Boolean(
-    creation?.state.status === 'HOMEWORLD' &&
-      (creation.pendingCascadeSkills ?? []).length === 0 &&
-      (creation.backgroundSkills ?? []).length >=
-        backgroundSkillAllowance(draft.characteristics.edu)
-  )
-
-const publishCharacterCreationHomeworldProgressNow = async (
-  flow: CharacterCreationFlow | null
-): Promise<void> => {
-  if (characterCreationReadOnly || !flow || flow.step !== 'homeworld') return
-
-  const { draft } = flow
-  const homeworld = homeworldForCommand(draft.homeworld)
-  if (!homeworld.lawLevel || homeworld.tradeCodes.length === 0) return
-
-  await ensureCharacterCreationPublished()
-
-  let creation = projectedCharacterCreationFromState(state, draft.characterId)
-  if (!creation || creation.state.status !== 'HOMEWORLD') return
-
-  const baseCommand = {
-    ...commandIdentity(),
-    characterId: draft.characterId
-  }
-
-  if (!sameHomeworldCommandValue(creation.homeworld, homeworld)) {
-    await postCharacterCreationCommand(
-      {
-        type: 'SetCharacterCreationHomeworld',
-        ...baseCommand,
-        homeworld
-      },
-      requestId('set-character-homeworld')
-    )
-    creation = projectedCharacterCreationFromState(state, draft.characterId)
-  }
-
-  if (!creation || creation.state.status !== 'HOMEWORLD') return
-
-  if (projectedHomeworldIsComplete(creation, draft)) {
-    await postCharacterCreationCommand(
-      {
-        type: 'CompleteCharacterCreationHomeworld',
-        ...baseCommand
-      },
-      requestId('complete-character-homeworld')
-    )
-    return
-  }
-
-  const projectedBackgroundSkills = new Set(creation.backgroundSkills ?? [])
-  const projectedPendingCascadeSkills = new Set(
-    creation.pendingCascadeSkills ?? []
-  )
-  for (const skill of draft.backgroundSkills) {
-    if (projectedBackgroundSkills.has(skill)) continue
-    if (projectedPendingCascadeSkills.has(skill)) continue
-    await postCharacterCreationCommand(
-      {
-        type: 'SelectCharacterCreationBackgroundSkill',
-        ...baseCommand,
-        skill
-      },
-      requestId('select-character-background-skill')
-    )
-    creation = projectedCharacterCreationFromState(state, draft.characterId)
-    if (!creation || creation.state.status !== 'HOMEWORLD') return
-    projectedBackgroundSkills.clear()
-    for (const nextSkill of creation.backgroundSkills ?? []) {
-      projectedBackgroundSkills.add(nextSkill)
-    }
-    projectedPendingCascadeSkills.clear()
-    for (const nextSkill of creation.pendingCascadeSkills ?? []) {
-      projectedPendingCascadeSkills.add(nextSkill)
-    }
-  }
-
-  const validation = deriveCharacterCreationValidationSummary({
-    ...flow,
-    step: 'homeworld'
+const characterCreationHomeworldPublisher =
+  createCharacterCreationHomeworldPublisher({
+    getState: () => state,
+    isReadOnly: () => characterCreationReadOnly,
+    commandIdentity,
+    ensurePublished: ensureCharacterCreationPublished,
+    postCharacterCreationCommand,
+    requestId,
+    setError
   })
-  creation = projectedCharacterCreationFromState(state, draft.characterId)
-  if (
-    validation.ok &&
-    creation?.state.status === 'HOMEWORLD' &&
-    (creation.pendingCascadeSkills ?? []).length === 0
-  ) {
-    await postCharacterCreationCommand(
-      {
-        type: 'CompleteCharacterCreationHomeworld',
-        ...baseCommand
-      },
-      requestId('complete-character-homeworld')
-    )
-  }
-}
-
-const publishCharacterCreationHomeworldProgress = (
-  flow: CharacterCreationFlow | null
-): Promise<void> => {
-  characterCreationHomeworldPublishPromise =
-    characterCreationHomeworldPublishPromise
-      .catch(() => {
-        // Keep the queue alive after an earlier rejected command.
-      })
-      .then(() => publishCharacterCreationHomeworldProgressNow(flow))
-      .catch((error) => setError(error.message))
-  return characterCreationHomeworldPublishPromise
-}
-
-const publishCharacterCreationBackgroundCascadeSelection = (
-  flow: CharacterCreationFlow | null,
-  skill: string
-): Promise<void> => {
-  characterCreationHomeworldPublishPromise =
-    characterCreationHomeworldPublishPromise
-      .catch(() => {
-        // Keep the queue alive after an earlier rejected command.
-      })
-      .then(async () => {
-        if (characterCreationReadOnly || !flow || flow.step !== 'homeworld') {
-          return
-        }
-        await publishCharacterCreationHomeworldProgressNow(flow)
-        const creation = projectedCharacterCreationFromState(state, flow.draft.characterId)
-        if (
-          !creation ||
-          creation.state.status !== 'HOMEWORLD' ||
-          (creation.pendingCascadeSkills ?? []).includes(skill)
-        ) {
-          return
-        }
-        await postCharacterCreationCommand(
-          {
-            type: 'SelectCharacterCreationBackgroundSkill',
-            ...commandIdentity(),
-            characterId: flow.draft.characterId,
-            skill
-          },
-          requestId('select-character-background-cascade')
-        )
-      })
-      .catch((error) => setError(error.message))
-  return characterCreationHomeworldPublishPromise
-}
-
-const publishCharacterCreationCascadeResolution = (
-  flow: CharacterCreationFlow | null,
-  cascadeSkill: string,
-  selection: string
-): Promise<void> => {
-  characterCreationHomeworldPublishPromise =
-    characterCreationHomeworldPublishPromise
-      .catch(() => {
-        // Keep the queue alive after an earlier rejected command.
-      })
-      .then(async () => {
-        if (characterCreationReadOnly || !flow || flow.step !== 'homeworld') {
-          return
-        }
-        await ensureCharacterCreationPublished()
-        const creation = projectedCharacterCreationFromState(state, flow.draft.characterId)
-        if (
-          !creation ||
-          creation.state.status !== 'HOMEWORLD' ||
-          !(creation.pendingCascadeSkills ?? []).includes(cascadeSkill)
-        ) {
-          return
-        }
-        await postCharacterCreationCommand(
-          {
-            type: 'ResolveCharacterCreationCascadeSkill',
-            ...commandIdentity(),
-            characterId: flow.draft.characterId,
-            cascadeSkill,
-            selection
-          },
-          requestId('resolve-character-background-cascade')
-        )
-        await publishCharacterCreationHomeworldProgressNow(flow)
-      })
-      .catch((error) => setError(error.message))
-  return characterCreationHomeworldPublishPromise
-}
 
 const publishCharacterCreationTermCascadeResolution = async (
   flow: CharacterCreationFlow | null,
@@ -957,7 +739,7 @@ const autoAdvanceCharacterCreationSetup = () => {
       characterCreationFlow
     )
     if (validation.ok) {
-      publishCharacterCreationHomeworldProgress(characterCreationFlow)
+      characterCreationHomeworldPublisher.publishProgress(characterCreationFlow)
     }
     return false
   }
@@ -1553,12 +1335,12 @@ const renderCharacterCreationBackgroundSkills = (
       renderCharacterCreationWizard()
       if (!wasSelected) {
         if (option.cascade) {
-          publishCharacterCreationBackgroundCascadeSelection(
+          characterCreationHomeworldPublisher.publishBackgroundCascadeSelection(
             nextFlow,
             option.label
           )
         } else {
-          publishCharacterCreationHomeworldProgress(nextFlow)
+          characterCreationHomeworldPublisher.publishProgress(nextFlow)
         }
       }
     })
@@ -1626,7 +1408,7 @@ const renderCharacterCreationCascadeChoice = (
           nextFlow
         ).catch((error) => setError(error.message))
       } else {
-        publishCharacterCreationCascadeResolution(
+        characterCreationHomeworldPublisher.publishCascadeResolution(
           nextFlow,
           cascade.cascadeSkill,
           option.label
@@ -1969,7 +1751,7 @@ const resolveCharacterCreationCareerQualification = async (
     })
   ).flow
 
-  await characterCreationHomeworldPublishPromise
+  await characterCreationHomeworldPublisher.flush()
   await ensureCharacterCreationPublished()
 
   let response = null
@@ -3201,7 +2983,7 @@ els.characterCreationFields.addEventListener('change', () => {
   syncCharacterCreationWizardFields()
   const nextFlow = characterCreationFlow
   if (nextFlow?.step === 'homeworld') {
-    publishCharacterCreationHomeworldProgress(nextFlow)
+    characterCreationHomeworldPublisher.publishProgress(nextFlow)
   }
   autoAdvanceCharacterCreationSetup()
   renderCharacterCreationWizard()
