@@ -30,9 +30,9 @@ type UpdateCharacterSheetCommand = Extract<
   Command,
   { type: 'UpdateCharacterSheet' }
 >
-type AdvanceCharacterCreationCommand = Extract<
+type CompleteCharacterCreationBasicTrainingCommand = Extract<
   Command,
-  { type: 'AdvanceCharacterCreation' }
+  { type: 'CompleteCharacterCreationBasicTraining' }
 >
 
 const moveCommand = (overrides: Partial<MovePieceCommand> = {}): Command => ({
@@ -81,7 +81,18 @@ const sheetCommand = (): UpdateCharacterSheetCommand => ({
   notes: 'Ready'
 })
 
-const characterCreationCommand = (): AdvanceCharacterCreationCommand => ({
+const characterCreationCommand =
+  (): CompleteCharacterCreationBasicTrainingCommand => ({
+    type: 'CompleteCharacterCreationBasicTraining',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId
+  })
+
+const genericCharacterCreationCommand = (): Extract<
+  Command,
+  { type: 'AdvanceCharacterCreation' }
+> => ({
   type: 'AdvanceCharacterCreation',
   gameId: identity.gameId,
   actorId: identity.actorId,
@@ -222,7 +233,6 @@ describe('app command router dispatch', () => {
       CreateCharacter: 'characterCreation',
       UpdateCharacterSheet: 'sheet',
       StartCharacterCreation: 'characterCreation',
-      AdvanceCharacterCreation: 'characterCreation',
       SetCharacterCreationHomeworld: 'characterCreation',
       SelectCharacterCreationBackgroundSkill: 'characterCreation',
       ResolveCharacterCreationCascadeSkill: 'characterCreation',
@@ -290,7 +300,7 @@ describe('app command router dispatch', () => {
       'RollDice',
       'SetDoorOpen',
       'UpdateCharacterSheet',
-      'AdvanceCharacterCreation',
+      'CompleteCharacterCreationBasicTraining',
       'DecideCharacterCreationAnagathics',
       'ResolveCharacterCreationAgingLosses'
     ])
@@ -309,6 +319,18 @@ describe('app command router dispatch', () => {
     assert.deepEqual(
       submissions.map((submission) => submission.command.expectedSeq),
       [40, 40, 40, 40, 40, 40, 40]
+    )
+  })
+
+  it('keeps generic character creation advances out of the typed client route', async () => {
+    const router = createAppCommandRouter({
+      getEventSeq: () => 40,
+      submit: async (input) => input.command.type
+    })
+
+    assert.equal(
+      router.routeFor(genericCharacterCreationCommand()),
+      'characterCreation'
     )
   })
 })

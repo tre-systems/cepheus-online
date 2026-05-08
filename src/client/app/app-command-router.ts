@@ -35,7 +35,6 @@ export type CharacterCreationCommand = Extract<
       | 'CreateCharacter'
       | 'UpdateCharacterSheet'
       | 'StartCharacterCreation'
-      | 'AdvanceCharacterCreation'
       | 'SetCharacterCreationHomeworld'
       | 'SelectCharacterCreationBackgroundSkill'
       | 'ResolveCharacterCreationCascadeSkill'
@@ -79,12 +78,16 @@ export type AppCommandRoute =
   | 'sheet'
   | 'characterCreation'
 
+type RoutedCommandType = Exclude<
+  GameCommand['type'],
+  'AdvanceCharacterCreation'
+>
+
 export const appCommandRouteByType = {
   CreateGame: 'game',
   CreateCharacter: 'characterCreation',
   UpdateCharacterSheet: 'sheet',
   StartCharacterCreation: 'characterCreation',
-  AdvanceCharacterCreation: 'characterCreation',
   SetCharacterCreationHomeworld: 'characterCreation',
   SelectCharacterCreationBackgroundSkill: 'characterCreation',
   ResolveCharacterCreationCascadeSkill: 'characterCreation',
@@ -124,7 +127,7 @@ export const appCommandRouteByType = {
   SetPieceVisibility: 'board',
   SetPieceFreedom: 'board',
   RollDice: 'dice'
-} satisfies Record<GameCommand['type'], AppCommandRoute>
+} satisfies Record<RoutedCommandType, AppCommandRoute>
 
 export interface AppCommandSubmitInput {
   requestId: string
@@ -254,7 +257,10 @@ export const createAppCommandRouter = <TResult = unknown>({
   return {
     sequenceCommand: (command, offset = 0) =>
       sequenceCommand(command, getEventSeq(), offset),
-    routeFor: (command) => appCommandRouteByType[command.type],
+    routeFor: (command) =>
+      command.type === 'AdvanceCharacterCreation'
+        ? 'characterCreation'
+        : appCommandRouteByType[command.type],
     ...domainRouter<GameCommand>(),
     board: domainRouter<BoardCommand>(),
     dice: domainRouter<DiceCommand>(),

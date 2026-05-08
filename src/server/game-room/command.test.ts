@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 
 import {
   createCareerCreationState,
+  type CareerCreationEvent,
   type CareerCreationStatus
 } from '../../shared/characterCreation'
 import { asCharacterId, asGameId, asUserId } from '../../shared/ids'
@@ -2702,6 +2703,92 @@ describe('deriveEventsForCommand error categories', () => {
       result.error.message,
       'COMPLETE_SKILLS must use CompleteCharacterCreationSkills'
     )
+  })
+
+  it('rejects remaining generic skill and anagathics facts after semantic migration', () => {
+    const cases: [CareerCreationEvent, CareerCreationStatus, string][] = [
+      [
+        {
+          type: 'ROLL_TERM_SKILL' as const,
+          termSkill: {
+            career: 'Merchant',
+            table: 'serviceSkills',
+            roll: {
+              expression: '1d6',
+              rolls: [1],
+              total: 1
+            },
+            tableRoll: 1,
+            rawSkill: 'Pilot',
+            skill: 'Pilot-1',
+            characteristic: null,
+            pendingCascadeSkill: null
+          }
+        },
+        'SKILLS_TRAINING' as const,
+        'ROLL_TERM_SKILL must use RollCharacterCreationTermSkill'
+      ],
+      [
+        {
+          type: 'RESOLVE_TERM_CASCADE_SKILL' as const,
+          cascadeSkill: 'Gun Combat',
+          selection: 'Slug Pistol'
+        },
+        'SKILLS_TRAINING' as const,
+        'RESOLVE_TERM_CASCADE_SKILL must use ResolveCharacterCreationTermCascadeSkill'
+      ],
+      [
+        {
+          type: 'DECIDE_ANAGATHICS' as const,
+          useAnagathics: false,
+          termIndex: 0
+        },
+        'AGING' as const,
+        'DECIDE_ANAGATHICS must use DecideCharacterCreationAnagathics'
+      ],
+      [
+        { type: 'RESET' as const },
+        'SURVIVAL' as const,
+        'RESET is not available in public character creation'
+      ]
+    ]
+
+    for (const [creationEvent, status, message] of cases) {
+      const result = runCommand(
+        {
+          type: 'AdvanceCharacterCreation',
+          gameId,
+          actorId,
+          characterId,
+          creationEvent
+        },
+        createCreation(status, {
+          state: createCareerCreationState(status, {
+            canCommission: true,
+            canAdvance: false
+          }),
+          terms: [
+            {
+              career: 'Merchant',
+              skills: ['Pilot-1'],
+              skillsAndTraining: ['Broker-0', 'Pilot-1'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 7
+            }
+          ]
+        })
+      )
+
+      assert.equal(result.ok, false)
+      if (result.ok) continue
+      assert.equal(result.error.code, 'invalid_command')
+      assert.equal(result.error.message, message)
+    }
   })
 
   it('blocks semantic term skill rolls outside skills training', () => {

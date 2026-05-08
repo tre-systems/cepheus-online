@@ -478,6 +478,12 @@ const semanticCommandForGenericCreationEvent = (
       return 'ResolveCharacterCreationCommission'
     case 'COMPLETE_ADVANCEMENT':
       return 'ResolveCharacterCreationAdvancement'
+    case 'ROLL_TERM_SKILL':
+      return 'RollCharacterCreationTermSkill'
+    case 'RESOLVE_TERM_CASCADE_SKILL':
+      return 'ResolveCharacterCreationTermCascadeSkill'
+    case 'DECIDE_ANAGATHICS':
+      return 'DecideCharacterCreationAnagathics'
     case 'DEATH_CONFIRMED':
       return 'ConfirmCharacterCreationDeath'
     case 'MISHAP_RESOLVED':
@@ -2201,6 +2207,14 @@ export const deriveEventsForCommand = (
           commandError(
             'invalid_command',
             'SKIP_ADVANCEMENT must use SkipCharacterCreationAdvancement'
+          )
+        )
+      }
+      if (command.creationEvent.type === 'RESET') {
+        return err(
+          commandError(
+            'invalid_command',
+            'RESET is not available in public character creation'
           )
         )
       }

@@ -250,13 +250,12 @@ Tasks:
   implemented, and the server-persisted characteristic completion event is now
   semantic.
 - Bootstrap/demo creation and custom-piece production paths are now off generic
-  `SET_CHARACTERISTICS` and `SELECT_CAREER`. The current isolation slice is the
-  remaining local draft fallback in `src/client/app/character-creation-flow.ts`,
-  plus the optional protocol-level decision about rejecting generic production
-  `SET_CHARACTERISTICS` and `SELECT_CAREER` attempts while keeping historical
-  replay compatibility for old `CharacterCreationTransitioned` events. Generic
-  no-benefit `FINISH_MUSTERING` and post-roll characteristic completion are no
-  longer active migration targets.
+  `SET_CHARACTERISTICS` and `SELECT_CAREER`. Local draft fallback and the typed
+  client character-creation route are also off `AdvanceCharacterCreation`.
+  Server command handling now rejects every current generic transition fact
+  before persistence. The remaining isolation slice is to hard-deprecate the
+  generic command response while keeping historical replay compatibility for old
+  `CharacterCreationTransitioned` events.
 - Make roll events first-class facts. Each roll-gated event should record the
   roll inputs, dice result, modifiers, target, success/failure, and resulting
   state transition.
@@ -360,14 +359,13 @@ Goal: make career entry follow the rules and feel like a meaningful choice.
 Status: mostly done. Qualification, failed-qualification options, Draft,
 Drifter fallback, drafted terms, and visible qualification/draft dice events are
 server-backed. Production career entry paths, including bootstrap/demo and
-custom-piece creation, are off generic `SELECT_CAREER`. Remaining work is to
-remove the local draft fallback in `src/client/app/character-creation-flow.ts`,
-prove the branch in browser smoke, and tighten copy/provenance.
+custom-piece creation, are off generic `SELECT_CAREER`; the local draft
+fallback no longer replays generic career events. Remaining work is to prove the
+branch in browser smoke and tighten copy/provenance.
 
 Tasks:
 
-- Remove the remaining local draft fallback in
-  `src/client/app/character-creation-flow.ts`.
+- Keep career-entry smoke coverage current as the UI is refactored.
 - Carry requested career, accepted career, drafted status, qualification
   penalty, failed-qualification options, and basic-training choice as projected
   facts.

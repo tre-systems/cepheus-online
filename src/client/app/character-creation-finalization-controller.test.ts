@@ -167,9 +167,10 @@ const assertNoRejectedGenericBridgeCommands = (
   assert.equal(
     commands.some(
       (command) =>
-        command.type === 'AdvanceCharacterCreation' &&
-        (command.creationEvent.type === 'SET_CHARACTERISTICS' ||
-          command.creationEvent.type === 'SELECT_CAREER')
+        command.type === 'RollCharacterCreationCharacteristic' ||
+        command.type === 'ResolveCharacterCreationQualification' ||
+        command.type === 'ResolveCharacterCreationDraft' ||
+        command.type === 'EnterCharacterCreationDrifter'
     ),
     false
   )

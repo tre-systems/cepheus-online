@@ -484,23 +484,19 @@ homeworld set/completion, background skill selection, cascade resolution,
 career qualification, draft resolution, career term start, basic training,
 survival, commission, advancement, term skill rolls, aging, reenlistment,
 career reenlistment, career exit, default death confirmation, post-mustering
-continuation, mustering benefits, mustering completion, and finalization.
-`AdvanceCharacterCreation` is referee-only and now rejects the fact-bearing
-reenlistment, leave-career, blocked-reenlist, forced-reenlist, continue-career,
-mustering-benefit, no-benefit `FINISH_MUSTERING`, death confirmation, and
-optional-mishap placeholder payloads that have semantic commands or explicit
+continuation, mustering benefits, mustering completion, and finalization. The
+production client no longer constructs `AdvanceCharacterCreation`, and the
+typed character-creation router excludes it. The server still decodes the
+generic command for compatibility, but it is referee-only and now rejects every
+current `CareerCreationEvent` payload in favor of semantic commands or explicit
 fences. The server-persisted generic `SET_CHARACTERISTICS` emitted after the
 sixth characteristic roll has been replaced with
-`CharacterCreationCharacteristicsCompleted`. Bootstrap/demo creation and
-custom-piece production paths are now off generic `SET_CHARACTERISTICS` and
-`SELECT_CAREER` bridge commands. The current slice is the remaining local draft
-fallback in `src/client/app/character-creation-flow.ts`, plus the optional
-protocol-level decision about rejecting generic production `SET_CHARACTERISTICS`
-and `SELECT_CAREER` attempts while keeping `CharacterCreationTransitioned`
-historical replay compatibility.
-P1: any remaining roll-bearing or rules-bearing `AdvanceCharacterCreation` facts
-should be rejected or migrated because dice and outcome facts must come from
-semantic server commands/events.
+`CharacterCreationCharacteristicsCompleted`. Bootstrap/demo creation,
+custom-piece production paths, and local draft fallback are now off generic
+`SET_CHARACTERISTICS` and `SELECT_CAREER` bridge commands. The remaining work
+is hard-deprecating the generic command path, keeping historical
+`CharacterCreationTransitioned` replay compatibility, and continuing to move
+read models/live activity onto semantic event facts.
 
 Tasks:
 
@@ -510,20 +506,25 @@ Tasks:
 - Keep command payloads intent-shaped. For example, commands request a career,
   a table choice, or a decision; the server derives dice, modifiers, success,
   rank, skill, or benefit facts.
-- Maintain backward compatibility only as a short bridge for the current UI.
-  New rules work should add semantic events first, then adapt the UI.
+- Maintain backward compatibility only for historical replay and protocol
+  decode stability. New rules work should add semantic events first, then adapt
+  the UI.
 - Finish the remaining `AdvanceCharacterCreation` migration in this order:
   1. Done: replace the server-persisted generic `SET_CHARACTERISTICS` after the sixth
      stat roll with `CharacterCreationCharacteristicsCompleted`, preserving the
      semantic roll facts already emitted for individual characteristic rolls.
   2. Done: move bootstrap/demo creation and custom-piece production paths off
      generic `SET_CHARACTERISTICS` and `SELECT_CAREER`.
-  3. Current: remove the remaining local draft fallback in
-     `src/client/app/character-creation-flow.ts`; decide whether generic
-     production `SET_CHARACTERISTICS` and `SELECT_CAREER` attempts also need
-     protocol-level rejection or whether client-side removal plus historical
-     replay compatibility is enough.
-  4. Keep `CharacterCreationTransitioned` only for historical replay while new
+  3. Done: remove the local draft fallback in
+     `src/client/app/character-creation-flow.ts` and exclude generic advance
+     from typed client character-creation dispatch.
+  4. Done: reject all current generic transition facts server-side before
+     persistence, including skill rolls, cascade choices, anagathics, and
+     reset.
+  5. Current: replace the per-event generic command branch with a hard
+     deprecated-command response once protocol fixtures and any migration tools
+     no longer depend on specific rejection messages.
+  6. Keep `CharacterCreationTransitioned` only for historical replay while new
      production rules work emits semantic events.
 - Finish updating `deriveLiveActivities()` to read semantic events directly
   instead of parsing coarse transition payloads where possible.
@@ -905,9 +906,10 @@ The next batch should run like this, in this order:
    server-persisted characteristic completion event now point at semantic
    commands/events or explicit fences. Bootstrap/demo creation and custom-piece
    production paths are now off generic `SET_CHARACTERISTICS` and
-   `SELECT_CAREER`. Current slice: remove the remaining local draft fallback in
-   `src/client/app/character-creation-flow.ts`, decide whether to add
-   protocol-level rejection for generic production attempts, and keep
+   `SELECT_CAREER`; local draft fallback is off generic commands; the typed
+   client character-creation route excludes `AdvanceCharacterCreation`; and
+   the server rejects every current generic creation fact before persistence.
+   Current slice: hard-deprecate the generic command path while preserving
    historical replay compatibility for old `CharacterCreationTransitioned`
    events.
 2. Finish the next architecture cleanup already underway: shrink `app.ts`,
