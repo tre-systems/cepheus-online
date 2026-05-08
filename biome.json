@@ -117,6 +117,8 @@
       "README.md",
       "docs/**/*.md",
       "src/**/*.ts",
+      "src/**/*.js",
+      "!src/server/static-client-assets.generated.ts",
       "scripts/**/*.mjs",
       "*.json",
       "*.mjs"

@@ -702,13 +702,16 @@ describe('mustering-out and aging helpers', () => {
     assert.equal(paid.terms[2].anagathicsCost, 5000)
     assert.equal(terms[2].anagathicsCost, undefined)
 
-    assert.deepEqual(resolveAnagathicsUse({ term: scoutTerm, survived: true }), {
-      term: {
-        ...scoutTerm,
-        anagathics: true
-      },
-      survived: true
-    })
+    assert.deepEqual(
+      resolveAnagathicsUse({ term: scoutTerm, survived: true }),
+      {
+        term: {
+          ...scoutTerm,
+          anagathics: true
+        },
+        survived: true
+      }
+    )
   })
 
   it('decides whether a character must age or can start another term', () => {

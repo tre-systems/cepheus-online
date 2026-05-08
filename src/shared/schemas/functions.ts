@@ -1,4 +1,4 @@
-import {gameID} from './types'
+import { gameID } from './types'
 
 interface ArraySchema {
   type: 'array'

@@ -1,14 +1,14 @@
-import {asUserId, type GameId, type UserId} from '../../shared/ids'
-import type {ClientMessage, ServerMessage} from '../../shared/protocol'
-import type {GameState} from '../../shared/state'
+import { asUserId, type GameId, type UserId } from '../../shared/ids'
+import type { ClientMessage, ServerMessage } from '../../shared/protocol'
+import type { GameState } from '../../shared/state'
 import {
   filterGameStateForViewer,
   type GameViewer,
   type ViewerRole
 } from '../../shared/viewer'
-import type {DurableObjectStorage} from '../cloudflare'
-import {getProjectedGameState} from './projection'
-import {getEventSeq} from './storage'
+import type { DurableObjectStorage } from '../cloudflare'
+import { getProjectedGameState } from './projection'
+import { getEventSeq } from './storage'
 
 const isLocalDevHost = (url: URL): boolean =>
   url.hostname === 'localhost' ||
@@ -50,7 +50,7 @@ export const parseViewerFromUrl = (url: URL): GameViewer => ({
 })
 
 export const viewerFromCommand = (
-  message: Extract<ClientMessage, {type: 'command'}>
+  message: Extract<ClientMessage, { type: 'command' }>
 ): GameViewer => ({
   userId: message.command.actorId,
   role: 'PLAYER'

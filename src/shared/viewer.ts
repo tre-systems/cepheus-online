@@ -1,5 +1,5 @@
-import type {UserId} from './ids'
-import type {GameState, PlayerState, PieceState} from './state'
+import type { UserId } from './ids'
+import type { GameState, PlayerState, PieceState } from './state'
 
 export type ViewerRole = PlayerState['role']
 
@@ -8,10 +8,7 @@ export interface GameViewer {
   role: ViewerRole
 }
 
-const isPieceVisibleToRole = (
-  piece: PieceState,
-  role: ViewerRole
-): boolean => {
+const isPieceVisibleToRole = (piece: PieceState, role: ViewerRole): boolean => {
   if (role === 'REFEREE') return true
   if (role === 'SPECTATOR') return piece.visibility === 'VISIBLE'
 

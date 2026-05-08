@@ -1,4 +1,4 @@
-import {err, ok, type Result} from './result'
+import { err, ok, type Result } from './result'
 
 export interface DiceExpression {
   count: number
@@ -37,7 +37,7 @@ export const parseDiceExpression = (
     return err('Dice expression must use between 2 and 1000 sides')
   }
 
-  return ok({count, sides, modifier})
+  return ok({ count, sides, modifier })
 }
 
 export const rollDiceExpression = (
@@ -51,7 +51,7 @@ export const rollDiceExpression = (
   }
 
   const rolls = Array.from(
-    {length: parsed.value.count},
+    { length: parsed.value.count },
     () => Math.floor(rng() * parsed.value.sides) + 1
   )
   const total =

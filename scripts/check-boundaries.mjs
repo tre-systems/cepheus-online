@@ -44,11 +44,11 @@ const addFailure = (path, lineNumber, message, line) => {
 }
 
 const checkLinePattern = ({ path, lines, pattern, message }) => {
-  lines.forEach((line, index) => {
+  for (const [index, line] of lines.entries()) {
     if (pattern.test(line)) {
       addFailure(path, index + 1, message, line)
     }
-  })
+  }
 }
 
 for (const path of sourceFiles) {

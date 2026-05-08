@@ -1,10 +1,10 @@
 import * as assert from 'node:assert/strict'
-import {describe, it} from 'node:test'
+import { describe, it } from 'node:test'
 
-import {parseDiceExpression, rollDiceExpression} from './dice'
-import type {EventEnvelope} from './events'
-import {asEventId, asGameId, asUserId} from './ids'
-import {projectGameState} from './projector'
+import { parseDiceExpression, rollDiceExpression } from './dice'
+import type { EventEnvelope } from './events'
+import { asEventId, asGameId, asUserId } from './ids'
+import { projectGameState } from './projector'
 
 describe('dice expressions', () => {
   it('parses count, sides, and signed modifier', () => {

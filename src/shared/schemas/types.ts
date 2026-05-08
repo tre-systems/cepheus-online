@@ -1,4 +1,4 @@
-import type {SchemaProperty} from './schemaTypes'
+import type { SchemaProperty } from './schemaTypes'
 
 export const color = Object.freeze({
   title: 'Color',

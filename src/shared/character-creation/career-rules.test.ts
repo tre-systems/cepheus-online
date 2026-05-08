@@ -10,7 +10,7 @@ describe('career rule helpers', () => {
   it('requires two term skill rolls for careers without commission', () => {
     assert.equal(
       deriveRequiredTermSkillCount({
-        Commission: '-',
+        Commission: '-'
       }),
       2
     )
@@ -31,10 +31,7 @@ describe('career rule helpers', () => {
       { canCommission: true, canAdvance: false }
     )
     assert.deepEqual(
-      deriveSurvivalPromotionOptions(
-        { Commission: '-', Advancement: '-' },
-        0
-      ),
+      deriveSurvivalPromotionOptions({ Commission: '-', Advancement: '-' }, 0),
       { canCommission: false, canAdvance: false }
     )
   })

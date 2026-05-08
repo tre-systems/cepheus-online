@@ -1,4 +1,4 @@
-import type {SchemaProperty} from './schemaTypes'
+import type { SchemaProperty } from './schemaTypes'
 
 type PieceSchema = SchemaProperty & {
   title: string
@@ -45,7 +45,7 @@ const pieceSchema = Object.freeze({
       title: 'Type',
       type: 'string',
       enum: [...pieceEnum],
-      enumNames: pieceEnum.map(i => i.charAt(0).toUpperCase() + i.slice(1))
+      enumNames: pieceEnum.map((i) => i.charAt(0).toUpperCase() + i.slice(1))
     },
     imageAssetId: {
       title: 'Counter Image',

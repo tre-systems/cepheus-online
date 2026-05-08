@@ -1290,9 +1290,7 @@ describe('character creation view helpers', () => {
           canCommission: true,
           canAdvance: false,
           drafted: false,
-          termSkillRolls: [
-            { table: 'serviceSkills', roll: 1, skill: 'Comms' }
-          ]
+          termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Comms' }]
         }
       })
     }

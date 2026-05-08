@@ -1,9 +1,9 @@
 import * as assert from 'node:assert/strict'
-import {describe, it} from 'node:test'
+import { describe, it } from 'node:test'
 
-import {asGameId} from '../../shared/ids'
-import type {GameEvent} from '../../shared/events'
-import {createMemoryStorage} from './test-support'
+import { asGameId } from '../../shared/ids'
+import type { GameEvent } from '../../shared/events'
+import { createMemoryStorage } from './test-support'
 import {
   appendEvents,
   EVENT_CHUNK_SIZE,
@@ -24,7 +24,7 @@ describe('chunked event storage', () => {
   it('appends events across chunk boundaries', async () => {
     const storage = createMemoryStorage()
     const gameId = asGameId('game-1')
-    const events = Array.from({length: EVENT_CHUNK_SIZE + 1}, (_, index) =>
+    const events = Array.from({ length: EVENT_CHUNK_SIZE + 1 }, (_, index) =>
       diceEvent(index + 1)
     )
 
@@ -55,7 +55,7 @@ describe('chunked event storage', () => {
       storage,
       gameId,
       null,
-      Array.from({length: 70}, (_, index) => diceEvent(index + 1)),
+      Array.from({ length: 70 }, (_, index) => diceEvent(index + 1)),
       '2026-05-03T00:00:00.000Z'
     )
 

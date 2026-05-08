@@ -1,4 +1,4 @@
-import {describe, it} from 'node:test'
+import { describe, it } from 'node:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
@@ -16,14 +16,14 @@ type Violation = {
 }
 
 const boundaries: readonly Boundary[] = [
-  {from: 'shared', forbidden: ['server', 'client']},
-  {from: 'server', forbidden: ['client']}
+  { from: 'shared', forbidden: ['server', 'client'] },
+  { from: 'server', forbidden: ['client'] }
 ]
 
 const sourceFiles = (directory: string): string[] => {
   const files: string[] = []
 
-  for (const entry of fs.readdirSync(directory, {withFileTypes: true})) {
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     const fullPath = path.join(directory, entry.name)
 
     if (entry.isDirectory()) {
@@ -45,9 +45,7 @@ const sourceFiles = (directory: string): string[] => {
 }
 
 const withoutComments = (source: string): string =>
-  source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1')
+  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
 
 const importSpecifiers = (source: string): string[] => {
   const specifiers: string[] = []
@@ -100,7 +98,10 @@ const violationsFor = (boundary: Boundary): Violation[] => {
       }
 
       const importedSegment = firstSourceSegment(resolved)
-      if (importedSegment !== null && boundary.forbidden.includes(importedSegment)) {
+      if (
+        importedSegment !== null &&
+        boundary.forbidden.includes(importedSegment)
+      ) {
         violations.push({
           file,
           specifier,

@@ -1,4 +1,4 @@
-import type {SchemaProperty} from './schemaTypes'
+import type { SchemaProperty } from './schemaTypes'
 
 interface Character {
   type: string

@@ -246,7 +246,10 @@ describe('character creation panel controller', () => {
 
     elements.panel.hidden = true
     elements.roomDialog.open = false
-    assert.equal(controller.overlayHost(), asElement(elements.fallbackOverlayHost))
+    assert.equal(
+      controller.overlayHost(),
+      asElement(elements.fallbackOverlayHost)
+    )
     assert.deepEqual(controller.overlayContext(), {
       inCreator: false,
       inDialog: false

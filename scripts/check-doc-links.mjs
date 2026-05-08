@@ -97,14 +97,14 @@ for (const file of markdownFiles) {
   const lines = readFileSync(absoluteFile, 'utf8').split('\n')
   let inFence = false
 
-  lines.forEach((line, index) => {
+  for (const [index, line] of lines.entries()) {
     if (/^```/.test(line)) {
       inFence = !inFence
-      return
+      continue
     }
 
     if (inFence) {
-      return
+      continue
     }
 
     const strippedLine = stripCodeSpans(line)
@@ -147,7 +147,7 @@ for (const file of markdownFiles) {
         )
       }
     }
-  })
+  }
 }
 
 if (errors.length > 0) {

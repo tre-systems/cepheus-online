@@ -52,7 +52,8 @@ const CLIENT_MODULES = new Map([
         '/client/app/app-location.js',
         '/client/app/room-menu-controller.js',
         '/client/app/service-worker.js',
-        '/client/game-commands.js'
+        '/client/game-commands.js',
+        '/shared/ids'
       ]
     }
   ],

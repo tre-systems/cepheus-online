@@ -725,7 +725,10 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.ok, true)
     if (!result.ok) return
     assert.equal(result.value[0]?.type, 'DiceRolled')
-    assert.equal(result.value[1]?.type, 'CharacterCreationQualificationResolved')
+    assert.equal(
+      result.value[1]?.type,
+      'CharacterCreationQualificationResolved'
+    )
     const qualification = result.value[1]
     if (qualification?.type !== 'CharacterCreationQualificationResolved') return
     assert.equal(qualification.characterId, characterId)

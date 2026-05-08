@@ -168,6 +168,10 @@ automatic fan-out. It is not a global game store.
 Biome is the formatter and linter. Treat lint and typecheck failures as
 blockers.
 
+Generated files such as `src/server/static-client-assets.generated.ts` are not
+formatted directly. Regenerate them with `npm run build:client`, then rely on
+typecheck and server tests to validate the emitted module.
+
 The local gate is split by cost:
 
 - `npm run verify:quick`: generated client assets, lint, docs, source-boundary

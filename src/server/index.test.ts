@@ -41,7 +41,8 @@ const clientModules = new Map<
         '/client/app/room-menu-controller.js',
         '/client/app/room-socket-controller.js',
         '/client/app/service-worker.js',
-        '/client/game-commands.js'
+        '/client/game-commands.js',
+        '/shared/ids'
       ]
     }
   ],
@@ -705,7 +706,7 @@ describe('Worker static client', () => {
     assert.equal(sw.includes('cepheus-online-__BUILD_HASH__'), false)
     assert.equal(sw.includes('cepheus-online-'), true)
     assert.equal(sw.includes('SW_UPDATED'), true)
-    assert.equal(sw.includes('event.request.mode === "navigate"'), true)
+    assert.equal(/event\.request\.mode\s*===\s*['"]navigate['"]/.test(sw), true)
     assert.equal(sw.includes('fetch(event.request)'), true)
     assert.equal(sw.includes('/rooms/'), true)
     assert.equal(sw.includes('/api/'), true)

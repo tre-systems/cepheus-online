@@ -5,4 +5,4 @@ export type JsonValue =
   | null
   | undefined
   | JsonValue[]
-  | {[key: string]: JsonValue}
+  | { [key: string]: JsonValue }

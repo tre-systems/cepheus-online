@@ -11,9 +11,7 @@ export const selectAgingEffect = (
   const maxRoll = Math.max(...rolls)
   const clampedRoll = Math.max(minRoll, Math.min(maxRoll, roll))
 
-  return (
-    table.find((effect) => Number(effect.Roll) === clampedRoll) ?? null
-  )
+  return table.find((effect) => Number(effect.Roll) === clampedRoll) ?? null
 }
 
 export const resolveAging = ({

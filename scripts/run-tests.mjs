@@ -1,7 +1,7 @@
-import {spawn} from 'node:child_process'
-import {mkdir, readdir, rm, writeFile} from 'node:fs/promises'
-import {join} from 'node:path'
-import {fileURLToPath} from 'node:url'
+import { spawn } from 'node:child_process'
+import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const outDir = join(root, 'build', 'test')
@@ -25,7 +25,7 @@ const run = (command, args) =>
   })
 
 const collectTests = async (directory) => {
-  const entries = await readdir(directory, {withFileTypes: true})
+  const entries = await readdir(directory, { withFileTypes: true })
   const tests = []
 
   for (const entry of entries) {
@@ -43,12 +43,12 @@ const collectTests = async (directory) => {
   return tests
 }
 
-await rm(outDir, {recursive: true, force: true})
+await rm(outDir, { recursive: true, force: true })
 await run(join(root, 'node_modules', '.bin', 'tsc'), [
   '-p',
   'tsconfig.test.json'
 ])
-await mkdir(outDir, {recursive: true})
+await mkdir(outDir, { recursive: true })
 await writeFile(join(outDir, 'package.json'), '{"type":"commonjs"}\n')
 
 const tests = await collectTests(join(outDir, 'src'))

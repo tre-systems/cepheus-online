@@ -1,5 +1,29 @@
-// @ts-nocheck
-
+import {
+  asBoardId,
+  asCharacterId,
+  asGameId,
+  asUserId,
+  type CharacterId,
+  type PieceId
+} from '../../shared/ids'
+import type { LiveDiceRollRevealTarget } from '../../shared/live-activity'
+import type { ServerMessage } from '../../shared/protocol'
+import type {
+  BenefitKind,
+  CareerCreationStatus,
+  CareerTerm
+} from '../../shared/character-creation/types'
+import type {
+  BoardState,
+  CharacterCreationHomeworld,
+  CharacterCreationProjection,
+  CharacterState,
+  CharacteristicKey,
+  DiceRollState,
+  GameState,
+  PieceState
+} from '../../shared/state'
+import type { GameCommand } from '../../shared/commands'
 import {
   boardList,
   boardOptionLabel,
@@ -10,11 +34,17 @@ import {
   selectedBoardPieces,
   pieceImageUrl
 } from './board-view.js'
-import { getAppElements } from './app-elements.js'
+import { getAppElements, type AppElements } from './app-elements.js'
 import { createAppBootstrap } from './app-bootstrap.js'
-import { createBoardController } from './board-controller.js'
+import {
+  createBoardController,
+  type BoardController
+} from './board-controller.js'
 import { createCharacterCreationPanel } from './character-creation-panel.js'
-import { deriveCreationActivityCardsFromApplication } from './creation-activity-view.js'
+import {
+  deriveCreationActivityCardsFromApplication,
+  type CreationActivityCardViewModel
+} from './creation-activity-view.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBasicTraining,
@@ -39,6 +69,7 @@ import {
   deriveCharacterCreationCommands,
   deriveCharacterCreationAgingChangeOptions,
   deriveCharacterCreationAnagathicsDecision,
+  deriveNextCharacterCreationCharacteristicRoll,
   deriveStartCharacterCreationCommand,
   deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationAgingRoll,
@@ -49,12 +80,24 @@ import {
   removeCharacterCreationBackgroundSkillSelection,
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
-  skipCharacterCreationCareerRoll
+  type CharacterCreationCareerPlan,
+  type CharacterCreationCareerRollKey,
+  type CharacterCreationCompletedTerm,
+  type CharacterCreationDraft,
+  type CharacterCreationFlow,
+  type CharacterCreationStep,
+  type CharacterCreationTermSkillTable
 } from './character-creation-flow.js'
 import {
   deriveCharacterCreationBasicTrainingButton,
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCareerRollButton,
+  type CharacterCreationCascadeSkillChoiceViewModel,
+  type CharacterCreationCareerCheckViewModel,
+  type CharacterCreationFieldViewModel,
+  type CharacterCreationHomeworldOptionViewModel,
+  type CharacterCreationHomeworldViewModel,
+  type CharacterCreationPendingCascadeChoiceViewModel,
   deriveCharacterCreationCareerOptionViewModels,
   deriveCharacterCreationCascadeSkillChoiceViewModels,
   deriveCharacterCreationDeathViewModel,
@@ -87,14 +130,29 @@ import { fetchRoomState, postRoomCommand } from './room-api.js'
 import {
   applyServerMessage as applyClientServerMessage,
   buildRollDiceCommand,
+  type ClientDiceRollActivity,
+  type ClientIdentity,
+  type ClientMessageApplication,
   buildSetDoorOpenCommand
 } from '../game-commands.js'
-import { createAppCommandRouter } from './app-command-router.js'
+import {
+  createAppCommandRouter,
+  type BoardCommand,
+  type CharacterCreationCommand,
+  type DiceCommand,
+  type DoorCommand,
+  type SheetCommand
+} from './app-command-router.js'
 import { createAppSession } from './app-session.js'
 import { resolveActorSessionSecret } from './actor-session.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
-import { createConnectivityController } from './connectivity-controller.js'
-import { deriveDoorToggleViewModels } from './door-los-view.js'
+import {
+  createConnectivityController,
+  type ConnectivityController
+} from './connectivity-controller.js'
+import {
+  deriveDoorToggleViewModels
+} from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
 import { createDiceRevealState } from './dice-reveal-state.js'
 import { createRoomSocketController } from './room-socket-controller.js'
@@ -113,29 +171,50 @@ import { registerClientServiceWorker } from './service-worker.js'
 
 registerClientServiceWorker()
 
-const els = getAppElements(document)
+type RequiredAppElements = Omit<
+  { [K in keyof AppElements]: NonNullable<AppElements[K]> },
+  'creatorQuickSection'
+> &
+  Pick<AppElements, 'creatorQuickSection'>
+
+const optionalAppElementKeys = new Set<keyof AppElements>([
+  'creatorQuickSection'
+])
+
+const requireAppElements = (elements: AppElements): RequiredAppElements => {
+  for (const key of Object.keys(elements) as (keyof AppElements)[]) {
+    if (optionalAppElementKeys.has(key)) continue
+    if (elements[key] === null) {
+      throw new Error(`Missing required app element: ${key}`)
+    }
+  }
+
+  return elements as RequiredAppElements
+}
+
+const els = requireAppElements(getAppElements(document))
 
 const initialIdentity = resolveAppLocationIdentity(location.search)
 let roomId = initialIdentity.roomId
 let actorId = initialIdentity.actorId
 let actorSessionSecret = resolveActorSessionSecret({ roomId, actorId })
-let state = null
+let state: GameState | null = null
 let firstStateApplied = false
-let latestDiceId = null
-let selectedCharacterId = null
+let latestDiceId: string | null = null
+let selectedCharacterId: CharacterId | null = null
 const viewerRole = initialIdentity.viewerRole
 const canSelectBoards = isRefereeViewer(viewerRole)
 const appSession = createAppSession({ roomId, actorId, viewerRole })
-let boardController = null
-let diceHideTimer = null
-let connectivityController = null
+let boardController: BoardController | null = null
+let diceHideTimer: number | null = null
+let connectivityController: ConnectivityController | null = null
 const diceRevealState = createDiceRevealState()
-const animatedDiceRollActivityIds = new Set()
-const creationActivityTimers = new Set()
-const dismissedCreationPresenceIds = new Set()
-let characterCreationFlow = null
+const animatedDiceRollActivityIds = new Set<string>()
+const creationActivityTimers = new Set<number>()
+const dismissedCreationPresenceIds = new Set<string>()
+let characterCreationFlow: CharacterCreationFlow | null = null
 let characterCreationReadOnly = false
-let characterCreationPublishPromise = null
+let characterCreationPublishPromise: Promise<void> | null = null
 let characterCreationHomeworldPublishPromise = Promise.resolve()
 const characterCreationCharacteristicKeys = [
   'str',
@@ -144,13 +223,13 @@ const characterCreationCharacteristicKeys = [
   'int',
   'edu',
   'soc'
-]
+] satisfies CharacteristicKey[]
 
-const setStatus = (text) => {
+const setStatus = (text: string): void => {
   els.status.textContent = text
 }
 
-const setError = (text) => {
+const setError = (text: string): void => {
   els.error.textContent = text || ''
 }
 
@@ -162,7 +241,10 @@ const clearCreationActivityFeed = () => {
   els.creationActivityFeed?.replaceChildren()
 }
 
-const scheduleCreationActivityTimer = (callback, delayMs) => {
+const scheduleCreationActivityTimer = (
+  callback: () => void,
+  delayMs: number
+): number => {
   const timer = window.setTimeout(() => {
     creationActivityTimers.delete(timer)
     callback()
@@ -171,9 +253,9 @@ const scheduleCreationActivityTimer = (callback, delayMs) => {
   return timer
 }
 
-const renderCreationActivityCard = (card) => {
-  if (!els.creationActivityFeed) return
-
+const renderCreationActivityCard = (
+  card: CreationActivityCardViewModel
+): void => {
   const item = document.createElement('article')
   item.className = `creation-activity-card ${card.tone}`
   item.setAttribute('role', 'status')
@@ -197,7 +279,10 @@ const renderCreationActivityCard = (card) => {
   }, 5200)
 }
 
-const showCreationActivityCards = (application, delayMs = 0) => {
+const showCreationActivityCards = (
+  application: ClientMessageApplication,
+  delayMs = 0
+): void => {
   if (characterCreationPanel.isOpen() && !characterCreationReadOnly) return
 
   const cards = deriveCreationActivityCardsFromApplication(application, {
@@ -217,7 +302,9 @@ const showCreationActivityCards = (application, delayMs = 0) => {
   renderCards()
 }
 
-const creationActivityRevealDelayMs = (diceRollActivities) => {
+const creationActivityRevealDelayMs = (
+  diceRollActivities: readonly ClientDiceRollActivity[]
+): number => {
   if (diceRollActivities.length === 0) return 0
 
   const revealAtMs = Math.max(
@@ -228,7 +315,7 @@ const creationActivityRevealDelayMs = (diceRollActivities) => {
   return Math.max(0, revealAtMs - Date.now()) + 160
 }
 
-const creationStatusText = (status) =>
+const creationStatusText = (status: string | null | undefined): string =>
   String(status || 'CREATION')
     .toLowerCase()
     .split(/[_\s-]+/)
@@ -236,31 +323,45 @@ const creationStatusText = (status) =>
     .map((word) => word[0].toUpperCase() + word.slice(1))
     .join(' ')
 
-const activeCreationSummaries = () => {
+interface ActiveCreationSummary {
+  id: CharacterId
+  name: string
+  ownerId: CharacterState['ownerId']
+  status: string
+  rolledCharacteristics: number
+  terms: number
+}
+
+const activeCreationSummaries = (): ActiveCreationSummary[] => {
   if (!state) return []
 
-  return Object.values(state.characters)
-    .filter(
-      (character) =>
-        character.creation &&
-        !character.creation.creationComplete &&
-        character.creation.state.status !== 'PLAYABLE' &&
-        !dismissedCreationPresenceIds.has(character.id)
-    )
-    .map((character) => {
-      const rolledCharacteristics = Object.values(
-        character.characteristics
-      ).filter((value) => value !== null).length
+  const summaries: ActiveCreationSummary[] = []
+  for (const character of Object.values(state.characters)) {
+    const creation = character.creation
+    if (
+      !creation ||
+      creation.creationComplete ||
+      creation.state.status === 'PLAYABLE' ||
+      dismissedCreationPresenceIds.has(character.id)
+    ) {
+      continue
+    }
 
-      return {
-        id: character.id,
-        name: character.name || 'Traveller',
-        ownerId: character.ownerId,
-        status: character.creation.state.status,
-        rolledCharacteristics,
-        terms: character.creation.terms.length
-      }
+    const rolledCharacteristics = Object.values(
+      character.characteristics
+    ).filter((value) => value !== null).length
+
+    summaries.push({
+      id: character.id,
+      name: character.name || 'Traveller',
+      ownerId: character.ownerId,
+      status: creation.state.status,
+      rolledCharacteristics,
+      terms: creation.terms.length
     })
+  }
+
+  return summaries
 }
 
 const renderCreationPresenceDock = () => {
@@ -294,7 +395,8 @@ const renderCreationPresenceDock = () => {
   clearButton.textContent = 'Clear'
   clearButton.title = 'Hide these live creation cards on this screen'
   clearButton.addEventListener('click', () => {
-    for (const summary of summaries) dismissedCreationPresenceIds.add(summary.id)
+    for (const summary of summaries)
+      dismissedCreationPresenceIds.add(summary.id)
     persistDismissedCreationPresenceIds()
     renderCreationPresenceDock()
   })
@@ -341,9 +443,19 @@ createPwaInstallController({
 
 const requestId = createRequestIdFactory()
 
-const clientIdentity = () => ({
-  gameId: roomId,
-  actorId
+const clientIdentity = (): ClientIdentity => ({
+  gameId: asGameId(roomId),
+  actorId: asUserId(actorId)
+})
+
+const commandIdentity = () => ({
+  gameId: asGameId(roomId),
+  actorId: asUserId(actorId)
+})
+
+const bootstrapIdentity = () => ({
+  roomId: asGameId(roomId),
+  actorId: asUserId(actorId)
 })
 
 const creationPresenceDismissalStorageKey = () =>
@@ -380,14 +492,15 @@ const persistDismissedCreationPresenceIds = () => {
 
 hydrateDismissedCreationPresenceIds()
 
-const currentSelectedPieceId = () => appSession.snapshot().selectedPieceId
+const currentSelectedPieceId = (): PieceId | null =>
+  appSession.snapshot().selectedPieceId
 
-const selectPiece = (pieceId) => {
+const selectPiece = (pieceId: PieceId | null): void => {
   selectedCharacterId = null
   appSession.selectPiece(pieceId)
 }
 
-const selectedCharacter = () =>
+const selectedCharacter = (): CharacterState | null =>
   selectedCharacterId ? (state?.characters[selectedCharacterId] ?? null) : null
 
 const characterCreationStepOrder = [
@@ -398,53 +511,50 @@ const characterCreationStepOrder = [
   'skills',
   'equipment',
   'review'
-]
+] satisfies CharacterCreationStep[]
 
-const characterCreationStepIndex = (step) =>
-  characterCreationStepOrder.includes(step)
-    ? characterCreationStepOrder.indexOf(step)
+const characterCreationStepIndex = (step: string): number =>
+  characterCreationStepOrder.indexOf(step as CharacterCreationStep) >= 0
+    ? characterCreationStepOrder.indexOf(step as CharacterCreationStep)
     : characterCreationStepOrder.length
 
-const currentCharacterCreationProjection = () => {
-  if (!characterCreationFlow) return null
-  return (
-    state?.characters?.[characterCreationFlow.draft.characterId]?.creation ??
-    null
-  )
-}
+const currentCharacterCreationProjection =
+  (): CharacterCreationProjection | null => {
+    if (!characterCreationFlow) return null
+    return (
+      state?.characters?.[characterCreationFlow.draft.characterId]?.creation ??
+      null
+    )
+  }
 
 const reconcileEditableCharacterCreationFlowWithProjection = () => {
-  if (characterCreationReadOnly || !characterCreationFlow) return
+  const flow = characterCreationFlow
+  if (characterCreationReadOnly || !flow) return
   const creation = currentCharacterCreationProjection()
   if (!creation) return
 
   const projectedStep = creationStepFromStatus(creation.state.status)
   const projectedStepIndex = characterCreationStepIndex(projectedStep)
-  const localStepIndex = characterCreationStepIndex(characterCreationFlow.step)
-  const localCharacteristicsComplete = characterCreationCharacteristicKeys.every(
-    (key) => characterCreationFlow.draft.characteristics[key] != null
-  )
+  const localStepIndex = characterCreationStepIndex(flow.step)
+  const localCharacteristicsComplete =
+    characterCreationCharacteristicKeys.every(
+      (key) => flow.draft.characteristics[key] != null
+    )
   const shouldSyncToProjection =
     projectedStepIndex < localStepIndex ||
     (projectedStepIndex > localStepIndex &&
-      (characterCreationFlow.step !== 'characteristics' ||
-        localCharacteristicsComplete)) ||
+      (flow.step !== 'characteristics' || localCharacteristicsComplete)) ||
     (creation.state.status === 'SKILLS_TRAINING' &&
       JSON.stringify(creation.pendingCascadeSkills ?? []) !==
-        JSON.stringify(characterCreationFlow.draft.pendingTermCascadeSkills)) ||
-    (creation.state.status === 'BASIC_TRAINING' &&
-      characterCreationFlow.step === 'career')
+        JSON.stringify(flow.draft.pendingTermCascadeSkills)) ||
+    (creation.state.status === 'BASIC_TRAINING' && flow.step === 'career')
 
   if (shouldSyncToProjection) {
-    syncCharacterCreationFlowFromRoomState(
-      state,
-      characterCreationFlow.draft.characterId,
-      characterCreationFlow
-    )
+    syncCharacterCreationFlowFromRoomState(state, flow.draft.characterId, flow)
   }
 }
 
-const handleServerMessage = (message) => {
+const handleServerMessage = (message: ServerMessage): void => {
   const application = applyClientServerMessage(state, message)
   const liveActivityApplication = prepareLiveActivityApplication(application, {
     animatedDiceRollActivityIds,
@@ -500,27 +610,34 @@ const handleServerMessage = (message) => {
   }
 }
 
-const resolveDiceReveal = (rollId) => {
+const resolveDiceReveal = (rollId: string): void => {
   diceRevealState.markRevealed(rollId)
 }
 
-const waitForDiceReveal = (roll) => {
+const waitForDiceReveal = (
+  roll: LiveDiceRollRevealTarget | DiceRollState
+): Promise<void> => {
   return diceRevealState.waitForReveal(roll)
 }
 
-const waitForDiceRevealOrDelay = (roll) => {
+const waitForDiceRevealOrDelay = (
+  roll: LiveDiceRollRevealTarget | DiceRollState
+): Promise<void> => {
   const revealAtMs = Date.parse(roll?.revealAt ?? '')
   if (!Number.isFinite(revealAtMs)) return waitForDiceReveal(roll)
   const delayMs = Math.max(0, revealAtMs - Date.now()) + 220
   return Promise.race([
     waitForDiceReveal(roll),
-    new Promise((resolve) => window.setTimeout(resolve, delayMs))
+    new Promise<void>((resolve) => window.setTimeout(resolve, delayMs))
   ])
 }
 
-const diceRollsForStateDeferral = (nextState, diceRollActivities) => {
+const diceRollsForStateDeferral = (
+  nextState: GameState | null,
+  diceRollActivities: readonly ClientDiceRollActivity[]
+): (ClientDiceRollActivity | DiceRollState)[] => {
   if (!firstStateApplied) return []
-  if (diceRollActivities.length > 0) return diceRollActivities
+  if (diceRollActivities.length > 0) return [...diceRollActivities]
 
   const latestRoll = nextState?.diceLog?.[nextState.diceLog.length - 1] ?? null
   if (!latestRoll) return []
@@ -529,7 +646,10 @@ const diceRollsForStateDeferral = (nextState, diceRollActivities) => {
   return [latestRoll]
 }
 
-const applyStateAfterDiceReveal = (nextState, diceRollActivities) => {
+const applyStateAfterDiceReveal = (
+  nextState: GameState | null,
+  diceRollActivities: readonly (ClientDiceRollActivity | DiceRollState)[]
+): void => {
   Promise.all(diceRollActivities.map((roll) => waitForDiceRevealOrDelay(roll)))
     .then(() => {
       const currentSeq = state?.eventSeq ?? -1
@@ -542,7 +662,23 @@ const applyStateAfterDiceReveal = (nextState, diceRollActivities) => {
     .catch((error) => setError(error.message))
 }
 
-const commandRouter = createAppCommandRouter({
+type CommandAcceptedMessage = Extract<
+  ServerMessage,
+  { type: 'commandAccepted' }
+>
+
+const isCommandAcceptedMessage = (
+  message: ServerMessage
+): message is CommandAcceptedMessage => message.type === 'commandAccepted'
+
+const serverMessageErrorText = (message: ServerMessage): string => {
+  if (message.type === 'commandRejected' || message.type === 'error') {
+    return message.error.message
+  }
+  return 'Command failed'
+}
+
+const commandRouter = createAppCommandRouter<CommandAcceptedMessage>({
   getEventSeq: () => state?.eventSeq ?? null,
   createRequestId: (command) => requestId(command.type),
   submit: async ({ requestId, command }) => {
@@ -553,41 +689,58 @@ const commandRouter = createAppCommandRouter({
       actorSessionSecret
     })
     handleServerMessage(response.message)
-    if (!response.ok) {
-      throw new Error(response.message.error?.message || 'Command failed')
+    if (!response.ok || !isCommandAcceptedMessage(response.message)) {
+      throw new Error(serverMessageErrorText(response.message))
     }
     return response.message
   }
 })
 
-const postCommand = async (command, id = requestId(command.type)) => {
+const postCommand = async (
+  command: GameCommand,
+  id = requestId(command.type)
+): Promise<CommandAcceptedMessage> => {
   return commandRouter.dispatch(command, { requestId: id })
 }
 
-const postBoardCommand = async (command, id = requestId(command.type)) => {
+const postBoardCommand = async (
+  command: BoardCommand,
+  id = requestId(command.type)
+): Promise<CommandAcceptedMessage> => {
   return commandRouter.board.dispatch(command, { requestId: id })
 }
 
-const postDiceCommand = async (command, id = requestId(command.type)) => {
+const postDiceCommand = async (
+  command: DiceCommand,
+  id = requestId(command.type)
+): Promise<CommandAcceptedMessage> => {
   return commandRouter.dice.dispatch(command, { requestId: id })
 }
 
-const postDoorCommand = async (command, id = requestId(command.type)) => {
+const postDoorCommand = async (
+  command: DoorCommand,
+  id = requestId(command.type)
+): Promise<CommandAcceptedMessage> => {
   return commandRouter.door.dispatch(command, { requestId: id })
 }
 
-const postSheetCommand = async (command, id = requestId(command.type)) => {
+const postSheetCommand = async (
+  command: SheetCommand,
+  id = requestId(command.type)
+): Promise<CommandAcceptedMessage> => {
   return commandRouter.sheet.dispatch(command, { requestId: id })
 }
 
 const postCharacterCreationCommand = async (
-  command,
+  command: CharacterCreationCommand,
   id = requestId(command.type)
-) => {
+): Promise<CommandAcceptedMessage> => {
   return commandRouter.characterCreation.dispatch(command, { requestId: id })
 }
 
-const postCharacterCreationCommands = (commands) =>
+const postCharacterCreationCommands = (
+  commands: readonly CharacterCreationCommand[]
+): Promise<CommandAcceptedMessage[]> =>
   commandRouter.characterCreation.dispatchSequential(commands)
 
 const ensureCharacterCreationPublishedNow = async () => {
@@ -595,7 +748,7 @@ const ensureCharacterCreationPublishedNow = async () => {
 
   if (!state) {
     await postCommand(
-      createGameCommand({ roomId, actorId }),
+      createGameCommand(bootstrapIdentity()),
       requestId('create-game-for-character-creation')
     )
   }
@@ -643,7 +796,9 @@ const ensureCharacterCreationPublished = () => {
   return characterCreationPublishPromise
 }
 
-const homeworldForCommand = (homeworld) => ({
+const homeworldForCommand = (
+  homeworld: CharacterCreationDraft['homeworld']
+): CharacterCreationHomeworld => ({
   name: null,
   lawLevel: homeworld.lawLevel ?? null,
   tradeCodes: Array.isArray(homeworld.tradeCodes)
@@ -653,7 +808,10 @@ const homeworldForCommand = (homeworld) => ({
       : []
 })
 
-const sameHomeworldCommandValue = (left, right) => {
+const sameHomeworldCommandValue = (
+  left: CharacterCreationHomeworld | null | undefined,
+  right: CharacterCreationHomeworld
+): boolean => {
   if (!left || !right) return false
   const leftTradeCodes = Array.isArray(left.tradeCodes)
     ? left.tradeCodes
@@ -673,14 +831,16 @@ const sameHomeworldCommandValue = (left, right) => {
   )
 }
 
-const projectedCharacterCreation = (characterId) =>
+const projectedCharacterCreation = (
+  characterId: CharacterId
+): CharacterCreationProjection | null =>
   state?.characters[characterId]?.creation ?? null
 
 const syncCharacterCreationFlowFromRoomState = (
-  roomState,
-  characterId,
-  fallbackFlow = null
-) => {
+  roomState: GameState | null,
+  characterId: CharacterId,
+  fallbackFlow: CharacterCreationFlow | null = null
+): CharacterCreationFlow | null => {
   const projectedCharacter = roomState?.characters?.[characterId] ?? null
   const projectedFlow = projectedCharacter
     ? flowFromProjectedCharacter(projectedCharacter)
@@ -689,10 +849,13 @@ const syncCharacterCreationFlowFromRoomState = (
   return characterCreationFlow
 }
 
-const backgroundSkillAllowance = (edu) =>
+const backgroundSkillAllowance = (edu: number | null): number =>
   3 + (edu == null ? 0 : Math.floor(edu / 3) - 2)
 
-const projectedHomeworldIsComplete = (creation, draft) =>
+const projectedHomeworldIsComplete = (
+  creation: CharacterCreationProjection | null,
+  draft: CharacterCreationDraft
+): boolean =>
   Boolean(
     creation?.state.status === 'HOMEWORLD' &&
       (creation.pendingCascadeSkills ?? []).length === 0 &&
@@ -700,7 +863,9 @@ const projectedHomeworldIsComplete = (creation, draft) =>
         backgroundSkillAllowance(draft.characteristics.edu)
   )
 
-const publishCharacterCreationHomeworldProgressNow = async (flow) => {
+const publishCharacterCreationHomeworldProgressNow = async (
+  flow: CharacterCreationFlow | null
+): Promise<void> => {
   if (characterCreationReadOnly || !flow || flow.step !== 'homeworld') return
 
   const { draft } = flow
@@ -713,8 +878,7 @@ const publishCharacterCreationHomeworldProgressNow = async (flow) => {
   if (!creation || creation.state.status !== 'HOMEWORLD') return
 
   const baseCommand = {
-    gameId: roomId,
-    actorId,
+    ...commandIdentity(),
     characterId: draft.characterId
   }
 
@@ -790,7 +954,9 @@ const publishCharacterCreationHomeworldProgressNow = async (flow) => {
   }
 }
 
-const publishCharacterCreationHomeworldProgress = (flow) => {
+const publishCharacterCreationHomeworldProgress = (
+  flow: CharacterCreationFlow | null
+): Promise<void> => {
   characterCreationHomeworldPublishPromise =
     characterCreationHomeworldPublishPromise
       .catch(() => {
@@ -802,9 +968,9 @@ const publishCharacterCreationHomeworldProgress = (flow) => {
 }
 
 const publishCharacterCreationBackgroundCascadeSelection = (
-  flow,
-  skill
-) => {
+  flow: CharacterCreationFlow | null,
+  skill: string
+): Promise<void> => {
   characterCreationHomeworldPublishPromise =
     characterCreationHomeworldPublishPromise
       .catch(() => {
@@ -826,8 +992,7 @@ const publishCharacterCreationBackgroundCascadeSelection = (
         await postCharacterCreationCommand(
           {
             type: 'SelectCharacterCreationBackgroundSkill',
-            gameId: roomId,
-            actorId,
+            ...commandIdentity(),
             characterId: flow.draft.characterId,
             skill
           },
@@ -839,10 +1004,10 @@ const publishCharacterCreationBackgroundCascadeSelection = (
 }
 
 const publishCharacterCreationCascadeResolution = (
-  flow,
-  cascadeSkill,
-  selection
-) => {
+  flow: CharacterCreationFlow | null,
+  cascadeSkill: string,
+  selection: string
+): Promise<void> => {
   characterCreationHomeworldPublishPromise =
     characterCreationHomeworldPublishPromise
       .catch(() => {
@@ -864,8 +1029,7 @@ const publishCharacterCreationCascadeResolution = (
         await postCharacterCreationCommand(
           {
             type: 'ResolveCharacterCreationCascadeSkill',
-            gameId: roomId,
-            actorId,
+            ...commandIdentity(),
             characterId: flow.draft.characterId,
             cascadeSkill,
             selection
@@ -879,18 +1043,17 @@ const publishCharacterCreationCascadeResolution = (
 }
 
 const publishCharacterCreationTermCascadeResolution = async (
-  flow,
-  cascadeSkill,
-  selection,
-  fallbackFlow
-) => {
+  flow: CharacterCreationFlow | null,
+  cascadeSkill: string,
+  selection: string,
+  fallbackFlow: CharacterCreationFlow
+): Promise<void> => {
   if (characterCreationReadOnly || !flow || flow.step !== 'career') return
   await ensureCharacterCreationPublished()
   const response = await postCharacterCreationCommand(
     {
       type: 'ResolveCharacterCreationTermCascadeSkill',
-      gameId: roomId,
-      actorId,
+      ...commandIdentity(),
       characterId: flow.draft.characterId,
       cascadeSkill,
       selection
@@ -906,31 +1069,45 @@ const publishCharacterCreationTermCascadeResolution = async (
   characterCreationPanel.scrollToTop()
 }
 
-const fetchState = async () => {
+const fetchState = async (): Promise<void> => {
   const message = await fetchRoomState({ roomId, viewerRole, actorId })
   handleServerMessage(message)
 }
 
-const parsePositiveIntegerInput = (input, fallback) => {
+const parsePositiveIntegerInput = (
+  input: HTMLInputElement,
+  fallback: number
+): number => {
   return parsePositiveIntegerValue(input.value, fallback)
 }
 
-const parsePositiveNumberInput = (input, fallback) => {
+const parsePositiveNumberInput = (
+  input: HTMLInputElement,
+  fallback: number
+): number => {
   return parsePositiveNumberValue(input.value, fallback)
 }
 
-const parseNonNegativeIntegerInput = (input, fallback) => {
+const parseNonNegativeIntegerInput = (
+  input: HTMLInputElement,
+  fallback: number
+): number => {
   return parseNonNegativeIntegerValue(input.value, fallback)
 }
 
-const characterCreationSeed = () => ({
+const characterCreationSeed = (): Pick<
+  CharacterCreationDraft,
+  'name' | 'equipment' | 'credits' | 'notes'
+> => ({
   name: '',
   equipment: [],
   credits: 0,
   notes: ''
 })
 
-const creationStepFromStatus = (status) => {
+const creationStepFromStatus = (
+  status: CareerCreationStatus | string
+): CharacterCreationStep => {
   switch (status) {
     case 'CHARACTERISTICS':
       return 'characteristics'
@@ -945,7 +1122,9 @@ const creationStepFromStatus = (status) => {
   }
 }
 
-const completedTermFromProjection = (term) => ({
+const completedTermFromProjection = (
+  term: CareerTerm
+): CharacterCreationCompletedTerm => ({
   career: term.career,
   drafted: term.draft === 1,
   anagathics: term.anagathics,
@@ -969,7 +1148,9 @@ const completedTermFromProjection = (term) => ({
   reenlistmentOutcome: term.canReenlist ? 'allowed' : 'blocked'
 })
 
-const careerPlanFromProjection = (creation) => {
+const careerPlanFromProjection = (
+  creation: CharacterCreationProjection
+): CharacterCreationCareerPlan | null => {
   const activeTerm = [...creation.terms]
     .reverse()
     .find((term) => !term.complete && !term.musteringOut)
@@ -998,8 +1179,7 @@ const careerPlanFromProjection = (creation) => {
     .reverse()
     .find(
       (event) =>
-        event.type === 'COMPLETE_COMMISSION' ||
-        event.type === 'SKIP_COMMISSION'
+        event.type === 'COMPLETE_COMMISSION' || event.type === 'SKIP_COMMISSION'
     )
   const advancement = [...currentTermHistory]
     .reverse()
@@ -1027,6 +1207,7 @@ const careerPlanFromProjection = (creation) => {
       roll: event.termSkill.roll.total,
       skill: event.termSkill.skill ?? event.termSkill.rawSkill
     }))
+  const agingFact = aging?.aging
 
   return {
     career: activeTerm.career,
@@ -1063,11 +1244,11 @@ const careerPlanFromProjection = (creation) => {
     rankBonusSkill: null,
     termSkillRolls,
     anagathics: activeTerm.anagathics ?? null,
-    agingRoll: aging?.aging?.roll?.total ?? null,
+    agingRoll: agingFact?.roll?.total ?? null,
     agingMessage:
-      aging?.aging?.characteristicChanges?.length > 0
-        ? `${aging.aging.characteristicChanges.length} characteristic changes`
-        : aging?.aging
+      (agingFact?.characteristicChanges?.length ?? 0) > 0
+        ? `${agingFact?.characteristicChanges?.length ?? 0} characteristic changes`
+        : agingFact
           ? 'No aging effects.'
           : null,
     agingSelections: [],
@@ -1077,16 +1258,18 @@ const careerPlanFromProjection = (creation) => {
       reenlistment?.type === 'RESOLVE_REENLISTMENT'
         ? (reenlistment.reenlistment.outcome ?? null)
         : reenlistment?.type === 'FORCED_REENLIST'
-        ? 'forced'
-        : reenlistment?.type === 'REENLIST'
-          ? 'allowed'
-          : reenlistment?.type === 'REENLIST_BLOCKED'
-            ? 'blocked'
-            : null
+          ? 'forced'
+          : reenlistment?.type === 'REENLIST'
+            ? 'allowed'
+            : reenlistment?.type === 'REENLIST_BLOCKED'
+              ? 'blocked'
+              : null
   }
 }
 
-const flowFromProjectedCharacter = (character) => {
+const flowFromProjectedCharacter = (
+  character: CharacterState
+): CharacterCreationFlow | null => {
   const creation = character.creation
   if (!creation) return null
 
@@ -1122,7 +1305,10 @@ const flowFromProjectedCharacter = (character) => {
   }
 }
 
-const openCharacterCreationFollow = (characterId, { readOnly = true } = {}) => {
+const openCharacterCreationFollow = (
+  characterId: CharacterId,
+  { readOnly = true }: { readOnly?: boolean } = {}
+): void => {
   const character = state?.characters[characterId] ?? null
   const flow = character ? flowFromProjectedCharacter(character) : null
   if (!flow) return
@@ -1156,7 +1342,9 @@ const refreshFollowedCharacterCreationFlow = () => {
 
 const shouldRefreshEditableCharacterCreationFlow = ({
   deferFollowedCreationRolls = []
-} = {}) =>
+}: {
+  deferFollowedCreationRolls?: readonly ClientDiceRollActivity[]
+} = {}): boolean =>
   !characterCreationReadOnly &&
   characterCreationPanel.isOpen() &&
   Boolean(characterCreationFlow) &&
@@ -1262,11 +1450,14 @@ const autoAdvanceCharacterCreationSetup = () => {
 const syncCharacterCreationWizardFields = () => {
   if (!characterCreationFlow) return
 
-  const values = {}
-  for (const field of els.characterCreationFields.querySelectorAll(
-    '[data-character-creation-field]'
+  const values: Record<string, string> = {}
+  for (const field of Array.from(
+    els.characterCreationFields.querySelectorAll<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >('[data-character-creation-field]')
   )) {
-    values[field.dataset.characterCreationField] = field.value
+    const key = field.dataset.characterCreationField
+    if (key) values[key] = field.value
   }
   characterCreationFlow = applyParsedCharacterCreationDraftPatch(
     characterCreationFlow,
@@ -1290,9 +1481,8 @@ const renderCharacterCreationWizard = () => {
     // Keep setup steps linear even when reopening a flow that is already valid.
   }
 
-  if (!characterCreationPanel.render(characterCreationFlow)) return
-
   const flow = characterCreationFlow
+  if (!characterCreationPanel.render(flow) || !flow) return
   els.characterCreationSteps.replaceChildren()
   els.characterCreationFields.replaceChildren(
     renderCharacterCreationNextStep(flow),
@@ -1306,8 +1496,13 @@ const renderCharacterCreationWizard = () => {
     characterCreationReadOnly
   )
   if (characterCreationReadOnly) {
-    for (const control of els.characterCreationFields.querySelectorAll(
-      'button, input, select, textarea'
+    for (const control of Array.from(
+      els.characterCreationFields.querySelectorAll<
+        | HTMLButtonElement
+        | HTMLInputElement
+        | HTMLSelectElement
+        | HTMLTextAreaElement
+      >('button, input, select, textarea')
     )) {
       control.disabled = true
     }
@@ -1315,7 +1510,9 @@ const renderCharacterCreationWizard = () => {
   renderCharacterCreationWizardControls()
 }
 
-const renderCharacterCreationNextStep = (flow) => {
+const renderCharacterCreationNextStep = (
+  flow: CharacterCreationFlow
+): HTMLElement => {
   const viewModel = deriveCharacterCreationNextStepViewModel(flow)
   const panel = document.createElement('section')
   panel.className = 'creation-next-step'
@@ -1363,7 +1560,9 @@ const renderCharacterCreationNextStep = (flow) => {
   return panel
 }
 
-const renderCharacterCreationFields = (flow) => {
+const renderCharacterCreationFields = (
+  flow: CharacterCreationFlow
+): DocumentFragment => {
   const fragment = document.createDocumentFragment()
   if (flow.step === 'characteristics') {
     fragment.append(renderCharacterCreationCharacteristicGrid(flow))
@@ -1479,7 +1678,9 @@ const renderCharacterCreationFields = (flow) => {
   return fragment
 }
 
-const renderCharacterCreationDeath = (flow) => {
+const renderCharacterCreationDeath = (
+  flow: CharacterCreationFlow
+): HTMLElement | null => {
   const viewModel = deriveCharacterCreationDeathViewModel(flow)
   if (!viewModel) return null
 
@@ -1516,7 +1717,9 @@ const renderCharacterCreationDeath = (flow) => {
   return panel
 }
 
-const renderCharacterCreationHomeworld = (flow) => {
+const renderCharacterCreationHomeworld = (
+  flow: CharacterCreationFlow
+): HTMLElement => {
   const viewModel = deriveCharacterCreationHomeworldViewModel(flow)
   const wrapper = document.createElement('div')
   wrapper.className = 'creation-homeworld'
@@ -1572,9 +1775,12 @@ const renderCharacterCreationHomeworld = (flow) => {
   return wrapper
 }
 
-const bindCharacterCreationActionButton = (button, callback) => {
+const bindCharacterCreationActionButton = (
+  button: HTMLButtonElement,
+  callback: () => Promise<void> | void
+): void => {
   let active = false
-  const run = (event) => {
+  const run = (event: Event) => {
     event.preventDefault()
     if (active) return
     active = true
@@ -1593,7 +1799,9 @@ const bindCharacterCreationActionButton = (button, callback) => {
   button.addEventListener('click', run)
 }
 
-const renderCharacterCreationTermSkillTables = (flow) => {
+const renderCharacterCreationTermSkillTables = (
+  flow: CharacterCreationFlow
+): HTMLElement | DocumentFragment => {
   const viewModel = deriveCharacterCreationTermSkillTrainingViewModel(flow)
   if (!viewModel) return document.createDocumentFragment()
 
@@ -1627,9 +1835,9 @@ const renderCharacterCreationTermSkillTables = (flow) => {
     button.title = action.reason
     button.disabled = action.disabled
     bindCharacterCreationActionButton(button, () =>
-      rollCharacterCreationTermSkill(action.table).catch((error) =>
-        setError(error.message)
-      )
+      rollCharacterCreationTermSkill(
+        action.table as CharacterCreationTermSkillTable
+      ).catch((error) => setError(error.message))
     )
     buttons.append(button)
   }
@@ -1641,7 +1849,9 @@ const renderCharacterCreationTermSkillTables = (flow) => {
   return panel
 }
 
-const renderCharacterCreationReenlistmentRollButton = (flow) => {
+const renderCharacterCreationReenlistmentRollButton = (
+  flow: CharacterCreationFlow
+): HTMLElement | null => {
   const action = deriveNextCharacterCreationReenlistmentRoll(flow)
   if (!action) return null
 
@@ -1661,7 +1871,9 @@ const renderCharacterCreationReenlistmentRollButton = (flow) => {
   return panel
 }
 
-const renderCharacterCreationAgingRollButton = (flow) => {
+const renderCharacterCreationAgingRollButton = (
+  flow: CharacterCreationFlow
+): HTMLElement | null => {
   const action = deriveNextCharacterCreationAgingRoll(flow)
   if (!action) return null
 
@@ -1680,7 +1892,9 @@ const renderCharacterCreationAgingRollButton = (flow) => {
   return panel
 }
 
-const renderCharacterCreationAgingChoices = (flow) => {
+const renderCharacterCreationAgingChoices = (
+  flow: CharacterCreationFlow
+): HTMLElement | DocumentFragment => {
   const changes = deriveCharacterCreationAgingChangeOptions(flow)
   if (changes.length === 0) return document.createDocumentFragment()
 
@@ -1720,7 +1934,9 @@ const renderCharacterCreationAgingChoices = (flow) => {
   return panel
 }
 
-const renderCharacterCreationAnagathicsDecision = (flow) => {
+const renderCharacterCreationAnagathicsDecision = (
+  flow: CharacterCreationFlow
+): HTMLElement | DocumentFragment => {
   const decision = deriveCharacterCreationAnagathicsDecision(flow)
   if (!decision) return document.createDocumentFragment()
 
@@ -1768,7 +1984,9 @@ const renderCharacterCreationAnagathicsDecision = (flow) => {
   return panel
 }
 
-const reenlistmentOutcomeText = (plan) => {
+const reenlistmentOutcomeText = (
+  plan: CharacterCreationCareerPlan | null | undefined
+): string => {
   if (plan?.reenlistmentOutcome === 'forced') {
     return `Reenlistment ${plan.reenlistmentRoll}: mandatory reenlistment.`
   }
@@ -1784,7 +2002,9 @@ const reenlistmentOutcomeText = (plan) => {
   return 'Roll reenlistment before deciding what happens next.'
 }
 
-const renderCharacterCreationTermCascadeChoices = (flow) => {
+const renderCharacterCreationTermCascadeChoices = (
+  flow: CharacterCreationFlow
+): HTMLElement | DocumentFragment => {
   if (flow.draft.pendingTermCascadeSkills.length === 0) {
     return document.createDocumentFragment()
   }
@@ -1806,7 +2026,9 @@ const renderCharacterCreationTermCascadeChoices = (flow) => {
   return panel
 }
 
-const renderCharacterCreationBackgroundSkills = (viewModel) => {
+const renderCharacterCreationBackgroundSkills = (
+  viewModel: CharacterCreationHomeworldViewModel
+): HTMLElement => {
   const list = document.createElement('div')
   list.className = 'creation-background-options'
   const remaining = viewModel.backgroundSkills.remainingSelections
@@ -1868,17 +2090,20 @@ const renderCharacterCreationBackgroundSkills = (viewModel) => {
 }
 
 const renderCharacterCreationCascadeChoice = (
-  cascade,
-  scope = 'background'
-) => {
+  cascade:
+    | CharacterCreationCascadeSkillChoiceViewModel
+    | CharacterCreationPendingCascadeChoiceViewModel,
+  scope: 'background' | 'term' = 'background'
+): HTMLElement => {
   const panel = document.createElement('div')
   panel.className = 'creation-cascade-choice'
   const title = document.createElement('strong')
-  title.textContent = cascade.title || `${cascade.label}-${cascade.level}`
+  title.textContent =
+    'title' in cascade ? cascade.title : `${cascade.label}-${cascade.level}`
   const options = document.createElement('div')
   options.className = 'creation-background-options'
 
-  if (cascade.prompt) {
+  if ('prompt' in cascade) {
     const prompt = document.createElement('p')
     prompt.textContent = cascade.prompt
     panel.append(title, prompt)
@@ -1916,7 +2141,7 @@ const renderCharacterCreationCascadeChoice = (
       renderCharacterCreationWizard()
       if (scope === 'term') {
         publishCharacterCreationTermCascadeResolution(
-          flow,
+          nextFlow,
           cascade.cascadeSkill,
           option.label,
           nextFlow
@@ -1936,7 +2161,10 @@ const renderCharacterCreationCascadeChoice = (
   return panel
 }
 
-const renderCharacterCreationOptionField = (field, options) => {
+const renderCharacterCreationOptionField = (
+  field: CharacterCreationFieldViewModel,
+  options: readonly CharacterCreationHomeworldOptionViewModel[]
+): HTMLLabelElement => {
   const label = document.createElement('label')
   label.className = `character-creation-field ${field.kind}`
   const name = document.createElement('span')
@@ -1969,7 +2197,9 @@ const renderCharacterCreationOptionField = (field, options) => {
   return label
 }
 
-const characteristicModifierLabel = (value) => {
+const characteristicModifierLabel = (
+  value: string | number | null | undefined
+): string => {
   if (value === '' || value === null || value === undefined) return ''
   const number = Number(value)
   if (!Number.isFinite(number)) return ''
@@ -1978,7 +2208,9 @@ const characteristicModifierLabel = (value) => {
   return modifier > 0 ? `+${modifier}` : String(modifier)
 }
 
-const renderCharacterCreationCharacteristicGrid = (flow) => {
+const renderCharacterCreationCharacteristicGrid = (
+  flow: CharacterCreationFlow
+): HTMLElement => {
   const fields = deriveCharacterCreationFieldViewModels(flow)
   const grid = document.createElement('div')
   grid.className = 'creation-stat-grid dice-stat-grid'
@@ -2001,8 +2233,9 @@ const renderCharacterCreationCharacteristicGrid = (flow) => {
         pip.className = 'stat-die-pip'
         rollButton.append(pip)
       }
+      const characteristicKey = field.key as CharacteristicKey
       bindCharacterCreationActionButton(rollButton, () =>
-        rollCharacterCreationCharacteristic(field.key).catch((error) =>
+        rollCharacterCreationCharacteristic(characteristicKey).catch((error) =>
           setError(error.message)
         )
       )
@@ -2026,7 +2259,9 @@ const renderCharacterCreationCharacteristicGrid = (flow) => {
   return grid
 }
 
-const formatCareerCheckShort = (check) => {
+const formatCareerCheckShort = (
+  check: CharacterCreationCareerCheckViewModel
+): string => {
   if (!check.available) return 'Unavailable'
   const modifier =
     check.modifier === 0
@@ -2037,7 +2272,9 @@ const formatCareerCheckShort = (check) => {
   return `${check.requirement}${modifier}`
 }
 
-const careerOutcomeText = (plan) => {
+const careerOutcomeText = (
+  plan: CharacterCreationCareerPlan | null | undefined
+): string => {
   if (!plan?.career) return 'Select a career to attempt qualification.'
   if (plan.drafted && plan.survivalRoll === null) {
     return `Drafted into ${plan.career}: ready to roll survival.`
@@ -2084,7 +2321,9 @@ const careerOutcomeText = (plan) => {
   return lines.join(' | ') || `${plan.career}: ready to roll qualification.`
 }
 
-const renderCharacterCreationCareerPicker = (flow) => {
+const renderCharacterCreationCareerPicker = (
+  flow: CharacterCreationFlow
+): HTMLElement => {
   const wrapper = document.createElement('div')
   wrapper.className = 'creation-career-picker'
 
@@ -2146,8 +2385,8 @@ const renderCharacterCreationCareerPicker = (flow) => {
       survival.textContent = `Survive ${formatCareerCheckShort(career.survival)}`
       button.append(title, qualification, survival)
       button.addEventListener('click', () => {
-        resolveCharacterCreationCareerQualification(career.key).catch(
-          (error) => setError(error.message)
+        resolveCharacterCreationCareerQualification(career.key).catch((error) =>
+          setError(error.message)
         )
       })
       list.append(button)
@@ -2157,7 +2396,9 @@ const renderCharacterCreationCareerPicker = (flow) => {
   return wrapper
 }
 
-const renderCharacterCreationTermResolution = (flow) => {
+const renderCharacterCreationTermResolution = (
+  flow: CharacterCreationFlow
+): HTMLElement | DocumentFragment => {
   const panel = document.createElement('div')
   panel.className = 'creation-term-resolution'
   const plan = flow.draft.careerPlan
@@ -2269,7 +2510,10 @@ const renderCharacterCreationTermResolution = (flow) => {
   return panel
 }
 
-const termSummary = (term, index) => {
+const termSummary = (
+  term: CharacterCreationCompletedTerm,
+  index: number
+): string => {
   const result = term.survivalPassed ? 'survived' : 'killed in service'
   const commission =
     term.commissionRoll === null
@@ -2291,9 +2535,10 @@ const termSummary = (term, index) => {
   const bonusSkill = term.rankBonusSkill
     ? `; rank skill ${term.rankBonusSkill}`
     : ''
+  const termSkillRolls = term.termSkillRolls ?? []
   const training =
-    term.termSkillRolls?.length > 0
-      ? `; training ${term.termSkillRolls
+    termSkillRolls.length > 0
+      ? `; training ${termSkillRolls
           .map((roll) => `${roll.skill} (${roll.roll})`)
           .join(', ')}`
       : ''
@@ -2313,7 +2558,9 @@ const termSummary = (term, index) => {
   return `${index + 1}. ${term.career}: ${result}${commission}${advancement}${rank}${bonusSkill}${training}${anagathics}${aging}${reenlistment}`
 }
 
-const renderCharacterCreationTermHistory = (flow) => {
+const renderCharacterCreationTermHistory = (
+  flow: CharacterCreationFlow
+): HTMLElement | DocumentFragment => {
   if (flow.draft.completedTerms.length === 0) {
     return document.createDocumentFragment()
   }
@@ -2331,7 +2578,10 @@ const renderCharacterCreationTermHistory = (flow) => {
   return panel
 }
 
-const selectFailedQualificationCareer = (career, drafted) => {
+const selectFailedQualificationCareer = (
+  career: string,
+  drafted: boolean
+): void => {
   if (!characterCreationFlow) return
   characterCreationFlow = applyParsedCharacterCreationDraftPatch(
     characterCreationFlow,
@@ -2357,7 +2607,9 @@ const selectFailedQualificationCareer = (career, drafted) => {
   characterCreationPanel.scrollToTop()
 }
 
-const resolveCharacterCreationCareerQualification = async (career) => {
+const resolveCharacterCreationCareerQualification = async (
+  career: string
+): Promise<void> => {
   if (!characterCreationFlow || characterCreationReadOnly) return
   setError('')
   syncCharacterCreationWizardFields()
@@ -2379,8 +2631,7 @@ const resolveCharacterCreationCareerQualification = async (career) => {
     response = await postCharacterCreationCommand(
       {
         type: 'ResolveCharacterCreationQualification',
-        gameId: roomId,
-        actorId,
+        ...commandIdentity(),
         characterId: flowWithCareer.draft.characterId,
         career
       },
@@ -2422,7 +2673,9 @@ const resolveCharacterCreationCareerQualification = async (career) => {
   characterCreationPanel.scrollToTop()
 }
 
-const renderCharacterCreationDraftFallback = (flow) => {
+const renderCharacterCreationDraftFallback = (
+  flow: CharacterCreationFlow
+): HTMLElement | DocumentFragment => {
   const viewModel = deriveCharacterCreationFailedQualificationViewModel(flow)
   if (!viewModel.open) return document.createDocumentFragment()
 
@@ -2458,7 +2711,9 @@ const renderCharacterCreationDraftFallback = (flow) => {
   return panel
 }
 
-const renderCharacterCreationCharacteristicRollButton = (flow) => {
+const renderCharacterCreationCharacteristicRollButton = (
+  flow: CharacterCreationFlow
+): HTMLElement | null => {
   const viewModel = deriveCharacterCreationCharacteristicRollButton(flow)
   if (!viewModel) return null
 
@@ -2476,22 +2731,12 @@ const renderCharacterCreationCharacteristicRollButton = (flow) => {
   const hint = document.createElement('small')
   hint.textContent = viewModel.reason
   wrapper.append(button, hint)
-  if (viewModel.skipLabel) {
-    const skipButton = document.createElement('button')
-    skipButton.type = 'button'
-    skipButton.className = 'secondary'
-    skipButton.textContent = viewModel.skipLabel
-    skipButton.addEventListener('click', () => {
-      characterCreationFlow = skipCharacterCreationCareerRoll(flow).flow
-      renderCharacterCreationWizard()
-      characterCreationPanel.scrollToTop()
-    })
-    wrapper.append(skipButton)
-  }
   return wrapper
 }
 
-const renderCharacterCreationCareerRollButton = (flow) => {
+const renderCharacterCreationCareerRollButton = (
+  flow: CharacterCreationFlow
+): HTMLElement | null => {
   const viewModel = deriveCharacterCreationCareerRollButton(flow)
   if (!viewModel) return null
   if (viewModel.key === 'qualificationRoll') return null
@@ -2511,7 +2756,9 @@ const renderCharacterCreationCareerRollButton = (flow) => {
   return wrapper
 }
 
-const renderCharacterCreationBasicTrainingButton = (flow) => {
+const renderCharacterCreationBasicTrainingButton = (
+  flow: CharacterCreationFlow
+): HTMLElement | null => {
   const viewModel = deriveCharacterCreationBasicTrainingButton(flow)
   if (!viewModel) return null
 
@@ -2542,7 +2789,9 @@ const renderCharacterCreationBasicTrainingButton = (flow) => {
   return wrapper
 }
 
-const renderCharacterCreationMusteringOut = (flow) => {
+const renderCharacterCreationMusteringOut = (
+  flow: CharacterCreationFlow
+): HTMLElement => {
   const panel = document.createElement('div')
   panel.className = 'creation-mustering-out'
   const title = document.createElement('strong')
@@ -2566,10 +2815,11 @@ const renderCharacterCreationMusteringOut = (flow) => {
 
   const actions = document.createElement('div')
   actions.className = 'creation-term-actions'
-  for (const [kind, label] of [
+  const benefitActions = [
     ['cash', 'Roll cash'],
     ['material', 'Roll benefit']
-  ]) {
+  ] satisfies readonly [BenefitKind, string][]
+  for (const [kind, label] of benefitActions) {
     const button = document.createElement('button')
     button.type = 'button'
     button.textContent = label
@@ -2596,8 +2846,8 @@ const renderCharacterCreationMusteringOut = (flow) => {
 }
 
 const rollCharacterCreationCharacteristic = async (
-  characteristicKey = null
-) => {
+  characteristicKey: CharacteristicKey | null = null
+): Promise<void> => {
   if (!characterCreationFlow) return
   setError('')
   syncCharacterCreationWizardFields()
@@ -2606,7 +2856,10 @@ const rollCharacterCreationCharacteristic = async (
     characterCreationFlow
   )
   if (!rollAction) return
-  const targetKey = characteristicKey ?? rollAction.key ?? null
+  const targetKey =
+    characteristicKey ??
+    deriveNextCharacterCreationCharacteristicRoll(characterCreationFlow)?.key ??
+    null
 
   if (!targetKey) {
     setError('Choose a characteristic to roll')
@@ -2618,8 +2871,7 @@ const rollCharacterCreationCharacteristic = async (
   const response = await postCharacterCreationCommand(
     {
       type: 'RollCharacterCreationCharacteristic',
-      gameId: roomId,
-      actorId,
+      ...commandIdentity(),
       characterId: characterCreationFlow.draft.characterId,
       characteristic: targetKey
     },
@@ -2659,25 +2911,30 @@ const completeCharacterCreationBasicTraining = async () => {
   const response = await postCharacterCreationCommand(
     {
       type: 'CompleteCharacterCreationBasicTraining',
-      gameId: roomId,
-      actorId,
+      ...commandIdentity(),
       characterId
     },
     requestId('complete-character-basic-training')
   )
-  syncCharacterCreationFlowFromRoomState(response.state, characterId, fallbackFlow)
+  syncCharacterCreationFlowFromRoomState(
+    response.state,
+    characterId,
+    fallbackFlow
+  )
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
 
-const rollCharacterCreationMusteringBenefit = async (kind) => {
+const rollCharacterCreationMusteringBenefit = async (
+  kind: BenefitKind
+): Promise<void> => {
   if (!characterCreationFlow) return
   setError('')
   syncCharacterCreationWizardFields()
 
   if (!state) {
     await postCommand(
-      createGameCommand({ roomId, actorId }),
+      createGameCommand(bootstrapIdentity()),
       requestId('create-game-for-mustering-roll')
     )
   }
@@ -2701,7 +2958,7 @@ const rollCharacterCreationMusteringBenefit = async (kind) => {
       identity: clientIdentity(),
       expression: `1d6${modifierText}`,
       reason: `${characterCreationFlow.draft.name.trim() || 'Character'} mustering out`
-    }),
+    }) as DiceCommand,
     requestId('mustering-roll')
   )
   const latestRoll =
@@ -2721,7 +2978,9 @@ const rollCharacterCreationMusteringBenefit = async (kind) => {
   characterCreationPanel.scrollToTop()
 }
 
-const rollCharacterCreationTermSkill = async (table) => {
+const rollCharacterCreationTermSkill = async (
+  table: CharacterCreationTermSkillTable
+): Promise<void> => {
   if (!characterCreationFlow) return
   setError('')
   syncCharacterCreationWizardFields()
@@ -2736,8 +2995,7 @@ const rollCharacterCreationTermSkill = async (table) => {
   const response = await postCharacterCreationCommand(
     {
       type: 'RollCharacterCreationTermSkill',
-      gameId: roomId,
-      actorId,
+      ...commandIdentity(),
       characterId,
       table
     },
@@ -2756,12 +3014,16 @@ const rollCharacterCreationTermSkill = async (table) => {
     table,
     roll: latestRoll.total
   }).flow
-  syncCharacterCreationFlowFromRoomState(response.state, characterId, fallbackFlow)
+  syncCharacterCreationFlowFromRoomState(
+    response.state,
+    characterId,
+    fallbackFlow
+  )
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
 
-const rollCharacterCreationReenlistment = async () => {
+const rollCharacterCreationReenlistment = async (): Promise<void> => {
   if (!characterCreationFlow) return
   setError('')
   syncCharacterCreationWizardFields()
@@ -2771,8 +3033,7 @@ const rollCharacterCreationReenlistment = async () => {
   const response = await postCharacterCreationCommand(
     {
       type: 'ResolveCharacterCreationReenlistment',
-      gameId: roomId,
-      actorId,
+      ...commandIdentity(),
       characterId
     },
     requestId('reenlistment-roll')
@@ -2789,12 +3050,16 @@ const rollCharacterCreationReenlistment = async () => {
     characterCreationFlow,
     latestRoll.total
   ).flow
-  syncCharacterCreationFlowFromRoomState(response.state, characterId, fallbackFlow)
+  syncCharacterCreationFlowFromRoomState(
+    response.state,
+    characterId,
+    fallbackFlow
+  )
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
 
-const rollCharacterCreationAging = async () => {
+const rollCharacterCreationAging = async (): Promise<void> => {
   if (!characterCreationFlow) return
   setError('')
   syncCharacterCreationWizardFields()
@@ -2806,8 +3071,7 @@ const rollCharacterCreationAging = async () => {
   const response = await postCharacterCreationCommand(
     {
       type: 'ResolveCharacterCreationAging',
-      gameId: roomId,
-      actorId,
+      ...commandIdentity(),
       characterId
     },
     requestId('aging-roll')
@@ -2833,7 +3097,9 @@ const rollCharacterCreationAging = async () => {
   characterCreationPanel.scrollToTop()
 }
 
-const renderCharacterCreationReview = (flow) => {
+const renderCharacterCreationReview = (
+  flow: CharacterCreationFlow
+): HTMLElement => {
   const summary = deriveCharacterCreationReviewSummary(flow)
   const review = document.createElement('div')
   review.className = 'character-creation-review'
@@ -2859,7 +3125,7 @@ const renderCharacterCreationReview = (flow) => {
   return review
 }
 
-const rollCharacterCreationCareerCheck = async () => {
+const rollCharacterCreationCareerCheck = async (): Promise<void> => {
   if (!characterCreationFlow) return
   setError('')
   syncCharacterCreationWizardFields()
@@ -2875,15 +3141,17 @@ const rollCharacterCreationCareerCheck = async () => {
     survivalRoll: 'ResolveCharacterCreationSurvival',
     commissionRoll: 'ResolveCharacterCreationCommission',
     advancementRoll: 'ResolveCharacterCreationAdvancement'
-  }
-  const commandType = commandTypeByRollKey[rollAction.key]
+  } satisfies Partial<
+    Record<CharacterCreationCareerRollKey, GameCommand['type']>
+  >
+  const commandType =
+    commandTypeByRollKey[rollAction.key as keyof typeof commandTypeByRollKey]
   if (!commandType) return
   const characterId = characterCreationFlow.draft.characterId
   const response = await postCharacterCreationCommand(
     {
       type: commandType,
-      gameId: roomId,
-      actorId,
+      ...commandIdentity(),
       characterId
     },
     requestId('career-roll')
@@ -2900,7 +3168,11 @@ const rollCharacterCreationCareerCheck = async () => {
     characterCreationFlow,
     latestRoll.total
   ).flow
-  syncCharacterCreationFlowFromRoomState(response.state, characterId, fallbackFlow)
+  syncCharacterCreationFlowFromRoomState(
+    response.state,
+    characterId,
+    fallbackFlow
+  )
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
@@ -2958,7 +3230,7 @@ const createCustomBoard = async () => {
   setError('')
   if (!state) {
     await postCommand(
-      createGameCommand({ roomId, actorId }),
+      createGameCommand(bootstrapIdentity()),
       requestId('create-game-for-board')
     )
   }
@@ -2976,8 +3248,7 @@ const createCustomBoard = async () => {
     null
   await postBoardCommand({
     type: 'CreateBoard',
-    gameId: roomId,
-    actorId,
+    ...commandIdentity(),
     boardId,
     name,
     imageAssetId: null,
@@ -2997,7 +3268,7 @@ const createWizardToken = async () => {
   if (!characterCreationFlow) return
   if (!selectedBoard()) {
     await postBoardCommand(
-      createBoardCommand({ roomId, actorId }),
+      createBoardCommand(bootstrapIdentity()) as BoardCommand,
       requestId('create-board-for-wizard-character')
     )
   }
@@ -3023,8 +3294,7 @@ const createWizardToken = async () => {
 
   await postBoardCommand({
     type: 'CreatePiece',
-    gameId: roomId,
-    actorId,
+    ...commandIdentity(),
     pieceId,
     boardId: board.id,
     name: characterCreationFlow.draft.name.trim(),
@@ -3056,7 +3326,7 @@ const finishCharacterCreationWizard = async () => {
 
   if (!state) {
     await postCommand(
-      createGameCommand({ roomId, actorId }),
+      createGameCommand(bootstrapIdentity()),
       requestId('create-game-for-wizard-character')
     )
   }
@@ -3070,7 +3340,7 @@ const finishCharacterCreationWizard = async () => {
     return
   }
 
-  await postCharacterCreationCommands(commands)
+  await postCharacterCreationCommands(commands as CharacterCreationCommand[])
 
   await createWizardToken()
   characterCreationFlow = null
@@ -3171,7 +3441,7 @@ const createCustomPiece = async () => {
 const bootstrapScene = async () => {
   setError('')
   for (let i = 0; i < 10; i++) {
-    const command = nextBootstrapCommand({ roomId, actorId, state })
+    const command = nextBootstrapCommand({ ...bootstrapIdentity(), state })
     if (!command) break
     await postCommand(command, 'bootstrap-' + i)
   }
@@ -3192,7 +3462,7 @@ const roomSocketController = createRoomSocketController({
   isOffline: () => connectivityController?.snapshot().status === 'offline',
   onStatus: setStatus,
   onError: setError,
-  onMessage: handleServerMessage
+  onMessage: (message) => handleServerMessage(message as ServerMessage)
 })
 
 const connectSocket = () => {
@@ -3212,21 +3482,24 @@ connectivityController = createConnectivityController({
 })
 
 const applyState = (
-  nextState,
+  nextState: GameState | null,
   {
     animateLatestDiceLog = true,
     deferDiceRevealIds = new Set(),
     deferFollowedCreationRolls = []
+  }: {
+    animateLatestDiceLog?: boolean
+    deferDiceRevealIds?: ReadonlySet<string>
+    deferFollowedCreationRolls?: readonly ClientDiceRollActivity[]
   } = {}
-) => {
+): void => {
   const previousDiceId = latestDiceId
   state = appSession.setAuthoritativeState(nextState).authoritativeState
   const shouldRenderFollowedCreation = refreshFollowedCharacterCreationFlow()
-  const shouldRenderEditableCreation = shouldRefreshEditableCharacterCreationFlow(
-    {
+  const shouldRenderEditableCreation =
+    shouldRefreshEditableCharacterCreationFlow({
       deferFollowedCreationRolls
-    }
-  )
+    })
   const latestRoll = state?.diceLog?.[state.diceLog.length - 1] || null
   latestDiceId = latestRoll?.id || null
   render()
@@ -3265,19 +3538,20 @@ const applyState = (
   firstStateApplied = true
 }
 
-const selectedBoard = () => {
+const selectedBoard = (): BoardState | null => {
   return selectSelectedBoard(state)
 }
 
-const boardPieces = () => {
+const boardPieces = (): PieceState[] => {
   return selectedBoardPieces(state)
 }
 
-const selectedPiece = () => {
+const selectedPiece = (): PieceState | null => {
   return boardController?.selectedPiece() || null
 }
 
-const boardDoorActions = (board) => {
+const boardDoorActions = (board: BoardState | null): HTMLElement | null => {
+  if (!board) return null
   const doors = deriveDoorToggleViewModels(board)
   if (doors.length === 0) return null
 
@@ -3306,7 +3580,15 @@ const boardDoorActions = (board) => {
   return actions
 }
 
-const characterCreationActions = (character) => {
+const characterCreationActions = (
+  character: CharacterState | null
+): {
+  title: string
+  status: string
+  summary: string
+  actions: HTMLElement | null
+} | null => {
+  if (!character) return null
   const plan = deriveCharacterCreationActionPlan(clientIdentity(), character)
   if (!plan) return null
   const actions = document.createElement('div')
@@ -3318,9 +3600,9 @@ const characterCreationActions = (character) => {
     button.textContent = viewModel.label
     button.className = viewModel.variant === 'primary' ? 'active' : ''
     button.addEventListener('click', () => {
-      postCharacterCreationCommand(viewModel.command).catch((error) =>
-        setError(error.message)
-      )
+      postCharacterCreationCommand(
+        viewModel.command as CharacterCreationCommand
+      ).catch((error) => setError(error.message))
     })
     actions.append(button)
   }
@@ -3347,24 +3629,25 @@ const characterSheetController = createCharacterSheetController({
   sendPatch: (characterId, patch) =>
     postSheetCommand({
       type: 'UpdateCharacterSheet',
-      gameId: roomId,
-      actorId,
-      characterId,
+      ...commandIdentity(),
+      characterId: asCharacterId(
+        typeof characterId === 'string'
+          ? characterId
+          : (characterId.characterId ?? characterId.id ?? '')
+      ),
       ...patch
     }),
   setVisibility: (piece, visibility) =>
     postSheetCommand({
       type: 'SetPieceVisibility',
-      gameId: roomId,
-      actorId,
+      ...commandIdentity(),
       pieceId: piece.id,
       visibility
     }),
   setFreedom: (piece, freedom) =>
     postSheetCommand({
       type: 'SetPieceFreedom',
-      gameId: roomId,
-      actorId,
+      ...commandIdentity(),
       pieceId: piece.id,
       freedom
     }),
@@ -3374,7 +3657,7 @@ const characterSheetController = createCharacterSheetController({
         identity: clientIdentity(),
         expression: '2d6',
         reason
-      })
+      }) as DiceCommand
     ),
   getCharacterCreationActions: characterCreationActions,
   reportError: (message) => setError(message)
@@ -3469,7 +3752,7 @@ const render = () => {
   renderCreationPresenceDock()
 }
 
-const animateRoll = (roll) => {
+const animateRoll = (roll: LiveDiceRollRevealTarget | DiceRollState): void => {
   const overlayHost = characterCreationPanel.overlayHost()
   if (overlayHost && els.diceOverlay.parentElement !== overlayHost) {
     overlayHost.append(els.diceOverlay)
@@ -3486,9 +3769,12 @@ const animateRoll = (roll) => {
   })
 }
 
+const canvasContext = els.canvas.getContext('2d')
+if (!canvasContext) throw new Error('2D canvas context unavailable')
+
 boardController = createBoardController({
   canvas: els.canvas,
-  context: els.canvas.getContext('2d'),
+  context: canvasContext,
   getState: () => state,
   getIdentity: clientIdentity,
   getSelectedPieceId: currentSelectedPieceId,
@@ -3531,8 +3817,9 @@ createRoomMenuController({
 })
 
 els.sheetButton.addEventListener('click', () => {
-  if (!currentSelectedPieceId() && selectedPiece()) {
-    selectPiece(selectedPiece().id)
+  const piece = selectedPiece()
+  if (!currentSelectedPieceId() && piece) {
+    selectPiece(piece.id)
   }
   if (!currentSelectedPieceId()) {
     characterCreationPanel.open()
@@ -3625,9 +3912,8 @@ els.boardSelect.addEventListener('change', () => {
   boardController?.clearDrag()
   postBoardCommand({
     type: 'SelectBoard',
-    gameId: roomId,
-    actorId,
-    boardId
+    ...commandIdentity(),
+    boardId: asBoardId(boardId)
   }).catch((error) => {
     setError(error.message)
     render()
@@ -3653,7 +3939,7 @@ els.roll.addEventListener('click', () => {
       identity: clientIdentity(),
       expression: els.diceExpression.value.trim() || '2d6',
       reason: 'Table roll'
-    })
+    }) as DiceCommand
   ).catch((error) => setError(error.message))
 })
 

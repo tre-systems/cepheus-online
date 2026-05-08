@@ -710,7 +710,8 @@ export const createCharacterSheetController = ({
     }
 
     if (!piece && character) {
-      if (activeSheetTab === 'action') renderCharacterOnlyActionTab(body, character)
+      if (activeSheetTab === 'action')
+        renderCharacterOnlyActionTab(body, character)
       else if (activeSheetTab === 'items') renderItemsTab(body, character)
       else if (activeSheetTab === 'notes')
         renderCharacterOnlyNotesTab(body, character)

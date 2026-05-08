@@ -1,5 +1,5 @@
-import {describe, it} from 'node:test'
-import {expect} from '../../test/expect'
+import { describe, it } from 'node:test'
+import { expect } from '../../test/expect'
 
 import pieceSchema from './pieceSchema'
 

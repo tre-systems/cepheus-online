@@ -1,7 +1,7 @@
-import {describe, it} from 'node:test'
-import {expect} from '../../test/expect'
+import { describe, it } from 'node:test'
+import { expect } from '../../test/expect'
 
-import {inviteUsersInputSchema} from './functions'
+import { inviteUsersInputSchema } from './functions'
 
 describe('functions schema', () => {
   describe('inviteUsersInputSchema', () => {

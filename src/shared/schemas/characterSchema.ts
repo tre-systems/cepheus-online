@@ -69,11 +69,11 @@ const characterSchemaFunction = ({
         type: 'object',
         title: 'Characteristics',
         properties: {
-          str: {type: ['number', 'null'], title: 'Str'},
-          dex: {type: ['number', 'null'], title: 'Dex'},
-          int: {type: ['number', 'null'], title: 'Int'},
-          edu: {type: ['number', 'null'], title: 'Edu'},
-          soc: {type: ['number', 'null'], title: 'Soc'}
+          str: { type: ['number', 'null'], title: 'Str' },
+          dex: { type: ['number', 'null'], title: 'Dex' },
+          int: { type: ['number', 'null'], title: 'Int' },
+          edu: { type: ['number', 'null'], title: 'Edu' },
+          soc: { type: ['number', 'null'], title: 'Soc' }
         }
       }
     }
@@ -82,12 +82,12 @@ const characterSchemaFunction = ({
         type: 'object',
         title: 'Characteristics',
         properties: {
-          str: {type: ['number', 'null'], title: 'Str'},
-          dex: {type: ['number', 'null'], title: 'Dex'},
-          end: {type: ['number', 'null'], title: 'End'},
-          int: {type: ['number', 'null'], title: 'Int'},
-          instinct: {type: ['number', 'null'], title: 'Instinct'},
-          pack: {type: ['number', 'null'], title: 'Pack'}
+          str: { type: ['number', 'null'], title: 'Str' },
+          dex: { type: ['number', 'null'], title: 'Dex' },
+          end: { type: ['number', 'null'], title: 'End' },
+          int: { type: ['number', 'null'], title: 'Int' },
+          instinct: { type: ['number', 'null'], title: 'Instinct' },
+          pack: { type: ['number', 'null'], title: 'Pack' }
         }
       }
     }
@@ -96,12 +96,12 @@ const characterSchemaFunction = ({
       type: 'object',
       title: 'Characteristics',
       properties: {
-        str: {type: ['number', 'null'], title: 'Str'},
-        dex: {type: ['number', 'null'], title: 'Dex'},
-        end: {type: ['number', 'null'], title: 'End'},
-        int: {type: ['number', 'null'], title: 'Int'},
-        edu: {type: ['number', 'null'], title: 'Edu'},
-        soc: {type: ['number', 'null'], title: 'Soc'}
+        str: { type: ['number', 'null'], title: 'Str' },
+        dex: { type: ['number', 'null'], title: 'Dex' },
+        end: { type: ['number', 'null'], title: 'End' },
+        int: { type: ['number', 'null'], title: 'Int' },
+        edu: { type: ['number', 'null'], title: 'Edu' },
+        soc: { type: ['number', 'null'], title: 'Soc' }
       }
     }
   }
@@ -111,26 +111,26 @@ const characterSchemaFunction = ({
     type: 'object',
     required: [],
     properties: {
-      name: {type: 'string', title: 'Name'},
+      name: { type: 'string', title: 'Name' },
       type: {
         title: 'Type',
         type: 'string',
         enum: ['PLAYER', 'NPC', 'ANIMAL', 'ROBOT']
       },
-      image: {type: 'string', title: 'Image'},
+      image: { type: 'string', title: 'Image' },
       gender: {
         title: 'Gender',
         type: 'string',
         enum: Object.values(ruleset.gender)
       },
-      age: {type: ['number', 'null'], title: 'Age'},
-      displayTitle: {type: ['boolean', 'null'], title: 'Show Title'},
+      age: { type: ['number', 'null'], title: 'Age' },
+      displayTitle: { type: ['boolean', 'null'], title: 'Show Title' },
       characteristics: getCharacteristics(),
       homeWorld: {
         type: 'object',
         title: 'Home World',
         properties: {
-          name: {type: ['string', 'null'], title: 'Home'},
+          name: { type: ['string', 'null'], title: 'Home' },
           lawLevel: {
             type: 'string',
             title: 'Law Level',
@@ -143,37 +143,37 @@ const characterSchemaFunction = ({
           }
         }
       },
-      credits: {type: 'number', title: 'Credits'},
-      startingCredits: {type: 'number', title: 'Starting Credits'},
+      credits: { type: 'number', title: 'Credits' },
+      startingCredits: { type: 'number', title: 'Starting Credits' },
       materialBenefits: {
         type: 'array',
         title: 'Material Benefits',
         default: [],
-        items: {type: 'string'}
+        items: { type: 'string' }
       },
-      notes: {type: 'string', title: ''},
-      description: {type: ['string', 'null'], title: 'Description'},
-      traits: {type: ['string', 'null'], title: 'Traits'},
-      price: {type: ['number', 'null'], title: 'Price'},
-      hull: {type: ['number', 'null'], title: 'Hull'},
-      structure: {type: ['number', 'null'], title: 'Structure'},
+      notes: { type: 'string', title: '' },
+      description: { type: ['string', 'null'], title: 'Description' },
+      traits: { type: ['string', 'null'], title: 'Traits' },
+      price: { type: ['number', 'null'], title: 'Price' },
+      hull: { type: ['number', 'null'], title: 'Hull' },
+      structure: { type: ['number', 'null'], title: 'Structure' },
       skills: {
         type: 'array',
         title: 'Skills',
         default: [],
-        items: {type: 'string'}
+        items: { type: 'string' }
       },
       animalData: {
         type: 'object',
         title: 'Animal Data',
         required: [],
         properties: {
-          size: {type: ['number', 'null'], title: 'Size'},
-          subType: {type: ['string', 'null'], title: 'Sub Type'},
-          type: {type: ['string', 'null'], title: 'Type'},
-          terrain: {type: ['string', 'null'], title: 'Terrain'},
-          locomotion: {type: ['string', 'null'], title: 'Locomotion'},
-          speed: {type: ['number', 'null'], title: 'Speed'}
+          size: { type: ['number', 'null'], title: 'Size' },
+          subType: { type: ['string', 'null'], title: 'Sub Type' },
+          type: { type: ['string', 'null'], title: 'Type' },
+          terrain: { type: ['string', 'null'], title: 'Terrain' },
+          locomotion: { type: ['string', 'null'], title: 'Locomotion' },
+          speed: { type: ['number', 'null'], title: 'Speed' }
         }
       }
     }

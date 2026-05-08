@@ -1,6 +1,6 @@
 export type Dispose = () => void
 
-type DisposableLike = Dispose | {dispose: Dispose}
+type DisposableLike = Dispose | { dispose: Dispose }
 type ReactiveErrorReporter = (err: unknown) => void
 
 export interface DisposalScope {
@@ -191,7 +191,7 @@ export const effect = (fn: () => void): Dispose => {
     const previousActive = active
     const previousOwner = ownerCleanups
 
-    active = {run, deps}
+    active = { run, deps }
     ownerCleanups = []
 
     try {

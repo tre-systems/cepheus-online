@@ -1,4 +1,4 @@
-import {STATIC_CLIENT_ASSETS} from './static-client-assets.generated'
+import { STATIC_CLIENT_ASSETS } from './static-client-assets.generated'
 
 const textResponse = (body: string, contentType: string): Response =>
   new Response(body, {

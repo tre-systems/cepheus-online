@@ -157,7 +157,10 @@ export const drawLosOverlaySegments = (
       transform.scale
     ctx.setLineDash(
       segment.type === 'door' && segment.open
-        ? [style.dashLength / transform.scale, style.gapLength / transform.scale]
+        ? [
+            style.dashLength / transform.scale,
+            style.gapLength / transform.scale
+          ]
         : []
     )
     ctx.beginPath()

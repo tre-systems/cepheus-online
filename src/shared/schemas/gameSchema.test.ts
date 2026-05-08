@@ -1,5 +1,5 @@
-import {describe, it} from 'node:test'
-import {expect} from '../../test/expect'
+import { describe, it } from 'node:test'
+import { expect } from '../../test/expect'
 
 import gameSchema from './gameSchema'
 
@@ -40,11 +40,11 @@ describe('gameSchema', () => {
       'restrictMovement'
     ] as const
 
-    booleanProps.forEach(prop => {
+    booleanProps.forEach((prop) => {
       const propSchema = gameSchema.properties[prop]
       expect(propSchema.type).toContain('boolean')
       expect(propSchema.type).toContain('null')
-      expect((propSchema as {default: boolean}).default).toBe(false)
+      expect((propSchema as { default: boolean }).default).toBe(false)
     })
   })
 

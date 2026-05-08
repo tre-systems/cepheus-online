@@ -1,4 +1,4 @@
-import type {DurableObjectStorage} from '../cloudflare'
+import type { DurableObjectStorage } from '../cloudflare'
 
 export interface MemoryDurableObjectStorage extends DurableObjectStorage {
   readonly records: Map<string, unknown>

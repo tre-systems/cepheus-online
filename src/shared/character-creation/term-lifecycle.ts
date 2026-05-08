@@ -52,7 +52,9 @@ export const startCareerTerm = ({
 }): CareerTermStart => {
   const completedBasicTraining = terms.some((term) => term.career === career)
   const nextTerms = terms.map((term, index) =>
-    index === terms.length - 1 ? { ...cloneCareerTerm(term), complete: true } : cloneCareerTerm(term)
+    index === terms.length - 1
+      ? { ...cloneCareerTerm(term), complete: true }
+      : cloneCareerTerm(term)
   )
 
   const hasCareer = careers.some((entry) => entry.name === career)
@@ -113,8 +115,7 @@ export const mustResolveAging = ({
 
 export const deriveAnagathicsModifier = (
   terms: readonly Pick<CareerTerm, 'anagathics'>[]
-): number =>
-  terms.reduce((total, term) => total + (term.anagathics ? 1 : 0), 0)
+): number => terms.reduce((total, term) => total + (term.anagathics ? 1 : 0), 0)
 
 export const deriveAgingRollModifier = (
   terms: readonly Pick<CareerTerm, 'anagathics'>[]
@@ -203,7 +204,8 @@ export const canOfferNewCareer = ({
   noOutstandingSelections?: boolean
   termCount: number
   remainingBenefits: number
-}): boolean => noOutstandingSelections && termCount < 7 && remainingBenefits === 0
+}): boolean =>
+  noOutstandingSelections && termCount < 7 && remainingBenefits === 0
 
 export const canCompleteCreation = ({
   noOutstandingSelections = true,

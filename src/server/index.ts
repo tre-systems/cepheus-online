@@ -1,17 +1,20 @@
-import {asGameId} from '../shared/ids'
-import type {Env} from './env'
-import {GameRoomDO} from './game-room/game-room-do'
-import {jsonResponse} from './http'
-import {serveStaticClient} from './static-client'
+import { asGameId } from '../shared/ids'
+import type { Env } from './env'
+import { GameRoomDO } from './game-room/game-room-do'
+import { jsonResponse } from './http'
+import { serveStaticClient } from './static-client'
 
-export {GameRoomDO}
+export { GameRoomDO }
 
-const routeGameRoom = (request: Request, env: Env): Response | Promise<Response> => {
+const routeGameRoom = (
+  request: Request,
+  env: Env
+): Response | Promise<Response> => {
   const url = new URL(request.url)
   const parts = url.pathname.split('/').filter(Boolean)
 
   if (parts[0] !== 'rooms' || !parts[1]) {
-    return jsonResponse({error: 'Not found'}, {status: 404})
+    return jsonResponse({ error: 'Not found' }, { status: 404 })
   }
 
   try {
@@ -23,7 +26,7 @@ const routeGameRoom = (request: Request, env: Env): Response | Promise<Response>
       {
         error: error instanceof Error ? error.message : 'Invalid room id'
       },
-      {status: 400}
+      { status: 400 }
     )
   }
 }
@@ -53,6 +56,6 @@ export default {
       return env.ASSETS.fetch(request)
     }
 
-    return jsonResponse({error: 'Not found'}, {status: 404})
+    return jsonResponse({ error: 'Not found' }, { status: 404 })
   }
 }

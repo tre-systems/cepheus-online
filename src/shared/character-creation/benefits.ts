@@ -65,7 +65,9 @@ const clampedBenefitRoll = (
     .map((key) => Number(key))
     .filter(Number.isFinite)
   if (rolls.length === 0) return String(roll)
-  return String(Math.max(Math.min(...rolls), Math.min(Math.max(...rolls), roll)))
+  return String(
+    Math.max(Math.min(...rolls), Math.min(Math.max(...rolls), roll))
+  )
 }
 
 export const resolveCareerBenefit = ({
@@ -93,8 +95,7 @@ export const resolveCareerBenefit = ({
   }
 
   const table = tables.materialBenefits[career]
-  const value =
-    table?.[clampedBenefitRoll(table, roll)] ?? 'Unknown Benefit'
+  const value = table?.[clampedBenefitRoll(table, roll)] ?? 'Unknown Benefit'
   return {
     kind: 'material',
     value,

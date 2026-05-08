@@ -1,5 +1,5 @@
-import {describe, it} from 'node:test'
-import {expect} from '../../test/expect'
+import { describe, it } from 'node:test'
+import { expect } from '../../test/expect'
 
 import equipmentSchema from './equipmentSchema'
 
@@ -31,14 +31,14 @@ describe('equipmentSchema', () => {
 
   it('should have all expected weapon properties', () => {
     const weaponProps = ['RoF', 'Range', 'Dmg', 'Recoil', 'Skill', 'Rounds']
-    weaponProps.forEach(prop => {
+    weaponProps.forEach((prop) => {
       expect(equipmentSchema.properties).toHaveProperty(prop)
     })
   })
 
   it('should have all expected armor properties', () => {
     const armorProps = ['AR', 'AP', 'LaserAR']
-    armorProps.forEach(prop => {
+    armorProps.forEach((prop) => {
       expect(equipmentSchema.properties).toHaveProperty(prop)
     })
   })
@@ -53,7 +53,7 @@ describe('equipmentSchema', () => {
       'Wgt',
       'Description'
     ]
-    generalProps.forEach(prop => {
+    generalProps.forEach((prop) => {
       expect(equipmentSchema.properties).toHaveProperty(prop)
     })
   })
@@ -77,7 +77,7 @@ describe('equipmentSchema', () => {
       'AP',
       'Rounds'
     ]
-    nullableNumericProps.forEach(prop => {
+    nullableNumericProps.forEach((prop) => {
       const propSchema =
         equipmentSchema.properties[
           prop as keyof typeof equipmentSchema.properties

@@ -1,8 +1,5 @@
 declare module 'node:test' {
-  export const describe: (
-    name: string,
-    fn: () => void | Promise<void>
-  ) => void
+  export const describe: (name: string, fn: () => void | Promise<void>) => void
   export const it: (name: string, fn: () => void | Promise<void>) => void
 }
 
@@ -36,7 +33,7 @@ declare module 'node:fs' {
 
   export function readdirSync(
     path: string,
-    options: {withFileTypes: true}
+    options: { withFileTypes: true }
   ): Dirent[]
   export function readFileSync(path: string, encoding: 'utf8'): string
 }

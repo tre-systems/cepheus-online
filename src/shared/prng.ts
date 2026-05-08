@@ -17,6 +17,4 @@ export const deriveEventRng = (
   gameSeed: number,
   eventSeq: number
 ): (() => number) =>
-  mulberry32(
-    (gameSeed ^ Math.imul(eventSeq, KNUTH_MULTIPLICATIVE_HASH)) | 0
-  )
+  mulberry32((gameSeed ^ Math.imul(eventSeq, KNUTH_MULTIPLICATIVE_HASH)) | 0)

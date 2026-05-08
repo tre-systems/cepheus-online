@@ -1,8 +1,8 @@
-import {projectGameState} from '../../shared/projector'
-import type {GameId} from '../../shared/ids'
-import type {GameState} from '../../shared/state'
-import type {DurableObjectStorage} from '../cloudflare'
-import {readCheckpoint, readEventStreamTail} from './storage'
+import { projectGameState } from '../../shared/projector'
+import type { GameId } from '../../shared/ids'
+import type { GameState } from '../../shared/state'
+import type { DurableObjectStorage } from '../cloudflare'
+import { readCheckpoint, readEventStreamTail } from './storage'
 
 export const getProjectedGameState = async (
   storage: DurableObjectStorage,

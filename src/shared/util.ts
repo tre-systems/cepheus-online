@@ -58,9 +58,8 @@ export const groupBy = <T>(
     return groups
   }, {})
 
-export const compact = <T>(
-  items: readonly (T | null | undefined)[]
-): T[] => items.filter((item): item is T => item != null)
+export const compact = <T>(items: readonly (T | null | undefined)[]): T[] =>
+  items.filter((item): item is T => item != null)
 
 export const filterMap = <T, U>(
   items: readonly T[],

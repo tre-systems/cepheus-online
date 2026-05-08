@@ -77,11 +77,11 @@ export const animateRoll = ({
   })
   const row = document.createElement('div')
   row.className = 'dice-row'
-  roll.rolls.forEach((value, index) => {
+  for (const [index, value] of roll.rolls.entries()) {
     const die = buildDie(value, index)
     die.style.animationDuration = `${timing.rollDurationMs}ms`
     row.append(die)
-  })
+  }
   const total = document.createElement('div')
   total.className = 'roll-total'
   total.textContent = 'Rolling...'

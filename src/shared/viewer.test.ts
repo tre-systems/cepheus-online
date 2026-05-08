@@ -1,9 +1,9 @@
 import * as assert from 'node:assert/strict'
-import {describe, it} from 'node:test'
+import { describe, it } from 'node:test'
 
-import {asBoardId, asGameId, asPieceId, asUserId} from './ids'
-import type {GameState} from './state'
-import {filterGameStateForViewer} from './viewer'
+import { asBoardId, asGameId, asPieceId, asUserId } from './ids'
+import type { GameState } from './state'
+import { filterGameStateForViewer } from './viewer'
 
 const buildState = (): GameState => ({
   id: asGameId('game-1'),

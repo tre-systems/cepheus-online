@@ -1,4 +1,4 @@
-import type {NumberProperty, StringProperty} from './schemaTypes'
+import type { NumberProperty, StringProperty } from './schemaTypes'
 
 interface BoardSchema {
   title: string

@@ -1,4 +1,4 @@
-import {effect, type ReadonlySignal, registerDisposer} from './reactive'
+import { effect, type ReadonlySignal, registerDisposer } from './reactive'
 
 interface ElProps {
   class?: string

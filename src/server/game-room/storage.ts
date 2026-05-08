@@ -1,7 +1,7 @@
-import type {EventEnvelope, GameEvent} from '../../shared/events'
-import {asEventId, type GameId, type UserId} from '../../shared/ids'
-import type {GameState} from '../../shared/state'
-import type {DurableObjectStorage} from '../cloudflare'
+import type { EventEnvelope, GameEvent } from '../../shared/events'
+import { asEventId, type GameId, type UserId } from '../../shared/ids'
+import type { GameState } from '../../shared/state'
+import type { DurableObjectStorage } from '../cloudflare'
 
 export const EVENT_CHUNK_SIZE = 64
 
@@ -27,7 +27,8 @@ export interface GameCheckpoint {
 const getEventChunkCount = async (
   storage: DurableObjectStorage,
   gameId: GameId
-): Promise<number> => (await storage.get<number>(eventChunkCountKey(gameId))) ?? 0
+): Promise<number> =>
+  (await storage.get<number>(eventChunkCountKey(gameId))) ?? 0
 
 const getEventChunk = async (
   storage: DurableObjectStorage,
@@ -47,7 +48,7 @@ export const readEventStream = async (
 ): Promise<EventEnvelope[]> => {
   const chunkCount = await getEventChunkCount(storage, gameId)
   const chunks = await Promise.all(
-    Array.from({length: chunkCount}, (_, chunkIndex) =>
+    Array.from({ length: chunkCount }, (_, chunkIndex) =>
       getEventChunk(storage, gameId, chunkIndex)
     )
   )

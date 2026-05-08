@@ -1,5 +1,5 @@
-import {describe, it} from 'node:test'
-import {expect} from '../../test/expect'
+import { describe, it } from 'node:test'
+import { expect } from '../../test/expect'
 
 import worldSchema from './worldSchema'
 
@@ -44,7 +44,7 @@ describe('worldSchema', () => {
       'techLevel'
     ]
 
-    uwpProps.forEach(prop => {
+    uwpProps.forEach((prop) => {
       const propSchema =
         worldSchema.properties[prop as keyof typeof worldSchema.properties]
       expect(propSchema.type).toBe('number')

@@ -1,7 +1,7 @@
-import {describe, it} from 'node:test'
-import {expect} from '../../test/expect'
-import type {SchemaDefinition} from '../types/schema'
-import {isObjectSchema} from '../types/schema'
+import { describe, it } from 'node:test'
+import { expect } from '../../test/expect'
+import type { SchemaDefinition } from '../types/schema'
+import { isObjectSchema } from '../types/schema'
 
 import combatStateSchema from './combatStateSchema'
 
@@ -29,7 +29,7 @@ const getProperty = (
 
 describe('combatStateSchema', () => {
   describe('for non-animal characters', () => {
-    const schema = combatStateSchema({character: {type: 'PLAYER'}})
+    const schema = combatStateSchema({ character: { type: 'PLAYER' } })
 
     it('should have correct title', () => {
       expect(schema.title).toBe('Combat State')
@@ -53,7 +53,7 @@ describe('combatStateSchema', () => {
   })
 
   describe('for animal characters', () => {
-    const schema = combatStateSchema({character: {type: 'ANIMAL'}})
+    const schema = combatStateSchema({ character: { type: 'ANIMAL' } })
 
     it('should have animal-specific characteristics', () => {
       const chars = getProperties(getProperty(schema, 'characteristics'))
@@ -73,7 +73,7 @@ describe('combatStateSchema', () => {
   })
 
   describe('common combat properties', () => {
-    const schema = combatStateSchema({character: {type: 'PLAYER'}})
+    const schema = combatStateSchema({ character: { type: 'PLAYER' } })
 
     it('should have visibility and awareness properties', () => {
       expect(getProperties(schema)).toHaveProperty('visible')
@@ -99,14 +99,14 @@ describe('combatStateSchema', () => {
         'dodge',
         'parry'
       ]
-      statusProps.forEach(prop => {
+      statusProps.forEach((prop) => {
         expect(getProperties(schema)).toHaveProperty(prop)
       })
     })
 
     it('should have combat modifier properties', () => {
       const modifierProps = ['aim', 'cover', 'weapon', 'armor', 'AR', 'group']
-      modifierProps.forEach(prop => {
+      modifierProps.forEach((prop) => {
         expect(getProperties(schema)).toHaveProperty(prop)
       })
     })
