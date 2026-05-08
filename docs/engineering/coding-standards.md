@@ -123,7 +123,9 @@ corrupt persisted state or programmer errors.
 
 The Worker-served shell source lives under `src/client/app`. Run
 `npm run build:client` after editing it so the generated server asset module
-stays current.
+stays current. The client build uses esbuild as a development-only bundler and
+embeds a self-contained browser bundle at `/client/app/app.js`; `tsc --noEmit`
+remains the authoritative typecheck.
 
 PWA behavior belongs in the shell layer. Keep the service worker conservative:
 cache static shell assets, use network-first navigation with an offline shell
@@ -170,7 +172,8 @@ blockers.
 
 Generated files such as `src/server/static-client-assets.generated.ts` are not
 formatted directly. Regenerate them with `npm run build:client`, then rely on
-typecheck and server tests to validate the emitted module.
+typecheck and server tests to validate the emitted esbuild bundle and static
+asset table.
 
 The local gate is split by cost:
 

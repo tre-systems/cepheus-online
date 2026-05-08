@@ -1,18 +1,38 @@
 import { createHash } from 'node:crypto'
-import { execFileSync } from 'node:child_process'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { build } from 'esbuild'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const clientRoot = join(root, 'src', 'client', 'app')
-const compiledClientRoot = join(root, '.tmp', 'client')
 const outputPath = join(
   root,
   'src',
   'server',
   'static-client-assets.generated.ts'
 )
+
+const bundleClient = async () => {
+  const result = await build({
+    entryPoints: [join(clientRoot, 'app.ts')],
+    bundle: true,
+    write: false,
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2022',
+    sourcemap: false,
+    logLevel: 'silent',
+    legalComments: 'none'
+  })
+
+  const output = result.outputFiles[0]
+  if (!output) {
+    throw new Error('esbuild did not produce a client JavaScript bundle')
+  }
+
+  return output.text
+}
 
 const assets = [
   {
@@ -41,475 +61,8 @@ const assets = [
   },
   {
     pathname: '/client/app/app.js',
-    source: join(compiledClientRoot, 'client', 'app', 'app.js'),
+    inlineBody: await bundleClient(),
     exportName: 'CLIENT_APP_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/app-elements.js',
-    source: join(compiledClientRoot, 'client', 'app', 'app-elements.js'),
-    exportName: 'CLIENT_APP_ELEMENTS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/app-location.js',
-    source: join(compiledClientRoot, 'client', 'app', 'app-location.js'),
-    exportName: 'CLIENT_APP_LOCATION_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/app-command-router.js',
-    source: join(compiledClientRoot, 'client', 'app', 'app-command-router.js'),
-    exportName: 'CLIENT_APP_COMMAND_ROUTER_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/app-bootstrap.js',
-    source: join(compiledClientRoot, 'client', 'app', 'app-bootstrap.js'),
-    exportName: 'CLIENT_APP_BOOTSTRAP_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/app-session.js',
-    source: join(compiledClientRoot, 'client', 'app', 'app-session.js'),
-    exportName: 'CLIENT_APP_SESSION_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/actor-session.js',
-    source: join(compiledClientRoot, 'client', 'app', 'actor-session.js'),
-    exportName: 'CLIENT_ACTOR_SESSION_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/board-geometry.js',
-    source: join(compiledClientRoot, 'client', 'app', 'board-geometry.js'),
-    exportName: 'CLIENT_BOARD_GEOMETRY_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/board-view.js',
-    source: join(compiledClientRoot, 'client', 'app', 'board-view.js'),
-    exportName: 'CLIENT_BOARD_VIEW_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/board-controller.js',
-    source: join(compiledClientRoot, 'client', 'app', 'board-controller.js'),
-    exportName: 'CLIENT_BOARD_CONTROLLER_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/bootstrap-flow.js',
-    source: join(compiledClientRoot, 'client', 'app', 'bootstrap-flow.js'),
-    exportName: 'CLIENT_BOOTSTRAP_FLOW_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/character-creation-actions.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'character-creation-actions.js'
-    ),
-    exportName: 'CLIENT_CHARACTER_CREATION_ACTIONS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/character-creation-panel.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'character-creation-panel.js'
-    ),
-    exportName: 'CLIENT_CHARACTER_CREATION_PANEL_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/character-sheet-controller.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'character-sheet-controller.js'
-    ),
-    exportName: 'CLIENT_CHARACTER_SHEET_CONTROLLER_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/character-sheet-view.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'character-sheet-view.js'
-    ),
-    exportName: 'CLIENT_CHARACTER_SHEET_VIEW_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/connectivity-controller.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'connectivity-controller.js'
-    ),
-    exportName: 'CLIENT_CONNECTIVITY_CONTROLLER_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/room-socket-controller.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'room-socket-controller.js'
-    ),
-    exportName: 'CLIENT_ROOM_SOCKET_CONTROLLER_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/connectivity.js',
-    source: join(compiledClientRoot, 'client', 'app', 'connectivity.js'),
-    exportName: 'CLIENT_CONNECTIVITY_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/character-creation-flow.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'character-creation-flow.js'
-    ),
-    exportName: 'CLIENT_CHARACTER_CREATION_FLOW_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/character-creation-view.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'character-creation-view.js'
-    ),
-    exportName: 'CLIENT_CHARACTER_CREATION_VIEW_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/creation-activity-view.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'creation-activity-view.js'
-    ),
-    exportName: 'CLIENT_CREATION_ACTIVITY_VIEW_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/creation-activity-feed.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'creation-activity-feed.js'
-    ),
-    exportName: 'CLIENT_CREATION_ACTIVITY_FEED_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/creation-presence-dock.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'creation-presence-dock.js'
-    ),
-    exportName: 'CLIENT_CREATION_PRESENCE_DOCK_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/dice-overlay.js',
-    source: join(compiledClientRoot, 'client', 'app', 'dice-overlay.js'),
-    exportName: 'CLIENT_DICE_OVERLAY_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/dice-reveal-state.js',
-    source: join(compiledClientRoot, 'client', 'app', 'dice-reveal-state.js'),
-    exportName: 'CLIENT_DICE_REVEAL_STATE_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/door-los-view.js',
-    source: join(compiledClientRoot, 'client', 'app', 'door-los-view.js'),
-    exportName: 'CLIENT_DOOR_LOS_VIEW_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/image-assets.js',
-    source: join(compiledClientRoot, 'client', 'app', 'image-assets.js'),
-    exportName: 'CLIENT_IMAGE_ASSETS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/live-activity-client.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'live-activity-client.js'
-    ),
-    exportName: 'CLIENT_LIVE_ACTIVITY_CLIENT_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/map-asset-library.js',
-    source: join(compiledClientRoot, 'client', 'app', 'map-asset-library.js'),
-    exportName: 'CLIENT_MAP_ASSET_LIBRARY_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/map-asset-picker-view.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'map-asset-picker-view.js'
-    ),
-    exportName: 'CLIENT_MAP_ASSET_PICKER_VIEW_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/piece-command-plan.js',
-    source: join(compiledClientRoot, 'client', 'app', 'piece-command-plan.js'),
-    exportName: 'CLIENT_PIECE_COMMAND_PLAN_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/pwa-install.js',
-    source: join(compiledClientRoot, 'client', 'app', 'pwa-install.js'),
-    exportName: 'CLIENT_PWA_INSTALL_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/pwa-update-state',
-    source: join(compiledClientRoot, 'client', 'app', 'pwa-update-state.js'),
-    exportName: 'CLIENT_PWA_UPDATE_STATE_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/request-id.js',
-    source: join(compiledClientRoot, 'client', 'app', 'request-id.js'),
-    exportName: 'CLIENT_REQUEST_ID_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/room-api.js',
-    source: join(compiledClientRoot, 'client', 'app', 'room-api.js'),
-    exportName: 'CLIENT_ROOM_API_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/room-menu-controller.js',
-    source: join(
-      compiledClientRoot,
-      'client',
-      'app',
-      'room-menu-controller.js'
-    ),
-    exportName: 'CLIENT_ROOM_MENU_CONTROLLER_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/app/service-worker.js',
-    source: join(compiledClientRoot, 'client', 'app', 'service-worker.js'),
-    exportName: 'CLIENT_SERVICE_WORKER_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/game-commands.js',
-    source: join(compiledClientRoot, 'client', 'game-commands.js'),
-    exportName: 'CLIENT_GAME_COMMANDS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/client/dice.js',
-    source: join(compiledClientRoot, 'client', 'dice.js'),
-    exportName: 'CLIENT_DICE_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/mapAssets.js',
-    source: join(compiledClientRoot, 'shared', 'mapAssets.js'),
-    exportName: 'SHARED_MAP_ASSETS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/live-activity.js',
-    source: join(compiledClientRoot, 'shared', 'live-activity.js'),
-    exportName: 'SHARED_LIVE_ACTIVITY_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/career-rules.js',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'career-rules.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_CAREER_RULES_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/career-rules',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'career-rules.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_CAREER_RULES_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/cepheus-srd-ruleset.js',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'cepheus-srd-ruleset.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_CEPHEUS_SRD_RULESET_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/skills.js',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'skills.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_SKILLS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/background-skills.js',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'background-skills.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_BACKGROUND_SKILLS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/benefits.js',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'benefits.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_BENEFITS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/benefits',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'benefits.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_BENEFITS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/aging.js',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'aging.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_AGING_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/term-lifecycle.js',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'term-lifecycle.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_TERM_LIFECYCLE_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/term-lifecycle',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'term-lifecycle.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_TERM_LIFECYCLE_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/character-creation/legal-actions.js',
-    source: join(
-      compiledClientRoot,
-      'shared',
-      'character-creation',
-      'legal-actions.js'
-    ),
-    exportName: 'SHARED_CHARACTER_CREATION_LEGAL_ACTIONS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/ids',
-    source: join(compiledClientRoot, 'shared', 'ids.js'),
-    exportName: 'SHARED_IDS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/ids.js',
-    source: join(compiledClientRoot, 'shared', 'ids.js'),
-    exportName: 'SHARED_IDS_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/result.js',
-    source: join(compiledClientRoot, 'shared', 'result.js'),
-    exportName: 'SHARED_RESULT_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/result',
-    source: join(compiledClientRoot, 'shared', 'result.js'),
-    exportName: 'SHARED_RESULT_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/util.js',
-    source: join(compiledClientRoot, 'shared', 'util.js'),
-    exportName: 'SHARED_UTIL_JS',
-    contentType: 'text/javascript; charset=utf-8'
-  },
-  {
-    pathname: '/shared/util',
-    source: join(compiledClientRoot, 'shared', 'util.js'),
-    exportName: 'SHARED_UTIL_JS',
     contentType: 'text/javascript; charset=utf-8'
   },
   {
@@ -602,12 +155,6 @@ const resolveModulePath = (fromPathname, specifier) => {
   return new URL(specifier, `https://cepheus.test${fromPathname}`).pathname
 }
 
-await rm(compiledClientRoot, { recursive: true, force: true })
-execFileSync('npx', ['tsc', '-p', 'tsconfig.client.json'], {
-  cwd: root,
-  stdio: 'inherit'
-})
-
 const lines = [
   '// Generated by scripts/build-client.mjs. Do not edit by hand.',
   ''
@@ -615,14 +162,7 @@ const lines = [
 const sourceBodies = new Map()
 
 for (const [exportName, { source, inlineBody }] of uniqueSources) {
-  const body =
-    inlineBody ??
-    (await readFile(
-      typeof source === 'string' && source.startsWith(root)
-        ? source
-        : join(clientRoot, source),
-      'utf8'
-    ))
+  const body = inlineBody ?? (await readFile(join(clientRoot, source), 'utf8'))
   sourceBodies.set(exportName, body)
 }
 

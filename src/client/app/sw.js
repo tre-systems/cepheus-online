@@ -4,6 +4,8 @@ const PRECACHE_URLS = [
   '/',
   '/client.js',
   `/client.js?v=${BUILD_HASH}`,
+  '/client/app/app.js',
+  `/client/app/app.js?v=${BUILD_HASH}`,
   '/styles.css',
   `/styles.css?v=${BUILD_HASH}`,
   '/icon.svg',
