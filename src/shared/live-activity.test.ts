@@ -222,6 +222,38 @@ describe('live activity derivation', () => {
     })
   })
 
+  it('derives direct characteristic completion activity', () => {
+    const activity = deriveLiveActivity(
+      envelope(3, {
+        type: 'CharacterCreationCharacteristicsCompleted',
+        characterId,
+        state: {
+          status: 'HOMEWORLD',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    )
+
+    assert.deepEqual(activity, {
+      id: asEventId('game-1:3'),
+      eventId: asEventId('game-1:3'),
+      gameId,
+      seq: 3,
+      actorId,
+      createdAt: '2026-05-03T00:00:03.000Z',
+      type: 'characterCreation',
+      characterId,
+      transition: 'SET_CHARACTERISTICS',
+      details: 'Characteristics assigned',
+      status: 'HOMEWORLD',
+      creationComplete: false
+    })
+  })
+
   it('derives compact semantic survival activity', () => {
     const activity = deriveLiveActivity(
       envelope(6, {

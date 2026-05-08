@@ -112,7 +112,7 @@ describe('creation activity view model', () => {
     const activities: readonly LiveActivityDescriptor[] = [
       characterActivity({
         seq: 20,
-        transition: 'SET_CHARACTERISTICS',
+        transition: 'CharacterCreationCharacteristicsCompleted',
         details: 'Characteristics assigned',
         status: 'HOMEWORLD'
       }),
@@ -125,6 +125,25 @@ describe('creation activity view model', () => {
     ]
 
     assert.deepEqual(deriveCreationActivityCards(activities), [])
+  })
+
+  it('labels semantic characteristic completion as assigned characteristics', () => {
+    assert.deepEqual(
+      deriveCreationActivityCard(
+        characterActivity({
+          seq: 22,
+          transition: 'CharacterCreationCharacteristicsCompleted',
+          details: 'Characteristics assigned',
+          status: 'HOMEWORLD'
+        })
+      ),
+      {
+        title: 'Characteristics assigned',
+        detail: 'Characteristics assigned',
+        tone: 'neutral',
+        seq: 22
+      }
+    )
   })
 
   it('suppresses cards authored by the current viewer actor', () => {

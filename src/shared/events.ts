@@ -70,6 +70,12 @@ export type GameEvent =
       creationComplete: boolean
     }
   | {
+      type: 'CharacterCreationCharacteristicsCompleted'
+      characterId: CharacterId
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
       type: 'CharacterCreationBasicTrainingCompleted'
       characterId: CharacterId
       trainingSkills: string[]

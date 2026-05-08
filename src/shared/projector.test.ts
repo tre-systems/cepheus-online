@@ -314,6 +314,63 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 7)
   })
 
+  it('projects semantic characteristic completion with legacy history', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'CHARACTERISTICS',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationCharacteristicsCompleted',
+        characterId,
+        state: {
+          status: 'HOMEWORLD',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'HOMEWORLD')
+    assert.equal(creation?.creationComplete, false)
+    assert.deepEqual(creation?.history, [{ type: 'SET_CHARACTERISTICS' }])
+    assert.equal(state?.eventSeq, 4)
+  })
+
   it('projects semantic basic training completion like the legacy transition', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

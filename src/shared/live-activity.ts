@@ -416,6 +416,17 @@ export const deriveLiveActivity = (
         creationComplete: event.creationComplete
       }
 
+    case 'CharacterCreationCharacteristicsCompleted':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'SET_CHARACTERISTICS',
+        details: 'Characteristics assigned',
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
     case 'CharacterCreationMishapResolved':
       return {
         ...baseActivity(envelope),

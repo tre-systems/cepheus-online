@@ -101,6 +101,52 @@ const runCommand = (
 }
 
 describe('deriveEventsForCommand error categories', () => {
+  it('emits semantic characteristic completion after the final stat roll', () => {
+    const creation = createCreation('CHARACTERISTICS')
+    const state = createState(creation)
+    state.characters[characterId].characteristics = {
+      str: 7,
+      dex: 8,
+      end: 6,
+      int: 9,
+      edu: 8,
+      soc: null
+    }
+
+    const result = deriveEventsForCommand(
+      {
+        type: 'RollCharacterCreationCharacteristic',
+        gameId,
+        actorId,
+        characterId,
+        characteristic: 'soc'
+      },
+      {
+        state,
+        currentSeq: 1,
+        nextSeq: 2,
+        gameSeed: 1234
+      }
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(
+      result.value.map((event) => event.type),
+      [
+        'DiceRolled',
+        'CharacterSheetUpdated',
+        'CharacterCreationCharacteristicsCompleted'
+      ]
+    )
+    const completion = result.value.at(-1)
+    assert.equal(completion?.type, 'CharacterCreationCharacteristicsCompleted')
+    if (completion?.type !== 'CharacterCreationCharacteristicsCompleted') return
+    assert.equal(completion.characterId, characterId)
+    assert.equal(completion.state.status, 'HOMEWORLD')
+    assert.equal(completion.creationComplete, false)
+  })
+
   it('blocks creation completion while aging decisions remain unresolved', () => {
     const result = runCommand(
       {

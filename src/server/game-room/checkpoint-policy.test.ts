@@ -87,6 +87,26 @@ describe('checkpoint policy', () => {
     )
   })
 
+  it('saves a checkpoint when semantic characteristic completion is complete', () => {
+    assert.equal(
+      shouldSaveCheckpoint(stateAt(12), [
+        envelope(12, {
+          type: 'CharacterCreationCharacteristicsCompleted',
+          characterId,
+          state: {
+            status: 'PLAYABLE',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          creationComplete: true
+        })
+      ]),
+      true
+    )
+  })
+
   it('does not save a checkpoint outside the named boundaries', () => {
     assert.equal(
       shouldSaveCheckpoint(stateAt(2), [

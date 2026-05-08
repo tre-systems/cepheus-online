@@ -17,6 +17,8 @@ export const hasCharacterCreationCompletionCheckpointBoundary = (
     (envelope) =>
       (envelope.event.type === 'CharacterCreationTransitioned' &&
         envelope.event.creationComplete) ||
+      (envelope.event.type === 'CharacterCreationCharacteristicsCompleted' &&
+        envelope.event.creationComplete) ||
       envelope.event.type === 'CharacterCreationCompleted'
   )
 

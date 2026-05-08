@@ -444,6 +444,75 @@ describe('room publication flow', () => {
     assert.equal(activity.reveal.delayMs, LIVE_DICE_RESULT_REVEAL_DELAY_MS)
   })
 
+  it('publishes semantic characteristic completion after the sixth stat roll', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-characteristics')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    let lastRoll: Awaited<ReturnType<typeof publish>> | null = null
+    for (const characteristic of [
+      'str',
+      'dex',
+      'end',
+      'int',
+      'edu',
+      'soc'
+    ] as const) {
+      lastRoll = await publish(storage, {
+        type: 'RollCharacterCreationCharacteristic',
+        gameId,
+        actorId,
+        characterId,
+        characteristic
+      })
+      assert.equal(lastRoll.ok, true)
+    }
+
+    assert.equal(lastRoll?.ok, true)
+    if (!lastRoll?.ok) return
+    const persisted = await readEventStream(storage, gameId)
+    assert.equal(
+      persisted.at(-1)?.event.type,
+      'CharacterCreationCharacteristicsCompleted'
+    )
+    assert.equal(
+      persisted.some(
+        (envelope) =>
+          envelope.event.type === 'CharacterCreationTransitioned' &&
+          envelope.event.creationEvent.type === 'SET_CHARACTERISTICS'
+      ),
+      false
+    )
+    const creation = lastRoll.value.state.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'HOMEWORLD')
+    assert.deepEqual(creation?.history, [{ type: 'SET_CHARACTERISTICS' }])
+    assert.deepEqual(
+      lastRoll.value.liveActivities.map((activity) => activity.type),
+      ['diceRoll', 'characterCreation']
+    )
+    const activity = lastRoll.value.liveActivities.at(-1)
+    assert.equal(activity?.type, 'characterCreation')
+    if (activity?.type !== 'characterCreation') return
+    assert.equal(activity.transition, 'SET_CHARACTERISTICS')
+    assert.equal(activity.details, 'Characteristics assigned')
+    assert.equal(activity.status, 'HOMEWORLD')
+    assert.equal(activity.creationComplete, false)
+  })
+
   it('publishes semantic aging resolution with seeded dice and activity', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-aging')

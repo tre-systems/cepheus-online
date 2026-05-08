@@ -483,15 +483,19 @@ Status: in progress. Semantic commands/events now cover characteristic rolls,
 homeworld set/completion, background skill selection, cascade resolution,
 career qualification, draft resolution, career term start, basic training,
 survival, commission, advancement, term skill rolls, aging, reenlistment,
-career reenlistment, career exit, post-mustering continuation, mustering
-benefits, mustering completion, and finalization. `AdvanceCharacterCreation`
-is referee-only and now rejects the fact-bearing reenlistment, leave-career,
-continue-career, mustering-benefit, and no-benefit `FINISH_MUSTERING` payloads
-that have semantic commands. The remaining high-value gap is migrating or
-fencing the death/mishap transition facts and making all pending decisions
-projection-owned. P1: any remaining roll-bearing or rules-bearing
-`AdvanceCharacterCreation` facts should be rejected or migrated because dice
-and outcome facts must come from semantic server commands/events.
+career reenlistment, career exit, default death confirmation, post-mustering
+continuation, mustering benefits, mustering completion, and finalization.
+`AdvanceCharacterCreation` is referee-only and now rejects the fact-bearing
+reenlistment, leave-career, blocked-reenlist, forced-reenlist, continue-career,
+mustering-benefit, no-benefit `FINISH_MUSTERING`, death confirmation, and
+optional-mishap placeholder payloads that have semantic commands or explicit
+fences. The current slice is replacing the server-persisted generic
+`SET_CHARACTERISTICS` emitted after the sixth characteristic roll with
+`CharacterCreationCharacteristicsCompleted`. Remaining generic
+`SET_CHARACTERISTICS` bootstrap/dev paths and `SELECT_CAREER` isolation stay as
+follow-on work. P1: any remaining roll-bearing or rules-bearing
+`AdvanceCharacterCreation` facts should be rejected or migrated because dice and
+outcome facts must come from semantic server commands/events.
 
 Tasks:
 
@@ -504,10 +508,9 @@ Tasks:
 - Maintain backward compatibility only as a short bridge for the current UI.
   New rules work should add semantic events first, then adapt the UI.
 - Finish the remaining `AdvanceCharacterCreation` migration in this order:
-  1. Add explicit optional-variant commands/events for `MISHAP_RESOLVED` and
-     `DEATH_CONFIRMED`, or keep them fenced until the mishap variant is
-     implemented. These are the highest-value remaining rules-bearing generic
-     payloads.
+  1. Replace the server-persisted generic `SET_CHARACTERISTICS` after the sixth
+     stat roll with `CharacterCreationCharacteristicsCompleted`, preserving the
+     semantic roll facts already emitted for individual characteristic rolls.
   2. Remove development/bootstrap reliance on generic `SET_CHARACTERISTICS`
      and `SELECT_CAREER`, or isolate it as referee-only fixture/backfill code
      with tests proving production UI cannot use it.
@@ -884,11 +887,13 @@ The next batch should run like this, in this order:
 
 1. Remove or fence the remaining generic character creation transition bridge.
    Done: generic reenlist, forced-reenlist, leave-career, blocked-reenlist,
-   continue-career, mustering-benefit, and no-benefit `FINISH_MUSTERING` fact
-   payloads now point at semantic commands. Next: add or fence semantic
-   death/mishap resolution commands, then isolate the remaining generic
-   `SET_CHARACTERISTICS`/`SELECT_CAREER` bootstrap or fixture paths away from
-   production UI.
+   continue-career, mustering-benefit, no-benefit `FINISH_MUSTERING`, default
+   death confirmation, and optional-mishap placeholder payloads now point at
+   semantic commands or explicit fences. Current slice: replace the
+   server-persisted generic `SET_CHARACTERISTICS` after the sixth stat roll
+   with `CharacterCreationCharacteristicsCompleted`. Next: isolate remaining
+   bootstrap/dev generic `SET_CHARACTERISTICS` and `SELECT_CAREER` paths away
+   from production UI.
 2. Finish the next architecture cleanup already underway: shrink `app.ts`,
    extract the character creation feature boundary, move rendering toward a
    signal-driven projection-fed model, split the projector registry by domain,

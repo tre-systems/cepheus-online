@@ -52,6 +52,7 @@ const creationActivityToastTransitions = new Set<string>(
 const transitionTitles = {
   STARTED: 'Character creation started',
   SET_CHARACTERISTICS: 'Characteristics assigned',
+  CharacterCreationCharacteristicsCompleted: 'Characteristics assigned',
   HOMEWORLD_SET: 'Homeworld selected',
   COMPLETE_HOMEWORLD: 'Homeworld complete',
   BACKGROUND_SKILL_SELECTED: 'Background skill selected',

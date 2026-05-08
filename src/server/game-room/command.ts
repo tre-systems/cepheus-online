@@ -2318,9 +2318,8 @@ export const deriveEventsForCommand = (
           { type: 'SET_CHARACTERISTICS' }
         )
         events.push({
-          type: 'CharacterCreationTransitioned',
+          type: 'CharacterCreationCharacteristicsCompleted',
           characterId: command.characterId,
-          creationEvent: { type: 'SET_CHARACTERISTICS' },
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         })
