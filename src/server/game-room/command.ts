@@ -461,6 +461,28 @@ const validateCharacterCreationAction = (
   return ok(undefined)
 }
 
+const semanticCommandForGenericCreationEvent = (
+  event: Extract<Command, { type: 'AdvanceCharacterCreation' }>['creationEvent']
+): string | null => {
+  switch (event.type) {
+    case 'SURVIVAL_PASSED':
+    case 'SURVIVAL_FAILED':
+      return 'ResolveCharacterCreationSurvival'
+    case 'COMPLETE_COMMISSION':
+      return 'ResolveCharacterCreationCommission'
+    case 'COMPLETE_ADVANCEMENT':
+      return 'ResolveCharacterCreationAdvancement'
+    case 'RESOLVE_REENLISTMENT':
+    case 'REENLIST_BLOCKED':
+    case 'FORCED_REENLIST':
+      return 'ResolveCharacterCreationReenlistment'
+    case 'REENLIST':
+      return event.reenlistment ? 'ResolveCharacterCreationReenlistment' : null
+    default:
+      return null
+  }
+}
+
 const validateCreationCompletion = (
   character: CharacterState
 ): Result<CharacterCreationProjection, CommandError> => {
@@ -1956,6 +1978,17 @@ export const deriveEventsForCommand = (
           commandError(
             'missing_entity',
             'Character creation has not been started'
+          )
+        )
+      }
+      const semanticCommand = semanticCommandForGenericCreationEvent(
+        command.creationEvent
+      )
+      if (semanticCommand) {
+        return err(
+          commandError(
+            'invalid_command',
+            `${command.creationEvent.type} must use ${semanticCommand}`
           )
         )
       }

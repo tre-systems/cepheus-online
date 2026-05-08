@@ -74,26 +74,32 @@ Each wave should make later work simpler, safer, or more testable.
 1. Finish the architecture seams that are already partially present: thin
    client composition root, one command router, one server publication pipeline,
    one projection/filter path, and protocol fixtures.
-2. Finish replacing coarse character creation transition events with semantic
+2. Close the remaining P0 character creation command-path gaps. Aging loss
+   resolution currently has no server/protocol command path, so it must be
+   added before more aging UI polish can be trusted.
+3. Finish replacing coarse character creation transition events with semantic
    commands/events where generic transitions still remain. Commands remain
-   intent, events record accepted facts with dice and outcome data.
-3. Keep moving the server projection toward the source of truth for every
+   intent, events record accepted facts with dice and outcome data, and any
+   remaining roll-bearing generic facts are either migrated or rejected with
+   stable errors.
+4. Keep moving the server projection toward the source of truth for every
    creation gate:
    pending choices, legal actions, term facts, final sheet fields, and refresh
    recovery.
-4. Complete and harden the SRD career term loop in order: qualification,
+5. Complete and harden the SRD career term loop in order: qualification,
    draft, basic training, survival/death, commission, advancement, term skills,
    aging, reenlistment, mustering out, and finalization.
-5. Add optional branches after the default loop is authoritative:
+6. Add optional branches after the default loop is authoritative:
    mishap-variant support, full anagathics survival/cost handling,
    multi-career continuations, richer final sheet/export display, and
    provenance.
-6. Layer live following on top of semantic events so connected players see dice
-   and compact outcome cards without creating another source of truth.
-7. Polish the mobile PWA experience once the flow shape is stable.
-8. Expand tactical board, map, LOS, referee, Discord, and rules breadth after
+7. Layer live following on top of semantic events, a planned viewer-filtering
+   contract, and centralized reveal timing so connected players see dice and
+   compact outcome cards without creating another source of truth.
+8. Polish the mobile PWA experience once the flow shape is stable.
+9. Expand tactical board, map, LOS, referee, Discord, and rules breadth after
    the core table loop is solid.
-9. Make high-risk UX flows executable in browser automation before continuing
+10. Make high-risk UX flows executable in browser automation before continuing
    broad UI polish, so stale-state, reveal-timing, and mobile layout bugs are
    found by repeatable runs instead of manual probing.
 
@@ -116,8 +122,10 @@ for board, dice, door, sheet, and character creation commands. Room command
 submission now lives behind `room-command-dispatch`, so request IDs, HTTP
 posting, accepted-message checks, and domain dispatch wrappers are no longer
 embedded directly in `app.ts`. `AppSession` exists and `app.ts` is type-checked,
-but `app.ts` is still too large and still owns too much rendering
-orchestration, so the composition-root extraction is not complete.
+but `app.ts` is still too large and still owns too much character-creation
+feature orchestration. The next architecture cleanup is to draw a clearer
+feature boundary around character creation and move the rendered wizard toward
+a signal-driven, projection-fed renderer.
 
 Primary write ownership:
 
@@ -142,12 +150,20 @@ Tasks:
   open modal state, form drafts, and pending dice animation are discardable.
 - Keep shrinking `src/client/app/app.ts` into typed dependencies rather than
   letting it grow as the long-term composition and orchestration file.
+- Extract character creation behind a feature boundary with explicit inputs:
+  authoritative projection, transient local form state, command adapter,
+  reveal coordinator, and dispose hooks.
+- Move character creation rendering toward dependency-free signals or an
+  equivalent local reactive primitive so state changes update the view without
+  adding another global store or framework.
 - Ensure each stateful client manager exposes a `dispose()` path when it owns
   listeners, effects, timers, or sockets.
 
 Done when:
 
 - `app.ts` is a thin boot file or composition shell.
+- Character creation can be mounted, updated from projection, and disposed
+  without `app.ts` owning its internal state graph.
 - All game-truth commands pass through one router before hitting the room API.
 - Board input, sheet actions, dice rolls, and character creation actions are
   testable without a browser.
@@ -321,12 +337,14 @@ Done when:
 ### Slice 0F: Automated UX Regression And Creation Client Architecture
 
 Status: partially done. Playwright browser smoke now runs in `npm run
-verify:full`, two-tab follow coverage exists for characteristic,
+verify:full`, the owner happy path now reaches mustering, finalization, sheet
+open, and token creation, two-tab follow coverage exists for characteristic,
 homeworld/background, qualification, anagathics, aging, reenlistment, and
 mustering benefit reveal timing, and the shared `diceRevealCoordinator` owns
-result deferral. The remaining leverage point is to broaden the executable
-scenarios into finalization while continuing to extract `app.ts` orchestration
-so browser-only failures are caught before manual play.
+result deferral. The remaining leverage point is to convert the completed
+finalization smoke into broader repeat/death/fallback/mobile coverage while
+continuing to extract the character creation feature boundary and renderer from
+`app.ts`.
 
 Primary write ownership:
 
@@ -341,11 +359,9 @@ Primary write ownership:
 
 Tasks:
 
-- Extend the executable browser smoke so it drives the real client through a
-  full one-term path: create traveller, roll six characteristics, complete
-  homeworld/background choices, qualify or enter fallback, apply basic
-  training, roll survival, resolve term skills, age, reenlist or muster out,
-  and report the current phase/action on failure.
+- Keep the committed full one-term finalization smoke healthy, and extend it to
+  common death, failed qualification, Draft, Drifter fallback, and refresh
+  branches while reporting the current phase/action on failure.
 - Extend that smoke into a small repeat runner that creates several disposable
   travellers, captures console errors, server response failures, current
   creation status, final sheet summary, and a screenshot or DOM snapshot when
@@ -371,6 +387,9 @@ Tasks:
   exposes explicit methods for opening owner mode, opening spectator mode,
   applying authoritative state, submitting choices, and disposing listeners or
   timers.
+- Make that controller the only character creation feature boundary used by
+  `app.ts`; follow-on rendering work should hang from that boundary rather than
+  adding more wizard state to the app shell.
 - Keep all roll animation, result deferral, spectator reveal timing, and button
   unblocking on `diceRevealCoordinator`; add coverage for every new
   roll-bearing creation action instead of adding local timing code.
@@ -378,6 +397,9 @@ Tasks:
   from authoritative projection plus local pending choices. Server projection
   owns phase, legal actions, progress, roll facts, and completion gates; local
   state owns only unsubmitted choices and transient UI controls.
+- Move the creation renderer toward a signal-driven model for local UI state,
+  pending command state, and reveal-coordinator output while keeping the signal
+  layer private to the feature.
 - Move browser action wiring behind a command adapter that always uses the
   existing client command router. Roll-bearing commands should be impossible to
   double-submit from the same rendered control.
@@ -386,8 +408,8 @@ Tasks:
 
 Done when:
 
-- A single command can reproduce the owner character creation happy path and
-  common death/fallback branches in a real browser.
+- A single command can reproduce the owner finalization happy path plus common
+  death/fallback branches in a real browser.
 - A single command can verify spectator follow behavior across two browser
   contexts or tabs.
 - Browser failures leave enough artifacts to fix the bug without manually
@@ -396,6 +418,47 @@ Done when:
 - Roll reveal timing is enforced by one coordinator and tested as a contract.
 - New creator UX work starts by adding or updating an executable scenario,
   not by relying on manual clicking as the primary regression check.
+
+### Slice 0G: Viewer Filtering And Reveal Timing Contract
+
+Status: planned. Viewer-aware filtering exists as a principle and some protocol
+fixtures cover viewer-filtered messages, while `diceRevealCoordinator` defers
+client-visible roll results for several creation paths. The remaining risk is
+that filtering, HTTP responses, WebSocket state, replay/reconnect views, and
+local reveal timing can drift as new semantic events land.
+
+Primary write ownership:
+
+- `src/server/game-room/publication.ts`
+- `src/server/game-room/game-room-do.ts`
+- `src/server/game-room/projection.ts`
+- `src/shared/protocol.ts`
+- `src/shared/state.ts`
+- `src/client/app/dice-reveal-coordinator.ts`
+- `src/client/app/character-creation-follow.ts`
+- viewer filtering, protocol, and browser follow tests
+
+Tasks:
+
+- Define one viewer-filtering contract for state-bearing HTTP responses,
+  WebSocket broadcasts, replay/reconnect views, and future activity history.
+- Add fixtures for owner, referee, and spectator views of creation state while
+  roll-dependent details are unrevealed, revealed live, and recovered after
+  refresh.
+- Keep roll-dependent details hidden from spectators until the local reveal
+  boundary, without weakening server-side viewer filtering or refresh recovery.
+- Add regression coverage for each new semantic roll-bearing creation event so
+  the persisted fact, filtered state, live activity, and reveal timing agree.
+- Keep reveal timing on `diceRevealCoordinator`; feature modules should consume
+  revealed view models instead of running local timers for outcome text.
+
+Done when:
+
+- Every state-bearing response uses the same viewer-safe projection path.
+- Owner, referee, and spectator views are fixture-backed for unrevealed,
+  revealed, and refresh-recovered creation states.
+- Roll-bearing creation outcomes cannot appear before reveal in the browser,
+  but refresh still reconstructs the authoritative state from projection.
 
 ## Phase 1: Server-Backed Character Creation Spine
 
@@ -425,7 +488,9 @@ career qualification, draft resolution, career term start, basic training,
 survival, commission, advancement, term skill rolls, aging, reenlistment,
 mustering benefits, mustering completion, and finalization. The remaining
 high-value gap is removing the remaining generic transition bridge and making
-all pending decisions projection-owned.
+all pending decisions projection-owned. P1: any remaining roll-bearing
+`AdvanceCharacterCreation` facts should be rejected or migrated because dice
+and outcome facts must come from semantic server commands/events.
 
 Tasks:
 
@@ -437,6 +502,10 @@ Tasks:
   rank, skill, or benefit facts.
 - Maintain backward compatibility only as a short bridge for the current UI.
   New rules work should add semantic events first, then adapt the UI.
+- Audit the remaining `AdvanceCharacterCreation` payloads and split them into
+  two groups: non-roll bridge payloads with a temporary compatibility owner,
+  and roll-bearing payloads that must be migrated to semantic commands/events
+  or rejected with stable `invalid_command` errors.
 - Finish updating `deriveLiveActivities()` to read semantic events directly
   instead of parsing coarse transition payloads where possible.
 - Add protocol fixtures for every new command, event envelope, accepted
@@ -531,7 +600,9 @@ Status: partially done. SRD career data, qualification penalties, failed
 qualification options, semantic qualification roll facts, semantic draft table
 roll facts, basic training plans, career-term start projection, semantic
 requested/accepted career facts, semantic basic-training completion, and client
-flow helpers exist. The remaining work is to carry richer basic-training
+flow helpers exist. Direct player use of `StartCharacterCareerTerm` is blocked
+server-side and covered by a regression test, so that bypass is no longer an
+active backlog item. The remaining work is to carry richer basic-training
 choices in projection and tighten the browser affordances around failed
 qualification and draft fallback.
 
@@ -541,6 +612,9 @@ Tasks:
   not client-only draft state.
 - Remove remaining generic `SELECT_CAREER` transition use from production paths
   now that semantic qualification, draft, Drifter, and career-term events exist.
+- Keep the direct `StartCharacterCareerTerm` path referee-only while the normal
+  player path goes through qualification, Draft, Drifter fallback, or other
+  explicit legal actions.
 - Add browser coverage for failed qualification, Draft roll, Drifter fallback,
   and refresh recovery.
 - Tighten career-entry provenance for requested career, accepted/drafted
@@ -615,14 +689,19 @@ Done when:
 
 ### Slice 2C: Aging, Anagathics, And Reenlistment
 
-Status: partially done. Aging roll modifiers, aging effect selection,
-reenlistment resolution, seven-term retirement, forced reenlistment, and
-server-backed semantic aging/reenlistment facts exist. Anagathics and some UI
-decisions/provenance still need completion.
+Status: partially done, with one P0 gap. Aging roll modifiers, aging effect
+selection, reenlistment resolution, seven-term retirement, forced reenlistment,
+and server-backed semantic aging/reenlistment facts exist, but aging loss
+resolution still has no server/protocol command path. Anagathics and some UI
+decisions/provenance also need completion.
 
 Tasks:
 
 - Use the correct aging modifier from term count and anagathics use.
+- Add the protocol command, server derivation/validation path, semantic event,
+  projection support, and fixtures for resolving required aging characteristic
+  losses. Until that exists, aging loss choices must not depend on a client-only
+  `AdvanceCharacterCreation` fact.
 - Present legal aging characteristic loss choices only when required.
 - Persist characteristic changes with term provenance.
 - Implement optional anagathics survival and cost/payment flow.
@@ -632,6 +711,8 @@ Tasks:
 Done when:
 
 - Aging cannot be skipped when required.
+- Required aging losses are resolved through a semantic server command/event and
+  reject stale, illegal, or malformed selections before persistence.
 - Reenlistment outcomes are deterministic and visible.
 - The player can continue, leave, retire, or be forced by the rules.
 
@@ -796,34 +877,43 @@ Done when:
 
 The next batch should run like this, in this order:
 
-1. Finish the remaining architecture work already underway: shrink `app.ts`,
-   extract the character creation controller/renderer/command adapter, split
-   the projector registry by domain, and keep publication parity plus
-   viewer-safe responses on the single publication path.
-2. Extend the automated UX regression slice before more broad creator polish:
-   full one-term browser smoke, multi-character repeat runner, later-term
-   two-tab spectator follow checks, mobile viewport assertions, and reveal
-   timing coverage for every roll-bearing action.
-3. Remove the remaining generic character creation transition bridge by moving
-   pending decisions and finalization details onto semantic commands/events.
-   Update protocol fixtures and live activity descriptors with each event
-   family.
-4. Finish moving legal-action state into server projection: pending decisions,
+1. Close the P0 aging loss resolution gap: add the protocol command, server
+   validation/derivation, semantic event, projection support, fixtures, and
+   stale/illegal rejection tests. Direct player `StartCharacterCareerTerm`
+   bypass is already fixed; keep it covered, but do not treat it as active work.
+2. Finish the next architecture cleanup already underway: shrink `app.ts`,
+   extract the character creation feature boundary, move rendering toward a
+   signal-driven projection-fed model, split the projector registry by domain,
+   and keep publication parity plus viewer-safe responses on the single
+   publication path.
+3. Remove or fence the remaining generic character creation transition bridge.
+   P1: migrate or reject any remaining roll-bearing
+   `AdvanceCharacterCreation` facts, then update protocol fixtures and live
+   activity descriptors with each semantic event family.
+4. Plan and execute the viewer filtering/reveal timing slice: one filtering
+   contract for HTTP, WebSocket, replay/reconnect, and activity history, with
+   reveal-boundary coverage for every roll-bearing creation action.
+5. Extend the automated UX regression slice before more broad creator polish:
+   turn the completed finalization smoke into a multi-character repeat runner,
+   add death/fallback branches, later-term two-tab spectator follow checks,
+   mobile viewport assertions, and reveal timing coverage for every roll-bearing
+   action.
+6. Finish moving legal-action state into server projection: pending decisions,
    requirements, failed-qualification options, remaining term skills, remaining
    mustering benefits, and completion gates. Reject commands that are not legal
    from the current projection.
-5. Harden the SRD term loop in browser automation: survival/death, commission,
+7. Harden the SRD term loop in browser automation: survival/death, commission,
    advancement, term skill tables, aging, reenlistment, mustering benefits, and
    multi-term continuation.
-6. Keep optional mishap tables behind an explicit variant; default failed
+8. Keep optional mishap tables behind an explicit variant; default failed
    survival remains Classic Traveller-style death.
-7. Complete anagathics survival/cost handling, multi-career continuation after
+9. Complete anagathics survival/cost handling, multi-career continuation after
    mustering, final sheet/export polish, and provenance. Each slice should add
    semantic events where needed, projection replay tests, protocol fixtures,
    and compact activity descriptors.
-8. Finish live following on top of semantic facts: follower cards, dice reveal
-   timing, refresh recovery, and future Discord-consumable event details.
-9. Run PWA/release work continuously when it does not compete with the core
+10. Finish live following on top of semantic facts: follower cards, dice reveal
+    timing, refresh recovery, and future Discord-consumable event details.
+11. Run PWA/release work continuously when it does not compete with the core
    architecture path; make it a hard gate before public play.
 
 The first product-visible milestone after this batch is: a connected player can

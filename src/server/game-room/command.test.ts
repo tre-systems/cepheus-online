@@ -1120,6 +1120,44 @@ describe('deriveEventsForCommand error categories', () => {
     )
   })
 
+  it('rejects generic commission roll facts after semantic migration', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: {
+          type: 'COMPLETE_COMMISSION',
+          commission: {
+            expression: '2d6',
+            rolls: [4, 4],
+            total: 8,
+            characteristic: 'int',
+            modifier: 0,
+            target: 5,
+            success: true
+          }
+        }
+      },
+      createCreation('COMMISSION', {
+        state: createCareerCreationState('COMMISSION', {
+          canCommission: true,
+          canAdvance: true
+        })
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(Object.hasOwn(result, 'value'), false)
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMPLETE_COMMISSION must use ResolveCharacterCreationCommission'
+    )
+  })
+
   it('emits a semantic advancement event with server-derived roll and rank facts', () => {
     const result = runCommand(
       {
@@ -1715,6 +1753,73 @@ describe('deriveEventsForCommand error categories', () => {
     if (result.ok) return
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(result.error.message, 'REENLISTMENT is not valid from AGING')
+  })
+
+  it('rejects generic reenlistment roll facts after semantic migration', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: {
+          type: 'RESOLVE_REENLISTMENT',
+          reenlistment: {
+            expression: '2d6',
+            rolls: [4, 4],
+            total: 8,
+            characteristic: null,
+            modifier: 0,
+            target: 6,
+            success: true,
+            outcome: 'allowed'
+          }
+        }
+      },
+      createCreation('REENLISTMENT')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(Object.hasOwn(result, 'value'), false)
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'RESOLVE_REENLISTMENT must use ResolveCharacterCreationReenlistment'
+    )
+  })
+
+  it('rejects generic reenlist decisions that carry roll facts', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: {
+          type: 'REENLIST',
+          reenlistment: {
+            expression: '2d6',
+            rolls: [4, 4],
+            total: 8,
+            characteristic: null,
+            modifier: 0,
+            target: 6,
+            success: true
+          }
+        }
+      },
+      createCreation('REENLISTMENT')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(Object.hasOwn(result, 'value'), false)
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'REENLIST must use ResolveCharacterCreationReenlistment'
+    )
   })
 
   it('blocks semantic reenlistment resolution after the roll is resolved', () => {
