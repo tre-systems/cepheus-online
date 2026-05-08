@@ -90,7 +90,9 @@ Important remaining gaps:
   projection-owned and easier to recover after refresh.
 - Multi-term career play, mustering out, and final sheet/export need browser
   automation and UX polish.
-- Optional mishaps and anagathics remain unimplemented.
+- Optional mishaps remain unimplemented. Anagathics now has a server-owned
+  use/skip decision before aging, but full survival-risk, cost/payment,
+  provenance, and UX polish are still open.
 - Character creation follow mode needs stronger two-tab automation and reveal
   timing contracts so spectators never see roll-dependent outcomes early.
 
@@ -144,8 +146,9 @@ tests before it is considered done.
   events exist. Gap: table-choice UX, cascade resolution, and provenance need
   browser-hardening.
 - [~] Resolve aging from the `aging` table, including characteristic loss
-  choices and anagathics modifiers. Semantic aging facts exist. Gap:
-  anagathics and characteristic-choice UI/projection polish are incomplete.
+  choices and anagathics modifiers. Semantic aging facts and a server-owned
+  anagathics use/skip event exist. Gap: anagathics cost/survival effects and
+  characteristic-choice UI/projection polish are incomplete.
 - [~] Roll reenlistment from `careerBasics`, handling mandatory retirement
   after seven terms, forced reenlistment on 12, success, failure, and voluntary
   exit. Current legal actions cover unresolved, forced, allowed, and blocked
@@ -412,7 +415,8 @@ Tasks:
 - Present aging characteristic loss choices only when required, and only for
   legal characteristics.
 - Persist characteristic changes with term provenance.
-- Implement optional anagathics use, survival check, and cost/payment flow.
+- Complete optional anagathics survival check, cost/payment flow, and
+  provenance on top of the server-owned use/skip decision.
 - Polish reenlistment UI/provenance for retirement after seven terms, forced
   reenlistment on 12, success, and failure toward mustering out.
 - Add UI copy for forced reenlistment, blocked reenlistment, retirement, and

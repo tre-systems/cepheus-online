@@ -85,8 +85,9 @@ Each wave should make later work simpler, safer, or more testable.
    draft, basic training, survival/death, commission, advancement, term skills,
    aging, reenlistment, mustering out, and finalization.
 5. Add optional branches after the default loop is authoritative:
-   mishap-variant support, anagathics, multi-career continuations, richer
-   final sheet/export display, and provenance.
+   mishap-variant support, full anagathics survival/cost handling,
+   multi-career continuations, richer final sheet/export display, and
+   provenance.
 6. Layer live following on top of semantic events so connected players see dice
    and compact outcome cards without creating another source of truth.
 7. Polish the mobile PWA experience once the flow shape is stable.
@@ -812,10 +813,10 @@ The next batch should run like this, in this order:
    multi-term continuation.
 6. Keep optional mishap tables behind an explicit variant; default failed
    survival remains Classic Traveller-style death.
-7. Add anagathics, multi-career continuation after mustering, final
-   sheet/export polish, and provenance. Each slice should add semantic events
-   where needed, projection replay tests, protocol fixtures, and compact
-   activity descriptors.
+7. Complete anagathics survival/cost handling, multi-career continuation after
+   mustering, final sheet/export polish, and provenance. Each slice should add
+   semantic events where needed, projection replay tests, protocol fixtures,
+   and compact activity descriptors.
 8. Finish live following on top of semantic facts: follower cards, dice reveal
    timing, refresh recovery, and future Discord-consumable event details.
 9. Run PWA/release work continuously when it does not compete with the core

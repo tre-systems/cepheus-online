@@ -1558,11 +1558,11 @@ const renderCharacterCreationCareerPicker = (
       survival.className = 'creation-career-check'
       survival.textContent = `Survive ${formatCharacterCreationCareerCheckShort(career.survival)}`
       button.append(title, qualification, survival)
-      button.addEventListener('click', () => {
+      bindAsyncActionButton(button, () =>
         characterCreationCommandController
           .resolveCareerQualification(career.key)
           .catch((error) => setError(error.message))
-      })
+      )
       list.append(button)
     }
     wrapper.append(list)

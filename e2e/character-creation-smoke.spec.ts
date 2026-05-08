@@ -496,6 +496,27 @@ test.describe('character creation smoke', () => {
     const roomId = await openUniqueRoom(page)
     const actorId = actorIdFromPage(page)
     const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const qualificationCommands: unknown[] = []
+
+    page.on('request', (request) => {
+      if (
+        request.method() !== 'POST' ||
+        !request.url().includes(`/rooms/${roomId}/command`)
+      ) {
+        return
+      }
+
+      const body = request.postData()
+      if (!body) return
+      const message = JSON.parse(body) as {
+        command?: { type?: string }
+      }
+      if (
+        message.command?.type === 'ResolveCharacterCreationQualification'
+      ) {
+        qualificationCommands.push(message.command)
+      }
+    })
 
     await page.locator('#createCharacterRailButton').click()
     const characterName =
@@ -567,7 +588,21 @@ test.describe('character creation smoke', () => {
         )
       ).toHaveValue('')
 
-      await ownerCareerButton.click()
+      await ownerCareerButton.evaluate((button) => {
+        button.dispatchEvent(
+          new PointerEvent('pointerdown', {
+            bubbles: true,
+            cancelable: true
+          })
+        )
+        button.dispatchEvent(
+          new MouseEvent('click', { bubbles: true, cancelable: true })
+        )
+        button.dispatchEvent(
+          new MouseEvent('click', { bubbles: true, cancelable: true })
+        )
+      })
+      await expect.poll(() => qualificationCommands.length).toBe(1)
 
       await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
         timeout: 5_000
