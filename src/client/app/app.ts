@@ -113,8 +113,7 @@ import {
   parseNonNegativeIntegerValue,
   parsePositiveIntegerValue,
   parsePositiveNumberValue,
-  uniqueBoardId,
-  uniquePieceId
+  uniqueBoardId
 } from './bootstrap-flow.js'
 import { fetchRoomState, postRoomCommand } from './room-api.js'
 import {
@@ -150,7 +149,10 @@ import {
   resolveAppLocationIdentity
 } from './app-location.js'
 import { prepareLiveActivityApplication } from './live-activity-client.js'
-import { planCreatePieceCommands } from './piece-command-plan.js'
+import {
+  planCreateCharacterTokenCommand,
+  planCreatePieceCommands
+} from './piece-command-plan.js'
 import { createPwaInstallController } from './pwa-install.js'
 import { createRequestIdFactory } from './request-id.js'
 import { createRoomMenuController } from './room-menu-controller.js'
@@ -1252,37 +1254,21 @@ const createWizardToken = async () => {
   const board = selectedBoard()
   if (!state || !board) return
 
-  const width = 50
-  const height = 50
-  const scale = 1
-  const pieceId = uniquePieceId(state, flow.draft.name)
-  const x = Math.max(
-    0,
-    Math.min(board.width - width * scale, 160 + (boardPieces().length % 8) * 58)
-  )
-  const y = Math.max(
-    0,
-    Math.min(
-      board.height - height * scale,
-      140 + Math.floor(boardPieces().length / 8) * 58
-    )
-  )
-
-  await postBoardCommand({
-    type: 'CreatePiece',
-    ...commandIdentity(),
-    pieceId,
-    boardId: board.id,
-    name: flow.draft.name.trim(),
+  const plan = planCreateCharacterTokenCommand({
+    identity: clientIdentity(),
+    state,
+    board,
     characterId: flow.draft.characterId,
-    imageAssetId: null,
-    x,
-    y,
-    width,
-    height,
-    scale
+    name: flow.draft.name,
+    existingPieceCount: boardPieces().length
   })
-  selectPiece(pieceId)
+  if (!plan.ok) {
+    setError(plan.error)
+    return
+  }
+
+  await postBoardCommand(plan.command)
+  selectPiece(plan.pieceId)
 }
 
 const finishCharacterCreationWizard = async () => {

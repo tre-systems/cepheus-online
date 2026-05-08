@@ -1,9 +1,18 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { BoardId, GameId, PieceId, UserId } from '../../shared/ids'
+import type {
+  BoardId,
+  CharacterId,
+  GameId,
+  PieceId,
+  UserId
+} from '../../shared/ids'
 import type { BoardState, GameState, PieceState } from '../../shared/state'
-import { planCreatePieceCommands } from './piece-command-plan'
+import {
+  planCreateCharacterTokenCommand,
+  planCreatePieceCommands
+} from './piece-command-plan'
 
 const identity = {
   gameId: 'demo-room' as GameId,
@@ -177,5 +186,66 @@ describe('piece command planner', () => {
       error: 'Piece name is required',
       focus: 'name'
     })
+  })
+
+  it('builds a linked token for a completed character', () => {
+    const result = planCreateCharacterTokenCommand({
+      identity,
+      state: gameState({
+        pieces: {
+          ['mae-1' as PieceId]: piece('mae-1')
+        }
+      }),
+      board,
+      characterId: 'mae-1' as CharacterId,
+      name: ' Mae ',
+      existingPieceCount: 1
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.pieceId, 'mae-2')
+    assert.equal(result.command.type, 'CreatePiece')
+    if (result.command.type !== 'CreatePiece') return
+    assert.equal(result.command.name, 'Mae')
+    assert.equal(result.command.characterId, 'mae-1')
+    assert.equal(result.command.imageAssetId, null)
+    assert.equal(result.command.x, 218)
+    assert.equal(result.command.y, 140)
+    assert.equal(result.command.width, 50)
+    assert.equal(result.command.height, 50)
+    assert.equal(result.command.scale, 1)
+  })
+
+  it('rejects character token planning without board context or a name', () => {
+    assert.deepEqual(
+      planCreateCharacterTokenCommand({
+        identity,
+        state: null,
+        board: null,
+        characterId: 'mae-1' as CharacterId,
+        name: 'Mae',
+        existingPieceCount: 0
+      }),
+      {
+        ok: false,
+        error: 'Bootstrap a board before creating a character token'
+      }
+    )
+
+    assert.deepEqual(
+      planCreateCharacterTokenCommand({
+        identity,
+        state: gameState(),
+        board,
+        characterId: 'mae-1' as CharacterId,
+        name: '   ',
+        existingPieceCount: 0
+      }),
+      {
+        ok: false,
+        error: 'Character token name is required'
+      }
+    )
   })
 })
