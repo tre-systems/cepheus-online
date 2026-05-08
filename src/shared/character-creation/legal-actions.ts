@@ -242,6 +242,17 @@ export const deriveLegalCareerCreationActionKeys = (
   }
 
   const noPendingDecisions = !hasAnyPendingDecision(context)
+  const hasOnlyAgingResolution =
+    context.pendingDecisions?.length === 1 &&
+    hasPendingDecision(context, 'agingResolution')
+  const canResolveAgingLossesBeforeReenlistment =
+    hasPendingDecision(context, 'agingResolution') &&
+    (context.pendingDecisions?.every(
+      (decision) =>
+        decision.key === 'agingResolution' ||
+        decision.key === 'reenlistmentResolution'
+    ) ??
+      false)
 
   switch (state.status) {
     case 'CHARACTERISTICS':
@@ -310,6 +321,9 @@ export const deriveLegalCareerCreationActionKeys = (
       }
       return noPendingDecisions ? ['resolveAging'] : []
     case 'REENLISTMENT':
+      if (hasOnlyAgingResolution || canResolveAgingLossesBeforeReenlistment) {
+        return ['resolveAging']
+      }
       if (options.reenlistmentOutcome === 'unresolved') {
         return (context.pendingDecisions?.every(
           (decision) => decision.key === 'reenlistmentResolution'
@@ -402,7 +416,10 @@ const actionDefinitions = {
     rollRequirement: { key: 'termSkill', dice: '1d6' }
   },
   resolveAging: {
-    commandTypes: ['ResolveCharacterCreationAging'],
+    commandTypes: [
+      'ResolveCharacterCreationAging',
+      'ResolveCharacterCreationAgingLosses'
+    ],
     rollRequirement: { key: 'aging', dice: '2d6' }
   },
   decideAnagathics: {

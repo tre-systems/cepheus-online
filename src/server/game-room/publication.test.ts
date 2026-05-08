@@ -26,9 +26,22 @@ import { createMemoryStorage } from './test-support'
 const gameId = asGameId('game-1')
 const actorId = asUserId('user-1')
 
+type AgingLossCommand = {
+  type: 'ResolveCharacterCreationAgingLosses'
+  gameId: typeof gameId
+  actorId: typeof actorId
+  expectedSeq?: number
+  characterId: ReturnType<typeof asCharacterId>
+  selectedLosses: Array<{
+    type: 'PHYSICAL' | 'MENTAL'
+    modifier: number
+    characteristic: 'str' | 'dex' | 'end' | 'int' | 'edu' | 'soc'
+  }>
+}
+
 const publish = (
   storage: ReturnType<typeof createMemoryStorage>,
-  command: GameCommand,
+  command: GameCommand | AgingLossCommand,
   requestId = `req-${command.type}`
 ) =>
   runCommandPublication(storage, gameId, {
@@ -752,6 +765,152 @@ describe('room publication flow', () => {
       type: 'RESOLVE_REENLISTMENT',
       reenlistment: storedEvent.reenlistment
     })
+  })
+
+  it('publishes aging loss resolution and allows reenlistment afterward', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-aging-losses')
+    await appendEvents(
+      storage,
+      gameId,
+      actorId,
+      [
+        {
+          type: 'GameCreated',
+          slug: 'game-1',
+          name: 'Spinward Test',
+          ownerId: actorId
+        },
+        {
+          type: 'CharacterCreated',
+          characterId,
+          ownerId: actorId,
+          characterType: 'PLAYER',
+          name: 'Scout'
+        },
+        {
+          type: 'CharacterSheetUpdated',
+          characterId,
+          characteristics: {
+            str: 7,
+            dex: 8,
+            end: 7,
+            int: 9,
+            edu: 8,
+            soc: 6
+          }
+        },
+        {
+          type: 'CharacterCreationStarted',
+          characterId,
+          creation: {
+            state: {
+              status: 'REENLISTMENT',
+              context: {
+                canCommission: false,
+                canAdvance: false
+              }
+            },
+            terms: [
+              {
+                career: 'Scout',
+                skills: ['Vacc Suit-1'],
+                skillsAndTraining: ['Vacc Suit-1'],
+                benefits: [],
+                complete: false,
+                canReenlist: true,
+                completedBasicTraining: true,
+                musteringOut: false,
+                anagathics: false,
+                survival: 8
+              }
+            ],
+            careers: [{ name: 'Scout', rank: 0 }],
+            canEnterDraft: true,
+            failedToQualify: false,
+            characteristicChanges: [
+              { type: 'PHYSICAL', modifier: -1 },
+              { type: 'PHYSICAL', modifier: -1 }
+            ],
+            creationComplete: false,
+            homeworld: null,
+            backgroundSkills: [],
+            pendingCascadeSkills: [],
+            history: []
+          }
+        }
+      ],
+      '2026-05-03T00:00:00.000Z'
+    )
+
+    const earlyReenlistment = await publish(storage, {
+      type: 'ResolveCharacterCreationReenlistment',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 4
+    })
+    assert.equal(earlyReenlistment.ok, false)
+    if (earlyReenlistment.ok) return
+    assert.equal(earlyReenlistment.error.code, 'invalid_command')
+
+    const losses = await publish(storage, {
+      type: 'ResolveCharacterCreationAgingLosses',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 4,
+      selectedLosses: [
+        { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+        { type: 'PHYSICAL', modifier: -1, characteristic: 'dex' }
+      ]
+    })
+
+    assert.equal(losses.ok, true)
+    if (!losses.ok) return
+    assert.equal(losses.value.liveActivities.length, 0)
+    assert.deepEqual(
+      losses.value.state.characters[characterId]?.creation
+        ?.characteristicChanges,
+      []
+    )
+    assert.deepEqual(
+      losses.value.state.characters[characterId]?.characteristics,
+      {
+        str: 6,
+        dex: 7,
+        end: 7,
+        int: 9,
+        edu: 8,
+        soc: 6
+      }
+    )
+
+    const resolved = await publish(storage, {
+      type: 'ResolveCharacterCreationReenlistment',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: losses.value.eventSeq
+    })
+
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    const persistedEvents = (await readEventStream(storage, gameId)).map(
+      (envelope) => envelope.event
+    )
+    assert.equal(
+      persistedEvents.some(
+        (event) =>
+          (event as { type: string }).type ===
+          'CharacterCreationAgingLossesResolved'
+      ),
+      true
+    )
+    assert.equal(
+      persistedEvents.at(-1)?.type,
+      'CharacterCreationReenlistmentResolved'
+    )
   })
 
   it('publishes semantic mustering benefit and completion events', async () => {

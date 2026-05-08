@@ -24,6 +24,7 @@ import {
   parseCareerRankReward,
   resolveCareerBenefit,
   resolveAging,
+  resolveAgingLosses,
   resolveCareerSkillTableRoll,
   resolveCascadeCareerSkill,
   resolveDraftCareer,
@@ -936,6 +937,35 @@ const validateReenlistmentResolution = (
       commandError(
         'invalid_command',
         'REENLISTMENT is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
+const validateAgingLossResolution = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.characteristicChanges.length === 0) {
+    return err(
+      commandError('invalid_command', 'No pending aging losses to resolve')
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('resolveAging')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'AGING_LOSSES are blocked by unresolved character creation decisions'
       )
     )
   }
@@ -2662,6 +2692,37 @@ export const deriveEventsForCommand = (
           ...resolved,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationAgingLosses': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateAgingLossResolution(character)
+      if (!creation.ok) return creation
+
+      const resolved = resolveAgingLosses({
+        characteristics: character.characteristics,
+        pendingLosses: creation.value.characteristicChanges,
+        selectedLosses: command.selectedLosses
+      })
+      if (!resolved.ok) {
+        return err(commandError('invalid_command', resolved.error.message))
+      }
+
+      return ok([
+        {
+          type: 'CharacterCreationAgingLossesResolved',
+          characterId: command.characterId,
+          selectedLosses: resolved.value.selectedLosses,
+          characteristicPatch: resolved.value.characteristicPatch,
+          state: creation.value.state,
+          creationComplete: creation.value.creationComplete
         }
       ])
     }

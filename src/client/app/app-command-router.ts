@@ -52,6 +52,7 @@ export type CharacterCreationCommand = Extract<
       | 'ResolveCharacterCreationAdvancement'
       | 'SkipCharacterCreationAdvancement'
       | 'ResolveCharacterCreationAging'
+      | 'ResolveCharacterCreationAgingLosses'
       | 'DecideCharacterCreationAnagathics'
       | 'ResolveCharacterCreationReenlistment'
       | 'RollCharacterCreationCharacteristic'
@@ -95,6 +96,7 @@ export const appCommandRouteByType = {
   ResolveCharacterCreationAdvancement: 'characterCreation',
   SkipCharacterCreationAdvancement: 'characterCreation',
   ResolveCharacterCreationAging: 'characterCreation',
+  ResolveCharacterCreationAgingLosses: 'characterCreation',
   DecideCharacterCreationAnagathics: 'characterCreation',
   ResolveCharacterCreationReenlistment: 'characterCreation',
   RollCharacterCreationCharacteristic: 'characterCreation',

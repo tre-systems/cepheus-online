@@ -1,4 +1,4 @@
-import type { CharacteristicKey } from '../state'
+import type { CharacteristicKey, CharacterSheetPatch } from '../state'
 
 export type CareerCreationStatus =
   | 'CHARACTERISTICS'
@@ -185,6 +185,7 @@ export type CareerCreationServerCommandType =
   | 'ResolveCharacterCreationAdvancement'
   | 'SkipCharacterCreationAdvancement'
   | 'ResolveCharacterCreationAging'
+  | 'ResolveCharacterCreationAgingLosses'
   | 'ResolveCharacterCreationReenlistment'
   | 'RollCharacterCreationTermSkill'
   | 'CompleteCharacterCreationSkills'
@@ -349,6 +350,15 @@ export type AgingChangeType = 'PHYSICAL' | 'MENTAL'
 export interface AgingChange {
   type: AgingChangeType
   modifier: number
+}
+
+export interface AgingLossSelection extends AgingChange {
+  characteristic: CharacteristicKey
+}
+
+export interface AgingLossResolution {
+  selectedLosses: AgingLossSelection[]
+  characteristicPatch: CharacterSheetPatch['characteristics']
 }
 
 export interface AgingEffect {

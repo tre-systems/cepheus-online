@@ -538,6 +538,14 @@ describe('protocol validation', () => {
         characterId: 'char-1'
       },
       {
+        type: 'ResolveCharacterCreationAgingLosses',
+        ...base,
+        characterId: 'char-1',
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' }
+        ]
+      },
+      {
         type: 'CreateBoard',
         ...base,
         boardId: 'board-1',
@@ -756,6 +764,31 @@ describe('protocol validation', () => {
       assert.equal(result.value.expectedSeq, 7)
       assert.equal(result.value.useAnagathics, useAnagathics)
     }
+  })
+
+  it('accepts semantic aging loss resolution commands', () => {
+    const result = decodeCommand({
+      type: 'ResolveCharacterCreationAgingLosses',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      expectedSeq: 7,
+      selectedLosses: [
+        { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+        { type: 'MENTAL', modifier: -2, characteristic: 'edu' }
+      ]
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'ResolveCharacterCreationAgingLosses')
+    if (result.value.type !== 'ResolveCharacterCreationAgingLosses') return
+    assert.equal(result.value.characterId, 'char-1')
+    assert.equal(result.value.expectedSeq, 7)
+    assert.deepEqual(result.value.selectedLosses, [
+      { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+      { type: 'MENTAL', modifier: -2, characteristic: 'edu' }
+    ])
   })
 
   it('accepts semantic commission resolution commands', () => {

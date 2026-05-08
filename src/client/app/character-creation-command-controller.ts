@@ -17,10 +17,13 @@ import {
   applyCharacterCreationReenlistmentRoll,
   applyCharacterCreationTermSkillRoll,
   applyParsedCharacterCreationDraftPatch,
+  deriveCharacterCreationAgingChangeOptions,
   deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationAgingRoll,
   deriveNextCharacterCreationCharacteristicRoll,
   nextCharacterCreationMusteringBenefitCareer,
+  updateCharacterCreationFields,
+  type CharacterCreationAgingSelection,
   type CharacterCreationFlow,
   type CharacterCreationTermSkillTable
 } from './character-creation-flow.js'
@@ -52,6 +55,10 @@ export interface CharacterCreationCommandController {
   rollReenlistment: () => Promise<void>
   decideAnagathics: (useAnagathics: boolean) => Promise<void>
   rollAging: () => Promise<void>
+  resolveAgingLoss: (
+    index: number,
+    characteristic: CharacteristicKey
+  ) => Promise<void>
   rollCareerCheck: () => Promise<void>
 }
 
@@ -489,6 +496,57 @@ export const createCharacterCreationCommandController = (
         renderWizard()
         scrollToTop()
       }
+    },
+
+    resolveAgingLoss: async (index, characteristic) => {
+      const flow = guardEditableFlow()
+      if (!flow) return
+      setError('')
+      syncFields()
+
+      const change = deriveCharacterCreationAgingChangeOptions(flow).find(
+        (candidate) => candidate.index === index
+      )
+      if (!change?.options.includes(characteristic)) return
+
+      const selections: CharacterCreationAgingSelection[] = [
+        ...(flow.draft.careerPlan?.agingSelections ?? []),
+        {
+          type: change.type,
+          modifier: change.modifier,
+          characteristic
+        }
+      ]
+      const selectedFlow = updateCharacterCreationFields(flow, {
+        careerPlan: flow.draft.careerPlan
+          ? {
+              ...flow.draft.careerPlan,
+              agingSelections: selections
+            }
+          : null
+      })
+
+      if (selections.length < flow.draft.pendingAgingChanges.length) {
+        setFlow(selectedFlow)
+        renderWizard()
+        return
+      }
+
+      await ensurePublished()
+      const response = await postCharacterCreationCommand(
+        {
+          type: 'ResolveCharacterCreationAgingLosses',
+          ...commandIdentity(),
+          characterId: flow.draft.characterId,
+          selectedLosses: selections
+        },
+        requestId('aging-losses')
+      )
+      syncAndRender(
+        { syncFlowFromRoomState, renderWizard, scrollToTop },
+        response,
+        flow
+      )
     },
 
     rollCareerCheck: async () => {

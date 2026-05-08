@@ -152,7 +152,10 @@ describe('career creation legal action planner', () => {
         {
           key: 'resolveAging',
           status: 'AGING',
-          commandTypes: ['ResolveCharacterCreationAging'],
+          commandTypes: [
+            'ResolveCharacterCreationAging',
+            'ResolveCharacterCreationAgingLosses'
+          ],
           rollRequirement: { key: 'aging', dice: '2d6' }
         }
       ]
@@ -629,7 +632,7 @@ describe('career creation legal action planner', () => {
           terms: [term({ reEnlistment: 7 })]
         })
       ),
-      []
+      ['resolveAging']
     )
   })
 

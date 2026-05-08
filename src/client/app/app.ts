@@ -76,7 +76,6 @@ import {
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBackgroundSkillSelection,
-  applyCharacterCreationAgingChange,
   applyParsedCharacterCreationDraftPatch,
   completeCharacterCreationCareerTerm,
   removeCharacterCreationBackgroundSkillSelection,
@@ -713,19 +712,8 @@ const renderCharacterCreationAgingChoices = (
   flow: CharacterCreationFlow
 ): HTMLElement | DocumentFragment => {
   return renderCharacterCreationAgingChoicesView(document, flow, {
-    applyAgingChange: (index, characteristic) => {
-      const latestFlow = characterCreationController.flow()
-      if (!latestFlow) return
-      characterCreationController.setFlow(
-        applyCharacterCreationAgingChange({
-          flow: latestFlow,
-          index,
-          characteristic
-        }).flow
-      )
-      setError('')
-      renderCharacterCreationWizard()
-    }
+    applyAgingChange: (index, characteristic) =>
+      characterCreationCommandController.resolveAgingLoss(index, characteristic)
   })
 }
 

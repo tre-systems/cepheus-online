@@ -447,6 +447,19 @@ describe('character creation actions', () => {
     })
   })
 
+  it('does not offer generic aging completion while aging losses need choices', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('AGING', {
+          characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+        })
+      )
+    )
+
+    assert.deepEqual(plan?.actions, [])
+  })
+
   it('uses semantic commands for deciding anagathics before aging', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,

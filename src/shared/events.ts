@@ -9,6 +9,7 @@ import type {
 import type {
   CareerCreationCheckFact,
   CareerCreationAgingFact,
+  AgingLossSelection,
   CareerCreationBenefitFact,
   CareerCreationDraftFact,
   CareerCreationEvent,
@@ -142,6 +143,14 @@ export type GameEvent =
       type: 'CharacterCreationAgingResolved'
       characterId: CharacterId
       aging: CareerCreationAgingFact
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationAgingLossesResolved'
+      characterId: CharacterId
+      selectedLosses: AgingLossSelection[]
+      characteristicPatch: CharacterSheetPatch['characteristics']
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

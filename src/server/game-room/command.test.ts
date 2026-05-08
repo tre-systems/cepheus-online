@@ -1,7 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { GameCommand } from '../../shared/commands'
 import {
   createCareerCreationState,
   type CareerCreationStatus
@@ -86,7 +85,7 @@ const createState = (
 })
 
 const runCommand = (
-  command: GameCommand,
+  command: Parameters<typeof deriveEventsForCommand>[0],
   creation: CharacterCreationProjection | null,
   contextOverrides: Partial<Pick<CommandContext, 'gameSeed' | 'nextSeq'>> = {}
 ) => {
@@ -1634,6 +1633,185 @@ describe('deriveEventsForCommand error categories', () => {
       result.error.message,
       'AGING is not valid from SKILLS_TRAINING'
     )
+  })
+
+  it('emits semantic aging loss resolution with server-derived characteristic changes', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAgingLosses',
+        gameId,
+        actorId,
+        characterId,
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'dex' }
+        ]
+      },
+      createCreation('REENLISTMENT', {
+        characteristicChanges: [
+          { type: 'PHYSICAL', modifier: -1 },
+          { type: 'PHYSICAL', modifier: -1 }
+        ],
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationAgingLossesResolved',
+        characterId,
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'dex' }
+        ],
+        characteristicPatch: {
+          str: 0,
+          dex: 0
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('rejects stale aging loss resolution commands', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAgingLosses',
+        gameId,
+        actorId,
+        characterId,
+        expectedSeq: 0,
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' }
+        ]
+      },
+      createCreation('REENLISTMENT', {
+        characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'stale_command')
+  })
+
+  it('rejects aging loss selections that do not exactly match pending losses', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAgingLosses',
+        gameId,
+        actorId,
+        characterId,
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -2, characteristic: 'str' }
+        ]
+      },
+      createCreation('REENLISTMENT', {
+        characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Selected aging losses must match pending aging losses'
+    )
+  })
+
+  it('rejects aging loss selections with invalid target groups or duplicate targets', () => {
+    const invalidGroup = runCommand(
+      {
+        type: 'ResolveCharacterCreationAgingLosses',
+        gameId,
+        actorId,
+        characterId,
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'int' }
+        ]
+      },
+      createCreation('REENLISTMENT', {
+        characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+      })
+    )
+
+    assert.equal(invalidGroup.ok, false)
+    if (invalidGroup.ok) return
+    assert.equal(invalidGroup.error.code, 'invalid_command')
+    assert.equal(
+      invalidGroup.error.message,
+      'int cannot receive a PHYSICAL aging loss'
+    )
+
+    const duplicate = runCommand(
+      {
+        type: 'ResolveCharacterCreationAgingLosses',
+        gameId,
+        actorId,
+        characterId,
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' }
+        ]
+      },
+      createCreation('REENLISTMENT', {
+        characteristicChanges: [
+          { type: 'PHYSICAL', modifier: -1 },
+          { type: 'PHYSICAL', modifier: -1 }
+        ]
+      })
+    )
+
+    assert.equal(duplicate.ok, false)
+    if (duplicate.ok) return
+    assert.equal(duplicate.error.code, 'invalid_command')
+    assert.equal(
+      duplicate.error.message,
+      'str cannot receive more than one PHYSICAL aging loss'
+    )
+  })
+
+  it('rejects aging loss resolution when no pending losses exist', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAgingLosses',
+        gameId,
+        actorId,
+        characterId,
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' }
+        ]
+      },
+      createCreation('REENLISTMENT')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'No pending aging losses to resolve')
   })
 
   it('emits a semantic reenlistment event with server-derived roll facts', () => {

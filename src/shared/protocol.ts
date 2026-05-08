@@ -1,5 +1,7 @@
 import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
 import type {
+  AgingChangeType,
+  AgingLossSelection,
   BenefitKind,
   CareerCreationBenefitFact,
   CareerCreationCheckFact,
@@ -546,6 +548,68 @@ const parseCharacteristicKey = (
   }
 
   return ok(raw as CharacteristicKey)
+}
+
+const parseAgingChangeType = (
+  raw: unknown,
+  label: string
+): Result<AgingChangeType, CommandError> => {
+  if (raw === 'PHYSICAL' || raw === 'MENTAL') return ok(raw)
+
+  return err(invalidCommand(`${label} is not supported`))
+}
+
+const parseAgingLossSelection = (
+  raw: unknown,
+  label: string
+): Result<AgingLossSelection, CommandError> => {
+  if (!isObject(raw)) {
+    return err(invalidCommand(`${label} must be an object`))
+  }
+
+  const type = parseAgingChangeType(raw.type, `${label}.type`)
+  if (!type.ok) return type
+  const modifier = parseNumber(raw.modifier, `${label}.modifier`)
+  if (!modifier.ok) return modifier
+  const characteristic = parseCharacteristicKey(
+    raw.characteristic,
+    `${label}.characteristic`
+  )
+  if (!characteristic.ok) return characteristic
+  if (characteristic.value === null) {
+    return err(invalidCommand(`${label}.characteristic cannot be null`))
+  }
+
+  return ok({
+    type: type.value,
+    modifier: modifier.value,
+    characteristic: characteristic.value
+  })
+}
+
+const parseAgingLossSelections = (
+  raw: unknown,
+  label: string
+): Result<AgingLossSelection[], CommandError> => {
+  if (!Array.isArray(raw)) {
+    return err(invalidCommand(`${label} must be an array`))
+  }
+  if (raw.length > characteristicKeys.length) {
+    return err(
+      invalidCommand(
+        `${label} cannot contain more than ${characteristicKeys.length} entries`
+      )
+    )
+  }
+
+  const losses: AgingLossSelection[] = []
+  for (const [index, item] of raw.entries()) {
+    const loss = parseAgingLossSelection(item, `${label}[${index}]`)
+    if (!loss.ok) return loss
+    losses.push(loss.value)
+  }
+
+  return ok(losses)
 }
 
 const parseCareerCreationDiceFact = (
@@ -1202,6 +1266,23 @@ export const decodeCommand = (
         type: 'ResolveCharacterCreationAging',
         ...base.value,
         characterId: characterId.value
+      })
+    }
+
+    case 'ResolveCharacterCreationAgingLosses': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const selectedLosses = parseAgingLossSelections(
+        raw.selectedLosses,
+        'selectedLosses'
+      )
+      if (!selectedLosses.ok) return selectedLosses
+
+      return ok({
+        type: 'ResolveCharacterCreationAgingLosses',
+        ...base.value,
+        characterId: characterId.value,
+        selectedLosses: selectedLosses.value
       })
     }
 

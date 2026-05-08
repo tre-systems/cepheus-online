@@ -975,6 +975,88 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
+  it('projects semantic aging loss resolution into characteristics and clears pending losses', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterSheetUpdated',
+        characterId,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'REENLISTMENT',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [
+            { type: 'PHYSICAL', modifier: -1 },
+            { type: 'PHYSICAL', modifier: -1 }
+          ],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(5, {
+        type: 'CharacterCreationAgingLossesResolved',
+        characterId,
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'dex' }
+        ],
+        characteristicPatch: {
+          str: 6,
+          dex: 7
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      } as EventEnvelope['event'])
+    ])
+
+    const character = state?.characters[characterId]
+    assert.equal(character?.characteristics.str, 6)
+    assert.equal(character?.characteristics.dex, 7)
+    assert.equal(character?.characteristics.end, 7)
+    assert.deepEqual(character?.creation?.characteristicChanges, [])
+    assert.equal(character?.creation?.state.status, 'REENLISTMENT')
+    assert.equal(state?.eventSeq, 5)
+  })
+
   it('projects semantic anagathics decisions onto the active term', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

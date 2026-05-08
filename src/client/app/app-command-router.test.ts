@@ -100,6 +100,23 @@ const anagathicsCommand = (): Extract<
   useAnagathics: false
 })
 
+const agingLossesCommand = (): Extract<
+  Command,
+  { type: 'ResolveCharacterCreationAgingLosses' }
+> => ({
+  type: 'ResolveCharacterCreationAgingLosses',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId,
+  selectedLosses: [
+    {
+      type: 'PHYSICAL',
+      modifier: -1,
+      characteristic: 'str'
+    }
+  ]
+})
+
 describe('app command router sequencing', () => {
   it('adds the current authoritative event sequence to stale-sensitive commands', () => {
     const command = sequenceCommand(moveCommand(), 12)
@@ -222,6 +239,7 @@ describe('app command router dispatch', () => {
       ResolveCharacterCreationAdvancement: 'characterCreation',
       SkipCharacterCreationAdvancement: 'characterCreation',
       ResolveCharacterCreationAging: 'characterCreation',
+      ResolveCharacterCreationAgingLosses: 'characterCreation',
       DecideCharacterCreationAnagathics: 'characterCreation',
       ResolveCharacterCreationReenlistment: 'characterCreation',
       RollCharacterCreationCharacteristic: 'characterCreation',
@@ -258,7 +276,8 @@ describe('app command router dispatch', () => {
       router.door.dispatch(doorCommand()),
       router.sheet.dispatch(sheetCommand()),
       router.characterCreation.dispatch(characterCreationCommand()),
-      router.characterCreation.dispatch(anagathicsCommand())
+      router.characterCreation.dispatch(anagathicsCommand()),
+      router.characterCreation.dispatch(agingLossesCommand())
     ])
 
     assert.deepEqual(results, [
@@ -267,7 +286,8 @@ describe('app command router dispatch', () => {
       'SetDoorOpen',
       'UpdateCharacterSheet',
       'AdvanceCharacterCreation',
-      'DecideCharacterCreationAnagathics'
+      'DecideCharacterCreationAnagathics',
+      'ResolveCharacterCreationAgingLosses'
     ])
     assert.deepEqual(
       submissions.map((submission) => router.routeFor(submission.command)),
@@ -277,12 +297,13 @@ describe('app command router dispatch', () => {
         'door',
         'sheet',
         'characterCreation',
+        'characterCreation',
         'characterCreation'
       ]
     )
     assert.deepEqual(
       submissions.map((submission) => submission.command.expectedSeq),
-      [40, 40, 40, 40, 40, 40]
+      [40, 40, 40, 40, 40, 40, 40]
     )
   })
 })

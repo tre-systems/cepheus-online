@@ -99,6 +99,49 @@ const musteringFlow = (): CharacterCreationFlow => {
   }
 }
 
+const agingLossFlow = (): CharacterCreationFlow => {
+  const flow = careerFlow()
+  return {
+    step: 'career',
+    draft: {
+      ...flow.draft,
+      pendingAgingChanges: [{ type: 'PHYSICAL', modifier: -1 }],
+      careerPlan: {
+        career: 'Scout',
+        drafted: false,
+        qualificationRoll: 8,
+        qualificationPassed: true,
+        survivalRoll: 9,
+        survivalPassed: true,
+        canCommission: false,
+        commissionRoll: null,
+        commissionPassed: null,
+        canAdvance: false,
+        advancementRoll: null,
+        advancementPassed: null,
+        termSkillRolls: [
+          {
+            table: 'serviceSkills',
+            roll: 1,
+            skill: 'Pilot-1'
+          },
+          {
+            table: 'personalDevelopment',
+            roll: 2,
+            skill: 'Vacc Suit-1'
+          }
+        ],
+        anagathics: false,
+        agingRoll: 3,
+        agingMessage: '1 characteristic change',
+        agingSelections: [],
+        reenlistmentRoll: null,
+        reenlistmentOutcome: null
+      }
+    }
+  }
+}
+
 describe('character creation command controller', () => {
   it('does not publish when no editable flow exists', async () => {
     const commands: CharacterCreationCommand[] = []
@@ -503,6 +546,141 @@ describe('character creation command controller', () => {
     assert.equal(syncedFallbacks[0]?.draft.careerPlan?.anagathics, false)
     assert.equal(renderCount, 1)
     assert.equal(scrollCount, 1)
+  })
+
+  it('submits aging loss choices through the semantic command without local mutation', async () => {
+    let flow: CharacterCreationFlow | null = agingLossFlow()
+    const originalFlow = flow
+    const commands: CharacterCreationCommand[] = []
+    const requestIds: string[] = []
+    const syncedFallbacks: CharacterCreationFlow[] = []
+    let published = 0
+    let renderCount = 0
+    let scrollCount = 0
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: (nextFlow) => {
+        flow = nextFlow
+      },
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command, requestId) => {
+        commands.push(command)
+        requestIds.push(requestId)
+        return { state: null }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {},
+      syncFlowFromRoomState: (_state, _characterId, fallbackFlow) => {
+        syncedFallbacks.push(fallbackFlow)
+        flow = fallbackFlow
+        return fallbackFlow
+      },
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        renderCount += 1
+      },
+      scrollToTop: () => {
+        scrollCount += 1
+      }
+    })
+
+    await controller.resolveAgingLoss(0, 'str')
+
+    const command = commands[0] as unknown as {
+      type: string
+      characterId: string
+      selectedLosses: unknown[]
+    }
+    assert.equal(published, 1)
+    assert.deepEqual(command, {
+      type: 'ResolveCharacterCreationAgingLosses',
+      gameId,
+      actorId,
+      characterId: originalFlow.draft.characterId,
+      selectedLosses: [
+        {
+          type: 'PHYSICAL',
+          modifier: -1,
+          characteristic: 'str'
+        }
+      ]
+    })
+    assert.deepEqual(requestIds, ['aging-losses'])
+    assert.equal(syncedFallbacks[0], originalFlow)
+    assert.equal(flow?.draft.characteristics.str, 7)
+    assert.deepEqual(flow?.draft.pendingAgingChanges, [
+      { type: 'PHYSICAL', modifier: -1 }
+    ])
+    assert.deepEqual(flow?.draft.careerPlan?.agingSelections, [])
+    assert.equal(renderCount, 1)
+    assert.equal(scrollCount, 1)
+  })
+
+  it('collects aging loss choices locally before submitting all losses', async () => {
+    let flow: CharacterCreationFlow | null = {
+      ...agingLossFlow(),
+      draft: {
+        ...agingLossFlow().draft,
+        pendingAgingChanges: [
+          { type: 'PHYSICAL', modifier: -1 },
+          { type: 'PHYSICAL', modifier: -1 }
+        ]
+      }
+    }
+    const commands: CharacterCreationCommand[] = []
+    let renderCount = 0
+    let published = 0
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: (nextFlow) => {
+        flow = nextFlow
+      },
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command) => {
+        commands.push(command)
+        return { state: null }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {},
+      syncFlowFromRoomState: () => flow,
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        renderCount += 1
+      },
+      scrollToTop: () => {}
+    })
+
+    await controller.resolveAgingLoss(0, 'str')
+
+    assert.equal(published, 0)
+    assert.deepEqual(commands, [])
+    assert.equal(flow?.draft.characteristics.str, 7)
+    assert.deepEqual(flow?.draft.pendingAgingChanges, [
+      { type: 'PHYSICAL', modifier: -1 },
+      { type: 'PHYSICAL', modifier: -1 }
+    ])
+    assert.deepEqual(flow?.draft.careerPlan?.agingSelections, [
+      { type: 'PHYSICAL', modifier: -1, characteristic: 'str' }
+    ])
+    assert.equal(renderCount, 1)
   })
 
   it('rolls a semantic mustering benefit, waits for reveal, and syncs fallback flow', async () => {

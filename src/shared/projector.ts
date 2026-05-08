@@ -140,7 +140,7 @@ type EventHandlerMap<TEventType extends GameEvent['type']> = {
 
 const requireState = (
   state: GameState | null,
-  eventType: GameEvent['type']
+  eventType: string
 ): GameState => {
   if (!state) throw new Error(`${eventType} before GameCreated`)
   return state
@@ -163,6 +163,7 @@ type CharacterEventType =
   | 'CharacterCreationAdvancementResolved'
   | 'CharacterCreationAdvancementSkipped'
   | 'CharacterCreationAgingResolved'
+  | 'CharacterCreationAgingLossesResolved'
   | 'CharacterCreationAnagathicsDecided'
   | 'CharacterCreationReenlistmentResolved'
   | 'CharacterCreationTermSkillRolled'
@@ -686,6 +687,26 @@ const characterEventHandlers = {
           aging: structuredClone(event.aging)
         }
       ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationAgingLossesResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    applyCharacterSheetPatch(character, {
+      characteristics: event.characteristicPatch
+    })
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      characteristicChanges: []
     }
     nextState.eventSeq = envelope.seq
 

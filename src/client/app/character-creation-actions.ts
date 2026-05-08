@@ -233,7 +233,8 @@ const deriveMusteringBenefitRollActions = (
 const actionsForLegalKey = (
   key: CareerCreationActionKey,
   identity: ClientIdentity,
-  character: CharacterState
+  character: CharacterState,
+  creation: CharacterCreationProjection
 ): CharacterCreationActionViewModel[] => {
   switch (key) {
     case 'setCharacteristics':
@@ -392,6 +393,7 @@ const actionsForLegalKey = (
         })
       ]
     case 'resolveAging':
+      if ((creation.characteristicChanges?.length ?? 0) > 0) return []
       return [
         action('complete-aging', 'Complete aging', {
           type: 'ResolveCharacterCreationAging',
@@ -540,7 +542,7 @@ const deriveActions = (
 
   return actionKeyOrder
     .filter((key) => legalKeys.has(key))
-    .flatMap((key) => actionsForLegalKey(key, identity, character))
+    .flatMap((key) => actionsForLegalKey(key, identity, character, creation))
 }
 
 export const deriveCharacterCreationActionPlan = (

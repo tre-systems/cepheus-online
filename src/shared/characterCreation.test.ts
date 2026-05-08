@@ -36,7 +36,9 @@ import {
   parseCareerSkill,
   parseCareerRankReward,
   payForAnagathics,
+  agingLossTargetsForType,
   resolveAging,
+  resolveAgingLosses,
   resolveAnagathicsUse,
   resolveCareerBenefit,
   resolveCascadeCareerSkill,
@@ -628,6 +630,95 @@ describe('mustering-out and aging helpers', () => {
         characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
       }
     )
+  })
+
+  it('limits aging loss targets to physical and mental characteristic groups', () => {
+    assert.deepEqual(agingLossTargetsForType('PHYSICAL'), ['str', 'dex', 'end'])
+    assert.deepEqual(agingLossTargetsForType('MENTAL'), ['int', 'edu', 'soc'])
+  })
+
+  it('resolves selected aging losses into a clamped characteristic patch', () => {
+    const result = resolveAgingLosses({
+      characteristics: {
+        str: 1,
+        dex: 8,
+        end: 9,
+        int: 10,
+        edu: 7,
+        soc: 6
+      },
+      pendingLosses: [
+        { type: 'PHYSICAL', modifier: -2 },
+        { type: 'MENTAL', modifier: -1 }
+      ],
+      selectedLosses: [
+        { type: 'MENTAL', modifier: -1, characteristic: 'edu' },
+        { type: 'PHYSICAL', modifier: -2, characteristic: 'str' }
+      ]
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, {
+      selectedLosses: [
+        { type: 'MENTAL', modifier: -1, characteristic: 'edu' },
+        { type: 'PHYSICAL', modifier: -2, characteristic: 'str' }
+      ],
+      characteristicPatch: {
+        edu: 6,
+        str: 0
+      }
+    })
+  })
+
+  it('rejects aging loss selections that do not match the pending loss multiset', () => {
+    const result = resolveAgingLosses({
+      characteristics,
+      pendingLosses: [
+        { type: 'PHYSICAL', modifier: -1 },
+        { type: 'PHYSICAL', modifier: -2 }
+      ],
+      selectedLosses: [
+        { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+        { type: 'PHYSICAL', modifier: -1, characteristic: 'dex' }
+      ]
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'aging_loss_multiset_mismatch')
+  })
+
+  it('rejects invalid and duplicate aging loss targets', () => {
+    const invalidTarget = resolveAgingLosses({
+      characteristics,
+      pendingLosses: [{ type: 'PHYSICAL', modifier: -1 }],
+      selectedLosses: [
+        { type: 'PHYSICAL', modifier: -1, characteristic: 'edu' }
+      ]
+    })
+
+    assert.equal(invalidTarget.ok, false)
+    if (!invalidTarget.ok) {
+      assert.equal(invalidTarget.error.code, 'invalid_aging_loss_target')
+    }
+
+    const duplicatedTarget = resolveAgingLosses({
+      characteristics,
+      pendingLosses: [
+        { type: 'PHYSICAL', modifier: -1 },
+        { type: 'PHYSICAL', modifier: -2 }
+      ],
+      selectedLosses: [
+        { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+        { type: 'PHYSICAL', modifier: -2, characteristic: 'str' }
+      ]
+    })
+
+    assert.equal(duplicatedTarget.ok, false)
+    if (!duplicatedTarget.ok) {
+      assert.equal(duplicatedTarget.error.code, 'duplicate_aging_loss_target')
+    }
   })
 
   it('creates, completes, and starts career terms without mutating inputs', () => {

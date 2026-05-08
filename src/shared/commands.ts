@@ -1,6 +1,7 @@
 import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
 import type {
   BenefitKind,
+  AgingLossSelection,
   FailedQualificationOption,
   CareerCreationEvent,
   CareerCreationTermSkillTable
@@ -104,6 +105,7 @@ export type Command =
   | CharacterCreationCommissionCommand
   | CharacterCreationAdvancementCommand
   | CharacterCreationAgingCommand
+  | CharacterCreationAgingLossesCommand
   | CharacterCreationAnagathicsCommand
   | CharacterCreationReenlistmentCommand
   | CharacterCreationTermSkillCommand
@@ -290,6 +292,15 @@ export type CharacterCreationAgingCommand = {
   characterId: CharacterId
 }
 
+export type CharacterCreationAgingLossesCommand = {
+  type: 'ResolveCharacterCreationAgingLosses'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+  selectedLosses: AgingLossSelection[]
+}
+
 export type CharacterCreationAnagathicsCommand = {
   type: 'DecideCharacterCreationAnagathics'
   gameId: GameId
@@ -373,6 +384,7 @@ export type SemanticCommand =
   | CharacterCreationAdvancementCommand
   | CharacterCreationAdvancementSkipCommand
   | CharacterCreationAgingCommand
+  | CharacterCreationAgingLossesCommand
   | CharacterCreationAnagathicsCommand
   | CharacterCreationReenlistmentCommand
   | CharacterCreationTermSkillCommand

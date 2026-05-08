@@ -208,6 +208,34 @@
     "expectedSeq": 26
   },
   {
+    "name": "character creation aging losses resolution command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-resolve-aging-losses",
+      "command": {
+        "type": "ResolveCharacterCreationAgingLosses",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 27,
+        "characterId": "crew-scout-1",
+        "selectedLosses": [
+          {
+            "type": "PHYSICAL",
+            "modifier": -1,
+            "characteristic": "str"
+          },
+          {
+            "type": "MENTAL",
+            "modifier": -1,
+            "characteristic": "edu"
+          }
+        ]
+      }
+    },
+    "commandType": "ResolveCharacterCreationAgingLosses",
+    "expectedSeq": 27
+  },
+  {
     "name": "character creation reenlistment resolution command",
     "message": {
       "type": "command",
@@ -216,12 +244,12 @@
         "type": "ResolveCharacterCreationReenlistment",
         "gameId": "cepheus-run",
         "actorId": "referee-1",
-        "expectedSeq": 27,
+        "expectedSeq": 28,
         "characterId": "crew-scout-1"
       }
     },
     "commandType": "ResolveCharacterCreationReenlistment",
-    "expectedSeq": 27
+    "expectedSeq": 28
   },
   {
     "name": "character creation term skill roll command",
