@@ -229,6 +229,10 @@ describe('character creation actions', () => {
         assert.equal(command?.type, 'CompleteCharacterCreationMustering')
         continue
       }
+      if (eventType === 'CREATION_COMPLETE') {
+        assert.equal(command?.type, 'CompleteCharacterCreation')
+        continue
+      }
       assert.equal(command?.type, 'AdvanceCharacterCreation')
       if (command?.type !== 'AdvanceCharacterCreation') continue
       assert.equal(command.creationEvent.type, eventType)

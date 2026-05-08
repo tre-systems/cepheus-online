@@ -110,6 +110,7 @@ export type Command =
   | CharacterCreationTermCascadeSkillCommand
   | CharacterCreationMusteringBenefitCommand
   | CharacterCreationMusteringCompletionCommand
+  | CharacterCreationCompletionCommand
   | {
       type: 'CreateBoard'
       gameId: GameId
@@ -341,6 +342,14 @@ export type CharacterCreationMusteringCompletionCommand = {
   characterId: CharacterId
 }
 
+export type CharacterCreationCompletionCommand = {
+  type: 'CompleteCharacterCreation'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
 export type SemanticCommand =
   | CharacterCreationCharacteristicCommand
   | CharacterCreationBasicTrainingCommand
@@ -360,5 +369,6 @@ export type SemanticCommand =
   | CharacterCreationTermCascadeSkillCommand
   | CharacterCreationMusteringBenefitCommand
   | CharacterCreationMusteringCompletionCommand
+  | CharacterCreationCompletionCommand
 
 export type GameCommand = Command | SemanticCommand

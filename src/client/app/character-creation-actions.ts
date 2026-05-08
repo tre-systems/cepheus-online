@@ -445,11 +445,12 @@ const actionsForLegalKey = (
       ]
     case 'completeCreation':
       return [
-        action(
-          'creation-complete',
-          'Make playable',
-          advanceCommand(identity, character, { type: 'CREATION_COMPLETE' })
-        )
+        action('creation-complete', 'Make playable', {
+          type: 'CompleteCharacterCreation',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
       ]
     case 'rollReenlistment':
       return [

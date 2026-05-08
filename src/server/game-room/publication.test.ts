@@ -108,6 +108,17 @@ const publishAgingResolution = (
     characterId
   })
 
+const publishCreationCompletion = (
+  storage: ReturnType<typeof createMemoryStorage>,
+  characterId: ReturnType<typeof asCharacterId>
+) =>
+  publish(storage, {
+    type: 'CompleteCharacterCreation',
+    gameId,
+    actorId,
+    characterId
+  })
+
 const publishPlayableCharacterCreation = async (
   storage: ReturnType<typeof createMemoryStorage>,
   characterId = asCharacterId('char-1')
@@ -204,7 +215,7 @@ const publishPlayableCharacterCreation = async (
     musteringBenefit: scoutLowPassageBenefit()
   })
   await advance({ type: 'FINISH_MUSTERING' })
-  await advance({ type: 'CREATION_COMPLETE' })
+  assert.equal((await publishCreationCompletion(storage, characterId)).ok, true)
 }
 
 describe('room publication flow', () => {
@@ -2161,7 +2172,7 @@ describe('room publication flow', () => {
       musteringBenefit: scoutLowPassageBenefit()
     })
     await advance({ type: 'FINISH_MUSTERING' })
-    const completed = await advance({ type: 'CREATION_COMPLETE' })
+    const completed = await publishCreationCompletion(storage, characterId)
 
     assert.equal(completed.ok, true)
     if (!completed.ok) return
@@ -2282,7 +2293,10 @@ describe('room publication flow', () => {
       musteringBenefit: scoutLowPassageBenefit()
     })
     await advance({ type: 'FINISH_MUSTERING' })
-    await advance({ type: 'CREATION_COMPLETE' })
+    assert.equal(
+      (await publishCreationCompletion(storage, characterId)).ok,
+      true
+    )
 
     const finalized = await publish(storage, {
       type: 'FinalizeCharacterCreation',

@@ -189,6 +189,7 @@ export type CareerCreationServerCommandType =
   | 'ResolveCharacterCreationTermCascadeSkill'
   | 'RollCharacterCreationMusteringBenefit'
   | 'CompleteCharacterCreationMustering'
+  | 'CompleteCharacterCreation'
   | 'StartCharacterCareerTerm'
   | 'FinalizeCharacterCreation'
 

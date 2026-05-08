@@ -59,6 +59,7 @@ export type CharacterCreationCommand = Extract<
       | 'ResolveCharacterCreationTermCascadeSkill'
       | 'RollCharacterCreationMusteringBenefit'
       | 'CompleteCharacterCreationMustering'
+      | 'CompleteCharacterCreation'
       | 'CreatePiece'
   }
 >
@@ -100,6 +101,7 @@ export const appCommandRouteByType = {
   ResolveCharacterCreationTermCascadeSkill: 'characterCreation',
   RollCharacterCreationMusteringBenefit: 'characterCreation',
   CompleteCharacterCreationMustering: 'characterCreation',
+  CompleteCharacterCreation: 'characterCreation',
   CreateBoard: 'board',
   SelectBoard: 'board',
   SetDoorOpen: 'door',

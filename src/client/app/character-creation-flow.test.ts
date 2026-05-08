@@ -1721,7 +1721,7 @@ describe('character creation flow', () => {
         'ResolveCharacterCreationAging',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
-        'AdvanceCharacterCreation'
+        'CompleteCharacterCreation'
       ]
     )
     assert.deepEqual(
@@ -1752,8 +1752,7 @@ describe('character creation flow', () => {
       { type: 'SKIP_COMMISSION' },
       { type: 'COMPLETE_SKILLS' },
       { type: 'LEAVE_CAREER' },
-      { type: 'FINISH_MUSTERING' },
-      { type: 'CREATION_COMPLETE' }
+      { type: 'FINISH_MUSTERING' }
     ])
     assert.equal(
       commands.find((command) => command.type === 'ResolveCharacterCreationAging')
@@ -1861,9 +1860,14 @@ describe('character creation flow', () => {
         'COMPLETE_COMMISSION',
         'COMPLETE_SKILLS',
         'LEAVE_CAREER',
-        'FINISH_MUSTERING',
-        'CREATION_COMPLETE'
+        'FINISH_MUSTERING'
       ]
+    )
+    assert.equal(
+      playableCommands.find(
+        (command) => command.type === 'CompleteCharacterCreation'
+      )?.type,
+      'CompleteCharacterCreation'
     )
     assert.equal(
       playableCommands.find(

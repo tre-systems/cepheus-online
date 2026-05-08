@@ -1286,6 +1286,17 @@ export const decodeCommand = (
       })
     }
 
+    case 'CompleteCharacterCreation': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'CompleteCharacterCreation',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
     case 'SetCharacterCreationHomeworld': {
       const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
       if (!characterId.ok) return characterId

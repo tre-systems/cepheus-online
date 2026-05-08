@@ -298,6 +298,10 @@ type ResolveCharacterCreationAgingCommand = Extract<
 >
 type CompleteCharacterCreationHomeworldCommand =
   CharacterCreationHomeworldCommand
+type CompleteCharacterCreationCommand = Extract<
+  Command,
+  { type: 'CompleteCharacterCreation' }
+>
 type SetCharacterCreationHomeworldCommand = Extract<
   Command,
   { type: 'SetCharacterCreationHomeworld' }
@@ -2418,6 +2422,10 @@ const initialCharacterCreationStateCommands = (
     type: 'ResolveCharacterCreationAging',
     ...baseCommand
   })
+  const completeCreationCommand = (): CompleteCharacterCreationCommand => ({
+    type: 'CompleteCharacterCreation',
+    ...baseCommand
+  })
   const completeHomeworldCommand =
     (): CompleteCharacterCreationHomeworldCommand => ({
       type: 'CompleteCharacterCreationHomeworld',
@@ -2528,7 +2536,7 @@ const initialCharacterCreationStateCommands = (
       commands.push(
         advance({ type: 'LEAVE_CAREER' }),
         advance({ type: 'FINISH_MUSTERING' }),
-        advance({ type: 'CREATION_COMPLETE' })
+        completeCreationCommand()
       )
     }
   }
@@ -2727,8 +2735,9 @@ export const deriveCharacterCreationCommands = (
   )
   const reachesPlayable = lifecycleCommands.some(
     (command) =>
-      command.type === 'AdvanceCharacterCreation' &&
-      command.creationEvent.type === 'CREATION_COMPLETE'
+      command.type === 'CompleteCharacterCreation' ||
+      (command.type === 'AdvanceCharacterCreation' &&
+        command.creationEvent.type === 'CREATION_COMPLETE')
   )
   const sheetCommand: Command = reachesPlayable
     ? deriveFinalizeCharacterCreationCommand(flow.draft, {

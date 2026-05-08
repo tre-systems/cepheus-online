@@ -460,6 +460,30 @@ const validateCharacterCreationAction = (
   return ok(undefined)
 }
 
+const validateCreationCompletion = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('completeCreation')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'CREATION_COMPLETE is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
 const validateBasicTrainingCompletion = (
   character: CharacterState
 ): Result<CharacterCreationProjection, CommandError> => {
@@ -1934,6 +1958,14 @@ export const deriveEventsForCommand = (
           )
         )
       }
+      if (command.creationEvent.type === 'CREATION_COMPLETE') {
+        return err(
+          commandError(
+            'invalid_command',
+            'CREATION_COMPLETE must use CompleteCharacterCreation'
+          )
+        )
+      }
       if (command.creationEvent.type === 'SKIP_COMMISSION') {
         return err(
           commandError(
@@ -1972,10 +2004,7 @@ export const deriveEventsForCommand = (
           )
         )
       }
-      if (
-        command.creationEvent.type === 'FINISH_MUSTERING' ||
-        command.creationEvent.type === 'CREATION_COMPLETE'
-      ) {
+      if (command.creationEvent.type === 'FINISH_MUSTERING') {
         const action = validateCharacterCreationAction(character, command)
         if (!action.ok) return action
       }
@@ -2846,6 +2875,35 @@ export const deriveEventsForCommand = (
       return ok([
         {
           type: 'CharacterCreationMusteringCompleted',
+          characterId: command.characterId,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'CompleteCharacterCreation': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed(
+          'Only the character owner or referee can complete character creation'
+        )
+      }
+      const creation = validateCreationCompletion(character)
+      if (!creation.ok) return creation
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'CREATION_COMPLETE'
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationCompleted',
           characterId: command.characterId,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'

@@ -508,6 +508,18 @@ test.describe('character creation smoke', () => {
       actorSession,
       characterId
     })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('#boardCanvas')).toBeVisible()

@@ -681,6 +681,17 @@ export const deriveLiveActivity = (
         creationComplete: event.creationComplete
       }
 
+    case 'CharacterCreationCompleted':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'CREATION_COMPLETE',
+        details: 'Creation complete',
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
     case 'CharacterCreationCascadeSkillResolved':
       return {
         ...baseActivity(envelope),

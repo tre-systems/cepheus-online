@@ -155,6 +155,7 @@ type CharacterEventType =
   | 'CharacterCreationSkillsCompleted'
   | 'CharacterCreationMusteringBenefitRolled'
   | 'CharacterCreationMusteringCompleted'
+  | 'CharacterCreationCompleted'
   | 'CharacterCreationHomeworldSet'
   | 'CharacterCreationHomeworldCompleted'
   | 'CharacterCreationBackgroundSkillSelected'
@@ -821,6 +822,26 @@ const characterEventHandlers = {
       history: [
         ...(character.creation.history ?? []),
         { type: 'FINISH_MUSTERING' }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationCompleted: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        { type: 'CREATION_COMPLETE' }
       ]
     }
     nextState.eventSeq = envelope.seq

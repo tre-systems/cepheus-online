@@ -105,11 +105,10 @@ describe('deriveEventsForCommand error categories', () => {
   it('blocks creation completion while aging decisions remain unresolved', () => {
     const result = runCommand(
       {
-        type: 'AdvanceCharacterCreation',
+        type: 'CompleteCharacterCreation',
         gameId,
         actorId,
-        characterId,
-        creationEvent: { type: 'CREATION_COMPLETE' }
+        characterId
       },
       createCreation('ACTIVE', {
         terms: [
@@ -463,21 +462,20 @@ describe('deriveEventsForCommand error categories', () => {
   it('returns not_allowed for terminal character creation transitions', () => {
     const result = runCommand(
       {
-        type: 'AdvanceCharacterCreation',
+        type: 'CompleteCharacterCreation',
         gameId,
         actorId,
-        characterId,
-        creationEvent: { type: 'CREATION_COMPLETE' }
+        characterId
       },
       createCreation('PLAYABLE', { homeworld })
     )
 
     assert.equal(result.ok, false)
     if (result.ok) return
-    assert.equal(result.error.code, 'not_allowed')
+    assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'CREATION_COMPLETE is not valid from PLAYABLE'
+      'CREATION_COMPLETE is blocked by unresolved character creation decisions'
     )
   })
 

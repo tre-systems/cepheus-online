@@ -15,8 +15,9 @@ export const hasCharacterCreationCompletionCheckpointBoundary = (
 ): boolean =>
   envelopes.some(
     (envelope) =>
-      envelope.event.type === 'CharacterCreationTransitioned' &&
-      envelope.event.creationComplete
+      (envelope.event.type === 'CharacterCreationTransitioned' &&
+        envelope.event.creationComplete) ||
+      envelope.event.type === 'CharacterCreationCompleted'
   )
 
 export const shouldSaveCheckpoint = (

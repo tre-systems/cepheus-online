@@ -192,6 +192,12 @@ export type GameEvent =
       creationComplete: boolean
     }
   | {
+      type: 'CharacterCreationCompleted'
+      characterId: CharacterId
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
       type: 'CharacterCreationHomeworldSet'
       characterId: CharacterId
       homeworld: CharacterCreationHomeworld

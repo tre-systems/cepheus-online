@@ -71,9 +71,8 @@ describe('checkpoint policy', () => {
     assert.equal(
       shouldSaveCheckpoint(stateAt(12), [
         envelope(12, {
-          type: 'CharacterCreationTransitioned',
+          type: 'CharacterCreationCompleted',
           characterId,
-          creationEvent: { type: 'CREATION_COMPLETE' },
           state: {
             status: 'PLAYABLE',
             context: {
