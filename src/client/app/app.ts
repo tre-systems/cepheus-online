@@ -42,6 +42,10 @@ import {
   type CharacterCreationCommandController
 } from './character-creation-command-controller.js'
 import {
+  createCharacterCreationController,
+  type CharacterCreationController
+} from './character-creation-controller.js'
+import {
   createCreationActivityFeedController,
   creationActivityRevealDelayMs
 } from './creation-activity-feed.js'
@@ -104,20 +108,9 @@ import {
   renderCharacterCreationReview as renderCharacterCreationReviewView,
   renderCharacterCreationTermHistory as renderCharacterCreationTermHistoryView
 } from './character-creation-review-view.js'
-import {
-  creationStepFromStatus,
-  flowFromProjectedCharacter
-} from './character-creation-projection.js'
-import {
-  projectedCharacterCreation as projectedCharacterCreationFromState,
-  refreshFollowedCharacterCreationFlowFromState,
-  shouldRefreshEditableCharacterCreationFlow as shouldRefreshEditableCharacterCreationFlowFromState,
-  syncCharacterCreationFlowFromRoomState as syncCharacterCreationFlowFromProjection
-} from './character-creation-follow.js'
-import {
-  characterCreationStepIndex,
-  shouldSyncEditableCharacterCreationFlowWithProjection
-} from './character-creation-sync.js'
+import { creationStepFromStatus } from './character-creation-projection.js'
+import { projectedCharacterCreation as projectedCharacterCreationFromState } from './character-creation-follow.js'
+import { characterCreationStepIndex } from './character-creation-sync.js'
 import {
   cssUrl,
   readImageDimensions,
@@ -183,7 +176,6 @@ let roomId = initialIdentity.roomId
 let actorId = initialIdentity.actorId
 let actorSessionSecret = resolveActorSessionSecret({ roomId, actorId })
 let state: GameState | null = null
-let selectedCharacterId: CharacterId | null = null
 const viewerRole = initialIdentity.viewerRole
 const canSelectBoards = isRefereeViewer(viewerRole)
 const appSession = createAppSession({ roomId, actorId, viewerRole })
@@ -192,8 +184,7 @@ let diceHideTimer: number | null = null
 let connectivityController: ConnectivityController | null = null
 const diceRevealCoordinator = createDiceRevealCoordinator()
 const animatedDiceRollActivityIds = new Set<string>()
-let characterCreationFlow: CharacterCreationFlow | null = null
-let characterCreationReadOnly = false
+let characterCreationController: CharacterCreationController
 let characterCreationPublishPromise: Promise<void> | null = null
 const setStatus = (text: string): void => {
   els.status.textContent = text
@@ -232,51 +223,21 @@ const currentSelectedPieceId = (): PieceId | null =>
   appSession.snapshot().selectedPieceId
 
 const selectPiece = (pieceId: PieceId | null): void => {
-  selectedCharacterId = null
+  characterCreationController?.setSelectedCharacterId(null)
   appSession.selectPiece(pieceId)
 }
 
-const selectedCharacter = (): CharacterState | null =>
-  selectedCharacterId ? (state?.characters[selectedCharacterId] ?? null) : null
+const selectedCharacter = (): CharacterState | null => {
+  const characterId = characterCreationController?.selectedCharacterId()
+  return characterId ? (state?.characters[characterId] ?? null) : null
+}
 
 const currentCharacterCreationProjection =
   (): CharacterCreationProjection | null => {
-    if (!characterCreationFlow) return null
-    return projectedCharacterCreationFromState(
-      state,
-      characterCreationFlow.draft.characterId
-    )
+    const flow = characterCreationController?.flow()
+    if (!flow) return null
+    return projectedCharacterCreationFromState(state, flow.draft.characterId)
   }
-
-const syncCharacterCreationFlowFromRoomState = (
-  roomState: GameState | null,
-  characterId: CharacterId,
-  fallbackFlow: CharacterCreationFlow | null = null
-): CharacterCreationFlow | null => {
-  characterCreationFlow = syncCharacterCreationFlowFromProjection({
-    currentFlow: characterCreationFlow,
-    roomState,
-    characterId,
-    fallbackFlow
-  })
-  return characterCreationFlow
-}
-
-const reconcileEditableCharacterCreationFlowWithProjection = () => {
-  const flow = characterCreationFlow
-  const creation = currentCharacterCreationProjection()
-
-  if (
-    shouldSyncEditableCharacterCreationFlowWithProjection({
-      flow,
-      creation,
-      readOnly: characterCreationReadOnly
-    }) &&
-    flow
-  ) {
-    syncCharacterCreationFlowFromRoomState(state, flow.draft.characterId, flow)
-  }
-}
 
 const handleServerMessage = (message: ServerMessage): void => {
   const application = applyClientServerMessage(state, message)
@@ -448,7 +409,8 @@ const postCharacterCreationCommands = (
   commandRouter.characterCreation.dispatchSequential(commands)
 
 const ensureCharacterCreationPublishedNow = async () => {
-  if (!characterCreationFlow || characterCreationReadOnly) return
+  const flow = characterCreationController.flow()
+  if (!flow || characterCreationController.readOnly()) return
 
   if (!state) {
     await postCommand(
@@ -457,15 +419,16 @@ const ensureCharacterCreationPublishedNow = async () => {
     )
   }
 
-  if (!state || !characterCreationFlow) return
+  const publishedFlow = characterCreationController.flow()
+  if (!state || !publishedFlow) return
 
-  const characterId = characterCreationFlow.draft.characterId
+  const characterId = publishedFlow.draft.characterId
   const character = state.characters[characterId] ?? null
   const commands = []
 
   if (!character) {
     commands.push(
-      deriveCreateCharacterCommand(characterCreationFlow.draft, {
+      deriveCreateCharacterCommand(publishedFlow.draft, {
         identity: clientIdentity(),
         state: null
       })
@@ -474,7 +437,7 @@ const ensureCharacterCreationPublishedNow = async () => {
 
   if (!character?.creation) {
     commands.push(
-      deriveStartCharacterCreationCommand(characterCreationFlow.draft, {
+      deriveStartCharacterCreationCommand(publishedFlow.draft, {
         identity: clientIdentity(),
         state: null
       })
@@ -503,7 +466,7 @@ const ensureCharacterCreationPublished = () => {
 const characterCreationHomeworldPublisher =
   createCharacterCreationHomeworldPublisher({
     getState: () => state,
-    isReadOnly: () => characterCreationReadOnly,
+    isReadOnly: () => characterCreationController.readOnly(),
     commandIdentity,
     ensurePublished: ensureCharacterCreationPublished,
     postCharacterCreationCommand,
@@ -553,13 +516,9 @@ const openCharacterCreationFollow = (
   characterId: CharacterId,
   { readOnly = true }: { readOnly?: boolean } = {}
 ): void => {
-  const character = state?.characters[characterId] ?? null
-  const flow = character ? flowFromProjectedCharacter(character) : null
+  const flow = characterCreationController.openFollow(characterId, { readOnly })
   if (!flow) return
 
-  selectedCharacterId = characterId
-  characterCreationFlow = flow
-  characterCreationReadOnly = readOnly
   if (!readOnly) {
     characterSheetController.setOpen(false)
   }
@@ -569,22 +528,7 @@ const openCharacterCreationFollow = (
 }
 
 const refreshFollowedCharacterCreationFlow = () => {
-  if (!characterCreationReadOnly || !selectedCharacterId) return false
-
-  const refresh = refreshFollowedCharacterCreationFlowFromState({
-    state,
-    selectedCharacterId,
-    readOnly: characterCreationReadOnly,
-    panelOpen: characterCreationPanel.isOpen()
-  })
-
-  characterCreationFlow = refresh.flow
-  characterCreationReadOnly = refresh.readOnly
-  if (refresh.shouldClose) {
-    characterCreationPanel.close()
-  }
-
-  return refresh.shouldRender
+  return characterCreationController.refreshFollowed()
 }
 
 const shouldRefreshEditableCharacterCreationFlow = ({
@@ -592,10 +536,7 @@ const shouldRefreshEditableCharacterCreationFlow = ({
 }: {
   deferFollowedCreationRolls?: readonly ClientDiceRollActivity[]
 } = {}): boolean =>
-  shouldRefreshEditableCharacterCreationFlowFromState({
-    readOnly: characterCreationReadOnly,
-    panelOpen: characterCreationPanel.isOpen(),
-    flow: characterCreationFlow,
+  characterCreationController.shouldRefreshEditable({
     deferredRollCount: deferFollowedCreationRolls.length
   })
 
@@ -621,11 +562,17 @@ const characterCreationPanel = createCharacterCreationPanel({
   requestRender: () => render()
 })
 
+characterCreationController = createCharacterCreationController({
+  getState: () => state,
+  isPanelOpen: () => characterCreationPanel.isOpen(),
+  closePanel: () => characterCreationPanel.close()
+})
+
 const creationActivityFeedController = createCreationActivityFeedController({
   elements: { feed: els.creationActivityFeed },
   getViewerActorId: () => actorId,
   shouldSuppressCards: () =>
-    characterCreationPanel.isOpen() && !characterCreationReadOnly,
+    characterCreationPanel.isOpen() && !characterCreationController.readOnly(),
   setTimeout: window.setTimeout.bind(window),
   clearTimeout: window.clearTimeout.bind(window)
 })
@@ -645,9 +592,9 @@ const creationPresenceDock = createCreationPresenceDock({
 creationPresenceDock.hydrate()
 
 const startCharacterCreationWizard = () => {
-  characterCreationReadOnly = false
+  characterCreationController.setReadOnly(false)
   if (!characterCreationPanel.isOpen()) characterCreationPanel.show()
-  if (characterCreationFlow) {
+  if (characterCreationController.flow()) {
     renderCharacterCreationWizard()
     characterCreationPanel.scrollToTop()
     return
@@ -658,7 +605,7 @@ const startCharacterCreationWizard = () => {
     name: seed.name || null,
     characterType: 'PLAYER'
   })
-  characterCreationFlow = {
+  characterCreationController.setFlow({
     ...flow,
     draft: {
       ...flow.draft,
@@ -667,18 +614,19 @@ const startCharacterCreationWizard = () => {
       equipment: seed.equipment,
       notes: seed.notes
     }
+  })
+  const nextFlow = characterCreationController.flow()
+  if (nextFlow) {
+    characterCreationController.setFlow(
+      nextCharacterCreationWizardStep(nextFlow).flow
+    )
   }
-  characterCreationFlow = nextCharacterCreationWizardStep(
-    characterCreationFlow
-  ).flow
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
 }
 
 const startNewCharacterCreationWizard = async () => {
-  characterCreationFlow = null
-  characterCreationReadOnly = false
-  selectedCharacterId = null
+  characterCreationController.resetForNewCreation()
   selectPiece(null)
   characterSheetController.setOpen(false)
   characterCreationPanel.open()
@@ -687,40 +635,36 @@ const startNewCharacterCreationWizard = async () => {
 }
 
 const autoAdvanceCharacterCreationSetup = () => {
-  if (characterCreationReadOnly) return false
-  if (!characterCreationFlow) return false
-  if (
-    !['basics', 'characteristics', 'homeworld'].includes(
-      characterCreationFlow.step
-    )
-  ) {
+  const flow = characterCreationController.flow()
+  if (characterCreationController.readOnly()) return false
+  if (!flow) return false
+  if (!['basics', 'characteristics', 'homeworld'].includes(flow.step)) {
     return false
   }
   if (
-    characterCreationFlow.step === 'homeworld' &&
+    flow.step === 'homeworld' &&
     characterCreationStepIndex(
       creationStepFromStatus(
         currentCharacterCreationProjection()?.state.status ?? 'HOMEWORLD'
       )
     ) <= characterCreationStepIndex('homeworld')
   ) {
-    const validation = deriveCharacterCreationValidationSummary(
-      characterCreationFlow
-    )
+    const validation = deriveCharacterCreationValidationSummary(flow)
     if (validation.ok) {
-      characterCreationHomeworldPublisher.publishProgress(characterCreationFlow)
+      characterCreationHomeworldPublisher.publishProgress(flow)
     }
     return false
   }
 
-  const result = nextCharacterCreationWizardStep(characterCreationFlow)
+  const result = nextCharacterCreationWizardStep(flow)
   if (!result.moved) return false
-  characterCreationFlow = result.flow
+  characterCreationController.setFlow(result.flow)
   return true
 }
 
 const syncCharacterCreationWizardFields = () => {
-  if (!characterCreationFlow) return
+  const flow = characterCreationController.flow()
+  if (!flow) return
 
   const values: Record<string, string> = {}
   for (const field of Array.from(
@@ -731,10 +675,12 @@ const syncCharacterCreationWizardFields = () => {
     const key = field.dataset.characterCreationField
     if (key) values[key] = field.value
   }
-  characterCreationFlow = applyParsedCharacterCreationDraftPatch(
-    characterCreationFlow,
-    parseCharacterCreationDraftPatch(values)
-  ).flow
+  characterCreationController.setFlow(
+    applyParsedCharacterCreationDraftPatch(
+      flow,
+      parseCharacterCreationDraftPatch(values)
+    ).flow
+  )
 }
 
 const renderCharacterCreationWizardControls = () => {
@@ -748,12 +694,14 @@ const renderCharacterCreationWizardControls = () => {
 }
 
 const renderCharacterCreationWizard = () => {
-  reconcileEditableCharacterCreationFlowWithProjection()
+  characterCreationController.reconcileEditableWithProjection(
+    currentCharacterCreationProjection()
+  )
   while (autoAdvanceCharacterCreationSetup()) {
     // Keep setup steps linear even when reopening a flow that is already valid.
   }
 
-  const flow = characterCreationFlow
+  const flow = characterCreationController.flow()
   if (!characterCreationPanel.render(flow) || !flow) return
   els.characterCreationSteps.replaceChildren()
   els.characterCreationFields.replaceChildren(
@@ -765,9 +713,9 @@ const renderCharacterCreationWizard = () => {
   els.characterCreationWizard.hidden = false
   els.characterCreationWizard.classList.toggle(
     'read-only',
-    characterCreationReadOnly
+    characterCreationController.readOnly()
   )
-  if (characterCreationReadOnly) {
+  if (characterCreationController.readOnly()) {
     for (const control of Array.from(
       els.characterCreationFields.querySelectorAll<
         | HTMLButtonElement
@@ -783,12 +731,12 @@ const renderCharacterCreationWizard = () => {
 }
 
 characterCreationCommandController = createCharacterCreationCommandController({
-  getFlow: () => characterCreationFlow,
+  getFlow: () => characterCreationController.flow(),
   setFlow: (flow) => {
-    characterCreationFlow = flow
+    characterCreationController.setFlow(flow)
   },
   setError,
-  isReadOnly: () => characterCreationReadOnly,
+  isReadOnly: () => characterCreationController.readOnly(),
   syncFields: syncCharacterCreationWizardFields,
   getState: () => state,
   flushHomeworldProgress: () => characterCreationHomeworldPublisher.flush(),
@@ -797,7 +745,7 @@ characterCreationCommandController = createCharacterCreationCommandController({
   commandIdentity,
   requestId,
   waitForDiceRevealOrDelay,
-  syncFlowFromRoomState: syncCharacterCreationFlowFromRoomState,
+  syncFlowFromRoomState: characterCreationController.syncFlowFromRoomState,
   autoAdvanceSetup: autoAdvanceCharacterCreationSetup,
   renderWizard: renderCharacterCreationWizard,
   scrollToTop: () => characterCreationPanel.scrollToTop()
@@ -993,7 +941,7 @@ const renderCharacterCreationDeath = (
   rollValue.textContent = viewModel.roll
   roll.append(rollLabel, rollValue)
   panel.append(eyebrow, title, detail, roll)
-  if (!characterCreationReadOnly) {
+  if (!characterCreationController.readOnly()) {
     const actions = document.createElement('div')
     actions.className = 'creation-death-actions'
     const next = document.createElement('button')
@@ -1188,12 +1136,15 @@ const renderCharacterCreationAgingChoices = (
       button.type = 'button'
       button.textContent = option.toUpperCase()
       button.addEventListener('click', () => {
-        if (!characterCreationFlow) return
-        characterCreationFlow = applyCharacterCreationAgingChange({
-          flow: characterCreationFlow,
-          index: change.index,
-          characteristic: option
-        }).flow
+        const flow = characterCreationController.flow()
+        if (!flow) return
+        characterCreationController.setFlow(
+          applyCharacterCreationAgingChange({
+            flow,
+            index: change.index,
+            characteristic: option
+          }).flow
+        )
         setError('')
         renderCharacterCreationWizard()
       })
@@ -1297,23 +1248,26 @@ const renderCharacterCreationBackgroundSkills = (
           ? 'Select, then choose a specialty'
           : 'Select background skill'
     button.addEventListener('click', () => {
-      if (!characterCreationFlow) return
+      const flow = characterCreationController.flow()
+      if (!flow) return
       syncCharacterCreationWizardFields()
+      const syncedFlow = characterCreationController.flow()
+      if (!syncedFlow) return
       const wasSelected = option.selected
-      characterCreationFlow = {
-        ...characterCreationFlow,
+      const nextFlow = {
+        ...syncedFlow,
         draft: wasSelected
           ? removeCharacterCreationBackgroundSkillSelection(
-              characterCreationFlow.draft,
+              syncedFlow.draft,
               option.label
             )
           : applyCharacterCreationBackgroundSkillSelection(
-              characterCreationFlow.draft,
+              syncedFlow.draft,
               option.label
             )
       }
+      characterCreationController.setFlow(nextFlow)
       setError('')
-      const nextFlow = characterCreationFlow
       renderCharacterCreationWizard()
       if (!wasSelected) {
         if (option.cascade) {
@@ -1362,25 +1316,28 @@ const renderCharacterCreationCascadeChoice = (
       ? 'This opens another cascade choice'
       : 'Resolve cascade skill'
     button.addEventListener('click', () => {
-      if (!characterCreationFlow) return
+      const flow = characterCreationController.flow()
+      if (!flow) return
       syncCharacterCreationWizardFields()
-      characterCreationFlow =
+      const syncedFlow = characterCreationController.flow()
+      if (!syncedFlow) return
+      const nextFlow =
         scope === 'term'
           ? resolveCharacterCreationTermCascadeSkill({
-              flow: characterCreationFlow,
+              flow: syncedFlow,
               cascadeSkill: cascade.cascadeSkill,
               selection: option.label
             }).flow
           : {
-              ...characterCreationFlow,
+              ...syncedFlow,
               draft: resolveCharacterCreationCascadeSkill({
-                draft: characterCreationFlow.draft,
+                draft: syncedFlow.draft,
                 cascadeSkill: cascade.cascadeSkill,
                 selection: option.label
               })
             }
+      characterCreationController.setFlow(nextFlow)
       setError('')
-      const nextFlow = characterCreationFlow
       renderCharacterCreationWizard()
       if (scope === 'term') {
         characterCreationCommandController
@@ -1653,11 +1610,14 @@ const renderCharacterCreationTermResolution = (
         ? 'Serve required term'
         : 'Serve another term'
     another.addEventListener('click', () => {
-      if (!characterCreationFlow) return
-      characterCreationFlow = completeCharacterCreationCareerTerm({
-        flow: characterCreationFlow,
-        continueCareer: true
-      }).flow
+      const flow = characterCreationController.flow()
+      if (!flow) return
+      characterCreationController.setFlow(
+        completeCharacterCreationCareerTerm({
+          flow,
+          continueCareer: true
+        }).flow
+      )
       setError('')
       renderCharacterCreationWizard()
       characterCreationPanel.scrollToTop()
@@ -1669,11 +1629,14 @@ const renderCharacterCreationTermResolution = (
   muster.type = 'button'
   muster.textContent = 'Muster out'
   muster.addEventListener('click', () => {
-    if (!characterCreationFlow) return
-    characterCreationFlow = completeCharacterCreationCareerTerm({
-      flow: characterCreationFlow,
-      continueCareer: false
-    }).flow
+    const flow = characterCreationController.flow()
+    if (!flow) return
+    characterCreationController.setFlow(
+      completeCharacterCreationCareerTerm({
+        flow,
+        continueCareer: false
+      }).flow
+    )
     setError('')
     renderCharacterCreationWizard()
     characterCreationPanel.scrollToTop()
@@ -1694,10 +1657,10 @@ const selectFailedQualificationCareer = (
   career: string,
   drafted: boolean
 ): void => {
-  if (!characterCreationFlow) return
-  characterCreationFlow = applyParsedCharacterCreationDraftPatch(
-    characterCreationFlow,
-    {
+  const flow = characterCreationController.flow()
+  if (!flow) return
+  characterCreationController.setFlow(
+    applyParsedCharacterCreationDraftPatch(flow, {
       careerPlan: {
         career,
         qualificationRoll: null,
@@ -1712,8 +1675,8 @@ const selectFailedQualificationCareer = (
         canAdvance: null,
         drafted
       }
-    }
-  ).flow
+    }).flow
+  )
   setError('')
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
@@ -1817,7 +1780,7 @@ const renderCharacterCreationBasicTrainingButton = (
   button.textContent = viewModel.label
   button.disabled = viewModel.disabled
   bindAsyncActionButton(button, () => {
-    if (!characterCreationFlow) return
+    if (!characterCreationController.flow()) return
     syncCharacterCreationWizardFields()
     setError('')
     return characterCreationCommandController
@@ -1987,7 +1950,8 @@ const createCustomBoard = async () => {
 }
 
 const createWizardToken = async () => {
-  if (!characterCreationFlow) return
+  const flow = characterCreationController.flow()
+  if (!flow) return
   if (!selectedBoard()) {
     await postBoardCommand(
       createBoardCommand(bootstrapIdentity()) as BoardCommand,
@@ -2001,7 +1965,7 @@ const createWizardToken = async () => {
   const width = 50
   const height = 50
   const scale = 1
-  const pieceId = uniquePieceId(state, characterCreationFlow.draft.name)
+  const pieceId = uniquePieceId(state, flow.draft.name)
   const x = Math.max(
     0,
     Math.min(board.width - width * scale, 160 + (boardPieces().length % 8) * 58)
@@ -2019,8 +1983,8 @@ const createWizardToken = async () => {
     ...commandIdentity(),
     pieceId,
     boardId: board.id,
-    name: characterCreationFlow.draft.name.trim(),
-    characterId: characterCreationFlow.draft.characterId,
+    name: flow.draft.name.trim(),
+    characterId: flow.draft.characterId,
     imageAssetId: null,
     x,
     y,
@@ -2032,12 +1996,15 @@ const createWizardToken = async () => {
 }
 
 const finishCharacterCreationWizard = async () => {
-  if (!characterCreationFlow) return
+  const flow = characterCreationController.flow()
+  if (!flow) return
   setError('')
   syncCharacterCreationWizardFields()
+  const syncedFlow = characterCreationController.flow()
+  if (!syncedFlow) return
 
   const validation = deriveCharacterCreationValidationSummary({
-    ...characterCreationFlow,
+    ...syncedFlow,
     step: 'review'
   })
   if (!validation.ok) {
@@ -2053,7 +2020,7 @@ const finishCharacterCreationWizard = async () => {
     )
   }
 
-  const commands = deriveCharacterCreationCommands(characterCreationFlow, {
+  const commands = deriveCharacterCreationCommands(syncedFlow, {
     identity: clientIdentity(),
     state
   })
@@ -2065,7 +2032,7 @@ const finishCharacterCreationWizard = async () => {
   await postCharacterCreationCommands(commands as CharacterCreationCommand[])
 
   await createWizardToken()
-  characterCreationFlow = null
+  characterCreationController.setFlow(null)
   renderCharacterCreationWizard()
   characterCreationPanel.close()
   characterSheetController.setOpen(true)
@@ -2073,23 +2040,26 @@ const finishCharacterCreationWizard = async () => {
 }
 
 const advanceCharacterCreationWizard = async () => {
-  if (!characterCreationFlow) {
+  const flow = characterCreationController.flow()
+  if (!flow) {
     startCharacterCreationWizard()
     return
   }
 
   syncCharacterCreationWizardFields()
-  if (characterCreationFlow.step === 'review') {
+  const syncedFlow = characterCreationController.flow()
+  if (!syncedFlow) return
+  if (syncedFlow.step === 'review') {
     await finishCharacterCreationWizard()
     return
   }
 
-  const result = nextCharacterCreationWizardStep(characterCreationFlow)
+  const result = nextCharacterCreationWizardStep(syncedFlow)
   if (!result.moved) {
     setError(result.validation.errors.join(', '))
   } else {
     setError('')
-    characterCreationFlow = result.flow
+    characterCreationController.setFlow(result.flow)
     renderCharacterCreationWizard()
     characterCreationPanel.scrollToTop()
     return
@@ -2098,11 +2068,14 @@ const advanceCharacterCreationWizard = async () => {
 }
 
 const backCharacterCreationWizard = () => {
-  if (!characterCreationFlow) return
+  const flow = characterCreationController.flow()
+  if (!flow) return
   syncCharacterCreationWizardFields()
-  characterCreationFlow = backCharacterCreationWizardStep(
-    characterCreationFlow
-  ).flow
+  const syncedFlow = characterCreationController.flow()
+  if (!syncedFlow) return
+  characterCreationController.setFlow(
+    backCharacterCreationWizardStep(syncedFlow).flow
+  )
   setError('')
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()
@@ -2526,7 +2499,7 @@ createRoomMenuController({
     actorSessionSecret = resolveActorSessionSecret({ roomId, actorId })
     appSession.setRoomIdentity({ roomId, actorId })
     diceRevealCoordinator.resetStateTracking()
-    selectedCharacterId = null
+    characterCreationController.setSelectedCharacterId(null)
     creationActivityFeedController.clear()
     creationPresenceDock.hydrate()
     selectPiece(null)
@@ -2560,11 +2533,7 @@ els.createCharacterRail.addEventListener('click', () => {
 
 els.characterCreatorClose.addEventListener('click', () => {
   characterCreationPanel.close()
-  if (characterCreationReadOnly) {
-    characterCreationFlow = null
-    characterCreationReadOnly = false
-    selectedCharacterId = null
-  }
+  characterCreationController.clearReadOnlyFollow()
   render()
 })
 
@@ -2597,7 +2566,7 @@ els.characterCreationFields.addEventListener('input', () => {
 
 els.characterCreationFields.addEventListener('change', () => {
   syncCharacterCreationWizardFields()
-  const nextFlow = characterCreationFlow
+  const nextFlow = characterCreationController.flow()
   if (nextFlow?.step === 'homeworld') {
     characterCreationHomeworldPublisher.publishProgress(nextFlow)
   }
