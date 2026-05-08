@@ -16,6 +16,8 @@ grouped by purpose so each future change has an obvious home.
   task queue for the guided Cepheus character creation flow.
 - [Architecture Decision Records](adr/README.md): accepted technical decisions
   and open decision points.
+- [Contributor workflow](../CONTRIBUTING.md): local setup, verification gates,
+  hooks, and boundary checks.
 
 ## Product
 
@@ -35,6 +37,7 @@ grouped by purpose so each future change has an obvious home.
 
 - [Development standards](engineering/development-standards.md)
 - [Coding standards](engineering/coding-standards.md)
+- [Contributor workflow](../CONTRIBUTING.md)
 - [Deployment](engineering/deployment.md)
 - [Security baseline](engineering/security-baseline.md)
 - [Testing strategy](engineering/testing-strategy.md)

@@ -5,7 +5,7 @@ into ordered implementation slices while preserving clear ownership for parallel
 agents. Shipped work belongs in `git log`; this file is for active or future
 work that still needs a named home.
 
-Last reviewed: 2026-05-06.
+Last reviewed: 2026-05-08.
 
 ## North Star
 
@@ -88,6 +88,9 @@ Each wave should make later work simpler, safer, or more testable.
 7. Polish the mobile PWA experience once the flow shape is stable.
 8. Expand tactical board, map, LOS, referee, Discord, and rules breadth after
    the core table loop is solid.
+9. Make high-risk UX flows executable in browser automation before continuing
+   broad UI polish, so stale-state, reveal-timing, and mobile layout bugs are
+   found by repeatable runs instead of manual probing.
 
 Work should pause before a later wave if the earlier wave reveals an
 architecture issue that would make the next features harder to reason about.
@@ -314,6 +317,88 @@ Done when:
 - PWA install and update behavior is predictable on mobile.
 - Docs links and deploy config fail early with actionable messages.
 - Heavy checks are available without making every small docs change expensive.
+
+### Slice 0F: Automated UX Regression And Creation Client Architecture
+
+Status: not started. This is the next leverage point for the recent character
+creation UX bugs. The current unit tests cover rules, commands, projectors, and
+view helpers well, but browser-only failures still escape because `app.ts`
+owns too much orchestration and the live creator mixes authoritative projection
+state, local draft state, dice reveal timing, DOM rendering, and async command
+guards.
+
+Primary write ownership:
+
+- `src/client/app/app.ts`
+- new `src/client/app/character-creation-controller.ts`
+- new `src/client/app/character-creation-renderer.ts`
+- new `src/client/app/character-creation-command-adapter.ts`
+- new `src/client/app/dice-reveal-coordinator.ts`
+- browser/E2E specs or smoke scripts under `e2e/` or `scripts/`
+- `docs/engineering/testing-strategy.md`
+- `package.json` and CI workflow files if browser automation is added
+
+Tasks:
+
+- Add an executable browser smoke for character creation that drives the real
+  client through the app shell: create traveller, roll six characteristics,
+  complete homeworld/background choices, qualify or enter fallback, apply
+  basic training, roll survival, and report the current phase/action on
+  failure.
+- Extend that smoke into a small repeat runner that creates several disposable
+  travellers, captures console errors, server response failures, current
+  creation status, final sheet summary, and a screenshot or DOM snapshot when
+  the flow gets stuck.
+- Add two-tab follow tests for the browser-only contract: the owner can act,
+  the spectator sees the same revealed creation state after dice finish, the
+  spectator cannot click owner-only controls, and refresh recovers from the
+  server projection.
+- Add mobile viewport checks for the high-risk creator screens:
+  characteristics, homeworld/background skills, career selection, survival or
+  death, term skills, reenlistment, mustering out, and spectator follow cards.
+  The checks should assert no important action is hidden, disabled by accident,
+  or overlapped at phone widths.
+- Add reveal-timing assertions for every roll-bearing creation action:
+  no roll-dependent result text appears before the dice reveal boundary, the
+  action button is disabled while the roll is pending, and controls unblock
+  only after the reveal has been applied.
+- Add lightweight UI invariants that can run without a full browser where
+  possible: exactly one primary next action for a projected phase, no enabled
+  roll action when a roll is pending, no local-only action for a read-only
+  spectator, and no stale local flow after a server projection advances.
+- Extract a `characterCreationController` that owns local creator state and
+  exposes explicit methods for opening owner mode, opening spectator mode,
+  applying authoritative state, submitting choices, and disposing listeners or
+  timers.
+- Extract a `diceRevealCoordinator` so roll animation, result deferral,
+  spectator reveal timing, and button unblocking are not reimplemented per
+  button or per view.
+- Make the rendered creation UI consume a single creation view model derived
+  from authoritative projection plus local pending choices. Server projection
+  owns phase, legal actions, progress, roll facts, and completion gates; local
+  state owns only unsubmitted choices and transient UI controls.
+- Move browser action wiring behind a command adapter that always uses the
+  existing client command router. Roll-bearing commands should be impossible to
+  double-submit from the same rendered control.
+- Decide and document the browser test toolchain. Prefer Delta-V's Playwright
+  pattern as a dev/test dependency if needed, while keeping the runtime client
+  dependency-free.
+- Add the browser smoke to the full verification gate once it is stable, and
+  keep a smaller local command available for rapid character creation UX
+  debugging.
+
+Done when:
+
+- A single command can reproduce the owner character creation happy path and
+  common death/fallback branches in a real browser.
+- A single command can verify spectator follow behavior across two browser
+  contexts or tabs.
+- Browser failures leave enough artifacts to fix the bug without manually
+  replaying the whole flow.
+- `app.ts` no longer owns character creation orchestration directly.
+- Roll reveal timing is enforced by one coordinator and tested as a contract.
+- New creator UX work starts by adding or updating an executable scenario,
+  not by relying on manual clicking as the primary regression check.
 
 ## Phase 1: Server-Backed Character Creation Spine
 
@@ -732,24 +817,28 @@ The next batch should run like this, in this order:
    wire `AppSession`, split the projector registry by domain, and keep
    publication parity plus viewer-safe responses on the single publication
    path.
-2. Add semantic character creation commands/events for the earliest SRD facts:
+2. Add the automated UX regression slice before more broad creator polish:
+   character creation browser smoke, multi-character repeat runner, two-tab
+   spectator follow checks, mobile viewport assertions, and a dice reveal
+   coordinator contract.
+3. Add semantic character creation commands/events for the earliest SRD facts:
    characteristics, homeworld/background/cascade, qualification, draft, career
    term start, and basic training. Update protocol fixtures and live activity
    descriptors with each event family.
-3. Move legal-action state into server projection: pending decisions, roll
+4. Move legal-action state into server projection: pending decisions, roll
    requirements, failed-qualification options, remaining term skills, remaining
    mustering benefits, and completion gates. Reject commands that are not legal
    from the current projection.
-4. Complete the SRD term loop on the server projection in rules order:
+5. Complete the SRD term loop on the server projection in rules order:
    survival, commission, advancement, term skill tables, and reenlistment.
-5. Add death next, because failed survival must not be hidden behind happy-path
+6. Add death next, because failed survival must not be hidden behind happy-path
    finalization. Keep mishap tables behind an explicit optional variant.
-6. Add aging/anagathics, then mustering out, then final sheet/export. Each
+7. Add aging/anagathics, then mustering out, then final sheet/export. Each
    slice should add semantic events, projection replay tests, protocol fixtures,
    and compact activity descriptors.
-7. Finish live following once semantic facts exist: follower cards, dice reveal
+8. Finish live following once semantic facts exist: follower cards, dice reveal
    timing, refresh recovery, and future Discord-consumable event details.
-8. Run PWA/release work continuously when it does not compete with the core
+9. Run PWA/release work continuously when it does not compete with the core
    architecture path; make it a hard gate before public play.
 
 The first product-visible milestone after this batch is: a connected player can

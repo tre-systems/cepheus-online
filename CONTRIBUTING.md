@@ -1,7 +1,8 @@
 # Contributing
 
-Cepheus Online is currently a small rewrite project. Keep changes narrow,
-tested, and aligned with the source boundaries.
+Contributor workflow only. For architecture, coding conventions, and current
+product priorities, start with [AGENTS.md](AGENTS.md) and the owner docs linked
+from [docs/README.md](docs/README.md).
 
 ## Setup
 
@@ -12,42 +13,70 @@ npm run prepare
 
 `npm run prepare` installs Husky hooks for local commits.
 
-## Common Commands
+## Verification Commands
 
-```bash
-npm run format
-npm run build:client
-npm run lint
-npm run check
-npm test
-npm run verify
-```
+Use the narrowest command that proves the change.
 
-- `format` writes Biome formatting changes.
-- `build:client` embeds `src/client/app` into generated Worker-served assets.
-- `lint` runs Biome checks.
-- `check` runs TypeScript without emitting.
-- `test` compiles tests to `build/test` and runs Node's test runner.
-- `verify` rebuilds client assets, then runs lint, typecheck, and tests.
+| Command | Purpose |
+| --- | --- |
+| `npm run build:client` | Compiles `src/client/app` and embeds served assets in `src/server/static-client-assets.generated.ts`. |
+| `npm run lint` | Runs Biome lint rules over source, scripts, JSON, and docs configured in `biome.json`. |
+| `npm run check:docs` | Checks internal Markdown file and anchor links. |
+| `npm run check:boundaries` | Enforces source-boundary safety rules that lint cannot express clearly. |
+| `npm run check` | Runs TypeScript with `noEmit` for app source. |
+| `npm test` | Compiles colocated tests and runs Node's built-in test runner. |
+| `npm run verify:quick` | Fast non-test gate: build client, lint, docs, boundary checks, typecheck. |
+| `npm run verify:full` | Full local gate: `verify:quick` plus `npm test`. |
+| `npm run verify` | Alias for `verify:full`. |
+| `npm run smoke:deployed -- <url>` | Production Worker smoke for routes, static assets, commands, viewer filtering, and WebSocket broadcasts. |
+
+Expected checks by change type:
+
+- Documentation only: `npm run check:docs`.
+- Client shell: `npm run build:client && npm run verify:quick && npm test`.
+- Shared rules, protocol, server, or projection: `npm run verify:full`.
+- Deployment or Worker asset serving: `npm run verify:full && npm run deploy:dry-run`.
+- Production confidence after deploy: `npm run smoke:deployed -- https://cepheus-online.rob-gilks.workers.dev/`.
 
 ## Hooks
 
-The pre-commit hook runs:
+The pre-commit hook inspects staged paths.
 
-```bash
-npm run build:client
-npm run lint
-npm run check
-```
+- Documentation-only commits run `npm run check:docs`.
+- Code or tooling commits run `npm run verify:quick`.
 
-The pre-push hook runs:
+The pre-push hook inspects the pushed diff.
 
-```bash
-npm run verify
-```
+- Documentation-only pushes run `npm run check:docs`.
+- Normal pushes run `npm run verify:quick`.
+- Set `CEPHEUS_FULL_PRE_PUSH=1` to run `npm run verify:full` before pushing.
 
-Set `HUSKY=0` only when you have already run the equivalent checks manually and
-need to bypass hooks for a local workflow issue.
+Use `HUSKY=0` only when you have already run equivalent checks and need to
+bypass hooks for a local workflow issue.
+
+## CI And Dependency Hygiene
+
+GitHub Actions runs `npm run verify` and a Cloudflare deploy dry-run for pushes
+and pull requests targeting `main`. Pushes to `main` deploy only after that
+verification job passes.
+
+A scheduled dependency audit runs weekly with `npm audit --omit=dev
+--audit-level=high`. Dependabot is configured for weekly npm patch updates with
+a small pull request limit so dependency maintenance stays reviewable.
+
+## Boundary Checks
+
+`npm run check:boundaries` enforces rules that protect the architecture:
+
+- no direct `innerHTML =` writes outside `src/client/dom.ts`
+- no `Math.random` in non-test `src/shared`
+- no `console.log`, `console.warn`, or `console.error` in non-test
+  `src/shared`
+- no new `// @ts-nocheck` files; the existing large client shell remains a
+  known migration debt until the client kernel refactor removes it
+
+Biome also enforces import-direction rules for `src/shared`, `src/server`, and
+`src/client`.
 
 ## Source Rules
 
@@ -56,9 +85,21 @@ need to bypass hooks for a local workflow issue.
 - `src/client` imports `src/shared` and `src/client`.
 - Runtime dependencies remain zero unless an architectural decision explicitly
   accepts one.
+- Development-only tooling is allowed when it improves consistency without
+  changing the shipped app.
 - Local published-product asset folders such as `Geomorphs/` and `Counters/`
   must not be committed.
 
-Read [AGENTS.md](AGENTS.md) and
-[docs/engineering/coding-standards.md](docs/engineering/coding-standards.md)
-before making structural changes.
+## Browser Testing Direction
+
+The current automated gate is mostly unit and protocol oriented. Before the
+character creation UX refactor, the backlog calls for a Delta-V-style browser
+smoke harness that drives the real app, captures console errors and screenshots
+on failure, and tests two-tab follow behavior. Keep browser tests focused on
+browser-only contracts; rules and state machines belong in unit tests.
+
+## Documentation
+
+One owner doc per topic. Update the relevant owner doc when behavior,
+architecture, routes, schemas, or operating procedures change. Link to existing
+docs rather than duplicating long explanations.

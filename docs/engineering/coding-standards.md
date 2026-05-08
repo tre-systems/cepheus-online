@@ -168,6 +168,27 @@ automatic fan-out. It is not a global game store.
 Biome is the formatter and linter. Treat lint and typecheck failures as
 blockers.
 
+The local gate is split by cost:
+
+- `npm run verify:quick`: generated client assets, lint, docs, source-boundary
+  checks, and TypeScript.
+- `npm run verify:full`: `verify:quick` plus the unit test suite.
+- `npm run smoke:deployed -- <url>`: deployed Worker smoke after a production
+  deploy or deployment-sensitive change.
+
+Husky runs a doc-only fast path for Markdown-only changes and `verify:quick`
+for code changes. Set `CEPHEUS_FULL_PRE_PUSH=1` before pushing when you want
+the hook to run the full local gate.
+
+`npm run check:boundaries` enforces architecture rules that are easy to miss in
+review:
+
+- `innerHTML` writes only in `src/client/dom.ts`
+- no `Math.random` in non-test `src/shared`
+- no console logging in non-test `src/shared`
+- no new `// @ts-nocheck` files while the existing client shell is being
+  decomposed
+
 Formatting defaults:
 
 - two-space indentation

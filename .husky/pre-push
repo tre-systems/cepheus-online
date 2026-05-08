@@ -1,1 +1,63 @@
-npm run verify
+zero_sha="0000000000000000000000000000000000000000"
+
+is_doc_path() {
+  case "$1" in
+    README.md|CONTRIBUTING.md|AGENTS.md|docs/*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+collect_pushed_files() {
+  while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+    [ -z "$local_ref" ] && continue
+    [ "$local_sha" = "$zero_sha" ] && continue
+
+    if [ "$remote_sha" = "$zero_sha" ]; then
+      git rev-list "$local_sha" --not --remotes |
+        while IFS= read -r commit; do
+          [ -z "$commit" ] && continue
+          git show --pretty='' --name-only "$commit"
+        done
+      continue
+    fi
+
+    git diff --name-only "$remote_sha" "$local_sha"
+  done | sort -u
+}
+
+pushed_files="$(collect_pushed_files)"
+
+if [ -z "$pushed_files" ]; then
+  exit 0
+fi
+
+docs_only=1
+while IFS= read -r path; do
+  [ -z "$path" ] && continue
+  if ! is_doc_path "$path"; then
+    docs_only=0
+    break
+  fi
+done <<EOF
+$pushed_files
+EOF
+
+if [ "$docs_only" -eq 1 ]; then
+  echo "Documentation-only push: running doc link checks."
+  npm run check:docs
+  exit 0
+fi
+
+if [ "${CEPHEUS_FULL_PRE_PUSH:-0}" = "1" ]; then
+  echo "Running full pre-push verification."
+  npm run verify:full
+  exit 0
+fi
+
+echo "Running quick pre-push verification. CI runs the full gate."
+npm run verify:quick
+echo "Set CEPHEUS_FULL_PRE_PUSH=1 to run npm run verify:full before pushing."

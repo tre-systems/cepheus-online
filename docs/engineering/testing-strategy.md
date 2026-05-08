@@ -8,8 +8,14 @@ test plan should continue to grow in layers as implementation expands.
 - `npm run check`: TypeScript compile check for `src/**/*.ts`.
 - `npm run check:docs`: dependency-free internal Markdown link check for
   root docs, `data/`, and `docs/`.
+- `npm run check:boundaries`: dependency-free source-boundary checks for
+  direct HTML writes, accidental shared-layer randomness/logging, and new
+  `ts-nocheck` files.
 - `npm test`: compiles source and co-located `*.test.ts` files to a temporary
   CommonJS build and runs Node's built-in test runner.
+- `npm run verify:quick`: rebuilds served client assets, then runs lint,
+  documentation checks, boundary checks, and TypeScript.
+- `npm run verify:full`: runs `verify:quick` plus the unit test suite.
 - Current tests cover shared protocol/dice/projection behavior, event envelope
   versioning, chunk-boundary storage, import boundaries, stale `expectedSeq`
   rejection, Durable Object HTTP flow, Worker static fallback including PWA
@@ -88,15 +94,27 @@ Use browser tests only for browser-specific contracts:
 Game rules and state machines belong in unit tests, not in broad browser
 scenarios.
 
+The next browser-test slice should follow the Delta-V pattern:
+
+- an executable character creation smoke that drives the real app shell
+- repeat runs that create several disposable travellers and leave screenshots
+  or DOM snapshots on failure
+- two-tab owner/spectator tests for live character creation follow mode
+- mobile viewport checks for the high-risk creator screens
+- explicit assertions that roll-dependent results are hidden until the dice
+  reveal boundary
+
+Browser tests are allowed to add development dependencies such as Playwright
+once the toolchain is selected. That does not change the runtime dependency
+budget for the shipped app.
+
 ## Local Verification
 
 The target local gate once implementation starts:
 
 ```bash
-npm run check:docs
-npm run check
-npm test
-npm run build
+npm run verify:quick
+npm run verify:full
 npm run test:e2e
 ```
 

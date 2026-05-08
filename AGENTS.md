@@ -44,16 +44,19 @@ It points to the canonical owner docs rather than repeating their full content.
 npm run format
 npm run build:client
 npm run lint
+npm run check:docs
+npm run check:boundaries
 npm run check
 npm test
+npm run verify:quick
 npm run verify
 ```
 
 Use the narrowest check that proves the change:
 
-- docs only: `npm run lint` is usually enough for Markdown/JSON formatting.
-- client shell changes: `npm run build:client && npm run check && npm test`.
-- shared/protocol/server changes: `npm run check && npm test`.
+- docs only: `npm run check:docs` is usually enough.
+- client shell changes: `npm run verify:quick && npm test`.
+- shared/protocol/server changes: `npm run verify:full`.
 - formatting-only changes: `npm run format`, then review the diff.
 - release-level confidence: `npm run verify`.
 

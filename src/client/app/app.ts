@@ -137,6 +137,14 @@ let characterCreationFlow = null
 let characterCreationReadOnly = false
 let characterCreationPublishPromise = null
 let characterCreationHomeworldPublishPromise = Promise.resolve()
+const characterCreationCharacteristicKeys = [
+  'str',
+  'dex',
+  'end',
+  'int',
+  'edu',
+  'soc'
+]
 
 const setStatus = (text) => {
   els.status.textContent = text
@@ -413,10 +421,14 @@ const reconcileEditableCharacterCreationFlowWithProjection = () => {
   const projectedStep = creationStepFromStatus(creation.state.status)
   const projectedStepIndex = characterCreationStepIndex(projectedStep)
   const localStepIndex = characterCreationStepIndex(characterCreationFlow.step)
+  const localCharacteristicsComplete = characterCreationCharacteristicKeys.every(
+    (key) => characterCreationFlow.draft.characteristics[key] != null
+  )
   const shouldSyncToProjection =
     projectedStepIndex < localStepIndex ||
     (projectedStepIndex > localStepIndex &&
-      characterCreationFlow.step !== 'characteristics') ||
+      (characterCreationFlow.step !== 'characteristics' ||
+        localCharacteristicsComplete)) ||
     (creation.state.status === 'SKILLS_TRAINING' &&
       JSON.stringify(creation.pendingCascadeSkills ?? []) !==
         JSON.stringify(characterCreationFlow.draft.pendingTermCascadeSkills)) ||
@@ -438,14 +450,24 @@ const handleServerMessage = (message) => {
     animatedDiceRollActivityIds,
     revealedDiceIds: diceRevealState.revealedDiceIds
   })
+  const deferredStateRolls = application.shouldApplyState
+    ? diceRollsForStateDeferral(
+        application.state,
+        liveActivityApplication.diceRollActivities
+      )
+    : []
   const sessionState = appSession.applyServerMessage(application)
   setError(sessionState.requestError || '')
   if (application.shouldApplyState) {
-    applyState(application.state, {
-      animateLatestDiceLog: liveActivityApplication.animateLatestDiceLog,
-      deferDiceRevealIds: liveActivityApplication.deferDiceRevealIds,
-      deferFollowedCreationRolls: liveActivityApplication.diceRollActivities
-    })
+    if (deferredStateRolls.length > 0) {
+      applyStateAfterDiceReveal(application.state, deferredStateRolls)
+    } else {
+      applyState(application.state, {
+        animateLatestDiceLog: liveActivityApplication.animateLatestDiceLog,
+        deferDiceRevealIds: liveActivityApplication.deferDiceRevealIds,
+        deferFollowedCreationRolls: liveActivityApplication.diceRollActivities
+      })
+    }
   }
   showCreationActivityCards(
     application,
@@ -454,6 +476,14 @@ const handleServerMessage = (message) => {
   for (const activity of liveActivityApplication.diceRollActivities) {
     animatedDiceRollActivityIds.add(activity.id)
     animateRoll(activity)
+  }
+  if (
+    liveActivityApplication.diceRollActivities.length === 0 &&
+    deferredStateRolls.length > 0
+  ) {
+    for (const roll of deferredStateRolls) {
+      animateRoll(roll)
+    }
   }
   if (sessionState.recovery.shouldReload) {
     fetchState()
@@ -486,6 +516,30 @@ const waitForDiceRevealOrDelay = (roll) => {
     waitForDiceReveal(roll),
     new Promise((resolve) => window.setTimeout(resolve, delayMs))
   ])
+}
+
+const diceRollsForStateDeferral = (nextState, diceRollActivities) => {
+  if (!firstStateApplied) return []
+  if (diceRollActivities.length > 0) return diceRollActivities
+
+  const latestRoll = nextState?.diceLog?.[nextState.diceLog.length - 1] ?? null
+  if (!latestRoll) return []
+  if (latestRoll.id === latestDiceId) return []
+  if (diceRevealState.isRevealed(latestRoll.id)) return []
+  return [latestRoll]
+}
+
+const applyStateAfterDiceReveal = (nextState, diceRollActivities) => {
+  Promise.all(diceRollActivities.map((roll) => waitForDiceRevealOrDelay(roll)))
+    .then(() => {
+      const currentSeq = state?.eventSeq ?? -1
+      const nextSeq = nextState?.eventSeq ?? -1
+      if (nextSeq < currentSeq) return
+      applyState(nextState, {
+        animateLatestDiceLog: false
+      })
+    })
+    .catch((error) => setError(error.message))
 }
 
 const commandRouter = createAppCommandRouter({
@@ -1524,8 +1578,15 @@ const bindCharacterCreationActionButton = (button, callback) => {
     event.preventDefault()
     if (active) return
     active = true
+    const priorDisabled = 'disabled' in button ? button.disabled : null
+    if ('disabled' in button) {
+      button.disabled = true
+    }
     Promise.resolve(callback()).finally(() => {
       active = false
+      if ('disabled' in button) {
+        button.disabled = priorDisabled ?? false
+      }
     })
   }
   button.addEventListener('pointerdown', run)
@@ -1565,11 +1626,11 @@ const renderCharacterCreationTermSkillTables = (flow) => {
     button.textContent = action.label
     button.title = action.reason
     button.disabled = action.disabled
-    bindCharacterCreationActionButton(button, () => {
+    bindCharacterCreationActionButton(button, () =>
       rollCharacterCreationTermSkill(action.table).catch((error) =>
         setError(error.message)
       )
-    })
+    )
     buttons.append(button)
   }
 
@@ -1589,11 +1650,11 @@ const renderCharacterCreationReenlistmentRollButton = (flow) => {
   const button = document.createElement('button')
   button.type = 'button'
   button.textContent = action.label
-  bindCharacterCreationActionButton(panel, () => {
+  bindCharacterCreationActionButton(button, () =>
     rollCharacterCreationReenlistment().catch((error) =>
       setError(error.message)
     )
-  })
+  )
   const note = document.createElement('small')
   note.textContent = action.reason
   panel.append(button, note)
@@ -1609,9 +1670,9 @@ const renderCharacterCreationAgingRollButton = (flow) => {
   const button = document.createElement('button')
   button.type = 'button'
   button.textContent = action.label
-  bindCharacterCreationActionButton(panel, () => {
+  bindCharacterCreationActionButton(button, () =>
     rollCharacterCreationAging().catch((error) => setError(error.message))
-  })
+  )
   const note = document.createElement('small')
   const modifier = action.modifier === 0 ? '' : ` (${action.modifier})`
   note.textContent = `${action.reason}${modifier}`
@@ -1940,11 +2001,11 @@ const renderCharacterCreationCharacteristicGrid = (flow) => {
         pip.className = 'stat-die-pip'
         rollButton.append(pip)
       }
-      rollButton.addEventListener('click', () => {
+      bindCharacterCreationActionButton(rollButton, () =>
         rollCharacterCreationCharacteristic(field.key).catch((error) =>
           setError(error.message)
         )
-      })
+      )
       modifier.textContent = ''
       row.append(rollButton, modifier)
     } else {
@@ -2407,11 +2468,11 @@ const renderCharacterCreationCharacteristicRollButton = (flow) => {
   button.type = 'button'
   button.textContent = viewModel.label
   button.disabled = viewModel.disabled
-  button.addEventListener('click', () => {
+  bindCharacterCreationActionButton(button, () =>
     rollCharacterCreationCharacteristic().catch((error) =>
       setError(error.message)
     )
-  })
+  )
   const hint = document.createElement('small')
   hint.textContent = viewModel.reason
   wrapper.append(button, hint)
@@ -2441,9 +2502,9 @@ const renderCharacterCreationCareerRollButton = (flow) => {
   button.type = 'button'
   button.textContent = viewModel.label
   button.disabled = viewModel.disabled
-  button.addEventListener('click', () => {
+  bindCharacterCreationActionButton(button, () =>
     rollCharacterCreationCareerCheck().catch((error) => setError(error.message))
-  })
+  )
   const hint = document.createElement('small')
   hint.textContent = viewModel.reason
   wrapper.append(button, hint)
@@ -2460,11 +2521,11 @@ const renderCharacterCreationBasicTrainingButton = (flow) => {
   button.type = 'button'
   button.textContent = viewModel.label
   button.disabled = viewModel.disabled
-  button.addEventListener('click', () => {
+  bindCharacterCreationActionButton(button, () => {
     if (!characterCreationFlow) return
     syncCharacterCreationWizardFields()
     setError('')
-    completeCharacterCreationBasicTraining().catch((error) =>
+    return completeCharacterCreationBasicTraining().catch((error) =>
       setError(error.message)
     )
   })
@@ -2522,11 +2583,11 @@ const renderCharacterCreationMusteringOut = (flow) => {
     if (modifier !== 0) {
       button.title = `${modifier > 0 ? '+' : ''}${modifier} DM`
     }
-    button.addEventListener('click', () => {
+    bindCharacterCreationActionButton(button, () =>
       rollCharacterCreationMusteringBenefit(kind).catch((error) =>
         setError(error.message)
       )
-    })
+    )
     actions.append(button)
   }
 
@@ -2572,11 +2633,16 @@ const rollCharacterCreationCharacteristic = async (
   }
 
   await waitForDiceRevealOrDelay(latestRoll)
-  characterCreationFlow = applyCharacterCreationCharacteristicRoll(
+  const fallbackFlow = applyCharacterCreationCharacteristicRoll(
     characterCreationFlow,
     latestRoll.total,
     targetKey
   ).flow
+  syncCharacterCreationFlowFromRoomState(
+    response.state,
+    characterCreationFlow.draft.characterId,
+    fallbackFlow
+  )
   autoAdvanceCharacterCreationSetup()
   renderCharacterCreationWizard()
   characterCreationPanel.scrollToTop()

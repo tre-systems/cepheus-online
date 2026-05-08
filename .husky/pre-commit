@@ -1,3 +1,36 @@
-npm run build:client
-npm run lint
-npm run check
+staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+if [ -z "$staged_files" ]; then
+  exit 0
+fi
+
+is_doc_path() {
+  case "$1" in
+    README.md|CONTRIBUTING.md|AGENTS.md|docs/*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+docs_only=1
+while IFS= read -r path; do
+  [ -z "$path" ] && continue
+  if ! is_doc_path "$path"; then
+    docs_only=0
+    break
+  fi
+done <<EOF
+$staged_files
+EOF
+
+if [ "$docs_only" -eq 1 ]; then
+  echo "Documentation-only commit: running doc link checks."
+  npm run check:docs
+  exit 0
+fi
+
+echo "Running pre-commit checks: build client, lint, docs, boundaries, typecheck."
+npm run verify:quick

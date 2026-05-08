@@ -4,6 +4,12 @@ These are the implementation patterns to use when the skeleton becomes a real
 application. They are adapted from Delta-V for a Cepheus campaign tool rather
 than copied as-is.
 
+Each durable pattern should answer three questions:
+
+- what shape the code should take
+- where that shape lives in this repository
+- why that shape makes later changes safer
+
 ## Event-Sourced Room State
 
 Every authoritative mutation in a room should be a command that produces one or
@@ -75,6 +81,16 @@ There should be one server path that:
 Do not add separate "save then broadcast" paths for each feature. That is how
 state drift starts.
 
+Current owner modules:
+
+- `src/server/game-room/publication.ts`
+- `src/server/game-room/command.ts`
+- `src/server/game-room/storage.ts`
+- `src/server/game-room/projection.ts`
+
+New server features should add collaborators to the publication path instead of
+publishing state from a feature-specific shortcut.
+
 ## Side-Effect-Free Shared Code
 
 Everything in `src/shared` should be deterministic and free of DOM, network,
@@ -84,6 +100,13 @@ are involved.
 
 This makes rules code testable, replayable, and usable on both client and
 server.
+
+Tooling support:
+
+- `npm run check:boundaries` rejects `Math.random` and console side effects in
+  non-test `src/shared` files.
+- Biome import restrictions stop `src/shared` from importing client or server
+  code.
 
 ## Viewer-Aware Filtering
 
@@ -117,6 +140,75 @@ Raw browser events should not touch game logic directly:
 The same command router should handle keyboard shortcuts, toolbar buttons,
 touch gestures, and canvas interactions.
 
+## Composition Root And Feature Managers
+
+The browser should be wired from a single composition root. Feature modules
+should receive dependencies through small typed objects and expose narrow
+manager APIs.
+
+```ts
+const creation = createCharacterCreationController({
+  getState,
+  commandRouter,
+  diceRevealCoordinator,
+  panel,
+  render
+})
+```
+
+Use this pattern when a module owns listeners, timers, sockets, effects, or
+mutable local UI state. Such modules should expose `dispose()` when they create
+resources that outlive one render call.
+
+Avoid tiny factories that only rename a callback or wrap one call site. Keep
+that wiring inline until the helper owns lifecycle, policy, validation, or
+reuse.
+
+Near-term target:
+
+- `src/client/app/app.ts` becomes the boot/composition shell.
+- Character creation orchestration moves into a controller.
+- Board, sheet, room menu, socket, PWA, dice, and creator modules are wired in
+  one visible place.
+
+## Dependency Injection
+
+Pure functions take direct inputs or a typed options object. Side-effecting
+modules take a dependency object.
+
+Use callable getters for state that changes over time:
+
+```ts
+const deps = {
+  getState: () => appSession.authoritativeState,
+  dispatchCommand,
+  showError
+}
+```
+
+Use stable references for services that do not change, such as a command router
+or panel manager. This keeps modules testable without importing browser globals
+or reaching across source boundaries.
+
+## Derive, Plan, Apply
+
+Prefer a functional core with an imperative shell:
+
+- `derive*` computes view models, legal actions, labels, dimensions, and plans.
+- `build*` constructs commands, protocol messages, or complex values.
+- `resolve*` interprets input into a structured result.
+- `apply*`, `handle*`, `render*`, and `draw*` own side effects.
+
+The character creator should follow this shape especially strictly:
+
+1. derive legal creation actions from the server projection
+2. render those actions from a single view model
+3. submit intent through the command router
+4. apply the accepted projection after dice reveal timing allows it
+
+This avoids the stale-local-flow class of bugs where the browser keeps
+rendering an action that the server has already advanced past.
+
 ## Tiny Reactive Layer
 
 Use `src/client/reactive.ts` selectively for UI state that needs automatic
@@ -126,6 +218,57 @@ large state library.
 
 Any view or controller that creates effects, listeners, or timers should own a
 disposal scope and expose `dispose()`.
+
+Good candidates:
+
+- durable local UI state such as online/offline, PWA update availability,
+  selected local panel, and pending install prompt
+- view-local derivations that update several DOM nodes from the same local
+  state
+
+Poor candidates:
+
+- authoritative game truth
+- replay or projection state that should be replaced from the server
+- one-shot outcomes such as dice sounds or transient spectator cards
+
+When using signals, keep them close to the view/controller that owns them.
+Do not pass signals through the entire client graph as a substitute for
+explicit dependencies.
+
+## Dice Reveal Coordination
+
+Roll-bearing commands have a stricter presentation contract than normal
+commands: players and spectators should not see roll-dependent results until
+the shared dice reveal point.
+
+The client should enforce this through one dice reveal coordinator:
+
+- accept live dice activity or the latest dice log entry
+- start the shared dice animation
+- defer result rendering until the reveal boundary
+- unblock the triggering action after the reveal is applied
+- resolve refresh/recovery without losing authoritative state
+
+Feature views should not each implement their own reveal timers. They should
+ask the coordinator whether a result is pending, revealing, or revealed.
+
+## Browser UX Automation
+
+Most rules and state-machine behavior belongs in unit tests. Browser tests are
+for contracts that require a browser:
+
+- the app boots from served Worker assets
+- mobile layouts keep primary actions reachable
+- canvas and pointer input produce commands
+- two tabs see compatible state and dice timing
+- PWA install/update/offline shell behavior works
+- character creation result text does not appear before dice reveal
+
+Browser failures should leave actionable artifacts: current room id, actor id,
+creation status, console errors, recent command errors, and a screenshot or DOM
+snapshot. Without those artifacts, the test recreates the manual debugging loop
+instead of replacing it.
 
 ## DOM Boundary
 
