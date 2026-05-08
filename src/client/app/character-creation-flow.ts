@@ -1,8 +1,4 @@
-import type {
-  CharacterCreationHomeworldCommand,
-  Command,
-  GameCommand
-} from '../../shared/commands'
+import type { Command, GameCommand } from '../../shared/commands'
 import {
   deriveBasicTrainingPlan,
   evaluateCareerCheck,
@@ -287,60 +283,6 @@ type CreateCharacterCommand = Extract<Command, { type: 'CreateCharacter' }>
 type StartCharacterCreationCommand = Extract<
   Command,
   { type: 'StartCharacterCreation' }
->
-type AdvanceCharacterCreationCommand = Extract<
-  Command,
-  { type: 'AdvanceCharacterCreation' }
->
-type CompleteCharacterCreationBasicTrainingCommand = Extract<
-  Command,
-  { type: 'CompleteCharacterCreationBasicTraining' }
->
-type ResolveCharacterCreationAgingCommand = Extract<
-  Command,
-  { type: 'ResolveCharacterCreationAging' }
->
-type DecideCharacterCreationAnagathicsCommand = Extract<
-  Command,
-  { type: 'DecideCharacterCreationAnagathics' }
->
-type ResolveCharacterCreationReenlistmentCommand = Extract<
-  Command,
-  { type: 'ResolveCharacterCreationReenlistment' }
->
-type ReenlistCharacterCreationCareerCommand = Extract<
-  Command,
-  { type: 'ReenlistCharacterCreationCareer' }
->
-type LeaveCharacterCreationCareerCommand = Extract<
-  Command,
-  { type: 'LeaveCharacterCreationCareer' }
->
-type CompleteCharacterCreationSkillsCommand = Extract<
-  Command,
-  { type: 'CompleteCharacterCreationSkills' }
->
-type CompleteCharacterCreationMusteringCommand = Extract<
-  Command,
-  { type: 'CompleteCharacterCreationMustering' }
->
-type CompleteCharacterCreationHomeworldCommand =
-  CharacterCreationHomeworldCommand
-type CompleteCharacterCreationCommand = Extract<
-  Command,
-  { type: 'CompleteCharacterCreation' }
->
-type SetCharacterCreationHomeworldCommand = Extract<
-  Command,
-  { type: 'SetCharacterCreationHomeworld' }
->
-type SelectCharacterCreationBackgroundSkillCommand = Extract<
-  Command,
-  { type: 'SelectCharacterCreationBackgroundSkill' }
->
-type ResolveCharacterCreationCascadeSkillCommand = Extract<
-  Command,
-  { type: 'ResolveCharacterCreationCascadeSkill' }
 >
 type StartCharacterCareerTermCommand = Extract<
   Command,
@@ -2430,286 +2372,20 @@ export const deriveStartCharacterCareerTermCommand = (
     state
   ) as StartCharacterCareerTermCommand
 
-const initialCharacterCreationStateCommands = (
-  draft: CharacterCreationDraft,
-  identity: ClientIdentity
-): GameCommand[] => {
-  const careerPlan = draft.careerPlan
-  const firstCareer =
-    draft.completedTerms[0]?.career ?? careerPlan?.career.trim() ?? ''
-  const firstDrafted =
-    draft.completedTerms[0]?.drafted ?? careerPlan?.drafted ?? false
-  const baseCommand = {
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId: draft.characterId
-  }
-  const advance = (
-    creationEvent: AdvanceCharacterCreationCommand['creationEvent']
-  ): AdvanceCharacterCreationCommand => ({
-    type: 'AdvanceCharacterCreation',
-    ...baseCommand,
-    creationEvent
-  })
-  const completeBasicTrainingCommand =
-    (): CompleteCharacterCreationBasicTrainingCommand => ({
-      type: 'CompleteCharacterCreationBasicTraining',
-      ...baseCommand
-    })
-  const resolveAgingCommand = (): ResolveCharacterCreationAgingCommand => ({
-    type: 'ResolveCharacterCreationAging',
-    ...baseCommand
-  })
-  const decideAnagathicsCommand = (
-    useAnagathics: boolean
-  ): DecideCharacterCreationAnagathicsCommand => ({
-    type: 'DecideCharacterCreationAnagathics',
-    ...baseCommand,
-    useAnagathics
-  })
-  const resolveReenlistmentCommand =
-    (): ResolveCharacterCreationReenlistmentCommand => ({
-      type: 'ResolveCharacterCreationReenlistment',
-      ...baseCommand
-    })
-  const reenlistCommand = (): ReenlistCharacterCreationCareerCommand => ({
-    type: 'ReenlistCharacterCreationCareer',
-    ...baseCommand
-  })
-  const leaveCareerCommand = (): LeaveCharacterCreationCareerCommand => ({
-    type: 'LeaveCharacterCreationCareer',
-    ...baseCommand
-  })
-  const completeSkillsCommand = (): CompleteCharacterCreationSkillsCommand => ({
-    type: 'CompleteCharacterCreationSkills',
-    ...baseCommand
-  })
-  const completeMusteringCommand =
-    (): CompleteCharacterCreationMusteringCommand => ({
-      type: 'CompleteCharacterCreationMustering',
-      ...baseCommand
-    })
-  const completeCreationCommand = (): CompleteCharacterCreationCommand => ({
-    type: 'CompleteCharacterCreation',
-    ...baseCommand
-  })
-  const completeHomeworldCommand =
-    (): CompleteCharacterCreationHomeworldCommand => ({
-      type: 'CompleteCharacterCreationHomeworld',
-      ...baseCommand
-    })
-  const backgroundPlan = deriveCharacterCreationBackgroundSkillPlan(draft)
-  const backgroundCommands =
-    draft.homeworld.lawLevel && hasHomeworldTradeCodes(draft.homeworld)
-      ? characterCreationBackgroundCommands({
-          draft,
-          identity,
-          baseCommand,
-          backgroundPlan
-        })
-      : []
-  const commands: GameCommand[] = [
-    {
-      type: 'StartCharacterCreation',
-      ...baseCommand
-    },
-    advance({ type: 'SET_CHARACTERISTICS' }),
-    ...backgroundCommands,
-    completeHomeworldCommand(),
-    {
-      type: 'StartCharacterCareerTerm',
-      ...baseCommand,
-      career: firstCareer,
-      ...(firstDrafted ? { drafted: true } : {})
-    } satisfies StartCharacterCareerTermCommand,
-    advance({
-      type: 'SELECT_CAREER',
-      isNewCareer: true,
-      ...(firstDrafted ? { drafted: true } : {})
-    })
-  ]
-
-  const completedTerms =
-    draft.completedTerms.length > 0
-      ? draft.completedTerms
-      : careerPlan && careerPlan.survivalPassed !== null
-        ? [
-            {
-              career: careerPlan.career.trim(),
-              drafted: careerPlan.drafted,
-              age: draft.age,
-              qualificationRoll: careerPlan.qualificationRoll,
-              survivalRoll: careerPlan.survivalRoll,
-              survivalPassed: careerPlan.survivalPassed === true,
-              canCommission: careerPlan.canCommission === true,
-              commissionRoll: careerPlan.commissionRoll,
-              commissionPassed: careerPlan.commissionPassed,
-              canAdvance: careerPlan.canAdvance === true,
-              advancementRoll: careerPlan.advancementRoll,
-              advancementPassed: careerPlan.advancementPassed,
-              anagathics: careerPlan.anagathics === true,
-              termSkillRolls: cloneTermSkillRolls(
-                careerPlan.termSkillRolls ?? []
-              )
-            } satisfies CharacterCreationCompletedTerm
-          ]
-        : []
-
-  if (completedTerms.length > 0) {
-    commands.push(completeBasicTrainingCommand())
-    let endedWithDeath = false
-
-    for (const [index, term] of completedTerms.entries()) {
-      commands.push(
-        term.survivalPassed
-          ? advance({
-              type: 'SURVIVAL_PASSED',
-              canCommission: term.canCommission,
-              canAdvance: term.canAdvance
-            })
-          : advance({ type: 'SURVIVAL_FAILED' })
-      )
-
-      if (!term.survivalPassed) {
-        endedWithDeath = true
-        break
-      }
-
-      if (term.canCommission) {
-        commands.push(
-          advance({
-            type: term.commissionPassed
-              ? 'COMPLETE_COMMISSION'
-              : 'SKIP_COMMISSION'
-          })
-        )
-      } else if (term.canAdvance) {
-        commands.push(
-          advance({
-            type: term.advancementPassed
-              ? 'COMPLETE_ADVANCEMENT'
-              : 'SKIP_ADVANCEMENT'
-          })
-        )
-      }
-
-      commands.push(completeSkillsCommand())
-      commands.push(decideAnagathicsCommand(term.anagathics === true))
-      commands.push(resolveAgingCommand())
-      if (index < completedTerms.length - 1) {
-        commands.push(resolveReenlistmentCommand(), reenlistCommand())
-      }
-    }
-
-    if (!endedWithDeath) {
-      commands.push(
-        resolveReenlistmentCommand(),
-        leaveCareerCommand(),
-        completeMusteringCommand(),
-        completeCreationCommand()
-      )
-    }
-  }
-
-  return commands
-}
-
-const characterCreationBackgroundCommands = ({
-  draft,
-  identity,
-  baseCommand,
-  backgroundPlan
-}: {
-  draft: CharacterCreationDraft
-  identity: ClientIdentity
-  baseCommand: Pick<
-    SetCharacterCreationHomeworldCommand,
-    'gameId' | 'actorId' | 'characterId'
-  >
-  backgroundPlan: BackgroundSkillPlan
-}): Command[] => {
-  const commands: Command[] = [
-    {
-      type: 'SetCharacterCreationHomeworld',
-      gameId: identity.gameId,
-      actorId: identity.actorId,
-      characterId: draft.characterId,
-      homeworld: {
-        name: null,
-        lawLevel: draft.homeworld.lawLevel ?? null,
-        tradeCodes: Array.isArray(draft.homeworld.tradeCodes)
-          ? [...draft.homeworld.tradeCodes]
-          : draft.homeworld.tradeCodes
-            ? [draft.homeworld.tradeCodes]
-            : []
-      }
-    } satisfies SetCharacterCreationHomeworldCommand
-  ]
-
-  const resolvedCascadeSkills = new Set<string>()
-  for (const cascadeSkill of backgroundPlan.pendingCascadeSkills) {
-    const selection = resolvedCascadeSelection(cascadeSkill, draft)
-    if (!selection) continue
-    commands.push({
-      type: 'ResolveCharacterCreationCascadeSkill',
-      ...baseCommand,
-      cascadeSkill,
-      selection
-    } satisfies ResolveCharacterCreationCascadeSkillCommand)
-    resolvedCascadeSkills.add(careerSkillWithLevel(selection, 0))
-  }
-
-  const preselected = new Set(backgroundPlan.backgroundSkills)
-  const requiredCount = requiredBackgroundSkillSelections(draft)
-  const extraSelectionCount = Math.max(
-    0,
-    requiredCount -
-      backgroundPlan.backgroundSkills.length -
-      backgroundPlan.pendingCascadeSkills.length
-  )
-  let selected = 0
-  for (const skill of draft.backgroundSkills) {
-    if (selected >= extraSelectionCount) break
-    if (preselected.has(skill) || resolvedCascadeSkills.has(skill)) continue
-    commands.splice(commands.length - resolvedCascadeSkills.size, 0, {
-      type: 'SelectCharacterCreationBackgroundSkill',
-      ...baseCommand,
-      skill
-    } satisfies SelectCharacterCreationBackgroundSkillCommand)
-    selected += 1
-  }
-
-  return commands
-}
-
-const resolvedCascadeSelection = (
-  cascadeSkill: string,
-  draft: CharacterCreationDraft
-): string | null => {
-  const cascadeName = cascadeSkill.replace(/-\d+$/, '')
-  const options = CEPHEUS_SRD_RULESET.cascadeSkills[cascadeName]
-  if (!options || options.length === 0) return null
-
-  for (const option of options) {
-    if (
-      draft.backgroundSkills.some(
-        (skill) => skill === careerSkillWithLevel(option, 0)
-      )
-    ) {
-      return option
-    }
-  }
-
-  return options[0] ?? null
-}
-
 export const deriveInitialCharacterCreationStateCommands = (
   draft: CharacterCreationDraft,
   { identity, state = null }: CharacterCreationCommandOptions
 ): GameCommand[] => {
   if (!state) return []
 
-  return initialCharacterCreationStateCommands(draft, identity)
+  return [
+    {
+      type: 'StartCharacterCreation',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: draft.characterId
+    }
+  ]
 }
 
 const careerHistoryNotes = (draft: CharacterCreationDraft): string[] => {
@@ -2799,30 +2475,7 @@ export const deriveCharacterCreationCommands = (
   if (!validation.ok) return []
   if (!options.state) return []
 
-  const lifecycleCommands = initialCharacterCreationStateCommands(
-    flow.draft,
-    options.identity
-  )
-  const reachesPlayable = lifecycleCommands.some(
-    (command) =>
-      command.type === 'CompleteCharacterCreation' ||
-      (command.type === 'AdvanceCharacterCreation' &&
-        command.creationEvent.type === 'CREATION_COMPLETE')
-  )
-  const sheetCommand: Command = reachesPlayable
-    ? deriveFinalizeCharacterCreationCommand(flow.draft, {
-        identity: options.identity,
-        state: null
-      })
-    : {
-        type: 'UpdateCharacterSheet',
-        gameId: options.identity.gameId,
-        actorId: options.identity.actorId,
-        characterId: flow.draft.characterId,
-        ...deriveCharacterSheetPatch(flow.draft)
-      }
-
-  const baseCommands: GameCommand[] = [
+  return [
     {
       type: 'CreateCharacter',
       gameId: options.identity.gameId,
@@ -2831,9 +2484,12 @@ export const deriveCharacterCreationCommands = (
       characterType: flow.draft.characterType,
       name: flow.draft.name.trim()
     },
-    ...lifecycleCommands,
-    sheetCommand
+    {
+      type: 'UpdateCharacterSheet',
+      gameId: options.identity.gameId,
+      actorId: options.identity.actorId,
+      characterId: flow.draft.characterId,
+      ...deriveCharacterSheetPatch(flow.draft)
+    }
   ]
-
-  return baseCommands
 }

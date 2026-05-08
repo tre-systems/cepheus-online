@@ -161,6 +161,20 @@ const finalizableFlow = (): CharacterCreationFlow => ({
   )
 })
 
+const assertNoRejectedGenericBridgeCommands = (
+  commands: readonly CharacterCreationCommand[]
+) => {
+  assert.equal(
+    commands.some(
+      (command) =>
+        command.type === 'AdvanceCharacterCreation' &&
+        (command.creationEvent.type === 'SET_CHARACTERISTICS' ||
+          command.creationEvent.type === 'SELECT_CAREER')
+    ),
+    false
+  )
+}
+
 const createHarness = ({
   currentFlow = finalizableFlow(),
   currentState = gameState(),
@@ -309,6 +323,48 @@ describe('character creation finalization controller', () => {
       true
     )
     assert.equal(harness.postedCharacterCommands.length, 1)
+  })
+
+  it('uses plain sheet commands for unpublished character creation fallback', async () => {
+    const harness = createHarness({
+      currentState: gameState()
+    })
+
+    await harness.controller.finish()
+
+    const commands = harness.postedCharacterCommands[0] ?? []
+    assert.deepEqual(
+      commands.map((command) => command.type),
+      ['CreateCharacter', 'UpdateCharacterSheet']
+    )
+    assertNoRejectedGenericBridgeCommands(commands)
+    assert.equal(commands[0]?.expectedSeq, undefined)
+    assert.equal(commands[1]?.expectedSeq, undefined)
+    assert.equal(
+      harness.postedBoardCommands.some(
+        (command) => command.type === 'CreatePiece'
+      ),
+      true
+    )
+  })
+
+  it('updates an existing non-creation character without rejected bridge commands', async () => {
+    const harness = createHarness({
+      currentState: gameState({
+        characters: {
+          [characterId]: character({ creation: null })
+        }
+      })
+    })
+
+    await harness.controller.finish()
+
+    const commands = harness.postedCharacterCommands[0] ?? []
+    assert.deepEqual(
+      commands.map((command) => command.type),
+      ['UpdateCharacterSheet']
+    )
+    assertNoRejectedGenericBridgeCommands(commands)
   })
 
   it('posts finalization commands before creating the linked token and closing UI', async () => {

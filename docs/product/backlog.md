@@ -491,10 +491,13 @@ mustering-benefit, no-benefit `FINISH_MUSTERING`, death confirmation, and
 optional-mishap placeholder payloads that have semantic commands or explicit
 fences. The server-persisted generic `SET_CHARACTERISTICS` emitted after the
 sixth characteristic roll has been replaced with
-`CharacterCreationCharacteristicsCompleted`. The current slice is isolating the
-remaining bootstrap/dev generic `SET_CHARACTERISTICS` paths and `SELECT_CAREER`
-away from production UI, adding server-side rejection for production attempts,
-and keeping `CharacterCreationTransitioned` historical replay compatibility.
+`CharacterCreationCharacteristicsCompleted`. Bootstrap/demo creation and
+custom-piece production paths are now off generic `SET_CHARACTERISTICS` and
+`SELECT_CAREER` bridge commands. The current slice is the remaining local draft
+fallback in `src/client/app/character-creation-flow.ts`, plus the optional
+protocol-level decision about rejecting generic production `SET_CHARACTERISTICS`
+and `SELECT_CAREER` attempts while keeping `CharacterCreationTransitioned`
+historical replay compatibility.
 P1: any remaining roll-bearing or rules-bearing `AdvanceCharacterCreation` facts
 should be rejected or migrated because dice and outcome facts must come from
 semantic server commands/events.
@@ -513,11 +516,14 @@ Tasks:
   1. Done: replace the server-persisted generic `SET_CHARACTERISTICS` after the sixth
      stat roll with `CharacterCreationCharacteristicsCompleted`, preserving the
      semantic roll facts already emitted for individual characteristic rolls.
-  2. Current: remove development/bootstrap reliance on generic
-     `SET_CHARACTERISTICS` and `SELECT_CAREER`, or isolate it as referee-only
-     fixture/backfill code with tests proving production UI cannot use it and
-     server-side rejection covering production attempts.
-  3. Keep `CharacterCreationTransitioned` only for historical replay while new
+  2. Done: move bootstrap/demo creation and custom-piece production paths off
+     generic `SET_CHARACTERISTICS` and `SELECT_CAREER`.
+  3. Current: remove the remaining local draft fallback in
+     `src/client/app/character-creation-flow.ts`; decide whether generic
+     production `SET_CHARACTERISTICS` and `SELECT_CAREER` attempts also need
+     protocol-level rejection or whether client-side removal plus historical
+     replay compatibility is enough.
+  4. Keep `CharacterCreationTransitioned` only for historical replay while new
      production rules work emits semantic events.
 - Finish updating `deriveLiveActivities()` to read semantic events directly
   instead of parsing coarse transition payloads where possible.
@@ -613,18 +619,20 @@ Status: partially done. SRD career data, qualification penalties, failed
 qualification options, semantic qualification roll facts, semantic draft table
 roll facts, basic training plans, career-term start projection, semantic
 requested/accepted career facts, semantic basic-training completion, and client
-flow helpers exist. Direct player use of `StartCharacterCareerTerm` is blocked
-server-side and covered by a regression test, so that bypass is no longer an
-active backlog item. The remaining work is to carry richer basic-training
-choices in projection and tighten the browser affordances around failed
-qualification and draft fallback.
+flow helpers exist. Production career entry paths, including bootstrap/demo and
+custom-piece creation, are now off generic `SELECT_CAREER`. Direct player use
+of `StartCharacterCareerTerm` is blocked server-side and covered by a
+regression test, so that bypass is no longer an active backlog item. The
+remaining work is to carry richer basic-training choices in projection and
+tighten the browser affordances around failed qualification and draft fallback.
 
 Tasks:
 
 - Carry choose-one basic training decisions as projected pending decisions,
   not client-only draft state.
-- Remove remaining generic `SELECT_CAREER` transition use from production paths
-  now that semantic qualification, draft, Drifter, and career-term events exist.
+- Remove the remaining local draft fallback in
+  `src/client/app/character-creation-flow.ts` now that semantic qualification,
+  draft, Drifter, and career-term events exist.
 - Keep the direct `StartCharacterCareerTerm` path referee-only while the normal
   player path goes through qualification, Draft, Drifter fallback, or other
   explicit legal actions.
@@ -895,9 +903,11 @@ The next batch should run like this, in this order:
    continue-career, mustering-benefit, no-benefit `FINISH_MUSTERING`, default
    death confirmation, optional-mishap placeholder payloads, and the
    server-persisted characteristic completion event now point at semantic
-   commands/events or explicit fences. Current slice: isolate remaining
-   bootstrap/dev generic `SET_CHARACTERISTICS` and `SELECT_CAREER` paths away
-   from production UI, reject production attempts server-side, and keep
+   commands/events or explicit fences. Bootstrap/demo creation and custom-piece
+   production paths are now off generic `SET_CHARACTERISTICS` and
+   `SELECT_CAREER`. Current slice: remove the remaining local draft fallback in
+   `src/client/app/character-creation-flow.ts`, decide whether to add
+   protocol-level rejection for generic production attempts, and keep
    historical replay compatibility for old `CharacterCreationTransitioned`
    events.
 2. Finish the next architecture cleanup already underway: shrink `app.ts`,

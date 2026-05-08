@@ -11,8 +11,9 @@ import {
   type BootstrapCommandContext
 } from './bootstrap-flow.js'
 import {
-  deriveCharacterCreationCommands,
+  deriveCreateCharacterCommand,
   deriveFinalizeCharacterCreationCommand,
+  deriveUpdateCharacterSheetCommand,
   type CharacterCreationFlow
 } from './character-creation-flow.js'
 import { deriveCharacterCreationValidationSummary } from './character-creation-view.js'
@@ -55,12 +56,26 @@ const deriveServerBackedFinalizationCommands = (
   state: GameState | null,
   identity: ClientIdentity
 ): CharacterCreationCommand[] => {
+  if (!state) return []
+
   const character = state?.characters[flow.draft.characterId] ?? null
   if (!character?.creation) {
-    return deriveCharacterCreationCommands(flow, {
-      identity,
-      state
-    }) as CharacterCreationCommand[]
+    const commands: CharacterCreationCommand[] = []
+    if (!character) {
+      commands.push(
+        deriveCreateCharacterCommand(flow.draft, {
+          identity,
+          state: null
+        }) as CharacterCreationCommand
+      )
+    }
+    commands.push(
+      deriveUpdateCharacterSheetCommand(flow.draft, {
+        identity,
+        state: null
+      }) as CharacterCreationCommand
+    )
+    return commands
   }
 
   const baseCommand = {

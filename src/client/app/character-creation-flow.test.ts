@@ -105,6 +105,8 @@ const completeDraft = () =>
   })
 
 const forbiddenGenericLifecycleEvents = new Set([
+  'SET_CHARACTERISTICS',
+  'SELECT_CAREER',
   'REENLIST',
   'FORCED_REENLIST',
   'LEAVE_CAREER',
@@ -1740,7 +1742,7 @@ describe('character creation flow', () => {
     assert.equal(startTermCommand.expectedSeq, 12)
   })
 
-  it('derives event-backed creation lifecycle commands for sequential dispatch', () => {
+  it('derives only the supported initial creation command for sequential dispatch', () => {
     assert.deepEqual(
       deriveInitialCharacterCreationStateCommands(completeDraft(), {
         identity,
@@ -1759,40 +1761,16 @@ describe('character creation flow', () => {
 
     assert.deepEqual(
       commands.map((command) => command.type),
-      [
-        'StartCharacterCreation',
-        'AdvanceCharacterCreation',
-        'SetCharacterCreationHomeworld',
-        'SelectCharacterCreationBackgroundSkill',
-        'ResolveCharacterCreationCascadeSkill',
-        'CompleteCharacterCreationHomeworld',
-        'StartCharacterCareerTerm',
-        'AdvanceCharacterCreation'
-      ]
+      ['StartCharacterCreation']
     )
+    assertNoGenericLifecycleAdvance(commands)
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
       Array.from({ length: commands.length }, () => undefined)
     )
-
-    const events = commands
-      .filter((command) => command.type === 'AdvanceCharacterCreation')
-      .map((command) =>
-        command.type === 'AdvanceCharacterCreation'
-          ? command.creationEvent.type
-          : null
-      )
-    assert.deepEqual(events, ['SET_CHARACTERISTICS', 'SELECT_CAREER'])
-
-    const startTerm = commands.find(
-      (command) => command.type === 'StartCharacterCareerTerm'
-    )
-    assert.equal(startTerm?.type, 'StartCharacterCareerTerm')
-    if (startTerm?.type !== 'StartCharacterCareerTerm') return
-    assert.equal(startTerm.career, 'Merchant')
   })
 
-  it('derives a playable creation sequence from an evaluated career plan', () => {
+  it('does not synthesize lifecycle bridge events from an evaluated career plan', () => {
     const draft = applyCharacterCreationCareerPlan(
       completeDraft(),
       selectCharacterCreationCareerPlan('Merchant', {
@@ -1807,75 +1785,16 @@ describe('character creation flow', () => {
     })
     assert.deepEqual(
       commands.map((command) => command.type),
-      [
-        'StartCharacterCreation',
-        'AdvanceCharacterCreation',
-        'SetCharacterCreationHomeworld',
-        'SelectCharacterCreationBackgroundSkill',
-        'ResolveCharacterCreationCascadeSkill',
-        'CompleteCharacterCreationHomeworld',
-        'StartCharacterCareerTerm',
-        'AdvanceCharacterCreation',
-        'CompleteCharacterCreationBasicTraining',
-        'AdvanceCharacterCreation',
-        'AdvanceCharacterCreation',
-        'CompleteCharacterCreationSkills',
-        'DecideCharacterCreationAnagathics',
-        'ResolveCharacterCreationAging',
-        'ResolveCharacterCreationReenlistment',
-        'LeaveCharacterCreationCareer',
-        'CompleteCharacterCreationMustering',
-        'CompleteCharacterCreation'
-      ]
+      ['StartCharacterCreation']
     )
     assertNoGenericLifecycleAdvance(commands)
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
       Array.from({ length: commands.length }, () => undefined)
     )
-
-    const startTerm = commands.find(
-      (command) => command.type === 'StartCharacterCareerTerm'
-    )
-    assert.equal(startTerm?.type, 'StartCharacterCareerTerm')
-    if (startTerm?.type !== 'StartCharacterCareerTerm') return
-    assert.equal(startTerm.career, 'Merchant')
-    assert.equal(startTerm.drafted, true)
-
-    const events = commands
-      .filter((command) => command.type === 'AdvanceCharacterCreation')
-      .map((command) =>
-        command.type === 'AdvanceCharacterCreation'
-          ? command.creationEvent
-          : null
-      )
-    assert.deepEqual(events, [
-      { type: 'SET_CHARACTERISTICS' },
-      { type: 'SELECT_CAREER', isNewCareer: true, drafted: true },
-      { type: 'SURVIVAL_PASSED', canCommission: true, canAdvance: false },
-      { type: 'SKIP_COMMISSION' }
-    ])
-    assert.equal(
-      commands.find(
-        (command) => command.type === 'LeaveCharacterCreationCareer'
-      )?.type,
-      'LeaveCharacterCreationCareer'
-    )
-    assert.equal(
-      commands.find(
-        (command) => command.type === 'DecideCharacterCreationAnagathics'
-      )?.type,
-      'DecideCharacterCreationAnagathics'
-    )
-    assert.equal(
-      commands.find(
-        (command) => command.type === 'ResolveCharacterCreationAging'
-      )?.type,
-      'ResolveCharacterCreationAging'
-    )
   })
 
-  it('derives semantic reenlist commands between multiple owner-created terms', () => {
+  it('does not synthesize lifecycle commands between owner-created terms', () => {
     const base = completeDraft()
     const completedTerm = {
       career: 'Merchant',
@@ -1923,46 +1842,15 @@ describe('character creation flow', () => {
     })
 
     assertNoGenericLifecycleAdvance(commands)
-    assert.equal(
-      commands.filter(
-        (command) => command.type === 'ReenlistCharacterCreationCareer'
-      ).length,
-      1
-    )
-    assert.equal(
-      commands.find(
-        (command) => command.type === 'LeaveCharacterCreationCareer'
-      )?.type,
-      'LeaveCharacterCreationCareer'
+    assert.deepEqual(
+      commands.map((command) => command.type),
+      ['StartCharacterCreation']
     )
     assert.deepEqual(
       commands
         .filter((command) => command.type === 'AdvanceCharacterCreation')
         .map((command) => command.creationEvent.type),
-      [
-        'SET_CHARACTERISTICS',
-        'SELECT_CAREER',
-        'SURVIVAL_PASSED',
-        'SURVIVAL_PASSED'
-      ]
-    )
-    assert.equal(
-      commands.find(
-        (command) => command.type === 'CompleteCharacterCreationBasicTraining'
-      )?.type,
-      'CompleteCharacterCreationBasicTraining'
-    )
-    assert.equal(
-      commands.filter(
-        (command) => command.type === 'CompleteCharacterCreationSkills'
-      ).length,
-      2
-    )
-    assert.equal(
-      commands.find(
-        (command) => command.type === 'CompleteCharacterCreationMustering'
-      )?.type,
-      'CompleteCharacterCreationMustering'
+      []
     )
   })
 
@@ -2016,19 +1904,9 @@ describe('character creation flow', () => {
 
     assert.deepEqual(
       commands.map((command) => command.type),
-      [
-        'CreateCharacter',
-        'StartCharacterCreation',
-        'AdvanceCharacterCreation',
-        'SetCharacterCreationHomeworld',
-        'SelectCharacterCreationBackgroundSkill',
-        'ResolveCharacterCreationCascadeSkill',
-        'CompleteCharacterCreationHomeworld',
-        'StartCharacterCareerTerm',
-        'AdvanceCharacterCreation',
-        'UpdateCharacterSheet'
-      ]
+      ['CreateCharacter', 'UpdateCharacterSheet']
     )
+    assertNoGenericLifecycleAdvance(commands)
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
       Array.from({ length: commands.length }, () => undefined)
@@ -2048,7 +1926,7 @@ describe('character creation flow', () => {
       },
       { identity, state }
     )
-    assert.equal(playableCommands.length, 20)
+    assert.equal(playableCommands.length, 2)
     assertNoGenericLifecycleAdvance(playableCommands)
     assert.deepEqual(
       playableCommands
@@ -2058,31 +1936,8 @@ describe('character creation flow', () => {
             ? command.creationEvent.type
             : null
         ),
-      [
-        'SET_CHARACTERISTICS',
-        'SELECT_CAREER',
-        'SURVIVAL_PASSED',
-        'COMPLETE_COMMISSION'
-      ]
+      []
     )
-    assert.equal(
-      playableCommands.find(
-        (command) => command.type === 'DecideCharacterCreationAnagathics'
-      )?.type,
-      'DecideCharacterCreationAnagathics'
-    )
-    assert.equal(
-      playableCommands.find(
-        (command) => command.type === 'CompleteCharacterCreation'
-      )?.type,
-      'CompleteCharacterCreation'
-    )
-    assert.equal(
-      playableCommands.find(
-        (command) => command.type === 'ResolveCharacterCreationAging'
-      )?.type,
-      'ResolveCharacterCreationAging'
-    )
-    assert.equal(playableCommands.at(-1)?.type, 'FinalizeCharacterCreation')
+    assert.equal(playableCommands.at(-1)?.type, 'UpdateCharacterSheet')
   })
 })
