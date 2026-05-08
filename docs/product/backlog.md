@@ -376,12 +376,8 @@ Tasks:
 - Move browser action wiring behind a command adapter that always uses the
   existing client command router. Roll-bearing commands should be impossible to
   double-submit from the same rendered control.
-- Decide and document the browser test toolchain. Prefer Delta-V's Playwright
-  pattern as a dev/test dependency if needed, while keeping the runtime client
-  dependency-free.
-- Add the browser smoke to the full verification gate once it is stable, and
-  keep a smaller local command available for rapid character creation UX
-  debugging.
+- Keep a smaller local command available for rapid character creation UX
+  debugging as the full browser smoke grows.
 
 Done when:
 
@@ -508,12 +504,14 @@ validation and UX around those choices.
 
 Tasks:
 
-- Port or confirm pure helpers for primary education, homeworld-derived skills,
-  background skill allowance, and cascade resolution.
-- Add mobile UI controls for law level, trade code, primary education, and
-  background skill selection.
-- Add a cascade skill modal that blocks progress until resolved.
-- Add command, event, projector, protocol, and client view-model tests.
+- Carry background allowance, granted skills, selected skills, and unresolved
+  cascades as explicit projection state for every creation source.
+- Replace remaining client-derived homeworld/cascade gates with projection
+  legal actions.
+- Improve provenance display for homeworld, background, and cascade skill
+  sources on the final sheet.
+- Extend browser refresh/follow checks for nested cascade choices and blocked
+  progress.
 
 Done when:
 
@@ -534,12 +532,14 @@ qualification and draft fallback.
 
 Tasks:
 
-- Prevent normal qualification into careers already left, except for allowed
-  Drifter behavior.
-- Apply previous-career qualification penalties.
-- On failed qualification, expose only Drifter or the Draft.
-- Implement first-term basic training and later new-career basic training.
-- Persist drafted terms and clear draft eligibility after draft use.
+- Carry choose-one basic training decisions as projected pending decisions,
+  not client-only draft state.
+- Remove remaining generic `SELECT_CAREER` transition use from production paths
+  now that semantic qualification, draft, Drifter, and career-term events exist.
+- Add browser coverage for failed qualification, Draft roll, Drifter fallback,
+  and refresh recovery.
+- Tighten career-entry provenance for requested career, accepted/drafted
+  career, prior-career penalty, and basic training source skills.
 
 Done when:
 
@@ -568,14 +568,12 @@ Tasks:
 - Keep semantic survival pass/fail events as the pattern for the rest of the
   term loop: command intent, server-derived roll facts, projection-owned gates,
   and replay tests.
-- [x] Add semantic commission events, including skipped commission, roll result,
-  rank/title changes, and rank bonus skills.
-- [x] Add semantic advancement events, including skipped advancement, roll result,
-  rank/title changes, and rank bonus skills.
-- [x] Add term skill table selection and roll events for service, specialist,
-  personal development, and advanced education tables.
 - Enforce outstanding selection gates for cascade, commission, promotion, and
   term skills before the server accepts the next command.
+- Move term skill table choice and cascade follow-up decisions into projection
+  so refresh restores the same next action.
+- Harden the real-browser term loop through survival, commission,
+  advancement, term skills, aging, reenlistment, and either death or mustering.
 - Add compact term-history cards from semantic term events.
 
 Done when:

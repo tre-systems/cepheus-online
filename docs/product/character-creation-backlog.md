@@ -318,25 +318,15 @@ consume the same state.
 
 Tasks:
 
-- Extend the shared character creation projection with:
-  - `homeWorld.name`
-  - `homeWorld.lawLevel`
-  - `homeWorld.tradeCodes`
-  - `backgroundSkills`
-  - `pendingCascadeSkills`
-- Add commands and events for setting homeworld data and resolving background
-  skill selections.
-- Port or confirm pure helpers for:
-  - primary education skill selection
-  - background skills from law level and trade codes
-  - total background skill allowance, including Education modifier
-  - cascade skill detection and resolution
-- Add UI controls for law level, trade code, primary education, and background
-  skill selection using the black, green, and white mobile visual language.
-- Add a cascade skill modal that supports nested cascade skills and blocks
-  progress until resolved.
-- Add tests for all helper behavior, command validation, projection updates, and
-  browser view model transitions.
+- Make background allowance, selected skills, granted skills, and unresolved
+  cascade choices first-class projected pending decisions for every creation
+  source.
+- Replace remaining client-derived homeworld/cascade progression checks with
+  shared legal actions from projection.
+- Polish provenance for homeworld, background, primary education, and cascade
+  skill sources on the final sheet.
+- Extend browser refresh/follow checks for nested cascade choices and blocked
+  progress.
 
 Acceptance:
 
@@ -357,17 +347,15 @@ usage, prove the branch in browser smoke, and tighten copy/provenance.
 
 Tasks:
 
-- Move the current partial career entry UI onto explicit server-backed commands
-  and events.
-- Prevent normal qualification into careers the character has already left,
-  except for Drifter behavior allowed by the rules.
-- Apply the previous-career qualification penalty.
-- On failed qualification, set `failedToQualify` and expose only Drifter or the
-  Draft.
-- Implement the Draft as a 1d6 table roll from the ruleset, not as a direct
-  selection.
-- Mark drafted terms and clear draft eligibility after draft use.
-- Emit visible dice events for qualification and draft rolls.
+- Remove remaining generic `SELECT_CAREER` transition usage from production
+  flows.
+- Carry requested career, accepted career, drafted status, qualification
+  penalty, failed-qualification options, and basic-training choice as projected
+  facts.
+- Add browser coverage for failed qualification, Draft roll, Drifter fallback,
+  and refresh recovery.
+- Tighten player-facing copy and provenance around qualification and draft
+  outcomes.
 
 Acceptance:
 
@@ -388,12 +376,8 @@ use without manual recovery.
 
 Tasks:
 
-- Implement basic training:
-  - first term ever grants all service skills at level 0
-  - later first term in a new career grants one selected service skill at level
-    0
-  - returning to the same career does not repeat basic training
-- Implement mishap and death handling from the ruleset.
+- Move choose-one basic training and term skill table choices into projected
+  pending decisions.
 - Polish commission eligibility, rank title, bonus skill reward, and provenance
   display.
 - Polish advancement eligibility, rank title, bonus skill reward, and
@@ -512,16 +496,17 @@ Acceptance:
 - Add client view model tests for status-to-action rendering.
 - Add stale command tests for creation actions that include expected sequence.
 - Add browser smoke tests with deterministic dice inputs for:
-  - characteristics through homeworld/background
+  - full one-term path from characteristics through homeworld/background,
+    survival, term skills, aging, reenlistment, and mustering
   - failed qualification to Draft
-  - one successful career term
   - one mustering-out and finalization path
+  - spectator reveal timing for later term rolls
 - Use the old `CharacterCreationFlow.test.tsx` as a scenario reference, not as a
   component structure to port.
 
 ## Suggested Next Slice
 
-Build the automated browser regression harness and use it to harden the
+Extend the automated browser regression harness and use it to harden the
 existing server-backed character creation loop across several disposable
 travellers.
 
@@ -531,9 +516,10 @@ Reason:
   browser orchestration, button-state, reveal-timing, and mobile layout issues.
 - Manual clicking is too slow to keep finding stuck states in multi-term
   creation.
-- A real-browser smoke should drive the same owner and spectator paths users
-  use, then leave screenshots, DOM state, console errors, and server responses
-  when something breaks.
+- The existing real-browser smoke should grow from early reveal/follow checks
+  into full one-term, failed-qualification, mustering, and mobile scenarios
+  that leave screenshots, DOM state, console errors, and server responses when
+  something breaks.
 
 Expected file areas:
 
@@ -544,9 +530,11 @@ Expected file areas:
 - `src/shared/state.ts`
 - `src/server/`
 - `src/client/app/character-creation-flow.ts`
-- `src/client/app/character-sheet.ts`
+- `src/client/app/character-sheet-controller.ts`
+- `src/client/app/character-sheet-view.ts`
 - `src/client/app/app.ts`
-- `test/` or colocated client/shared tests, following current repo patterns
+- `e2e/character-creation-smoke.spec.ts`
+- colocated client/shared/server tests, following current repo patterns
 
 Architecture acceptance for the next slice:
 
