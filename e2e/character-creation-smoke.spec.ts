@@ -209,6 +209,21 @@ const characterCreationCareerButton = (page: Page, career: string) =>
       has: page.locator('.creation-career-title').filter({ hasText: career })
     })
 
+const openOrExpectFollowedCreation = async (
+  page: Page,
+  characterName: string
+): Promise<void> => {
+  const card = page
+    .locator('#creationPresenceDock .creation-presence-card')
+    .filter({ hasText: characterName })
+  if (await card.isVisible().catch(() => false)) {
+    await card.click()
+  }
+  await expect(
+    page.getByRole('complementary', { name: 'Character creator' })
+  ).toBeVisible({ timeout: 5_000 })
+}
+
 test.describe('character creation smoke', () => {
   test('opens the creator and rolls the first characteristic through shared dice', async ({
     page
@@ -328,11 +343,7 @@ test.describe('character creation smoke', () => {
         viewer: 'player'
       })
 
-      const card = spectator
-        .locator('#creationPresenceDock .creation-presence-card')
-        .filter({ hasText: characterName })
-      await expect(card).toBeVisible({ timeout: 5_000 })
-      await card.click()
+      await openOrExpectFollowedCreation(spectator, characterName)
 
       const ownerStrValue = page
         .locator('#characterCreationFields .creation-stat-cell')
@@ -359,11 +370,7 @@ test.describe('character creation smoke', () => {
       await expect(spectatorStrValue).toHaveText(rolledStr, { timeout: 5_000 })
 
       await spectator.reload({ waitUntil: 'domcontentloaded' })
-      const reloadedCard = spectator
-        .locator('#creationPresenceDock .creation-presence-card')
-        .filter({ hasText: characterName })
-      await expect(reloadedCard).toBeVisible()
-      await reloadedCard.click()
+      await openOrExpectFollowedCreation(spectator, characterName)
       await expect(spectatorStrValue).toHaveText(rolledStr, { timeout: 5_000 })
     } finally {
       await spectator.close()
@@ -426,11 +433,7 @@ test.describe('character creation smoke', () => {
         viewer: 'player'
       })
 
-      const card = spectator
-        .locator('#creationPresenceDock .creation-presence-card')
-        .filter({ hasText: characterName })
-      await expect(card).toBeVisible({ timeout: 5_000 })
-      await card.click()
+      await openOrExpectFollowedCreation(spectator, characterName)
       await expect(
         spectator.locator(
           '[data-character-creation-field="homeworld.lawLevel"]'
@@ -561,11 +564,7 @@ test.describe('character creation smoke', () => {
         viewer: 'player'
       })
 
-      const card = spectator
-        .locator('#creationPresenceDock .creation-presence-card')
-        .filter({ hasText: characterName })
-      await expect(card).toBeVisible({ timeout: 5_000 })
-      await card.click()
+      await openOrExpectFollowedCreation(spectator, characterName)
 
       const spectatorFields = spectator.locator('#characterCreationFields')
       const spectatorOutcome = spectator.locator(

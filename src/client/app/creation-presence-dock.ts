@@ -30,6 +30,7 @@ export interface CreationPresenceDockOptions {
     options: { readOnly: boolean }
   ) => void
   localStorage: Storage
+  autoFollowSingleRemoteCreation?: boolean
 }
 
 const creationStatusText = (status: string | null | undefined): string =>
@@ -80,7 +81,8 @@ export const createCreationPresenceDock = ({
   getRoomId,
   getActorId,
   openCharacterCreationFollow,
-  localStorage
+  localStorage,
+  autoFollowSingleRemoteCreation = true
 }: CreationPresenceDockOptions): CreationPresenceDockController => {
   const dismissedCreationPresenceIds = new Set<string>()
 
@@ -133,6 +135,17 @@ export const createCreationPresenceDock = ({
       )
       if (summaries.length === 0) {
         hide()
+        return
+      }
+
+      const currentActorId = getActorId()
+      if (
+        autoFollowSingleRemoteCreation &&
+        summaries.length === 1 &&
+        summaries[0]?.ownerId !== currentActorId
+      ) {
+        hide()
+        openCharacterCreationFollow(summaries[0].id, { readOnly: true })
         return
       }
 
