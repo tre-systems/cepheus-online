@@ -30,6 +30,16 @@ export const resolveViewerForState = (
   }
 }
 
+export const isActorRefereeOrOwner = (
+  state: Pick<GameState, 'ownerId' | 'players'> | null | undefined,
+  actorId: UserId | null | undefined
+): boolean =>
+  Boolean(
+    state &&
+      actorId &&
+      (state.ownerId === actorId || state.players[actorId]?.role === 'REFEREE')
+  )
+
 export const filterGameStateForViewer = (
   state: GameState,
   viewer: GameViewer

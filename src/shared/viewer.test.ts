@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 
 import { asBoardId, asGameId, asPieceId, asUserId } from './ids'
 import type { GameState } from './state'
-import { filterGameStateForViewer } from './viewer'
+import { filterGameStateForViewer, isActorRefereeOrOwner } from './viewer'
 
 const buildState = (): GameState => ({
   id: asGameId('game-1'),
@@ -75,5 +75,26 @@ describe('viewer filtering', () => {
 
     assert.deepEqual(Object.keys(filtered.pieces), ['visible'])
     assert.deepEqual(Object.keys(state.pieces).sort(), ['hidden', 'visible'])
+  })
+
+  it('derives actor referee authority from owner or room role', () => {
+    const state = buildState()
+    state.players[asUserId('assistant-referee')] = {
+      userId: asUserId('assistant-referee'),
+      role: 'REFEREE'
+    }
+    state.players[asUserId('player')] = {
+      userId: asUserId('player'),
+      role: 'PLAYER'
+    }
+
+    assert.equal(isActorRefereeOrOwner(state, asUserId('referee')), true)
+    assert.equal(
+      isActorRefereeOrOwner(state, asUserId('assistant-referee')),
+      true
+    )
+    assert.equal(isActorRefereeOrOwner(state, asUserId('player')), false)
+    assert.equal(isActorRefereeOrOwner(state, asUserId('stranger')), false)
+    assert.equal(isActorRefereeOrOwner(null, asUserId('referee')), false)
   })
 })

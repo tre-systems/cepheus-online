@@ -58,6 +58,7 @@ export interface CharacterSheetControllerOptions {
   getSelectedCharacter?: () => CharacterState | null
   getSelectedBoard: () => Pick<BoardState, 'name'> | null
   getCharacterState: () => Pick<GameState, 'characters'> | null | undefined
+  canEditSheetFields?: (character: CharacterState) => boolean
   getBoardDoorActions: () => CharacterSheetDoorActions
   sendPatch: (
     target: string | CharacterSheetPatchTarget,
@@ -107,6 +108,7 @@ export const createCharacterSheetController = ({
   getSelectedCharacter,
   getSelectedBoard,
   getCharacterState,
+  canEditSheetFields = () => true,
   getBoardDoorActions,
   sendPatch,
   setVisibility,
@@ -198,7 +200,9 @@ export const createCharacterSheetController = ({
     piece: PieceState | null,
     character: CharacterState | null
   ) => {
-    if (!piece?.characterId || !character) return statStrip(character)
+    if (!piece?.characterId || !character || !canEditSheetFields(character)) {
+      return null
+    }
 
     const form = documentApi.createElement('div')
     form.className = 'sheet-edit-form'
@@ -353,7 +357,9 @@ export const createCharacterSheetController = ({
     character: CharacterState | null,
     skills: string[]
   ) => {
-    if (!piece.characterId || !character) return null
+    if (!piece.characterId || !character || !canEditSheetFields(character)) {
+      return null
+    }
 
     const form = documentApi.createElement('div')
     form.className = 'sheet-skill-editor'
@@ -411,11 +417,11 @@ export const createCharacterSheetController = ({
       visibilityActions(piece),
       sheetRow('Move', piece.freedom),
       freedomActions(piece),
-      sheetSectionTitle('Edit'),
-      editableDetailsForm(piece, character),
       sheetSectionTitle('Skills'),
       skillChips(deriveCharacterSkills(character))
     )
+    const editor = editableDetailsForm(piece, character)
+    if (editor) body.append(sheetSectionTitle('Edit'), editor)
     appendDoorActions(body)
   }
 
@@ -456,7 +462,7 @@ export const createCharacterSheetController = ({
   }
 
   const itemsEditor = (character: CharacterState | null) => {
-    if (!character) return null
+    if (!character || !canEditSheetFields(character)) return null
     const equipment = Array.isArray(character.equipment)
       ? character.equipment
       : []
@@ -599,11 +605,11 @@ export const createCharacterSheetController = ({
       sheetRow('Age', character.age == null ? '-' : String(character.age)),
       statStrip(character),
       ...creationRows(character.creation),
-      sheetSectionTitle('Edit'),
-      editableDetailsForm(null, character),
       sheetSectionTitle('Skills'),
       skillChips(deriveCharacterSkills(character))
     )
+    const editor = editableDetailsForm(null, character)
+    if (editor) body.append(sheetSectionTitle('Edit'), editor)
     appendDoorActions(body)
   }
 

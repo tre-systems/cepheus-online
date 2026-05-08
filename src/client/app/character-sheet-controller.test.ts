@@ -172,6 +172,7 @@ const createHarness = (options: {
   selectedPiece: PieceState | null
   state: GameState | null
   doorActions?: TestElement | null
+  canEditSheetFields?: boolean
 }) => {
   const sheet = new TestElement('aside')
   const sheetName = new TestElement('h2')
@@ -203,6 +204,7 @@ const createHarness = (options: {
     getSelectedPiece: () => options.selectedPiece,
     getSelectedBoard: () => board(),
     getCharacterState: () => options.state,
+    canEditSheetFields: () => options.canEditSheetFields ?? true,
     getBoardDoorActions: () => ({
       actions: options.doorActions ? asElement(options.doorActions) : null
     }),
@@ -281,6 +283,121 @@ describe('character sheet controller', () => {
       {
         target: characterId,
         patch: { skills: ['Pilot-1', 'Recon-0', 'Vacc Suit-0'] }
+      }
+    ])
+  })
+
+  it('sends stat editor patches when canonical sheet fields are editable', () => {
+    const scout = character()
+    const harness = createHarness({
+      selectedPiece: piece(),
+      state: gameState({ [characterId]: scout })
+    })
+
+    harness.controller.render()
+
+    const inputs = findAll(
+      harness.elements.sheetBody,
+      (candidate) => candidate.tagName === 'input'
+    )
+    const age = inputs.find((input) => input.name === 'age')
+    const str = inputs.find((input) => input.name === 'str')
+    if (!age || !str) throw new Error('Expected age and STR inputs')
+    age.value = '35'
+    str.value = '7'
+    findByText(harness.elements.sheetBody, 'Save').click()
+
+    assert.deepEqual(harness.calls.patches, [
+      {
+        target: characterId,
+        patch: {
+          age: 35,
+          characteristics: {
+            str: 7,
+            dex: 8,
+            end: 7,
+            int: 9,
+            edu: 10,
+            soc: 6
+          }
+        }
+      }
+    ])
+  })
+
+  it('keeps canonical sheet fields read-only when only notes are editable', () => {
+    const scout = character()
+    const harness = createHarness({
+      selectedPiece: piece(),
+      state: gameState({ [characterId]: scout }),
+      canEditSheetFields: false
+    })
+
+    harness.controller.render()
+    assert.equal(harness.elements.sheetName.textContent, 'Scout')
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.tagName === 'input'
+      ).length,
+      0
+    )
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.textContent === 'Edit'
+      ).length,
+      0
+    )
+
+    harness.controller.selectTab('action')
+    findByText(harness.elements.sheetBody, 'Recon-0').click()
+    assert.deepEqual(harness.calls.rolls, ['Scout: Recon-0'])
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.tagName === 'textarea'
+      ).length,
+      0
+    )
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.textContent === 'Save skills'
+      ).length,
+      0
+    )
+
+    harness.controller.selectTab('items')
+    findByText(harness.elements.sheetBody, 'Laser Pistol')
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.tagName === 'input'
+      ).length,
+      0
+    )
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.textContent === 'Save items'
+      ).length,
+      0
+    )
+
+    harness.controller.selectTab('notes')
+    const notes = findAll(
+      harness.elements.sheetBody,
+      (candidate) => candidate.tagName === 'textarea'
+    )[0]
+    if (!notes) throw new Error('Expected notes textarea')
+    notes.value = 'Updated notes'
+    findByText(harness.elements.sheetBody, 'Save').click()
+
+    assert.deepEqual(harness.calls.patches, [
+      {
+        target: characterId,
+        patch: { notes: 'Updated notes' }
       }
     ])
   })

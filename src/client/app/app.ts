@@ -14,6 +14,7 @@ import type {
   GameState,
   PieceState
 } from '../../shared/state'
+import { isActorRefereeOrOwner } from '../../shared/viewer.js'
 import {
   boardList,
   boardOptionLabel,
@@ -1241,6 +1242,7 @@ const characterSheetController = createCharacterSheetController({
   getSelectedCharacter: selectedCharacter,
   getSelectedBoard: selectedBoard,
   getCharacterState: () => state,
+  canEditSheetFields: () => isActorRefereeOrOwner(state, asUserId(actorId)),
   getBoardDoorActions: () => ({ actions: boardDoorActions(selectedBoard()) }),
   sendPatch: (characterId, patch) =>
     postSheetCommand({
