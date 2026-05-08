@@ -122,6 +122,7 @@ export type CareerCreationEvent =
     }
   | { type: 'COMPLETE_SKILLS' }
   | { type: 'COMPLETE_AGING'; aging?: CareerCreationAgingFact }
+  | { type: 'DECIDE_ANAGATHICS'; useAnagathics: boolean; termIndex: number }
   | {
       type: 'RESOLVE_REENLISTMENT'
       reenlistment: CareerCreationReenlistmentFact
@@ -161,6 +162,7 @@ export type CareerCreationActionKey =
   | 'skipAdvancement'
   | 'completeSkills'
   | 'resolveAging'
+  | 'decideAnagathics'
   | 'rollReenlistment'
   | 'reenlist'
   | 'leaveCareer'
@@ -190,6 +192,7 @@ export type CareerCreationServerCommandType =
   | 'RollCharacterCreationMusteringBenefit'
   | 'CompleteCharacterCreationMustering'
   | 'CompleteCharacterCreation'
+  | 'DecideCharacterCreationAnagathics'
   | 'StartCharacterCareerTerm'
   | 'FinalizeCharacterCreation'
 
@@ -278,6 +281,7 @@ export interface CareerCreationActionProjection {
   pendingCascadeSkills?: readonly string[]
   requiredTermSkillCount?: number
   creationComplete?: boolean
+  history?: readonly CareerCreationEvent[]
 }
 
 export interface CareerCheck {

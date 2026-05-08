@@ -1676,11 +1676,8 @@ describe('character creation flow', () => {
         command.type === 'AdvanceCharacterCreation'
           ? command.creationEvent.type
           : null
-    )
-    assert.deepEqual(events, [
-      'SET_CHARACTERISTICS',
-      'SELECT_CAREER'
-    ])
+      )
+    assert.deepEqual(events, ['SET_CHARACTERISTICS', 'SELECT_CAREER'])
 
     const startTerm = commands.find(
       (command) => command.type === 'StartCharacterCareerTerm'
@@ -1718,6 +1715,7 @@ describe('character creation flow', () => {
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
+        'DecideCharacterCreationAnagathics',
         'ResolveCharacterCreationAging',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
@@ -1755,8 +1753,15 @@ describe('character creation flow', () => {
       { type: 'FINISH_MUSTERING' }
     ])
     assert.equal(
-      commands.find((command) => command.type === 'ResolveCharacterCreationAging')
-        ?.type,
+      commands.find(
+        (command) => command.type === 'DecideCharacterCreationAnagathics'
+      )?.type,
+      'DecideCharacterCreationAnagathics'
+    )
+    assert.equal(
+      commands.find(
+        (command) => command.type === 'ResolveCharacterCreationAging'
+      )?.type,
       'ResolveCharacterCreationAging'
     )
   })
@@ -1843,7 +1848,7 @@ describe('character creation flow', () => {
       },
       { identity, state }
     )
-    assert.equal(playableCommands.length, 18)
+    assert.equal(playableCommands.length, 19)
     assert.deepEqual(
       playableCommands
         .filter((command) => command.type === 'AdvanceCharacterCreation')
@@ -1862,6 +1867,12 @@ describe('character creation flow', () => {
         'LEAVE_CAREER',
         'FINISH_MUSTERING'
       ]
+    )
+    assert.equal(
+      playableCommands.find(
+        (command) => command.type === 'DecideCharacterCreationAnagathics'
+      )?.type,
+      'DecideCharacterCreationAnagathics'
     )
     assert.equal(
       playableCommands.find(

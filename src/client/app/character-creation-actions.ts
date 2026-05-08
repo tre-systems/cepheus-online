@@ -352,16 +352,12 @@ const actionsForLegalKey = (
       ]
     case 'skipCommission':
       return [
-        action(
-          'skip-commission',
-          'Skip commission',
-          {
-            type: 'SkipCharacterCreationCommission',
-            gameId: identity.gameId,
-            actorId: identity.actorId,
-            characterId: character.id
-          }
-        )
+        action('skip-commission', 'Skip commission', {
+          type: 'SkipCharacterCreationCommission',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
       ]
     case 'rollAdvancement':
       return [
@@ -388,16 +384,12 @@ const actionsForLegalKey = (
       ]
     case 'completeSkills':
       return [
-        action(
-          'complete-skills',
-          'Complete skills',
-          {
-            type: 'CompleteCharacterCreationSkills',
-            gameId: identity.gameId,
-            actorId: identity.actorId,
-            characterId: character.id
-          }
-        )
+        action('complete-skills', 'Complete skills', {
+          type: 'CompleteCharacterCreationSkills',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id
+        })
       ]
     case 'resolveAging':
       return [
@@ -407,6 +399,28 @@ const actionsForLegalKey = (
           actorId: identity.actorId,
           characterId: character.id
         })
+      ]
+    case 'decideAnagathics':
+      return [
+        action('use-anagathics', 'Use anagathics', {
+          type: 'DecideCharacterCreationAnagathics',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: character.id,
+          useAnagathics: true
+        }),
+        action(
+          'skip-anagathics',
+          'Skip anagathics',
+          {
+            type: 'DecideCharacterCreationAnagathics',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id,
+            useAnagathics: false
+          },
+          'secondary'
+        )
       ]
     case 'reenlist':
       return [
@@ -484,6 +498,7 @@ const actionKeyOrder: readonly CareerCreationActionKey[] = [
   'rollAdvancement',
   'skipAdvancement',
   'completeSkills',
+  'decideAnagathics',
   'resolveAging',
   'leaveCareer',
   'reenlist',

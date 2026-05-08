@@ -91,6 +91,9 @@ const eventFixtures = {
       }
     }
   ],
+  DECIDE_ANAGATHICS: [
+    { type: 'DECIDE_ANAGATHICS', useAnagathics: false, termIndex: 0 }
+  ],
   REENLIST: [{ type: 'REENLIST' }],
   LEAVE_CAREER: [{ type: 'LEAVE_CAREER' }],
   REENLIST_BLOCKED: [{ type: 'REENLIST_BLOCKED' }],

@@ -37,7 +37,9 @@ const creation = (
   ...overrides
 })
 
-const stateWithCreation = (projected: CharacterCreationProjection): GameState => ({
+const stateWithCreation = (
+  projected: CharacterCreationProjection
+): GameState => ({
   id: gameId,
   slug: 'demo-room',
   name: 'Demo Room',

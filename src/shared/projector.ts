@@ -67,6 +67,20 @@ const recordActiveTermAdvancement = (
       : structuredClone(term)
   )
 
+const recordActiveTermAnagathics = (
+  terms: readonly CareerTerm[],
+  termIndex: number,
+  useAnagathics: boolean
+) =>
+  terms.map((term, index) =>
+    index === termIndex
+      ? {
+          ...structuredClone(term),
+          anagathics: useAnagathics
+        }
+      : structuredClone(term)
+  )
+
 const applyCareerRank = (
   careers: readonly CareerRank[],
   career: string,
@@ -149,6 +163,7 @@ type CharacterEventType =
   | 'CharacterCreationAdvancementResolved'
   | 'CharacterCreationAdvancementSkipped'
   | 'CharacterCreationAgingResolved'
+  | 'CharacterCreationAnagathicsDecided'
   | 'CharacterCreationReenlistmentResolved'
   | 'CharacterCreationTermSkillRolled'
   | 'CharacterCreationTermCascadeSkillResolved'
@@ -669,6 +684,35 @@ const characterEventHandlers = {
         {
           type: 'COMPLETE_AGING',
           aging: structuredClone(event.aging)
+        }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationAnagathicsDecided: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      terms: recordActiveTermAnagathics(
+        character.creation.terms,
+        event.termIndex,
+        event.useAnagathics
+      ),
+      history: [
+        ...(character.creation.history ?? []),
+        {
+          type: 'DECIDE_ANAGATHICS',
+          useAnagathics: event.useAnagathics,
+          termIndex: event.termIndex
         }
       ]
     }

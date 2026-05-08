@@ -336,6 +336,10 @@ const describeCareerCreationEvent = (
       return 'Skills and training complete'
     case 'COMPLETE_AGING':
       return agingDetails(event)
+    case 'DECIDE_ANAGATHICS':
+      return event.useAnagathics
+        ? 'Anagathics used this term'
+        : 'Anagathics skipped this term'
     case 'RESOLVE_REENLISTMENT':
       return reenlistmentDetails({
         outcome: event.reenlistment.outcome,
@@ -594,6 +598,19 @@ export const deriveLiveActivity = (
             aging: event.aging
           })
         ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationAnagathicsDecided':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'DECIDE_ANAGATHICS',
+        details: event.useAnagathics
+          ? 'Anagathics used this term'
+          : 'Anagathics skipped this term',
         status: event.state.status,
         creationComplete: event.creationComplete
       }

@@ -431,7 +431,7 @@ describe('career creation legal action planner', () => {
       deriveLegalCareerCreationActionKeys(createCareerCreationState('AGING'), {
         pendingDecisions: [{ key: 'anagathicsDecision' }]
       }),
-      []
+      ['decideAnagathics']
     )
   })
 
@@ -733,6 +733,33 @@ describe('career creation legal action planner', () => {
         })
       ),
       []
+    )
+  })
+
+  it('requires anagathics decisions before resolving projected aging', () => {
+    const beforeDecision = projection('AGING', {
+      terms: [term({ survival: 8 })]
+    })
+
+    assert.deepEqual(deriveCareerCreationPendingDecisions(beforeDecision), [
+      { key: 'anagathicsDecision' }
+    ])
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(beforeDecision),
+      ['decideAnagathics']
+    )
+
+    const afterDecision = projection('AGING', {
+      terms: [term({ survival: 8, anagathics: true })],
+      history: [
+        { type: 'DECIDE_ANAGATHICS', useAnagathics: true, termIndex: 0 }
+      ]
+    })
+
+    assert.deepEqual(deriveCareerCreationPendingDecisions(afterDecision), [])
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(afterDecision),
+      ['resolveAging']
     )
   })
 

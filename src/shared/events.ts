@@ -146,6 +146,14 @@ export type GameEvent =
       creationComplete: boolean
     }
   | {
+      type: 'CharacterCreationAnagathicsDecided'
+      characterId: CharacterId
+      useAnagathics: boolean
+      termIndex: number
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
       type: 'CharacterCreationReenlistmentResolved'
       characterId: CharacterId
       outcome: CareerCreationReenlistmentFact['outcome']

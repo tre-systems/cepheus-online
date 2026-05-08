@@ -27,6 +27,7 @@ import {
   resolveCareerSkillTableRoll,
   resolveCascadeCareerSkill,
   resolveDraftCareer,
+  resolveAnagathicsUse,
   resolveReenlistment,
   transitionCareerCreationState
 } from '../../shared/characterCreation'
@@ -849,6 +850,38 @@ const validateAgingResolution = (
       commandError(
         'invalid_command',
         'AGING is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
+const validateAnagathicsDecision = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'AGING') {
+    return err(
+      commandError(
+        'invalid_command',
+        `ANAGATHICS_DECISION is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('decideAnagathics')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'ANAGATHICS_DECISION is blocked by unresolved character creation decisions'
       )
     )
   }
@@ -2596,6 +2629,43 @@ export const deriveEventsForCommand = (
           ...resolved,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'DecideCharacterCreationAnagathics': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed(
+          'Only the character owner or referee can decide anagathics'
+        )
+      }
+      const creation = validateAnagathicsDecision(character)
+      if (!creation.ok) return creation
+      const termIndex = creation.value.terms.length - 1
+      const activeTerm = creation.value.terms[termIndex]
+      if (!activeTerm) {
+        return err(commandError('missing_entity', 'Career term does not exist'))
+      }
+
+      const resolved = resolveAnagathicsUse({
+        term: activeTerm,
+        survived: command.useAnagathics
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationAnagathicsDecided',
+          characterId: command.characterId,
+          useAnagathics: resolved.term.anagathics,
+          termIndex,
+          state: structuredClone(creation.value.state),
+          creationComplete: false
         }
       ])
     }

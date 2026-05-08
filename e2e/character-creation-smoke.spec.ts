@@ -812,13 +812,37 @@ test.describe('character creation smoke', () => {
 
     const skipAnagathics = page.getByRole('button', { name: 'Skip' })
     if ((await skipAnagathics.count()) > 0) {
+      const decisionAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'DecideCharacterCreationAnagathics'
+          )
+      )
       await skipAnagathics.click()
+      await expect((await decisionAccepted).ok()).toBe(true)
+    } else {
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'DecideCharacterCreationAnagathics',
+        characterId,
+        useAnagathics: false
+      })
     }
 
     const rollAging = page.getByRole('button', { name: 'Roll aging' })
     if ((await rollAging.count()) > 0) {
       await expect(rollAging).toBeVisible({ timeout: 5_000 })
+      const agingAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'ResolveCharacterCreationAging'
+          )
+      )
       await rollAging.click()
+      await expect((await agingAccepted).ok()).toBe(true)
       await waitForDiceReveal(page)
       await expect(rollAging).toHaveCount(0, { timeout: 5_000 })
       for (let index = 0; index < 4; index += 1) {

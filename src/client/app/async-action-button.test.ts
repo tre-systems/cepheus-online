@@ -28,8 +28,7 @@ class TestButton {
   }
 }
 
-const asButton = (button: TestButton) =>
-  button as unknown as HTMLButtonElement
+const asButton = (button: TestButton) => button as unknown as HTMLButtonElement
 
 describe('async action button binding', () => {
   it('prevents duplicate pointer/click submissions while the callback is active', async () => {

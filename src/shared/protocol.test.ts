@@ -737,6 +737,27 @@ describe('protocol validation', () => {
     assert.equal(result.value.expectedSeq, 7)
   })
 
+  it('accepts semantic anagathics decision commands', () => {
+    for (const useAnagathics of [true, false]) {
+      const result = decodeCommand({
+        type: 'DecideCharacterCreationAnagathics',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        expectedSeq: 7,
+        useAnagathics
+      })
+
+      assert.equal(result.ok, true)
+      if (!result.ok) continue
+      assert.equal(result.value.type, 'DecideCharacterCreationAnagathics')
+      if (result.value.type !== 'DecideCharacterCreationAnagathics') continue
+      assert.equal(result.value.characterId, 'char-1')
+      assert.equal(result.value.expectedSeq, 7)
+      assert.equal(result.value.useAnagathics, useAnagathics)
+    }
+  })
+
   it('accepts semantic commission resolution commands', () => {
     const result = decodeCommand({
       type: 'ResolveCharacterCreationCommission',
@@ -995,6 +1016,47 @@ describe('protocol validation', () => {
     if (result.ok) return
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(result.error.message, 'canCommission must be a boolean')
+  })
+
+  it('rejects client-authored anagathics facts in generic creation commands', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-creation',
+      command: {
+        type: 'AdvanceCharacterCreation',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        creationEvent: {
+          type: 'DECIDE_ANAGATHICS',
+          useAnagathics: true,
+          termIndex: 0
+        }
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Unsupported character creation event DECIDE_ANAGATHICS'
+    )
+  })
+
+  it('rejects malformed semantic anagathics decision commands', () => {
+    const result = decodeCommand({
+      type: 'DecideCharacterCreationAnagathics',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      useAnagathics: 'yes'
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'useAnagathics must be a boolean')
   })
 
   it('accepts semantic reenlistment resolution commands and facts', () => {

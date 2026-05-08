@@ -9,6 +9,7 @@ import type {
 import type { CharacterCreationCommand } from './app-command-router.js'
 import {
   applyCharacterCreationAgingRoll,
+  applyCharacterCreationAnagathicsDecision,
   applyCharacterCreationBasicTraining,
   applyCharacterCreationCareerRoll,
   applyCharacterCreationCharacteristicRoll,
@@ -49,6 +50,7 @@ export interface CharacterCreationCommandController {
   rollTermSkill: (table: CharacterCreationTermSkillTable) => Promise<void>
   rollMusteringBenefit: (kind: BenefitKind) => Promise<void>
   rollReenlistment: () => Promise<void>
+  decideAnagathics: (useAnagathics: boolean) => Promise<void>
   rollAging: () => Promise<void>
   rollCareerCheck: () => Promise<void>
 }
@@ -427,6 +429,34 @@ export const createCharacterCreationCommandController = (
         renderWizard()
         scrollToTop()
       }
+    },
+
+    decideAnagathics: async (useAnagathics) => {
+      const flow = guardEditableFlow()
+      if (!flow) return
+      setError('')
+      syncFields()
+
+      const fallbackFlow = applyCharacterCreationAnagathicsDecision({
+        flow,
+        useAnagathics
+      }).flow
+
+      await ensurePublished()
+      const response = await postCharacterCreationCommand(
+        {
+          type: 'DecideCharacterCreationAnagathics',
+          ...commandIdentity(),
+          characterId: flow.draft.characterId,
+          useAnagathics
+        },
+        requestId('anagathics-decision')
+      )
+      syncAndRender(
+        { syncFlowFromRoomState, renderWizard, scrollToTop },
+        response,
+        fallbackFlow
+      )
     },
 
     rollAging: async () => {

@@ -409,6 +409,102 @@ describe('character creation command controller', () => {
     assert.equal(scrolled, true)
   })
 
+  it('decides anagathics through the semantic command and syncs fallback flow', async () => {
+    let flow: CharacterCreationFlow | null = {
+      ...careerFlow(),
+      draft: {
+        ...careerFlow().draft,
+        careerPlan: {
+          career: 'Merchant',
+          drafted: false,
+          qualificationRoll: 7,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          canCommission: false,
+          commissionRoll: null,
+          commissionPassed: null,
+          canAdvance: false,
+          advancementRoll: null,
+          advancementPassed: null,
+          termSkillRolls: [
+            {
+              table: 'serviceSkills',
+              roll: 1,
+              skill: 'Broker-1'
+            },
+            {
+              table: 'personalDevelopment',
+              roll: 2,
+              skill: 'Dex +1'
+            }
+          ],
+          anagathics: null,
+          agingRoll: null,
+          agingSelections: [],
+          reenlistmentRoll: null,
+          reenlistmentOutcome: null
+        }
+      }
+    }
+    const commands: CharacterCreationCommand[] = []
+    const requestIds: string[] = []
+    const syncedFallbacks: CharacterCreationFlow[] = []
+    let published = 0
+    let renderCount = 0
+    let scrollCount = 0
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: (nextFlow) => {
+        flow = nextFlow
+      },
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command, requestId) => {
+        commands.push(command)
+        requestIds.push(requestId)
+        return { state: null }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {},
+      syncFlowFromRoomState: (_state, _characterId, fallbackFlow) => {
+        syncedFallbacks.push(fallbackFlow)
+        flow = fallbackFlow
+        return fallbackFlow
+      },
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        renderCount += 1
+      },
+      scrollToTop: () => {
+        scrollCount += 1
+      }
+    })
+
+    await controller.decideAnagathics(false)
+
+    assert.equal(published, 1)
+    assert.deepEqual(commands[0], {
+      type: 'DecideCharacterCreationAnagathics',
+      gameId,
+      actorId,
+      characterId: flow?.draft.characterId,
+      useAnagathics: false
+    })
+    assert.deepEqual(requestIds, ['anagathics-decision'])
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.anagathics, false)
+    assert.equal(renderCount, 1)
+    assert.equal(scrollCount, 1)
+  })
+
   it('rolls a semantic mustering benefit, waits for reveal, and syncs fallback flow', async () => {
     let flow: CharacterCreationFlow | null = musteringFlow()
     const commands: CharacterCreationCommand[] = []

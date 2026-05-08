@@ -1,8 +1,5 @@
 import type { CharacterId } from '../../shared/ids'
-import type {
-  CharacterCreationProjection,
-  GameState
-} from '../../shared/state'
+import type { CharacterCreationProjection, GameState } from '../../shared/state'
 import type { CharacterCreationFlow } from './character-creation-flow.js'
 import { flowFromProjectedCharacter } from './character-creation-projection.js'
 

@@ -1254,6 +1254,9 @@ describe('deriveEventsForCommand error categories', () => {
             anagathics: false,
             survival: 8
           }
+        ],
+        history: [
+          { type: 'DECIDE_ANAGATHICS', useAnagathics: false, termIndex: 0 }
         ]
       })
     )
@@ -1319,6 +1322,9 @@ describe('deriveEventsForCommand error categories', () => {
           { ...scoutTerm },
           { ...scoutTerm, anagathics: true },
           { ...scoutTerm, complete: false }
+        ],
+        history: [
+          { type: 'DECIDE_ANAGATHICS', useAnagathics: false, termIndex: 3 }
         ]
       }),
       { gameSeed: 18 }
@@ -1341,6 +1347,88 @@ describe('deriveEventsForCommand error categories', () => {
         { type: 'PHYSICAL', modifier: -1 }
       ]
     })
+  })
+
+  it('blocks semantic aging until anagathics is decided for the active term', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationAging',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('AGING', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'AGING is blocked by unresolved character creation decisions'
+    )
+  })
+
+  it('emits a semantic anagathics decision event for the active term', () => {
+    const result = runCommand(
+      {
+        type: 'DecideCharacterCreationAnagathics',
+        gameId,
+        actorId,
+        characterId,
+        useAnagathics: true
+      },
+      createCreation('AGING', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationAnagathicsDecided',
+        characterId,
+        useAnagathics: true,
+        termIndex: 0,
+        state: {
+          status: 'AGING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
   })
 
   it('rejects generic aging completion after semantic migration', () => {

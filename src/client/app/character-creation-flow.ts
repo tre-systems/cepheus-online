@@ -296,6 +296,10 @@ type ResolveCharacterCreationAgingCommand = Extract<
   Command,
   { type: 'ResolveCharacterCreationAging' }
 >
+type DecideCharacterCreationAnagathicsCommand = Extract<
+  Command,
+  { type: 'DecideCharacterCreationAnagathics' }
+>
 type CompleteCharacterCreationHomeworldCommand =
   CharacterCreationHomeworldCommand
 type CompleteCharacterCreationCommand = Extract<
@@ -2422,6 +2426,13 @@ const initialCharacterCreationStateCommands = (
     type: 'ResolveCharacterCreationAging',
     ...baseCommand
   })
+  const decideAnagathicsCommand = (
+    useAnagathics: boolean
+  ): DecideCharacterCreationAnagathicsCommand => ({
+    type: 'DecideCharacterCreationAnagathics',
+    ...baseCommand,
+    useAnagathics
+  })
   const completeCreationCommand = (): CompleteCharacterCreationCommand => ({
     type: 'CompleteCharacterCreation',
     ...baseCommand
@@ -2480,6 +2491,7 @@ const initialCharacterCreationStateCommands = (
               canAdvance: careerPlan.canAdvance === true,
               advancementRoll: careerPlan.advancementRoll,
               advancementPassed: careerPlan.advancementPassed,
+              anagathics: careerPlan.anagathics === true,
               termSkillRolls: cloneTermSkillRolls(
                 careerPlan.termSkillRolls ?? []
               )
@@ -2526,6 +2538,7 @@ const initialCharacterCreationStateCommands = (
       }
 
       commands.push(advance({ type: 'COMPLETE_SKILLS' }))
+      commands.push(decideAnagathicsCommand(term.anagathics === true))
       commands.push(resolveAgingCommand())
       if (index < completedTerms.length - 1) {
         commands.push(advance({ type: 'REENLIST' }))

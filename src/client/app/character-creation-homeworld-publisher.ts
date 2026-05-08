@@ -99,8 +99,9 @@ export const createCharacterCreationHomeworldPublisher = ({
 }: CharacterCreationHomeworldPublisherDeps): CharacterCreationHomeworldPublisher => {
   let publishPromise = Promise.resolve()
 
-  const currentCreation = (characterId: CharacterCreationDraft['characterId']) =>
-    projectedCharacterCreation(getState(), characterId)
+  const currentCreation = (
+    characterId: CharacterCreationDraft['characterId']
+  ) => projectedCharacterCreation(getState(), characterId)
 
   const publishProgressNow = async (
     flow: CharacterCreationFlow | null

@@ -37,7 +37,8 @@ class TestDocument {
   }
 }
 
-const testDocument = new TestDocument() as unknown as CharacterCreationReviewDocument
+const testDocument =
+  new TestDocument() as unknown as CharacterCreationReviewDocument
 const asNode = (value: HTMLElement | DocumentFragment): TestNode =>
   value as unknown as TestNode
 
@@ -146,7 +147,9 @@ describe('character creation review view', () => {
   })
 
   it('renders review summary sections from a character creation flow', () => {
-    const node = asNode(renderCharacterCreationReview(testDocument, completeFlow()))
+    const node = asNode(
+      renderCharacterCreationReview(testDocument, completeFlow())
+    )
 
     assert.equal(node.className, 'character-creation-review')
     assert.equal(node.children[0]?.textContent, 'Iona Vesh')

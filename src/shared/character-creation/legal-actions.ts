@@ -1,4 +1,5 @@
 import { deriveRemainingCareerBenefits } from './benefits'
+import { CEPHEUS_SRD_RULESET } from './cepheus-srd-ruleset'
 import { canCompleteCreation, canOfferNewCareer } from './term-lifecycle'
 import type {
   CareerCreationActionContext,
@@ -69,6 +70,34 @@ const rankInCareer = (
   career: string
 ): number => creation.careers?.find((entry) => entry.name === career)?.rank ?? 0
 
+const hasAnagathicsDecisionForActiveTerm = (
+  creation: CareerCreationActionProjection
+): boolean => {
+  const termIndex = (creation.terms?.length ?? 0) - 1
+  if (termIndex < 0) return false
+
+  return (
+    creation.history?.some(
+      (event) =>
+        event.type === 'DECIDE_ANAGATHICS' && event.termIndex === termIndex
+    ) ?? false
+  )
+}
+
+const shouldDecideAnagathics = (
+  creation: CareerCreationActionProjection
+): boolean => {
+  if (creation.state.status !== 'AGING') return false
+  if ((creation.characteristicChanges?.length ?? 0) > 0) return false
+
+  const term = lastTerm(creation)
+  if (!term) return false
+  if (hasAnagathicsDecisionForActiveTerm(creation)) return false
+  if (!CEPHEUS_SRD_RULESET.careerBasics[term.career]) return false
+
+  return term.survival !== undefined
+}
+
 const basicTrainingCommandTypes = [
   'CompleteCharacterCreationBasicTraining'
 ] as unknown as LegalCareerCreationAction['commandTypes']
@@ -122,6 +151,10 @@ export const deriveCareerCreationPendingDecisions = (
 
   if ((creation.characteristicChanges?.length ?? 0) > 0) {
     decisions.push({ key: 'agingResolution' })
+  }
+
+  if (shouldDecideAnagathics(creation)) {
+    decisions.push({ key: 'anagathicsDecision' })
   }
 
   if (
@@ -259,6 +292,12 @@ export const deriveLegalCareerCreationActionKeys = (
     case 'SKILLS_TRAINING':
       return noPendingDecisions ? ['completeSkills'] : []
     case 'AGING':
+      if (
+        context.pendingDecisions?.length === 1 &&
+        hasPendingDecision(context, 'anagathicsDecision')
+      ) {
+        return ['decideAnagathics']
+      }
       return noPendingDecisions ? ['resolveAging'] : []
     case 'REENLISTMENT':
       if (options.reenlistmentOutcome === 'unresolved') {
@@ -353,6 +392,9 @@ const actionDefinitions = {
   resolveAging: {
     commandTypes: ['ResolveCharacterCreationAging'],
     rollRequirement: { key: 'aging', dice: '2d6' }
+  },
+  decideAnagathics: {
+    commandTypes: ['DecideCharacterCreationAnagathics']
   },
   rollReenlistment: {
     commandTypes: ['ResolveCharacterCreationReenlistment'],

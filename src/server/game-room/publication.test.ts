@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
 import type { Command, GameCommand } from '../../shared/commands'
 import {
   asBoardId,
@@ -107,6 +108,11 @@ const publishAgingResolution = (
     actorId,
     characterId
   })
+
+const firstCascadeSelection = (cascadeSkill: string): string =>
+  CEPHEUS_SRD_RULESET.cascadeSkills[
+    cascadeSkill.replace(/\*$/, '')
+  ]?.[0]?.replace(/\*$/, '') ?? cascadeSkill.replace(/\*$/, '')
 
 const publishCreationCompletion = (
   storage: ReturnType<typeof createMemoryStorage>,
@@ -299,6 +305,7 @@ describe('room publication flow', () => {
   it('publishes semantic aging resolution with seeded dice and activity', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-aging')
+    await storage.put(gameSeedKey(gameId), 5)
     await publish(storage, createGameCommand())
     await publish(storage, {
       type: 'CreateCharacter',
@@ -372,12 +379,96 @@ describe('room publication flow', () => {
       characterId
     )
     assert.equal(basicTrainingCompleted.ok, true)
-    await advance({
-      type: 'SURVIVAL_PASSED',
-      canCommission: false,
-      canAdvance: false
+    const survival = await publish(storage, {
+      type: 'ResolveCharacterCreationSurvival',
+      gameId,
+      actorId,
+      characterId
     })
-    assert.equal((await publishSkillsCompletion(storage, characterId)).ok, true)
+    assert.equal(
+      survival.ok,
+      true,
+      survival.ok ? undefined : survival.error.message
+    )
+    const serviceSkill = await publish(storage, {
+      type: 'RollCharacterCreationTermSkill',
+      gameId,
+      actorId,
+      characterId,
+      table: 'serviceSkills'
+    })
+    assert.equal(
+      serviceSkill.ok,
+      true,
+      serviceSkill.ok ? undefined : serviceSkill.error.message
+    )
+    if (!serviceSkill.ok) return
+    const pendingTermCascade =
+      serviceSkill.value.state.characters[characterId]?.creation
+        ?.pendingCascadeSkills?.[0]
+    if (pendingTermCascade) {
+      const resolvedCascade = await publish(storage, {
+        type: 'ResolveCharacterCreationTermCascadeSkill',
+        gameId,
+        actorId,
+        characterId,
+        cascadeSkill: pendingTermCascade,
+        selection: firstCascadeSelection(pendingTermCascade)
+      })
+      assert.equal(
+        resolvedCascade.ok,
+        true,
+        resolvedCascade.ok ? undefined : resolvedCascade.error.message
+      )
+    }
+    const specialistSkill = await publish(storage, {
+      type: 'RollCharacterCreationTermSkill',
+      gameId,
+      actorId,
+      characterId,
+      table: 'specialistSkills'
+    })
+    assert.equal(
+      specialistSkill.ok,
+      true,
+      specialistSkill.ok ? undefined : specialistSkill.error.message
+    )
+    if (
+      specialistSkill.ok &&
+      specialistSkill.value.state.characters[characterId]?.creation?.state
+        .status === 'SKILLS_TRAINING'
+    ) {
+      const skillsCompleted = await publishSkillsCompletion(
+        storage,
+        characterId
+      )
+      assert.equal(
+        skillsCompleted.ok,
+        true,
+        skillsCompleted.ok ? undefined : skillsCompleted.error.message
+      )
+    }
+    const anagathics = await publish(storage, {
+      type: 'DecideCharacterCreationAnagathics',
+      gameId,
+      actorId,
+      characterId,
+      useAnagathics: false
+    })
+    assert.equal(
+      anagathics.ok,
+      true,
+      anagathics.ok ? undefined : anagathics.error.message
+    )
+    if (!anagathics.ok) return
+    assert.equal(anagathics.value.liveActivities.length, 1)
+    assert.equal(anagathics.value.liveActivities[0]?.type, 'characterCreation')
+    assert.equal(
+      anagathics.value.liveActivities[0]?.type === 'characterCreation'
+        ? anagathics.value.liveActivities[0].transition
+        : null,
+      'DECIDE_ANAGATHICS'
+    )
 
     const resolved = await publish(storage, {
       type: 'ResolveCharacterCreationAging',
@@ -391,6 +482,12 @@ describe('room publication flow', () => {
     const events = (await readEventStream(storage, gameId)).map(
       (envelope) => envelope.event
     )
+    assert.equal(
+      events.some(
+        (event) => event.type === 'CharacterCreationAnagathicsDecided'
+      ),
+      true
+    )
     assert.deepEqual(
       events.slice(-2).map((event) => event.type),
       ['DiceRolled', 'CharacterCreationAgingResolved']
@@ -401,6 +498,8 @@ describe('room publication flow', () => {
     const agingEvent = events.at(-1)
     assert.equal(agingEvent?.type, 'CharacterCreationAgingResolved')
     if (agingEvent?.type !== 'CharacterCreationAgingResolved') return
+    assert.deepEqual(agingEvent.aging.roll.rolls, [6, 3])
+    assert.equal(agingEvent.aging.roll.total, 9)
     assert.equal(
       resolved.value.state.characters[characterId]?.age,
       agingEvent.aging.age
@@ -2053,7 +2152,10 @@ describe('room publication flow', () => {
         ?.advancement?.success,
       true
     )
-    assert.equal(history.filter((event) => event.type === 'COMPLETE_AGING').length, 2)
+    assert.equal(
+      history.filter((event) => event.type === 'COMPLETE_AGING').length,
+      2
+    )
     assert.equal(
       history.find((event) => event.type === 'REENLIST')?.reenlistment?.success,
       true

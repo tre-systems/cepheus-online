@@ -1205,6 +1205,20 @@ export const decodeCommand = (
       })
     }
 
+    case 'DecideCharacterCreationAnagathics': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const useAnagathics = parseBoolean(raw.useAnagathics, 'useAnagathics')
+      if (!useAnagathics.ok) return useAnagathics
+
+      return ok({
+        type: 'DecideCharacterCreationAnagathics',
+        ...base.value,
+        characterId: characterId.value,
+        useAnagathics: useAnagathics.value
+      })
+    }
+
     case 'ResolveCharacterCreationReenlistment': {
       const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
       if (!characterId.ok) return characterId

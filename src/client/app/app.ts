@@ -50,7 +50,6 @@ import { createCharacterCreationHomeworldPublisher } from './character-creation-
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBackgroundSkillSelection,
-  applyCharacterCreationAnagathicsDecision,
   applyCharacterCreationAgingChange,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationWizardStep,
@@ -1226,30 +1225,20 @@ const renderCharacterCreationAnagathicsDecision = (
   use.type = 'button'
   use.textContent = 'Use anagathics'
   use.title = decision.reason
-  use.addEventListener('click', () => {
-    if (!characterCreationFlow) return
-    characterCreationFlow = applyCharacterCreationAnagathicsDecision({
-      flow: characterCreationFlow,
-      useAnagathics: true
-    }).flow
-    setError('')
-    renderCharacterCreationWizard()
-    characterCreationPanel.scrollToTop()
-  })
+  bindAsyncActionButton(use, () =>
+    characterCreationCommandController
+      .decideAnagathics(true)
+      .catch((error) => setError(error.message))
+  )
 
   const skip = document.createElement('button')
   skip.type = 'button'
   skip.textContent = 'Skip'
-  skip.addEventListener('click', () => {
-    if (!characterCreationFlow) return
-    characterCreationFlow = applyCharacterCreationAnagathicsDecision({
-      flow: characterCreationFlow,
-      useAnagathics: false
-    }).flow
-    setError('')
-    renderCharacterCreationWizard()
-    characterCreationPanel.scrollToTop()
-  })
+  bindAsyncActionButton(skip, () =>
+    characterCreationCommandController
+      .decideAnagathics(false)
+      .catch((error) => setError(error.message))
+  )
 
   actions.append(use, skip)
   panel.append(title, text, actions)

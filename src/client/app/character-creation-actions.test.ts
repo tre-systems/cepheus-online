@@ -447,6 +447,36 @@ describe('character creation actions', () => {
     })
   })
 
+  it('uses semantic commands for deciding anagathics before aging', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('AGING', {
+          terms: [term({ survival: 8 })]
+        })
+      )
+    )
+
+    assert.deepEqual(
+      plan?.actions.map((action) => action.key),
+      ['use-anagathics', 'skip-anagathics']
+    )
+    assert.deepEqual(plan?.actions[0]?.command, {
+      type: 'DecideCharacterCreationAnagathics',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId,
+      useAnagathics: true
+    })
+    assert.deepEqual(plan?.actions[1]?.command, {
+      type: 'DecideCharacterCreationAnagathics',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: 'mae' as CharacterId,
+      useAnagathics: false
+    })
+  })
+
   it('has no action once creation is playable', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,
