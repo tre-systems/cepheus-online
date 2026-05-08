@@ -1635,7 +1635,7 @@ describe('character creation flow', () => {
     assert.equal(startTermCommand.expectedSeq, 12)
   })
 
-  it('derives event-backed creation lifecycle commands with sequential expectedSeq', () => {
+  it('derives event-backed creation lifecycle commands for sequential dispatch', () => {
     assert.deepEqual(
       deriveInitialCharacterCreationStateCommands(completeDraft(), {
         identity,
@@ -1667,7 +1667,7 @@ describe('character creation flow', () => {
     )
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
-      Array.from({ length: commands.length }, (_, index) => 12 + index)
+      Array.from({ length: commands.length }, () => undefined)
     )
 
     const events = commands
@@ -1719,7 +1719,7 @@ describe('character creation flow', () => {
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
-        'AdvanceCharacterCreation',
+        'ResolveCharacterCreationAging',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation'
@@ -1727,7 +1727,7 @@ describe('character creation flow', () => {
     )
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
-      Array.from({ length: commands.length }, (_, index) => 12 + index)
+      Array.from({ length: commands.length }, () => undefined)
     )
 
     const startTerm = commands.find(
@@ -1753,11 +1753,15 @@ describe('character creation flow', () => {
       { type: 'SURVIVAL_PASSED', canCommission: true, canAdvance: false },
       { type: 'SKIP_COMMISSION' },
       { type: 'COMPLETE_SKILLS' },
-      { type: 'COMPLETE_AGING' },
       { type: 'LEAVE_CAREER' },
       { type: 'FINISH_MUSTERING' },
       { type: 'CREATION_COMPLETE' }
     ])
+    assert.equal(
+      commands.find((command) => command.type === 'ResolveCharacterCreationAging')
+        ?.type,
+      'ResolveCharacterCreationAging'
+    )
   })
 
   it('derives a detached sheet patch copy', () => {
@@ -1825,7 +1829,7 @@ describe('character creation flow', () => {
     )
     assert.deepEqual(
       commands.map((command) => command.expectedSeq),
-      Array.from({ length: commands.length }, (_, index) => 12 + index)
+      Array.from({ length: commands.length }, () => undefined)
     )
 
     const playableDraft = applyCharacterCreationCareerPlan(
@@ -1859,11 +1863,16 @@ describe('character creation flow', () => {
         'SURVIVAL_PASSED',
         'COMPLETE_COMMISSION',
         'COMPLETE_SKILLS',
-        'COMPLETE_AGING',
         'LEAVE_CAREER',
         'FINISH_MUSTERING',
         'CREATION_COMPLETE'
       ]
+    )
+    assert.equal(
+      playableCommands.find(
+        (command) => command.type === 'ResolveCharacterCreationAging'
+      )?.type,
+      'ResolveCharacterCreationAging'
     )
     assert.equal(playableCommands.at(-1)?.type, 'FinalizeCharacterCreation')
   })

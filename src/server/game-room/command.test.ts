@@ -1345,6 +1345,42 @@ describe('deriveEventsForCommand error categories', () => {
     })
   })
 
+  it('rejects generic aging completion after semantic migration', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'COMPLETE_AGING' }
+      },
+      createCreation('AGING', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMPLETE_AGING must use ResolveCharacterCreationAging'
+    )
+  })
+
   it('blocks semantic aging resolution outside aging', () => {
     const result = runCommand(
       {

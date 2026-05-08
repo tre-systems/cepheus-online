@@ -149,6 +149,18 @@ describe('career creation legal action planner', () => {
     )
 
     assert.deepEqual(
+      deriveLegalCareerCreationActions(createCareerCreationState('AGING')),
+      [
+        {
+          key: 'resolveAging',
+          status: 'AGING',
+          commandTypes: ['ResolveCharacterCreationAging'],
+          rollRequirement: { key: 'aging', dice: '2d6' }
+        }
+      ]
+    )
+
+    assert.deepEqual(
       deriveLegalCareerCreationActions(
         createCareerCreationState('MUSTERING_OUT'),
         { canContinueCareer: true }

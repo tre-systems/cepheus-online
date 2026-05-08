@@ -1926,6 +1926,14 @@ export const deriveEventsForCommand = (
           )
         )
       }
+      if (command.creationEvent.type === 'COMPLETE_AGING') {
+        return err(
+          commandError(
+            'invalid_command',
+            'COMPLETE_AGING must use ResolveCharacterCreationAging'
+          )
+        )
+      }
       if (command.creationEvent.type === 'SKIP_COMMISSION') {
         return err(
           commandError(

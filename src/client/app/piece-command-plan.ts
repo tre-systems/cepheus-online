@@ -35,21 +35,6 @@ export type CreatePieceCommandPlan =
       focus: 'name' | null
     }
 
-const sequenceCommandAt = <T extends Command>(
-  command: T,
-  state: Pick<GameState, 'eventSeq'>,
-  offset: number
-): T => {
-  if (command.expectedSeq !== undefined || command.type === 'CreateGame') {
-    return command
-  }
-
-  return {
-    ...command,
-    expectedSeq: state.eventSeq + offset
-  }
-}
-
 export const createDefaultPieceCharacterCreationFlow = (
   characterId: CharacterId,
   name: string
@@ -139,25 +124,21 @@ export const planCreatePieceCommands = ({
     }
   }
 
-  const createPieceCommand = sequenceCommandAt(
-    {
-      type: 'CreatePiece',
-      gameId: identity.gameId,
-      actorId: identity.actorId,
-      pieceId,
-      boardId: board.id,
-      name: trimmedName,
-      characterId,
-      imageAssetId,
-      x,
-      y,
-      width,
-      height,
-      scale
-    },
-    state,
-    characterCommands.length
-  )
+  const createPieceCommand: Command = {
+    type: 'CreatePiece',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    pieceId,
+    boardId: board.id,
+    name: trimmedName,
+    characterId,
+    imageAssetId,
+    x,
+    y,
+    width,
+    height,
+    scale
+  }
 
   return {
     ok: true,

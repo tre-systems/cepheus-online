@@ -55,7 +55,7 @@ const gameState = (overrides: Partial<GameState> = {}): GameState => ({
 })
 
 describe('piece command planner', () => {
-  it('builds one sequenced piece command without a linked character', () => {
+  it('builds one piece command without a linked character', () => {
     const result = planCreatePieceCommands({
       identity,
       state: gameState(),
@@ -79,7 +79,7 @@ describe('piece command planner', () => {
     assert.equal(result.commands[0].pieceId, 'security-drone-1')
     assert.equal(result.commands[0].characterId, null)
     assert.equal(result.commands[0].imageAssetId, 'local/counters/drone.webp')
-    assert.equal(result.commands[0].expectedSeq, 12)
+    assert.equal(result.commands[0].expectedSeq, undefined)
     assert.equal(result.commands[0].x, 276)
     assert.equal(result.commands[0].y, 140)
     assert.equal(result.commands[0].width, 60)
@@ -127,7 +127,7 @@ describe('piece command planner', () => {
     )
     assert.deepEqual(
       result.commands.map((command) => command.expectedSeq),
-      Array.from({ length: result.commands.length }, (_, index) => 12 + index)
+      Array.from({ length: result.commands.length }, () => undefined)
     )
     assert.equal(result.commands.at(-1)?.type, 'CreatePiece')
     const createPieceCommand = result.commands.at(-1)

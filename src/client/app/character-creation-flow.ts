@@ -288,6 +288,10 @@ type AdvanceCharacterCreationCommand = Extract<
   Command,
   { type: 'AdvanceCharacterCreation' }
 >
+type ResolveCharacterCreationAgingCommand = Extract<
+  Command,
+  { type: 'ResolveCharacterCreationAging' }
+>
 type SetCharacterCreationHomeworldCommand = Extract<
   Command,
   { type: 'SetCharacterCreationHomeworld' }
@@ -608,25 +612,6 @@ const stepIndex = (step: CharacterCreationStep): number =>
 const defaultManualCharacterName = (
   state: Pick<GameState, 'characters'> | null
 ): string => `Character ${Object.keys(state?.characters || {}).length + 1}`
-
-const sequenceCommandAt = <T extends Command>(
-  command: T,
-  state: Pick<GameState, 'eventSeq'> | null,
-  offset: number
-): T => {
-  if (
-    !state ||
-    command.expectedSeq !== undefined ||
-    command.type === 'CreateGame'
-  ) {
-    return command
-  }
-
-  return {
-    ...command,
-    expectedSeq: state.eventSeq + offset
-  }
-}
 
 const validateBasics = (draft: CharacterCreationDraft): string[] => {
   const errors: string[] = []
@@ -2419,6 +2404,10 @@ const initialCharacterCreationStateCommands = (
     ...baseCommand,
     creationEvent
   })
+  const resolveAgingCommand = (): ResolveCharacterCreationAgingCommand => ({
+    type: 'ResolveCharacterCreationAging',
+    ...baseCommand
+  })
   const backgroundPlan = deriveCharacterCreationBackgroundSkillPlan(draft)
   const backgroundCommands =
     draft.homeworld.lawLevel && hasHomeworldTradeCodes(draft.homeworld)
@@ -2514,7 +2503,7 @@ const initialCharacterCreationStateCommands = (
       }
 
       commands.push(advance({ type: 'COMPLETE_SKILLS' }))
-      commands.push(advance({ type: 'COMPLETE_AGING' }))
+      commands.push(resolveAgingCommand())
       if (index < completedTerms.length - 1) {
         commands.push(advance({ type: 'REENLIST' }))
       }
@@ -2627,9 +2616,7 @@ export const deriveInitialCharacterCreationStateCommands = (
 ): Command[] => {
   if (!state) return []
 
-  return initialCharacterCreationStateCommands(draft, identity).map(
-    (command, index) => sequenceCommandAt(command, state, index)
-  )
+  return initialCharacterCreationStateCommands(draft, identity)
 }
 
 const careerHistoryNotes = (draft: CharacterCreationDraft): string[] => {
@@ -2754,7 +2741,5 @@ export const deriveCharacterCreationCommands = (
     sheetCommand
   ]
 
-  return baseCommands.map((command, index) =>
-    sequenceCommandAt(command, options.state ?? null, index)
-  )
+  return baseCommands
 }

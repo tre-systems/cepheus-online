@@ -351,7 +351,7 @@ const actionDefinitions = {
     rollRequirement: { key: 'termSkill', dice: '1d6' }
   },
   resolveAging: {
-    commandTypes: ['AdvanceCharacterCreation'],
+    commandTypes: ['ResolveCharacterCreationAging'],
     rollRequirement: { key: 'aging', dice: '2d6' }
   },
   rollReenlistment: {
