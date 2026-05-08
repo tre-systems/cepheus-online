@@ -235,7 +235,7 @@ describe('character creation actions', () => {
     }
   })
 
-  it('uses semantic commands for commission and advancement rolls', () => {
+  it('uses semantic commands for commission and advancement decisions', () => {
     const commissionPlan = deriveCharacterCreationActionPlan(
       identity,
       character(
@@ -277,11 +277,33 @@ describe('character creation actions', () => {
       }
     )
     assert.deepEqual(
+      commissionPlan?.actions.find((availableAction) => {
+        return availableAction.key === 'skip-commission'
+      })?.command,
+      {
+        type: 'SkipCharacterCreationCommission',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: 'mae' as CharacterId
+      }
+    )
+    assert.deepEqual(
       advancementPlan?.actions.find((availableAction) => {
         return availableAction.key === 'complete-advancement'
       })?.command,
       {
         type: 'ResolveCharacterCreationAdvancement',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: 'mae' as CharacterId
+      }
+    )
+    assert.deepEqual(
+      advancementPlan?.actions.find((availableAction) => {
+        return availableAction.key === 'skip-advancement'
+      })?.command,
+      {
+        type: 'SkipCharacterCreationAdvancement',
         gameId: identity.gameId,
         actorId: identity.actorId,
         characterId: 'mae' as CharacterId

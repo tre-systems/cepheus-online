@@ -1024,6 +1024,66 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.message, 'COMMISSION is not valid from SURVIVAL')
   })
 
+  it('emits a semantic commission skip event', () => {
+    const result = runCommand(
+      {
+        type: 'SkipCharacterCreationCommission',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('COMMISSION', {
+        state: createCareerCreationState('COMMISSION', {
+          canCommission: true,
+          canAdvance: true
+        })
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationCommissionSkipped',
+        characterId,
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: true,
+            canAdvance: true
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks generic commission skip commands', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'SKIP_COMMISSION' }
+      },
+      createCreation('COMMISSION', {
+        state: createCareerCreationState('COMMISSION', {
+          canCommission: true,
+          canAdvance: true
+        })
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'SKIP_COMMISSION must use SkipCharacterCreationCommission'
+    )
+  })
+
   it('emits a semantic advancement event with server-derived roll and rank facts', () => {
     const result = runCommand(
       {
@@ -1112,6 +1172,66 @@ describe('deriveEventsForCommand error categories', () => {
     if (result.ok) return
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(result.error.message, 'ADVANCEMENT is not valid from SURVIVAL')
+  })
+
+  it('emits a semantic advancement skip event', () => {
+    const result = runCommand(
+      {
+        type: 'SkipCharacterCreationAdvancement',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('ADVANCEMENT', {
+        state: createCareerCreationState('ADVANCEMENT', {
+          canCommission: false,
+          canAdvance: true
+        })
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationAdvancementSkipped',
+        characterId,
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: true
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks generic advancement skip commands', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'SKIP_ADVANCEMENT' }
+      },
+      createCreation('ADVANCEMENT', {
+        state: createCareerCreationState('ADVANCEMENT', {
+          canCommission: false,
+          canAdvance: true
+        })
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'SKIP_ADVANCEMENT must use SkipCharacterCreationAdvancement'
+    )
   })
 
   it('emits a semantic aging event with server-derived roll facts', () => {

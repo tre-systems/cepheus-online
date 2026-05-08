@@ -704,6 +704,38 @@ const validateCommissionResolution = (
   return ok(character.creation)
 }
 
+const validateCommissionSkip = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'COMMISSION') {
+    return err(
+      commandError(
+        'invalid_command',
+        `SKIP_COMMISSION is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('skipCommission')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'SKIP_COMMISSION is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
 const validateAdvancementResolution = (
   character: CharacterState
 ): Result<CharacterCreationProjection, CommandError> => {
@@ -729,6 +761,38 @@ const validateAdvancementResolution = (
       commandError(
         'invalid_command',
         'ADVANCEMENT is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
+const validateAdvancementSkip = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'ADVANCEMENT') {
+    return err(
+      commandError(
+        'invalid_command',
+        `SKIP_ADVANCEMENT is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('skipAdvancement')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'SKIP_ADVANCEMENT is blocked by unresolved character creation decisions'
       )
     )
   }
@@ -1862,6 +1926,22 @@ export const deriveEventsForCommand = (
           )
         )
       }
+      if (command.creationEvent.type === 'SKIP_COMMISSION') {
+        return err(
+          commandError(
+            'invalid_command',
+            'SKIP_COMMISSION must use SkipCharacterCreationCommission'
+          )
+        )
+      }
+      if (command.creationEvent.type === 'SKIP_ADVANCEMENT') {
+        return err(
+          commandError(
+            'invalid_command',
+            'SKIP_ADVANCEMENT must use SkipCharacterCreationAdvancement'
+          )
+        )
+      }
       if (
         !canTransitionCareerCreationState(
           character.creation.state,
@@ -2328,6 +2408,30 @@ export const deriveEventsForCommand = (
       ])
     }
 
+    case 'SkipCharacterCreationCommission': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateCommissionSkip(character)
+      if (!creation.ok) return creation
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'SKIP_COMMISSION'
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationCommissionSkipped',
+          characterId: command.characterId,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
     case 'ResolveCharacterCreationAdvancement': {
       const state = requireGame(context.state)
       if (!state.ok) return state
@@ -2377,6 +2481,30 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationAdvancementResolved',
           characterId: command.characterId,
           ...resolved.value,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'SkipCharacterCreationAdvancement': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateAdvancementSkip(character)
+      if (!creation.ok) return creation
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'SKIP_ADVANCEMENT'
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationAdvancementSkipped',
+          characterId: command.characterId,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         }

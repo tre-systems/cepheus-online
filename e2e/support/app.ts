@@ -7,12 +7,31 @@ export const openUniqueRoom = async (
   page: Page,
   roomId = uniqueRoomId()
 ): Promise<string> => {
-  await page.goto(`/?game=${roomId}&user=e2e-referee&viewer=referee`, {
+  await openRoom(page, {
+    roomId,
+    userId: 'e2e-referee',
+    viewer: 'referee'
+  })
+
+  return roomId
+}
+
+export const openRoom = async (
+  page: Page,
+  {
+    roomId,
+    userId,
+    viewer = 'player'
+  }: {
+    roomId: string
+    userId: string
+    viewer?: 'player' | 'spectator' | 'referee'
+  }
+): Promise<void> => {
+  await page.goto(`/?game=${roomId}&user=${userId}&viewer=${viewer}`, {
     waitUntil: 'domcontentloaded'
   })
 
   await expect(page.locator('#boardCanvas')).toBeVisible()
   await expect(page.locator('#connectionStatus')).toBeVisible()
-
-  return roomId
 }

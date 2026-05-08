@@ -160,6 +160,38 @@
     "expectedSeq": 25
   },
   {
+    "name": "character creation commission skip command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-skip-commission",
+      "command": {
+        "type": "SkipCharacterCreationCommission",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 25,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "SkipCharacterCreationCommission",
+    "expectedSeq": 25
+  },
+  {
+    "name": "character creation advancement skip command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-skip-advancement",
+      "command": {
+        "type": "SkipCharacterCreationAdvancement",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 25,
+        "characterId": "crew-scout-1"
+      }
+    },
+    "commandType": "SkipCharacterCreationAdvancement",
+    "expectedSeq": 25
+  },
+  {
     "name": "character creation aging resolution command",
     "message": {
       "type": "command",

@@ -355,7 +355,12 @@ const actionsForLegalKey = (
         action(
           'skip-commission',
           'Skip commission',
-          advanceCommand(identity, character, { type: 'SKIP_COMMISSION' })
+          {
+            type: 'SkipCharacterCreationCommission',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id
+          }
         )
       ]
     case 'rollAdvancement':
@@ -372,7 +377,12 @@ const actionsForLegalKey = (
         action(
           'skip-advancement',
           'Skip advancement',
-          advanceCommand(identity, character, { type: 'SKIP_ADVANCEMENT' }),
+          {
+            type: 'SkipCharacterCreationAdvancement',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id
+          },
           'secondary'
         )
       ]

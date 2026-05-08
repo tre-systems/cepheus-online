@@ -302,7 +302,7 @@ describe('career creation legal action planner', () => {
         {
           key: 'skipCommission',
           status: 'COMMISSION',
-          commandTypes: ['AdvanceCharacterCreation']
+          commandTypes: ['SkipCharacterCreationCommission']
         }
       ]
     )
@@ -324,7 +324,7 @@ describe('career creation legal action planner', () => {
         {
           key: 'skipAdvancement',
           status: 'ADVANCEMENT',
-          commandTypes: ['AdvanceCharacterCreation']
+          commandTypes: ['SkipCharacterCreationAdvancement']
         }
       ]
     )

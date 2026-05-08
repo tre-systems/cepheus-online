@@ -1161,12 +1161,34 @@ export const decodeCommand = (
       })
     }
 
+    case 'SkipCharacterCreationCommission': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'SkipCharacterCreationCommission',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
     case 'ResolveCharacterCreationAdvancement': {
       const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
       if (!characterId.ok) return characterId
 
       return ok({
         type: 'ResolveCharacterCreationAdvancement',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'SkipCharacterCreationAdvancement': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'SkipCharacterCreationAdvancement',
         ...base.value,
         characterId: characterId.value
       })

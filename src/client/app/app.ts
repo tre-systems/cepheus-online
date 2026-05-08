@@ -36,6 +36,7 @@ import {
   createBoardController,
   type BoardController
 } from './board-controller.js'
+import { bindAsyncActionButton } from './async-action-button.js'
 import { createCharacterCreationPanel } from './character-creation-panel.js'
 import {
   createCreationActivityFeedController,
@@ -76,9 +77,7 @@ import {
   removeCharacterCreationBackgroundSkillSelection,
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
-  type CharacterCreationCareerPlan,
   type CharacterCreationCareerRollKey,
-  type CharacterCreationCompletedTerm,
   type CharacterCreationDraft,
   type CharacterCreationFlow,
   type CharacterCreationTermSkillTable
@@ -88,7 +87,6 @@ import {
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCareerRollButton,
   type CharacterCreationCascadeSkillChoiceViewModel,
-  type CharacterCreationCareerCheckViewModel,
   type CharacterCreationFieldViewModel,
   type CharacterCreationHomeworldOptionViewModel,
   type CharacterCreationHomeworldViewModel,
@@ -103,6 +101,11 @@ import {
   deriveCharacterCreationReviewSummary,
   deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary,
+  formatCharacterCreationCareerCheckShort,
+  formatCharacterCreationCareerOutcome,
+  formatCharacterCreationCharacteristicModifier,
+  formatCharacterCreationCompletedTermSummary,
+  formatCharacterCreationReenlistmentOutcome,
   parseCharacterCreationDraftPatch
 } from './character-creation-view.js'
 import {
@@ -1291,30 +1294,6 @@ const renderCharacterCreationHomeworld = (
   return wrapper
 }
 
-const bindCharacterCreationActionButton = (
-  button: HTMLButtonElement,
-  callback: () => Promise<void> | void
-): void => {
-  let active = false
-  const run = (event: Event) => {
-    event.preventDefault()
-    if (active) return
-    active = true
-    const priorDisabled = 'disabled' in button ? button.disabled : null
-    if ('disabled' in button) {
-      button.disabled = true
-    }
-    Promise.resolve(callback()).finally(() => {
-      active = false
-      if ('disabled' in button) {
-        button.disabled = priorDisabled ?? false
-      }
-    })
-  }
-  button.addEventListener('pointerdown', run)
-  button.addEventListener('click', run)
-}
-
 const renderCharacterCreationTermSkillTables = (
   flow: CharacterCreationFlow
 ): HTMLElement | DocumentFragment => {
@@ -1350,7 +1329,7 @@ const renderCharacterCreationTermSkillTables = (
     button.textContent = action.label
     button.title = action.reason
     button.disabled = action.disabled
-    bindCharacterCreationActionButton(button, () =>
+    bindAsyncActionButton(button, () =>
       rollCharacterCreationTermSkill(
         action.table as CharacterCreationTermSkillTable
       ).catch((error) => setError(error.message))
@@ -1376,7 +1355,7 @@ const renderCharacterCreationReenlistmentRollButton = (
   const button = document.createElement('button')
   button.type = 'button'
   button.textContent = action.label
-  bindCharacterCreationActionButton(button, () =>
+  bindAsyncActionButton(button, () =>
     rollCharacterCreationReenlistment().catch((error) =>
       setError(error.message)
     )
@@ -1398,7 +1377,7 @@ const renderCharacterCreationAgingRollButton = (
   const button = document.createElement('button')
   button.type = 'button'
   button.textContent = action.label
-  bindCharacterCreationActionButton(button, () =>
+  bindAsyncActionButton(button, () =>
     rollCharacterCreationAging().catch((error) => setError(error.message))
   )
   const note = document.createElement('small')
@@ -1498,24 +1477,6 @@ const renderCharacterCreationAnagathicsDecision = (
   actions.append(use, skip)
   panel.append(title, text, actions)
   return panel
-}
-
-const reenlistmentOutcomeText = (
-  plan: CharacterCreationCareerPlan | null | undefined
-): string => {
-  if (plan?.reenlistmentOutcome === 'forced') {
-    return `Reenlistment ${plan.reenlistmentRoll}: mandatory reenlistment.`
-  }
-  if (plan?.reenlistmentOutcome === 'allowed') {
-    return `Reenlistment ${plan.reenlistmentRoll}: may reenlist or muster out.`
-  }
-  if (plan?.reenlistmentOutcome === 'blocked') {
-    return `Reenlistment ${plan.reenlistmentRoll}: must muster out.`
-  }
-  if (plan?.reenlistmentOutcome === 'retire') {
-    return 'Seven terms served: must retire and muster out.'
-  }
-  return 'Roll reenlistment before deciding what happens next.'
 }
 
 const renderCharacterCreationTermCascadeChoices = (
@@ -1713,17 +1674,6 @@ const renderCharacterCreationOptionField = (
   return label
 }
 
-const characteristicModifierLabel = (
-  value: string | number | null | undefined
-): string => {
-  if (value === '' || value === null || value === undefined) return ''
-  const number = Number(value)
-  if (!Number.isFinite(number)) return ''
-  const modifier = Math.floor(number / 3) - 2
-  if (modifier === 0) return ''
-  return modifier > 0 ? `+${modifier}` : String(modifier)
-}
-
 const renderCharacterCreationCharacteristicGrid = (
   flow: CharacterCreationFlow
 ): HTMLElement => {
@@ -1750,7 +1700,7 @@ const renderCharacterCreationCharacteristicGrid = (
         rollButton.append(pip)
       }
       const characteristicKey = field.key as CharacteristicKey
-      bindCharacterCreationActionButton(rollButton, () =>
+      bindAsyncActionButton(rollButton, () =>
         rollCharacterCreationCharacteristic(characteristicKey).catch((error) =>
           setError(error.message)
         )
@@ -1760,7 +1710,9 @@ const renderCharacterCreationCharacteristicGrid = (
     } else {
       const value = document.createElement('strong')
       value.textContent = field.value
-      modifier.textContent = characteristicModifierLabel(field.value)
+      modifier.textContent = formatCharacterCreationCharacteristicModifier(
+        field.value
+      )
       row.append(value, modifier)
     }
     cell.append(name, row)
@@ -1773,68 +1725,6 @@ const renderCharacterCreationCharacteristicGrid = (
     grid.append(cell)
   }
   return grid
-}
-
-const formatCareerCheckShort = (
-  check: CharacterCreationCareerCheckViewModel
-): string => {
-  if (!check.available) return 'Unavailable'
-  const modifier =
-    check.modifier === 0
-      ? ''
-      : check.modifier > 0
-        ? ` +${check.modifier}`
-        : ` ${check.modifier}`
-  return `${check.requirement}${modifier}`
-}
-
-const careerOutcomeText = (
-  plan: CharacterCreationCareerPlan | null | undefined
-): string => {
-  if (!plan?.career) return 'Select a career to attempt qualification.'
-  if (plan.drafted && plan.survivalRoll === null) {
-    return `Drafted into ${plan.career}: ready to roll survival.`
-  }
-  const lines = []
-  if (plan.qualificationRoll !== null) {
-    lines.push(
-      `Qualification ${plan.qualificationRoll}: ${
-        plan.qualificationPassed ? 'accepted' : 'rejected'
-      }`
-    )
-  }
-  if (plan.survivalRoll !== null) {
-    lines.push(
-      `Survival ${plan.survivalRoll}: ${
-        plan.survivalPassed ? 'survived' : 'mishap'
-      }`
-    )
-  }
-  if (plan.commissionRoll !== null) {
-    lines.push(
-      plan.commissionRoll === -1
-        ? 'Commission skipped'
-        : `Commission ${plan.commissionRoll}: ${
-            plan.commissionPassed ? 'commissioned' : 'not commissioned'
-          }`
-    )
-  }
-  if (plan.advancementRoll !== null) {
-    lines.push(
-      plan.advancementRoll === -1
-        ? 'Advancement skipped'
-        : `Advancement ${plan.advancementRoll}: ${
-            plan.advancementPassed ? 'advanced' : 'held rank'
-          }`
-    )
-  }
-  if (plan.agingRoll != null) {
-    lines.push(`Aging ${plan.agingRoll}: ${plan.agingMessage ?? 'resolved'}`)
-  }
-  if (plan.reenlistmentOutcome) {
-    lines.push(reenlistmentOutcomeText(plan))
-  }
-  return lines.join(' | ') || `${plan.career}: ready to roll qualification.`
 }
 
 const renderCharacterCreationCareerPicker = (
@@ -1871,7 +1761,7 @@ const renderCharacterCreationCareerPicker = (
     ? `${plan.career} term`
     : 'Choose a career'
   const outcomeBody = document.createElement('p')
-  outcomeBody.textContent = careerOutcomeText(plan)
+  outcomeBody.textContent = formatCharacterCreationCareerOutcome(plan)
   outcome.append(outcomeTitle, outcomeBody)
   wrapper.append(outcome)
 
@@ -1895,10 +1785,10 @@ const renderCharacterCreationCareerPicker = (
       title.textContent = career.label
       const qualification = document.createElement('span')
       qualification.className = 'creation-career-check'
-      qualification.textContent = `Qualify ${formatCareerCheckShort(career.qualification)}`
+      qualification.textContent = `Qualify ${formatCharacterCreationCareerCheckShort(career.qualification)}`
       const survival = document.createElement('span')
       survival.className = 'creation-career-check'
-      survival.textContent = `Survive ${formatCareerCheckShort(career.survival)}`
+      survival.textContent = `Survive ${formatCharacterCreationCareerCheckShort(career.survival)}`
       button.append(title, qualification, survival)
       button.addEventListener('click', () => {
         resolveCharacterCreationCareerQualification(career.key).catch((error) =>
@@ -1979,7 +1869,7 @@ const renderCharacterCreationTermResolution = (
     return panel
   }
 
-  text.textContent = reenlistmentOutcomeText(plan)
+  text.textContent = formatCharacterCreationReenlistmentOutcome(plan)
   const actions = document.createElement('div')
   actions.className = 'creation-term-actions'
 
@@ -2026,54 +1916,6 @@ const renderCharacterCreationTermResolution = (
   return panel
 }
 
-const termSummary = (
-  term: CharacterCreationCompletedTerm,
-  index: number
-): string => {
-  const result = term.survivalPassed ? 'survived' : 'killed in service'
-  const commission =
-    term.commissionRoll === null
-      ? ''
-      : term.commissionRoll === -1
-        ? ', skipped commission'
-        : term.commissionPassed
-          ? ', commissioned'
-          : ', no commission'
-  const advancement =
-    term.advancementRoll === null
-      ? ''
-      : term.advancementRoll === -1
-        ? ', skipped advancement'
-        : term.advancementPassed
-          ? ', advanced'
-          : ', held rank'
-  const rank = term.rankTitle ? `, rank ${term.rankTitle}` : ''
-  const bonusSkill = term.rankBonusSkill
-    ? `; rank skill ${term.rankBonusSkill}`
-    : ''
-  const termSkillRolls = term.termSkillRolls ?? []
-  const training =
-    termSkillRolls.length > 0
-      ? `; training ${termSkillRolls
-          .map((roll) => `${roll.skill} (${roll.roll})`)
-          .join(', ')}`
-      : ''
-  const aging =
-    term.agingRoll != null
-      ? `; aging ${term.agingRoll}${
-          term.agingMessage ? ` ${term.agingMessage}` : ''
-        }`
-      : ''
-  const anagathics = term.anagathics === true ? '; anagathics' : ''
-  const reenlistment =
-    term.reenlistmentOutcome && term.reenlistmentRoll !== null
-      ? `; reenlistment ${term.reenlistmentRoll} ${term.reenlistmentOutcome}`
-      : term.reenlistmentOutcome === 'retire'
-        ? '; retirement required'
-        : ''
-  return `${index + 1}. ${term.career}: ${result}${commission}${advancement}${rank}${bonusSkill}${training}${anagathics}${aging}${reenlistment}`
-}
-
 const renderCharacterCreationTermHistory = (
   flow: CharacterCreationFlow
 ): HTMLElement | DocumentFragment => {
@@ -2087,7 +1929,7 @@ const renderCharacterCreationTermHistory = (
   const list = document.createElement('div')
   for (const [index, term] of flow.draft.completedTerms.entries()) {
     const item = document.createElement('span')
-    item.textContent = termSummary(term, index)
+    item.textContent = formatCharacterCreationCompletedTermSummary(term, index)
     list.append(item)
   }
   panel.append(title, list)
@@ -2239,7 +2081,7 @@ const renderCharacterCreationCharacteristicRollButton = (
   button.type = 'button'
   button.textContent = viewModel.label
   button.disabled = viewModel.disabled
-  bindCharacterCreationActionButton(button, () =>
+  bindAsyncActionButton(button, () =>
     rollCharacterCreationCharacteristic().catch((error) =>
       setError(error.message)
     )
@@ -2263,7 +2105,7 @@ const renderCharacterCreationCareerRollButton = (
   button.type = 'button'
   button.textContent = viewModel.label
   button.disabled = viewModel.disabled
-  bindCharacterCreationActionButton(button, () =>
+  bindAsyncActionButton(button, () =>
     rollCharacterCreationCareerCheck().catch((error) => setError(error.message))
   )
   const hint = document.createElement('small')
@@ -2284,7 +2126,7 @@ const renderCharacterCreationBasicTrainingButton = (
   button.type = 'button'
   button.textContent = viewModel.label
   button.disabled = viewModel.disabled
-  bindCharacterCreationActionButton(button, () => {
+  bindAsyncActionButton(button, () => {
     if (!characterCreationFlow) return
     syncCharacterCreationWizardFields()
     setError('')
@@ -2349,7 +2191,7 @@ const renderCharacterCreationMusteringOut = (
     if (modifier !== 0) {
       button.title = `${modifier > 0 ? '+' : ''}${modifier} DM`
     }
-    bindCharacterCreationActionButton(button, () =>
+    bindAsyncActionButton(button, () =>
       rollCharacterCreationMusteringBenefit(kind).catch((error) =>
         setError(error.message)
       )

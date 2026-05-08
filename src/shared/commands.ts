@@ -256,8 +256,24 @@ export type CharacterCreationCommissionCommand = {
   characterId: CharacterId
 }
 
+export type CharacterCreationCommissionSkipCommand = {
+  type: 'SkipCharacterCreationCommission'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
 export type CharacterCreationAdvancementCommand = {
   type: 'ResolveCharacterCreationAdvancement'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
+export type CharacterCreationAdvancementSkipCommand = {
+  type: 'SkipCharacterCreationAdvancement'
   gameId: GameId
   actorId: UserId
   expectedSeq?: number
@@ -334,7 +350,9 @@ export type SemanticCommand =
   | CharacterCreationDrifterCommand
   | CharacterCreationSurvivalCommand
   | CharacterCreationCommissionCommand
+  | CharacterCreationCommissionSkipCommand
   | CharacterCreationAdvancementCommand
+  | CharacterCreationAdvancementSkipCommand
   | CharacterCreationAgingCommand
   | CharacterCreationReenlistmentCommand
   | CharacterCreationTermSkillCommand

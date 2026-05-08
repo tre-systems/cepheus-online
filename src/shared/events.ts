@@ -118,11 +118,23 @@ export type GameEvent =
       creationComplete: boolean
     }
   | {
+      type: 'CharacterCreationCommissionSkipped'
+      characterId: CharacterId
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
       type: 'CharacterCreationAdvancementResolved'
       characterId: CharacterId
       passed: boolean
       advancement: CareerCreationCheckFact
       rank: CareerCreationRankFact | null
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationAdvancementSkipped'
+      characterId: CharacterId
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

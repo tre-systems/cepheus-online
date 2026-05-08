@@ -792,6 +792,40 @@ describe('protocol validation', () => {
     })
   })
 
+  it('accepts semantic commission skip commands', () => {
+    const result = decodeCommand({
+      type: 'SkipCharacterCreationCommission',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      expectedSeq: 7
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'SkipCharacterCreationCommission')
+    if (result.value.type !== 'SkipCharacterCreationCommission') return
+    assert.equal(result.value.characterId, 'char-1')
+    assert.equal(result.value.expectedSeq, 7)
+  })
+
+  it('accepts semantic advancement skip commands', () => {
+    const result = decodeCommand({
+      type: 'SkipCharacterCreationAdvancement',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      expectedSeq: 7
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'SkipCharacterCreationAdvancement')
+    if (result.value.type !== 'SkipCharacterCreationAdvancement') return
+    assert.equal(result.value.characterId, 'char-1')
+    assert.equal(result.value.expectedSeq, 7)
+  })
+
   it('accepts semantic career term start commands', () => {
     const result = decodeCommand({
       type: 'StartCharacterCareerTerm',

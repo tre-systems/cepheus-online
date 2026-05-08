@@ -543,6 +543,16 @@ export const deriveLiveActivity = (
         creationComplete: event.creationComplete
       }
 
+    case 'CharacterCreationCommissionSkipped':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'SKIP_COMMISSION',
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
     case 'CharacterCreationAdvancementResolved':
       return {
         ...baseActivity(envelope),
@@ -558,6 +568,16 @@ export const deriveLiveActivity = (
             rank: event.rank
           })
         ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationAdvancementSkipped':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'SKIP_ADVANCEMENT',
         status: event.state.status,
         creationComplete: event.creationComplete
       }

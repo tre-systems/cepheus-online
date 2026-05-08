@@ -574,6 +574,65 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
+  it('projects semantic commission skip into history', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Merchant'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'COMMISSION',
+            context: {
+              canCommission: true,
+              canAdvance: true
+            }
+          },
+          terms: [],
+          careers: [{ name: 'Merchant', rank: 1 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          homeworld: null,
+          backgroundSkills: [],
+          pendingCascadeSkills: [],
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationCommissionSkipped',
+        characterId,
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: true,
+            canAdvance: true
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'SKILLS_TRAINING')
+    assert.deepEqual(creation?.history, [{ type: 'SKIP_COMMISSION' }])
+    assert.equal(state?.eventSeq, 4)
+  })
+
   it('projects semantic advancement resolution into history, term, and career rank', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
@@ -679,6 +738,66 @@ describe('game state projection', () => {
         }
       }
     ])
+    assert.equal(state?.eventSeq, 4)
+  })
+
+  it('projects semantic advancement skip into history', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Merchant'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'ADVANCEMENT',
+            context: {
+              canCommission: false,
+              canAdvance: true
+            }
+          },
+          terms: [],
+          careers: [{ name: 'Merchant', rank: 1 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          homeworld: null,
+          backgroundSkills: [],
+          pendingCascadeSkills: [],
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationAdvancementSkipped',
+        characterId,
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: true
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'SKILLS_TRAINING')
+    assert.deepEqual(creation?.careers, [{ name: 'Merchant', rank: 1 }])
+    assert.deepEqual(creation?.history, [{ type: 'SKIP_ADVANCEMENT' }])
     assert.equal(state?.eventSeq, 4)
   })
 

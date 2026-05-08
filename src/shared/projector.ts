@@ -145,7 +145,9 @@ type CharacterEventType =
   | 'CharacterCreationDrifterEntered'
   | 'CharacterCreationSurvivalResolved'
   | 'CharacterCreationCommissionResolved'
+  | 'CharacterCreationCommissionSkipped'
   | 'CharacterCreationAdvancementResolved'
+  | 'CharacterCreationAdvancementSkipped'
   | 'CharacterCreationAgingResolved'
   | 'CharacterCreationReenlistmentResolved'
   | 'CharacterCreationTermSkillRolled'
@@ -522,6 +524,26 @@ const characterEventHandlers = {
     return nextState
   },
 
+  CharacterCreationCommissionSkipped: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        { type: 'SKIP_COMMISSION' }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
   CharacterCreationAdvancementResolved: (state, envelope) => {
     const event = envelope.event
     const nextState = requireState(state, event.type)
@@ -554,6 +576,26 @@ const characterEventHandlers = {
       history: [
         ...(character.creation.history ?? []),
         structuredClone(creationEvent)
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationAdvancementSkipped: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        { type: 'SKIP_ADVANCEMENT' }
       ]
     }
     nextState.eventSeq = envelope.seq

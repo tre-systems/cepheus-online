@@ -28,6 +28,11 @@ import {
   deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary,
   equipmentText,
+  formatCharacterCreationCareerCheckShort,
+  formatCharacterCreationCareerOutcome,
+  formatCharacterCreationCharacteristicModifier,
+  formatCharacterCreationCompletedTermSummary,
+  formatCharacterCreationReenlistmentOutcome,
   parseCharacterCreationDraftPatch
 } from './character-creation-view'
 
@@ -117,6 +122,83 @@ const completeFlow = (): CharacterCreationFlow => ({
 })
 
 describe('character creation view helpers', () => {
+  it('formats character creation display text helpers', () => {
+    assert.equal(formatCharacterCreationCharacteristicModifier(null), '')
+    assert.equal(formatCharacterCreationCharacteristicModifier(''), '')
+    assert.equal(formatCharacterCreationCharacteristicModifier('bad'), '')
+    assert.equal(formatCharacterCreationCharacteristicModifier(6), '')
+    assert.equal(formatCharacterCreationCharacteristicModifier(9), '+1')
+    assert.equal(formatCharacterCreationCharacteristicModifier(3), '-1')
+
+    assert.equal(
+      formatCharacterCreationCareerCheckShort({
+        label: 'Survival',
+        requirement: 'End 5+',
+        available: true,
+        characteristic: 'end',
+        target: 5,
+        modifier: 1
+      }),
+      'End 5+ +1'
+    )
+    assert.equal(
+      formatCharacterCreationCareerCheckShort({
+        label: 'Survival',
+        requirement: 'End 5+',
+        available: true,
+        characteristic: 'end',
+        target: 5,
+        modifier: -1
+      }),
+      'End 5+ -1'
+    )
+    assert.equal(
+      formatCharacterCreationCareerCheckShort({
+        label: 'Commission',
+        requirement: '',
+        available: false,
+        characteristic: null,
+        target: null,
+        modifier: 0
+      }),
+      'Unavailable'
+    )
+
+    const plan = completeFlow().draft.careerPlan
+    if (!plan) throw new Error('Expected complete flow career plan')
+
+    assert.equal(
+      formatCharacterCreationReenlistmentOutcome({
+        ...plan,
+        reenlistmentRoll: 12,
+        reenlistmentOutcome: 'forced'
+      }),
+      'Reenlistment 12: mandatory reenlistment.'
+    )
+    assert.equal(
+      formatCharacterCreationCareerOutcome({
+        ...plan,
+        commissionRoll: -1,
+        advancementRoll: -1,
+        reenlistmentOutcome: 'blocked'
+      }),
+      'Qualification 8: accepted | Survival 9: survived | Commission skipped | Advancement skipped | Aging 0: Character aged to 34. | Reenlistment 7: must muster out.'
+    )
+
+    assert.equal(
+      formatCharacterCreationCompletedTermSummary(
+        {
+          ...completeFlow().draft.completedTerms[0],
+          rankTitle: 'Fourth Officer',
+          rankBonusSkill: 'Broker-1',
+          anagathics: true
+        },
+        0
+      ),
+      '1. Scout: survived, rank Fourth Officer; rank skill Broker-1; training Pilot (1); anagathics; aging 0 Character aged to 34.; reenlistment 7 allowed'
+    )
+  })
+
   it('exposes step and CTA labels for the flow steps', () => {
     assert.deepEqual(characterCreationStepLabels, {
       basics: 'Basics',
