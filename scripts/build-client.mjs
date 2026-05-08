@@ -211,6 +211,28 @@ const assets = [
     contentType: 'text/javascript; charset=utf-8'
   },
   {
+    pathname: '/client/app/creation-activity-feed.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'creation-activity-feed.js'
+    ),
+    exportName: 'CLIENT_CREATION_ACTIVITY_FEED_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
+    pathname: '/client/app/creation-presence-dock.js',
+    source: join(
+      compiledClientRoot,
+      'client',
+      'app',
+      'creation-presence-dock.js'
+    ),
+    exportName: 'CLIENT_CREATION_PRESENCE_DOCK_JS',
+    contentType: 'text/javascript; charset=utf-8'
+  },
+  {
     pathname: '/client/app/dice-overlay.js',
     source: join(compiledClientRoot, 'client', 'app', 'dice-overlay.js'),
     exportName: 'CLIENT_DICE_OVERLAY_JS',

@@ -73,6 +73,12 @@ export interface AppElements {
   roomCancel: HTMLButtonElement | null
 }
 
+export type RequiredAppElements = Omit<
+  { [K in keyof AppElements]: NonNullable<AppElements[K]> },
+  'creatorQuickSection'
+> &
+  Pick<AppElements, 'creatorQuickSection'>
+
 const getElement = <T extends HTMLElement>(
   document: AppElementsDocument,
   id: string
@@ -149,3 +155,20 @@ export const getAppElements = (document: AppElementsDocument): AppElements => ({
   roomDialog: getElement(document, 'roomDialog'),
   roomCancel: getElement(document, 'roomCancelButton')
 })
+
+const optionalAppElementKeys = new Set<keyof AppElements>([
+  'creatorQuickSection'
+])
+
+export const requireAppElements = (
+  elements: AppElements
+): RequiredAppElements => {
+  for (const key of Object.keys(elements) as (keyof AppElements)[]) {
+    if (optionalAppElementKeys.has(key)) continue
+    if (elements[key] === null) {
+      throw new Error(`Missing required app element: ${key}`)
+    }
+  }
+
+  return elements as RequiredAppElements
+}

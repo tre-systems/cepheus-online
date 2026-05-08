@@ -34,7 +34,7 @@ import {
   selectedBoardPieces,
   pieceImageUrl
 } from './board-view.js'
-import { getAppElements, type AppElements } from './app-elements.js'
+import { getAppElements, requireAppElements } from './app-elements.js'
 import { createAppBootstrap } from './app-bootstrap.js'
 import {
   createBoardController,
@@ -42,9 +42,10 @@ import {
 } from './board-controller.js'
 import { createCharacterCreationPanel } from './character-creation-panel.js'
 import {
-  deriveCreationActivityCardsFromApplication,
-  type CreationActivityCardViewModel
-} from './creation-activity-view.js'
+  createCreationActivityFeedController,
+  creationActivityRevealDelayMs
+} from './creation-activity-feed.js'
+import { createCreationPresenceDock } from './creation-presence-dock.js'
 import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBasicTraining,
@@ -132,7 +133,6 @@ import {
   buildRollDiceCommand,
   type ClientDiceRollActivity,
   type ClientIdentity,
-  type ClientMessageApplication,
   buildSetDoorOpenCommand
 } from '../game-commands.js'
 import {
@@ -150,9 +150,7 @@ import {
   createConnectivityController,
   type ConnectivityController
 } from './connectivity-controller.js'
-import {
-  deriveDoorToggleViewModels
-} from './door-los-view.js'
+import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
 import { createDiceRevealState } from './dice-reveal-state.js'
 import { createRoomSocketController } from './room-socket-controller.js'
@@ -170,27 +168,6 @@ import { createRoomMenuController } from './room-menu-controller.js'
 import { registerClientServiceWorker } from './service-worker.js'
 
 registerClientServiceWorker()
-
-type RequiredAppElements = Omit<
-  { [K in keyof AppElements]: NonNullable<AppElements[K]> },
-  'creatorQuickSection'
-> &
-  Pick<AppElements, 'creatorQuickSection'>
-
-const optionalAppElementKeys = new Set<keyof AppElements>([
-  'creatorQuickSection'
-])
-
-const requireAppElements = (elements: AppElements): RequiredAppElements => {
-  for (const key of Object.keys(elements) as (keyof AppElements)[]) {
-    if (optionalAppElementKeys.has(key)) continue
-    if (elements[key] === null) {
-      throw new Error(`Missing required app element: ${key}`)
-    }
-  }
-
-  return elements as RequiredAppElements
-}
 
 const els = requireAppElements(getAppElements(document))
 
@@ -210,8 +187,6 @@ let diceHideTimer: number | null = null
 let connectivityController: ConnectivityController | null = null
 const diceRevealState = createDiceRevealState()
 const animatedDiceRollActivityIds = new Set<string>()
-const creationActivityTimers = new Set<number>()
-const dismissedCreationPresenceIds = new Set<string>()
 let characterCreationFlow: CharacterCreationFlow | null = null
 let characterCreationReadOnly = false
 let characterCreationPublishPromise: Promise<void> | null = null
@@ -231,206 +206,6 @@ const setStatus = (text: string): void => {
 
 const setError = (text: string): void => {
   els.error.textContent = text || ''
-}
-
-const clearCreationActivityFeed = () => {
-  for (const timer of creationActivityTimers) {
-    window.clearTimeout(timer)
-  }
-  creationActivityTimers.clear()
-  els.creationActivityFeed?.replaceChildren()
-}
-
-const scheduleCreationActivityTimer = (
-  callback: () => void,
-  delayMs: number
-): number => {
-  const timer = window.setTimeout(() => {
-    creationActivityTimers.delete(timer)
-    callback()
-  }, delayMs)
-  creationActivityTimers.add(timer)
-  return timer
-}
-
-const renderCreationActivityCard = (
-  card: CreationActivityCardViewModel
-): void => {
-  const item = document.createElement('article')
-  item.className = `creation-activity-card ${card.tone}`
-  item.setAttribute('role', 'status')
-
-  const title = document.createElement('strong')
-  title.textContent = card.title
-
-  const detail = document.createElement('span')
-  detail.textContent = card.detail
-
-  item.append(title, detail)
-  els.creationActivityFeed.prepend(item)
-
-  while (els.creationActivityFeed.children.length > 3) {
-    els.creationActivityFeed.lastElementChild?.remove()
-  }
-
-  scheduleCreationActivityTimer(() => {
-    item.classList.add('leaving')
-    scheduleCreationActivityTimer(() => item.remove(), 220)
-  }, 5200)
-}
-
-const showCreationActivityCards = (
-  application: ClientMessageApplication,
-  delayMs = 0
-): void => {
-  if (characterCreationPanel.isOpen() && !characterCreationReadOnly) return
-
-  const cards = deriveCreationActivityCardsFromApplication(application, {
-    viewerActorId: actorId
-  })
-  if (cards.length === 0 || !els.creationActivityFeed) return
-
-  const renderCards = () => {
-    for (const card of cards) renderCreationActivityCard(card)
-  }
-
-  if (delayMs > 0) {
-    scheduleCreationActivityTimer(renderCards, delayMs)
-    return
-  }
-
-  renderCards()
-}
-
-const creationActivityRevealDelayMs = (
-  diceRollActivities: readonly ClientDiceRollActivity[]
-): number => {
-  if (diceRollActivities.length === 0) return 0
-
-  const revealAtMs = Math.max(
-    ...diceRollActivities.map((activity) => Date.parse(activity.revealAt))
-  )
-  if (!Number.isFinite(revealAtMs)) return 0
-
-  return Math.max(0, revealAtMs - Date.now()) + 160
-}
-
-const creationStatusText = (status: string | null | undefined): string =>
-  String(status || 'CREATION')
-    .toLowerCase()
-    .split(/[_\s-]+/)
-    .filter(Boolean)
-    .map((word) => word[0].toUpperCase() + word.slice(1))
-    .join(' ')
-
-interface ActiveCreationSummary {
-  id: CharacterId
-  name: string
-  ownerId: CharacterState['ownerId']
-  status: string
-  rolledCharacteristics: number
-  terms: number
-}
-
-const activeCreationSummaries = (): ActiveCreationSummary[] => {
-  if (!state) return []
-
-  const summaries: ActiveCreationSummary[] = []
-  for (const character of Object.values(state.characters)) {
-    const creation = character.creation
-    if (
-      !creation ||
-      creation.creationComplete ||
-      creation.state.status === 'PLAYABLE' ||
-      dismissedCreationPresenceIds.has(character.id)
-    ) {
-      continue
-    }
-
-    const rolledCharacteristics = Object.values(
-      character.characteristics
-    ).filter((value) => value !== null).length
-
-    summaries.push({
-      id: character.id,
-      name: character.name || 'Traveller',
-      ownerId: character.ownerId,
-      status: creation.state.status,
-      rolledCharacteristics,
-      terms: creation.terms.length
-    })
-  }
-
-  return summaries
-}
-
-const renderCreationPresenceDock = () => {
-  if (!els.creationPresenceDock) return
-  if (
-    (els.characterCreator && !els.characterCreator.hidden) ||
-    els.sheet?.classList.contains('open')
-  ) {
-    els.creationPresenceDock.hidden = true
-    els.creationPresenceDock.replaceChildren()
-    return
-  }
-
-  const summaries = activeCreationSummaries()
-  if (summaries.length === 0) {
-    els.creationPresenceDock.hidden = true
-    els.creationPresenceDock.replaceChildren()
-    return
-  }
-
-  const heading = document.createElement('div')
-  heading.className = 'creation-presence-heading'
-  const title = document.createElement('strong')
-  title.textContent = 'Creation live'
-  const count = document.createElement('span')
-  count.textContent =
-    summaries.length === 1 ? '1 traveller' : `${summaries.length} travellers`
-  const clearButton = document.createElement('button')
-  clearButton.type = 'button'
-  clearButton.className = 'creation-presence-clear'
-  clearButton.textContent = 'Clear'
-  clearButton.title = 'Hide these live creation cards on this screen'
-  clearButton.addEventListener('click', () => {
-    for (const summary of summaries)
-      dismissedCreationPresenceIds.add(summary.id)
-    persistDismissedCreationPresenceIds()
-    renderCreationPresenceDock()
-  })
-  heading.append(title, count, clearButton)
-
-  const list = document.createElement('div')
-  list.className = 'creation-presence-list'
-  const items = summaries.map((summary) => {
-    const item = document.createElement('button')
-    item.className = 'creation-presence-card'
-    item.type = 'button'
-    item.title = `Open ${summary.name}`
-
-    const name = document.createElement('strong')
-    name.textContent = summary.name
-
-    const detail = document.createElement('span')
-    detail.textContent = `${creationStatusText(summary.status)} · ${summary.rolledCharacteristics}/6 stats · ${summary.terms} terms`
-
-    const owner = document.createElement('small')
-    owner.textContent = summary.ownerId ? `by ${summary.ownerId}` : 'unowned'
-
-    item.append(name, detail, owner)
-    item.addEventListener('click', () => {
-      openCharacterCreationFollow(summary.id, {
-        readOnly: summary.ownerId !== actorId
-      })
-    })
-    return item
-  })
-  list.append(...items)
-
-  els.creationPresenceDock.hidden = false
-  els.creationPresenceDock.replaceChildren(heading, list)
 }
 
 createPwaInstallController({
@@ -457,40 +232,6 @@ const bootstrapIdentity = () => ({
   roomId: asGameId(roomId),
   actorId: asUserId(actorId)
 })
-
-const creationPresenceDismissalStorageKey = () =>
-  `cepheus-online:${roomId}:${actorId}:dismissed-creation-presence`
-
-const hydrateDismissedCreationPresenceIds = () => {
-  try {
-    const rawValue = window.localStorage.getItem(
-      creationPresenceDismissalStorageKey()
-    )
-    const ids = rawValue ? JSON.parse(rawValue) : []
-    if (!Array.isArray(ids)) return
-    dismissedCreationPresenceIds.clear()
-    for (const id of ids) {
-      if (typeof id === 'string' && id.trim()) {
-        dismissedCreationPresenceIds.add(id)
-      }
-    }
-  } catch {
-    dismissedCreationPresenceIds.clear()
-  }
-}
-
-const persistDismissedCreationPresenceIds = () => {
-  try {
-    window.localStorage.setItem(
-      creationPresenceDismissalStorageKey(),
-      JSON.stringify([...dismissedCreationPresenceIds])
-    )
-  } catch {
-    // Local dismissal is a convenience; ignore storage failures.
-  }
-}
-
-hydrateDismissedCreationPresenceIds()
 
 const currentSelectedPieceId = (): PieceId | null =>
   appSession.snapshot().selectedPieceId
@@ -579,7 +320,7 @@ const handleServerMessage = (message: ServerMessage): void => {
       })
     }
   }
-  showCreationActivityCards(
+  creationActivityFeedController.show(
     application,
     creationActivityRevealDelayMs(liveActivityApplication.diceRollActivities)
   )
@@ -1371,6 +1112,29 @@ const characterCreationPanel = createCharacterCreationPanel({
   closeCharacterSheet: () => characterSheetController.setOpen(false),
   requestRender: () => render()
 })
+
+const creationActivityFeedController = createCreationActivityFeedController({
+  elements: { feed: els.creationActivityFeed },
+  getViewerActorId: () => actorId,
+  shouldSuppressCards: () =>
+    characterCreationPanel.isOpen() && !characterCreationReadOnly,
+  setTimeout: window.setTimeout.bind(window),
+  clearTimeout: window.clearTimeout.bind(window)
+})
+
+const creationPresenceDock = createCreationPresenceDock({
+  elements: {
+    dock: els.creationPresenceDock,
+    characterCreator: els.characterCreator,
+    sheet: els.sheet
+  },
+  getRoomId: () => roomId,
+  getActorId: () => actorId,
+  openCharacterCreationFollow,
+  localStorage: window.localStorage
+})
+
+creationPresenceDock.hydrate()
 
 const startCharacterCreationWizard = () => {
   characterCreationReadOnly = false
@@ -3749,7 +3513,7 @@ const render = () => {
   renderBoardControls()
   boardController?.render()
   renderRail()
-  renderCreationPresenceDock()
+  creationPresenceDock.render(state)
 }
 
 const animateRoll = (roll: LiveDiceRollRevealTarget | DiceRollState): void => {
@@ -3807,7 +3571,8 @@ createRoomMenuController({
     firstStateApplied = false
     latestDiceId = null
     selectedCharacterId = null
-    clearCreationActivityFeed()
+    creationActivityFeedController.clear()
+    creationPresenceDock.hydrate()
     selectPiece(null)
     boardController?.clearDrag()
     characterSheetController.setOpen(false)

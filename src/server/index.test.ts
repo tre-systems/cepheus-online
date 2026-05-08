@@ -26,7 +26,8 @@ const clientModules = new Map<
         '/client/app/character-creation-panel.js',
         '/client/app/character-creation-flow.js',
         '/client/app/character-creation-view.js',
-        '/client/app/creation-activity-view.js',
+        '/client/app/creation-activity-feed.js',
+        '/client/app/creation-presence-dock.js',
         '/client/app/character-sheet-controller.js',
         '/client/app/connectivity-controller.js',
         '/client/app/dice-overlay.js',
@@ -187,6 +188,17 @@ const clientModules = new Map<
   [
     '/client/app/creation-activity-view.js',
     { markers: ['deriveCreationActivityCardsFromApplication'] }
+  ],
+  [
+    '/client/app/creation-activity-feed.js',
+    {
+      markers: ['createCreationActivityFeedController'],
+      imports: ['/client/app/creation-activity-view.js']
+    }
+  ],
+  [
+    '/client/app/creation-presence-dock.js',
+    { markers: ['createCreationPresenceDock'] }
   ],
   [
     '/client/app/character-sheet-controller.js',

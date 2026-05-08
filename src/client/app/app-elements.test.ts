@@ -1,7 +1,11 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { type AppElements, getAppElements } from './app-elements'
+import {
+  type AppElements,
+  getAppElements,
+  requireAppElements
+} from './app-elements'
 
 const elementIds = {
   status: 'connectionStatus',
@@ -127,5 +131,32 @@ describe('app elements', () => {
     assert.equal(elements.status, null)
     assert.equal(elements.roomDialog, null)
     assert.deepEqual(elements.sheetTabs, [])
+  })
+
+  it('requires all runtime shell elements except retired quick creation', () => {
+    const ids = Object.values(elementIds).filter(
+      (id) => id !== elementIds.creatorQuickSection
+    )
+    const fakeDocument = new FakeDocument(ids, [])
+
+    const elements = requireAppElements(getAppElements(fakeDocument))
+
+    assert.equal(elements.status, fakeDocument.elements.get(elementIds.status))
+    assert.equal(elements.creatorQuickSection, null)
+  })
+
+  it('reports the missing required shell element key', () => {
+    const ids = Object.values(elementIds).filter(
+      (id) => id !== elementIds.status
+    )
+    const fakeDocument = new FakeDocument(ids, [])
+
+    let message = ''
+    try {
+      requireAppElements(getAppElements(fakeDocument))
+    } catch (error) {
+      message = String(error)
+    }
+    assert.equal(message.includes('Missing required app element: status'), true)
   })
 })
