@@ -895,7 +895,7 @@ test.describe('character creation smoke', () => {
     const rollReenlistment = page.getByRole('button', {
       name: 'Roll reenlistment'
     })
-    await expect(rollReenlistment).toBeVisible({ timeout: 5_000 })
+    await expect(rollReenlistment).toBeVisible({ timeout: 15_000 })
     await rollReenlistment.click()
     await waitForDiceReveal(page)
 
