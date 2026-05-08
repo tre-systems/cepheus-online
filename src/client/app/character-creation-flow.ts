@@ -300,6 +300,18 @@ type DecideCharacterCreationAnagathicsCommand = Extract<
   Command,
   { type: 'DecideCharacterCreationAnagathics' }
 >
+type ResolveCharacterCreationReenlistmentCommand = Extract<
+  Command,
+  { type: 'ResolveCharacterCreationReenlistment' }
+>
+type ReenlistCharacterCreationCareerCommand = Extract<
+  Command,
+  { type: 'ReenlistCharacterCreationCareer' }
+>
+type LeaveCharacterCreationCareerCommand = Extract<
+  Command,
+  { type: 'LeaveCharacterCreationCareer' }
+>
 type CompleteCharacterCreationHomeworldCommand =
   CharacterCreationHomeworldCommand
 type CompleteCharacterCreationCommand = Extract<
@@ -2438,6 +2450,19 @@ const initialCharacterCreationStateCommands = (
     ...baseCommand,
     useAnagathics
   })
+  const resolveReenlistmentCommand =
+    (): ResolveCharacterCreationReenlistmentCommand => ({
+      type: 'ResolveCharacterCreationReenlistment',
+      ...baseCommand
+    })
+  const reenlistCommand = (): ReenlistCharacterCreationCareerCommand => ({
+    type: 'ReenlistCharacterCreationCareer',
+    ...baseCommand
+  })
+  const leaveCareerCommand = (): LeaveCharacterCreationCareerCommand => ({
+    type: 'LeaveCharacterCreationCareer',
+    ...baseCommand
+  })
   const completeCreationCommand = (): CompleteCharacterCreationCommand => ({
     type: 'CompleteCharacterCreation',
     ...baseCommand
@@ -2546,13 +2571,14 @@ const initialCharacterCreationStateCommands = (
       commands.push(decideAnagathicsCommand(term.anagathics === true))
       commands.push(resolveAgingCommand())
       if (index < completedTerms.length - 1) {
-        commands.push(advance({ type: 'REENLIST' }))
+        commands.push(resolveReenlistmentCommand(), reenlistCommand())
       }
     }
 
     if (!endedWithDeath) {
       commands.push(
-        advance({ type: 'LEAVE_CAREER' }),
+        resolveReenlistmentCommand(),
+        leaveCareerCommand(),
         advance({ type: 'FINISH_MUSTERING' }),
         completeCreationCommand()
       )

@@ -429,7 +429,12 @@ const actionsForLegalKey = (
         action(
           'reenlist',
           'Re-enlist',
-          advanceCommand(identity, character, { type: 'REENLIST' }),
+          {
+            type: 'ReenlistCharacterCreationCareer',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id
+          },
           'secondary'
         )
       ]
@@ -438,7 +443,12 @@ const actionsForLegalKey = (
         action(
           'leave-career',
           'Leave career',
-          advanceCommand(identity, character, { type: 'LEAVE_CAREER' })
+          {
+            type: 'LeaveCharacterCreationCareer',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id
+          }
         )
       ]
     case 'continueCareer':
@@ -446,7 +456,12 @@ const actionsForLegalKey = (
         action(
           'continue-career',
           'Continue career',
-          advanceCommand(identity, character, { type: 'CONTINUE_CAREER' }),
+          {
+            type: 'ContinueCharacterCreationAfterMustering',
+            gameId: identity.gameId,
+            actorId: identity.actorId,
+            characterId: character.id
+          },
           'secondary'
         )
       ]

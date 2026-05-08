@@ -430,20 +430,20 @@ const actionDefinitions = {
     rollRequirement: { key: 'reenlistment', dice: '2d6' }
   },
   reenlist: {
-    commandTypes: ['AdvanceCharacterCreation']
+    commandTypes: ['ReenlistCharacterCreationCareer']
   },
   leaveCareer: {
-    commandTypes: ['AdvanceCharacterCreation']
+    commandTypes: ['LeaveCharacterCreationCareer']
   },
   forcedReenlist: {
-    commandTypes: ['AdvanceCharacterCreation']
+    commandTypes: ['ReenlistCharacterCreationCareer']
   },
   resolveMusteringBenefit: {
     commandTypes: ['RollCharacterCreationMusteringBenefit'],
     rollRequirement: { key: 'musteringBenefit', dice: '2d6' }
   },
   continueCareer: {
-    commandTypes: ['AdvanceCharacterCreation']
+    commandTypes: ['ContinueCharacterCreationAfterMustering']
   },
   finishMustering: {
     commandTypes: ['CompleteCharacterCreationMustering']

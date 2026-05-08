@@ -55,11 +55,14 @@ export type CharacterCreationCommand = Extract<
       | 'ResolveCharacterCreationAgingLosses'
       | 'DecideCharacterCreationAnagathics'
       | 'ResolveCharacterCreationReenlistment'
+      | 'ReenlistCharacterCreationCareer'
+      | 'LeaveCharacterCreationCareer'
       | 'RollCharacterCreationCharacteristic'
       | 'RollCharacterCreationTermSkill'
       | 'CompleteCharacterCreationSkills'
       | 'ResolveCharacterCreationTermCascadeSkill'
       | 'RollCharacterCreationMusteringBenefit'
+      | 'ContinueCharacterCreationAfterMustering'
       | 'CompleteCharacterCreationMustering'
       | 'CompleteCharacterCreation'
       | 'CreatePiece'
@@ -99,11 +102,14 @@ export const appCommandRouteByType = {
   ResolveCharacterCreationAgingLosses: 'characterCreation',
   DecideCharacterCreationAnagathics: 'characterCreation',
   ResolveCharacterCreationReenlistment: 'characterCreation',
+  ReenlistCharacterCreationCareer: 'characterCreation',
+  LeaveCharacterCreationCareer: 'characterCreation',
   RollCharacterCreationCharacteristic: 'characterCreation',
   RollCharacterCreationTermSkill: 'characterCreation',
   CompleteCharacterCreationSkills: 'characterCreation',
   ResolveCharacterCreationTermCascadeSkill: 'characterCreation',
   RollCharacterCreationMusteringBenefit: 'characterCreation',
+  ContinueCharacterCreationAfterMustering: 'characterCreation',
   CompleteCharacterCreationMustering: 'characterCreation',
   CompleteCharacterCreation: 'characterCreation',
   CreateBoard: 'board',

@@ -166,10 +166,13 @@ type CharacterEventType =
   | 'CharacterCreationAgingLossesResolved'
   | 'CharacterCreationAnagathicsDecided'
   | 'CharacterCreationReenlistmentResolved'
+  | 'CharacterCreationCareerReenlisted'
+  | 'CharacterCreationCareerLeft'
   | 'CharacterCreationTermSkillRolled'
   | 'CharacterCreationTermCascadeSkillResolved'
   | 'CharacterCreationSkillsCompleted'
   | 'CharacterCreationMusteringBenefitRolled'
+  | 'CharacterCreationAfterMusteringContinued'
   | 'CharacterCreationMusteringCompleted'
   | 'CharacterCreationCompleted'
   | 'CharacterCreationHomeworldSet'
@@ -777,6 +780,61 @@ const characterEventHandlers = {
     return nextState
   },
 
+  CharacterCreationCareerReenlisted: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    startProjectedCareerTerm({
+      character,
+      acceptedCareer: event.career
+    })
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        {
+          type: event.forced ? 'FORCED_REENLIST' : 'REENLIST'
+        }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationCareerLeft: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    const lastTermIndex = character.creation.terms.length - 1
+    const terms = character.creation.terms.map((term, index) =>
+      index === lastTermIndex ? leaveCareerTerm(term) : structuredClone(term)
+    )
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      terms,
+      history: [
+        ...(character.creation.history ?? []),
+        {
+          type:
+            event.outcome === 'blocked' ? 'REENLIST_BLOCKED' : 'LEAVE_CAREER'
+        }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
   CharacterCreationTermCascadeSkillResolved: (state, envelope) => {
     const event = envelope.event
     const nextState = requireState(state, event.type)
@@ -867,6 +925,26 @@ const characterEventHandlers = {
           quantity: 1,
           notes: `Mustering benefit: ${event.musteringBenefit.career}`
         }
+      ]
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationAfterMusteringContinued: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      history: [
+        ...(character.creation.history ?? []),
+        { type: 'CONTINUE_CAREER' }
       ]
     }
     nextState.eventSeq = envelope.seq

@@ -170,7 +170,7 @@ describe('career creation legal action planner', () => {
         {
           key: 'continueCareer',
           status: 'MUSTERING_OUT',
-          commandTypes: ['AdvanceCharacterCreation']
+          commandTypes: ['ContinueCharacterCreationAfterMustering']
         },
         {
           key: 'finishMustering',
@@ -861,7 +861,7 @@ describe('career creation legal action planner', () => {
           {
             key: 'forcedReenlist',
             status: 'REENLISTMENT',
-            commandTypes: ['AdvanceCharacterCreation']
+            commandTypes: ['ReenlistCharacterCreationCareer']
           }
         ]
       }

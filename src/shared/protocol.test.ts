@@ -1118,6 +1118,29 @@ describe('protocol validation', () => {
     assert.equal(transition.value.creationEvent.type, 'RESOLVE_REENLISTMENT')
   })
 
+  it('accepts semantic career lifecycle commands', () => {
+    for (const type of [
+      'ReenlistCharacterCreationCareer',
+      'LeaveCharacterCreationCareer',
+      'ContinueCharacterCreationAfterMustering'
+    ] as const) {
+      const command = decodeCommand({
+        type,
+        gameId: 'game-1',
+        actorId: 'user-1',
+        expectedSeq: 12,
+        characterId: 'char-1'
+      })
+
+      assert.equal(command.ok, true)
+      if (!command.ok) return
+      assert.equal(command.value.type, type)
+      if (command.value.type !== type) return
+      assert.equal(command.value.expectedSeq, 12)
+      assert.equal(command.value.characterId, 'char-1')
+    }
+  })
+
   it('accepts character creation homeworld/background commands', () => {
     const homeworld = decodeClientMessage({
       type: 'command',

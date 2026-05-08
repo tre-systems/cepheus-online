@@ -638,6 +638,35 @@ export const deriveLiveActivity = (
         creationComplete: event.creationComplete
       }
 
+    case 'CharacterCreationCareerReenlisted':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: event.forced ? 'FORCED_REENLIST' : 'REENLIST',
+        details: event.forced
+          ? 'Forced reenlistment'
+          : 'Reenlisted for another term',
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationCareerLeft':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition:
+          event.outcome === 'blocked' ? 'REENLIST_BLOCKED' : 'LEAVE_CAREER',
+        details: event.retirement
+          ? 'Retired from career'
+          : event.outcome === 'blocked'
+            ? 'Reenlistment blocked'
+            : 'Leaving career',
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
     case 'CharacterCreationTermSkillRolled':
       return {
         ...baseActivity(envelope),
@@ -683,6 +712,17 @@ export const deriveLiveActivity = (
             musteringBenefit: event.musteringBenefit
           })
         ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
+    case 'CharacterCreationAfterMusteringContinued':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'CONTINUE_CAREER',
+        details: 'Continuing career',
         status: event.state.status,
         creationComplete: event.creationComplete
       }

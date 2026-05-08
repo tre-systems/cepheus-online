@@ -10,6 +10,7 @@ import {
   deriveBasicTrainingPlan,
   deriveCareerQualificationDm,
   deriveCareerCreationActionContext,
+  deriveCareerCreationReenlistmentOutcome,
   deriveFailedQualificationOptions,
   deriveRemainingCareerBenefits,
   deriveMaterialBenefitRollModifier,
@@ -474,11 +475,15 @@ const semanticCommandForGenericCreationEvent = (
     case 'COMPLETE_ADVANCEMENT':
       return 'ResolveCharacterCreationAdvancement'
     case 'RESOLVE_REENLISTMENT':
-    case 'REENLIST_BLOCKED':
-    case 'FORCED_REENLIST':
       return 'ResolveCharacterCreationReenlistment'
     case 'REENLIST':
-      return event.reenlistment ? 'ResolveCharacterCreationReenlistment' : null
+    case 'FORCED_REENLIST':
+      return 'ReenlistCharacterCreationCareer'
+    case 'LEAVE_CAREER':
+    case 'REENLIST_BLOCKED':
+      return 'LeaveCharacterCreationCareer'
+    case 'CONTINUE_CAREER':
+      return 'ContinueCharacterCreationAfterMustering'
     case 'FINISH_MUSTERING':
       return event.musteringBenefit
         ? 'RollCharacterCreationMusteringBenefit'
@@ -948,6 +953,73 @@ const validateReenlistmentResolution = (
   return ok(character.creation)
 }
 
+const validateCareerReenlistment = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'REENLISTMENT') {
+    return err(
+      commandError(
+        'invalid_command',
+        `REENLIST is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (
+    !legalActions.includes('reenlist') &&
+    !legalActions.includes('forcedReenlist')
+  ) {
+    return err(
+      commandError(
+        'invalid_command',
+        'REENLIST is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
+const validateCareerLeave = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'REENLISTMENT') {
+    return err(
+      commandError(
+        'invalid_command',
+        `LEAVE_CAREER is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('leaveCareer')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'LEAVE_CAREER is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
 const validateAgingLossResolution = (
   character: CharacterState
 ): Result<CharacterCreationProjection, CommandError> => {
@@ -1094,6 +1166,38 @@ const validateMusteringCompletion = (
   return ok(character.creation)
 }
 
+const validateMusteringContinuation = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  if (character.creation.state.status !== 'MUSTERING_OUT') {
+    return err(
+      commandError(
+        'invalid_command',
+        `CONTINUE_CAREER is not valid from ${character.creation.state.status}`
+      )
+    )
+  }
+
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    character.creation
+  )
+  if (!legalActions.includes('continueCareer')) {
+    return err(
+      commandError(
+        'invalid_command',
+        'CONTINUE_CAREER is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(character.creation)
+}
+
 type CharacterCreationSurvivalResolvedEvent = Extract<
   GameEvent,
   { type: 'CharacterCreationSurvivalResolved' }
@@ -1117,6 +1221,16 @@ type CharacterCreationAgingResolvedEvent = Extract<
 type CharacterCreationReenlistmentResolvedEvent = Extract<
   GameEvent,
   { type: 'CharacterCreationReenlistmentResolved' }
+>
+
+type CharacterCreationCareerReenlistedEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationCareerReenlisted' }
+>
+
+type CharacterCreationCareerLeftEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationCareerLeft' }
 >
 
 type CharacterCreationTermSkillRolledEvent = Extract<
@@ -2822,6 +2936,98 @@ export const deriveEventsForCommand = (
       ])
     }
 
+    case 'ReenlistCharacterCreationCareer': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateCareerReenlistment(character)
+      if (!creation.ok) return creation
+
+      const outcome = deriveCareerCreationReenlistmentOutcome(creation.value)
+      if (outcome !== 'forced' && outcome !== 'allowed') {
+        return err(
+          commandError(
+            'invalid_command',
+            'REENLIST is blocked by unresolved character creation decisions'
+          )
+        )
+      }
+      const career = creation.value.terms.at(-1)?.career
+      if (!career) {
+        return err(
+          commandError('missing_entity', 'No active career term is available')
+        )
+      }
+
+      const creationEvent =
+        outcome === 'forced'
+          ? ({ type: 'FORCED_REENLIST' } as const)
+          : ({ type: 'REENLIST' } as const)
+      const nextState = transitionCareerCreationState(
+        creation.value.state,
+        creationEvent
+      )
+
+      return ok([
+        {
+          type: 'CharacterCreationCareerReenlisted',
+          characterId: command.characterId,
+          outcome,
+          career,
+          forced: outcome === 'forced',
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        } satisfies CharacterCreationCareerReenlistedEvent
+      ])
+    }
+
+    case 'LeaveCharacterCreationCareer': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateCareerLeave(character)
+      if (!creation.ok) return creation
+
+      const outcome = deriveCareerCreationReenlistmentOutcome(creation.value)
+      if (
+        outcome !== 'allowed' &&
+        outcome !== 'blocked' &&
+        outcome !== 'retire'
+      ) {
+        return err(
+          commandError(
+            'invalid_command',
+            'LEAVE_CAREER is blocked by unresolved character creation decisions'
+          )
+        )
+      }
+      const creationEvent =
+        outcome === 'blocked'
+          ? ({ type: 'REENLIST_BLOCKED' } as const)
+          : ({ type: 'LEAVE_CAREER' } as const)
+      const nextState = transitionCareerCreationState(
+        creation.value.state,
+        creationEvent
+      )
+
+      return ok([
+        {
+          type: 'CharacterCreationCareerLeft',
+          characterId: command.characterId,
+          outcome,
+          retirement: outcome === 'retire',
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        } satisfies CharacterCreationCareerLeftEvent
+      ])
+    }
+
     case 'RollCharacterCreationTermSkill': {
       const state = requireGame(context.state)
       if (!state.ok) return state
@@ -3020,6 +3226,30 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationMusteringBenefitRolled',
           characterId: command.characterId,
           ...resolved.value,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        }
+      ])
+    }
+
+    case 'ContinueCharacterCreationAfterMustering': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      const creation = validateMusteringContinuation(character)
+      if (!creation.ok) return creation
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'CONTINUE_CAREER'
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationAfterMusteringContinued',
+          characterId: command.characterId,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         }

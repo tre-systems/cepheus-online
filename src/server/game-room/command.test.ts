@@ -2044,8 +2044,253 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'REENLIST must use ResolveCharacterCreationReenlistment'
+      'REENLIST must use ReenlistCharacterCreationCareer'
     )
+  })
+
+  it('rejects generic career lifecycle decisions after semantic migration', () => {
+    for (const [creationEvent, semanticCommand] of [
+      [{ type: 'REENLIST' as const }, 'ReenlistCharacterCreationCareer'],
+      [{ type: 'FORCED_REENLIST' as const }, 'ReenlistCharacterCreationCareer'],
+      [{ type: 'LEAVE_CAREER' as const }, 'LeaveCharacterCreationCareer'],
+      [{ type: 'REENLIST_BLOCKED' as const }, 'LeaveCharacterCreationCareer'],
+      [
+        { type: 'CONTINUE_CAREER' as const },
+        'ContinueCharacterCreationAfterMustering'
+      ]
+    ] as const) {
+      const result = runCommand(
+        {
+          type: 'AdvanceCharacterCreation',
+          gameId,
+          actorId,
+          characterId,
+          creationEvent
+        },
+        createCreation(
+          creationEvent.type === 'CONTINUE_CAREER'
+            ? 'MUSTERING_OUT'
+            : 'REENLISTMENT'
+        )
+      )
+
+      assert.equal(result.ok, false)
+      if (result.ok) return
+      assert.equal(result.error.code, 'invalid_command')
+      assert.equal(
+        result.error.message,
+        `${creationEvent.type} must use ${semanticCommand}`
+      )
+    }
+  })
+
+  it('emits a semantic career reenlistment event from projected allowed outcome', () => {
+    const result = runCommand(
+      {
+        type: 'ReenlistCharacterCreationCareer',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('REENLISTMENT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8,
+            reEnlistment: 8
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationCareerReenlisted',
+        characterId,
+        outcome: 'allowed',
+        career: 'Scout',
+        forced: false,
+        state: {
+          status: 'SURVIVAL',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits a forced semantic career reenlistment event from projection', () => {
+    const result = runCommand(
+      {
+        type: 'ReenlistCharacterCreationCareer',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('REENLISTMENT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8,
+            reEnlistment: 12
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value[0]?.type, 'CharacterCreationCareerReenlisted')
+    if (result.value[0]?.type !== 'CharacterCreationCareerReenlisted') return
+    assert.equal(result.value[0].outcome, 'forced')
+    assert.equal(result.value[0].forced, true)
+  })
+
+  it('emits semantic career leave events for blocked and retirement outcomes', () => {
+    const blocked = runCommand(
+      {
+        type: 'LeaveCharacterCreationCareer',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('REENLISTMENT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8,
+            reEnlistment: 4
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(blocked.ok, true)
+    if (!blocked.ok) return
+    assert.deepEqual(blocked.value, [
+      {
+        type: 'CharacterCreationCareerLeft',
+        characterId,
+        outcome: 'blocked',
+        retirement: false,
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+
+    const retirement = runCommand(
+      {
+        type: 'LeaveCharacterCreationCareer',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('REENLISTMENT', {
+        terms: Array.from({ length: 7 }, () => ({
+          career: 'Scout',
+          skills: ['Vacc Suit-1'],
+          skillsAndTraining: ['Vacc Suit-1'],
+          benefits: [],
+          complete: true,
+          canReenlist: true,
+          completedBasicTraining: true,
+          musteringOut: false,
+          anagathics: false,
+          survival: 8
+        })),
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(retirement.ok, true)
+    if (!retirement.ok) return
+    assert.equal(retirement.value[0]?.type, 'CharacterCreationCareerLeft')
+    if (retirement.value[0]?.type !== 'CharacterCreationCareerLeft') return
+    assert.equal(retirement.value[0].outcome, 'retire')
+    assert.equal(retirement.value[0].retirement, true)
+  })
+
+  it('emits a semantic post-mustering continuation event from projection', () => {
+    const result = runCommand(
+      {
+        type: 'ContinueCharacterCreationAfterMustering',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('MUSTERING_OUT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: ['Low Passage'],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false,
+            survival: 8
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationAfterMusteringContinued',
+        characterId,
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
   })
 
   it('blocks semantic reenlistment resolution after the roll is resolved', () => {

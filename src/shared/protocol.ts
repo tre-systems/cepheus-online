@@ -1321,6 +1321,28 @@ export const decodeCommand = (
       })
     }
 
+    case 'ReenlistCharacterCreationCareer': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'ReenlistCharacterCreationCareer',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'LeaveCharacterCreationCareer': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'LeaveCharacterCreationCareer',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
     case 'RollCharacterCreationTermSkill': {
       const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
       if (!characterId.ok) return characterId
@@ -1386,6 +1408,17 @@ export const decodeCommand = (
 
       return ok({
         type: 'CompleteCharacterCreationMustering',
+        ...base.value,
+        characterId: characterId.value
+      })
+    }
+
+    case 'ContinueCharacterCreationAfterMustering': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+
+      return ok({
+        type: 'ContinueCharacterCreationAfterMustering',
         ...base.value,
         characterId: characterId.value
       })

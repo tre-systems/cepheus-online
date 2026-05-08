@@ -832,22 +832,13 @@ const renderCharacterCreationTermResolution = (
       })
       if (!result.moved) return
 
-      const reenlistmentOutcome = flow.draft.careerPlan?.reenlistmentOutcome
-      const creationEvent = continueCareer
-        ? {
-            type:
-              reenlistmentOutcome === 'forced'
-                ? ('FORCED_REENLIST' as const)
-                : ('REENLIST' as const)
-          }
-        : { type: 'LEAVE_CAREER' as const }
-
       await ensureCharacterCreationPublished()
       await postCharacterCreationCommand({
-        type: 'AdvanceCharacterCreation',
+        type: continueCareer
+          ? 'ReenlistCharacterCreationCareer'
+          : 'LeaveCharacterCreationCareer',
         ...commandIdentity(),
-        characterId: flow.draft.characterId,
-        creationEvent
+        characterId: flow.draft.characterId
       })
       characterCreationController.setFlow(result.flow)
       setError('')

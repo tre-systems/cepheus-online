@@ -233,6 +233,10 @@ describe('character creation actions', () => {
         assert.equal(command?.type, 'CompleteCharacterCreation')
         continue
       }
+      if (eventType === 'LEAVE_CAREER') {
+        assert.equal(command?.type, 'LeaveCharacterCreationCareer')
+        continue
+      }
       assert.equal(command?.type, 'AdvanceCharacterCreation')
       if (command?.type !== 'AdvanceCharacterCreation') continue
       assert.equal(command.creationEvent.type, eventType)

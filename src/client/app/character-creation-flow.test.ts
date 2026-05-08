@@ -1798,7 +1798,8 @@ describe('character creation flow', () => {
         'AdvanceCharacterCreation',
         'DecideCharacterCreationAnagathics',
         'ResolveCharacterCreationAging',
-        'AdvanceCharacterCreation',
+        'ResolveCharacterCreationReenlistment',
+        'LeaveCharacterCreationCareer',
         'AdvanceCharacterCreation',
         'CompleteCharacterCreation'
       ]
@@ -1830,7 +1831,6 @@ describe('character creation flow', () => {
       { type: 'SURVIVAL_PASSED', canCommission: true, canAdvance: false },
       { type: 'SKIP_COMMISSION' },
       { type: 'COMPLETE_SKILLS' },
-      { type: 'LEAVE_CAREER' },
       { type: 'FINISH_MUSTERING' }
     ])
     assert.equal(
@@ -1929,7 +1929,7 @@ describe('character creation flow', () => {
       },
       { identity, state }
     )
-    assert.equal(playableCommands.length, 19)
+    assert.equal(playableCommands.length, 20)
     assert.deepEqual(
       playableCommands
         .filter((command) => command.type === 'AdvanceCharacterCreation')
@@ -1945,7 +1945,6 @@ describe('character creation flow', () => {
         'SURVIVAL_PASSED',
         'COMPLETE_COMMISSION',
         'COMPLETE_SKILLS',
-        'LEAVE_CAREER',
         'FINISH_MUSTERING'
       ]
     )

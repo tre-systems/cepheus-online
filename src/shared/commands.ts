@@ -108,10 +108,13 @@ export type Command =
   | CharacterCreationAgingLossesCommand
   | CharacterCreationAnagathicsCommand
   | CharacterCreationReenlistmentCommand
+  | CharacterCreationCareerReenlistmentCommand
+  | CharacterCreationCareerLeaveCommand
   | CharacterCreationTermSkillCommand
   | CharacterCreationSkillsCompletionCommand
   | CharacterCreationTermCascadeSkillCommand
   | CharacterCreationMusteringBenefitCommand
+  | CharacterCreationAfterMusteringContinuationCommand
   | CharacterCreationMusteringCompletionCommand
   | CharacterCreationCompletionCommand
   | {
@@ -318,6 +321,22 @@ export type CharacterCreationReenlistmentCommand = {
   characterId: CharacterId
 }
 
+export type CharacterCreationCareerReenlistmentCommand = {
+  type: 'ReenlistCharacterCreationCareer'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
+export type CharacterCreationCareerLeaveCommand = {
+  type: 'LeaveCharacterCreationCareer'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
 export type CharacterCreationTermSkillCommand = {
   type: 'RollCharacterCreationTermSkill'
   gameId: GameId
@@ -355,6 +374,14 @@ export type CharacterCreationMusteringBenefitCommand = {
   kind: BenefitKind
 }
 
+export type CharacterCreationAfterMusteringContinuationCommand = {
+  type: 'ContinueCharacterCreationAfterMustering'
+  gameId: GameId
+  actorId: UserId
+  expectedSeq?: number
+  characterId: CharacterId
+}
+
 export type CharacterCreationMusteringCompletionCommand = {
   type: 'CompleteCharacterCreationMustering'
   gameId: GameId
@@ -387,10 +414,13 @@ export type SemanticCommand =
   | CharacterCreationAgingLossesCommand
   | CharacterCreationAnagathicsCommand
   | CharacterCreationReenlistmentCommand
+  | CharacterCreationCareerReenlistmentCommand
+  | CharacterCreationCareerLeaveCommand
   | CharacterCreationTermSkillCommand
   | CharacterCreationSkillsCompletionCommand
   | CharacterCreationTermCascadeSkillCommand
   | CharacterCreationMusteringBenefitCommand
+  | CharacterCreationAfterMusteringContinuationCommand
   | CharacterCreationMusteringCompletionCommand
   | CharacterCreationCompletionCommand
 

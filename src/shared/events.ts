@@ -15,6 +15,7 @@ import type {
   CareerCreationEvent,
   CareerCreationRankFact,
   CareerCreationReenlistmentFact,
+  CareerCreationReenlistmentOutcome,
   CareerCreationTermSkillFact,
   FailedQualificationOption
 } from './characterCreation'
@@ -171,6 +172,26 @@ export type GameEvent =
       creationComplete: boolean
     }
   | {
+      type: 'CharacterCreationCareerReenlisted'
+      characterId: CharacterId
+      outcome: Extract<CareerCreationReenlistmentOutcome, 'forced' | 'allowed'>
+      career: string
+      forced: boolean
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationCareerLeft'
+      characterId: CharacterId
+      outcome: Extract<
+        CareerCreationReenlistmentOutcome,
+        'allowed' | 'blocked' | 'retire'
+      >
+      retirement: boolean
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
       type: 'CharacterCreationTermSkillRolled'
       characterId: CharacterId
       termSkill: CareerCreationTermSkillFact
@@ -199,6 +220,12 @@ export type GameEvent =
       type: 'CharacterCreationMusteringBenefitRolled'
       characterId: CharacterId
       musteringBenefit: CareerCreationBenefitFact
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationAfterMusteringContinued'
+      characterId: CharacterId
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }
