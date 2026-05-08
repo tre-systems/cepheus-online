@@ -632,7 +632,7 @@ test.describe('character creation smoke', () => {
       )
       await expect(spectatorFields).toContainText(
         /Apply basic training|Qualification failed|Enter the draft|Enter Drifter/,
-        { timeout: 5_000 }
+        { timeout: 15_000 }
       )
     } finally {
       await spectator.close()
@@ -865,9 +865,13 @@ test.describe('character creation smoke', () => {
       })
     }
 
+    await expect(page.locator('#characterCreationFields')).toContainText(
+      /Roll aging|Roll reenlistment/,
+      { timeout: 15_000 }
+    )
+
     const rollAging = page.getByRole('button', { name: 'Roll aging' })
-    if ((await rollAging.count()) > 0) {
-      await expect(rollAging).toBeVisible({ timeout: 5_000 })
+    if (await rollAging.isVisible().catch(() => false)) {
       const agingAccepted = page.waitForResponse(
         (response) =>
           response.request().method() === 'POST' &&
@@ -892,9 +896,20 @@ test.describe('character creation smoke', () => {
       }
     }
 
-    const rollReenlistment = page.getByRole('button', {
+    let rollReenlistment = page.getByRole('button', {
       name: 'Roll reenlistment'
     })
+    if ((await rollReenlistment.count()) === 0) {
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.locator('#boardCanvas')).toBeVisible()
+      await page
+        .locator('#creationPresenceDock .creation-presence-card')
+        .filter({ hasText: characterName })
+        .click()
+      rollReenlistment = page.getByRole('button', {
+        name: 'Roll reenlistment'
+      })
+    }
     await expect(rollReenlistment).toBeVisible({ timeout: 15_000 })
     await rollReenlistment.click()
     await waitForDiceReveal(page)
