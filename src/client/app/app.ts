@@ -110,6 +110,12 @@ import {
   flowFromProjectedCharacter
 } from './character-creation-projection.js'
 import {
+  projectedCharacterCreation as projectedCharacterCreationFromState,
+  refreshFollowedCharacterCreationFlowFromState,
+  shouldRefreshEditableCharacterCreationFlow as shouldRefreshEditableCharacterCreationFlowFromState,
+  syncCharacterCreationFlowFromRoomState as syncCharacterCreationFlowFromProjection
+} from './character-creation-follow.js'
+import {
   characterCreationStepIndex,
   shouldSyncEditableCharacterCreationFlowWithProjection
 } from './character-creation-sync.js'
@@ -238,11 +244,25 @@ const selectedCharacter = (): CharacterState | null =>
 const currentCharacterCreationProjection =
   (): CharacterCreationProjection | null => {
     if (!characterCreationFlow) return null
-    return (
-      state?.characters?.[characterCreationFlow.draft.characterId]?.creation ??
-      null
+    return projectedCharacterCreationFromState(
+      state,
+      characterCreationFlow.draft.characterId
     )
   }
+
+const syncCharacterCreationFlowFromRoomState = (
+  roomState: GameState | null,
+  characterId: CharacterId,
+  fallbackFlow: CharacterCreationFlow | null = null
+): CharacterCreationFlow | null => {
+  characterCreationFlow = syncCharacterCreationFlowFromProjection({
+    currentFlow: characterCreationFlow,
+    roomState,
+    characterId,
+    fallbackFlow
+  })
+  return characterCreationFlow
+}
 
 const reconcileEditableCharacterCreationFlowWithProjection = () => {
   const flow = characterCreationFlow
@@ -517,24 +537,6 @@ const sameHomeworldCommandValue = (
   )
 }
 
-const projectedCharacterCreation = (
-  characterId: CharacterId
-): CharacterCreationProjection | null =>
-  state?.characters[characterId]?.creation ?? null
-
-const syncCharacterCreationFlowFromRoomState = (
-  roomState: GameState | null,
-  characterId: CharacterId,
-  fallbackFlow: CharacterCreationFlow | null = null
-): CharacterCreationFlow | null => {
-  const projectedCharacter = roomState?.characters?.[characterId] ?? null
-  const projectedFlow = projectedCharacter
-    ? flowFromProjectedCharacter(projectedCharacter)
-    : null
-  characterCreationFlow = projectedFlow ?? fallbackFlow ?? characterCreationFlow
-  return characterCreationFlow
-}
-
 const backgroundSkillAllowance = (edu: number | null): number =>
   3 + (edu == null ? 0 : Math.floor(edu / 3) - 2)
 
@@ -560,7 +562,7 @@ const publishCharacterCreationHomeworldProgressNow = async (
 
   await ensureCharacterCreationPublished()
 
-  let creation = projectedCharacterCreation(draft.characterId)
+  let creation = projectedCharacterCreationFromState(state, draft.characterId)
   if (!creation || creation.state.status !== 'HOMEWORLD') return
 
   const baseCommand = {
@@ -577,7 +579,7 @@ const publishCharacterCreationHomeworldProgressNow = async (
       },
       requestId('set-character-homeworld')
     )
-    creation = projectedCharacterCreation(draft.characterId)
+    creation = projectedCharacterCreationFromState(state, draft.characterId)
   }
 
   if (!creation || creation.state.status !== 'HOMEWORLD') return
@@ -608,7 +610,7 @@ const publishCharacterCreationHomeworldProgressNow = async (
       },
       requestId('select-character-background-skill')
     )
-    creation = projectedCharacterCreation(draft.characterId)
+    creation = projectedCharacterCreationFromState(state, draft.characterId)
     if (!creation || creation.state.status !== 'HOMEWORLD') return
     projectedBackgroundSkills.clear()
     for (const nextSkill of creation.backgroundSkills ?? []) {
@@ -624,7 +626,7 @@ const publishCharacterCreationHomeworldProgressNow = async (
     ...flow,
     step: 'homeworld'
   })
-  creation = projectedCharacterCreation(draft.characterId)
+  creation = projectedCharacterCreationFromState(state, draft.characterId)
   if (
     validation.ok &&
     creation?.state.status === 'HOMEWORLD' &&
@@ -667,7 +669,7 @@ const publishCharacterCreationBackgroundCascadeSelection = (
           return
         }
         await publishCharacterCreationHomeworldProgressNow(flow)
-        const creation = projectedCharacterCreation(flow.draft.characterId)
+        const creation = projectedCharacterCreationFromState(state, flow.draft.characterId)
         if (
           !creation ||
           creation.state.status !== 'HOMEWORLD' ||
@@ -704,7 +706,7 @@ const publishCharacterCreationCascadeResolution = (
           return
         }
         await ensureCharacterCreationPublished()
-        const creation = projectedCharacterCreation(flow.draft.characterId)
+        const creation = projectedCharacterCreationFromState(state, flow.draft.characterId)
         if (
           !creation ||
           creation.state.status !== 'HOMEWORLD' ||
@@ -813,17 +815,20 @@ const openCharacterCreationFollow = (
 const refreshFollowedCharacterCreationFlow = () => {
   if (!characterCreationReadOnly || !selectedCharacterId) return false
 
-  const character = state?.characters[selectedCharacterId] ?? null
-  const flow = character ? flowFromProjectedCharacter(character) : null
-  if (!flow) {
-    characterCreationFlow = null
-    characterCreationReadOnly = false
+  const refresh = refreshFollowedCharacterCreationFlowFromState({
+    state,
+    selectedCharacterId,
+    readOnly: characterCreationReadOnly,
+    panelOpen: characterCreationPanel.isOpen()
+  })
+
+  characterCreationFlow = refresh.flow
+  characterCreationReadOnly = refresh.readOnly
+  if (refresh.shouldClose) {
     characterCreationPanel.close()
-    return false
   }
 
-  characterCreationFlow = flow
-  return characterCreationPanel.isOpen()
+  return refresh.shouldRender
 }
 
 const shouldRefreshEditableCharacterCreationFlow = ({
@@ -831,10 +836,12 @@ const shouldRefreshEditableCharacterCreationFlow = ({
 }: {
   deferFollowedCreationRolls?: readonly ClientDiceRollActivity[]
 } = {}): boolean =>
-  !characterCreationReadOnly &&
-  characterCreationPanel.isOpen() &&
-  Boolean(characterCreationFlow) &&
-  deferFollowedCreationRolls.length === 0
+  shouldRefreshEditableCharacterCreationFlowFromState({
+    readOnly: characterCreationReadOnly,
+    panelOpen: characterCreationPanel.isOpen(),
+    flow: characterCreationFlow,
+    deferredRollCount: deferFollowedCreationRolls.length
+  })
 
 const characterCreationPanel = createCharacterCreationPanel({
   elements: {
