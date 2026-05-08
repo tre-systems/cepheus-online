@@ -118,7 +118,7 @@ describe('piece command planner', () => {
         'SetCharacterCreationHomeworld',
         'SelectCharacterCreationBackgroundSkill',
         'ResolveCharacterCreationCascadeSkill',
-        'AdvanceCharacterCreation',
+        'CompleteCharacterCreationHomeworld',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation',
         'UpdateCharacterSheet',

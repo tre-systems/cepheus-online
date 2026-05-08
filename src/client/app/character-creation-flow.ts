@@ -1,4 +1,8 @@
-import type { Command } from '../../shared/commands'
+import type {
+  CharacterCreationHomeworldCommand,
+  Command,
+  GameCommand
+} from '../../shared/commands'
 import {
   deriveBasicTrainingPlan,
   evaluateCareerCheck,
@@ -292,6 +296,8 @@ type ResolveCharacterCreationAgingCommand = Extract<
   Command,
   { type: 'ResolveCharacterCreationAging' }
 >
+type CompleteCharacterCreationHomeworldCommand =
+  CharacterCreationHomeworldCommand
 type SetCharacterCreationHomeworldCommand = Extract<
   Command,
   { type: 'SetCharacterCreationHomeworld' }
@@ -2386,7 +2392,7 @@ export const deriveStartCharacterCareerTermCommand = (
 const initialCharacterCreationStateCommands = (
   draft: CharacterCreationDraft,
   identity: ClientIdentity
-): Command[] => {
+): GameCommand[] => {
   const careerPlan = draft.careerPlan
   const firstCareer =
     draft.completedTerms[0]?.career ?? careerPlan?.career.trim() ?? ''
@@ -2408,6 +2414,11 @@ const initialCharacterCreationStateCommands = (
     type: 'ResolveCharacterCreationAging',
     ...baseCommand
   })
+  const completeHomeworldCommand =
+    (): CompleteCharacterCreationHomeworldCommand => ({
+      type: 'CompleteCharacterCreationHomeworld',
+      ...baseCommand
+    })
   const backgroundPlan = deriveCharacterCreationBackgroundSkillPlan(draft)
   const backgroundCommands =
     draft.homeworld.lawLevel && hasHomeworldTradeCodes(draft.homeworld)
@@ -2418,14 +2429,14 @@ const initialCharacterCreationStateCommands = (
           backgroundPlan
         })
       : []
-  const commands: Command[] = [
+  const commands: GameCommand[] = [
     {
       type: 'StartCharacterCreation',
       ...baseCommand
     },
     advance({ type: 'SET_CHARACTERISTICS' }),
     ...backgroundCommands,
-    advance({ type: 'COMPLETE_HOMEWORLD' }),
+    completeHomeworldCommand(),
     {
       type: 'StartCharacterCareerTerm',
       ...baseCommand,
@@ -2613,7 +2624,7 @@ const resolvedCascadeSelection = (
 export const deriveInitialCharacterCreationStateCommands = (
   draft: CharacterCreationDraft,
   { identity, state = null }: CharacterCreationCommandOptions
-): Command[] => {
+): GameCommand[] => {
   if (!state) return []
 
   return initialCharacterCreationStateCommands(draft, identity)
@@ -2696,7 +2707,7 @@ export const deriveFinalizeCharacterCreationCommand = (
 export const deriveCharacterCreationCommands = (
   flow: CharacterCreationFlow,
   options: CharacterCreationCommandOptions
-): Command[] => {
+): GameCommand[] => {
   const validation = {
     ...validateCurrentCharacterCreationStep({
       ...flow,
@@ -2728,7 +2739,7 @@ export const deriveCharacterCreationCommands = (
         ...deriveCharacterSheetPatch(flow.draft)
       }
 
-  const baseCommands: Command[] = [
+  const baseCommands: GameCommand[] = [
     {
       type: 'CreateCharacter',
       gameId: options.identity.gameId,

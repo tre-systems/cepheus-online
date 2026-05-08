@@ -92,6 +92,89 @@ const activeCreationCharacterId = async (
   return characterId
 }
 
+const seedCreationToHomeworld = async (
+  page: Page,
+  {
+    roomId,
+    actorId,
+    actorSession,
+    characterId,
+    edu = 12
+  }: {
+    roomId: string
+    actorId: string
+    actorSession: string
+    characterId: string
+    edu?: number
+  }
+): Promise<void> => {
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'UpdateCharacterSheet',
+    characterId,
+    characteristics: {
+      str: 8,
+      dex: 7,
+      end: 6,
+      int: 8,
+      edu,
+      soc: 7
+    }
+  })
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'AdvanceCharacterCreation',
+    characterId,
+    creationEvent: { type: 'SET_CHARACTERISTICS' }
+  })
+}
+
+const seedCreationToCareerSelection = async (
+  page: Page,
+  {
+    roomId,
+    actorId,
+    actorSession,
+    characterId
+  }: {
+    roomId: string
+    actorId: string
+    actorSession: string
+    characterId: string
+  }
+): Promise<void> => {
+  await seedCreationToHomeworld(page, {
+    roomId,
+    actorId,
+    actorSession,
+    characterId
+  })
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'SetCharacterCreationHomeworld',
+    characterId,
+    homeworld: {
+      name: null,
+      lawLevel: 'No Law',
+      tradeCodes: ['Asteroid']
+    }
+  })
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'ResolveCharacterCreationCascadeSkill',
+    characterId,
+    cascadeSkill: 'Gun Combat-0',
+    selection: 'Slug Rifle'
+  })
+  for (const skill of ['Admin', 'Advocate', 'Comms']) {
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'SelectCharacterCreationBackgroundSkill',
+      characterId,
+      skill
+    })
+  }
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'CompleteCharacterCreationHomeworld',
+    characterId
+  })
+}
+
 test.describe('character creation smoke', () => {
   test('opens the creator and rolls the first characteristic through shared dice', async ({
     page
@@ -267,22 +350,11 @@ test.describe('character creation smoke', () => {
       (await page.locator('#characterCreatorTitle').textContent()) ?? ''
     const characterId = await activeCreationCharacterId(page, roomId, actorId)
 
-    await postCommand(page, roomId, actorId, actorSession, {
-      type: 'UpdateCharacterSheet',
-      characterId,
-      characteristics: {
-        str: 8,
-        dex: 7,
-        end: 6,
-        int: 8,
-        edu: 12,
-        soc: 7
-      }
-    })
-    await postCommand(page, roomId, actorId, actorSession, {
-      type: 'AdvanceCharacterCreation',
-      characterId,
-      creationEvent: { type: 'SET_CHARACTERISTICS' }
+    await seedCreationToHomeworld(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
     })
 
     await page.reload({ waitUntil: 'domcontentloaded' })
@@ -376,6 +448,112 @@ test.describe('character creation smoke', () => {
       )
       await expect.poll(() => postedCommandTypes).toContain(
         'SelectCharacterCreationBackgroundSkill'
+      )
+    } finally {
+      await spectator.close()
+    }
+  })
+
+  test('lets another player follow a live career qualification roll without early reveal', async ({
+    browser,
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    const ownerCard = page
+      .locator('#creationPresenceDock .creation-presence-card')
+      .filter({ hasText: characterName })
+    await expect(ownerCard).toBeVisible({ timeout: 5_000 })
+    await ownerCard.click()
+
+    const ownerCareerButton = page
+      .locator('#characterCreationFields .creation-career-list button')
+      .filter({ hasText: 'Scout' })
+    await expect(ownerCareerButton).toBeVisible({ timeout: 5_000 })
+
+    const spectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: 'e2e-spectator',
+        viewer: 'player'
+      })
+
+      const card = spectator
+        .locator('#creationPresenceDock .creation-presence-card')
+        .filter({ hasText: characterName })
+      await expect(card).toBeVisible({ timeout: 5_000 })
+      await card.click()
+
+      const spectatorFields = spectator.locator('#characterCreationFields')
+      const spectatorOutcome = spectator.locator(
+        '#characterCreationFields .creation-career-outcome'
+      )
+      await expect(
+        spectator
+          .locator('#characterCreationFields .creation-career-list button')
+          .filter({ hasText: 'Scout' })
+      ).toBeDisabled()
+      await expect(
+        spectator.locator('[data-character-creation-field="career"]')
+      ).toHaveValue('')
+      await expect(
+        spectator.locator('[data-character-creation-field="qualificationRoll"]')
+      ).toHaveValue('')
+      await expect(
+        spectator.locator(
+          '[data-character-creation-field="qualificationPassed"]'
+        )
+      ).toHaveValue('')
+
+      await ownerCareerButton.click()
+
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expect(
+        spectator.locator('[data-character-creation-field="career"]')
+      ).toHaveValue('', { timeout: 100 })
+      await expect(
+        spectator.locator('[data-character-creation-field="qualificationRoll"]')
+      ).toHaveValue('', { timeout: 100 })
+      await expect(
+        spectator.locator(
+          '[data-character-creation-field="qualificationPassed"]'
+        )
+      ).toHaveValue('', { timeout: 100 })
+      await expect(spectatorOutcome).not.toContainText(
+        /accepted|rejected|Qualification \d+/i,
+        { timeout: 100 }
+      )
+      await expect(
+        spectator.locator('#characterCreationFields .creation-draft-fallback')
+      ).toHaveCount(0, { timeout: 100 })
+
+      await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
+        'Rolling...',
+        { timeout: 5_000 }
+      )
+      await expect(spectatorFields).toContainText(
+        /Apply basic training|Qualification failed|Enter the draft|Enter Drifter/,
+        { timeout: 5_000 }
       )
     } finally {
       await spectator.close()

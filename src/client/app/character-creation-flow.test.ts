@@ -1660,7 +1660,7 @@ describe('character creation flow', () => {
         'SetCharacterCreationHomeworld',
         'SelectCharacterCreationBackgroundSkill',
         'ResolveCharacterCreationCascadeSkill',
-        'AdvanceCharacterCreation',
+        'CompleteCharacterCreationHomeworld',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation'
       ]
@@ -1676,10 +1676,9 @@ describe('character creation flow', () => {
         command.type === 'AdvanceCharacterCreation'
           ? command.creationEvent.type
           : null
-      )
+    )
     assert.deepEqual(events, [
       'SET_CHARACTERISTICS',
-      'COMPLETE_HOMEWORLD',
       'SELECT_CAREER'
     ])
 
@@ -1712,7 +1711,7 @@ describe('character creation flow', () => {
         'SetCharacterCreationHomeworld',
         'SelectCharacterCreationBackgroundSkill',
         'ResolveCharacterCreationCascadeSkill',
-        'AdvanceCharacterCreation',
+        'CompleteCharacterCreationHomeworld',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation',
         'AdvanceCharacterCreation',
@@ -1747,7 +1746,6 @@ describe('character creation flow', () => {
       )
     assert.deepEqual(events, [
       { type: 'SET_CHARACTERISTICS' },
-      { type: 'COMPLETE_HOMEWORLD' },
       { type: 'SELECT_CAREER', isNewCareer: true, drafted: true },
       { type: 'COMPLETE_BASIC_TRAINING' },
       { type: 'SURVIVAL_PASSED', canCommission: true, canAdvance: false },
@@ -1821,7 +1819,7 @@ describe('character creation flow', () => {
         'SetCharacterCreationHomeworld',
         'SelectCharacterCreationBackgroundSkill',
         'ResolveCharacterCreationCascadeSkill',
-        'AdvanceCharacterCreation',
+        'CompleteCharacterCreationHomeworld',
         'StartCharacterCareerTerm',
         'AdvanceCharacterCreation',
         'UpdateCharacterSheet'
@@ -1857,7 +1855,6 @@ describe('character creation flow', () => {
         ),
       [
         'SET_CHARACTERISTICS',
-        'COMPLETE_HOMEWORLD',
         'SELECT_CAREER',
         'COMPLETE_BASIC_TRAINING',
         'SURVIVAL_PASSED',
