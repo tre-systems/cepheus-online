@@ -69,6 +69,55 @@ const createBoardCommand = (boardId = asBoardId('board-1')): Command => ({
   scale: 50
 })
 
+const characteristicKeys = ['str', 'dex', 'end', 'int', 'edu', 'soc'] as const
+
+const publishCharacterCreationCharacteristics = async (
+  storage: ReturnType<typeof createMemoryStorage>,
+  characterId: ReturnType<typeof asCharacterId>
+) => {
+  let lastResult: Awaited<ReturnType<typeof publish>> | null = null
+
+  for (const characteristic of characteristicKeys) {
+    const result = await publish(storage, {
+      type: 'RollCharacterCreationCharacteristic',
+      gameId,
+      actorId,
+      characterId,
+      characteristic
+    })
+    assert.equal(result.ok, true, result.ok ? undefined : result.error.message)
+    if (!result.ok) return result
+    lastResult = result
+  }
+
+  if (!lastResult) {
+    throw new Error('No character creation characteristics were rolled')
+  }
+  return lastResult
+}
+
+const publishCareerQualification = async (
+  storage: ReturnType<typeof createMemoryStorage>,
+  characterId: ReturnType<typeof asCharacterId>,
+  career = 'Scout'
+) => {
+  const result = await publish(storage, {
+    type: 'ResolveCharacterCreationQualification',
+    gameId,
+    actorId,
+    characterId,
+    career
+  })
+
+  assert.equal(result.ok, true, result.ok ? undefined : result.error.message)
+  if (!result.ok) return result
+  assert.equal(
+    result.value.state.characters[characterId]?.creation?.state.status,
+    'BASIC_TRAINING'
+  )
+  return result
+}
+
 const publishBasicTrainingCompletion = (
   storage: ReturnType<typeof createMemoryStorage>,
   characterId: ReturnType<typeof asCharacterId>
@@ -264,24 +313,7 @@ const publishPlayableCharacterCreation = async (
     characterId
   })
 
-  const advance = async (
-    creationEvent: Extract<
-      Command,
-      { type: 'AdvanceCharacterCreation' }
-    >['creationEvent']
-  ) => {
-    const result = await publish(storage, {
-      type: 'AdvanceCharacterCreation',
-      gameId,
-      actorId,
-      characterId,
-      creationEvent
-    })
-
-    assert.equal(result.ok, true)
-  }
-
-  await advance({ type: 'SET_CHARACTERISTICS' })
+  await publishCharacterCreationCharacteristics(storage, characterId)
   const homeworldSet = await publish(storage, {
     type: 'SetCharacterCreationHomeworld',
     gameId,
@@ -312,16 +344,7 @@ const publishPlayableCharacterCreation = async (
     characterId
   })
   assert.equal(homeworldCompleted.ok, true)
-  const termStarted = await publish(storage, {
-    type: 'StartCharacterCareerTerm',
-    gameId,
-    actorId,
-    characterId,
-    career: 'Scout'
-  })
-  assert.equal(termStarted.ok, true)
-
-  await advance({ type: 'SELECT_CAREER', isNewCareer: true })
+  await publishCareerQualification(storage, characterId)
   const basicTrainingCompleted = await publishBasicTrainingCompletion(
     storage,
     characterId
@@ -533,25 +556,8 @@ describe('room publication flow', () => {
       characterId
     })
 
-    const advance = async (
-      creationEvent: Extract<
-        Command,
-        { type: 'AdvanceCharacterCreation' }
-      >['creationEvent']
-    ) => {
-      const result = await publish(storage, {
-        type: 'AdvanceCharacterCreation',
-        gameId,
-        actorId,
-        characterId,
-        creationEvent
-      })
-
-      assert.equal(result.ok, true)
-    }
-
-    await advance({ type: 'SET_CHARACTERISTICS' })
-    await publish(storage, {
+    await publishCharacterCreationCharacteristics(storage, characterId)
+    const homeworldSet = await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
       gameId,
       actorId,
@@ -562,7 +568,12 @@ describe('room publication flow', () => {
         tradeCodes: ['Asteroid', 'Industrial']
       }
     })
-    await publish(storage, {
+    assert.equal(
+      homeworldSet.ok,
+      true,
+      homeworldSet.ok ? undefined : homeworldSet.error.message
+    )
+    const cascadeResolved = await publish(storage, {
       type: 'ResolveCharacterCreationCascadeSkill',
       gameId,
       actorId,
@@ -570,6 +581,11 @@ describe('room publication flow', () => {
       cascadeSkill: 'Gun Combat-0',
       selection: 'Slug Rifle'
     })
+    assert.equal(
+      cascadeResolved.ok,
+      true,
+      cascadeResolved.ok ? undefined : cascadeResolved.error.message
+    )
     const homeworldCompleted = await publish(storage, {
       type: 'CompleteCharacterCreationHomeworld',
       gameId,
@@ -577,14 +593,7 @@ describe('room publication flow', () => {
       characterId
     })
     assert.equal(homeworldCompleted.ok, true)
-    await publish(storage, {
-      type: 'StartCharacterCareerTerm',
-      gameId,
-      actorId,
-      characterId,
-      career: 'Scout'
-    })
-    await advance({ type: 'SELECT_CAREER', isNewCareer: true })
+    await publishCareerQualification(storage, characterId)
     const basicTrainingCompleted = await publishBasicTrainingCompletion(
       storage,
       characterId
@@ -709,8 +718,8 @@ describe('room publication flow', () => {
     const agingEvent = events.at(-1)
     assert.equal(agingEvent?.type, 'CharacterCreationAgingResolved')
     if (agingEvent?.type !== 'CharacterCreationAgingResolved') return
-    assert.deepEqual(agingEvent.aging.roll.rolls, [6, 3])
-    assert.equal(agingEvent.aging.roll.total, 9)
+    assert.deepEqual(agingEvent.aging.roll.rolls, [5, 5])
+    assert.equal(agingEvent.aging.roll.total, 10)
     assert.equal(
       resolved.value.state.characters[characterId]?.age,
       agingEvent.aging.age
@@ -1388,17 +1397,12 @@ describe('room publication flow', () => {
       'CHARACTERISTICS'
     )
 
-    const advanced = await publish(storage, {
-      type: 'AdvanceCharacterCreation',
-      gameId,
-      actorId,
-      characterId,
-      expectedSeq: 3,
-      creationEvent: { type: 'SET_CHARACTERISTICS' }
-    })
-
-    assert.equal(advanced.ok, true)
-    if (!advanced.ok) return
+    const advanced = await publishCharacterCreationCharacteristics(
+      storage,
+      characterId
+    )
+    assert.equal(advanced?.ok, true)
+    if (!advanced?.ok) return
     assert.equal(
       advanced.value.state.characters[characterId]?.creation?.state.status,
       'HOMEWORLD'
@@ -1409,7 +1413,7 @@ describe('room publication flow', () => {
       gameId,
       actorId,
       characterId,
-      expectedSeq: 4,
+      expectedSeq: advanced.value.state.eventSeq,
       homeworld: {
         name: 'Regina',
         lawLevel: 'No Law',
@@ -1435,7 +1439,7 @@ describe('room publication flow', () => {
       gameId,
       actorId,
       characterId,
-      expectedSeq: 5,
+      expectedSeq: homeworldSet.value.state.eventSeq,
       cascadeSkill: 'Gun Combat-0',
       selection: 'Slug Rifle'
     })
@@ -1453,7 +1457,7 @@ describe('room publication flow', () => {
       gameId,
       actorId,
       characterId,
-      expectedSeq: 6
+      expectedSeq: resolvedCascade.value.state.eventSeq
     })
 
     assert.equal(homeworld.ok, true)
@@ -1464,7 +1468,7 @@ describe('room publication flow', () => {
       gameId,
       actorId,
       characterId,
-      expectedSeq: 7,
+      expectedSeq: homeworld.value.state.eventSeq,
       career: 'Scout'
     })
 
@@ -1476,7 +1480,7 @@ describe('room publication flow', () => {
       ['Scout']
     )
     assert.deepEqual(creation?.careers, [{ name: 'Scout', rank: 0 }])
-    assert.equal(term.value.state.eventSeq, 8)
+    assert.equal(term.value.state.eventSeq, homeworld.value.state.eventSeq + 1)
 
     const recovered = await getProjectedGameState(storage, gameId)
     assert.deepEqual(recovered?.characters[characterId]?.creation?.homeworld, {
@@ -2003,13 +2007,7 @@ describe('room publication flow', () => {
       actorId,
       characterId
     })
-    await publish(storage, {
-      type: 'AdvanceCharacterCreation',
-      gameId,
-      actorId,
-      characterId,
-      creationEvent: { type: 'SET_CHARACTERISTICS' }
-    })
+    await publishCharacterCreationCharacteristics(storage, characterId)
 
     const homeworldSet = await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
@@ -2045,7 +2043,7 @@ describe('room publication flow', () => {
 
     const events = await readEventStream(storage, gameId)
     assert.deepEqual(
-      events.slice(4).map((envelope) => envelope.event),
+      events.slice(-3).map((envelope) => envelope.event),
       [
         {
           type: 'CharacterCreationHomeworldSet',
@@ -2089,7 +2087,7 @@ describe('room publication flow', () => {
       'Slug Rifle-0'
     ])
     assert.deepEqual(creation?.pendingCascadeSkills, [])
-    assert.equal(recovered?.eventSeq, 7)
+    assert.equal(recovered?.eventSeq, events.length)
   })
 
   it('publishes semantic character creation activity into player projections', async () => {
@@ -2110,13 +2108,7 @@ describe('room publication flow', () => {
       actorId,
       characterId
     })
-    await publish(storage, {
-      type: 'AdvanceCharacterCreation',
-      gameId,
-      actorId,
-      characterId,
-      creationEvent: { type: 'SET_CHARACTERISTICS' }
-    })
+    await publishCharacterCreationCharacteristics(storage, characterId)
 
     const homeworldSet = await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
@@ -2134,10 +2126,10 @@ describe('room publication flow', () => {
     if (!homeworldSet.ok) return
     assert.deepEqual(homeworldSet.value.liveActivities, [
       {
-        id: 'game-1:5',
-        eventId: 'game-1:5',
+        id: `game-1:${homeworldSet.value.state.eventSeq}`,
+        eventId: `game-1:${homeworldSet.value.state.eventSeq}`,
         gameId,
-        seq: 5,
+        seq: homeworldSet.value.state.eventSeq,
         actorId,
         createdAt: homeworldSet.value.liveActivities[0]?.createdAt,
         type: 'characterCreation',
@@ -2157,7 +2149,7 @@ describe('room publication flow', () => {
         role: 'PLAYER'
       }
     )
-    assert.equal(playerProjection.eventSeq, 5)
+    assert.equal(playerProjection.eventSeq, homeworldSet.value.state.eventSeq)
     assert.deepEqual(
       playerProjection.characters[characterId]?.creation?.backgroundSkills,
       ['Zero-G-0', 'Broker-0']
@@ -2189,14 +2181,8 @@ describe('room publication flow', () => {
       actorId,
       characterId
     })
-    await publish(storage, {
-      type: 'AdvanceCharacterCreation',
-      gameId,
-      actorId,
-      characterId,
-      creationEvent: { type: 'SET_CHARACTERISTICS' }
-    })
-    await publish(storage, {
+    await publishCharacterCreationCharacteristics(storage, characterId)
+    const homeworldSet = await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
       gameId,
       actorId,
@@ -2207,7 +2193,12 @@ describe('room publication flow', () => {
         tradeCodes: ['Asteroid', 'Industrial']
       }
     })
-    await publish(storage, {
+    assert.equal(
+      homeworldSet.ok,
+      true,
+      homeworldSet.ok ? undefined : homeworldSet.error.message
+    )
+    const cascadeResolved = await publish(storage, {
       type: 'ResolveCharacterCreationCascadeSkill',
       gameId,
       actorId,
@@ -2215,6 +2206,11 @@ describe('room publication flow', () => {
       cascadeSkill: 'Gun Combat-0',
       selection: 'Slug Rifle'
     })
+    assert.equal(
+      cascadeResolved.ok,
+      true,
+      cascadeResolved.ok ? undefined : cascadeResolved.error.message
+    )
 
     const completed = await publish(storage, {
       type: 'CompleteCharacterCreationHomeworld',
@@ -2240,10 +2236,10 @@ describe('room publication flow', () => {
     })
     assert.deepEqual(completed.value.liveActivities, [
       {
-        id: 'game-1:7',
-        eventId: 'game-1:7',
+        id: `game-1:${completed.value.state.eventSeq}`,
+        eventId: `game-1:${completed.value.state.eventSeq}`,
         gameId,
-        seq: 7,
+        seq: completed.value.state.eventSeq,
         actorId,
         createdAt: completed.value.liveActivities[0]?.createdAt,
         type: 'characterCreation',
@@ -2261,7 +2257,10 @@ describe('room publication flow', () => {
       { type: 'SET_CHARACTERISTICS' },
       { type: 'COMPLETE_HOMEWORLD' }
     ])
-    assert.equal((await readEventStream(storage, gameId)).length, 7)
+    assert.equal(
+      (await readEventStream(storage, gameId)).length,
+      completed.value.state.eventSeq
+    )
   })
 
   it('records semantic SRD roll facts in character creation transition history', async () => {
@@ -2284,25 +2283,7 @@ describe('room publication flow', () => {
       characterId
     })
 
-    const advance = async (
-      creationEvent: Extract<
-        Command,
-        { type: 'AdvanceCharacterCreation' }
-      >['creationEvent']
-    ) => {
-      const result = await publish(storage, {
-        type: 'AdvanceCharacterCreation',
-        gameId,
-        actorId,
-        characterId,
-        creationEvent
-      })
-
-      assert.equal(result.ok, true)
-      return result
-    }
-
-    await advance({ type: 'SET_CHARACTERISTICS' })
+    await publishCharacterCreationCharacteristics(storage, characterId)
     await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
       gameId,
@@ -2329,27 +2310,7 @@ describe('room publication flow', () => {
       characterId
     })
     assert.equal(homeworldCompleted.ok, true)
-    await publish(storage, {
-      type: 'StartCharacterCareerTerm',
-      gameId,
-      actorId,
-      characterId,
-      career: 'Scout'
-    })
-
-    await advance({
-      type: 'SELECT_CAREER',
-      isNewCareer: true,
-      qualification: {
-        expression: '2d6',
-        rolls: [4, 5],
-        total: 9,
-        characteristic: 'int',
-        modifier: 1,
-        target: 4,
-        success: true
-      }
-    })
+    await publishCareerQualification(storage, characterId)
     const basicTrainingCompleted = await publishBasicTrainingCompletion(
       storage,
       characterId
@@ -2438,6 +2399,9 @@ describe('room publication flow', () => {
     const persistedCreationEvents = persistedEvents
       .filter((event) => event.type === 'CharacterCreationTransitioned')
       .map((event) => event.creationEvent)
+    const persistedQualificationEvents = persistedEvents.filter(
+      (event) => event.type === 'CharacterCreationQualificationResolved'
+    )
     const persistedAgingEvents = persistedEvents.filter(
       (event) => event.type === 'CharacterCreationAgingResolved'
     )
@@ -2448,8 +2412,9 @@ describe('room publication flow', () => {
           ['SELECT_CAREER', 'FINISH_MUSTERING'].includes(event.type)
         )
         .map((event) => event.type),
-      ['SELECT_CAREER', 'FINISH_MUSTERING']
+      ['FINISH_MUSTERING']
     )
+    assert.equal(persistedQualificationEvents.length, 1)
     assert.equal(
       persistedEvents.some(
         (event) => event.type === 'CharacterCreationCareerReenlisted'
@@ -2462,8 +2427,11 @@ describe('room publication flow', () => {
     const history = recovered?.characters[characterId]?.creation?.history ?? []
 
     assert.deepEqual(
-      history.find((event) => event.type === 'SELECT_CAREER'),
-      persistedCreationEvents.find((event) => event.type === 'SELECT_CAREER')
+      history.find((event) => event.type === 'SELECT_CAREER')?.qualification,
+      persistedQualificationEvents[0]?.type ===
+        'CharacterCreationQualificationResolved'
+        ? persistedQualificationEvents[0].qualification
+        : undefined
     )
     assert.equal(
       history.find((event) => event.type === 'SURVIVAL_PASSED')?.survival
@@ -2522,21 +2490,7 @@ describe('room publication flow', () => {
       characterId
     })
 
-    const advance = async (
-      creationEvent: Extract<
-        Command,
-        { type: 'AdvanceCharacterCreation' }
-      >['creationEvent']
-    ) =>
-      publish(storage, {
-        type: 'AdvanceCharacterCreation',
-        gameId,
-        actorId,
-        characterId,
-        creationEvent
-      })
-
-    await advance({ type: 'SET_CHARACTERISTICS' })
+    await publishCharacterCreationCharacteristics(storage, characterId)
     await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
       gameId,
@@ -2563,14 +2517,7 @@ describe('room publication flow', () => {
       characterId
     })
     assert.equal(homeworldCompleted.ok, true)
-    await publish(storage, {
-      type: 'StartCharacterCareerTerm',
-      gameId,
-      actorId,
-      characterId,
-      career: 'Scout'
-    })
-    await advance({ type: 'SELECT_CAREER', isNewCareer: true })
+    await publishCareerQualification(storage, characterId)
     const basicTrainingCompleted = await publishBasicTrainingCompletion(
       storage,
       characterId
@@ -2635,7 +2582,10 @@ describe('room publication flow', () => {
       completed.value.state.characters[characterId]?.creation?.state.status,
       'PLAYABLE'
     )
-    assert.equal((await readCheckpoint(storage, gameId))?.seq, 26)
+    assert.equal(
+      (await readCheckpoint(storage, gameId))?.seq,
+      completed.value.state.eventSeq
+    )
   })
 
   it('publishes final character creation sheets only after playable', async () => {
@@ -2682,21 +2632,7 @@ describe('room publication flow', () => {
     if (early.ok) return
     assert.equal(early.error.code, 'invalid_command')
 
-    const advance = async (
-      creationEvent: Extract<
-        Command,
-        { type: 'AdvanceCharacterCreation' }
-      >['creationEvent']
-    ) =>
-      publish(storage, {
-        type: 'AdvanceCharacterCreation',
-        gameId,
-        actorId,
-        characterId,
-        creationEvent
-      })
-
-    await advance({ type: 'SET_CHARACTERISTICS' })
+    await publishCharacterCreationCharacteristics(storage, characterId)
     await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
       gameId,
@@ -2723,14 +2659,7 @@ describe('room publication flow', () => {
       characterId
     })
     assert.equal(homeworldCompleted.ok, true)
-    await publish(storage, {
-      type: 'StartCharacterCareerTerm',
-      gameId,
-      actorId,
-      characterId,
-      career: 'Scout'
-    })
-    await advance({ type: 'SELECT_CAREER', isNewCareer: true })
+    await publishCareerQualification(storage, characterId)
     const basicTrainingCompleted = await publishBasicTrainingCompletion(
       storage,
       characterId
@@ -2813,7 +2742,10 @@ describe('room publication flow', () => {
       true
     )
     assert.equal(character?.notes.includes('Final scout.'), false)
-    assert.equal((await readEventStream(storage, gameId)).length, 27)
+    assert.equal(
+      (await readEventStream(storage, gameId)).length,
+      finalized.value.state.eventSeq
+    )
   })
 
   it('recovers finalized character creation from playable checkpoint plus tail', async () => {
@@ -2822,7 +2754,7 @@ describe('room publication flow', () => {
     await publishPlayableCharacterCreation(storage, characterId)
 
     const playableCheckpoint = await readCheckpoint(storage, gameId)
-    assert.equal(playableCheckpoint?.seq, 26)
+    assert.equal(playableCheckpoint?.seq, 38)
 
     const finalized = await publish(storage, {
       type: 'FinalizeCharacterCreation',
@@ -2846,7 +2778,10 @@ describe('room publication flow', () => {
 
     assert.equal(finalized.ok, true)
     if (!finalized.ok) return
-    assert.equal((await readCheckpoint(storage, gameId))?.seq, 26)
+    assert.equal(
+      (await readCheckpoint(storage, gameId))?.seq,
+      playableCheckpoint?.seq
+    )
     assert.deepEqual(
       (
         await readEventStreamTail(storage, gameId, playableCheckpoint?.seq ?? 0)
@@ -2951,13 +2886,7 @@ describe('room publication flow', () => {
       actorId,
       characterId
     })
-    await publish(storage, {
-      type: 'AdvanceCharacterCreation',
-      gameId,
-      actorId,
-      characterId,
-      creationEvent: { type: 'SET_CHARACTERISTICS' }
-    })
+    await publishCharacterCreationCharacteristics(storage, characterId)
 
     const stale = await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
@@ -2975,14 +2904,11 @@ describe('room publication flow', () => {
     assert.equal(stale.ok, false)
     if (stale.ok) return
     assert.equal(stale.error.code, 'stale_command')
-    assert.equal((await readEventStream(storage, gameId)).length, 4)
+    assert.equal((await readEventStream(storage, gameId)).length, 16)
   })
 
   it('rejects stale expected sequence numbers on semantic character creation commands before append', async () => {
-    const assertStale = async (
-      command: Command,
-      expectedEventCount: number
-    ) => {
+    const assertStale = async (command: Command) => {
       const storage = createMemoryStorage()
       const characterId = asCharacterId('char-stale')
       await publish(storage, createGameCommand())
@@ -3000,13 +2926,7 @@ describe('room publication flow', () => {
         actorId,
         characterId
       })
-      await publish(storage, {
-        type: 'AdvanceCharacterCreation',
-        gameId,
-        actorId,
-        characterId,
-        creationEvent: { type: 'SET_CHARACTERISTICS' }
-      })
+      await publishCharacterCreationCharacteristics(storage, characterId)
       await publish(storage, {
         type: 'SetCharacterCreationHomeworld',
         gameId,
@@ -3042,6 +2962,7 @@ describe('room publication flow', () => {
         })
       }
 
+      const eventCountBefore = (await readEventStream(storage, gameId)).length
       const stale = await publish(storage, command)
 
       assert.equal(stale.ok, false)
@@ -3049,44 +2970,35 @@ describe('room publication flow', () => {
       assert.equal(stale.error.code, 'stale_command')
       assert.equal(
         (await readEventStream(storage, gameId)).length,
-        expectedEventCount
+        eventCountBefore
       )
     }
 
-    await assertStale(
-      {
-        type: 'SelectCharacterCreationBackgroundSkill',
-        gameId,
-        actorId,
-        characterId: asCharacterId('char-stale'),
-        expectedSeq: 4,
-        skill: 'Admin'
-      },
-      5
-    )
-    await assertStale(
-      {
-        type: 'ResolveCharacterCreationCascadeSkill',
-        gameId,
-        actorId,
-        characterId: asCharacterId('char-stale'),
-        expectedSeq: 5,
-        cascadeSkill: 'Gun Combat-0',
-        selection: 'Slug Rifle'
-      },
-      6
-    )
-    await assertStale(
-      {
-        type: 'StartCharacterCareerTerm',
-        gameId,
-        actorId,
-        characterId: asCharacterId('char-stale'),
-        expectedSeq: 6,
-        career: 'Scout'
-      },
-      7
-    )
+    await assertStale({
+      type: 'SelectCharacterCreationBackgroundSkill',
+      gameId,
+      actorId,
+      characterId: asCharacterId('char-stale'),
+      expectedSeq: 4,
+      skill: 'Admin'
+    })
+    await assertStale({
+      type: 'ResolveCharacterCreationCascadeSkill',
+      gameId,
+      actorId,
+      characterId: asCharacterId('char-stale'),
+      expectedSeq: 5,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
+    await assertStale({
+      type: 'StartCharacterCareerTerm',
+      gameId,
+      actorId,
+      characterId: asCharacterId('char-stale'),
+      expectedSeq: 6,
+      career: 'Scout'
+    })
   })
 
   it('rejects character creation commands for missing characters', async () => {
@@ -3181,13 +3093,7 @@ describe('room publication flow', () => {
         actorId,
         characterId
       })
-      await publish(storage, {
-        type: 'AdvanceCharacterCreation',
-        gameId,
-        actorId,
-        characterId,
-        creationEvent: { type: 'SET_CHARACTERISTICS' }
-      })
+      await publishCharacterCreationCharacteristics(storage, characterId)
 
       await assertRejectedTransition(
         storage,
@@ -3199,7 +3105,7 @@ describe('room publication flow', () => {
           creationEvent: { type: 'SELECT_CAREER', isNewCareer: true }
         },
         'invalid_command',
-        'SELECT_CAREER is not valid from HOMEWORLD'
+        'SELECT_CAREER must use ResolveCharacterCreationQualification, ResolveCharacterCreationDraft, or EnterCharacterCreationDrifter'
       )
     }
 
@@ -3221,13 +3127,7 @@ describe('room publication flow', () => {
         actorId,
         characterId
       })
-      await publish(storage, {
-        type: 'AdvanceCharacterCreation',
-        gameId,
-        actorId,
-        characterId,
-        creationEvent: { type: 'SET_CHARACTERISTICS' }
-      })
+      await publishCharacterCreationCharacteristics(storage, characterId)
       await publish(storage, {
         type: 'SetCharacterCreationHomeworld',
         gameId,
@@ -3289,8 +3189,8 @@ describe('room publication flow', () => {
           characterId,
           creationEvent: { type: 'SET_CHARACTERISTICS' }
         },
-        'not_allowed',
-        'SET_CHARACTERISTICS is not valid from PLAYABLE'
+        'invalid_command',
+        'SET_CHARACTERISTICS must use RollCharacterCreationCharacteristic'
       )
     }
   })
@@ -3313,13 +3213,7 @@ describe('room publication flow', () => {
       actorId,
       characterId
     })
-    await publish(storage, {
-      type: 'AdvanceCharacterCreation',
-      gameId,
-      actorId,
-      characterId,
-      creationEvent: { type: 'SET_CHARACTERISTICS' }
-    })
+    await publishCharacterCreationCharacteristics(storage, characterId)
     await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
       gameId,
@@ -3346,7 +3240,7 @@ describe('room publication flow', () => {
       rejected.error.message,
       'Background choices must be complete before career selection'
     )
-    assert.equal((await readEventStream(storage, gameId)).length, 5)
+    assert.equal((await readEventStream(storage, gameId)).length, 17)
   })
 
   it('rejects career term starts outside career selection', async () => {

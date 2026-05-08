@@ -467,6 +467,10 @@ const semanticCommandForGenericCreationEvent = (
   event: Extract<Command, { type: 'AdvanceCharacterCreation' }>['creationEvent']
 ): string | null => {
   switch (event.type) {
+    case 'SET_CHARACTERISTICS':
+      return 'RollCharacterCreationCharacteristic'
+    case 'SELECT_CAREER':
+      return 'ResolveCharacterCreationQualification, ResolveCharacterCreationDraft, or EnterCharacterCreationDrifter'
     case 'SURVIVAL_PASSED':
     case 'SURVIVAL_FAILED':
       return 'ResolveCharacterCreationSurvival'

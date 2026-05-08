@@ -6,7 +6,7 @@ import type {
   PieceId,
   UserId
 } from '../../shared/ids'
-import type { GameState } from '../../shared/state'
+import type { CharacteristicKey, GameState } from '../../shared/state'
 
 export interface BootstrapCommandContext {
   roomId: GameId
@@ -24,6 +24,14 @@ const idFromName = (name: string, fallback: string): string =>
     .replace(/^-|-$/g, '') || fallback
 
 const scoutCharacterId = 'scout' as CharacterId
+const bootstrapCharacteristicKeys = [
+  'str',
+  'dex',
+  'end',
+  'int',
+  'edu',
+  'soc'
+] satisfies CharacteristicKey[]
 
 export const createGameCommand = ({
   roomId,
@@ -98,15 +106,31 @@ export const startScoutCreationCommand = ({
   characterId: scoutCharacterId
 })
 
-export const setScoutCharacteristicsCreationCommand = ({
+const nextUnrolledScoutCharacteristic = (
+  state: GameState
+): CharacteristicKey | null => {
+  const scout = state.characters[scoutCharacterId]
+  if (!scout) return null
+
+  for (const characteristic of bootstrapCharacteristicKeys) {
+    if (scout.characteristics[characteristic] === null) return characteristic
+  }
+
+  return null
+}
+
+export const rollScoutCharacteristicCreationCommand = ({
   roomId,
-  actorId
-}: BootstrapCommandContext): Command => ({
-  type: 'AdvanceCharacterCreation',
+  actorId,
+  characteristic
+}: BootstrapCommandContext & {
+  characteristic: CharacteristicKey
+}): GameCommand => ({
+  type: 'RollCharacterCreationCharacteristic',
   gameId: roomId,
   actorId,
   characterId: scoutCharacterId,
-  creationEvent: { type: 'SET_CHARACTERISTICS' }
+  characteristic
 })
 
 export const completeScoutHomeworldCreationCommand = ({
@@ -119,7 +143,7 @@ export const completeScoutHomeworldCreationCommand = ({
   characterId: scoutCharacterId
 })
 
-export const startScoutCareerTermCommand = ({
+export const startScoutCareerTermDevCommand = ({
   roomId,
   actorId
 }: BootstrapCommandContext): Command => ({
@@ -130,15 +154,26 @@ export const startScoutCareerTermCommand = ({
   career: 'Scout'
 })
 
-export const selectScoutCareerCreationCommand = ({
+export const resolveScoutCareerQualificationCommand = ({
   roomId,
   actorId
-}: BootstrapCommandContext): Command => ({
-  type: 'AdvanceCharacterCreation',
+}: BootstrapCommandContext): GameCommand => ({
+  type: 'ResolveCharacterCreationQualification',
   gameId: roomId,
   actorId,
   characterId: scoutCharacterId,
-  creationEvent: { type: 'SELECT_CAREER', isNewCareer: true }
+  career: 'Scout'
+})
+
+export const enterScoutDrifterCreationCommand = ({
+  roomId,
+  actorId
+}: BootstrapCommandContext): GameCommand => ({
+  type: 'EnterCharacterCreationDrifter',
+  gameId: roomId,
+  actorId,
+  characterId: scoutCharacterId,
+  option: 'Drifter'
 })
 
 export const createPieceCommand = (
@@ -236,16 +271,21 @@ export const nextBootstrapCommand = ({
   if (!scout) return createCharacterCommand(commandContext)
   if (!scout.creation) return startScoutCreationCommand(commandContext)
   if (scout.creation.state.status === 'CHARACTERISTICS') {
-    return setScoutCharacteristicsCreationCommand(commandContext)
+    const characteristic = nextUnrolledScoutCharacteristic(state)
+    return characteristic
+      ? rollScoutCharacteristicCreationCommand({
+          ...commandContext,
+          characteristic
+        })
+      : null
   }
   if (scout.creation.state.status === 'HOMEWORLD') {
     return completeScoutHomeworldCreationCommand(commandContext)
   }
-  if (scout.creation.terms.length === 0) {
-    return startScoutCareerTermCommand(commandContext)
-  }
   if (scout.creation.state.status === 'CAREER_SELECTION') {
-    return selectScoutCareerCreationCommand(commandContext)
+    return scout.creation.failedToQualify
+      ? enterScoutDrifterCreationCommand(commandContext)
+      : resolveScoutCareerQualificationCommand(commandContext)
   }
   if ((scout.skills || []).length === 0) {
     return updateScoutSheetCommand(commandContext)

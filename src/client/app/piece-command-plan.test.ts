@@ -96,7 +96,7 @@ describe('piece command planner', () => {
     assert.equal(result.commands[0].scale, 1.5)
   })
 
-  it('builds event-backed character creation before the linked piece', () => {
+  it('builds plain sheet commands before the linked piece', () => {
     const result = planCreatePieceCommands({
       identity,
       state: gameState({
@@ -120,30 +120,80 @@ describe('piece command planner', () => {
     assert.equal(result.characterId, 'mae-1')
     assert.deepEqual(
       result.commands.map((command) => command.type),
-      [
-        'CreateCharacter',
-        'StartCharacterCreation',
-        'AdvanceCharacterCreation',
-        'SetCharacterCreationHomeworld',
-        'SelectCharacterCreationBackgroundSkill',
-        'ResolveCharacterCreationCascadeSkill',
-        'CompleteCharacterCreationHomeworld',
-        'StartCharacterCareerTerm',
-        'AdvanceCharacterCreation',
-        'UpdateCharacterSheet',
-        'CreatePiece'
-      ]
+      ['CreateCharacter', 'UpdateCharacterSheet', 'CreatePiece']
     )
     assert.deepEqual(
       result.commands.map((command) => command.expectedSeq),
       Array.from({ length: result.commands.length }, () => undefined)
     )
+    assert.equal(
+      result.commands.some(
+        (command) =>
+          command.type === 'StartCharacterCreation' ||
+          command.type === 'AdvanceCharacterCreation' ||
+          command.type === 'StartCharacterCareerTerm'
+      ),
+      false
+    )
+    assert.equal(result.commands[0]?.type, 'CreateCharacter')
+    if (result.commands[0]?.type !== 'CreateCharacter') return
+    assert.equal(result.commands[0].characterId, 'mae-1')
+    assert.equal(result.commands[0].name, 'Mae')
+    assert.equal(result.commands[1]?.type, 'UpdateCharacterSheet')
+    if (result.commands[1]?.type !== 'UpdateCharacterSheet') return
+    assert.equal(result.commands[1].characterId, 'mae-1')
+    assert.equal(result.commands[1].age, 30)
+    assert.deepEqual(result.commands[1].characteristics, {
+      str: 7,
+      dex: 7,
+      end: 7,
+      int: 7,
+      edu: 7,
+      soc: 7
+    })
+    assert.deepEqual(result.commands[1].skills, [
+      'Broker-0',
+      'Slug Pistol-0',
+      'Admin-0',
+      'Athletics-0',
+      'Gun Combat-0'
+    ])
+    assert.deepEqual(result.commands[1].equipment, [])
+    assert.equal(result.commands[1].credits, 0)
     assert.equal(result.commands.at(-1)?.type, 'CreatePiece')
     const createPieceCommand = result.commands.at(-1)
     if (createPieceCommand?.type !== 'CreatePiece') return
     assert.equal(createPieceCommand.characterId, 'mae-1')
     assert.equal(createPieceCommand.x, 218)
     assert.equal(createPieceCommand.y, 140)
+  })
+
+  it('does not emit generic character creation bridge events for custom sheets', () => {
+    const result = planCreatePieceCommands({
+      identity,
+      state: gameState(),
+      board,
+      name: 'Bridge-Free Scout',
+      imageAssetId: null,
+      width: 50,
+      height: 50,
+      scale: 1,
+      existingPieceCount: 0,
+      withCharacterSheet: true
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    for (const command of result.commands) {
+      assert.equal(command.type === 'AdvanceCharacterCreation', false)
+      if (command.type === 'AdvanceCharacterCreation') {
+        assert.equal(
+          command.creationEvent.type === 'SET_CHARACTERISTICS',
+          false
+        )
+        assert.equal(command.creationEvent.type === 'SELECT_CAREER', false)
+      }
+    }
   })
 
   it('rejects missing room state or board context', () => {

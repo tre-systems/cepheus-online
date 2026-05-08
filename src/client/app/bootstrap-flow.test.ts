@@ -166,16 +166,66 @@ describe('bootstrap flow helpers', () => {
       'StartCharacterCreation'
     )
 
+    const characteristicCommand = nextBootstrapCommand({
+      roomId,
+      actorId,
+      state: gameState({
+        boards: boards('main-board'),
+        characters: characters({ scout: scout([], creation()) })
+      })
+    })
+    assert.equal(
+      characteristicCommand?.type,
+      'RollCharacterCreationCharacteristic'
+    )
+    if (characteristicCommand?.type !== 'RollCharacterCreationCharacteristic') {
+      return
+    }
+    assert.equal(characteristicCommand.characteristic, 'str')
+
+    const nextCharacteristicScout = scout([], creation())
+    nextCharacteristicScout.characteristics.str = 7
+    const nextCharacteristicCommand = nextBootstrapCommand({
+      roomId,
+      actorId,
+      state: gameState({
+        boards: boards('main-board'),
+        characters: characters({ scout: nextCharacteristicScout })
+      })
+    })
+    assert.equal(
+      nextCharacteristicCommand?.type,
+      'RollCharacterCreationCharacteristic'
+    )
+    if (
+      nextCharacteristicCommand?.type !== 'RollCharacterCreationCharacteristic'
+    ) {
+      return
+    }
+    assert.equal(nextCharacteristicCommand.characteristic, 'dex')
+
     assert.equal(
       nextBootstrapCommand({
         roomId,
         actorId,
         state: gameState({
           boards: boards('main-board'),
-          characters: characters({ scout: scout([], creation()) })
+          characters: characters({
+            scout: {
+              ...nextCharacteristicScout,
+              characteristics: {
+                str: 7,
+                dex: 8,
+                end: 8,
+                int: 7,
+                edu: 9,
+                soc: 6
+              }
+            }
+          })
         })
-      })?.type,
-      'AdvanceCharacterCreation'
+      }),
+      null
     )
 
     assert.deepEqual(
@@ -224,7 +274,7 @@ describe('bootstrap flow helpers', () => {
           })
         })
       })?.type,
-      'StartCharacterCareerTerm'
+      'ResolveCharacterCreationQualification'
     )
 
     assert.equal(
@@ -260,7 +310,30 @@ describe('bootstrap flow helpers', () => {
           })
         })
       })?.type,
-      'AdvanceCharacterCreation'
+      'ResolveCharacterCreationQualification'
+    )
+
+    assert.equal(
+      nextBootstrapCommand({
+        roomId,
+        actorId,
+        state: gameState({
+          boards: boards('main-board'),
+          characters: characters({
+            scout: scout(
+              [],
+              creation({
+                state: {
+                  status: 'CAREER_SELECTION',
+                  context: { canCommission: false, canAdvance: false }
+                },
+                failedToQualify: true
+              })
+            )
+          })
+        })
+      })?.type,
+      'EnterCharacterCreationDrifter'
     )
 
     assert.equal(
@@ -412,6 +485,94 @@ describe('bootstrap flow helpers', () => {
     assert.equal(command?.type, 'CreatePiece')
     if (command?.type !== 'CreatePiece') return
     assert.equal(command.boardId, 'main-board')
+  })
+
+  it('does not emit generic character creation events from production bootstrap', () => {
+    const characteristicState = scout([], creation())
+    const commands = [
+      nextBootstrapCommand({
+        roomId,
+        actorId,
+        state: gameState({
+          boards: boards('main-board'),
+          characters: characters({ scout: characteristicState })
+        })
+      }),
+      nextBootstrapCommand({
+        roomId,
+        actorId,
+        state: gameState({
+          boards: boards('main-board'),
+          characters: characters({
+            scout: scout(
+              [],
+              creation({
+                state: {
+                  status: 'HOMEWORLD',
+                  context: { canCommission: false, canAdvance: false }
+                }
+              })
+            )
+          })
+        })
+      }),
+      nextBootstrapCommand({
+        roomId,
+        actorId,
+        state: gameState({
+          boards: boards('main-board'),
+          characters: characters({
+            scout: scout(
+              [],
+              creation({
+                state: {
+                  status: 'CAREER_SELECTION',
+                  context: { canCommission: false, canAdvance: false }
+                }
+              })
+            )
+          })
+        })
+      }),
+      nextBootstrapCommand({
+        roomId,
+        actorId,
+        state: gameState({
+          boards: boards('main-board'),
+          characters: characters({
+            scout: scout(
+              [],
+              creation({
+                state: {
+                  status: 'CAREER_SELECTION',
+                  context: { canCommission: false, canAdvance: false }
+                },
+                failedToQualify: true
+              })
+            )
+          })
+        })
+      })
+    ]
+
+    assert.deepEqual(
+      commands.map((command) => command?.type),
+      [
+        'RollCharacterCreationCharacteristic',
+        'CompleteCharacterCreationHomeworld',
+        'ResolveCharacterCreationQualification',
+        'EnterCharacterCreationDrifter'
+      ]
+    )
+    assert.equal(
+      commands.some(
+        (command) =>
+          command?.type === 'AdvanceCharacterCreation' &&
+          (command.creationEvent.type === 'SET_CHARACTERISTICS' ||
+            command.creationEvent.type === 'SELECT_CAREER')
+      ),
+      false
+    )
   })
 
   it('generates unique ids from names and existing entity counts', () => {

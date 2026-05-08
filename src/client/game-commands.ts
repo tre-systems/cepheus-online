@@ -1,4 +1,4 @@
-import type { Command } from '../shared/commands'
+import type { Command, GameCommand } from '../shared/commands'
 import {
   asBoardId,
   asCharacterId,
@@ -57,13 +57,25 @@ type UpdateCharacterSheetCommand = Extract<
   Command,
   { type: 'UpdateCharacterSheet' }
 >
-type AdvanceCharacterCreationCommand = Extract<
-  Command,
-  { type: 'AdvanceCharacterCreation' }
->
 type StartCharacterCareerTermCommand = Extract<
-  Command,
+  GameCommand,
   { type: 'StartCharacterCareerTerm' }
+>
+type CompleteCharacterCreationHomeworldCommand = Extract<
+  GameCommand,
+  { type: 'CompleteCharacterCreationHomeworld' }
+>
+type RollCharacterCreationCharacteristicCommand = Extract<
+  GameCommand,
+  { type: 'RollCharacterCreationCharacteristic' }
+>
+type ResolveCharacterCreationQualificationCommand = Extract<
+  GameCommand,
+  { type: 'ResolveCharacterCreationQualification' }
+>
+type EnterCharacterCreationDrifterCommand = Extract<
+  GameCommand,
+  { type: 'EnterCharacterCreationDrifter' }
 >
 type CharacterSheetPatchInput = CharacterSheetPatch & {
   skillsText?: string
@@ -94,6 +106,18 @@ const CHARACTERISTIC_KEYS = [
   'soc'
 ] satisfies CharacteristicKey[]
 
+const nextUnrolledCharacteristic = (
+  character: Pick<CharacterState, 'characteristics'>
+): CharacteristicKey | null => {
+  for (const characteristic of CHARACTERISTIC_KEYS) {
+    if (character.characteristics[characteristic] === null) {
+      return characteristic
+    }
+  }
+
+  return null
+}
+
 export const resolveClientIdentity = (
   searchParams: URLSearchParams
 ): ClientIdentity => ({
@@ -103,7 +127,7 @@ export const resolveClientIdentity = (
 
 export const buildCommandMessage = (
   requestId: string,
-  command: Command
+  command: GameCommand
 ): Extract<ClientMessage, { type: 'command' }> => ({
   type: 'command',
   requestId,
@@ -111,9 +135,9 @@ export const buildCommandMessage = (
 })
 
 export const buildSequencedCommand = (
-  command: Command,
+  command: GameCommand,
   state: Pick<GameState, 'eventSeq'> | null
-): Command => {
+): GameCommand => {
   if (!state || command.expectedSeq !== undefined) return command
   if (command.type === 'CreateGame') return command
 
@@ -370,17 +394,19 @@ export const buildStartCharacterCreationCommand = ({
   characterId
 })
 
-export const buildSetCharacterCharacteristicsCreationCommand = ({
+export const buildRollCharacterCreationCharacteristicCommand = ({
   identity,
-  characterId = DEFAULT_CHARACTER_ID
+  characterId = DEFAULT_CHARACTER_ID,
+  characteristic
 }: ClientCommandOptions & {
   characterId?: CharacterId
-}): AdvanceCharacterCreationCommand => ({
-  type: 'AdvanceCharacterCreation',
+  characteristic: CharacteristicKey
+}): RollCharacterCreationCharacteristicCommand => ({
+  type: 'RollCharacterCreationCharacteristic',
   gameId: identity.gameId,
   actorId: identity.actorId,
   characterId,
-  creationEvent: { type: 'SET_CHARACTERISTICS' }
+  characteristic
 })
 
 export const buildCompleteCharacterHomeworldCreationCommand = ({
@@ -388,12 +414,11 @@ export const buildCompleteCharacterHomeworldCreationCommand = ({
   characterId = DEFAULT_CHARACTER_ID
 }: ClientCommandOptions & {
   characterId?: CharacterId
-}): AdvanceCharacterCreationCommand => ({
-  type: 'AdvanceCharacterCreation',
+}): CompleteCharacterCreationHomeworldCommand => ({
+  type: 'CompleteCharacterCreationHomeworld',
   gameId: identity.gameId,
   actorId: identity.actorId,
-  characterId,
-  creationEvent: { type: 'COMPLETE_HOMEWORLD' }
+  characterId
 })
 
 export const buildStartCharacterCareerTermCommand = ({
@@ -411,20 +436,32 @@ export const buildStartCharacterCareerTermCommand = ({
   career
 })
 
-export const buildSelectCharacterCareerCreationCommand = ({
+export const buildResolveCharacterCareerQualificationCommand = ({
+  identity,
+  characterId = DEFAULT_CHARACTER_ID,
+  career = 'Scout'
+}: ClientCommandOptions & {
+  characterId?: CharacterId
+  career?: string
+}): ResolveCharacterCreationQualificationCommand => ({
+  type: 'ResolveCharacterCreationQualification',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId,
+  career
+})
+
+export const buildEnterCharacterDrifterCreationCommand = ({
   identity,
   characterId = DEFAULT_CHARACTER_ID
 }: ClientCommandOptions & {
   characterId?: CharacterId
-}): AdvanceCharacterCreationCommand => ({
-  type: 'AdvanceCharacterCreation',
+}): EnterCharacterCreationDrifterCommand => ({
+  type: 'EnterCharacterCreationDrifter',
   gameId: identity.gameId,
   actorId: identity.actorId,
   characterId,
-  creationEvent: {
-    type: 'SELECT_CAREER',
-    isNewCareer: true
-  }
+  option: 'Drifter'
 })
 
 export const buildCreatePieceCommand = ({
@@ -518,7 +555,7 @@ export const buildRollDiceCommand = ({
 export const buildBootstrapCommands = (
   identity: ClientIdentity,
   state: GameState | null
-): Command[] => {
+): GameCommand[] => {
   if (!state) {
     return [buildCreateGameCommand({ requestId: 'bootstrap-game', identity })]
   }
@@ -558,11 +595,15 @@ export const buildBootstrapCommands = (
   }
 
   if (scout.creation.state.status === 'CHARACTERISTICS') {
+    const characteristic = nextUnrolledCharacteristic(scout)
+    if (!characteristic) return []
+
     return [
       buildSequencedCommand(
-        buildSetCharacterCharacteristicsCreationCommand({
+        buildRollCharacterCreationCharacteristicCommand({
           requestId: 'bootstrap-characteristics',
-          identity
+          identity,
+          characteristic
         }),
         state
       )
@@ -581,23 +622,28 @@ export const buildBootstrapCommands = (
     ]
   }
 
-  if (scout.creation.terms.length === 0) {
+  if (scout.creation.state.status === 'CAREER_SELECTION') {
     return [
       buildSequencedCommand(
-        buildStartCharacterCareerTermCommand({
-          requestId: 'bootstrap-career-term',
-          identity
-        }),
+        scout.creation.failedToQualify
+          ? buildEnterCharacterDrifterCreationCommand({
+              requestId: 'bootstrap-career-drifter',
+              identity
+            })
+          : buildResolveCharacterCareerQualificationCommand({
+              requestId: 'bootstrap-career-qualification',
+              identity
+            }),
         state
       )
     ]
   }
 
-  if (scout.creation.state.status === 'CAREER_SELECTION') {
+  if (scout.creation.terms.length === 0) {
     return [
       buildSequencedCommand(
-        buildSelectCharacterCareerCreationCommand({
-          requestId: 'bootstrap-career-selection',
+        buildStartCharacterCareerTermCommand({
+          requestId: 'bootstrap-career-term-dev',
           identity
         }),
         state

@@ -245,16 +245,16 @@ Tasks:
   that semantic commands exist for the main SRD path. Keep adding semantic
   commands where behavior still matters, especially optional mishaps,
   anagathics, multi-career continuation, and final export/provenance.
-- Default death confirmation now has a semantic path, and optional mishap
+- Default death confirmation now has a semantic path, optional mishap
   placeholder payloads are fenced until the optional mishap variant is
-  implemented.
-- The current semantic-completion slice is replacing the server-persisted
-  generic `SET_CHARACTERISTICS` after the sixth characteristic roll with
-  `CharacterCreationCharacteristicsCompleted`. The remaining bootstrap/dev
-  generic `SET_CHARACTERISTICS` paths and `SELECT_CAREER` isolation are
-  follow-on work. Generic no-benefit `FINISH_MUSTERING` now points at
-  `CompleteCharacterCreationMustering` and is no longer the active migration
-  target.
+  implemented, and the server-persisted characteristic completion event is now
+  semantic.
+- The current isolation slice is moving the remaining bootstrap/dev generic
+  `SET_CHARACTERISTICS` paths and `SELECT_CAREER` use away from production UI,
+  adding server-side rejection for production attempts, and keeping historical
+  replay compatibility for old `CharacterCreationTransitioned` events. Generic
+  no-benefit `FINISH_MUSTERING` and post-roll characteristic completion are no
+  longer active migration targets.
 - Make roll events first-class facts. Each roll-gated event should record the
   roll inputs, dice result, modifiers, target, success/failure, and resulting
   state transition.

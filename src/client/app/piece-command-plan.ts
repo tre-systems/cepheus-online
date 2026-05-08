@@ -5,11 +5,16 @@ import type { ClientIdentity } from '../game-commands.js'
 import { uniqueCharacterId, uniquePieceId } from './bootstrap-flow.js'
 import {
   createCharacterCreationFlow,
-  deriveCharacterCreationCommands,
+  deriveCharacterSheetPatch,
   selectCharacterCreationCareerPlan
 } from './character-creation-flow.js'
 
+type CreateCharacterCommand = Extract<Command, { type: 'CreateCharacter' }>
 type CreatePieceCommand = Extract<Command, { type: 'CreatePiece' }>
+type UpdateCharacterSheetCommand = Extract<
+  Command,
+  { type: 'UpdateCharacterSheet' }
+>
 
 export interface CreatePieceCommandPlanInput {
   identity: ClientIdentity
@@ -112,6 +117,35 @@ export const createDefaultPieceCharacterCreationFlow = (
   step: 'review' as const
 })
 
+const planDefaultPieceCharacterCommands = ({
+  identity,
+  characterId,
+  name
+}: {
+  identity: ClientIdentity
+  characterId: CharacterId
+  name: string
+}): GameCommand[] => {
+  const flow = createDefaultPieceCharacterCreationFlow(characterId, name)
+  const createCharacterCommand: CreateCharacterCommand = {
+    type: 'CreateCharacter',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId,
+    characterType: flow.draft.characterType,
+    name: flow.draft.name.trim()
+  }
+  const updateSheetCommand: UpdateCharacterSheetCommand = {
+    type: 'UpdateCharacterSheet',
+    gameId: identity.gameId,
+    actorId: identity.actorId,
+    characterId,
+    ...deriveCharacterSheetPatch(flow.draft)
+  }
+
+  return [createCharacterCommand, updateSheetCommand]
+}
+
 export const planCreatePieceCommands = ({
   identity,
   state,
@@ -154,19 +188,12 @@ export const planCreatePieceCommands = ({
   })
 
   const characterCommands = characterId
-    ? deriveCharacterCreationCommands(
-        createDefaultPieceCharacterCreationFlow(characterId, trimmedName),
-        { identity, state }
-      )
+    ? planDefaultPieceCharacterCommands({
+        identity,
+        characterId,
+        name: trimmedName
+      })
     : []
-
-  if (characterId && characterCommands.length === 0) {
-    return {
-      ok: false,
-      error: 'Character creation needs the current room state',
-      focus: null
-    }
-  }
 
   const createPieceCommand: Command = {
     type: 'CreatePiece',

@@ -489,13 +489,15 @@ continuation, mustering benefits, mustering completion, and finalization.
 reenlistment, leave-career, blocked-reenlist, forced-reenlist, continue-career,
 mustering-benefit, no-benefit `FINISH_MUSTERING`, death confirmation, and
 optional-mishap placeholder payloads that have semantic commands or explicit
-fences. The current slice is replacing the server-persisted generic
-`SET_CHARACTERISTICS` emitted after the sixth characteristic roll with
-`CharacterCreationCharacteristicsCompleted`. Remaining generic
-`SET_CHARACTERISTICS` bootstrap/dev paths and `SELECT_CAREER` isolation stay as
-follow-on work. P1: any remaining roll-bearing or rules-bearing
-`AdvanceCharacterCreation` facts should be rejected or migrated because dice and
-outcome facts must come from semantic server commands/events.
+fences. The server-persisted generic `SET_CHARACTERISTICS` emitted after the
+sixth characteristic roll has been replaced with
+`CharacterCreationCharacteristicsCompleted`. The current slice is isolating the
+remaining bootstrap/dev generic `SET_CHARACTERISTICS` paths and `SELECT_CAREER`
+away from production UI, adding server-side rejection for production attempts,
+and keeping `CharacterCreationTransitioned` historical replay compatibility.
+P1: any remaining roll-bearing or rules-bearing `AdvanceCharacterCreation` facts
+should be rejected or migrated because dice and outcome facts must come from
+semantic server commands/events.
 
 Tasks:
 
@@ -508,12 +510,13 @@ Tasks:
 - Maintain backward compatibility only as a short bridge for the current UI.
   New rules work should add semantic events first, then adapt the UI.
 - Finish the remaining `AdvanceCharacterCreation` migration in this order:
-  1. Replace the server-persisted generic `SET_CHARACTERISTICS` after the sixth
+  1. Done: replace the server-persisted generic `SET_CHARACTERISTICS` after the sixth
      stat roll with `CharacterCreationCharacteristicsCompleted`, preserving the
      semantic roll facts already emitted for individual characteristic rolls.
-  2. Remove development/bootstrap reliance on generic `SET_CHARACTERISTICS`
-     and `SELECT_CAREER`, or isolate it as referee-only fixture/backfill code
-     with tests proving production UI cannot use it.
+  2. Current: remove development/bootstrap reliance on generic
+     `SET_CHARACTERISTICS` and `SELECT_CAREER`, or isolate it as referee-only
+     fixture/backfill code with tests proving production UI cannot use it and
+     server-side rejection covering production attempts.
   3. Keep `CharacterCreationTransitioned` only for historical replay while new
      production rules work emits semantic events.
 - Finish updating `deriveLiveActivities()` to read semantic events directly
@@ -674,10 +677,12 @@ Done when:
 
 ### Slice 2B: Mishap And Death
 
-Status: skeletal. The default Classic Traveller-style flow now routes failed
-survival directly to `DECEASED`. The separate `MISHAP` status remains only as
-the placeholder for a future optional mishap variant. Ruleset-backed optional
-mishap outcomes and their server events are still missing.
+Status: partial. The default Classic Traveller-style flow now routes failed
+survival directly to `DECEASED` through semantic death commands/events. Generic
+death and optional-mishap transition payloads are fenced or replaced by semantic
+commands. The separate `MISHAP` status remains only as the placeholder for a
+future optional mishap variant. Ruleset-backed optional mishap outcome tables
+and full consequence events are still missing.
 
 Tasks:
 
@@ -888,12 +893,13 @@ The next batch should run like this, in this order:
 1. Remove or fence the remaining generic character creation transition bridge.
    Done: generic reenlist, forced-reenlist, leave-career, blocked-reenlist,
    continue-career, mustering-benefit, no-benefit `FINISH_MUSTERING`, default
-   death confirmation, and optional-mishap placeholder payloads now point at
-   semantic commands or explicit fences. Current slice: replace the
-   server-persisted generic `SET_CHARACTERISTICS` after the sixth stat roll
-   with `CharacterCreationCharacteristicsCompleted`. Next: isolate remaining
+   death confirmation, optional-mishap placeholder payloads, and the
+   server-persisted characteristic completion event now point at semantic
+   commands/events or explicit fences. Current slice: isolate remaining
    bootstrap/dev generic `SET_CHARACTERISTICS` and `SELECT_CAREER` paths away
-   from production UI.
+   from production UI, reject production attempts server-side, and keep
+   historical replay compatibility for old `CharacterCreationTransitioned`
+   events.
 2. Finish the next architecture cleanup already underway: shrink `app.ts`,
    extract the character creation feature boundary, move rendering toward a
    signal-driven projection-fed model, split the projector registry by domain,

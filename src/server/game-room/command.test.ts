@@ -254,6 +254,50 @@ describe('deriveEventsForCommand error categories', () => {
     )
   })
 
+  it('rejects generic characteristic completion after semantic migration', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'SET_CHARACTERISTICS' }
+      },
+      createCreation('CHARACTERISTICS')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(Object.hasOwn(result, 'value'), false)
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'SET_CHARACTERISTICS must use RollCharacterCreationCharacteristic'
+    )
+  })
+
+  it('rejects generic career selection after semantic migration', () => {
+    const result = runCommand(
+      {
+        type: 'AdvanceCharacterCreation',
+        gameId,
+        actorId,
+        characterId,
+        creationEvent: { type: 'SELECT_CAREER', isNewCareer: true }
+      },
+      createCreation('CAREER_SELECTION')
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(Object.hasOwn(result, 'value'), false)
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'SELECT_CAREER must use ResolveCharacterCreationQualification, ResolveCharacterCreationDraft, or EnterCharacterCreationDrifter'
+    )
+  })
+
   it('rejects generic mustering benefit facts after semantic migration', () => {
     const result = runCommand(
       {

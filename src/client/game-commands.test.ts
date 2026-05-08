@@ -9,7 +9,11 @@ import {
   asPieceId,
   asUserId
 } from '../shared/ids'
-import type { CharacterCreationProjection, GameState } from '../shared/state'
+import type {
+  CharacterCharacteristics,
+  CharacterCreationProjection,
+  GameState
+} from '../shared/state'
 import {
   applyServerMessage,
   buildBootstrapCommands,
@@ -35,6 +39,14 @@ const identity = {
 
 const boardId = asBoardId('main-board')
 const characterId = asCharacterId('scout')
+const unrolledCharacteristics = (): CharacterCharacteristics => ({
+  str: null,
+  dex: null,
+  end: null,
+  int: null,
+  edu: null,
+  soc: null
+})
 
 const state = {
   id: identity.gameId,
@@ -110,6 +122,7 @@ const creation = (
   options: {
     terms?: CharacterCreationProjection['terms']
     careers?: CharacterCreationProjection['careers']
+    failedToQualify?: boolean
     creationComplete?: boolean
   } = {}
 ): CharacterCreationProjection => ({
@@ -123,7 +136,7 @@ const creation = (
   terms: options.terms ?? [],
   careers: options.careers ?? [],
   canEnterDraft: true,
-  failedToQualify: false,
+  failedToQualify: options.failedToQualify ?? false,
   characteristicChanges: [],
   creationComplete: options.creationComplete ?? false
 })
@@ -131,7 +144,7 @@ const creation = (
 const scoutWithCreation = (
   characterCreation: CharacterCreationProjection,
   skills: string[] = []
-) =>
+): GameState =>
   ({
     ...stateWithCharacter,
     characters: {
@@ -293,34 +306,44 @@ describe('client command helpers', () => {
     assert.equal(startCommands[0]?.type, 'StartCharacterCreation')
     assert.equal(startCommands[0]?.expectedSeq, stateWithCharacter.eventSeq)
 
+    const characteristicsState = scoutWithCreation(creation('CHARACTERISTICS'))
+    characteristicsState.characters[characterId].characteristics =
+      unrolledCharacteristics()
     const characteristicsCommands = buildBootstrapCommands(
       identity,
-      scoutWithCreation(creation('CHARACTERISTICS'))
+      characteristicsState
     )
     assert.equal(characteristicsCommands.length, 1)
-    assert.equal(characteristicsCommands[0]?.type, 'AdvanceCharacterCreation')
-    if (characteristicsCommands[0]?.type !== 'AdvanceCharacterCreation') return
     assert.equal(
-      characteristicsCommands[0].creationEvent.type,
-      'SET_CHARACTERISTICS'
+      characteristicsCommands[0]?.type,
+      'RollCharacterCreationCharacteristic'
     )
+    if (
+      characteristicsCommands[0]?.type !== 'RollCharacterCreationCharacteristic'
+    ) {
+      return
+    }
+    assert.equal(characteristicsCommands[0].characteristic, 'str')
 
     const homeworldCommands = buildBootstrapCommands(
       identity,
       scoutWithCreation(creation('HOMEWORLD'))
     )
     assert.equal(homeworldCommands.length, 1)
-    assert.equal(homeworldCommands[0]?.type, 'AdvanceCharacterCreation')
-    if (homeworldCommands[0]?.type !== 'AdvanceCharacterCreation') return
-    assert.equal(homeworldCommands[0].creationEvent.type, 'COMPLETE_HOMEWORLD')
+    assert.equal(
+      homeworldCommands[0]?.type,
+      'CompleteCharacterCreationHomeworld'
+    )
 
     const termCommands = buildBootstrapCommands(
       identity,
       scoutWithCreation(creation('CAREER_SELECTION'))
     )
     assert.equal(termCommands.length, 1)
-    assert.equal(termCommands[0]?.type, 'StartCharacterCareerTerm')
-    if (termCommands[0]?.type !== 'StartCharacterCareerTerm') return
+    assert.equal(termCommands[0]?.type, 'ResolveCharacterCreationQualification')
+    if (termCommands[0]?.type !== 'ResolveCharacterCreationQualification') {
+      return
+    }
     assert.equal(termCommands[0].career, 'Scout')
 
     const careerCommands = buildBootstrapCommands(
@@ -328,12 +351,51 @@ describe('client command helpers', () => {
       scoutAfterCareerTerm
     )
     assert.equal(careerCommands.length, 1)
-    assert.equal(careerCommands[0]?.type, 'AdvanceCharacterCreation')
-    if (careerCommands[0]?.type !== 'AdvanceCharacterCreation') return
-    assert.deepEqual(careerCommands[0].creationEvent, {
-      type: 'SELECT_CAREER',
-      isNewCareer: true
-    })
+    assert.equal(
+      careerCommands[0]?.type,
+      'ResolveCharacterCreationQualification'
+    )
+
+    const drifterCommands = buildBootstrapCommands(
+      identity,
+      scoutWithCreation(creation('CAREER_SELECTION', { failedToQualify: true }))
+    )
+    assert.equal(drifterCommands.length, 1)
+    assert.equal(drifterCommands[0]?.type, 'EnterCharacterCreationDrifter')
+  })
+
+  it('does not emit generic character creation events during production bootstrap', () => {
+    const states = [
+      scoutWithCreation(creation('CHARACTERISTICS')),
+      scoutWithCreation(creation('HOMEWORLD')),
+      scoutWithCreation(creation('CAREER_SELECTION')),
+      scoutWithCreation(creation('CAREER_SELECTION', { failedToQualify: true }))
+    ]
+    states[0].characters[characterId].characteristics =
+      unrolledCharacteristics()
+
+    const commands = states.flatMap((currentState) =>
+      buildBootstrapCommands(identity, currentState)
+    )
+
+    assert.deepEqual(
+      commands.map((command) => command.type),
+      [
+        'RollCharacterCreationCharacteristic',
+        'CompleteCharacterCreationHomeworld',
+        'ResolveCharacterCreationQualification',
+        'EnterCharacterCreationDrifter'
+      ]
+    )
+    assert.equal(
+      commands.some(
+        (command) =>
+          command.type === 'AdvanceCharacterCreation' &&
+          (command.creationEvent.type === 'SET_CHARACTERISTICS' ||
+            command.creationEvent.type === 'SELECT_CAREER')
+      ),
+      false
+    )
   })
 
   it('bootstraps the default character sheet after creation reaches a playable path', () => {
