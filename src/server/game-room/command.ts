@@ -222,6 +222,31 @@ const characterSheetPatchFields = (
   ...(command.credits === undefined ? {} : { credits: command.credits })
 })
 
+const hasAuthoritativeSheetFieldPatch = (
+  command: Extract<Command, { type: 'UpdateCharacterSheet' }>
+): boolean =>
+  command.age !== undefined ||
+  command.characteristics !== undefined ||
+  command.skills !== undefined ||
+  command.equipment !== undefined ||
+  command.credits !== undefined
+
+const validateCharacterSheetAuthority = (
+  state: GameState,
+  command: Extract<Command, { type: 'UpdateCharacterSheet' }>
+): Result<void, CommandError> => {
+  if (
+    !isReferee(state, command.actorId) &&
+    hasAuthoritativeSheetFieldPatch(command)
+  ) {
+    return notAllowed(
+      'Server-authored character creation fields can only be corrected by a referee'
+    )
+  }
+
+  return ok(undefined)
+}
+
 const normalizeHomeworld = (
   homeworld: CharacterCreationHomeworld
 ): Result<CharacterCreationHomeworld, CommandError> => {
@@ -1940,6 +1965,8 @@ export const deriveEventsForCommand = (
           'Only the character owner or referee can edit a sheet'
         )
       }
+      const authority = validateCharacterSheetAuthority(state.value, command)
+      if (!authority.ok) return authority
       const patch = validateCharacterSheetPatch(command)
       if (!patch.ok) return patch
 

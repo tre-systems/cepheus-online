@@ -288,10 +288,6 @@ type StartCharacterCareerTermCommand = Extract<
   Command,
   { type: 'StartCharacterCareerTerm' }
 >
-type UpdateCharacterSheetCommand = Extract<
-  Command,
-  { type: 'UpdateCharacterSheet' }
->
 type FinalizeCharacterCreationCommand = Extract<
   Command,
   { type: 'FinalizeCharacterCreation' }
@@ -2430,21 +2426,6 @@ export const deriveCharacterSheetPatch = (
   draft: CharacterCreationDraft
 ): CharacterSheetPatch => deriveCharacterCreationSheet(draft)
 
-export const deriveUpdateCharacterSheetCommand = (
-  draft: CharacterCreationDraft,
-  { identity, state = null }: CharacterCreationCommandOptions
-): UpdateCharacterSheetCommand =>
-  buildSequencedCommand(
-    {
-      type: 'UpdateCharacterSheet',
-      gameId: identity.gameId,
-      actorId: identity.actorId,
-      characterId: draft.characterId,
-      ...deriveCharacterSheetPatch(draft)
-    },
-    state
-  ) as UpdateCharacterSheetCommand
-
 export const deriveFinalizeCharacterCreationCommand = (
   draft: CharacterCreationDraft,
   { identity, state = null }: CharacterCreationCommandOptions
@@ -2460,36 +2441,4 @@ export const deriveFinalizeCharacterCreationCommand = (
     },
     state
   ) as FinalizeCharacterCreationCommand
-}
-
-export const deriveCharacterCreationCommands = (
-  flow: CharacterCreationFlow,
-  options: CharacterCreationCommandOptions
-): GameCommand[] => {
-  const validation = {
-    ...validateCurrentCharacterCreationStep({
-      ...flow,
-      step: 'review'
-    })
-  }
-  if (!validation.ok) return []
-  if (!options.state) return []
-
-  return [
-    {
-      type: 'CreateCharacter',
-      gameId: options.identity.gameId,
-      actorId: options.identity.actorId,
-      characterId: flow.draft.characterId,
-      characterType: flow.draft.characterType,
-      name: flow.draft.name.trim()
-    },
-    {
-      type: 'UpdateCharacterSheet',
-      gameId: options.identity.gameId,
-      actorId: options.identity.actorId,
-      characterId: flow.draft.characterId,
-      ...deriveCharacterSheetPatch(flow.draft)
-    }
-  ]
 }

@@ -9,6 +9,19 @@ The server owns game truth. Clients submit commands; the room Durable Object
 validates and orders them. Browser state is not trusted for rules, permissions,
 dice, hidden visibility, or access control.
 
+## Anti-Cheat And Rules Integrity
+
+The client is not trusted for dice, character creation outcomes, final sheet
+facts, permissions, or hidden data. The room Durable Object must validate
+command shape, actor authority, `expectedSeq`, legal actions, and rules state
+before appending events.
+
+Character creation is server-authored. Players use semantic creation commands
+for characteristics, homeworld, career terms, rolls, mustering, and
+finalization. Manual `UpdateCharacterSheet` patches from non-referees are
+notes-only; age, characteristics, skills, equipment, and credits are
+creation-owned fields that only a referee may correct manually.
+
 ## Discord Identity
 
 Discord OAuth should establish identity, but the app should still issue its own
@@ -53,6 +66,8 @@ High-risk hidden data:
 
 - hidden board pieces and unrevealed rooms
 - NPC stats and referee notes
+- viewer-safe character creation and finalization payloads, especially private
+  notes and unrevealed roll-dependent outcomes
 - private handouts
 - secret map layers
 - pending encounters

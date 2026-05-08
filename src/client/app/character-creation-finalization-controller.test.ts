@@ -161,21 +161,6 @@ const finalizableFlow = (): CharacterCreationFlow => ({
   )
 })
 
-const assertNoRejectedGenericBridgeCommands = (
-  commands: readonly CharacterCreationCommand[]
-) => {
-  assert.equal(
-    commands.some(
-      (command) =>
-        command.type === 'RollCharacterCreationCharacteristic' ||
-        command.type === 'ResolveCharacterCreationQualification' ||
-        command.type === 'ResolveCharacterCreationDraft' ||
-        command.type === 'EnterCharacterCreationDrifter'
-    ),
-    false
-  )
-}
-
 const createHarness = ({
   currentFlow = finalizableFlow(),
   currentState = gameState(),
@@ -312,7 +297,7 @@ describe('character creation finalization controller', () => {
     )
   })
 
-  it('creates a missing game before deriving finalization commands', async () => {
+  it('creates a missing game before requiring server-backed creation state', async () => {
     const harness = createHarness({ currentState: null })
 
     await harness.controller.finish()
@@ -320,36 +305,31 @@ describe('character creation finalization controller', () => {
     assert.equal(
       harness.events.indexOf(
         'createGame:request:create-game-for-wizard-character'
-      ) < harness.events.indexOf('postCharacterCreationCommands'),
+      ) <
+        harness.events.indexOf(
+          'error:Character creation needs the current room state'
+        ),
       true
     )
-    assert.equal(harness.postedCharacterCommands.length, 1)
+    assert.equal(harness.postedCharacterCommands.length, 0)
   })
 
-  it('uses plain sheet commands for unpublished character creation fallback', async () => {
+  it('rejects unpublished character creation instead of posting a manual sheet fallback', async () => {
     const harness = createHarness({
       currentState: gameState()
     })
 
     await harness.controller.finish()
 
-    const commands = harness.postedCharacterCommands[0] ?? []
-    assert.deepEqual(
-      commands.map((command) => command.type),
-      ['CreateCharacter', 'UpdateCharacterSheet']
-    )
-    assertNoRejectedGenericBridgeCommands(commands)
-    assert.equal(commands[0]?.expectedSeq, undefined)
-    assert.equal(commands[1]?.expectedSeq, undefined)
+    assert.deepEqual(harness.postedCharacterCommands, [])
+    assert.deepEqual(harness.postedBoardCommands, [])
     assert.equal(
-      harness.postedBoardCommands.some(
-        (command) => command.type === 'CreatePiece'
-      ),
-      true
+      harness.error,
+      'Character creation needs the current room state'
     )
   })
 
-  it('updates an existing non-creation character without rejected bridge commands', async () => {
+  it('rejects an existing non-creation character instead of posting a manual sheet update', async () => {
     const harness = createHarness({
       currentState: gameState({
         characters: {
@@ -360,12 +340,12 @@ describe('character creation finalization controller', () => {
 
     await harness.controller.finish()
 
-    const commands = harness.postedCharacterCommands[0] ?? []
-    assert.deepEqual(
-      commands.map((command) => command.type),
-      ['UpdateCharacterSheet']
+    assert.deepEqual(harness.postedCharacterCommands, [])
+    assert.deepEqual(harness.postedBoardCommands, [])
+    assert.equal(
+      harness.error,
+      'Character creation needs the current room state'
     )
-    assertNoRejectedGenericBridgeCommands(commands)
   })
 
   it('posts finalization commands before creating the linked token and closing UI', async () => {
@@ -427,7 +407,14 @@ describe('character creation finalization controller', () => {
   })
 
   it('creates a missing board before token planning', async () => {
-    const harness = createHarness({ currentBoard: null })
+    const harness = createHarness({
+      currentBoard: null,
+      currentState: gameState({
+        characters: {
+          [characterId]: character()
+        }
+      })
+    })
 
     await harness.controller.finish()
 

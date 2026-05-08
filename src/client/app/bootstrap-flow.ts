@@ -70,32 +70,6 @@ export const createCharacterCommand = ({
   name: 'Scout'
 })
 
-export const updateScoutSheetCommand = ({
-  roomId,
-  actorId
-}: BootstrapCommandContext): Command => ({
-  type: 'UpdateCharacterSheet',
-  gameId: roomId,
-  actorId,
-  characterId: scoutCharacterId,
-  age: 34,
-  characteristics: {
-    str: 7,
-    dex: 8,
-    end: 8,
-    int: 7,
-    edu: 9,
-    soc: 6
-  },
-  skills: ['Vacc Suit-0', 'Gun Combat-0', 'Mechanic-0', 'Recon-0'],
-  equipment: [
-    { name: 'Vacc Suit', quantity: 1, notes: 'Carried' },
-    { name: 'Laser Carbine', quantity: 1, notes: 'Carried' },
-    { name: 'Medkit', quantity: 1, notes: 'Stowed' }
-  ],
-  credits: 1200
-})
-
 export const startScoutCreationCommand = ({
   roomId,
   actorId
@@ -286,9 +260,6 @@ export const nextBootstrapCommand = ({
     return scout.creation.failedToQualify
       ? enterScoutDrifterCreationCommand(commandContext)
       : resolveScoutCareerQualificationCommand(commandContext)
-  }
-  if ((scout.skills || []).length === 0) {
-    return updateScoutSheetCommand(commandContext)
   }
   if (Object.keys(state.pieces || {}).length === 0) {
     return createPieceCommand(

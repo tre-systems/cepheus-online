@@ -173,6 +173,10 @@ tests before it is considered done.
   completed character projections.
 - The client may hold temporary UI selections, but it must not optimistically
   mutate authoritative character state.
+- Manual/generated shortcuts are not canonical SRD creation. They must either
+  emit the same semantic commands/events or stay outside the player-facing
+  rules path. Player sheet patches are notes-only; referee corrections are the
+  explicit manual escape hatch.
 - Each rules action should have an explicit command and an explicit event, or a
   deliberately named aggregate command that emits explicit semantic events.
 - Dice rolls should be replayable facts. Character creation events that depend
@@ -255,6 +259,11 @@ Tasks:
   Server command handling now hard-deprecates the generic command response
   before persistence while keeping protocol decode stability and historical
   replay compatibility for old `CharacterCreationTransitioned` events.
+- Custom piece creation no longer creates a prefilled sheet, creation
+  finalization no longer falls back to manual sheet update commands, and
+  non-referee `UpdateCharacterSheet` patches can only update notes. Add any new
+  import/admin tools as explicit referee-only workflows rather than player
+  shortcuts.
 - Make roll events first-class facts. Each roll-gated event should record the
   roll inputs, dice result, modifiers, target, success/failure, and resulting
   state transition.
@@ -461,6 +470,8 @@ Tasks:
   - no outstanding selections
   - not in an unresolved death or mishap branch
 - Project the finalized sheet from creation state, preserving creation history.
+  Final characteristics, age, skills, credits, equipment, and history must be
+  server-derived from creation events and finalization.
 - Add UPP/export display for completed characters.
 
 Acceptance:

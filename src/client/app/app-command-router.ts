@@ -33,7 +33,6 @@ export type CharacterCreationCommand = Extract<
   {
     type:
       | 'CreateCharacter'
-      | 'UpdateCharacterSheet'
       | 'StartCharacterCreation'
       | 'SetCharacterCreationHomeworld'
       | 'SelectCharacterCreationBackgroundSkill'

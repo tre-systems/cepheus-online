@@ -96,7 +96,7 @@ describe('piece command planner', () => {
     assert.equal(result.commands[0].scale, 1.5)
   })
 
-  it('builds plain sheet commands before the linked piece', () => {
+  it('builds an empty linked character before the linked piece', () => {
     const result = planCreatePieceCommands({
       identity,
       state: gameState({
@@ -120,7 +120,7 @@ describe('piece command planner', () => {
     assert.equal(result.characterId, 'mae-1')
     assert.deepEqual(
       result.commands.map((command) => command.type),
-      ['CreateCharacter', 'UpdateCharacterSheet', 'CreatePiece']
+      ['CreateCharacter', 'CreatePiece']
     )
     assert.deepEqual(
       result.commands.map((command) => command.expectedSeq),
@@ -139,27 +139,6 @@ describe('piece command planner', () => {
     if (result.commands[0]?.type !== 'CreateCharacter') return
     assert.equal(result.commands[0].characterId, 'mae-1')
     assert.equal(result.commands[0].name, 'Mae')
-    assert.equal(result.commands[1]?.type, 'UpdateCharacterSheet')
-    if (result.commands[1]?.type !== 'UpdateCharacterSheet') return
-    assert.equal(result.commands[1].characterId, 'mae-1')
-    assert.equal(result.commands[1].age, 30)
-    assert.deepEqual(result.commands[1].characteristics, {
-      str: 7,
-      dex: 7,
-      end: 7,
-      int: 7,
-      edu: 7,
-      soc: 7
-    })
-    assert.deepEqual(result.commands[1].skills, [
-      'Broker-0',
-      'Slug Pistol-0',
-      'Admin-0',
-      'Athletics-0',
-      'Gun Combat-0'
-    ])
-    assert.deepEqual(result.commands[1].equipment, [])
-    assert.equal(result.commands[1].credits, 0)
     assert.equal(result.commands.at(-1)?.type, 'CreatePiece')
     const createPieceCommand = result.commands.at(-1)
     if (createPieceCommand?.type !== 'CreatePiece') return

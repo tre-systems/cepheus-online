@@ -369,7 +369,7 @@ describe('bootstrap flow helpers', () => {
           })
         })
       })?.type,
-      'UpdateCharacterSheet'
+      'CreatePiece'
     )
 
     const createPiece = nextBootstrapCommand({

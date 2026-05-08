@@ -3,18 +3,9 @@ import type { CharacterId, PieceId } from '../../shared/ids'
 import type { BoardState, GameState } from '../../shared/state'
 import type { ClientIdentity } from '../game-commands.js'
 import { uniqueCharacterId, uniquePieceId } from './bootstrap-flow.js'
-import {
-  createCharacterCreationFlow,
-  deriveCharacterSheetPatch,
-  selectCharacterCreationCareerPlan
-} from './character-creation-flow.js'
 
 type CreateCharacterCommand = Extract<Command, { type: 'CreateCharacter' }>
 type CreatePieceCommand = Extract<Command, { type: 'CreatePiece' }>
-type UpdateCharacterSheetCommand = Extract<
-  Command,
-  { type: 'UpdateCharacterSheet' }
->
 
 export interface CreatePieceCommandPlanInput {
   identity: ClientIdentity
@@ -88,35 +79,6 @@ const planPiecePlacement = ({
   )
 })
 
-export const createDefaultPieceCharacterCreationFlow = (
-  characterId: CharacterId,
-  name: string
-) => ({
-  ...createCharacterCreationFlow(characterId, {
-    name,
-    age: 30,
-    characteristics: {
-      str: 7,
-      dex: 7,
-      end: 7,
-      int: 7,
-      edu: 7,
-      soc: 7
-    },
-    homeworld: {
-      lawLevel: 'Low Law',
-      tradeCodes: ['Industrial']
-    },
-    backgroundSkills: ['Broker-0', 'Slug Pistol-0', 'Admin-0'],
-    pendingCascadeSkills: [],
-    careerPlan: selectCharacterCreationCareerPlan('Scout'),
-    skills: ['Athletics-0', 'Gun Combat-0'],
-    equipment: [],
-    credits: 0
-  }),
-  step: 'review' as const
-})
-
 const planDefaultPieceCharacterCommands = ({
   identity,
   characterId,
@@ -126,24 +88,16 @@ const planDefaultPieceCharacterCommands = ({
   characterId: CharacterId
   name: string
 }): GameCommand[] => {
-  const flow = createDefaultPieceCharacterCreationFlow(characterId, name)
   const createCharacterCommand: CreateCharacterCommand = {
     type: 'CreateCharacter',
     gameId: identity.gameId,
     actorId: identity.actorId,
     characterId,
-    characterType: flow.draft.characterType,
-    name: flow.draft.name.trim()
-  }
-  const updateSheetCommand: UpdateCharacterSheetCommand = {
-    type: 'UpdateCharacterSheet',
-    gameId: identity.gameId,
-    actorId: identity.actorId,
-    characterId,
-    ...deriveCharacterSheetPatch(flow.draft)
+    characterType: 'NPC',
+    name: name.trim()
   }
 
-  return [createCharacterCommand, updateSheetCommand]
+  return [createCharacterCommand]
 }
 
 export const planCreatePieceCommands = ({

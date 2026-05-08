@@ -1456,15 +1456,48 @@ describe('room publication flow', () => {
       ['Zero-G-0', 'Broker-0', 'Slug Rifle-0']
     )
 
-    const homeworld = await publish(storage, {
+    let homeworld = await publish(storage, {
       type: 'CompleteCharacterCreationHomeworld',
       gameId,
       actorId,
       characterId,
       expectedSeq: resolvedCascade.value.state.eventSeq
     })
+    for (const skill of ['Admin', 'Electronics', 'Computer']) {
+      if (
+        homeworld.ok ||
+        homeworld.error.message !==
+          'Background choices must be complete before career selection'
+      ) {
+        break
+      }
+      const selected = await publish(storage, {
+        type: 'SelectCharacterCreationBackgroundSkill',
+        gameId,
+        actorId,
+        characterId,
+        skill
+      })
+      assert.equal(
+        selected.ok,
+        true,
+        selected.ok ? undefined : selected.error.message
+      )
+      if (!selected.ok) return
+      homeworld = await publish(storage, {
+        type: 'CompleteCharacterCreationHomeworld',
+        gameId,
+        actorId,
+        characterId,
+        expectedSeq: selected.value.state.eventSeq
+      })
+    }
 
-    assert.equal(homeworld.ok, true)
+    assert.equal(
+      homeworld.ok,
+      true,
+      homeworld.ok ? undefined : homeworld.error.message
+    )
     if (!homeworld.ok) return
 
     const term = await publish(storage, {
@@ -3186,13 +3219,45 @@ describe('room publication flow', () => {
         cascadeSkill: 'Gun Combat-0',
         selection: 'Slug Rifle'
       })
-      const careerSelection = await publish(storage, {
+      let careerSelection = await publish(storage, {
         type: 'CompleteCharacterCreationHomeworld',
         gameId,
         actorId,
         characterId
       })
-      assert.equal(careerSelection.ok, true)
+      for (const skill of ['Admin', 'Electronics', 'Computer']) {
+        if (
+          careerSelection.ok ||
+          careerSelection.error.message !==
+            'Background choices must be complete before career selection'
+        ) {
+          break
+        }
+        const selected = await publish(storage, {
+          type: 'SelectCharacterCreationBackgroundSkill',
+          gameId,
+          actorId,
+          characterId,
+          skill
+        })
+        assert.equal(
+          selected.ok,
+          true,
+          selected.ok ? undefined : selected.error.message
+        )
+        if (!selected.ok) return
+        careerSelection = await publish(storage, {
+          type: 'CompleteCharacterCreationHomeworld',
+          gameId,
+          actorId,
+          characterId
+        })
+      }
+      assert.equal(
+        careerSelection.ok,
+        true,
+        careerSelection.ok ? undefined : careerSelection.error.message
+      )
       if (!careerSelection.ok) return
       assert.equal(
         careerSelection.value.state.characters[characterId]?.creation?.state
@@ -3431,6 +3496,139 @@ describe('room publication flow', () => {
       { name: 'Vacc suit', quantity: 1, notes: '' }
     ])
     assert.equal(character?.credits, 900)
+  })
+
+  it('blocks player edits to server-authored creation sheet fields', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    const refereeId = asUserId('referee-1')
+    await publish(storage, {
+      type: 'CreateGame',
+      gameId,
+      actorId: refereeId,
+      slug: 'game-1',
+      name: 'Spinward Test'
+    })
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    const rejected = await publish(storage, {
+      type: 'UpdateCharacterSheet',
+      gameId,
+      actorId,
+      characterId,
+      characteristics: { str: 15 }
+    })
+
+    assert.equal(rejected.ok, false)
+    if (rejected.ok) return
+    assert.equal(rejected.error.code, 'not_allowed')
+    assert.equal(
+      rejected.error.message,
+      'Server-authored character creation fields can only be corrected by a referee'
+    )
+    assert.equal((await readEventStream(storage, gameId)).length, 3)
+  })
+
+  it('keeps player notes editable during canonical creation', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    const refereeId = asUserId('referee-1')
+    await publish(storage, {
+      type: 'CreateGame',
+      gameId,
+      actorId: refereeId,
+      slug: 'game-1',
+      name: 'Spinward Test'
+    })
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    const updated = await publish(storage, {
+      type: 'UpdateCharacterSheet',
+      gameId,
+      actorId,
+      characterId,
+      notes: 'Keeps an in-character journal.'
+    })
+
+    assert.equal(
+      updated.ok,
+      true,
+      updated.ok ? undefined : updated.error.message
+    )
+    if (!updated.ok) return
+    assert.equal(
+      updated.value.state.characters[characterId]?.notes,
+      'Keeps an in-character journal.'
+    )
+  })
+
+  it('allows referee corrections to canonical creation sheet fields', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    const refereeId = asUserId('referee-1')
+    await publish(storage, {
+      type: 'CreateGame',
+      gameId,
+      actorId: refereeId,
+      slug: 'game-1',
+      name: 'Spinward Test'
+    })
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+    await publish(storage, {
+      type: 'StartCharacterCreation',
+      gameId,
+      actorId,
+      characterId
+    })
+
+    const updated = await publish(storage, {
+      type: 'UpdateCharacterSheet',
+      gameId,
+      actorId: refereeId,
+      characterId,
+      credits: 100
+    })
+
+    assert.equal(
+      updated.ok,
+      true,
+      updated.ok ? undefined : updated.error.message
+    )
+    if (!updated.ok) return
+    assert.equal(updated.value.state.characters[characterId]?.credits, 100)
   })
 
   it('rejects non-string character sheet notes during publication', async () => {

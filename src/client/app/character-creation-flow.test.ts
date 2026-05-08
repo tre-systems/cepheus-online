@@ -28,7 +28,6 @@ import {
   createCharacterCreationFlow,
   createInitialCharacterDraft,
   createManualCharacterCreationFlow,
-  deriveCharacterCreationCommands,
   deriveCharacterCreationBasicTrainingAction,
   deriveCharacterCreationAnagathicsDecision,
   deriveCharacterSheetPatch,
@@ -43,7 +42,6 @@ import {
   deriveCharacterCreationTermSkillTableActions,
   deriveStartCharacterCareerTermCommand,
   deriveStartCharacterCreationCommand,
-  deriveUpdateCharacterSheetCommand,
   evaluateCharacterCreationCareerPlan,
   remainingMusteringBenefits,
   remainingCharacterCreationTermSkillRolls,
@@ -1690,7 +1688,7 @@ describe('character creation flow', () => {
     })
   })
 
-  it('derives sequenced create and sheet update commands from a valid draft', () => {
+  it('derives sequenced creation commands from a valid draft', () => {
     const draft = completeDraft()
 
     const createCommand = deriveCreateCharacterCommand(draft, {
@@ -1704,25 +1702,6 @@ describe('character creation flow', () => {
     assert.equal(createCommand.characterType, 'PLAYER')
     assert.equal(createCommand.name, 'Iona Vesh')
     assert.equal(createCommand.expectedSeq, 12)
-
-    const updateCommand = deriveUpdateCharacterSheetCommand(draft, {
-      identity,
-      state
-    })
-    assert.equal(updateCommand.type, 'UpdateCharacterSheet')
-    assert.equal(updateCommand.characterId, characterId)
-    assert.equal(updateCommand.expectedSeq, 12)
-    assert.deepEqual(updateCommand.characteristics, draft.characteristics)
-    assert.deepEqual(updateCommand.skills, [
-      'Zero-G-0',
-      'Gun Combat-0',
-      'Admin-0',
-      'Pilot-1',
-      'Vacc Suit-0'
-    ])
-    assert.deepEqual(updateCommand.equipment, [
-      { name: 'Vacc Suit', quantity: 1, notes: 'Carried' }
-    ])
 
     const startCreationCommand = deriveStartCharacterCreationCommand(draft, {
       identity,
@@ -1876,68 +1855,5 @@ describe('character creation flow', () => {
 
     patch.skills?.push('Mechanic-0')
     assert.deepEqual(draft.skills, ['Pilot-1', 'Vacc Suit-0'])
-  })
-
-  it('derives both creation commands only when the full flow is valid', () => {
-    const invalidCommands = deriveCharacterCreationCommands(
-      createCharacterCreationFlow(characterId),
-      { identity, state }
-    )
-    assert.deepEqual(invalidCommands, [])
-
-    const unsequencedCommands = deriveCharacterCreationCommands(
-      {
-        step: 'review',
-        draft: completeDraft()
-      },
-      { identity, state: null }
-    )
-    assert.deepEqual(unsequencedCommands, [])
-
-    const commands = deriveCharacterCreationCommands(
-      {
-        step: 'review',
-        draft: completeDraft()
-      },
-      { identity, state }
-    )
-
-    assert.deepEqual(
-      commands.map((command) => command.type),
-      ['CreateCharacter', 'UpdateCharacterSheet']
-    )
-    assertNoGenericLifecycleAdvance(commands)
-    assert.deepEqual(
-      commands.map((command) => command.expectedSeq),
-      Array.from({ length: commands.length }, () => undefined)
-    )
-
-    const playableDraft = applyCharacterCreationCareerPlan(
-      completeDraft(),
-      selectCharacterCreationCareerPlan('Merchant', {
-        survivalRoll: 5,
-        commissionRoll: 4
-      })
-    )
-    const playableCommands = deriveCharacterCreationCommands(
-      {
-        step: 'review',
-        draft: playableDraft
-      },
-      { identity, state }
-    )
-    assert.equal(playableCommands.length, 2)
-    assertNoGenericLifecycleAdvance(playableCommands)
-    assert.deepEqual(
-      playableCommands
-        .filter((command) => command.type === 'AdvanceCharacterCreation')
-        .map((command) =>
-          command.type === 'AdvanceCharacterCreation'
-            ? command.creationEvent.type
-            : null
-        ),
-      []
-    )
-    assert.equal(playableCommands.at(-1)?.type, 'UpdateCharacterSheet')
   })
 })

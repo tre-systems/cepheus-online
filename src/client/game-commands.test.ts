@@ -20,7 +20,6 @@ import {
   buildCharacterSheetPatchCommand,
   buildCharacterSkillRollReason,
   buildCreatePieceCommand,
-  buildDefaultCharacterSheetUpdateCommand,
   buildMovePieceCommand,
   buildSequencedCommand,
   buildSetDoorOpenCommand,
@@ -398,7 +397,7 @@ describe('client command helpers', () => {
     )
   })
 
-  it('bootstraps the default character sheet after creation reaches a playable path', () => {
+  it('bootstraps the default piece without patching a character sheet', () => {
     const commands = buildBootstrapCommands(
       identity,
       scoutWithCreation(
@@ -422,24 +421,8 @@ describe('client command helpers', () => {
     )
 
     assert.equal(commands.length, 1)
-    assert.equal(commands[0]?.type, 'UpdateCharacterSheet')
+    assert.equal(commands[0]?.type, 'CreatePiece')
     assert.equal(commands[0]?.expectedSeq, stateWithBoard.eventSeq)
-
-    const sheetCommand = buildDefaultCharacterSheetUpdateCommand({
-      requestId: 'test-sheet',
-      identity
-    })
-
-    assert.equal(sheetCommand?.type, 'UpdateCharacterSheet')
-    assert.equal(sheetCommand?.characterId, characterId)
-    assert.deepEqual(sheetCommand?.characteristics, {
-      str: 7,
-      dex: 8,
-      end: 8,
-      int: 7,
-      edu: 9,
-      soc: 6
-    })
   })
 
   it('binds the default piece to the default character', () => {

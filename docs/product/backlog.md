@@ -37,6 +37,8 @@ The near-term product target is:
 - Character creation should be driven by an explicit shared state machine:
   commands request legal transitions, events record accepted facts, projections
   expose current state, and the client renders only legal next actions.
+- Manual sheet edits are not a character creation path. Player sheet patches are
+  notes-only; referee corrections may patch creation-owned fields when needed.
 - Shared rules code must stay deterministic, dependency-free, and free of DOM,
   network, storage, logging, and ambient randomness.
 - The browser may keep local planning state, but authoritative game state is
@@ -496,9 +498,10 @@ custom-piece production paths, and local draft fallback are now off generic
 `SET_CHARACTERISTICS` and `SELECT_CAREER` bridge commands. The generic command
 path now returns one stable deprecated-command rejection before persistence,
 while historical `CharacterCreationTransitioned` replay compatibility remains
-in projection/read-model code. The remaining work is continuing to move read
-models/live activity onto semantic event facts and tightening manual sheet edit
-boundaries.
+in projection/read-model code. Custom piece creation no longer creates a
+prefilled sheet, finalization no longer falls back to `UpdateCharacterSheet`,
+and non-referee manual sheet edits are limited to notes. The remaining work is
+continuing to move read models/live activity onto semantic event facts.
 
 Tasks:
 
@@ -525,7 +528,10 @@ Tasks:
      reset.
   5. Done: replace the per-event generic command branch with a hard
      deprecated-command response while keeping protocol decode compatibility.
-  6. Keep `CharacterCreationTransitioned` only for historical replay while new
+  6. Done: remove shortcut sheet mutation paths from custom pieces and
+     character creation finalization, and fence player `UpdateCharacterSheet`
+     patches to notes only.
+  7. Keep `CharacterCreationTransitioned` only for historical replay while new
      production rules work emits semantic events.
 - Finish updating `deriveLiveActivities()` to read semantic events directly
   instead of parsing coarse transition payloads where possible.
@@ -768,7 +774,9 @@ Tasks:
 - Project the final playable sheet from creation state and finalization:
   characteristics, age, skills, ranks/titles, credits, equipment/material
   benefits, career history, and notes.
-- Remove the need for manual cleanup after finalization.
+- Remove the need for manual cleanup after finalization. The canonical sheet is
+  derived server-side from creation events and finalization; the client does not
+  submit trusted final sheet values.
 - Add UPP display and a plain export block for completed characters.
 - Add replay tests that build the same final sheet from full event stream,
   checkpoint plus tail, and refresh-loaded room state.

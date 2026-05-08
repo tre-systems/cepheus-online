@@ -11,9 +11,7 @@ import {
   type BootstrapCommandContext
 } from './bootstrap-flow.js'
 import {
-  deriveCreateCharacterCommand,
   deriveFinalizeCharacterCreationCommand,
-  deriveUpdateCharacterSheetCommand,
   type CharacterCreationFlow
 } from './character-creation-flow.js'
 import { deriveCharacterCreationValidationSummary } from './character-creation-view.js'
@@ -60,22 +58,7 @@ const deriveServerBackedFinalizationCommands = (
 
   const character = state?.characters[flow.draft.characterId] ?? null
   if (!character?.creation) {
-    const commands: CharacterCreationCommand[] = []
-    if (!character) {
-      commands.push(
-        deriveCreateCharacterCommand(flow.draft, {
-          identity,
-          state: null
-        }) as CharacterCreationCommand
-      )
-    }
-    commands.push(
-      deriveUpdateCharacterSheetCommand(flow.draft, {
-        identity,
-        state: null
-      }) as CharacterCreationCommand
-    )
-    return commands
+    return []
   }
 
   const baseCommand = {
