@@ -122,9 +122,27 @@ describe('character creation mustering view', () => {
             completedTerm()
           ],
           musteringBenefits: [
-            { career: 'Scout', kind: 'cash', roll: 1, value: '10000', credits: 10000 },
-            { career: 'Scout', kind: 'cash', roll: 2, value: '10000', credits: 10000 },
-            { career: 'Scout', kind: 'cash', roll: 3, value: '20000', credits: 20000 }
+            {
+              career: 'Scout',
+              kind: 'cash',
+              roll: 1,
+              value: '10000',
+              credits: 10000
+            },
+            {
+              career: 'Scout',
+              kind: 'cash',
+              roll: 2,
+              value: '10000',
+              credits: 10000
+            },
+            {
+              career: 'Scout',
+              kind: 'cash',
+              roll: 3,
+              value: '20000',
+              credits: 20000
+            }
           ]
         }),
         {

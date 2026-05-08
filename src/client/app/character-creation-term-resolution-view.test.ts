@@ -38,7 +38,9 @@ const baseFlow = (
 })
 
 const survivedPlan = (
-  overrides: Partial<NonNullable<CharacterCreationFlow['draft']['careerPlan']>> = {}
+  overrides: Partial<
+    NonNullable<CharacterCreationFlow['draft']['careerPlan']>
+  > = {}
 ): NonNullable<CharacterCreationFlow['draft']['careerPlan']> => ({
   career: 'Scout',
   qualificationRoll: 8,
@@ -62,11 +64,9 @@ const survivedPlan = (
 describe('character creation term resolution view', () => {
   it('returns an empty fragment when no career is selected', () => {
     const node = asNode(
-      renderCharacterCreationTermResolution(
-        document,
-        baseFlow(null),
-        { completeTerm: () => {} }
-      )
+      renderCharacterCreationTermResolution(document, baseFlow(null), {
+        completeTerm: () => {}
+      })
     )
 
     assert.equal(node.tagName, '#fragment')
@@ -122,7 +122,9 @@ describe('character creation term resolution view', () => {
     const node = asNode(
       renderCharacterCreationTermResolution(
         document,
-        baseFlow(survivedPlan({ reenlistmentRoll: 7, reenlistmentOutcome: 'allowed' })),
+        baseFlow(
+          survivedPlan({ reenlistmentRoll: 7, reenlistmentOutcome: 'allowed' })
+        ),
         { completeTerm: (continueCareer) => completed.push(continueCareer) }
       )
     )
@@ -141,11 +143,16 @@ describe('character creation term resolution view', () => {
     const node = asNode(
       renderCharacterCreationTermResolution(
         document,
-        baseFlow(survivedPlan({ reenlistmentRoll: 12, reenlistmentOutcome: 'forced' })),
+        baseFlow(
+          survivedPlan({ reenlistmentRoll: 12, reenlistmentOutcome: 'forced' })
+        ),
         { completeTerm: () => {} }
       )
     )
 
-    assert.equal(node.children[2]?.children[0]?.textContent, 'Serve required term')
+    assert.equal(
+      node.children[2]?.children[0]?.textContent,
+      'Serve required term'
+    )
   })
 })

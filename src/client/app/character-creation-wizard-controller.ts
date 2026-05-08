@@ -119,9 +119,7 @@ export const createCharacterCreationWizardController = ({
     if (
       flow.step === 'homeworld' &&
       characterCreationStepIndex(
-        creationStepFromStatus(
-          currentProjection()?.state.status ?? 'HOMEWORLD'
-        )
+        creationStepFromStatus(currentProjection()?.state.status ?? 'HOMEWORLD')
       ) <= characterCreationStepIndex('homeworld')
     ) {
       const validation = deriveCharacterCreationValidationSummary(flow)

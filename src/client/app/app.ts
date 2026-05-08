@@ -67,6 +67,7 @@ import {
 import { createCreationPresenceDock } from './creation-presence-dock.js'
 import { createCharacterCreationHomeworldPublisher } from './character-creation-homeworld-publisher.js'
 import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './character-creation-mustering-view.js'
+import { createCharacterCreationPublicationController } from './character-creation-publication-controller.js'
 import { renderCharacterCreationTermResolution as renderCharacterCreationTermResolutionView } from './character-creation-term-resolution-view.js'
 import {
   createCharacterCreationWizardController,
@@ -79,9 +80,7 @@ import {
   applyParsedCharacterCreationDraftPatch,
   characterCreationCareerNames,
   completeCharacterCreationCareerTerm,
-  deriveCreateCharacterCommand,
   deriveCharacterCreationCommands,
-  deriveStartCharacterCreationCommand,
   removeCharacterCreationBackgroundSkillSelection,
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
@@ -175,7 +174,6 @@ let connectivityController: ConnectivityController | null = null
 const diceRevealCoordinator = createDiceRevealCoordinator()
 const animatedDiceRollActivityIds = new Set<string>()
 let characterCreationController: CharacterCreationController
-let characterCreationPublishPromise: Promise<void> | null = null
 let characterCreationWizardController: CharacterCreationWizardController
 const setStatus = (text: string): void => {
   els.status.textContent = text
@@ -399,60 +397,23 @@ const postCharacterCreationCommands = (
 ): Promise<CommandAcceptedMessage[]> =>
   commandRouter.characterCreation.dispatchSequential(commands)
 
-const ensureCharacterCreationPublishedNow = async () => {
-  const flow = characterCreationController.flow()
-  if (!flow || characterCreationController.readOnly()) return
+const characterCreationPublicationController =
+  createCharacterCreationPublicationController({
+    getFlow: () => characterCreationController.flow(),
+    getState: () => state,
+    isReadOnly: () => characterCreationController.readOnly(),
+    identity: clientIdentity,
+    createGame: () =>
+      postCommand(
+        createGameCommand(bootstrapIdentity()),
+        requestId('create-game-for-character-creation')
+      ),
+    postCharacterCreationCommands,
+    reportError: setError
+  })
 
-  if (!state) {
-    await postCommand(
-      createGameCommand(bootstrapIdentity()),
-      requestId('create-game-for-character-creation')
-    )
-  }
-
-  const publishedFlow = characterCreationController.flow()
-  if (!state || !publishedFlow) return
-
-  const characterId = publishedFlow.draft.characterId
-  const character = state.characters[characterId] ?? null
-  const commands = []
-
-  if (!character) {
-    commands.push(
-      deriveCreateCharacterCommand(publishedFlow.draft, {
-        identity: clientIdentity(),
-        state: null
-      })
-    )
-  }
-
-  if (!character?.creation) {
-    commands.push(
-      deriveStartCharacterCreationCommand(publishedFlow.draft, {
-        identity: clientIdentity(),
-        state: null
-      })
-    )
-  }
-
-  if (commands.length > 0) {
-    await postCharacterCreationCommands(commands)
-  }
-}
-
-const ensureCharacterCreationPublished = () => {
-  if (!characterCreationPublishPromise) {
-    characterCreationPublishPromise = ensureCharacterCreationPublishedNow()
-      .catch((error) => {
-        setError(error.message)
-        throw error
-      })
-      .finally(() => {
-        characterCreationPublishPromise = null
-      })
-  }
-  return characterCreationPublishPromise
-}
+const ensureCharacterCreationPublished = () =>
+  characterCreationPublicationController.ensurePublished()
 
 const characterCreationHomeworldPublisher =
   createCharacterCreationHomeworldPublisher({
