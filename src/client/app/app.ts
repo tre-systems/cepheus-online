@@ -82,6 +82,7 @@ import { createRoomAssetCreationWiring } from './room-asset-creation-wiring.js'
 import { createRoomMenuWiring } from './room-menu-wiring.js'
 import { createAppShell, registerAppShellServiceWorker } from './app-shell.js'
 import { createBoardControlsWiring } from './board-controls-wiring.js'
+import { createAppRefreshWiring } from './app-refresh-wiring.js'
 
 registerAppShellServiceWorker()
 
@@ -791,8 +792,10 @@ els.bootstrap.addEventListener('click', () => {
   bootstrapScene().catch((error) => setError(error.message))
 })
 
-els.refresh.addEventListener('click', () => {
-  fetchState().catch((error) => setError(error.message))
+createAppRefreshWiring({
+  refreshButton: els.refresh,
+  fetchState,
+  reportError: setError
 })
 
 els.roll.addEventListener('click', () => {

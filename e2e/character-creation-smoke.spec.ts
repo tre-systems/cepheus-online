@@ -3227,4 +3227,111 @@ test.describe('character creation smoke', () => {
       await expectMobileControlUsable(cascadeButtons.first(), 'Cascade choice')
     }
   })
+
+  test('keeps mustering out controls usable at phone width', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 5)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const context: RepeatTravellerContext = {
+      label: 'mobile-mustering',
+      seed: 5,
+      phase: 'setup',
+      action: 'not started',
+      commandTypes: []
+    }
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    context.characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId: context.characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId: context.characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationQualification',
+      characterId: context.characterId,
+      career: 'Scout'
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationBasicTraining',
+      characterId: context.characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationSurvival',
+      characterId: context.characterId
+    })
+    await completeRepeatRequiredTermSkills(
+      page,
+      roomId,
+      actorId,
+      actorSession,
+      context
+    )
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'DecideCharacterCreationAnagathics',
+      characterId: context.characterId,
+      useAnagathics: false
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationAging',
+      characterId: context.characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationReenlistment',
+      characterId: context.characterId
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+
+    const fields = page.locator('#characterCreationFields')
+    const musterOut = page.getByRole('button', { name: 'Muster out' })
+    await expectMobileControlUsable(musterOut, 'Muster out')
+    await musterOut.click()
+
+    await expect(fields).toContainText(/Skills|Review the skill list/, {
+      timeout: 5_000
+    })
+    await expectMobileCreatorControlsFit(page)
+
+    const continueToEquipment = page.getByRole('button', {
+      name: 'Continue to equipment'
+    })
+    await expectMobileControlUsable(
+      continueToEquipment,
+      'Continue to equipment'
+    )
+    await continueToEquipment.click()
+
+    await expect(fields).toContainText(/Equipment|Add starting equipment/, {
+      timeout: 5_000
+    })
+    await expect(fields).toContainText('Mustering out', { timeout: 5_000 })
+    await expectMobileCreatorControlsFit(page)
+    await expectMobileControlUsable(
+      page.getByRole('button', { name: 'Roll benefit' }),
+      'Roll benefit'
+    )
+  })
 })

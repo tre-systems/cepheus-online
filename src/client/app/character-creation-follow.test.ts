@@ -124,6 +124,23 @@ describe('character creation follow helpers', () => {
     assert.equal(fallback, fallbackFlow)
   })
 
+  it('replaces stale local editable flow after the server projection advances', () => {
+    const staleHomeworldFlow = {
+      ...fallbackFlow,
+      step: 'homeworld' as const
+    }
+
+    const syncedFlow = syncCharacterCreationFlowFromRoomState({
+      currentFlow: staleHomeworldFlow,
+      roomState: stateWithCreation(creation('BASIC_TRAINING')),
+      characterId,
+      fallbackFlow: staleHomeworldFlow
+    })
+
+    assert.equal(syncedFlow?.step, 'skills')
+    assert.equal(syncedFlow === staleHomeworldFlow, false)
+  })
+
   it('hydrates mustering benefits from projected semantic history', () => {
     const projectedFlow = syncCharacterCreationFlowFromRoomState({
       currentFlow: null,
