@@ -8,7 +8,7 @@ import { projectGameState } from '../../shared/projector'
 import { err, ok, type Result } from '../../shared/result'
 import type { GameState } from '../../shared/state'
 import type { DurableObjectStorage } from '../cloudflare'
-import { shouldSaveCheckpoint } from './checkpoint-policy'
+import { deriveCheckpointDecision } from './checkpoint-policy'
 import { deriveEventsForCommand } from './command'
 import { getProjectedGameState } from './projection'
 import {
@@ -162,7 +162,9 @@ export const runCommandPublication = async (
     throw error
   }
 
-  if (shouldSaveCheckpoint(nextState, envelopes)) {
+  const checkpointDecision = deriveCheckpointDecision(nextState, envelopes)
+
+  if (checkpointDecision.shouldSave) {
     await saveCheckpoint(storage, nextState, createdAt)
   }
 

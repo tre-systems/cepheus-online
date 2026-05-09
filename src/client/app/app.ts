@@ -36,22 +36,6 @@ import {
   createCharacterCreationCommandController,
   type CharacterCreationCommandController
 } from './character-creation-command-controller.js'
-import { renderCharacterCreationCharacteristicGrid as renderCharacterCreationCharacteristicGridView } from './character-creation-characteristics-view.js'
-import {
-  renderCharacterCreationAgingChoices as renderCharacterCreationAgingChoicesView,
-  renderCharacterCreationAgingRollButton as renderCharacterCreationAgingRollButtonView,
-  renderCharacterCreationAnagathicsDecision as renderCharacterCreationAnagathicsDecisionView,
-  renderCharacterCreationReenlistmentRollButton as renderCharacterCreationReenlistmentRollButtonView,
-  renderCharacterCreationTermSkillTables as renderCharacterCreationTermSkillTablesView
-} from './character-creation-career-support-view.js'
-import {
-  renderCharacterCreationCareerPicker as renderCharacterCreationCareerPickerView,
-  renderCharacterCreationCareerRollButton as renderCharacterCreationCareerRollButtonView
-} from './character-creation-career-selection-view.js'
-import {
-  renderCharacterCreationHomeworld as renderCharacterCreationHomeworldView,
-  renderCharacterCreationTermCascadeChoices as renderCharacterCreationTermCascadeChoicesView
-} from './character-creation-homeworld-view.js'
 import {
   createCharacterCreationController,
   type CharacterCreationController
@@ -62,40 +46,22 @@ import {
 } from './creation-activity-feed.js'
 import { createCreationPresenceDock } from './creation-presence-dock.js'
 import { createCharacterCreationHomeworldPublisher } from './character-creation-homeworld-publisher.js'
-import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './character-creation-mustering-view.js'
 import { createCharacterCreationLifecycleController } from './character-creation-lifecycle-controller.js'
 import { createCharacterCreationPublicationController } from './character-creation-publication-controller.js'
 import {
   createCharacterCreationFinalizationController,
   type CharacterCreationFinalizationController
 } from './character-creation-finalization-controller.js'
-import { renderCharacterCreationTermResolution as renderCharacterCreationTermResolutionView } from './character-creation-term-resolution-view.js'
 import {
   createCharacterCreationWizardController,
   type CharacterCreationWizardController
 } from './character-creation-wizard-controller.js'
 import { createCharacterCreationDomController } from './character-creation-dom-controller.js'
+import type { CharacterCreationDraft } from './character-creation-flow.js'
 import {
-  applyCharacterCreationBackgroundSkillSelection,
-  applyParsedCharacterCreationDraftPatch,
-  completeCharacterCreationCareerTerm,
-  removeCharacterCreationBackgroundSkillSelection,
-  resolveCharacterCreationCascadeSkill,
-  resolveCharacterCreationTermCascadeSkill,
-  type CharacterCreationDraft,
-  type CharacterCreationFlow
-} from './character-creation-flow.js'
-import {
-  renderCharacterCreationBasicTrainingButton as renderCharacterCreationBasicTrainingButtonView,
-  renderCharacterCreationCharacteristicRollButton as renderCharacterCreationCharacteristicRollButtonView,
-  renderCharacterCreationDeath as renderCharacterCreationDeathView,
-  renderCharacterCreationDraftFields as renderCharacterCreationDraftFieldsView,
-  renderCharacterCreationNextStep as renderCharacterCreationNextStepView
-} from './character-creation-renderer.js'
-import {
-  renderCharacterCreationReview as renderCharacterCreationReviewView,
-  renderCharacterCreationTermHistory as renderCharacterCreationTermHistoryView
-} from './character-creation-review-view.js'
+  createCharacterCreationRenderController,
+  type CharacterCreationRenderController
+} from './character-creation-render-controller.js'
 import { renderCharacterCreationSheetActions } from './character-creation-sheet-actions.js'
 import { cssUrl } from './image-assets.js'
 import { createGameCommand, nextBootstrapCommand } from './bootstrap-flow.js'
@@ -156,6 +122,7 @@ let characterCreationLifecycleController: ReturnType<
 >
 let characterCreationFinalizationController: CharacterCreationFinalizationController
 let characterCreationWizardController: CharacterCreationWizardController
+let characterCreationRenderController: CharacterCreationRenderController
 const setStatus = (text: string): void => {
   els.status.textContent = text
 }
@@ -467,52 +434,33 @@ const autoAdvanceCharacterCreationSetup = () =>
 const syncCharacterCreationWizardFields = () =>
   characterCreationWizardController.syncFields()
 
-const renderCharacterCreationWizardControls = () => {
-  els.backCharacterWizard.disabled = true
-  els.nextCharacterWizard.disabled = true
-  els.backCharacterWizard.hidden = true
-  els.nextCharacterWizard.hidden = true
-  if (els.creatorActions) els.creatorActions.hidden = true
+const renderCharacterCreationWizardControls = () =>
+  characterCreationRenderController.renderWizardControls()
 
-  els.characterCreationStatus.replaceChildren()
-}
+const renderCharacterCreationWizard = () =>
+  characterCreationRenderController.renderWizard()
 
-const renderCharacterCreationWizard = () => {
-  characterCreationController.reconcileEditableWithProjection(
-    characterCreationController.currentProjection()
-  )
-  while (autoAdvanceCharacterCreationSetup()) {
-    // Keep setup steps linear even when reopening a flow that is already valid.
-  }
-
-  const flow = characterCreationController.flow()
-  if (!characterCreationPanel.render(flow) || !flow) return
-  els.characterCreationSteps.replaceChildren()
-  els.characterCreationFields.replaceChildren(
-    renderCharacterCreationNextStep(flow),
-    flow.step === 'review'
-      ? renderCharacterCreationReview(flow)
-      : renderCharacterCreationFields(flow)
-  )
-  els.characterCreationWizard.hidden = false
-  els.characterCreationWizard.classList.toggle(
-    'read-only',
-    characterCreationController.readOnly()
-  )
-  if (characterCreationController.readOnly()) {
-    for (const control of Array.from(
-      els.characterCreationFields.querySelectorAll<
-        | HTMLButtonElement
-        | HTMLInputElement
-        | HTMLSelectElement
-        | HTMLTextAreaElement
-      >('button, input, select, textarea')
-    )) {
-      control.disabled = true
-    }
-  }
-  renderCharacterCreationWizardControls()
-}
+characterCreationRenderController = createCharacterCreationRenderController({
+  document,
+  elements: {
+    backCharacterWizard: els.backCharacterWizard,
+    nextCharacterWizard: els.nextCharacterWizard,
+    creatorActions: els.creatorActions,
+    characterCreationStatus: els.characterCreationStatus,
+    characterCreationSteps: els.characterCreationSteps,
+    characterCreationFields: els.characterCreationFields,
+    characterCreationWizard: els.characterCreationWizard
+  },
+  controller: characterCreationController,
+  panel: characterCreationPanel,
+  wizard: characterCreationWizardController,
+  homeworldPublisher: characterCreationHomeworldPublisher,
+  getCommandController: () => characterCreationCommandController,
+  ensurePublished: ensureCharacterCreationPublished,
+  postCharacterCreationCommand,
+  commandIdentity,
+  reportError: setError
+})
 
 characterCreationCommandController = createCharacterCreationCommandController({
   getFlow: () => characterCreationController.flow(),
@@ -554,354 +502,9 @@ createCharacterCreationDomController({
   reportError: setError
 })
 
-const renderCharacterCreationNextStep = (
-  flow: CharacterCreationFlow
-): HTMLElement => {
-  return renderCharacterCreationNextStepView(document, flow, {
-    advanceStep: advanceCharacterCreationWizard,
-    reportError: setError,
-    resolveBackgroundCascadeSkill: ({ scope, cascadeSkill, selection }) => {
-      resolveCharacterCreationCascadeChoice(scope, cascadeSkill, selection)
-    }
-  })
-}
-
-const renderCharacterCreationFields = (
-  flow: CharacterCreationFlow
-): DocumentFragment => {
-  const fragment = document.createDocumentFragment()
-  if (flow.step === 'characteristics') {
-    fragment.append(renderCharacterCreationCharacteristicGrid(flow))
-    return fragment
-  }
-  if (flow.step === 'career') {
-    const death = renderCharacterCreationDeath(flow)
-    if (death) {
-      fragment.append(death)
-      return fragment
-    }
-    const careerRollButton = renderCharacterCreationCareerRollButton(flow)
-    if (careerRollButton) fragment.append(careerRollButton)
-    fragment.append(renderCharacterCreationAnagathicsDecision(flow))
-    const agingRollButton = renderCharacterCreationAgingRollButton(flow)
-    if (agingRollButton) fragment.append(agingRollButton)
-    fragment.append(renderCharacterCreationAgingChoices(flow))
-    const reenlistmentRollButton =
-      renderCharacterCreationReenlistmentRollButton(flow)
-    if (reenlistmentRollButton) fragment.append(reenlistmentRollButton)
-    fragment.append(renderCharacterCreationTermSkillTables(flow))
-    fragment.append(renderCharacterCreationTermCascadeChoices(flow))
-    fragment.append(renderCharacterCreationCareerPicker(flow))
-    fragment.append(renderCharacterCreationTermResolution(flow))
-    fragment.append(renderCharacterCreationTermHistory(flow))
-    return fragment
-  }
-  if (flow.step === 'homeworld') {
-    fragment.append(renderCharacterCreationHomeworld(flow))
-    return fragment
-  }
-  fragment.append(
-    renderCharacterCreationDraftFieldsView(document, flow, {
-      renderCharacteristicRollButton:
-        renderCharacterCreationCharacteristicRollButton,
-      renderCareerRollButton: renderCharacterCreationCareerRollButton,
-      renderBasicTrainingButton: renderCharacterCreationBasicTrainingButton,
-      renderMusteringOut: renderCharacterCreationMusteringOut
-    })
-  )
-  return fragment
-}
-
-const renderCharacterCreationDeath = (
-  flow: CharacterCreationFlow
-): HTMLElement | null => {
-  return renderCharacterCreationDeathView(document, flow, {
-    readOnly: () => characterCreationController.readOnly(),
-    startNewCharacter: startNewCharacterCreationWizard,
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationHomeworld = (
-  flow: CharacterCreationFlow
-): HTMLElement => {
-  return renderCharacterCreationHomeworldView(document, flow, {
-    toggleBackgroundSkill: ({ label, selected, cascade }) => {
-      const flow = characterCreationController.flow()
-      if (!flow) return
-      syncCharacterCreationWizardFields()
-      const syncedFlow = characterCreationController.flow()
-      if (!syncedFlow) return
-      const nextFlow = {
-        ...syncedFlow,
-        draft: selected
-          ? removeCharacterCreationBackgroundSkillSelection(
-              syncedFlow.draft,
-              label
-            )
-          : applyCharacterCreationBackgroundSkillSelection(
-              syncedFlow.draft,
-              label
-            )
-      }
-      characterCreationController.setFlow(nextFlow)
-      setError('')
-      renderCharacterCreationWizard()
-      if (!selected) {
-        if (cascade) {
-          characterCreationHomeworldPublisher.publishBackgroundCascadeSelection(
-            nextFlow,
-            label
-          )
-        } else {
-          characterCreationHomeworldPublisher.publishProgress(nextFlow)
-        }
-      }
-    },
-    resolveCascadeSkill: ({ scope, cascadeSkill, selection }) => {
-      resolveCharacterCreationCascadeChoice(scope, cascadeSkill, selection)
-    }
-  })
-}
-
-const renderCharacterCreationTermSkillTables = (
-  flow: CharacterCreationFlow
-): HTMLElement | DocumentFragment => {
-  return renderCharacterCreationTermSkillTablesView(document, flow, {
-    rollTermSkill: (table) =>
-      characterCreationCommandController.rollTermSkill(table),
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationReenlistmentRollButton = (
-  flow: CharacterCreationFlow
-): HTMLElement | null => {
-  return renderCharacterCreationReenlistmentRollButtonView(document, flow, {
-    rollReenlistment: () =>
-      characterCreationCommandController.rollReenlistment(),
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationAgingRollButton = (
-  flow: CharacterCreationFlow
-): HTMLElement | null => {
-  return renderCharacterCreationAgingRollButtonView(document, flow, {
-    rollAging: () => characterCreationCommandController.rollAging(),
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationAgingChoices = (
-  flow: CharacterCreationFlow
-): HTMLElement | DocumentFragment => {
-  return renderCharacterCreationAgingChoicesView(document, flow, {
-    applyAgingChange: (index, characteristic) =>
-      characterCreationCommandController.resolveAgingLoss(index, characteristic)
-  })
-}
-
-const renderCharacterCreationAnagathicsDecision = (
-  flow: CharacterCreationFlow
-): HTMLElement | DocumentFragment => {
-  return renderCharacterCreationAnagathicsDecisionView(document, flow, {
-    decideAnagathics: (useAnagathics) =>
-      characterCreationCommandController.decideAnagathics(useAnagathics),
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationTermCascadeChoices = (
-  flow: CharacterCreationFlow
-): HTMLElement | DocumentFragment => {
-  return renderCharacterCreationTermCascadeChoicesView(document, flow, {
-    resolveCascadeSkill: ({ scope, cascadeSkill, selection }) => {
-      resolveCharacterCreationCascadeChoice(scope, cascadeSkill, selection)
-    }
-  })
-}
-
-const resolveCharacterCreationCascadeChoice = (
-  scope: 'background' | 'term',
-  cascadeSkill: string,
-  selection: string
-) => {
-  const flow = characterCreationController.flow()
-  if (!flow) return
-  syncCharacterCreationWizardFields()
-  const syncedFlow = characterCreationController.flow()
-  if (!syncedFlow) return
-  const nextFlow =
-    scope === 'term'
-      ? resolveCharacterCreationTermCascadeSkill({
-          flow: syncedFlow,
-          cascadeSkill,
-          selection
-        }).flow
-      : {
-          ...syncedFlow,
-          draft: resolveCharacterCreationCascadeSkill({
-            draft: syncedFlow.draft,
-            cascadeSkill,
-            selection
-          })
-        }
-  characterCreationController.setFlow(nextFlow)
-  setError('')
-  renderCharacterCreationWizard()
-  if (scope === 'term') {
-    characterCreationCommandController
-      .publishTermCascadeResolution(nextFlow, cascadeSkill, selection, nextFlow)
-      .catch((error) => setError(error.message))
-  } else {
-    characterCreationHomeworldPublisher.publishCascadeResolution(
-      nextFlow,
-      cascadeSkill,
-      selection
-    )
-  }
-}
-
-const renderCharacterCreationCharacteristicGrid = (
-  flow: CharacterCreationFlow
-): HTMLElement => {
-  return renderCharacterCreationCharacteristicGridView(document, flow, {
-    rollCharacteristic: (characteristicKey) =>
-      characterCreationCommandController.rollCharacteristic(characteristicKey),
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationCareerPicker = (
-  flow: CharacterCreationFlow
-): HTMLElement => {
-  return renderCharacterCreationCareerPickerView(document, flow, {
-    resolveCareerQualification: (career) =>
-      characterCreationCommandController.resolveCareerQualification(career),
-    selectFailedQualificationCareer,
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationTermResolution = (
-  flow: CharacterCreationFlow
-): HTMLElement | DocumentFragment => {
-  return renderCharacterCreationTermResolutionView(document, flow, {
-    completeTerm: async (continueCareer) => {
-      const flow = characterCreationController.flow()
-      if (!flow) return
-      const result = completeCharacterCreationCareerTerm({
-        flow,
-        continueCareer
-      })
-      if (!result.moved) return
-
-      await ensureCharacterCreationPublished()
-      await postCharacterCreationCommand({
-        type: continueCareer
-          ? 'ReenlistCharacterCreationCareer'
-          : 'LeaveCharacterCreationCareer',
-        ...commandIdentity(),
-        characterId: flow.draft.characterId
-      })
-      characterCreationController.setFlow(result.flow)
-      setError('')
-      renderCharacterCreationWizard()
-      characterCreationPanel.scrollToTop()
-    }
-  })
-}
-
-const renderCharacterCreationTermHistory = (
-  flow: CharacterCreationFlow
-): HTMLElement | DocumentFragment => {
-  return renderCharacterCreationTermHistoryView(document, flow)
-}
-
-const selectFailedQualificationCareer = (
-  career: string,
-  drafted: boolean
-): void => {
-  const flow = characterCreationController.flow()
-  if (!flow) return
-  characterCreationController.setFlow(
-    applyParsedCharacterCreationDraftPatch(flow, {
-      careerPlan: {
-        career,
-        qualificationRoll: null,
-        qualificationPassed: true,
-        survivalRoll: null,
-        survivalPassed: null,
-        commissionRoll: null,
-        commissionPassed: null,
-        advancementRoll: null,
-        advancementPassed: null,
-        canCommission: null,
-        canAdvance: null,
-        drafted
-      }
-    }).flow
-  )
-  setError('')
-  renderCharacterCreationWizard()
-  characterCreationPanel.scrollToTop()
-}
-
-const renderCharacterCreationCharacteristicRollButton = (
-  flow: CharacterCreationFlow
-): HTMLElement | null => {
-  return renderCharacterCreationCharacteristicRollButtonView(document, flow, {
-    rollCharacteristic: () =>
-      characterCreationCommandController.rollCharacteristic(),
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationCareerRollButton = (
-  flow: CharacterCreationFlow
-): HTMLElement | null => {
-  return renderCharacterCreationCareerRollButtonView(document, flow, {
-    rollCareerCheck: () => characterCreationCommandController.rollCareerCheck(),
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationBasicTrainingButton = (
-  flow: CharacterCreationFlow
-): HTMLElement | null => {
-  return renderCharacterCreationBasicTrainingButtonView(document, flow, {
-    hasFlow: () => Boolean(characterCreationController.flow()),
-    syncFields: syncCharacterCreationWizardFields,
-    completeBasicTraining: () =>
-      characterCreationCommandController.completeBasicTraining(),
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationMusteringOut = (
-  flow: CharacterCreationFlow
-): HTMLElement => {
-  return renderCharacterCreationMusteringOutView(document, flow, {
-    rollMusteringBenefit: (kind) =>
-      characterCreationCommandController.rollMusteringBenefit(kind),
-    reportError: setError
-  })
-}
-
-const renderCharacterCreationReview = (
-  flow: CharacterCreationFlow
-): HTMLElement => {
-  return renderCharacterCreationReviewView(document, flow)
-}
-
 const currentBoardList = () => boardList(state)
 
 const currentSelectedBoardId = () => selectSelectedBoardId(state)
-
-const advanceCharacterCreationWizard = async () => {
-  await characterCreationWizardController.advance()
-}
 
 const bootstrapScene = async () => {
   setError('')

@@ -709,6 +709,99 @@ test.describe('character creation smoke', () => {
     }
   })
 
+  test('shows failed qualification fallback and persists Drifter after refresh', async ({
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 4)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const postedCommandTypes: string[] = []
+
+    page.on('request', (request) => {
+      if (
+        request.method() !== 'POST' ||
+        !request.url().includes(`/rooms/${roomId}/command`)
+      ) {
+        return
+      }
+      const body = request.postData()
+      if (!body) return
+      const message = JSON.parse(body) as {
+        command?: { type?: string }
+      }
+      if (message.command?.type) postedCommandTypes.push(message.command.type)
+    })
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 2,
+        dex: 2,
+        end: 2,
+        int: 2,
+        edu: 2,
+        soc: 2
+      }
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+
+    const fields = page.locator('#characterCreationFields')
+    const scoutCareer = characterCreationCareerButton(page, 'Scout')
+    await expect(scoutCareer).toBeVisible({ timeout: 5_000 })
+    await scoutCareer.click()
+    await waitForDiceReveal(page)
+
+    await expect(fields.locator('.creation-draft-fallback')).toBeVisible({
+      timeout: 5_000
+    })
+    await expect(fields).toContainText('Qualification failed')
+    await expect(fields).toContainText('Choose Drifter or roll for the Draft.')
+    await expect(
+      fields.getByRole('button', { name: 'Become a Drifter' })
+    ).toBeVisible()
+    await expect(
+      fields.getByRole('button', { name: 'Roll draft (1d6)' })
+    ).toBeVisible()
+
+    await fields.getByRole('button', { name: 'Become a Drifter' }).click()
+    await expect.poll(() => postedCommandTypes).toContain(
+      'EnterCharacterCreationDrifter'
+    )
+    await expect(fields).toContainText(/Drifter|Apply basic training/, {
+      timeout: 5_000
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await expect(fields).toContainText(/Drifter|Apply basic training/, {
+      timeout: 5_000
+    })
+
+    const roomState = await fetchRoomState(page, roomId, actorId)
+    const creationJson = JSON.stringify(
+      roomState.state?.characters[characterId]?.creation ?? null
+    )
+    expect(creationJson).toContain('Drifter')
+  })
+
   test('keeps owner career roll results hidden until reveal and leaves the next action usable', async ({
     page
   }) => {

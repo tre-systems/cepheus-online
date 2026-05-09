@@ -21,6 +21,7 @@ import {
   deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationAgingRoll,
   deriveNextCharacterCreationCharacteristicRoll,
+  resolveCharacterCreationDraftCareer,
   nextCharacterCreationMusteringBenefitCareer,
   updateCharacterCreationFields,
   type CharacterCreationAgingSelection,
@@ -49,6 +50,9 @@ export interface CharacterCreationCommandController {
     characteristicKey?: CharacteristicKey | null
   ) => Promise<void>
   resolveCareerQualification: (career: string) => Promise<void>
+  resolveFailedQualificationOption: (
+    option: 'Drifter' | 'Draft'
+  ) => Promise<void>
   completeBasicTraining: () => Promise<void>
   rollTermSkill: (table: CharacterCreationTermSkillTable) => Promise<void>
   rollMusteringBenefit: (kind: BenefitKind) => Promise<void>
@@ -312,6 +316,90 @@ export const createCharacterCreationCommandController = (
       setFlow(fallbackFlow)
       renderWizard()
       scrollToTop()
+    },
+
+    resolveFailedQualificationOption: async (option) => {
+      const flow = guardEditableFlow()
+      if (!flow) return
+      setError('')
+      syncFields()
+      await flushHomeworldProgress()
+      await ensurePublished()
+
+      if (option === 'Drifter') {
+        const fallbackFlow = applyParsedCharacterCreationDraftPatch(flow, {
+          careerPlan: {
+            career: 'Drifter',
+            qualificationRoll: null,
+            qualificationPassed: true,
+            survivalRoll: null,
+            survivalPassed: null,
+            commissionRoll: null,
+            commissionPassed: null,
+            advancementRoll: null,
+            advancementPassed: null,
+            canCommission: null,
+            canAdvance: null,
+            drafted: false
+          }
+        }).flow
+        const response = await postCharacterCreationCommand(
+          {
+            type: 'EnterCharacterCreationDrifter',
+            ...commandIdentity(),
+            characterId: flow.draft.characterId,
+            option: 'Drifter'
+          },
+          requestId('enter-character-drifter')
+        )
+        syncAndRender(
+          { syncFlowFromRoomState, renderWizard, scrollToTop },
+          response,
+          fallbackFlow
+        )
+        return
+      }
+
+      const response = await postCharacterCreationCommand(
+        {
+          type: 'ResolveCharacterCreationDraft',
+          ...commandIdentity(),
+          characterId: flow.draft.characterId
+        },
+        requestId('resolve-character-draft')
+      )
+      const roll = latestDiceRoll(response)
+      if (!roll) {
+        setError('Draft roll did not return a dice result')
+        return
+      }
+      await waitForDiceRevealOrDelay(roll)
+      const career = resolveCharacterCreationDraftCareer(roll.total)
+      if (!career) {
+        setError('Draft roll did not resolve a career')
+        return
+      }
+      const fallbackFlow = applyParsedCharacterCreationDraftPatch(flow, {
+        careerPlan: {
+          career,
+          qualificationRoll: roll.total,
+          qualificationPassed: true,
+          survivalRoll: null,
+          survivalPassed: null,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: null,
+          canAdvance: null,
+          drafted: true
+        }
+      }).flow
+      syncAndRender(
+        { syncFlowFromRoomState, renderWizard, scrollToTop },
+        response,
+        fallbackFlow
+      )
     },
 
     completeBasicTraining: async () => {

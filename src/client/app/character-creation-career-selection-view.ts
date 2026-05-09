@@ -18,12 +18,11 @@ export interface CharacterCreationCareerSelectionDocument {
 export interface CharacterCreationCareerSelectionViewDeps {
   resolveCareerQualification: (career: string) => Promise<void>
   rollCareerCheck: () => Promise<void>
-  selectFailedQualificationCareer: (career: string, drafted: boolean) => void
+  resolveFailedQualificationOption: (
+    option: 'Drifter' | 'Draft'
+  ) => Promise<void>
   reportError: (message: string) => void
 }
-
-const unsupportedDraftMessage =
-  'Draft resolution is handled by the event-backed creator flow; choose Drifter here or restart from the shared creation actions.'
 
 export const renderCharacterCreationCareerPicker = (
   document: CharacterCreationCareerSelectionDocument,
@@ -31,7 +30,7 @@ export const renderCharacterCreationCareerPicker = (
   deps: Pick<
     CharacterCreationCareerSelectionViewDeps,
     | 'resolveCareerQualification'
-    | 'selectFailedQualificationCareer'
+    | 'resolveFailedQualificationOption'
     | 'reportError'
   >
 ): HTMLElement => {
@@ -141,11 +140,11 @@ const renderCharacterCreationDraftFallback = (
   document: CharacterCreationCareerSelectionDocument,
   flow: CharacterCreationFlow,
   {
-    selectFailedQualificationCareer,
+    resolveFailedQualificationOption,
     reportError
   }: Pick<
     CharacterCreationCareerSelectionViewDeps,
-    'selectFailedQualificationCareer' | 'reportError'
+    'resolveFailedQualificationOption' | 'reportError'
   >
 ): HTMLElement | DocumentFragment => {
   const viewModel = deriveCharacterCreationFailedQualificationViewModel(flow)
@@ -167,13 +166,11 @@ const renderCharacterCreationDraftFallback = (
       option.rollRequirement === null
         ? option.actionLabel
         : `${option.actionLabel} (${option.rollRequirement})`
-    button.addEventListener('click', () => {
-      if (option.option === 'Drifter') {
-        selectFailedQualificationCareer('Drifter', false)
-        return
-      }
-      reportError(unsupportedDraftMessage)
-    })
+    bindAsyncActionButton(button, () =>
+      resolveFailedQualificationOption(option.option).catch((error) =>
+        reportError(error.message)
+      )
+    )
     list.append(button)
   }
 

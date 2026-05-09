@@ -4,7 +4,10 @@ import { describe, it } from 'node:test'
 import type { EventEnvelope } from '../../shared/events'
 import { asCharacterId, asEventId, asGameId, asUserId } from '../../shared/ids'
 import type { GameState } from '../../shared/state'
-import { CHECKPOINT_INTERVAL, shouldSaveCheckpoint } from './checkpoint-policy'
+import {
+  CHECKPOINT_INTERVAL,
+  deriveCheckpointDecision
+} from './checkpoint-policy'
 
 const gameId = asGameId('game-1')
 const actorId = asUserId('user-1')
@@ -39,8 +42,8 @@ const envelope = (
 
 describe('checkpoint policy', () => {
   it('saves a checkpoint at initial game creation', () => {
-    assert.equal(
-      shouldSaveCheckpoint(stateAt(1), [
+    assert.deepEqual(
+      deriveCheckpointDecision(stateAt(1), [
         envelope(1, {
           type: 'GameCreated',
           slug: 'game-1',
@@ -48,13 +51,16 @@ describe('checkpoint policy', () => {
           ownerId: actorId
         })
       ]),
-      true
+      {
+        shouldSave: true,
+        reasons: ['game_creation']
+      }
     )
   })
 
   it('saves a checkpoint at the fixed event interval', () => {
-    assert.equal(
-      shouldSaveCheckpoint(stateAt(CHECKPOINT_INTERVAL), [
+    assert.deepEqual(
+      deriveCheckpointDecision(stateAt(CHECKPOINT_INTERVAL), [
         envelope(CHECKPOINT_INTERVAL, {
           type: 'DiceRolled',
           expression: '1d6',
@@ -63,13 +69,16 @@ describe('checkpoint policy', () => {
           total: 4
         })
       ]),
-      true
+      {
+        shouldSave: true,
+        reasons: ['event_interval']
+      }
     )
   })
 
   it('saves a checkpoint when character creation completes', () => {
-    assert.equal(
-      shouldSaveCheckpoint(stateAt(12), [
+    assert.deepEqual(
+      deriveCheckpointDecision(stateAt(12), [
         envelope(12, {
           type: 'CharacterCreationCompleted',
           characterId,
@@ -83,13 +92,16 @@ describe('checkpoint policy', () => {
           creationComplete: true
         })
       ]),
-      true
+      {
+        shouldSave: true,
+        reasons: ['character_creation_completion']
+      }
     )
   })
 
   it('saves a checkpoint when semantic characteristic completion is complete', () => {
-    assert.equal(
-      shouldSaveCheckpoint(stateAt(12), [
+    assert.deepEqual(
+      deriveCheckpointDecision(stateAt(12), [
         envelope(12, {
           type: 'CharacterCreationCharacteristicsCompleted',
           characterId,
@@ -103,13 +115,39 @@ describe('checkpoint policy', () => {
           creationComplete: true
         })
       ]),
-      true
+      {
+        shouldSave: true,
+        reasons: ['character_creation_completion']
+      }
+    )
+  })
+
+  it('returns every matching checkpoint reason', () => {
+    assert.deepEqual(
+      deriveCheckpointDecision(stateAt(CHECKPOINT_INTERVAL), [
+        envelope(CHECKPOINT_INTERVAL, {
+          type: 'CharacterCreationCompleted',
+          characterId,
+          state: {
+            status: 'PLAYABLE',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          creationComplete: true
+        })
+      ]),
+      {
+        shouldSave: true,
+        reasons: ['event_interval', 'character_creation_completion']
+      }
     )
   })
 
   it('does not save a checkpoint outside the named boundaries', () => {
-    assert.equal(
-      shouldSaveCheckpoint(stateAt(2), [
+    assert.deepEqual(
+      deriveCheckpointDecision(stateAt(2), [
         envelope(2, {
           type: 'DiceRolled',
           expression: '1d6',
@@ -118,7 +156,10 @@ describe('checkpoint policy', () => {
           total: 4
         })
       ]),
-      false
+      {
+        shouldSave: false,
+        reasons: []
+      }
     )
   })
 })

@@ -68,7 +68,7 @@ describe('character creation career selection view', () => {
           resolved.push(career)
           throw new Error('No qualification')
         },
-        selectFailedQualificationCareer: () => {},
+        resolveFailedQualificationOption: async () => {},
         reportError: (message) => {
           error = message
         }
@@ -91,8 +91,8 @@ describe('character creation career selection view', () => {
     assert.equal(error, 'No qualification')
   })
 
-  it('renders failed qualification fallback actions', () => {
-    const selected: Array<[string, boolean]> = []
+  it('renders failed qualification fallback actions', async () => {
+    const selected: string[] = []
     let error = ''
     const node = asNode(
       renderCharacterCreationCareerPicker(
@@ -105,8 +105,9 @@ describe('character creation career selection view', () => {
         }),
         {
           resolveCareerQualification: async () => {},
-          selectFailedQualificationCareer: (career, drafted) => {
-            selected.push([career, drafted])
+          resolveFailedQualificationOption: async (option) => {
+            selected.push(option)
+            if (option === 'Draft') throw new Error('No draft')
           },
           reportError: (message) => {
             error = message
@@ -125,13 +126,12 @@ describe('character creation career selection view', () => {
     if (!drifter || !draft) throw new Error('Expected fallback buttons')
 
     drifter.click()
+    await Promise.resolve()
     draft.click()
+    await Promise.resolve()
 
-    assert.deepEqual(selected, [['Drifter', false]])
-    assert.equal(
-      error,
-      'Draft resolution is handled by the event-backed creator flow; choose Drifter here or restart from the shared creation actions.'
-    )
+    assert.deepEqual(selected, ['Drifter', 'Draft'])
+    assert.equal(error, 'No draft')
   })
 
   it('renders later career roll buttons but hides qualification rolls', async () => {
