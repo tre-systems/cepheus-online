@@ -14,6 +14,7 @@ import { LIVE_DICE_RESULT_REVEAL_DELAY_MS } from '../../shared/live-activity'
 import { filterGameStateForViewer } from '../../shared/viewer'
 import { getProjectedGameState } from './projection'
 import { CommandPublicationError, runCommandPublication } from './publication'
+import { buildRoomStateMessage } from './queries'
 import {
   appendEvents,
   gameSeedKey,
@@ -2852,14 +2853,41 @@ describe('room publication flow', () => {
   it('recovers finalized character creation from interval checkpoint plus tail', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')
+    const hiddenPieceId = asPieceId('hidden-finalized-sheet-piece')
     await publishPlayableCharacterCreation(storage, characterId)
 
     const playableCheckpoint = await readCheckpoint(storage, gameId)
     assert.equal(playableCheckpoint?.seq, 38)
 
+    const board = await publish(
+      storage,
+      createBoardCommand(asBoardId('finalization-checkpoint-board-39'))
+    )
+    assert.equal(board.ok, true)
+    const piece = await publish(storage, {
+      type: 'CreatePiece',
+      gameId,
+      actorId,
+      pieceId: hiddenPieceId,
+      boardId: asBoardId('finalization-checkpoint-board-39'),
+      characterId,
+      name: 'Hidden Scout',
+      x: 10,
+      y: 10
+    })
+    assert.equal(piece.ok, true)
+    const hidden = await publish(storage, {
+      type: 'SetPieceVisibility',
+      gameId,
+      actorId,
+      pieceId: hiddenPieceId,
+      visibility: 'HIDDEN'
+    })
+    assert.equal(hidden.ok, true)
+
     const intervalCheckpointSeq = 64
     for (
-      let index = (playableCheckpoint?.seq ?? 0) + 1;
+      let index = (hidden.ok ? hidden.value.eventSeq : 41) + 1;
       index <= intervalCheckpointSeq;
       index += 1
     ) {
@@ -2949,6 +2977,29 @@ describe('room publication flow', () => {
     )
     assert.equal(finalizedEvent.credits !== 1200, true)
     assert.equal(finalizedEvent.notes.includes('Final scout.'), false)
+
+    const refreshMessage = await buildRoomStateMessage(storage, gameId, {
+      userId: asUserId('player-2'),
+      role: 'PLAYER'
+    })
+    assert.equal(refreshMessage.type, 'roomState')
+    if (refreshMessage.type !== 'roomState') return
+    assert.equal(refreshMessage.eventSeq, finalized.value.state.eventSeq)
+    assert.equal(refreshMessage.state?.eventSeq, finalized.value.state.eventSeq)
+    assert.equal(refreshMessage.state?.pieces[hiddenPieceId], undefined)
+    const refreshedCharacter = refreshMessage.state?.characters[characterId]
+    assert.equal(refreshedCharacter?.name, 'Scout')
+    assert.equal(refreshedCharacter?.type, 'PLAYER')
+    assert.equal(refreshedCharacter?.active, true)
+    assert.equal(refreshedCharacter?.age, finalizedEvent.age)
+    assert.deepEqual(
+      refreshedCharacter?.characteristics,
+      finalizedEvent.characteristics
+    )
+    assert.deepEqual(refreshedCharacter?.skills, finalizedEvent.skills)
+    assert.deepEqual(refreshedCharacter?.equipment, finalizedEvent.equipment)
+    assert.equal(refreshedCharacter?.credits, finalizedEvent.credits)
+    assert.equal(refreshedCharacter?.notes, finalizedEvent.notes)
   })
 
   it('recovers semantic commission, advancement, and term skills from checkpoint plus tail', async () => {

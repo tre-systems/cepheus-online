@@ -347,13 +347,14 @@ Merchant term, mustering, Scout continuation, and two-tab spectator follow.
 Two-tab follow coverage exists for characteristic, homeworld/background,
 qualification, anagathics, aging, reenlistment, commission, advancement,
 term skill rolls, mustering benefit reveal timing, and post-mustering
-continuation. Failed qualification now has real button-path browser coverage
-for both Drifter and Draft fallback recovery. The shared
+continuation, including mustering completion, finalization, and spectator
+refresh recovery of the projected sheet. Failed qualification now has real
+button-path browser coverage for both Drifter and Draft fallback recovery. The shared
 `diceRevealCoordinator` owns result deferral. Death/restart has deterministic
 browser coverage, semantic commission/advancement/term-skill events have
 checkpoint-plus-tail recovery coverage, finalization recovery now proves the
 server-derived sheet survives checkpoint-plus-tail replay, and sheet-side,
-wizard-render, room asset creation, and character sheet wiring have been
+wizard-render, room asset creation, character sheet, and room menu wiring have been
 extracted from `app.ts`. The remaining leverage point is to convert the
 completed finalization and multi-career smoke into broader
 repeat/mobile/spectator coverage while continuing to extract the character
@@ -379,9 +380,9 @@ Tasks:
   travellers, captures console errors, server response failures, current
   creation status, final sheet summary, and a screenshot or DOM snapshot when
   the flow gets stuck.
-- Extend two-tab follow tests beyond the currently covered paths: mustering out,
-  finalization, and repeated multi-term refreshes should all reveal only after
-  dice finish and recover from server projection on refresh.
+- Extend two-tab follow tests beyond the currently covered paths: repeated
+  multi-term refreshes should reveal only after dice finish and recover from
+  server projection on refresh.
 - Add mobile viewport checks for the high-risk creator screens:
   characteristics, homeworld/background skills, career selection, survival or
   death, term skills, reenlistment, mustering out, and spectator follow cards.
@@ -791,8 +792,8 @@ Tasks:
   derived server-side from creation events and finalization; the client does not
   submit trusted final sheet values.
 - Add UPP display and a plain export block for completed characters.
-- Extend final sheet replay coverage from full event stream and checkpoint plus
-  tail to include refresh-loaded room state.
+- Add refresh-loaded room state coverage for any remaining final-sheet fields
+  not covered by the current checkpoint-plus-tail read model test.
 
 Done when:
 
@@ -949,9 +950,8 @@ The next batch should run like this, in this order:
    requirements, failed-qualification options, remaining term skills, remaining
    mustering benefits, and completion gates. Reject commands that are not legal
    from the current projection.
-7. Harden the SRD term loop in browser automation: mustering out,
-   finalization, repeated refreshes, mobile layouts, and multi-term
-   continuation.
+7. Harden the SRD term loop in browser automation: repeated refreshes, mobile
+   layouts, and multi-term continuation.
 8. Keep optional mishap tables behind an explicit variant; default failed
    survival remains Classic Traveller-style death.
 9. Complete anagathics survival/cost handling, multi-career continuation after

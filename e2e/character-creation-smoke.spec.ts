@@ -7,15 +7,34 @@ type RoomStateMessage = {
     characters: Record<
       string,
       {
+        age?: number | null
+        credits?: number
+        equipment?: Array<{ name?: string; quantity?: number; notes?: string }>
+        notes?: string
+        skills?: string[]
         creation?: CharacterCreationProjection
       }
     >
   } | null
 }
 
+type ProjectedCharacter = NonNullable<
+  RoomStateMessage['state']
+>['characters'][string]
+
 type CharacterCreationProjection = {
+  creationComplete?: boolean
+  state?: {
+    status?: string
+  }
   history?: Array<{
     type?: string
+    musteringBenefit?: {
+      career: string
+      kind: string
+      tableRoll: number
+      value: string
+    }
     termSkill?: {
       career?: string
       table?: string
@@ -57,12 +76,24 @@ const actorSessionFromPage = async (
 const fetchRoomState = async (
   page: Page,
   roomId: string,
-  actorId: string
+  actorId: string,
+  viewer: 'referee' | 'player' | 'spectator' = 'referee'
 ): Promise<RoomStateMessage> => {
   const response = await page.request.get(
-    `/rooms/${encodeURIComponent(roomId)}/state?viewer=referee&user=${encodeURIComponent(actorId)}`
+    `/rooms/${encodeURIComponent(roomId)}/state?viewer=${viewer}&user=${encodeURIComponent(actorId)}`
   )
   return (await response.json()) as RoomStateMessage
+}
+
+const fetchProjectedCharacter = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  characterId: string,
+  viewer: 'referee' | 'player' | 'spectator' = 'referee'
+): Promise<ProjectedCharacter | null> => {
+  const message = await fetchRoomState(page, roomId, actorId, viewer)
+  return message.state?.characters[characterId] ?? null
 }
 
 const latestProjectedTermSkill = async (
@@ -1676,6 +1707,335 @@ test.describe('character creation smoke', () => {
           )
         )
         .toEqual(termSkill)
+    } finally {
+      await spectator.close()
+    }
+  })
+
+  test('lets a spectator follow mustering finalization and recover the projected sheet after refresh', async ({
+    browser,
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 13_579)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const postedCommandTypes: string[] = []
+
+    page.on('request', (request) => {
+      if (
+        request.method() !== 'POST' ||
+        !request.url().includes(`/rooms/${roomId}/command`)
+      ) {
+        return
+      }
+      const body = request.postData()
+      if (!body) return
+      const message = JSON.parse(body) as {
+        command?: { type?: string }
+      }
+      if (message.command?.type) postedCommandTypes.push(message.command.type)
+    })
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationQualification',
+      characterId,
+      career: 'Merchant'
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+
+    await resolveVisibleCascadeChoices(page)
+    await page.getByRole('button', { name: 'Apply basic training' }).click()
+
+    const rollSurvival = page.getByRole('button', { name: 'Roll survival' })
+    await expect(rollSurvival).toBeVisible({ timeout: 5_000 })
+    await rollSurvival.click()
+    await waitForDiceReveal(page)
+
+    for (const actionName of ['Roll commission', 'Roll advancement']) {
+      const action = page.getByRole('button', { name: actionName })
+      if (await action.isVisible().catch(() => false)) {
+        await action.click()
+        await waitForDiceReveal(page)
+      }
+    }
+
+    const ownerFields = page.locator('#characterCreationFields')
+    await expect(ownerFields).toContainText('Skills and training', {
+      timeout: 5_000
+    })
+
+    for (let roll = 0; roll < 4; roll += 1) {
+      const termSkillTable = page
+        .locator('#characterCreationFields button:not([disabled])')
+        .filter({
+          hasText:
+            /Personal development|Service skills|Specialist skills|Advanced education/
+        })
+        .first()
+      if (!(await termSkillTable.isVisible().catch(() => false))) break
+      await termSkillTable.click()
+      await waitForDiceReveal(page)
+      await resolveVisibleCascadeChoices(page)
+    }
+
+    await expect(ownerFields).toContainText('Anagathics', {
+      timeout: 5_000
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'DecideCharacterCreationAnagathics',
+      characterId,
+      useAnagathics: false
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await expect(ownerFields).toContainText(/Roll aging|Roll reenlistment/, {
+      timeout: 15_000
+    })
+
+    const rollAging = page.getByRole('button', { name: 'Roll aging' })
+    if (await rollAging.isVisible().catch(() => false)) {
+      await rollAging.click()
+      await waitForDiceReveal(page)
+      for (let index = 0; index < 4; index += 1) {
+        const agingChoice = page.locator('.creation-term-actions button').first()
+        if (
+          (await agingChoice.count()) === 0 ||
+          !(await agingChoice.isVisible())
+        ) {
+          break
+        }
+        await agingChoice.click()
+      }
+    }
+
+    const rollReenlistment = page.getByRole('button', {
+      name: 'Roll reenlistment'
+    })
+    await expect(rollReenlistment).toBeVisible({ timeout: 15_000 })
+    await rollReenlistment.click()
+    await waitForDiceReveal(page)
+
+    const musterOut = page.getByRole('button', { name: 'Muster out' })
+    await expect(musterOut).toBeVisible({ timeout: 5_000 })
+    await musterOut.click()
+    await expect(ownerFields).toContainText(/Skills|Review the skill list/, {
+      timeout: 5_000
+    })
+    await page.getByRole('button', { name: 'Continue to equipment' }).click()
+    await expect(ownerFields).toContainText(
+      /Equipment|Add starting equipment/,
+      { timeout: 5_000 }
+    )
+
+    const spectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: 'e2e-finalizing-spectator',
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(spectator, characterName)
+
+      const spectatorFields = spectator.locator('#characterCreationFields')
+      const spectatorBenefitList = spectatorFields.locator(
+        '.creation-benefit-list'
+      )
+      const spectatorActivityFeed = spectator.locator('#creationActivityFeed')
+      const projectedMusteringBenefit = async () => {
+        const character = await fetchProjectedCharacter(
+          spectator,
+          roomId,
+          'e2e-finalizing-spectator',
+          characterId,
+          'spectator'
+        )
+        return (
+          character?.creation?.history?.find(
+            (event) =>
+              event.type === 'FINISH_MUSTERING' &&
+              event.musteringBenefit?.career === 'Merchant' &&
+              event.musteringBenefit.kind === 'cash'
+          )?.musteringBenefit ?? null
+        )
+      }
+
+      const rollCashBenefit = page.getByRole('button', { name: 'Roll cash' })
+      await expect(rollCashBenefit).toBeVisible({ timeout: 5_000 })
+      await expect(spectatorBenefitList).toHaveCount(0)
+      await expect(spectatorFields).not.toContainText(/Merchant: cash \d+ ->/, {
+        timeout: 100
+      })
+
+      const benefitAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'RollCharacterCreationMusteringBenefit'
+          )
+      )
+      await rollCashBenefit.click()
+      await expect((await benefitAccepted).ok()).toBe(true)
+
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
+        'Rolling...',
+        { timeout: 100 }
+      )
+      await expect(spectatorBenefitList).toHaveCount(0, { timeout: 100 })
+      await expect(spectatorFields).not.toContainText(/Merchant: cash \d+ ->/, {
+        timeout: 100
+      })
+
+      await waitForDiceReveal(page)
+      await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
+        'Rolling...',
+        { timeout: 5_000 }
+      )
+
+      const projectedBenefit = await projectedMusteringBenefit()
+      if (!projectedBenefit) {
+        throw new Error('Mustering benefit was not projected')
+      }
+      const cashCredits = Number(projectedBenefit.value)
+      expect(cashCredits).toBeGreaterThan(0)
+      await expect(spectatorActivityFeed).toContainText('Mustering benefit', {
+        timeout: 5_000
+      })
+      await expect(spectatorActivityFeed).toContainText(
+        `Merchant; cash; Cr${projectedBenefit.value}; table roll ${projectedBenefit.tableRoll}`,
+        { timeout: 5_000 }
+      )
+
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'CompleteCharacterCreationMustering',
+        characterId
+      })
+      postedCommandTypes.push('CompleteCharacterCreationMustering')
+
+      await expect
+        .poll(async () => {
+          const character = await fetchProjectedCharacter(
+            spectator,
+            roomId,
+            'e2e-finalizing-spectator',
+            characterId,
+            'spectator'
+          )
+          return character?.creation?.state?.status
+        })
+        .toBe('ACTIVE')
+
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'CompleteCharacterCreation',
+        characterId
+      })
+      postedCommandTypes.push('CompleteCharacterCreation')
+
+      const finalizedNotes = [
+        'Rules source: Cepheus Engine SRD.',
+        'Term 1: Merchant, survived.',
+        `Mustering out: Merchant cash ${projectedBenefit.tableRoll} -> ${projectedBenefit.value}.`
+      ].join('\n')
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'FinalizeCharacterCreation',
+        characterId,
+        age: 22,
+        characteristics: {
+          str: 15,
+          dex: 15,
+          end: 15,
+          int: 15,
+          edu: 15,
+          soc: 15
+        },
+        skills: ['Admin', 'Advocate', 'Comms', 'Steward-1'],
+        equipment: [],
+        credits: cashCredits,
+        notes: finalizedNotes
+      })
+      postedCommandTypes.push('FinalizeCharacterCreation')
+
+      await expect.poll(() => postedCommandTypes).toContain(
+        'CompleteCharacterCreationMustering'
+      )
+      await expect.poll(() => postedCommandTypes).toContain(
+        'CompleteCharacterCreation'
+      )
+      await expect.poll(() => postedCommandTypes).toContain(
+        'FinalizeCharacterCreation'
+      )
+      await expect(spectatorActivityFeed).toContainText(
+        'Character finalized',
+        { timeout: 5_000 }
+      )
+
+      const projectedFinalizedSheet = async () => {
+        const character = await fetchProjectedCharacter(
+          spectator,
+          roomId,
+          'e2e-finalizing-spectator',
+          characterId,
+          'spectator'
+        )
+        if (!character) return null
+        return {
+          status: character.creation?.state?.status,
+          creationComplete: character.creation?.creationComplete,
+          credits: character.credits,
+          notes: character.notes,
+          skillCount: character.skills?.length ?? 0,
+          equipmentCount: character.equipment?.length ?? 0
+        }
+      }
+
+      await expect.poll(projectedFinalizedSheet).toMatchObject({
+        status: 'PLAYABLE',
+        creationComplete: true,
+        credits: cashCredits,
+        equipmentCount: 0
+      })
+      const liveSheet = await projectedFinalizedSheet()
+      if (!liveSheet) throw new Error('Finalized sheet was not projected')
+      expect(liveSheet.notes).toContain('Rules source: Cepheus Engine SRD.')
+      expect(liveSheet.notes).toContain('Term 1: Merchant, survived.')
+      expect(liveSheet.skillCount).toBeGreaterThan(0)
+
+      await spectator.reload({ waitUntil: 'domcontentloaded' })
+      await expect(spectator.locator('#boardCanvas')).toBeVisible()
+      await expect.poll(projectedFinalizedSheet).toEqual(liveSheet)
     } finally {
       await spectator.close()
     }

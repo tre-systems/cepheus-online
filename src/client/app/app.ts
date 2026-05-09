@@ -77,9 +77,9 @@ import {
 import { createRoomConnectionController } from './room-connection-controller.js'
 import { prepareLiveActivityApplication } from './live-activity-client.js'
 import { createRequestIdFactory } from './request-id.js'
-import { createRoomMenuController } from './room-menu-controller.js'
 import { createRoomCommandDispatch } from './room-command-dispatch.js'
 import { createRoomAssetCreationWiring } from './room-asset-creation-wiring.js'
+import { createRoomMenuWiring } from './room-menu-wiring.js'
 import { createAppShell, registerAppShellServiceWorker } from './app-shell.js'
 import { renderBoardControls as renderBoardControlElements } from './board-controls.js'
 
@@ -723,34 +723,29 @@ boardController = createBoardController({
   requestRender: render
 })
 
-createRoomMenuController({
-  elements: {
-    roomForm: els.roomForm,
-    roomInput: els.roomInput,
-    userInput: els.userInput,
-    menuButton: els.menu,
-    roomDialog: els.roomDialog,
-    roomCancelButton: els.roomCancel
-  },
+createRoomMenuWiring({
+  elements: els,
   initialRoomId: roomId,
   initialActorId: actorId,
   defaultRoomId: DEFAULT_APP_LOCATION.roomId,
   defaultActorId: DEFAULT_APP_LOCATION.actorId,
-  onOpenRoom: (identity) => {
+  onOpenRoomIdentity: (identity) => {
     roomId = identity.roomId
     actorId = identity.actorId
     actorSessionSecret = resolveActorSessionSecret({ roomId, actorId })
-    appSession.setRoomIdentity({ roomId, actorId })
-    diceRevealCoordinator.resetStateTracking()
-    characterCreationController.setSelectedCharacterId(null)
-    creationActivityFeedController.clear()
-    creationPresenceDock.hydrate()
-    selectPiece(null)
-    boardController?.clearDrag()
-    characterSheetController.setOpen(false)
-    connectSocket()
-    fetchState().catch((error) => setError(error.message))
-  }
+  },
+  setAppSessionRoomIdentity: appSession.setRoomIdentity,
+  resetDiceRevealTracking: () => diceRevealCoordinator.resetStateTracking(),
+  clearSelectedCharacter: () =>
+    characterCreationController.setSelectedCharacterId(null),
+  clearCreationActivityFeed: () => creationActivityFeedController.clear(),
+  hydrateCreationPresenceDock: () => creationPresenceDock.hydrate(),
+  selectPiece,
+  clearBoardDrag: () => boardController?.clearDrag(),
+  closeCharacterSheet: () => characterSheetController.setOpen(false),
+  connectSocket,
+  fetchState,
+  reportError: setError
 })
 
 createRoomAssetCreationWiring({
