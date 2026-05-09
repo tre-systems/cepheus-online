@@ -1142,6 +1142,152 @@ test.describe('character creation smoke', () => {
     ).toBeVisible()
   })
 
+  test('lets a spectator follow survival death without early reveal and recover after refresh', async ({
+    browser,
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 4)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationQualification',
+      characterId,
+      career: 'Hunter'
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationBasicTraining',
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 2,
+        dex: 2,
+        end: 2,
+        int: 2,
+        edu: 2,
+        soc: 2
+      }
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+
+    const spectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: 'e2e-spectator',
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(spectator, characterName)
+
+      const ownerRollSurvival = page.getByRole('button', {
+        name: 'Roll survival'
+      })
+      const spectatorFields = spectator.locator('#characterCreationFields')
+      const spectatorDeathCard = spectatorFields.locator(
+        '.creation-death-card'
+      )
+      const spectatorSurvivalRoll = spectator.locator(
+        '[data-character-creation-field="survivalRoll"]'
+      )
+
+      await expect(ownerRollSurvival).toBeVisible({ timeout: 5_000 })
+      await expect(spectatorSurvivalRoll).toHaveValue('')
+      await expect(spectatorDeathCard).toHaveCount(0)
+      await expect(spectatorFields).not.toContainText(
+        /Survival \d+|Killed in service|dead/i,
+        { timeout: 100 }
+      )
+
+      const survivalAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'ResolveCharacterCreationSurvival'
+          )
+      )
+      await ownerRollSurvival.click()
+      await expect((await survivalAccepted).ok()).toBe(true)
+
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
+        'Rolling...',
+        { timeout: 100 }
+      )
+      await expect(spectatorSurvivalRoll).toHaveValue('', { timeout: 100 })
+      await expect(spectatorDeathCard).toHaveCount(0, { timeout: 100 })
+      await expect(spectatorFields).not.toContainText(
+        /Survival \d+|Killed in service|dead/i,
+        { timeout: 100 }
+      )
+
+      await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
+        'Rolling...',
+        { timeout: 5_000 }
+      )
+      await expect(spectatorDeathCard).toBeVisible({ timeout: 5_000 })
+      await expect(spectatorDeathCard).toContainText('Hunter')
+      await expect(spectatorDeathCard).toContainText('Killed in service')
+      await expect(spectatorDeathCard).toContainText('Survival roll')
+      await expect(spectatorFields).not.toContainText('Muster out')
+
+      const projectedDeathText =
+        (await spectatorDeathCard.textContent())?.replace(/\s+/g, ' ').trim() ??
+        ''
+
+      await spectator.reload({ waitUntil: 'domcontentloaded' })
+      await expect(spectator.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(spectator, characterName)
+      await expect(spectatorDeathCard).toBeVisible({ timeout: 5_000 })
+      await expect(spectatorDeathCard).toContainText('Hunter')
+      await expect(spectatorDeathCard).toContainText('Killed in service')
+      await expect(spectatorDeathCard).toContainText('Survival roll')
+      await expect(spectatorFields).not.toContainText('Muster out')
+      await expect
+        .poll(async () =>
+          ((await spectatorDeathCard.textContent()) ?? '')
+            .replace(/\s+/g, ' ')
+            .trim()
+        )
+        .toBe(projectedDeathText)
+    } finally {
+      await spectator.close()
+    }
+  })
+
   test('drives a seeded multi-career path with spectator follow through mustering', async ({
     browser,
     page

@@ -157,6 +157,137 @@ describe('character creation lifecycle controller', () => {
     ])
   })
 
+  it('waits for every deferred reveal before rendering a followed creation', async () => {
+    const events: string[] = []
+    const revealWaiters = new Map<string, () => void>()
+    const controller = createCharacterCreationLifecycleController({
+      controller: {
+        openFollow: () => flow,
+        refreshFollowed: () => {
+          events.push('refreshFollowed')
+          return true
+        },
+        shouldRefreshEditable: ({ deferredRollCount = 0 } = {}) => {
+          events.push(`shouldRefreshEditable:${deferredRollCount}`)
+          return false
+        }
+      },
+      panel: {
+        open: () => {},
+        scrollToTop: () => {}
+      },
+      closeCharacterSheet: () => {},
+      renderWizard: () => events.push('renderWizard'),
+      waitForDiceReveal: async (roll) => {
+        events.push(`waitForDiceReveal:${roll.id}`)
+        await new Promise<void>((resolve) => {
+          revealWaiters.set(roll.id, resolve)
+        })
+      },
+      reportError: (message) => events.push(`error:${message}`)
+    })
+
+    controller
+      .planStateRefresh({
+        deferFollowedCreationRolls: [
+          rollActivity,
+          { ...rollActivity, id: 'roll-2' }
+        ]
+      })
+      .renderAfterAppRender()
+
+    assert.deepEqual(events, [
+      'refreshFollowed',
+      'shouldRefreshEditable:2',
+      'waitForDiceReveal:roll-1',
+      'waitForDiceReveal:roll-2'
+    ])
+
+    revealWaiters.get('roll-1')?.()
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+    assert.deepEqual(events, [
+      'refreshFollowed',
+      'shouldRefreshEditable:2',
+      'waitForDiceReveal:roll-1',
+      'waitForDiceReveal:roll-2'
+    ])
+
+    revealWaiters.get('roll-2')?.()
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+    assert.deepEqual(events, [
+      'refreshFollowed',
+      'shouldRefreshEditable:2',
+      'waitForDiceReveal:roll-1',
+      'waitForDiceReveal:roll-2',
+      'refreshFollowed',
+      'renderWizard'
+    ])
+  })
+
+  it('does not render a stale followed projection after a newer state supersedes it', async () => {
+    const events: string[] = []
+    let pendingRefreshes = 0
+    let releaseOldReveal: () => void = () => {
+      throw new Error('Reveal wait was not started')
+    }
+    const controller = createCharacterCreationLifecycleController({
+      controller: {
+        openFollow: () => flow,
+        refreshFollowed: () => {
+          pendingRefreshes += 1
+          events.push(`refreshFollowed:${pendingRefreshes}`)
+          return pendingRefreshes <= 2
+        },
+        shouldRefreshEditable: ({ deferredRollCount = 0 } = {}) => {
+          events.push(`shouldRefreshEditable:${deferredRollCount}`)
+          return false
+        }
+      },
+      panel: {
+        open: () => {},
+        scrollToTop: () => {}
+      },
+      closeCharacterSheet: () => {},
+      renderWizard: () => events.push('renderWizard'),
+      waitForDiceReveal: async () => {
+        events.push('waitForDiceReveal')
+        await new Promise<void>((resolve) => {
+          releaseOldReveal = resolve
+        })
+      },
+      reportError: (message) => events.push(`error:${message}`)
+    })
+
+    controller
+      .planStateRefresh({ deferFollowedCreationRolls: [rollActivity] })
+      .renderAfterAppRender()
+    controller.planStateRefresh().renderAfterAppRender()
+
+    assert.deepEqual(events, [
+      'refreshFollowed:1',
+      'shouldRefreshEditable:1',
+      'waitForDiceReveal',
+      'refreshFollowed:2',
+      'shouldRefreshEditable:0',
+      'renderWizard'
+    ])
+
+    releaseOldReveal()
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+    assert.deepEqual(events, [
+      'refreshFollowed:1',
+      'shouldRefreshEditable:1',
+      'waitForDiceReveal',
+      'refreshFollowed:2',
+      'shouldRefreshEditable:0',
+      'renderWizard',
+      'refreshFollowed:3'
+    ])
+  })
+
   it('skips deferred followed rendering when the projection is gone after reveal', async () => {
     let refreshCount = 0
     const events: string[] = []

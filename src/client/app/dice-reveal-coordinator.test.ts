@@ -152,6 +152,32 @@ describe('dice reveal coordinator', () => {
     )
   })
 
+  it('uses live activity reveal targets before falling back to the latest dice log roll', () => {
+    const coordinator = createDiceRevealCoordinator()
+    coordinator.recordStateApplied(gameState([diceRoll('roll-1')]))
+
+    const liveRoll = activity('live-roll-1')
+    const latestRoll = diceRoll('roll-2')
+
+    assert.deepEqual(
+      coordinator.diceRollsForStateDeferral({
+        nextState: gameState([diceRoll('roll-1'), latestRoll]),
+        diceRollActivities: [liveRoll]
+      }),
+      [liveRoll]
+    )
+
+    coordinator.markRevealed(liveRoll.id)
+
+    assert.deepEqual(
+      coordinator.diceRollsForStateDeferral({
+        nextState: gameState([diceRoll('roll-1'), latestRoll]),
+        diceRollActivities: [liveRoll]
+      }),
+      [latestRoll]
+    )
+  })
+
   it('defers a new latest dice log roll until it is revealed', () => {
     const coordinator = createDiceRevealCoordinator()
     coordinator.recordStateApplied(gameState([diceRoll('roll-1')]))

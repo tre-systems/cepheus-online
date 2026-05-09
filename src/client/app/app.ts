@@ -77,20 +77,15 @@ import type { BoardCommand, DiceCommand } from './app-command-router.js'
 import { createAppSession } from './app-session.js'
 import { resolveActorSessionSecret } from './actor-session.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
-import {
-  createConnectivityController,
-  type ConnectivityController
-} from './connectivity-controller.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
 import { createDiceRevealCoordinator } from './dice-reveal-coordinator.js'
-import { createRoomSocketController } from './room-socket-controller.js'
 import {
   DEFAULT_APP_LOCATION,
-  buildRoomWebSocketUrl,
   isRefereeViewer,
   resolveAppLocationIdentity
 } from './app-location.js'
+import { createRoomConnectionController } from './room-connection-controller.js'
 import { prepareLiveActivityApplication } from './live-activity-client.js'
 import { createRequestIdFactory } from './request-id.js'
 import { createRoomMenuController } from './room-menu-controller.js'
@@ -112,7 +107,6 @@ const canSelectBoards = isRefereeViewer(viewerRole)
 const appSession = createAppSession({ roomId, actorId, viewerRole })
 let boardController: BoardController | null = null
 let diceHideTimer: number | null = null
-let connectivityController: ConnectivityController | null = null
 const diceRevealCoordinator = createDiceRevealCoordinator()
 const animatedDiceRollActivityIds = new Set<string>()
 let characterCreationController: CharacterCreationController
@@ -509,9 +503,8 @@ const bootstrapScene = async () => {
   await fetchState()
 }
 
-const roomSocketController = createRoomSocketController({
+const roomConnectionController = createRoomConnectionController({
   webSocketConstructor: WebSocket,
-  buildUrl: buildRoomWebSocketUrl,
   getUrlInput: () => ({
     protocol: location.protocol,
     host: location.host,
@@ -520,27 +513,15 @@ const roomSocketController = createRoomSocketController({
     actorId,
     actorSessionSecret
   }),
-  isOffline: () => connectivityController?.snapshot().status === 'offline',
+  fetchState,
   onStatus: setStatus,
   onError: setError,
-  onMessage: (message) => handleServerMessage(message as ServerMessage)
+  onMessage: handleServerMessage
 })
 
 const connectSocket = () => {
-  roomSocketController.connect()
+  roomConnectionController.connect()
 }
-
-connectivityController = createConnectivityController({
-  onChange: (connectivity) => {
-    if (connectivity.status === 'offline') {
-      setStatus('Offline')
-      return
-    }
-
-    connectSocket()
-    fetchState().catch((error) => setError(error.message))
-  }
-})
 
 const applyState = (
   nextState: GameState | null,
@@ -953,7 +934,7 @@ els.roll.addEventListener('click', () => {
 window.addEventListener('resize', render)
 
 createAppBootstrap({
-  connectivityStatus: connectivityController.snapshot().status,
+  connectivityStatus: roomConnectionController.connectivitySnapshot().status,
   connect: connectSocket,
   fetchState,
   setStatus,

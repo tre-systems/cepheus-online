@@ -5,7 +5,7 @@ into ordered implementation slices while preserving clear ownership for parallel
 agents. Shipped work belongs in `git log`; this file is for active or future
 work that still needs a named home.
 
-Last reviewed: 2026-05-08.
+Last reviewed: 2026-05-09.
 
 ## North Star
 
@@ -173,11 +173,13 @@ Done when:
 ### Slice 0B: Publication And Projection Hardening
 
 Status: partially done. Command publication already appends events, projects
-state, saves checkpoints, checks stored projection parity, returns one
-state-bearing response, and records telemetry for accepted/rejected/internal
-publication outcomes. `projectGameState` now uses an exhaustive event-handler
-registry, but the handlers still live in one shared projector module rather
-than domain modules.
+state, saves checkpoints, checks stored projection parity through a named
+parity helper, returns one state-bearing response, and records telemetry for
+accepted/rejected/internal publication outcomes. Checkpoint decisions now return
+named reasons for the current creation, interval, and character-completion
+boundaries. `projectGameState` now uses an exhaustive event-handler registry,
+but the handlers still live in one shared projector module rather than domain
+modules.
 
 Primary write ownership:
 
@@ -199,9 +201,9 @@ Tasks:
 - Keep one state-bearing response per accepted command and one server-side
   filtering path for HTTP responses, WebSocket broadcasts, and future replay
   views.
-- Move checkpoint decisions into named policy helpers with Cepheus boundaries:
-  game creation, character creation completion, map scene changes, combat round
-  boundaries, and larger event-count intervals.
+- Extend checkpoint decisions beyond the current named boundaries:
+  game creation, character creation completion, larger event-count intervals,
+  map scene changes, and combat round boundaries.
 - Extend publication tests so every new character creation event family
   reconstructs from checkpoint plus tail.
 - Add telemetry hooks or structured test seams for projection mismatch,
@@ -301,10 +303,11 @@ Done when:
 
 ### Slice 0E: PWA And Release Hygiene
 
-Status: partially done. PWA assets and service worker support exist, docs link
-checking is in `verify:quick`, quick/full verification gates exist, Cloudflare
-deploy validation runs in CI, and deployed smoke covers the Worker shell,
-static bundle, room commands, and WebSocket dice path. Remaining work is mostly
+Status: partially done. PWA assets and service worker support exist, PWA shell
+composition is extracted behind `app-shell`, docs link checking is in
+`verify:quick`, quick/full verification gates exist, Cloudflare deploy
+validation runs in CI, and deployed smoke covers the Worker shell, static
+bundle, room commands, and WebSocket dice path. Remaining work is mostly
 installed-PWA update behavior, connectivity UX, and mobile install/reload
 checks.
 
@@ -343,13 +346,14 @@ open, and token creation, and a seeded multi-career browser journey covers a
 Merchant term, mustering, Scout continuation, and two-tab spectator follow.
 Two-tab follow coverage exists for characteristic, homeworld/background,
 qualification, anagathics, aging, reenlistment, mustering benefit reveal
-timing, and post-mustering continuation. The shared `diceRevealCoordinator`
-owns result deferral. Death/restart has deterministic browser coverage, and
-sheet-side character creation action rendering has been extracted from
-`app.ts`. The remaining leverage point is to convert the completed
-finalization and multi-career smoke into broader repeat/fallback/mobile
-coverage while continuing to extract the character creation feature boundary
-and renderer from `app.ts`.
+timing, and post-mustering continuation. Failed qualification now has real
+button-path browser coverage for both Drifter and Draft fallback recovery.
+The shared `diceRevealCoordinator` owns result deferral. Death/restart has
+deterministic browser coverage, and sheet-side plus wizard-render
+character-creation rendering has been extracted from `app.ts`. The remaining
+leverage point is to convert the completed finalization and multi-career smoke
+into broader repeat/mobile/spectator coverage while continuing to extract the
+character creation feature boundary from `app.ts`.
 
 Primary write ownership:
 
@@ -364,11 +368,9 @@ Primary write ownership:
 
 Tasks:
 
-- Keep the committed full one-term finalization and seeded multi-career smoke
-  healthy, and extend them to
-  failed qualification, Draft, Drifter fallback, and refresh branches while
-  reporting the current phase/action on failure. Common death/restart is
-  covered by a deterministic browser smoke.
+- Keep the committed full one-term finalization, seeded multi-career,
+  failed-qualification Drifter, failed-qualification Draft, and death/restart
+  smoke tests healthy while reporting the current phase/action on failure.
 - Extend that smoke into a small repeat runner that creates several disposable
   travellers, captures console errors, server response failures, current
   creation status, final sheet summary, and a screenshot or DOM snapshot when
