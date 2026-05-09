@@ -345,15 +345,17 @@ verify:full`, the owner happy path now reaches mustering, finalization, sheet
 open, and token creation, and a seeded multi-career browser journey covers a
 Merchant term, mustering, Scout continuation, and two-tab spectator follow.
 Two-tab follow coverage exists for characteristic, homeworld/background,
-qualification, anagathics, aging, reenlistment, mustering benefit reveal
-timing, and post-mustering continuation. Failed qualification now has real
-button-path browser coverage for both Drifter and Draft fallback recovery.
-The shared `diceRevealCoordinator` owns result deferral. Death/restart has
-deterministic browser coverage, and sheet-side plus wizard-render
-character-creation rendering has been extracted from `app.ts`. The remaining
-leverage point is to convert the completed finalization and multi-career smoke
-into broader repeat/mobile/spectator coverage while continuing to extract the
-character creation feature boundary from `app.ts`.
+qualification, anagathics, aging, reenlistment, commission, advancement,
+mustering benefit reveal timing, and post-mustering continuation. Failed
+qualification now has real button-path browser coverage for both Drifter and
+Draft fallback recovery. The shared `diceRevealCoordinator` owns result
+deferral. Death/restart has deterministic browser coverage, semantic
+commission/advancement/term-skill events have checkpoint-plus-tail recovery
+coverage, and sheet-side, wizard-render, and room asset creation wiring have
+been extracted from `app.ts`. The remaining leverage point is to convert the
+completed finalization and multi-career smoke into broader
+repeat/mobile/spectator coverage while continuing to extract the character
+creation feature boundary from `app.ts`.
 
 Primary write ownership:
 
@@ -375,10 +377,9 @@ Tasks:
   travellers, captures console errors, server response failures, current
   creation status, final sheet summary, and a screenshot or DOM snapshot when
   the flow gets stuck.
-- Extend two-tab follow tests beyond the currently covered paths:
-  survival/death, term skills, mustering out, finalization, and repeated
-  multi-term refreshes should all reveal only after dice finish and recover
-  from server projection on refresh.
+- Extend two-tab follow tests beyond the currently covered paths: term skills,
+  mustering out, finalization, and repeated multi-term refreshes should all
+  reveal only after dice finish and recover from server projection on refresh.
 - Add mobile viewport checks for the high-risk creator screens:
   characteristics, homeworld/background skills, career selection, survival or
   death, term skills, reenlistment, mustering out, and spectator follow cards.
@@ -940,16 +941,15 @@ The next batch should run like this, in this order:
    reveal-boundary coverage for every roll-bearing creation action.
 4. Extend the automated UX regression slice before more broad creator polish:
    turn the completed finalization smoke into a multi-character repeat runner,
-   add death/fallback branches, later-term two-tab spectator follow checks,
-   mobile viewport assertions, and reveal timing coverage for every roll-bearing
-   action.
+   add later-term two-tab spectator follow checks, mobile viewport assertions,
+   and reveal timing coverage for every roll-bearing action.
 6. Finish moving legal-action state into server projection: pending decisions,
    requirements, failed-qualification options, remaining term skills, remaining
    mustering benefits, and completion gates. Reject commands that are not legal
    from the current projection.
-7. Harden the SRD term loop in browser automation: survival/death, commission,
-   advancement, term skill tables, aging, reenlistment, mustering benefits, and
-   multi-term continuation.
+7. Harden the SRD term loop in browser automation: term skill tables, mustering
+   out, finalization, repeated refreshes, mobile layouts, and multi-term
+   continuation.
 8. Keep optional mishap tables behind an explicit variant; default failed
    survival remains Classic Traveller-style death.
 9. Complete anagathics survival/cost handling, multi-career continuation after

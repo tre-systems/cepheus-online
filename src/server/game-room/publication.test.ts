@@ -2904,6 +2904,191 @@ describe('room publication flow', () => {
     )
   })
 
+  it('recovers semantic commission, advancement, and term skills from checkpoint plus tail', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-recovery-tail')
+    await publish(storage, createGameCommand())
+    await storage.put(gameSeedKey(gameId), 5)
+
+    for (let index = 1; index <= 63; index += 1) {
+      const created = await publish(
+        storage,
+        createBoardCommand(asBoardId(`checkpoint-board-${index}`))
+      )
+      assert.equal(created.ok, true)
+    }
+
+    const intervalCheckpoint = await readCheckpoint(storage, gameId)
+    assert.equal(intervalCheckpoint?.seq, 64)
+
+    await appendEvents(
+      storage,
+      gameId,
+      actorId,
+      [
+        {
+          type: 'CharacterCreated',
+          characterId,
+          ownerId: actorId,
+          characterType: 'PLAYER',
+          name: 'Merchant'
+        },
+        {
+          type: 'CharacterSheetUpdated',
+          characterId,
+          characteristics: {
+            str: 9,
+            dex: 9,
+            end: 9,
+            int: 15,
+            edu: 15,
+            soc: 9
+          }
+        },
+        {
+          type: 'CharacterCreationStarted',
+          characterId,
+          creation: {
+            state: {
+              status: 'COMMISSION',
+              context: {
+                canCommission: true,
+                canAdvance: true
+              }
+            },
+            terms: [
+              {
+                career: 'Merchant',
+                skills: [],
+                skillsAndTraining: ['Broker-0'],
+                benefits: [],
+                complete: false,
+                canReenlist: true,
+                completedBasicTraining: true,
+                musteringOut: false,
+                anagathics: false,
+                survival: 8
+              }
+            ],
+            careers: [{ name: 'Merchant', rank: 0 }],
+            canEnterDraft: true,
+            failedToQualify: false,
+            characteristicChanges: [],
+            creationComplete: false,
+            homeworld: null,
+            backgroundSkills: [],
+            pendingCascadeSkills: [],
+            history: [
+              {
+                type: 'SURVIVAL_PASSED',
+                canCommission: true,
+                canAdvance: true,
+                survival: {
+                  expression: '2d6',
+                  rolls: [4, 4],
+                  total: 8,
+                  characteristic: 'int',
+                  modifier: 0,
+                  target: 5,
+                  success: true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      '2026-05-03T00:00:00.000Z'
+    )
+
+    const commissioned = await publish(storage, {
+      type: 'ResolveCharacterCreationCommission',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: 67
+    })
+    assert.equal(
+      commissioned.ok,
+      true,
+      commissioned.ok ? undefined : commissioned.error.message
+    )
+    if (!commissioned.ok) return
+
+    const advanced = await publish(storage, {
+      type: 'ResolveCharacterCreationAdvancement',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: commissioned.value.eventSeq
+    })
+    assert.equal(
+      advanced.ok,
+      true,
+      advanced.ok ? undefined : advanced.error.message
+    )
+    if (!advanced.ok) return
+
+    const skilled = await publish(storage, {
+      type: 'RollCharacterCreationTermSkill',
+      gameId,
+      actorId,
+      characterId,
+      expectedSeq: advanced.value.eventSeq,
+      table: 'serviceSkills'
+    })
+
+    assert.equal(
+      skilled.ok,
+      true,
+      skilled.ok ? undefined : skilled.error.message
+    )
+    if (!skilled.ok) return
+    assert.equal((await readCheckpoint(storage, gameId))?.seq, 64)
+    const recoveredTail = await readEventStreamTail(
+      storage,
+      gameId,
+      intervalCheckpoint?.seq ?? 0
+    )
+    assert.deepEqual(
+      recoveredTail.map((envelope) => envelope.event.type).slice(-9),
+      [
+        'CharacterCreated',
+        'CharacterSheetUpdated',
+        'CharacterCreationStarted',
+        'DiceRolled',
+        'CharacterCreationCommissionResolved',
+        'DiceRolled',
+        'CharacterCreationAdvancementResolved',
+        'DiceRolled',
+        'CharacterCreationTermSkillRolled'
+      ]
+    )
+
+    const recovered = await getProjectedGameState(storage, gameId)
+    const creation = recovered?.characters[characterId]?.creation
+    const advancementEvent = recoveredTail
+      .map((envelope) => envelope.event)
+      .find((event) => event.type === 'CharacterCreationAdvancementResolved')
+    assert.deepEqual(recovered, skilled.value.state)
+    assert.equal(creation?.history?.at(-3)?.type, 'COMPLETE_COMMISSION')
+    assert.equal(creation?.history?.at(-2)?.type, 'COMPLETE_ADVANCEMENT')
+    assert.equal(creation?.history?.at(-1)?.type, 'ROLL_TERM_SKILL')
+    assert.equal(
+      creation?.terms.at(-1)?.advancement,
+      advancementEvent?.type === 'CharacterCreationAdvancementResolved'
+        ? advancementEvent.advancement.total
+        : null
+    )
+    assert.equal(creation?.terms.at(-1)?.skills.length, 1)
+    assert.equal(
+      creation?.careers[0]?.rank,
+      advancementEvent?.type === 'CharacterCreationAdvancementResolved' &&
+        advancementEvent.rank
+        ? advancementEvent.rank.newRank
+        : 0
+    )
+  })
+
   it('rejects stale expected sequence numbers on character creation commands', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')

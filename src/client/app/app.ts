@@ -69,7 +69,7 @@ import {
   type ClientIdentity,
   buildSetDoorOpenCommand
 } from '../game-commands.js'
-import type { BoardCommand, DiceCommand } from './app-command-router.js'
+import type { DiceCommand } from './app-command-router.js'
 import { createAppSession } from './app-session.js'
 import { resolveActorSessionSecret } from './actor-session.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
@@ -86,7 +86,7 @@ import { prepareLiveActivityApplication } from './live-activity-client.js'
 import { createRequestIdFactory } from './request-id.js'
 import { createRoomMenuController } from './room-menu-controller.js'
 import { createRoomCommandDispatch } from './room-command-dispatch.js'
-import { createRoomAssetCreationController } from './room-asset-creation-controller.js'
+import { createRoomAssetCreationWiring } from './room-asset-creation-wiring.js'
 import { createAppShell, registerAppShellServiceWorker } from './app-shell.js'
 import { renderBoardControls as renderBoardControlElements } from './board-controls.js'
 
@@ -810,39 +810,16 @@ createRoomMenuController({
   }
 })
 
-createRoomAssetCreationController({
-  elements: {
-    createPiece: els.createPiece,
-    createBoard: els.createBoard,
-    pieceNameInput: els.pieceNameInput,
-    pieceImageInput: els.pieceImageInput,
-    pieceImageFileInput: els.pieceImageFileInput,
-    pieceCropInput: els.pieceCropInput,
-    pieceCropXInput: els.pieceCropXInput,
-    pieceCropYInput: els.pieceCropYInput,
-    pieceCropWidthInput: els.pieceCropWidthInput,
-    pieceCropHeightInput: els.pieceCropHeightInput,
-    pieceWidthInput: els.pieceWidthInput,
-    pieceHeightInput: els.pieceHeightInput,
-    pieceScaleInput: els.pieceScaleInput,
-    pieceSheetInput: els.pieceSheetInput,
-    boardNameInput: els.boardNameInput,
-    boardImageInput: els.boardImageInput,
-    boardImageFileInput: els.boardImageFileInput,
-    boardWidthInput: els.boardWidthInput,
-    boardHeightInput: els.boardHeightInput,
-    boardScaleInput: els.boardScaleInput,
-    roomDialog: els.roomDialog
-  },
+createRoomAssetCreationWiring({
+  elements: els,
   getState: () => state,
   getSelectedBoard: selectedBoard,
   getSelectedBoardPieces: boardPieces,
   getClientIdentity: clientIdentity,
   getBootstrapIdentity: bootstrapIdentity,
-  getCommandIdentity: clientIdentity,
   createRequestId: requestId,
   postCommand,
-  postBoardCommand: (command) => postBoardCommand(command as BoardCommand),
+  postBoardCommand,
   dispatchCommandsSequential: commandRouter.dispatchSequential,
   selectPiece,
   requestRender: render,

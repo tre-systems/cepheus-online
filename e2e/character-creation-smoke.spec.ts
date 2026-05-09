@@ -210,6 +210,77 @@ const waitForDiceReveal = async (page: Page): Promise<void> => {
   )
 }
 
+const normalizedText = async (
+  locator: ReturnType<Page['locator']>
+): Promise<string> =>
+  ((await locator.textContent()) ?? '').replace(/\s+/g, ' ').trim()
+
+const rollCareerOutcomeWithSpectatorReveal = async ({
+  owner,
+  spectator,
+  roomId,
+  actionName,
+  commandType,
+  fieldName,
+  outcomePattern
+}: {
+  owner: Page
+  spectator: Page
+  roomId: string
+  actionName: 'Roll commission' | 'Roll advancement'
+  commandType:
+    | 'ResolveCharacterCreationCommission'
+    | 'ResolveCharacterCreationAdvancement'
+  fieldName: 'commissionRoll' | 'advancementRoll'
+  outcomePattern: RegExp
+}): Promise<string | null> => {
+  const ownerAction = owner.getByRole('button', { name: actionName })
+  if (!(await ownerAction.isVisible().catch(() => false))) return null
+
+  const spectatorFields = spectator.locator('#characterCreationFields')
+  const spectatorRoll = spectator.locator(
+    `[data-character-creation-field="${fieldName}"]`
+  )
+  const spectatorOutcome = spectatorFields.locator('.creation-career-outcome')
+
+  await expect(spectatorRoll).toHaveValue('')
+  await expect(spectatorOutcome).not.toContainText(outcomePattern, {
+    timeout: 100
+  })
+
+  const commandAccepted = owner.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      response.url().includes(`/rooms/${roomId}/command`) &&
+      (response.request().postData() ?? '').includes(commandType)
+  )
+  await ownerAction.click()
+  await expect((await commandAccepted).ok()).toBe(true)
+
+  await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+    timeout: 5_000
+  })
+  await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
+    'Rolling...',
+    { timeout: 100 }
+  )
+  await expect(spectatorRoll).toHaveValue('', { timeout: 100 })
+  await expect(spectatorOutcome).not.toContainText(outcomePattern, {
+    timeout: 100
+  })
+
+  await waitForDiceReveal(owner)
+  await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
+    'Rolling...',
+    { timeout: 5_000 }
+  )
+  await expect(spectatorOutcome).toContainText(outcomePattern, {
+    timeout: 5_000
+  })
+
+  return normalizedText(spectatorOutcome)
+}
+
 const resolveVisibleCascadeChoices = async (page: Page): Promise<void> => {
   for (let index = 0; index < 6; index += 1) {
     const choice = page.locator('.creation-cascade-choice').first()
@@ -1283,6 +1354,105 @@ test.describe('character creation smoke', () => {
             .trim()
         )
         .toBe(projectedDeathText)
+    } finally {
+      await spectator.close()
+    }
+  })
+
+  test('lets a spectator follow commission and advancement rolls without early reveal and recover after refresh', async ({
+    browser,
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 13_579)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationQualification',
+      characterId,
+      career: 'Merchant'
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await resolveVisibleCascadeChoices(page)
+    await page.getByRole('button', { name: 'Apply basic training' }).click()
+
+    const rollSurvival = page.getByRole('button', { name: 'Roll survival' })
+    await expect(rollSurvival).toBeVisible({ timeout: 5_000 })
+    await rollSurvival.click()
+    await waitForDiceReveal(page)
+
+    const spectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: 'e2e-spectator',
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(spectator, characterName)
+
+      const projectedOutcomes: string[] = []
+      const commissionOutcome = await rollCareerOutcomeWithSpectatorReveal({
+        owner: page,
+        spectator,
+        roomId,
+        actionName: 'Roll commission',
+        commandType: 'ResolveCharacterCreationCommission',
+        fieldName: 'commissionRoll',
+        outcomePattern: /Commission \d+: (commissioned|not commissioned)/
+      })
+      if (commissionOutcome) projectedOutcomes.push(commissionOutcome)
+
+      const advancementOutcome = await rollCareerOutcomeWithSpectatorReveal({
+        owner: page,
+        spectator,
+        roomId,
+        actionName: 'Roll advancement',
+        commandType: 'ResolveCharacterCreationAdvancement',
+        fieldName: 'advancementRoll',
+        outcomePattern: /Advancement \d+: (advanced|held rank)/
+      })
+      if (advancementOutcome) projectedOutcomes.push(advancementOutcome)
+
+      expect(projectedOutcomes.length).toBeGreaterThan(0)
+      const finalProjectedOutcome = projectedOutcomes.at(-1) ?? ''
+
+      await spectator.reload({ waitUntil: 'domcontentloaded' })
+      await expect(spectator.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(spectator, characterName)
+      const refreshedOutcome = spectator.locator(
+        '#characterCreationFields .creation-career-outcome'
+      )
+      await expect
+        .poll(() => normalizedText(refreshedOutcome))
+        .toBe(finalProjectedOutcome)
     } finally {
       await spectator.close()
     }
