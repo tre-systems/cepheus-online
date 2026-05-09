@@ -344,8 +344,10 @@ Merchant term, mustering, Scout continuation, and two-tab spectator follow.
 Two-tab follow coverage exists for characteristic, homeworld/background,
 qualification, anagathics, aging, reenlistment, mustering benefit reveal
 timing, and post-mustering continuation. The shared `diceRevealCoordinator`
-owns result deferral. The remaining leverage point is to convert the completed
-finalization and multi-career smoke into broader repeat/death/fallback/mobile
+owns result deferral. Death/restart has deterministic browser coverage, and
+sheet-side character creation action rendering has been extracted from
+`app.ts`. The remaining leverage point is to convert the completed
+finalization and multi-career smoke into broader repeat/fallback/mobile
 coverage while continuing to extract the character creation feature boundary
 and renderer from `app.ts`.
 
@@ -364,8 +366,9 @@ Tasks:
 
 - Keep the committed full one-term finalization and seeded multi-career smoke
   healthy, and extend them to
-  common death, failed qualification, Draft, Drifter fallback, and refresh
-  branches while reporting the current phase/action on failure.
+  failed qualification, Draft, Drifter fallback, and refresh branches while
+  reporting the current phase/action on failure. Common death/restart is
+  covered by a deterministic browser smoke.
 - Extend that smoke into a small repeat runner that creates several disposable
   travellers, captures console errors, server response failures, current
   creation status, final sheet summary, and a screenshot or DOM snapshot when

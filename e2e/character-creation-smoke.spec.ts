@@ -96,6 +96,18 @@ const activeCreationCharacterId = async (
   return characterId
 }
 
+const creationCharacterIds = async (
+  page: Page,
+  roomId: string,
+  actorId: string
+): Promise<string[]> => {
+  const message = await fetchRoomState(page, roomId, actorId)
+  if (message.type !== 'roomState' || !message.state) return []
+  return Object.entries(message.state.characters)
+    .filter(([, character]) => Boolean(character.creation))
+    .map(([characterId]) => characterId)
+}
+
 const seedCreationToHomeworld = async (
   page: Page,
   {
@@ -807,6 +819,122 @@ test.describe('character creation smoke', () => {
       { timeout: 5_000 }
     )
     await expect(rollSurvival).toHaveCount(0)
+  })
+
+  test('shows the killed-in-service branch and starts a fresh draft', async ({
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 4)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+    await page.locator('#createCharacterRailButton').click()
+    const originalCharacterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationQualification',
+      characterId,
+      career: 'Hunter'
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationBasicTraining',
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 2,
+        dex: 2,
+        end: 2,
+        int: 2,
+        edu: 2,
+        soc: 2
+      }
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, originalCharacterName)
+
+    const fields = page.locator('#characterCreationFields')
+    const deathCard = fields.locator('.creation-death-card')
+    const rollSurvival = page.getByRole('button', { name: 'Roll survival' })
+
+    await expect(rollSurvival).toBeVisible({ timeout: 5_000 })
+    await expect(deathCard).toHaveCount(0)
+    await expect(fields).not.toContainText('Killed in service', {
+      timeout: 100
+    })
+
+    await rollSurvival.click()
+    await expect(page.locator('#diceOverlay.visible')).toBeVisible({
+      timeout: 5_000
+    })
+    await expect(page.locator('#diceStage .roll-total')).toHaveText(
+      'Rolling...',
+      { timeout: 100 }
+    )
+    await expect(deathCard).toHaveCount(0, { timeout: 100 })
+
+    await waitForDiceReveal(page)
+    await expect(deathCard).toBeVisible({ timeout: 5_000 })
+    await expect(deathCard).toContainText('Hunter')
+    await expect(deathCard).toContainText('Killed in service')
+    await expect(deathCard).toContainText('Survival roll')
+    await expect(fields).not.toContainText('Muster out')
+    await expect(rollSurvival).toHaveCount(0)
+
+    const restartAccepted = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes(`/rooms/${roomId}/command`) &&
+        (response.request().postData() ?? '').includes('CreateCharacter')
+    )
+    await page.getByRole('button', { name: 'Start a new character' }).click()
+    await expect((await restartAccepted).ok()).toBe(true)
+
+    let restartedCreationIds: string[] = []
+    await expect
+      .poll(async () => {
+        restartedCreationIds = await creationCharacterIds(
+          page,
+          roomId,
+          actorId
+        )
+        return restartedCreationIds.length
+      })
+      .toBe(2)
+    expect(restartedCreationIds).toContain(characterId)
+    expect(restartedCreationIds.some((id) => id !== characterId)).toBe(true)
+
+    await expect(deathCard).toHaveCount(0, { timeout: 5_000 })
+    await expect(fields).toContainText('Characteristics', { timeout: 5_000 })
+    await expect(
+      fields.getByRole('button', { name: 'Roll Str' })
+    ).toBeVisible()
   })
 
   test('drives a seeded multi-career path with spectator follow through mustering', async ({

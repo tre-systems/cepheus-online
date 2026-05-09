@@ -75,7 +75,6 @@ import {
   type CharacterCreationWizardController
 } from './character-creation-wizard-controller.js'
 import { createCharacterCreationDomController } from './character-creation-dom-controller.js'
-import { deriveCharacterCreationActionPlan } from './character-creation-actions.js'
 import {
   applyCharacterCreationBackgroundSkillSelection,
   applyParsedCharacterCreationDraftPatch,
@@ -97,6 +96,7 @@ import {
   renderCharacterCreationReview as renderCharacterCreationReviewView,
   renderCharacterCreationTermHistory as renderCharacterCreationTermHistoryView
 } from './character-creation-review-view.js'
+import { renderCharacterCreationSheetActions } from './character-creation-sheet-actions.js'
 import { cssUrl } from './image-assets.js'
 import { createGameCommand, nextBootstrapCommand } from './bootstrap-flow.js'
 import { fetchRoomState, postRoomCommand } from './room-api.js'
@@ -107,11 +107,7 @@ import {
   type ClientIdentity,
   buildSetDoorOpenCommand
 } from '../game-commands.js'
-import type {
-  BoardCommand,
-  CharacterCreationCommand,
-  DiceCommand
-} from './app-command-router.js'
+import type { BoardCommand, DiceCommand } from './app-command-router.js'
 import { createAppSession } from './app-session.js'
 import { resolveActorSessionSecret } from './actor-session.js'
 import { createCharacterSheetController } from './character-sheet-controller.js'
@@ -1038,30 +1034,12 @@ const characterCreationActions = (
   summary: string
   actions: HTMLElement | null
 } | null => {
-  if (!character) return null
-  const plan = deriveCharacterCreationActionPlan(clientIdentity(), character)
-  if (!plan) return null
-  const actions = document.createElement('div')
-  actions.className = 'sheet-actions creation-actions'
-  for (const viewModel of plan.actions) {
-    if (!viewModel.command) continue
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.textContent = viewModel.label
-    button.className = viewModel.variant === 'primary' ? 'active' : ''
-    button.addEventListener('click', () => {
-      postCharacterCreationCommand(
-        viewModel.command as CharacterCreationCommand
-      ).catch((error) => setError(error.message))
-    })
-    actions.append(button)
-  }
-  return {
-    title: plan.title,
-    status: plan.status,
-    summary: plan.summary,
-    actions: actions.childElementCount > 0 ? actions : null
-  }
+  return renderCharacterCreationSheetActions(character, {
+    document,
+    identity: clientIdentity,
+    dispatch: postCharacterCreationCommand,
+    reportError: setError
+  })
 }
 
 const characterSheetController = createCharacterSheetController({
