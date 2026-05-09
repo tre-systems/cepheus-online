@@ -802,6 +802,118 @@ test.describe('character creation smoke', () => {
     expect(creationJson).toContain('Drifter')
   })
 
+  test('rolls failed qualification Draft fallback and persists drafted career after refresh', async ({
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 4)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const postedCommandTypes: string[] = []
+
+    page.on('request', (request) => {
+      if (
+        request.method() !== 'POST' ||
+        !request.url().includes(`/rooms/${roomId}/command`)
+      ) {
+        return
+      }
+      const body = request.postData()
+      if (!body) return
+      const message = JSON.parse(body) as {
+        command?: { type?: string }
+      }
+      if (message.command?.type) postedCommandTypes.push(message.command.type)
+    })
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 2,
+        dex: 2,
+        end: 2,
+        int: 2,
+        edu: 2,
+        soc: 2
+      }
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+
+    const fields = page.locator('#characterCreationFields')
+    const scoutCareer = characterCreationCareerButton(page, 'Scout')
+    await expect(scoutCareer).toBeVisible({ timeout: 5_000 })
+    await scoutCareer.click()
+    await waitForDiceReveal(page)
+
+    await expect(fields.locator('.creation-draft-fallback')).toBeVisible({
+      timeout: 5_000
+    })
+    await expect(fields).toContainText('Qualification failed')
+    await expect(fields).toContainText('Choose Drifter or roll for the Draft.')
+
+    const draftButton = fields.getByRole('button', {
+      name: 'Roll draft (1d6)'
+    })
+    await expect(draftButton).toBeVisible()
+    postedCommandTypes.length = 0
+    await draftButton.click()
+
+    await expect.poll(() => postedCommandTypes).toContain(
+      'ResolveCharacterCreationDraft'
+    )
+    await waitForDiceReveal(page)
+    await expect(fields.locator('.creation-draft-fallback')).toHaveCount(0, {
+      timeout: 5_000
+    })
+
+    const draftCareers = [
+      'Aerospace',
+      'Marine',
+      'Maritime Defense',
+      'Navy',
+      'Scout',
+      'Surface Defense'
+    ]
+    const roomState = await fetchRoomState(page, roomId, actorId)
+    const creation =
+      (roomState.state?.characters[characterId]?.creation as
+        | {
+            canEnterDraft?: boolean
+            terms?: Array<{ career?: string; draft?: 1 }>
+          }
+        | undefined) ?? null
+    expect(creation?.canEnterDraft).toBe(false)
+    const draftedTerm = creation?.terms?.find((term) => term.draft === 1)
+    const draftedCareer = draftedTerm?.career
+    expect(draftedCareer).toBeTruthy()
+    expect(draftCareers).toContain(draftedCareer)
+    if (!draftedCareer) throw new Error('Drafted career was not persisted')
+
+    await expect(fields).toContainText(draftedCareer, { timeout: 5_000 })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await expect(fields).toContainText(draftedCareer, { timeout: 5_000 })
+    await expect(fields.locator('.creation-draft-fallback')).toHaveCount(0)
+  })
+
   test('keeps owner career roll results hidden until reveal and leaves the next action usable', async ({
     page
   }) => {

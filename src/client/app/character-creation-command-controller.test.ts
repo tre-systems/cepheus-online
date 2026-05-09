@@ -2,7 +2,12 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { asGameId, asUserId } from '../../shared/ids'
-import type { DiceRollState, GameState } from '../../shared/state'
+import type {
+  CharacterCreationProjection,
+  CharacterState,
+  DiceRollState,
+  GameState
+} from '../../shared/state'
 import type { CharacterCreationCommand } from './app-command-router'
 import { createCharacterCreationCommandController } from './character-creation-command-controller'
 import {
@@ -41,6 +46,16 @@ const stateWithDice = (roll: DiceRollState): GameState => ({
   eventSeq: 1
 })
 
+const stateWithDiceAndCharacter = (
+  roll: DiceRollState,
+  character: CharacterState
+): GameState => ({
+  ...stateWithDice(roll),
+  characters: {
+    [character.id]: character
+  }
+})
+
 const characteristicFlow = (): CharacterCreationFlow =>
   nextCharacterCreationWizardStep(
     createManualCharacterCreationFlow({ name: 'Iona Vesh' })
@@ -68,6 +83,88 @@ const careerFlow = (): CharacterCreationFlow => {
     }
   }
 }
+
+const failedQualificationFlow = (): CharacterCreationFlow => {
+  const flow = careerFlow()
+  return {
+    step: 'career',
+    draft: {
+      ...flow.draft,
+      careerPlan: {
+        career: 'Rogue',
+        drafted: false,
+        qualificationRoll: 2,
+        qualificationPassed: false,
+        survivalRoll: null,
+        survivalPassed: null,
+        canCommission: null,
+        commissionRoll: null,
+        commissionPassed: null,
+        canAdvance: null,
+        advancementRoll: null,
+        advancementPassed: null,
+        termSkillRolls: []
+      }
+    }
+  }
+}
+
+const projectedDraftCharacter = (
+  flow: CharacterCreationFlow,
+  creation: CharacterCreationProjection
+): CharacterState => ({
+  id: flow.draft.characterId,
+  ownerId: actorId,
+  type: 'PLAYER',
+  name: flow.draft.name,
+  active: true,
+  notes: '',
+  age: flow.draft.age,
+  characteristics: flow.draft.characteristics,
+  skills: [],
+  equipment: [],
+  credits: 0,
+  creation
+})
+
+const projectedDraftCreation = (): CharacterCreationProjection => ({
+  state: {
+    status: 'BASIC_TRAINING',
+    context: {
+      canCommission: false,
+      canAdvance: false
+    }
+  },
+  terms: [
+    {
+      career: 'Navy',
+      skills: [],
+      skillsAndTraining: [],
+      benefits: [],
+      complete: false,
+      canReenlist: true,
+      completedBasicTraining: false,
+      musteringOut: false,
+      anagathics: false,
+      draft: 1
+    }
+  ],
+  careers: [{ name: 'Navy', rank: 0 }],
+  canEnterDraft: false,
+  failedToQualify: false,
+  characteristicChanges: [],
+  creationComplete: false,
+  homeworld: null,
+  backgroundSkills: [],
+  pendingCascadeSkills: [],
+  history: [
+    {
+      type: 'SELECT_CAREER',
+      isNewCareer: true,
+      drafted: true
+    }
+  ]
+})
 
 const musteringFlow = (): CharacterCreationFlow => {
   const flow = careerFlow()
@@ -450,6 +547,169 @@ describe('character creation command controller', () => {
     assert.equal(syncedFallbacks[0], flow)
     assert.equal(rendered, true)
     assert.equal(scrolled, true)
+  })
+
+  it('enters Drifter after failed qualification and syncs rendered fallback flow', async () => {
+    let flow: CharacterCreationFlow | null = failedQualificationFlow()
+    const originalCharacterId = flow.draft.characterId
+    const commands: CharacterCreationCommand[] = []
+    const requestIds: string[] = []
+    const syncedFallbacks: CharacterCreationFlow[] = []
+    let flushed = 0
+    let published = 0
+    let rendered = 0
+    let scrolled = 0
+    let waited = false
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: (nextFlow) => {
+        flow = nextFlow
+      },
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {
+        flushed += 1
+      },
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command, requestId) => {
+        commands.push(command)
+        requestIds.push(requestId)
+        return { state: null }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {
+        waited = true
+      },
+      syncFlowFromRoomState: (state, characterId, fallbackFlow) => {
+        assert.equal(state, null)
+        assert.equal(characterId, originalCharacterId)
+        syncedFallbacks.push(fallbackFlow)
+        flow = fallbackFlow
+        return fallbackFlow
+      },
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        rendered += 1
+      },
+      scrollToTop: () => {
+        scrolled += 1
+      }
+    })
+
+    await controller.resolveFailedQualificationOption('Drifter')
+
+    assert.equal(flushed, 1)
+    assert.equal(published, 1)
+    assert.deepEqual(commands[0], {
+      type: 'EnterCharacterCreationDrifter',
+      gameId,
+      actorId,
+      characterId: originalCharacterId,
+      option: 'Drifter'
+    })
+    assert.deepEqual(requestIds, ['enter-character-drifter'])
+    assert.equal(waited, false)
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.career, 'Drifter')
+    assert.equal(
+      syncedFallbacks[0]?.draft.careerPlan?.qualificationPassed,
+      true
+    )
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.drafted, false)
+    assert.equal(flow?.draft.careerPlan?.career, 'Drifter')
+    assert.equal(rendered, 1)
+    assert.equal(scrolled, 1)
+  })
+
+  it('rolls Draft after failed qualification, waits for reveal, and syncs projected fallback flow', async () => {
+    let flow: CharacterCreationFlow | null = failedQualificationFlow()
+    const originalCharacterId = flow.draft.characterId
+    const roll = diceRoll(4)
+    const roomState = stateWithDiceAndCharacter(
+      roll,
+      projectedDraftCharacter(flow, projectedDraftCreation())
+    )
+    const commands: CharacterCreationCommand[] = []
+    const requestIds: string[] = []
+    const waitedFor: string[] = []
+    const syncedFallbacks: CharacterCreationFlow[] = []
+    let flushed = 0
+    let published = 0
+    let rendered = 0
+    let scrolled = 0
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: (nextFlow) => {
+        flow = nextFlow
+      },
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {
+        flushed += 1
+      },
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command, requestId) => {
+        commands.push(command)
+        requestIds.push(requestId)
+        return { state: roomState }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async (nextRoll) => {
+        waitedFor.push(nextRoll.id)
+      },
+      syncFlowFromRoomState: (state, characterId, fallbackFlow) => {
+        assert.equal(state, roomState)
+        assert.equal(characterId, originalCharacterId)
+        syncedFallbacks.push(fallbackFlow)
+        flow = fallbackFlow
+        return fallbackFlow
+      },
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        rendered += 1
+      },
+      scrollToTop: () => {
+        scrolled += 1
+      }
+    })
+
+    await controller.resolveFailedQualificationOption('Draft')
+
+    assert.equal(flushed, 1)
+    assert.equal(published, 1)
+    assert.deepEqual(commands[0], {
+      type: 'ResolveCharacterCreationDraft',
+      gameId,
+      actorId,
+      characterId: originalCharacterId
+    })
+    assert.deepEqual(requestIds, ['resolve-character-draft'])
+    assert.deepEqual(waitedFor, ['roll-1'])
+    assert.equal(
+      roomState.characters[originalCharacterId]?.creation?.terms[0]?.career,
+      'Navy'
+    )
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.career, 'Navy')
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.qualificationRoll, 4)
+    assert.equal(
+      syncedFallbacks[0]?.draft.careerPlan?.qualificationPassed,
+      true
+    )
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.drafted, true)
+    assert.equal(flow?.draft.careerPlan?.career, 'Navy')
+    assert.equal(rendered, 1)
+    assert.equal(scrolled, 1)
   })
 
   it('decides anagathics through the semantic command and syncs fallback flow', async () => {

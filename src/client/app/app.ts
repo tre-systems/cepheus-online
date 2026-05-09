@@ -92,14 +92,13 @@ import {
   resolveAppLocationIdentity
 } from './app-location.js'
 import { prepareLiveActivityApplication } from './live-activity-client.js'
-import { createPwaInstallController } from './pwa-install.js'
 import { createRequestIdFactory } from './request-id.js'
 import { createRoomMenuController } from './room-menu-controller.js'
 import { createRoomCommandDispatch } from './room-command-dispatch.js'
 import { createRoomAssetCreationController } from './room-asset-creation-controller.js'
-import { registerClientServiceWorker } from './service-worker.js'
+import { createAppShell, registerAppShellServiceWorker } from './app-shell.js'
 
-registerClientServiceWorker()
+registerAppShellServiceWorker()
 
 const els = requireAppElements(getAppElements(document))
 
@@ -131,13 +130,7 @@ const setError = (text: string): void => {
   els.error.textContent = text || ''
 }
 
-createPwaInstallController({
-  elements: {
-    prompt: els.pwaInstallPrompt,
-    installButton: els.pwaInstallButton,
-    dismissButton: els.pwaInstallDismissButton
-  }
-})
+createAppShell({ elements: els })
 
 const requestId = createRequestIdFactory()
 

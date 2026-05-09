@@ -11,6 +11,7 @@ import type { DurableObjectStorage } from '../cloudflare'
 import { deriveCheckpointDecision } from './checkpoint-policy'
 import { deriveEventsForCommand } from './command'
 import { getProjectedGameState } from './projection'
+import { compareProjectionParity } from './projection-parity'
 import {
   isPublicationRejectedTelemetryCode,
   noopPublicationTelemetrySink,
@@ -55,11 +56,6 @@ const commandError = (
 
 const internalPublicationError = (message: string): CommandPublicationError =>
   new CommandPublicationError('projection_mismatch', message)
-
-const hasProjectionParity = (
-  left: GameState | null,
-  right: GameState | null
-): boolean => JSON.stringify(left) === JSON.stringify(right)
 
 const resolvePublicationOptions = (
   options: string | RunCommandPublicationOptions | undefined
@@ -174,10 +170,10 @@ export const runCommandPublication = async (
 
   const projectedState = await getProjectedGameState(storage, gameId)
 
-  if (!hasProjectionParity(projectedState, nextState)) {
-    const error = internalPublicationError(
-      'Stored event stream does not match live projection'
-    )
+  const projectionParity = compareProjectionParity(projectedState, nextState)
+
+  if (!projectionParity.matches) {
+    const error = internalPublicationError(projectionParity.message)
     telemetrySink.recordPublication({
       type: 'publicationInternalError',
       gameId,
