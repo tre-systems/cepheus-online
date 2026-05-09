@@ -337,13 +337,15 @@ Done when:
 
 Status: partially done. Playwright browser smoke now runs in `npm run
 verify:full`, the owner happy path now reaches mustering, finalization, sheet
-open, and token creation, two-tab follow coverage exists for characteristic,
-homeworld/background, qualification, anagathics, aging, reenlistment, and
-mustering benefit reveal timing, and the shared `diceRevealCoordinator` owns
-result deferral. The remaining leverage point is to convert the completed
-finalization smoke into broader repeat/death/fallback/mobile coverage while
-continuing to extract the character creation feature boundary and renderer from
-`app.ts`.
+open, and token creation, and a seeded multi-career browser journey covers a
+Merchant term, mustering, Scout continuation, and two-tab spectator follow.
+Two-tab follow coverage exists for characteristic, homeworld/background,
+qualification, anagathics, aging, reenlistment, mustering benefit reveal
+timing, and post-mustering continuation. The shared `diceRevealCoordinator`
+owns result deferral. The remaining leverage point is to convert the completed
+finalization and multi-career smoke into broader repeat/death/fallback/mobile
+coverage while continuing to extract the character creation feature boundary
+and renderer from `app.ts`.
 
 Primary write ownership:
 
@@ -358,25 +360,18 @@ Primary write ownership:
 
 Tasks:
 
-- Add a seeded deterministic Playwright journey that drives character creation
-  through the real browser UI from blank character to final sheet. The fixture
-  should set the room seed through the local/test-only seed route, produce a
-  multi-term traveller with more than one career, and keep a spectator tab open
-  for the same room.
-- In that seeded journey, assert the spectator follows each creation phase from
-  the server projection, sees the same dice animation timing, and does not see
-  roll-dependent outcomes until the reveal boundary has elapsed.
-- Keep the committed full one-term finalization smoke healthy, and extend it to
+- Keep the committed full one-term finalization and seeded multi-career smoke
+  healthy, and extend them to
   common death, failed qualification, Draft, Drifter fallback, and refresh
   branches while reporting the current phase/action on failure.
 - Extend that smoke into a small repeat runner that creates several disposable
   travellers, captures console errors, server response failures, current
   creation status, final sheet summary, and a screenshot or DOM snapshot when
   the flow gets stuck.
-- Extend two-tab follow tests beyond the covered characteristic,
-  homeworld/background, and qualification paths: survival/death, term skills,
-  aging, reenlistment, mustering out, and finalization should all reveal only
-  after dice finish and recover from server projection on refresh.
+- Extend two-tab follow tests beyond the currently covered paths:
+  survival/death, term skills, mustering out, finalization, and repeated
+  multi-term refreshes should all reveal only after dice finish and recover
+  from server projection on refresh.
 - Add mobile viewport checks for the high-risk creator screens:
   characteristics, homeworld/background skills, career selection, survival or
   death, term skills, reenlistment, mustering out, and spectator follow cards.
