@@ -96,6 +96,23 @@ const publishCharacterCreationCharacteristics = async (
   return lastResult
 }
 
+const publishEducationCorrection = async (
+  storage: ReturnType<typeof createMemoryStorage>,
+  characterId: ReturnType<typeof asCharacterId>,
+  edu = 8
+) => {
+  const result = await publish(storage, {
+    type: 'UpdateCharacterSheet',
+    gameId,
+    actorId,
+    characterId,
+    characteristics: { edu }
+  })
+
+  assert.equal(result.ok, true, result.ok ? undefined : result.error.message)
+  return result
+}
+
 const publishCareerQualification = async (
   storage: ReturnType<typeof createMemoryStorage>,
   characterId: ReturnType<typeof asCharacterId>,
@@ -2058,18 +2075,7 @@ describe('room publication flow', () => {
       characterId
     })
     await publishCharacterCreationCharacteristics(storage, characterId)
-    const educationFixed = await publish(storage, {
-      type: 'UpdateCharacterSheet',
-      gameId,
-      actorId,
-      characterId,
-      characteristics: { edu: 12 }
-    })
-    assert.equal(
-      educationFixed.ok,
-      true,
-      educationFixed.ok ? undefined : educationFixed.error.message
-    )
+    await publishEducationCorrection(storage, characterId)
 
     const homeworldSet = await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
@@ -2171,6 +2177,7 @@ describe('room publication flow', () => {
       characterId
     })
     await publishCharacterCreationCharacteristics(storage, characterId)
+    await publishEducationCorrection(storage, characterId)
 
     const homeworldSet = await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
@@ -2244,6 +2251,7 @@ describe('room publication flow', () => {
       characterId
     })
     await publishCharacterCreationCharacteristics(storage, characterId)
+    await publishEducationCorrection(storage, characterId)
     const homeworldSet = await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
       gameId,
@@ -3020,6 +3028,7 @@ describe('room publication flow', () => {
         characterId
       })
       await publishCharacterCreationCharacteristics(storage, characterId)
+      await publishEducationCorrection(storage, characterId)
       await publish(storage, {
         type: 'SetCharacterCreationHomeworld',
         gameId,
@@ -3221,6 +3230,7 @@ describe('room publication flow', () => {
         characterId
       })
       await publishCharacterCreationCharacteristics(storage, characterId)
+      await publishEducationCorrection(storage, characterId)
       await publish(storage, {
         type: 'SetCharacterCreationHomeworld',
         gameId,
@@ -3339,7 +3349,8 @@ describe('room publication flow', () => {
       characterId
     })
     await publishCharacterCreationCharacteristics(storage, characterId)
-    await publish(storage, {
+    await publishEducationCorrection(storage, characterId)
+    const homeworldSet = await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
       gameId,
       actorId,
@@ -3350,6 +3361,13 @@ describe('room publication flow', () => {
         tradeCodes: ['Asteroid']
       }
     })
+    assert.equal(
+      homeworldSet.ok,
+      true,
+      homeworldSet.ok ? undefined : homeworldSet.error.message
+    )
+    const eventCountBeforeRejected = (await readEventStream(storage, gameId))
+      .length
 
     const rejected = await publish(storage, {
       type: 'CompleteCharacterCreationHomeworld',
@@ -3365,7 +3383,10 @@ describe('room publication flow', () => {
       rejected.error.message,
       'Background choices must be complete before career selection'
     )
-    assert.equal((await readEventStream(storage, gameId)).length, 17)
+    assert.equal(
+      (await readEventStream(storage, gameId)).length,
+      eventCountBeforeRejected
+    )
   })
 
   it('rejects career term starts outside career selection', async () => {
