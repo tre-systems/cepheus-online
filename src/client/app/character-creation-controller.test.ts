@@ -1,7 +1,12 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { asCharacterId, asGameId, asUserId } from '../../shared/ids'
+import {
+  asCharacterId,
+  asGameId,
+  asUserId,
+  type CharacterId
+} from '../../shared/ids'
 import type { CharacterCreationProjection, GameState } from '../../shared/state'
 import { effect } from '../reactive'
 import { createCharacterCreationController } from './character-creation-controller'
@@ -144,7 +149,37 @@ describe('character creation controller', () => {
     assert.equal(controller.refreshFollowed(), false)
     assert.equal(controller.flow(), null)
     assert.equal(controller.readOnly(), false)
+    assert.equal(controller.selectedCharacterId(), null)
     assert.equal(panelClosed, true)
+  })
+
+  it('updates multi-signal follow state atomically', () => {
+    const controller = createCharacterCreationController({
+      getState: () => stateWithCreation(creation('BASIC_TRAINING')),
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+    const observed: Array<{
+      flowStep: string | null
+      readOnly: boolean
+      selected: CharacterId | null
+    }> = []
+    const dispose = effect(() => {
+      observed.push({
+        flowStep: controller.flowSignal.value?.step ?? null,
+        readOnly: controller.readOnlySignal.value,
+        selected: controller.selectedCharacterIdSignal.value
+      })
+    })
+
+    controller.openFollow(characterId)
+
+    assert.deepEqual(observed, [
+      { flowStep: null, readOnly: false, selected: null },
+      { flowStep: 'skills', readOnly: true, selected: characterId }
+    ])
+
+    dispose()
   })
 
   it('does not clear editable flow when room state changes', () => {

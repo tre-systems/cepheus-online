@@ -236,6 +236,18 @@ When using signals, keep them close to the view/controller that owns them.
 Do not pass signals through the entire client graph as a substitute for
 explicit dependencies.
 
+When a controller has several signals that describe one local UI snapshot,
+update them with `batch()` so effects never observe an impossible intermediate
+state. This matters for feature-level renderers such as character creation:
+opening a followed traveller should publish the selected character, flow, and
+read-only state as one change.
+
+Do not introduce Preact, React, Next.js, or another browser framework just to
+avoid direct DOM calls. The preferred architecture is dependency-free feature
+controllers with pure `derive*` functions and narrow `render*` shells. A
+framework dependency needs an ADR-level reason, such as a proven reduction in
+complexity that cannot be achieved with the local reactive layer.
+
 ## Dice Reveal Coordination
 
 Roll-bearing commands have a stricter presentation contract than normal

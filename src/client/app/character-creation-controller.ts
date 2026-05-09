@@ -1,6 +1,7 @@
 import type { CharacterId } from '../../shared/ids'
 import type { CharacterCreationProjection, GameState } from '../../shared/state'
 import {
+  batch,
   createDisposalScope,
   type ReadonlySignal,
   signal
@@ -105,9 +106,11 @@ export const createCharacterCreationController = ({
       const nextFlow = character ? flowFromProjectedCharacter(character) : null
       if (!nextFlow) return null
 
-      selectedCharacterId.value = characterId
-      flow.value = nextFlow
-      readOnly.value = nextReadOnly
+      batch(() => {
+        selectedCharacterId.value = characterId
+        flow.value = nextFlow
+        readOnly.value = nextReadOnly
+      })
       return flow.value
     },
 
@@ -154,8 +157,13 @@ export const createCharacterCreationController = ({
         panelOpen: isPanelOpen()
       })
 
-      flow.value = refresh.flow
-      readOnly.value = refresh.readOnly
+      batch(() => {
+        flow.value = refresh.flow
+        readOnly.value = refresh.readOnly
+        if (!refresh.flow) {
+          selectedCharacterId.value = null
+        }
+      })
       if (refresh.shouldClose) {
         closePanel()
       }
@@ -172,16 +180,20 @@ export const createCharacterCreationController = ({
       }),
 
     resetForNewCreation: () => {
-      flow.value = null
-      readOnly.value = false
-      selectedCharacterId.value = null
+      batch(() => {
+        flow.value = null
+        readOnly.value = false
+        selectedCharacterId.value = null
+      })
     },
 
     clearReadOnlyFollow: () => {
       if (!readOnly.value) return
-      flow.value = null
-      readOnly.value = false
-      selectedCharacterId.value = null
+      batch(() => {
+        flow.value = null
+        readOnly.value = false
+        selectedCharacterId.value = null
+      })
     },
 
     dispose: scope.dispose

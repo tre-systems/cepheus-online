@@ -155,6 +155,8 @@ Tasks:
 - Move character creation rendering toward dependency-free signals or an
   equivalent local reactive primitive so state changes update the view without
   adding another global store or framework.
+- Keep related local feature signals batched so render effects see complete
+  snapshots, not half-updated selected-character, flow, or read-only state.
 - Ensure each stateful client manager exposes a `dispose()` path when it owns
   listeners, effects, timers, or sockets.
 
