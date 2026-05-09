@@ -3126,6 +3126,84 @@ test.describe('character creation smoke', () => {
     await expectMobileCreatorControlsFit(page)
   })
 
+  test('keeps spectator follow cards usable at phone width', async ({
+    browser,
+    page
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 13_579)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+    await page.locator('#createCharacterRailButton').click()
+    const firstCharacterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    await activeCreationCharacterId(page, roomId, actorId)
+
+    const secondCharacterId = 'mobile-follow-card-second'
+    const secondCharacterName = 'Mobile Follow Card Second'
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CreateCharacter',
+      characterId: secondCharacterId,
+      characterType: 'PLAYER',
+      name: secondCharacterName
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'StartCharacterCreation',
+      characterId: secondCharacterId
+    })
+
+    const spectator = await browser.newPage()
+    try {
+      await spectator.setViewportSize({ width: 390, height: 844 })
+      await openRoom(spectator, {
+        roomId,
+        userId: 'e2e-mobile-follow-spectator',
+        viewer: 'player'
+      })
+
+      const dock = spectator.locator('#creationPresenceDock')
+      const cards = dock.locator('.creation-presence-card')
+      const firstCard = cards.filter({ hasText: firstCharacterName })
+      const secondCard = cards.filter({ hasText: secondCharacterName })
+
+      await expect(dock).toBeVisible({ timeout: 5_000 })
+      await expect(cards).toHaveCount(2)
+      await expect(firstCard).toContainText(firstCharacterName)
+      await expect(firstCard).toContainText(/stats · \d+ terms/)
+      await expect(secondCard).toContainText(secondCharacterName)
+      await expect(secondCard).toContainText(/stats · \d+ terms/)
+      await expect
+        .poll(() =>
+          visibleHorizontalOverflow(
+            spectator,
+            [
+              '#creationPresenceDock',
+              '#creationPresenceDock .creation-presence-heading',
+              '#creationPresenceDock .creation-presence-clear',
+              '#creationPresenceDock .creation-presence-card',
+              '#creationPresenceDock .creation-presence-card *'
+            ].join(',')
+          )
+        )
+        .toEqual([])
+
+      await expectMobileControlUsable(firstCard, 'Spectator follow card')
+      await firstCard.click()
+      await expect(
+        spectator.getByRole('complementary', { name: 'Character creator' })
+      ).toBeVisible({ timeout: 5_000 })
+      await expect(spectator.locator('#characterCreationFields')).toContainText(
+        'Characteristics',
+        { timeout: 5_000 }
+      )
+      await expectMobileCreatorControlsFit(spectator)
+    } finally {
+      await spectator.close()
+    }
+  })
+
   test('keeps term skill controls usable at phone width', async ({ page }) => {
     test.setTimeout(60_000)
     await page.setViewportSize({ width: 390, height: 844 })

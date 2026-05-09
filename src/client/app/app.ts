@@ -57,12 +57,10 @@ import { createGameCommand, nextBootstrapCommand } from './bootstrap-flow.js'
 import { fetchRoomState, postRoomCommand } from './room-api.js'
 import {
   applyServerMessage as applyClientServerMessage,
-  buildRollDiceCommand,
   type ClientDiceRollActivity,
   type ClientIdentity,
   buildSetDoorOpenCommand
 } from '../game-commands.js'
-import type { DiceCommand } from './app-command-router.js'
 import { createAppSession } from './app-session.js'
 import { resolveActorSessionSecret } from './actor-session.js'
 import { createCharacterSheetWiring } from './character-sheet-wiring.js'
@@ -83,6 +81,7 @@ import { createRoomMenuWiring } from './room-menu-wiring.js'
 import { createAppShell, registerAppShellServiceWorker } from './app-shell.js'
 import { createBoardControlsWiring } from './board-controls-wiring.js'
 import { createAppRefreshWiring } from './app-refresh-wiring.js'
+import { createDiceCommandWiring } from './dice-command-wiring.js'
 
 registerAppShellServiceWorker()
 
@@ -798,14 +797,12 @@ createAppRefreshWiring({
   reportError: setError
 })
 
-els.roll.addEventListener('click', () => {
-  postDiceCommand(
-    buildRollDiceCommand({
-      identity: clientIdentity(),
-      expression: els.diceExpression.value.trim() || '2d6',
-      reason: 'Table roll'
-    }) as DiceCommand
-  ).catch((error) => setError(error.message))
+createDiceCommandWiring({
+  rollButton: els.roll,
+  diceExpression: els.diceExpression,
+  getClientIdentity: clientIdentity,
+  postDiceCommand,
+  reportError: setError
 })
 
 window.addEventListener('resize', render)
