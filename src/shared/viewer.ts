@@ -20,6 +20,11 @@ const isPieceVisibleToRole = (piece: PieceState, role: ViewerRole): boolean => {
   return piece.visibility !== 'HIDDEN'
 }
 
+const canViewerSeeUnrevealedDice = (
+  state: Pick<GameState, 'ownerId'>,
+  viewer: GameViewer
+): boolean => viewer.role === 'REFEREE' || viewer.userId === state.ownerId
+
 export const resolveViewerForState = (
   state: GameState,
   viewer: GameViewer
@@ -58,7 +63,7 @@ export const filterGameStateForViewer = (
       isPieceVisibleToRole(piece, resolvedViewer.role)
     )
   )
-  if (resolvedViewer.role !== 'REFEREE') {
+  if (!canViewerSeeUnrevealedDice(state, resolvedViewer)) {
     for (const roll of filtered.diceLog) {
       if (Date.parse(roll.revealAt) <= nowMs) continue
       delete (roll as unknown as Record<string, unknown>).rolls
@@ -79,7 +84,7 @@ export const filterLiveActivitiesForViewer = (
 
   return activities.map((activity) => {
     if (
-      resolvedViewer.role === 'REFEREE' ||
+      canViewerSeeUnrevealedDice(state, resolvedViewer) ||
       activity.type !== 'diceRoll' ||
       Date.parse(activity.reveal.revealAt) <= nowMs
     ) {

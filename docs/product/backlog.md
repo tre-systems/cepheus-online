@@ -356,19 +356,21 @@ result deferral. Death/restart has deterministic browser coverage, semantic
 commission/advancement/term-skill events have checkpoint-plus-tail recovery
 coverage, finalization recovery now proves the server-derived sheet survives
 checkpoint-plus-tail replay, and sheet-side, wizard-render, room asset
-creation, character sheet, room menu, board controls, dice overlay, refresh
-button, dice command, app lifecycle, character-sheet control, and room
-bootstrap wiring have been extracted from `app.ts`. Late term-skill,
+creation, character sheet, room menu, board controls, board door actions, dice
+overlay, refresh button, dice command, app lifecycle, character-sheet control,
+and room bootstrap wiring have been extracted from `app.ts`. Late term-skill,
 reenlistment, mustering-out, finalization, and spectator follow-card controls
 now have phone-width usability coverage, and lightweight unit invariants cover
 single-primary actions, pending-roll render suppression, duplicate roll-submit
 suppression for characteristic, aging, reenlistment, and mustering benefit
-actions, read-only spectator controls, redacted dice activity handling, and
-stale local flow replacement after server projection advances. The
-repeat-runner smoke now covers three disposable travellers with console and
+actions, read-only spectator controls, redacted dice activity handling, board
+door command dispatch, and stale local flow replacement after server projection
+advances. The seeded multi-career smoke now includes spectator recovery for a
+live term-skill roll after reveal, refresh, and close/reopen, while the
+repeat-runner smoke covers three disposable travellers with console and
 server-response failure context. The remaining leverage point is to broaden
-multi-term spectator recovery while continuing to extract the character
-creation feature boundary from `app.ts`.
+multi-term spectator recovery beyond the current term-skill path while
+continuing to extract the character creation feature boundary from `app.ts`.
 
 Primary write ownership:
 
@@ -389,9 +391,9 @@ Tasks:
 - Extend the repeat runner beyond its current three-traveller coverage only
   when new branches are added. It now records console errors, server response
   failures, and screenshots or DOM snapshots when the flow gets stuck.
-- Extend two-tab follow tests beyond the currently covered paths: repeated
-  multi-term refreshes should reveal only after dice finish and recover from
-  server projection on refresh.
+- Extend two-tab follow tests beyond the currently covered term-skill path:
+  repeated multi-term refreshes should reveal only after dice finish and recover
+  from server projection on refresh.
 - Extend mobile viewport checks only when new controls are introduced. Current
   early-screen, term-skill, reenlistment, mustering-out, finalization, and
   spectator follow-card controls have phone-width coverage that asserts no
@@ -448,10 +450,11 @@ protocol fixtures cover viewer-filtered messages, while `diceRevealCoordinator`
 defers client-visible roll results for several creation paths. State-bearing
 HTTP command responses, WebSocket broadcasts, and room state refreshes now
 redact pre-reveal dice `rolls` and `total` for player/spectator viewers while
-preserving reveal metadata. Room state refreshes expose the dice details after
-the reveal boundary. The remaining risk is that creation-specific projection
-details, future activity history, and local reveal timing can drift as new
-semantic events land.
+preserving reveal metadata. Owner and referee views retain unrevealed dice
+details, player/spectator views reveal them after the boundary, and the client
+coordinator can schedule reveal fallback from redacted targets. The remaining
+risk is that creation-specific projection details, future activity history, and
+new local reveal timing can drift as new semantic events land.
 
 Primary write ownership:
 
@@ -469,9 +472,9 @@ Tasks:
 - Extend the viewer-filtering contract from state-bearing HTTP responses,
   WebSocket broadcasts, and room state refreshes to future replay/activity
   history.
-- Add fixtures for owner, referee, and spectator views of creation state while
-  roll-dependent details are unrevealed, revealed live, and recovered after
-  refresh.
+- Extend the current owner/referee/player/spectator dice fixtures to creation
+  projection details while roll-dependent details are unrevealed, revealed
+  live, and recovered after refresh.
 - Keep roll-dependent details hidden from spectators until the local reveal
   boundary, without weakening server-side viewer filtering or refresh recovery.
 - Add regression coverage for each new semantic roll-bearing creation event so

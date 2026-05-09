@@ -30,7 +30,31 @@ const activity = (
   total: 7
 })
 
-const gameState = (diceLog: DiceRollState[]): GameState => ({
+const redactedActivity = (
+  id: string,
+  revealAt = '2026-05-08T10:00:02.000Z'
+): ClientDiceRollActivity => ({
+  id,
+  revealAt
+})
+
+type RedactedDiceRollState = Omit<DiceRollState, 'rolls' | 'total'>
+
+const redactedDiceRoll = (
+  id: string,
+  revealAt = '2026-05-08T10:00:02.000Z'
+): RedactedDiceRollState => ({
+  id,
+  actorId: null,
+  createdAt: '2026-05-08T10:00:00.000Z',
+  revealAt,
+  expression: '2d6',
+  reason: 'Test roll'
+})
+
+const gameState = (
+  diceLog: readonly (DiceRollState | RedactedDiceRollState)[]
+): GameState => ({
   id: asGameId('game-1'),
   slug: 'game-1',
   name: 'Game 1',
@@ -39,7 +63,7 @@ const gameState = (diceLog: DiceRollState[]): GameState => ({
   characters: {},
   boards: {},
   pieces: {},
-  diceLog,
+  diceLog: [...diceLog] as DiceRollState[],
   selectedBoardId: null,
   eventSeq: diceLog.length
 })
@@ -79,6 +103,40 @@ describe('dice reveal coordinator', () => {
 
     const pending = coordinator
       .waitForRevealOrDelay(diceRoll('roll-1'))
+      .then(() => {
+        resolved = true
+      })
+
+    await flushMicrotasks()
+    assert.equal(resolved, false)
+    assert.equal(delayMs, 2220)
+
+    if (!timer) {
+      throw new Error('Expected reveal fallback timer to be scheduled')
+    }
+    const runTimer: () => void = timer
+    runTimer()
+    await pending
+
+    assert.equal(resolved, true)
+  })
+
+  it('uses revealAt as a fallback for redacted reveal targets', async () => {
+    let timer: (() => void) | null = null
+    let delayMs: number | null = null
+    const coordinator = createDiceRevealCoordinator({
+      nowMs: () => Date.parse('2026-05-08T10:00:00.000Z'),
+      setTimer: (callback, delay) => {
+        timer = callback
+        delayMs = delay
+        return 1
+      },
+      revealFallbackBufferMs: 220
+    })
+    let resolved = false
+
+    const pending = coordinator
+      .waitForRevealOrDelay(redactedActivity('roll-1'))
       .then(() => {
         resolved = true
       })
@@ -152,6 +210,21 @@ describe('dice reveal coordinator', () => {
     )
   })
 
+  it('defers redacted pending live dice activities after state has been applied', () => {
+    const coordinator = createDiceRevealCoordinator()
+    coordinator.recordStateApplied(gameState([]))
+
+    const pending = redactedActivity('roll-1')
+
+    assert.deepEqual(
+      coordinator.diceRollsForStateDeferral({
+        nextState: gameState([redactedDiceRoll('roll-1')]),
+        diceRollActivities: [pending]
+      }),
+      [pending]
+    )
+  })
+
   it('uses live activity reveal targets before falling back to the latest dice log roll', () => {
     const coordinator = createDiceRevealCoordinator()
     coordinator.recordStateApplied(gameState([diceRoll('roll-1')]))
@@ -217,6 +290,28 @@ describe('dice reveal coordinator', () => {
     assert.equal(second.wasFirstStateApplied, true)
     assert.equal(second.previousDiceId, 'roll-1')
     assert.equal(second.latestRoll?.id, 'roll-2')
+  })
+
+  it('records applied redacted dice log rolls without result fields', () => {
+    const coordinator = createDiceRevealCoordinator()
+
+    const first = coordinator.recordStateApplied(
+      gameState([redactedDiceRoll('roll-1')])
+    )
+    const second = coordinator.recordStateApplied(
+      gameState([redactedDiceRoll('roll-1'), redactedDiceRoll('roll-2')])
+    )
+
+    assert.equal(first.wasFirstStateApplied, false)
+    assert.equal(first.previousDiceId, null)
+    assert.equal(first.latestRoll?.id, 'roll-1')
+    assert.equal('rolls' in (first.latestRoll ?? {}), false)
+    assert.equal('total' in (first.latestRoll ?? {}), false)
+    assert.equal(second.wasFirstStateApplied, true)
+    assert.equal(second.previousDiceId, 'roll-1')
+    assert.equal(second.latestRoll?.id, 'roll-2')
+    assert.equal('rolls' in (second.latestRoll ?? {}), false)
+    assert.equal('total' in (second.latestRoll ?? {}), false)
   })
 
   it('resets state tracking for room changes', () => {

@@ -1,7 +1,12 @@
-import type { DiceRollState, GameState } from '../../shared/state'
+import type { GameState } from '../../shared/state'
 import type { ClientDiceRollActivity } from '../game-commands.js'
 
-export type DiceRevealRoll = ClientDiceRollActivity | DiceRollState
+export interface DiceRevealRoll {
+  id: string
+  revealAt: string
+  rolls?: readonly number[]
+  total?: number
+}
 
 export interface DiceRevealCoordinator {
   readonly revealedDiceIds: ReadonlySet<string>
@@ -26,7 +31,7 @@ export interface DiceRevealStateDeferralInput {
 
 export interface DiceRevealApplication {
   previousDiceId: string | null
-  latestRoll: DiceRollState | null
+  latestRoll: DiceRevealRoll | null
   wasFirstStateApplied: boolean
 }
 

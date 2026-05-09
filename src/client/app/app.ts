@@ -57,13 +57,11 @@ import { fetchRoomState, postRoomCommand } from './room-api.js'
 import {
   applyServerMessage as applyClientServerMessage,
   type ClientDiceRollActivity,
-  type ClientIdentity,
-  buildSetDoorOpenCommand
+  type ClientIdentity
 } from '../game-commands.js'
 import { createAppSession } from './app-session.js'
 import { resolveActorSessionSecret } from './actor-session.js'
 import { createCharacterSheetWiring } from './character-sheet-wiring.js'
-import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { createDiceOverlayWiring } from './dice-overlay-wiring.js'
 import { createDiceRevealCoordinator } from './dice-reveal-coordinator.js'
 import {
@@ -84,6 +82,7 @@ import { createDiceCommandWiring } from './dice-command-wiring.js'
 import { createAppLifecycleWiring } from './app-lifecycle-wiring.js'
 import { createCharacterSheetControlsWiring } from './character-sheet-controls-wiring.js'
 import { createRoomBootstrapScene } from './room-bootstrap-scene.js'
+import { createBoardDoorActions } from './board-door-actions.js'
 
 registerAppShellServiceWorker()
 
@@ -571,35 +570,13 @@ const selectedPiece = (): PieceState | null => {
   return boardController?.selectedPiece() || null
 }
 
-const boardDoorActions = (board: BoardState | null): HTMLElement | null => {
-  if (!board) return null
-  const doors = deriveDoorToggleViewModels(board)
-  if (doors.length === 0) return null
-
-  const actions = document.createElement('div')
-  actions.className = 'sheet-actions'
-  for (const door of doors) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.textContent = door.toggleLabel
-    button.className = door.open ? 'active' : ''
-    button.title = `${door.label}: ${door.stateLabel}`
-    button.addEventListener('click', () => {
-      if (!state) return
-      postDoorCommand(
-        buildSetDoorOpenCommand({
-          identity: clientIdentity(),
-          state,
-          boardId: board.id,
-          doorId: door.id,
-          open: door.nextOpen
-        })
-      ).catch((error) => setError(error.message))
-    })
-    actions.append(button)
-  }
-  return actions
-}
+const boardDoorActions = createBoardDoorActions({
+  document,
+  identity: clientIdentity,
+  getState: () => state,
+  dispatch: postDoorCommand,
+  reportError: setError
+})
 
 const characterSheetController = createCharacterSheetWiring({
   document,
@@ -609,7 +586,9 @@ const characterSheetController = createCharacterSheetWiring({
   getSelectedBoard: selectedBoard,
   getCharacterState: () => state,
   canEditSheetFields: () => isActorRefereeOrOwner(state, asUserId(actorId)),
-  getBoardDoorActions: () => ({ actions: boardDoorActions(selectedBoard()) }),
+  getBoardDoorActions: () => ({
+    actions: boardDoorActions.render(selectedBoard())
+  }),
   getClientIdentity: clientIdentity,
   getCommandIdentity: commandIdentity,
   postSheetCommand,
