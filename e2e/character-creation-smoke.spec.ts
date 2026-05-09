@@ -808,6 +808,69 @@ const driveRepeatTravellerToFinalized = async (
   })
 }
 
+const seedCreationToReenlistmentDecision = async (
+  page: Page,
+  {
+    roomId,
+    actorId,
+    actorSession,
+    context
+  }: {
+    roomId: string
+    actorId: string
+    actorSession: string
+    context: RepeatTravellerContext & { characterId: string }
+  }
+): Promise<void> => {
+  await seedCreationToCareerSelection(page, {
+    roomId,
+    actorId,
+    actorSession,
+    characterId: context.characterId
+  })
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'UpdateCharacterSheet',
+    characterId: context.characterId,
+    characteristics: {
+      str: 15,
+      dex: 15,
+      end: 15,
+      int: 15,
+      edu: 15,
+      soc: 15
+    }
+  })
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'ResolveCharacterCreationQualification',
+    characterId: context.characterId,
+    career: 'Scout'
+  })
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'CompleteCharacterCreationBasicTraining',
+    characterId: context.characterId
+  })
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'ResolveCharacterCreationSurvival',
+    characterId: context.characterId
+  })
+  await completeRepeatRequiredTermSkills(
+    page,
+    roomId,
+    actorId,
+    actorSession,
+    context
+  )
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'DecideCharacterCreationAnagathics',
+    characterId: context.characterId,
+    useAnagathics: false
+  })
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'ResolveCharacterCreationAging',
+    characterId: context.characterId
+  })
+}
+
 test.describe('character creation smoke', () => {
   test('repeat-runs disposable seeded travellers with failure context', async ({
     page
@@ -3306,6 +3369,82 @@ test.describe('character creation smoke', () => {
     }
   })
 
+  test('keeps reenlistment controls usable at phone width', async ({
+    page
+  }) => {
+    test.setTimeout(60_000)
+    await page.setViewportSize({ width: 390, height: 844 })
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 5)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const context: RepeatTravellerContext & { characterId: string } = {
+      label: 'mobile-reenlistment',
+      seed: 5,
+      characterId: '',
+      phase: 'setup',
+      action: 'not started',
+      commandTypes: []
+    }
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    context.characterId = await activeCreationCharacterId(
+      page,
+      roomId,
+      actorId
+    )
+
+    await seedCreationToReenlistmentDecision(page, {
+      roomId,
+      actorId,
+      actorSession,
+      context
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+
+    const fields = page.locator('#characterCreationFields')
+    await expect(fields).toContainText('Roll reenlistment', {
+      timeout: 15_000
+    })
+    await expectMobileCreatorControlsFit(page)
+
+    const rollReenlistment = page.getByRole('button', {
+      name: 'Roll reenlistment'
+    })
+    await expectMobileControlUsable(rollReenlistment, 'Roll reenlistment')
+    await rollReenlistment.click()
+    await waitForDiceReveal(page)
+
+    await expect(fields).toContainText(/Reenlistment \d+:/, {
+      timeout: 5_000
+    })
+    await expectMobileCreatorControlsFit(page)
+
+    const termDecisionButtons = fields.locator(
+      '.creation-term-resolution .creation-term-actions button:not([disabled])'
+    )
+    await expect
+      .poll(() => termDecisionButtons.count())
+      .toBeGreaterThanOrEqual(1)
+
+    const decisionCount = Math.min(await termDecisionButtons.count(), 2)
+    for (let index = 0; index < decisionCount; index += 1) {
+      await expectMobileControlUsable(
+        termDecisionButtons.nth(index),
+        `Reenlistment decision ${index + 1}`
+      )
+    }
+    await expectMobileControlUsable(
+      page.getByRole('button', { name: 'Muster out' }),
+      'Muster out after reenlistment'
+    )
+  })
+
   test('keeps mustering out controls usable at phone width', async ({
     page
   }) => {
@@ -3411,5 +3550,124 @@ test.describe('character creation smoke', () => {
       page.getByRole('button', { name: 'Roll benefit' }),
       'Roll benefit'
     )
+  })
+
+  test('keeps finalization controls usable at phone width', async ({
+    page
+  }) => {
+    test.setTimeout(60_000)
+    await page.setViewportSize({ width: 390, height: 844 })
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 5)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const context: RepeatTravellerContext & { characterId: string } = {
+      label: 'mobile-finalization',
+      seed: 5,
+      characterId: '',
+      phase: 'setup',
+      action: 'not started',
+      commandTypes: []
+    }
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    context.characterId = await activeCreationCharacterId(
+      page,
+      roomId,
+      actorId
+    )
+
+    await seedCreationToReenlistmentDecision(page, {
+      roomId,
+      actorId,
+      actorSession,
+      context
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationReenlistment',
+      characterId: context.characterId
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+
+    const fields = page.locator('#characterCreationFields')
+    const musterOut = page.getByRole('button', { name: 'Muster out' })
+    await expectMobileControlUsable(musterOut, 'Muster out')
+    await musterOut.click()
+
+    await expect(fields).toContainText(/Skills|Review the skill list/, {
+      timeout: 5_000
+    })
+    await expectMobileCreatorControlsFit(page)
+
+    const continueToEquipment = page.getByRole('button', {
+      name: 'Continue to equipment'
+    })
+    await expectMobileControlUsable(
+      continueToEquipment,
+      'Continue to equipment'
+    )
+    await continueToEquipment.click()
+
+    await expect(fields).toContainText(/Equipment|Add starting equipment/, {
+      timeout: 5_000
+    })
+    await expectMobileCreatorControlsFit(page)
+
+    const rollBenefit = page.getByRole('button', { name: 'Roll benefit' })
+    await expectMobileControlUsable(rollBenefit, 'Roll benefit')
+    await rollBenefit.click()
+    await waitForDiceReveal(page)
+    await expect(fields).toContainText('Benefits complete.', {
+      timeout: 5_000
+    })
+    await expectMobileCreatorControlsFit(page)
+
+    const reviewCharacter = page.getByRole('button', {
+      name: 'Review character'
+    })
+    await expectMobileControlUsable(reviewCharacter, 'Review character')
+    await reviewCharacter.click()
+    await expect(fields.locator('.character-creation-review')).toBeVisible({
+      timeout: 5_000
+    })
+    await expectMobileCreatorControlsFit(page)
+
+    const createCharacter = page.getByRole('button', {
+      name: 'Create character'
+    })
+    await expectMobileControlUsable(createCharacter, 'Create character')
+    const finalizedAccepted = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes(`/rooms/${roomId}/command`) &&
+        (response.request().postData() ?? '').includes(
+          'FinalizeCharacterCreation'
+        )
+    )
+    await createCharacter.click()
+    await expect((await finalizedAccepted).ok()).toBe(true)
+
+    await expect
+      .poll(async () => {
+        const character = await fetchProjectedCharacter(
+          page,
+          roomId,
+          actorId,
+          context.characterId
+        )
+        return {
+          status: character?.creation?.state?.status,
+          creationComplete: character?.creation?.creationComplete
+        }
+      })
+      .toMatchObject({
+        status: 'PLAYABLE',
+        creationComplete: true
+      })
   })
 })

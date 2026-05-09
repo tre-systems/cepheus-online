@@ -16,7 +16,6 @@ import {
   pieceImageUrl
 } from './board-view.js'
 import { getAppElements, requireAppElements } from './app-elements.js'
-import { createAppBootstrap } from './app-bootstrap.js'
 import {
   createBoardController,
   type BoardController
@@ -82,6 +81,7 @@ import { createAppShell, registerAppShellServiceWorker } from './app-shell.js'
 import { createBoardControlsWiring } from './board-controls-wiring.js'
 import { createAppRefreshWiring } from './app-refresh-wiring.js'
 import { createDiceCommandWiring } from './dice-command-wiring.js'
+import { createAppLifecycleWiring } from './app-lifecycle-wiring.js'
 
 registerAppShellServiceWorker()
 
@@ -787,10 +787,6 @@ for (const tab of els.sheetTabs) {
   })
 }
 
-els.bootstrap.addEventListener('click', () => {
-  bootstrapScene().catch((error) => setError(error.message))
-})
-
 createAppRefreshWiring({
   refreshButton: els.refresh,
   fetchState,
@@ -805,12 +801,17 @@ createDiceCommandWiring({
   reportError: setError
 })
 
-window.addEventListener('resize', render)
-
-createAppBootstrap({
-  connectivityStatus: roomConnectionController.connectivitySnapshot().status,
-  connect: connectSocket,
-  fetchState,
-  setStatus,
-  setError
+createAppLifecycleWiring({
+  windowTarget: window,
+  bootstrapButton: els.bootstrap,
+  render,
+  bootstrapScene,
+  reportError: setError,
+  appBootstrap: {
+    connectivityStatus: roomConnectionController.connectivitySnapshot().status,
+    connect: connectSocket,
+    fetchState,
+    setStatus,
+    setError
+  }
 })

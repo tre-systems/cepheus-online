@@ -357,15 +357,15 @@ commission/advancement/term-skill events have checkpoint-plus-tail recovery
 coverage, finalization recovery now proves the server-derived sheet survives
 checkpoint-plus-tail replay, and sheet-side, wizard-render, room asset
 creation, character sheet, room menu, board controls, dice overlay, refresh
-button, and dice command wiring have been extracted from `app.ts`. Late
-term-skill and mustering-out controls plus spectator follow cards now have
-phone-width usability coverage, and lightweight unit invariants cover
-single-primary actions, pending-roll render suppression, duplicate roll-submit
-suppression, read-only spectator controls, and stale local flow replacement
-after server projection advances. The remaining leverage point is to convert
-the completed finalization and multi-career smoke into broader mobile/spectator
-coverage while continuing to extract the character creation feature boundary
-from `app.ts`.
+button, dice command, and app lifecycle wiring have been extracted from
+`app.ts`. Late term-skill, reenlistment, mustering-out, finalization, and
+spectator follow-card controls now have phone-width usability coverage, and
+lightweight unit invariants cover single-primary actions, pending-roll render
+suppression, duplicate roll-submit suppression for characteristic and
+reenlistment actions, read-only spectator controls, and stale local flow
+replacement after server projection advances. The remaining leverage point is
+to broaden multi-term spectator recovery while continuing to extract the
+character creation feature boundary from `app.ts`.
 
 Primary write ownership:
 
@@ -389,18 +389,18 @@ Tasks:
 - Extend two-tab follow tests beyond the currently covered paths: repeated
   multi-term refreshes should reveal only after dice finish and recover from
   server projection on refresh.
-- Extend mobile viewport checks beyond current early-screen, term-skill,
-  mustering-out, and spectator follow-card coverage to reenlistment and
-  finalization. The checks should assert no important action is hidden,
-  disabled by accident, or overlapped at phone widths.
+- Extend mobile viewport checks only when new controls are introduced. Current
+  early-screen, term-skill, reenlistment, mustering-out, finalization, and
+  spectator follow-card controls have phone-width coverage that asserts no
+  important action is hidden, disabled by accident, or overlapped.
 - Add reveal-timing assertions for every roll-bearing creation action:
   no roll-dependent result text appears before the dice reveal boundary, and
   controls unblock only after the reveal has been applied. Duplicate submit
   suppression for rendered roll controls now has unit coverage.
 - Extend the lightweight UI invariants as new edge cases are found; current
   coverage includes single-primary actions, pending-roll render suppression,
-  read-only controls, and stale local flow replacement after server projection
-  advances.
+  duplicate characteristic and reenlistment roll suppression, read-only
+  controls, and stale local flow replacement after server projection advances.
 - Extract a `characterCreationController` that owns local creator state and
   exposes explicit methods for opening owner mode, opening spectator mode,
   applying authoritative state, submitting choices, and disposing listeners or

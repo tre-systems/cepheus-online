@@ -166,6 +166,42 @@ describe('character creation career support view', () => {
     assert.deepEqual(events, ['reenlist', 'aging'])
   })
 
+  it('suppresses repeated reenlistment rolls while a roll is pending', async () => {
+    const events: string[] = []
+    let resolveRoll: () => void = () => {}
+
+    const element = renderCharacterCreationReenlistmentRollButton(
+      document,
+      careerFlow({ age: 22 }, { anagathics: false }),
+      {
+        rollReenlistment: () => {
+          events.push('reenlist')
+          return new Promise<void>((resolve) => {
+            resolveRoll = resolve
+          })
+        },
+        reportError: (message) => events.push(message)
+      }
+    )
+    if (!element) throw new Error('Expected reenlistment button')
+
+    const button = asNode(element).children[0]
+    button?.click()
+    button?.click()
+
+    assert.deepEqual(events, ['reenlist'])
+    assert.equal(button?.disabled, true)
+
+    resolveRoll()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    assert.equal(button?.disabled, false)
+    button?.click()
+
+    assert.deepEqual(events, ['reenlist', 'reenlist'])
+  })
+
   it('renders aging choices without owning flow mutation', () => {
     const aged = applyCharacterCreationAgingRoll(
       careerFlow(
