@@ -1,4 +1,5 @@
 import type { UserId } from './ids'
+import type { LiveActivityDescriptor } from './live-activity'
 import type { GameState, PlayerState, PieceState } from './state'
 
 export type ViewerRole = PlayerState['role']
@@ -6,6 +7,10 @@ export type ViewerRole = PlayerState['role']
 export interface GameViewer {
   userId: UserId | null
   role: ViewerRole
+}
+
+export interface ViewerFilterOptions {
+  nowMs?: number
 }
 
 const isPieceVisibleToRole = (piece: PieceState, role: ViewerRole): boolean => {
@@ -42,7 +47,8 @@ export const isActorRefereeOrOwner = (
 
 export const filterGameStateForViewer = (
   state: GameState,
-  viewer: GameViewer
+  viewer: GameViewer,
+  { nowMs = Date.now() }: ViewerFilterOptions = {}
 ): GameState => {
   const resolvedViewer = resolveViewerForState(state, viewer)
   const filtered = structuredClone(state)
@@ -52,6 +58,39 @@ export const filterGameStateForViewer = (
       isPieceVisibleToRole(piece, resolvedViewer.role)
     )
   )
+  if (resolvedViewer.role !== 'REFEREE') {
+    for (const roll of filtered.diceLog) {
+      if (Date.parse(roll.revealAt) <= nowMs) continue
+      delete (roll as unknown as Record<string, unknown>).rolls
+      delete (roll as unknown as Record<string, unknown>).total
+    }
+  }
 
   return filtered
+}
+
+export const filterLiveActivitiesForViewer = (
+  activities: readonly LiveActivityDescriptor[],
+  state: GameState,
+  viewer: GameViewer,
+  { nowMs = Date.now() }: ViewerFilterOptions = {}
+): LiveActivityDescriptor[] => {
+  const resolvedViewer = resolveViewerForState(state, viewer)
+
+  return activities.map((activity) => {
+    if (
+      resolvedViewer.role === 'REFEREE' ||
+      activity.type !== 'diceRoll' ||
+      Date.parse(activity.reveal.revealAt) <= nowMs
+    ) {
+      return activity
+    }
+
+    const filtered = structuredClone(activity)
+    delete (filtered as unknown as Record<string, unknown>).rolls
+    delete (filtered as unknown as Record<string, unknown>).total
+    delete (filtered as unknown as Record<string, unknown>).rollsOmitted
+
+    return filtered
+  })
 }

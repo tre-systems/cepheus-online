@@ -60,6 +60,9 @@ export const deriveLiveDiceRollRevealTarget = (
   activity: LiveActivityDescriptor
 ): LiveDiceRollRevealTarget | null => {
   if (activity.type !== 'diceRoll') return null
+  if (!Array.isArray(activity.rolls) || typeof activity.total !== 'number') {
+    return null
+  }
 
   return {
     id: activity.id,

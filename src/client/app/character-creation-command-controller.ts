@@ -99,6 +99,11 @@ const latestDiceRoll = (
 ): DiceRollState | null =>
   response.state?.diceLog?.[response.state.diceLog.length - 1] ?? null
 
+const hasDiceRollResult = (
+  roll: DiceRollState | null
+): roll is DiceRollState =>
+  Array.isArray(roll?.rolls) && typeof roll?.total === 'number'
+
 const syncAndRender = (
   {
     syncFlowFromRoomState,
@@ -168,6 +173,10 @@ export const createCharacterCreationCommandController = (
     await waitForDiceRevealOrDelay(roll)
     const flow = getFlow()
     if (!flow) return false
+    if (!hasDiceRollResult(roll)) {
+      syncFlowFromRoomState(response.state, flow.draft.characterId, flow)
+      return true
+    }
     const fallbackFlow = fallback(flow, roll).flow
     syncFlowFromRoomState(
       response.state,

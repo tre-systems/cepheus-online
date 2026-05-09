@@ -8,7 +8,11 @@ import {
 } from '../../shared/protocol'
 import type { Result } from '../../shared/result'
 import type { GameState } from '../../shared/state'
-import { filterGameStateForViewer, type GameViewer } from '../../shared/viewer'
+import {
+  filterGameStateForViewer,
+  filterLiveActivitiesForViewer,
+  type GameViewer
+} from '../../shared/viewer'
 import type { DurableObjectState, WebSocketResponseInit } from '../cloudflare'
 import type { Env } from '../env'
 import { jsonResponse } from '../http'
@@ -82,8 +86,14 @@ const statusForError = (error: CommandError): number => {
 const serializeMessage = (message: ServerMessage): string =>
   JSON.stringify(message)
 
-const activityPayload = (liveActivities: readonly LiveActivityDescriptor[]) =>
-  liveActivities.length === 0 ? {} : { liveActivities: [...liveActivities] }
+const activityPayload = (
+  liveActivities: readonly LiveActivityDescriptor[],
+  state: GameState,
+  viewer: GameViewer
+) =>
+  liveActivities.length === 0
+    ? {}
+    : { liveActivities: filterLiveActivitiesForViewer(liveActivities, state, viewer) }
 
 const MAX_COMMAND_BODY_BYTES = 64 * 1024
 const MAX_TEST_SEED_BODY_BYTES = 1024
@@ -254,7 +264,7 @@ export class GameRoomDO {
           requestId: accepted.requestId,
           state: filtered,
           eventSeq: filtered.eventSeq,
-          ...activityPayload(liveActivities)
+          ...activityPayload(liveActivities, state, viewer)
         })
         continue
       }
@@ -263,7 +273,7 @@ export class GameRoomDO {
         type: 'roomState',
         state: filtered,
         eventSeq: filtered.eventSeq,
-        ...activityPayload(liveActivities)
+        ...activityPayload(liveActivities, state, viewer)
       })
     }
   }
@@ -362,6 +372,11 @@ export class GameRoomDO {
 
     const viewer = viewerFromCommand(message)
     const filtered = filterGameStateForViewer(publication.value.state, viewer)
+    const liveActivities = filterLiveActivitiesForViewer(
+      publication.value.liveActivities,
+      publication.value.state,
+      viewer
+    )
 
     return {
       ok: true,
@@ -372,7 +387,7 @@ export class GameRoomDO {
         requestId: publication.value.requestId,
         state: filtered,
         eventSeq: filtered.eventSeq,
-        ...activityPayload(publication.value.liveActivities)
+        ...(liveActivities.length === 0 ? {} : { liveActivities })
       }
     }
   }

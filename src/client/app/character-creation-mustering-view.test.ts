@@ -11,47 +11,13 @@ import {
   renderCharacterCreationMusteringOut,
   type CharacterCreationMusteringDocument
 } from './character-creation-mustering-view'
-
-type TestListener = (event: { preventDefault: () => void }) => void
-
-class TestNode {
-  tagName: string
-  className = ''
-  textContent = ''
-  type = ''
-  title = ''
-  disabled = false
-  children: TestNode[] = []
-  listeners: Record<string, TestListener[]> = {}
-
-  constructor(tagName: string) {
-    this.tagName = tagName
-  }
-
-  append(...children: TestNode[]) {
-    this.children.push(...children)
-  }
-
-  addEventListener(type: string, listener: TestListener) {
-    this.listeners[type] = [...(this.listeners[type] ?? []), listener]
-  }
-
-  click() {
-    for (const listener of this.listeners.click ?? []) {
-      listener({ preventDefault: () => {} })
-    }
-  }
-}
-
-class TestDocument {
-  createElement(tagName: string) {
-    return new TestNode(tagName)
-  }
-}
+import {
+  asNode,
+  testDocument as sharedTestDocument
+} from './test-dom.test-helper'
 
 const testDocument =
-  new TestDocument() as unknown as CharacterCreationMusteringDocument
-const asNode = (value: HTMLElement): TestNode => value as unknown as TestNode
+  sharedTestDocument as unknown as CharacterCreationMusteringDocument
 
 const completedTerm = (): CharacterCreationCompletedTerm => ({
   career: 'Scout',
@@ -166,5 +132,37 @@ describe('character creation mustering view', () => {
 
     assert.deepEqual(rolled, ['material'])
     assert.equal(error, 'No benefit')
+  })
+
+  it('suppresses repeated benefit rolls while a roll is pending', async () => {
+    const rolled: string[] = []
+    let resolveRoll: () => void = () => {}
+    const node = asNode(
+      renderCharacterCreationMusteringOut(testDocument, flow(), {
+        rollMusteringBenefit: (kind) => {
+          rolled.push(kind)
+          return new Promise<void>((resolve) => {
+            resolveRoll = resolve
+          })
+        },
+        reportError: (message) => rolled.push(message)
+      })
+    )
+
+    const benefit = node.children[3]?.children[1]
+    benefit?.click()
+    benefit?.click()
+
+    assert.deepEqual(rolled, ['material'])
+    assert.equal(benefit?.disabled, true)
+
+    resolveRoll()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    assert.equal(benefit?.disabled, false)
+    benefit?.click()
+
+    assert.deepEqual(rolled, ['material', 'material'])
   })
 })

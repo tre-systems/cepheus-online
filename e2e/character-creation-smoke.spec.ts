@@ -61,6 +61,12 @@ type RepeatTravellerContext = {
   phase: string
   action: string
   commandTypes: string[]
+  consoleErrors: string[]
+  serverResponses: Array<{
+    commandType: string
+    status: number
+    body: string
+  }>
 }
 
 const actorSessionKey = (roomId: string, actorId: string): string =>
@@ -562,8 +568,34 @@ const postRepeatCommand = async (
   context: RepeatTravellerContext,
   command: Record<string, unknown>
 ): Promise<void> => {
-  context.commandTypes.push(String(command.type))
-  await postCommand(page, roomId, actorId, actorSession, command)
+  const commandType = String(command.type)
+  context.commandTypes.push(commandType)
+  const response = await page.request.post(
+    `/rooms/${encodeURIComponent(roomId)}/command`,
+    {
+      headers: {
+        'content-type': 'application/json',
+        'x-cepheus-actor-session': actorSession
+      },
+      data: {
+        type: 'command',
+        requestId: `e2e-repeat-${commandType}-${Date.now()}`,
+        command: {
+          gameId: roomId,
+          actorId,
+          ...command
+        }
+      }
+    }
+  )
+  const responseText = await response.text()
+  context.serverResponses.push({
+    commandType,
+    status: response.status(),
+    body: responseText.slice(0, 1_000)
+  })
+  expect(response.ok(), responseText).toBe(true)
+  expect(JSON.parse(responseText).type, responseText).toBe('commandAccepted')
 }
 
 const postRepeatCommandIfAccepted = async (
@@ -575,7 +607,8 @@ const postRepeatCommandIfAccepted = async (
   command: Record<string, unknown>,
   allowedRejection: RegExp
 ): Promise<boolean> => {
-  context.commandTypes.push(String(command.type))
+  const commandType = String(command.type)
+  context.commandTypes.push(commandType)
   const response = await page.request.post(
     `/rooms/${encodeURIComponent(roomId)}/command`,
     {
@@ -585,7 +618,7 @@ const postRepeatCommandIfAccepted = async (
       },
       data: {
         type: 'command',
-        requestId: `e2e-repeat-${String(command.type)}-${Date.now()}`,
+        requestId: `e2e-repeat-${commandType}-${Date.now()}`,
         command: {
           gameId: roomId,
           actorId,
@@ -595,6 +628,11 @@ const postRepeatCommandIfAccepted = async (
     }
   )
   const responseText = await response.text()
+  context.serverResponses.push({
+    commandType,
+    status: response.status(),
+    body: responseText.slice(0, 1_000)
+  })
   if (response.ok()) {
     expect(JSON.parse(responseText).type, responseText).toBe('commandAccepted')
     return true
@@ -660,6 +698,50 @@ const createRepeatTraveller = async (
   await postRepeatCommand(page, roomId, actorId, actorSession, context, {
     type: 'StartCharacterCreation',
     characterId: context.characterId
+  })
+}
+
+const createRepeatContext = (
+  label: string,
+  seed: number,
+  consoleErrors: string[]
+): RepeatTravellerContext => ({
+  label,
+  seed,
+  phase: 'setup',
+  action: 'not started',
+  commandTypes: [],
+  consoleErrors,
+  serverResponses: []
+})
+
+const seedLowStatRepeatTravellerToCareerSelection = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  actorSession: string,
+  context: RepeatTravellerContext
+): Promise<void> => {
+  await setRoomSeed(page, roomId, context.seed)
+  await createRepeatTraveller(page, roomId, actorId, actorSession, context)
+  if (!context.characterId) throw new Error('Missing repeat character')
+  await seedCreationToCareerSelection(page, {
+    roomId,
+    actorId,
+    actorSession,
+    characterId: context.characterId
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'UpdateCharacterSheet',
+    characterId: context.characterId,
+    characteristics: {
+      str: 2,
+      dex: 2,
+      end: 2,
+      int: 2,
+      edu: 2,
+      soc: 2
+    }
   })
 }
 
@@ -876,6 +958,11 @@ test.describe('character creation smoke', () => {
     page
   }, testInfo) => {
     test.setTimeout(60_000)
+    const consoleErrors: string[] = []
+    page.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text())
+    })
+
     const roomId = await openUniqueRoom(page)
     await setRoomSeed(page, roomId, 13_579)
     const actorId = actorIdFromPage(page)
@@ -886,13 +973,7 @@ test.describe('character creation smoke', () => {
       name: 'Repeat runner smoke'
     })
 
-    const finalized: RepeatTravellerContext = {
-      label: 'finalized-scout',
-      seed: 5,
-      phase: 'setup',
-      action: 'not started',
-      commandTypes: []
-    }
+    const finalized = createRepeatContext('finalized-scout', 5, consoleErrors)
     await repeatTravellerStep(
       page,
       roomId,
@@ -962,13 +1043,7 @@ test.describe('character creation smoke', () => {
       }
     )
 
-    const drifter: RepeatTravellerContext = {
-      label: 'fallback-drifter',
-      seed: 4,
-      phase: 'setup',
-      action: 'not started',
-      commandTypes: []
-    }
+    const drifter = createRepeatContext('fallback-drifter', 4, consoleErrors)
     const fallbackRoomId = await openUniqueRoom(page)
     const fallbackActorId = actorIdFromPage(page)
     const fallbackActorSession = await actorSessionFromPage(
@@ -990,39 +1065,12 @@ test.describe('character creation smoke', () => {
       'setup',
       'create low-stat traveller',
       async () => {
-        await setRoomSeed(page, fallbackRoomId, drifter.seed)
-        await createRepeatTraveller(
+        await seedLowStatRepeatTravellerToCareerSelection(
           page,
           fallbackRoomId,
           fallbackActorId,
           fallbackActorSession,
           drifter
-        )
-        if (!drifter.characterId) throw new Error('Missing Drifter character')
-        await seedCreationToCareerSelection(page, {
-          roomId: fallbackRoomId,
-          actorId: fallbackActorId,
-          actorSession: fallbackActorSession,
-          characterId: drifter.characterId
-        })
-        await postRepeatCommand(
-          page,
-          fallbackRoomId,
-          fallbackActorId,
-          fallbackActorSession,
-          drifter,
-          {
-            type: 'UpdateCharacterSheet',
-            characterId: drifter.characterId,
-            characteristics: {
-              str: 2,
-              dex: 2,
-              end: 2,
-              int: 2,
-              edu: 2,
-              soc: 2
-            }
-          }
         )
       }
     )
@@ -1076,6 +1124,126 @@ test.describe('character creation smoke', () => {
           roomState.state?.characters[drifter.characterId]?.creation ?? null
         )
         expect(creationJson).toContain('Drifter')
+      }
+    )
+
+    const drafted = createRepeatContext('fallback-draft', 4, consoleErrors)
+    await repeatTravellerStep(
+      page,
+      fallbackRoomId,
+      fallbackActorId,
+      testInfo,
+      drafted,
+      'setup',
+      'create low-stat draft traveller',
+      async () => {
+        await seedLowStatRepeatTravellerToCareerSelection(
+          page,
+          fallbackRoomId,
+          fallbackActorId,
+          fallbackActorSession,
+          drafted
+        )
+      }
+    )
+    await repeatTravellerStep(
+      page,
+      fallbackRoomId,
+      fallbackActorId,
+      testInfo,
+      drafted,
+      'career',
+      'fail Entertainer qualification and roll Draft',
+      async () => {
+        if (!drafted.characterName) throw new Error('Missing Draft name')
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await expect(page.locator('#boardCanvas')).toBeVisible()
+        await openOrExpectFollowedCreation(page, drafted.characterName)
+
+        const fields = page.locator('#characterCreationFields')
+        const entertainerCareer = characterCreationCareerButton(
+          page,
+          'Entertainer'
+        )
+        await expect(entertainerCareer).toBeVisible({ timeout: 5_000 })
+        await entertainerCareer.click()
+        await waitForDiceReveal(page)
+
+        await expect(fields.locator('.creation-draft-fallback')).toBeVisible({
+          timeout: 5_000
+        })
+        await expect(fields).toContainText('Qualification failed')
+        const draftButton = fields.getByRole('button', {
+          name: 'Roll draft (1d6)'
+        })
+        await expect(draftButton).toBeVisible()
+        await draftButton.click()
+        drafted.commandTypes.push('ResolveCharacterCreationDraft')
+        await waitForDiceReveal(page)
+        await expect(fields.locator('.creation-draft-fallback')).toHaveCount(
+          0,
+          { timeout: 5_000 }
+        )
+
+        if (!drafted.characterId) throw new Error('Missing Draft character')
+        const roomState = await fetchRoomState(
+          page,
+          fallbackRoomId,
+          fallbackActorId
+        )
+        const creation =
+          (roomState.state?.characters[drafted.characterId]?.creation as
+            | {
+                canEnterDraft?: boolean
+                terms?: Array<{ career?: string; draft?: 1 }>
+              }
+            | undefined) ?? null
+        expect(creation?.canEnterDraft).toBe(false)
+        const draftedCareer = creation?.terms?.find(
+          (term) => term.draft === 1
+        )?.career
+        expect(draftedCareer).toBeTruthy()
+        if (!draftedCareer) throw new Error('Drafted career was not persisted')
+        await expect(fields).toContainText(draftedCareer, { timeout: 5_000 })
+      }
+    )
+    await repeatTravellerStep(
+      page,
+      fallbackRoomId,
+      fallbackActorId,
+      testInfo,
+      drafted,
+      'assert',
+      'projected Draft fallback after refresh',
+      async () => {
+        if (!drafted.characterId) throw new Error('Missing Draft character')
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await expect(page.locator('#boardCanvas')).toBeVisible()
+        if (!drafted.characterName) throw new Error('Missing Draft name')
+        await openOrExpectFollowedCreation(page, drafted.characterName)
+
+        const roomState = await fetchRoomState(
+          page,
+          fallbackRoomId,
+          fallbackActorId
+        )
+        const creation =
+          (roomState.state?.characters[drafted.characterId]?.creation as
+            | {
+                canEnterDraft?: boolean
+                terms?: Array<{ career?: string; draft?: 1 }>
+              }
+            | undefined) ?? null
+        const draftedCareer = creation?.terms?.find(
+          (term) => term.draft === 1
+        )?.career
+        expect(creation?.canEnterDraft).toBe(false)
+        expect(draftedCareer).toBeTruthy()
+        if (!draftedCareer) throw new Error('Drafted career was not persisted')
+        await expect(page.locator('#characterCreationFields')).toContainText(
+          draftedCareer,
+          { timeout: 5_000 }
+        )
       }
     )
   })
@@ -3384,7 +3552,9 @@ test.describe('character creation smoke', () => {
       characterId: '',
       phase: 'setup',
       action: 'not started',
-      commandTypes: []
+      commandTypes: [],
+      consoleErrors: [],
+      serverResponses: []
     }
 
     await page.locator('#createCharacterRailButton').click()
@@ -3458,7 +3628,9 @@ test.describe('character creation smoke', () => {
       seed: 5,
       phase: 'setup',
       action: 'not started',
-      commandTypes: []
+      commandTypes: [],
+      consoleErrors: [],
+      serverResponses: []
     }
 
     await page.locator('#createCharacterRailButton').click()
@@ -3567,7 +3739,9 @@ test.describe('character creation smoke', () => {
       characterId: '',
       phase: 'setup',
       action: 'not started',
-      commandTypes: []
+      commandTypes: [],
+      consoleErrors: [],
+      serverResponses: []
     }
 
     await page.locator('#createCharacterRailButton').click()

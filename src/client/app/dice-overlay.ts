@@ -13,8 +13,26 @@ export type DiceFaceValueContent =
 
 export type BrowserDiceRoll = LiveDiceRollRevealTarget
 
+export const hasDiceRollResult = (
+  roll: Partial<BrowserDiceRoll> | null | undefined
+): roll is BrowserDiceRoll =>
+  Array.isArray(roll?.rolls) && typeof roll?.total === 'number'
+
 export interface AnimateRollOptions {
   roll: BrowserDiceRoll
+  overlay: HTMLElement
+  stage: HTMLElement
+  hideTimer: number | null
+  onReveal?: () => void
+}
+
+export interface PendingDiceRoll {
+  id: string
+  revealAt: string
+}
+
+export interface AnimatePendingRollOptions {
+  roll: PendingDiceRoll
   overlay: HTMLElement
   stage: HTMLElement
   hideTimer: number | null
@@ -89,6 +107,44 @@ export const animateRoll = ({
   stage.replaceChildren(row)
   setTimeout(() => {
     total.textContent = String(roll.total)
+    for (const die of Array.from(row.querySelectorAll('.die'))) {
+      die.classList.remove('rolling')
+    }
+    onReveal?.()
+  }, timing.rollDurationMs)
+
+  return window.setTimeout(() => {
+    overlay.classList.remove('visible')
+  }, timing.visibleDurationMs)
+}
+
+export const animatePendingRoll = ({
+  roll,
+  overlay,
+  stage,
+  hideTimer,
+  onReveal
+}: AnimatePendingRollOptions): number => {
+  if (hideTimer) window.clearTimeout(hideTimer)
+  overlay.classList.add('visible')
+  const timing = deriveDiceRollTiming({
+    revealAt: roll.revealAt,
+    nowMs: Date.now()
+  })
+  const row = document.createElement('div')
+  row.className = 'dice-row'
+  for (const value of [1, 1]) {
+    const die = buildDie(value, row.children.length)
+    die.style.animationDuration = `${timing.rollDurationMs}ms`
+    row.append(die)
+  }
+  const total = document.createElement('div')
+  total.className = 'roll-total'
+  total.textContent = 'Rolling...'
+  row.append(total)
+  stage.replaceChildren(row)
+  setTimeout(() => {
+    total.textContent = '?'
     for (const die of Array.from(row.querySelectorAll('.die'))) {
       die.classList.remove('rolling')
     }

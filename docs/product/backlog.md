@@ -357,15 +357,17 @@ commission/advancement/term-skill events have checkpoint-plus-tail recovery
 coverage, finalization recovery now proves the server-derived sheet survives
 checkpoint-plus-tail replay, and sheet-side, wizard-render, room asset
 creation, character sheet, room menu, board controls, dice overlay, refresh
-button, dice command, and app lifecycle wiring have been extracted from
-`app.ts`. Late term-skill, reenlistment, mustering-out, finalization, and
-spectator follow-card controls now have phone-width usability coverage, and
-lightweight unit invariants cover single-primary actions, pending-roll render
-suppression, duplicate roll-submit suppression for characteristic and
-reenlistment actions, read-only spectator controls, and stale local flow
-replacement after server projection advances. The remaining leverage point is
-to broaden multi-term spectator recovery while continuing to extract the
-character creation feature boundary from `app.ts`.
+button, dice command, app lifecycle, and character-sheet control wiring have
+been extracted from `app.ts`. Late term-skill, reenlistment, mustering-out,
+finalization, and spectator follow-card controls now have phone-width usability
+coverage, and lightweight unit invariants cover single-primary actions,
+pending-roll render suppression, duplicate roll-submit suppression for
+characteristic, aging, reenlistment, and mustering benefit actions, read-only
+spectator controls, and stale local flow replacement after server projection
+advances. The repeat-runner smoke now covers three disposable travellers with
+console and server-response failure context. The remaining leverage point is to
+broaden multi-term spectator recovery while continuing to extract the character
+creation feature boundary from `app.ts`.
 
 Primary write ownership:
 
@@ -383,8 +385,8 @@ Tasks:
 - Keep the committed full one-term finalization, seeded multi-career,
   failed-qualification Drifter, failed-qualification Draft, and death/restart
   smoke tests healthy while reporting the current phase/action on failure.
-- Extend the repeat runner from its current two-traveller coverage toward
-  several disposable travellers, including console errors, server response
+- Extend the repeat runner beyond its current three-traveller coverage only
+  when new branches are added. It now records console errors, server response
   failures, and screenshots or DOM snapshots when the flow gets stuck.
 - Extend two-tab follow tests beyond the currently covered paths: repeated
   multi-term refreshes should reveal only after dice finish and recover from
@@ -399,8 +401,9 @@ Tasks:
   suppression for rendered roll controls now has unit coverage.
 - Extend the lightweight UI invariants as new edge cases are found; current
   coverage includes single-primary actions, pending-roll render suppression,
-  duplicate characteristic and reenlistment roll suppression, read-only
-  controls, and stale local flow replacement after server projection advances.
+  duplicate characteristic, aging, reenlistment, and mustering benefit roll
+  suppression, read-only controls, and stale local flow replacement after
+  server projection advances.
 - Extract a `characterCreationController` that owns local creator state and
   exposes explicit methods for opening owner mode, opening spectator mode,
   applying authoritative state, submitting choices, and disposing listeners or
@@ -439,11 +442,14 @@ Done when:
 
 ### Slice 0G: Viewer Filtering And Reveal Timing Contract
 
-Status: planned. Viewer-aware filtering exists as a principle and some protocol
-fixtures cover viewer-filtered messages, while `diceRevealCoordinator` defers
-client-visible roll results for several creation paths. The remaining risk is
-that filtering, HTTP responses, WebSocket state, replay/reconnect views, and
-local reveal timing can drift as new semantic events land.
+Status: partially done. Viewer-aware filtering exists as a principle and some
+protocol fixtures cover viewer-filtered messages, while `diceRevealCoordinator`
+defers client-visible roll results for several creation paths. State-bearing
+HTTP command responses and WebSocket broadcasts now redact pre-reveal dice
+`rolls` and `total` for player/spectator viewers while preserving reveal
+metadata. The remaining risk is that replay/reconnect views, creation-specific
+projection details, and local reveal timing can drift as new semantic events
+land.
 
 Primary write ownership:
 
@@ -458,8 +464,8 @@ Primary write ownership:
 
 Tasks:
 
-- Define one viewer-filtering contract for state-bearing HTTP responses,
-  WebSocket broadcasts, replay/reconnect views, and future activity history.
+- Extend the viewer-filtering contract from state-bearing HTTP responses and
+  WebSocket broadcasts to replay/reconnect views and future activity history.
 - Add fixtures for owner, referee, and spectator views of creation state while
   roll-dependent details are unrevealed, revealed live, and recovered after
   refresh.

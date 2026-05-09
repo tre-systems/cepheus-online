@@ -82,6 +82,7 @@ import { createBoardControlsWiring } from './board-controls-wiring.js'
 import { createAppRefreshWiring } from './app-refresh-wiring.js'
 import { createDiceCommandWiring } from './dice-command-wiring.js'
 import { createAppLifecycleWiring } from './app-lifecycle-wiring.js'
+import { createCharacterSheetControlsWiring } from './character-sheet-controls-wiring.js'
 
 registerAppShellServiceWorker()
 
@@ -208,13 +209,13 @@ const resolveDiceReveal = (rollId: string): void => {
 }
 
 const waitForDiceReveal = (
-  roll: LiveDiceRollRevealTarget | DiceRollState
+  roll: ClientDiceRollActivity | LiveDiceRollRevealTarget | DiceRollState
 ): Promise<void> => {
   return diceRevealCoordinator.waitForReveal(roll)
 }
 
 const waitForDiceRevealOrDelay = (
-  roll: LiveDiceRollRevealTarget | DiceRollState
+  roll: ClientDiceRollActivity | LiveDiceRollRevealTarget | DiceRollState
 ): Promise<void> => {
   return diceRevealCoordinator.waitForRevealOrDelay(roll)
 }
@@ -764,28 +765,15 @@ createRoomAssetCreationWiring({
   reportError: setError
 })
 
-els.sheetButton.addEventListener('click', () => {
-  const piece = selectedPiece()
-  if (!currentSelectedPieceId() && piece) {
-    selectPiece(piece.id)
-  }
-  if (!currentSelectedPieceId()) {
-    characterCreationPanel.open()
-    return
-  }
-  characterSheetController.toggleOpen()
-  render()
+createCharacterSheetControlsWiring({
+  elements: els,
+  controller: characterSheetController,
+  getCurrentSelectedPieceId: currentSelectedPieceId,
+  getSelectedPiece: selectedPiece,
+  selectPiece,
+  openCharacterCreationPanel: () => characterCreationPanel.open(),
+  requestRender: render
 })
-
-els.sheetClose.addEventListener('click', () => {
-  characterSheetController.setOpen(false)
-})
-
-for (const tab of els.sheetTabs) {
-  tab.addEventListener('click', () => {
-    characterSheetController.selectTab(tab.dataset.sheetTab)
-  })
-}
 
 createAppRefreshWiring({
   refreshButton: els.refresh,

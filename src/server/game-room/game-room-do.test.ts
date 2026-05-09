@@ -27,6 +27,52 @@ const createSocket = (): TestSocket => {
 const parseMessages = (socket: TestSocket) =>
   socket.sent.map((message) => JSON.parse(message))
 
+const asRecord = (value: unknown): Record<string, unknown> => {
+  assert.equal(typeof value, 'object')
+  assert.equal(value !== null, true)
+
+  return value as Record<string, unknown>
+}
+
+const assertPreRevealDiceDetailsHidden = (rawMessage: unknown) => {
+  const message = asRecord(rawMessage)
+  assert.equal(
+    message.type === 'commandAccepted' || message.type === 'roomState',
+    true
+  )
+  const state = asRecord(message.state)
+  const diceLog = state.diceLog
+
+  assert.equal(Array.isArray(diceLog), true)
+  const roll = asRecord((diceLog as unknown[])[0])
+
+  assert.equal(typeof roll?.createdAt, 'string')
+  assert.equal(typeof roll?.revealAt, 'string')
+  assert.equal(
+    Date.parse(roll.revealAt as string) > Date.parse(roll.createdAt as string),
+    true
+  )
+  assert.equal('rolls' in roll, false, 'pre-reveal dice log omits rolls')
+  assert.equal('total' in roll, false, 'pre-reveal dice log omits total')
+
+  const liveActivities = message.liveActivities
+
+  assert.equal(Array.isArray(liveActivities), true)
+  const activity = asRecord((liveActivities as unknown[])[0])
+  assert.equal(activity?.type, 'diceRoll')
+  assert.equal(typeof activity.createdAt, 'string')
+  const reveal = asRecord(activity.reveal)
+
+  assert.equal(typeof reveal.revealAt, 'string')
+  assert.equal(
+    Date.parse(reveal.revealAt as string) >
+      Date.parse(activity.createdAt as string),
+    true
+  )
+  assert.equal('rolls' in activity, false, 'pre-reveal activity omits rolls')
+  assert.equal('total' in activity, false, 'pre-reveal activity omits total')
+}
+
 const createRoom = (
   webSockets: TestSocket[] = [],
   tags = new Map<WebSocket, string[]>(),
@@ -568,6 +614,39 @@ describe('GameRoomDO HTTP skeleton', () => {
       assert.equal(message.liveActivities.length, 1)
       assert.equal(message.liveActivities[0].type, 'diceRoll')
       assert.equal(message.liveActivities[0].reason, 'Table roll')
+    }
+  })
+
+  it('keeps pre-reveal dice details out of player and spectator state-bearing messages', async () => {
+    const player = createSocket()
+    const spectator = createSocket()
+    const tags = new Map<WebSocket, string[]>([
+      [player, roomSocketTags('player', 'user-2')],
+      [spectator, roomSocketTags('spectator', 'user-3')]
+    ])
+    const room = createRoom([player, spectator], tags)
+    await postCommand(room, createGameBody())
+    player.sent.length = 0
+    spectator.sent.length = 0
+
+    const response = await postCommand(
+      room,
+      commandBody('roll-dice-player', {
+        type: 'RollDice',
+        actorId: 'user-2',
+        expression: '2d6',
+        reason: 'Table roll'
+      })
+    )
+    const responseMessage = await response.json()
+
+    assert.equal(response.status, 200)
+    assertPreRevealDiceDetailsHidden(responseMessage)
+    for (const message of [
+      ...parseMessages(player),
+      ...parseMessages(spectator)
+    ]) {
+      assertPreRevealDiceDetailsHidden(message)
     }
   })
 
