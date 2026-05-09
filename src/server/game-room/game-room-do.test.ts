@@ -7,7 +7,7 @@ import type { Env } from '../env'
 import { GameRoomDO } from './game-room-do'
 import type { PublicationTelemetryEvent } from './publication-telemetry'
 import { createMemoryStorage } from './test-support'
-import { readEventStream } from './storage'
+import { gameSeedKey, readEventStream } from './storage'
 
 type TestSocket = WebSocket & {
   sent: string[]
@@ -72,6 +72,17 @@ const postRawCommand = (room: GameRoomDO, body: string) =>
         'x-cepheus-actor-session': 'test-session-token-123456'
       },
       body
+    })
+  )
+
+const postTestSeed = (room: GameRoomDO, seed: unknown, host = 'cepheus.test') =>
+  room.fetch(
+    new Request(`https://${host}/rooms/game-1/test/seed`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({ seed })
     })
   )
 
@@ -147,6 +158,50 @@ const startCharacterCreationBody = () =>
   })
 
 describe('GameRoomDO HTTP skeleton', () => {
+  it('accepts a local test seed for deterministic browser journeys', async () => {
+    const storage = createMemoryStorage()
+    const room = createRoom([], new Map(), storage)
+
+    const response = await postTestSeed(room, 12345)
+    const message = await response.json()
+
+    assert.equal(response.status, 200)
+    assert.equal(message.ok, true)
+    assert.equal(message.gameId, 'game-1')
+    assert.equal(message.seed, 12345)
+    assert.equal(await storage.get(gameSeedKey(asGameId('game-1'))), 12345)
+  })
+
+  it('rejects the test seed route on production hosts', async () => {
+    const storage = createMemoryStorage()
+    const room = createRoom([], new Map(), storage)
+
+    const response = await postTestSeed(
+      room,
+      12345,
+      'cepheus-online.rob-gilks.workers.dev'
+    )
+    const message = await response.json()
+
+    assert.equal(response.status, 403)
+    assert.equal(message.error.code, 'not_allowed')
+    assert.equal(await storage.get(gameSeedKey(asGameId('game-1'))), undefined)
+  })
+
+  it('validates local test seed values', async () => {
+    const room = createRoom()
+
+    const response = await postTestSeed(room, '12345')
+    const message = await response.json()
+
+    assert.equal(response.status, 400)
+    assert.equal(message.error.code, 'invalid_message')
+    assert.equal(
+      message.error.message,
+      'seed must be an integer between 0 and 4294967295'
+    )
+  })
+
   it('serves an empty room state before creation', async () => {
     const room = createRoom()
 

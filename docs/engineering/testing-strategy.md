@@ -109,6 +109,19 @@ app:
 - explicit assertions that roll-dependent results are hidden until the dice
   reveal boundary
 
+Deterministic browser journeys may seed a disposable local room before the first
+command with:
+
+```text
+POST /rooms/:gameId/test/seed
+{ "seed": 12345 }
+```
+
+That route is only accepted on local/test hosts such as `localhost`,
+`127.0.0.1`, and `*.test`; deployed Worker hosts reject it. Use it for
+repeatable end-to-end creation paths, including multi-term characters, career
+changes, and owner/spectator synchronization.
+
 Playwright is a development dependency only. That does not change the runtime
 dependency budget for the shipped app.
 

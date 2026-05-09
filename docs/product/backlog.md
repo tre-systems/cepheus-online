@@ -358,6 +358,14 @@ Primary write ownership:
 
 Tasks:
 
+- Add a seeded deterministic Playwright journey that drives character creation
+  through the real browser UI from blank character to final sheet. The fixture
+  should set the room seed through the local/test-only seed route, produce a
+  multi-term traveller with more than one career, and keep a spectator tab open
+  for the same room.
+- In that seeded journey, assert the spectator follows each creation phase from
+  the server projection, sees the same dice animation timing, and does not see
+  roll-dependent outcomes until the reveal boundary has elapsed.
 - Keep the committed full one-term finalization smoke healthy, and extend it to
   common death, failed qualification, Draft, Drifter fallback, and refresh
   branches while reporting the current phase/action on failure.

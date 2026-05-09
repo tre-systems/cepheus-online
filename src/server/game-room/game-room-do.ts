@@ -24,7 +24,7 @@ import {
   parseViewerUserId,
   viewerFromCommand
 } from './queries'
-import { getEventSeq } from './storage'
+import { gameSeedKey, getEventSeq } from './storage'
 
 declare const WebSocketPair: {
   new (): {
@@ -45,7 +45,7 @@ const parseRoomRoute = (url: URL): RoomRoute | null => {
   try {
     return {
       gameId: asGameId(parts[1]),
-      action: parts[2] ?? ''
+      action: parts.slice(2).join('/')
     }
   } catch {
     return null
@@ -86,6 +86,7 @@ const activityPayload = (liveActivities: readonly LiveActivityDescriptor[]) =>
   liveActivities.length === 0 ? {} : { liveActivities: [...liveActivities] }
 
 const MAX_COMMAND_BODY_BYTES = 64 * 1024
+const MAX_TEST_SEED_BODY_BYTES = 1024
 const MAX_WEBSOCKET_MESSAGE_BYTES = 64 * 1024
 const RATE_LIMIT_WINDOW_MS = 10_000
 const MAX_COMMANDS_PER_WINDOW = 40
@@ -95,6 +96,13 @@ const ACTOR_SESSION_PATTERN = /^[A-Za-z0-9_-]{24,128}$/
 const encoder = new TextEncoder()
 
 const byteLength = (value: string): number => encoder.encode(value).length
+
+const isLocalTestHost = (hostname: string): boolean =>
+  hostname === 'localhost' ||
+  hostname === '127.0.0.1' ||
+  hostname === '::1' ||
+  hostname === '[::1]' ||
+  hostname.endsWith('.test')
 
 const actorSessionKey = (gameId: GameId, actorId: string): string =>
   `actorSession:${gameId}:${actorId}`
@@ -426,6 +434,79 @@ export class GameRoomDO {
       : { ok: false, message: result.response, status: result.status }
   }
 
+  private async handleTestSeedRequest(
+    request: Request,
+    url: URL,
+    gameId: GameId
+  ): Promise<Response> {
+    if (!isLocalTestHost(url.hostname)) {
+      return jsonResponse(
+        {
+          error: commandError(
+            'not_allowed',
+            'Test seed route is only available on local test hosts'
+          )
+        },
+        { status: 403 }
+      )
+    }
+
+    let raw: unknown
+    try {
+      const body = await request.text()
+      if (byteLength(body) > MAX_TEST_SEED_BODY_BYTES) {
+        return jsonResponse(
+          {
+            error: commandError(
+              'invalid_message',
+              'Test seed body is too large'
+            )
+          },
+          { status: 413 }
+        )
+      }
+      raw = JSON.parse(body)
+    } catch {
+      return jsonResponse(
+        {
+          error: commandError('invalid_message', 'Invalid JSON body')
+        },
+        { status: 400 }
+      )
+    }
+
+    const seed =
+      typeof raw === 'object' && raw !== null && 'seed' in raw
+        ? (raw as { seed?: unknown }).seed
+        : undefined
+
+    if (
+      typeof seed !== 'number' ||
+      !Number.isInteger(seed) ||
+      seed < 0 ||
+      seed > 0xffffffff
+    ) {
+      return jsonResponse(
+        {
+          error: commandError(
+            'invalid_message',
+            'seed must be an integer between 0 and 4294967295'
+          )
+        },
+        { status: 400 }
+      )
+    }
+
+    const storedSeed = seed | 0
+    await this.state.storage.put(gameSeedKey(gameId), storedSeed)
+
+    return jsonResponse({
+      ok: true,
+      gameId,
+      seed: storedSeed
+    })
+  }
+
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
     const route = parseRoomRoute(url)
@@ -479,6 +560,10 @@ export class GameRoomDO {
       return jsonResponse(
         await this.buildRoomStateMessage(route.gameId, viewer)
       )
+    }
+
+    if (request.method === 'POST' && route.action === 'test/seed') {
+      return this.handleTestSeedRequest(request, url, route.gameId)
     }
 
     if (request.method === 'POST' && route.action === 'command') {

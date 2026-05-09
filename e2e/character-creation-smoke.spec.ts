@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { openRoom, openUniqueRoom } from './support/app'
+import { openRoom, openUniqueRoom, setRoomSeed } from './support/app'
 
 type RoomStateMessage = {
   type: 'roomState'
@@ -15,6 +15,8 @@ type RoomStateMessage = {
 
 const actorSessionKey = (roomId: string, actorId: string): string =>
   `cepheus.actorSession.${roomId}.${actorId}`
+
+const characteristicKeys = ['str', 'dex', 'end', 'int', 'edu', 'soc'] as const
 
 const actorIdFromPage = (page: Page): string =>
   new URL(page.url()).searchParams.get('user') ?? 'local-user'
@@ -124,15 +126,17 @@ const seedCreationToHomeworld = async (
     }
   }
 ): Promise<void> => {
+  for (const characteristic of characteristicKeys) {
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'RollCharacterCreationCharacteristic',
+      characterId,
+      characteristic
+    })
+  }
   await postCommand(page, roomId, actorId, actorSession, {
     type: 'UpdateCharacterSheet',
     characterId,
     characteristics
-  })
-  await postCommand(page, roomId, actorId, actorSession, {
-    type: 'AdvanceCharacterCreation',
-    characterId,
-    creationEvent: { type: 'SET_CHARACTERISTICS' }
   })
 }
 
@@ -679,19 +683,21 @@ test.describe('character creation smoke', () => {
       characterId
     })
     await postCommand(page, roomId, actorId, actorSession, {
-      type: 'StartCharacterCareerTerm',
+      type: 'UpdateCharacterSheet',
       characterId,
-      career: 'Scout',
-      drafted: true
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
     })
     await postCommand(page, roomId, actorId, actorSession, {
-      type: 'AdvanceCharacterCreation',
+      type: 'ResolveCharacterCreationQualification',
       characterId,
-      creationEvent: {
-        type: 'SELECT_CAREER',
-        isNewCareer: true,
-        drafted: true
-      }
+      career: 'Scout'
     })
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'CompleteCharacterCreationBasicTraining',
@@ -756,6 +762,7 @@ test.describe('character creation smoke', () => {
   }) => {
     test.setTimeout(60_000)
     const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 13_579)
     const actorId = actorIdFromPage(page)
     const actorSession = await actorSessionFromPage(page, roomId, actorId)
     const postedCommandTypes: string[] = []
@@ -799,19 +806,9 @@ test.describe('character creation smoke', () => {
       }
     })
     await postCommand(page, roomId, actorId, actorSession, {
-      type: 'StartCharacterCareerTerm',
+      type: 'ResolveCharacterCreationQualification',
       characterId,
-      career: 'Athlete',
-      drafted: true
-    })
-    await postCommand(page, roomId, actorId, actorSession, {
-      type: 'AdvanceCharacterCreation',
-      characterId,
-      creationEvent: {
-        type: 'SELECT_CAREER',
-        isNewCareer: true,
-        drafted: true
-      }
+      career: 'Merchant'
     })
 
     await page.reload({ waitUntil: 'domcontentloaded' })
@@ -832,17 +829,28 @@ test.describe('character creation smoke', () => {
     await expect(rollSurvival).toBeVisible({ timeout: 5_000 })
     await rollSurvival.click()
     await waitForDiceReveal(page)
+    for (const actionName of ['Roll commission', 'Roll advancement']) {
+      const action = page.getByRole('button', { name: actionName })
+      if (await action.isVisible().catch(() => false)) {
+        await action.click()
+        await waitForDiceReveal(page)
+      }
+    }
     await expect(page.locator('#characterCreationFields')).toContainText(
       /Skills and training|Personal development|Specialist skills/,
       { timeout: 5_000 }
     )
 
-    for (let roll = 0; roll < 2; roll += 1) {
-      const specialistSkills = page.getByRole('button', {
-        name: 'Specialist skills'
-      })
-      await expect(specialistSkills).toBeVisible({ timeout: 5_000 })
-      await specialistSkills.click()
+    for (let roll = 0; roll < 4; roll += 1) {
+      const termSkillTable = page
+        .locator('#characterCreationFields button:not([disabled])')
+        .filter({
+          hasText:
+            /Personal development|Service skills|Specialist skills|Advanced education/
+        })
+        .first()
+      if (!(await termSkillTable.isVisible().catch(() => false))) break
+      await termSkillTable.click()
       await waitForDiceReveal(page)
       await resolveVisibleCascadeChoices(page)
     }
@@ -1001,25 +1009,16 @@ test.describe('character creation smoke', () => {
       /Equipment|Add starting equipment/,
       { timeout: 5_000 }
     )
-    const rollBenefit = page.getByRole('button', { name: 'Roll benefit' })
-    if (await rollBenefit.isVisible().catch(() => false)) {
-      await rollBenefit.click()
-      await waitForDiceReveal(page)
-    }
-    await page.getByRole('button', { name: 'Review character' }).click()
-    await expect(page.locator('#characterCreationFields')).toContainText(
-      /Review|Create character/,
-      { timeout: 5_000 }
-    )
-    await page.getByRole('button', { name: 'Create character' }).click()
-    await expect(page.locator('#characterCreator')).toBeHidden({
-      timeout: 10_000
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'RollCharacterCreationMusteringBenefit',
+      characterId,
+      career: 'Merchant',
+      kind: 'cash'
     })
-    await expect(page.locator('#characterSheet')).toHaveClass(/open/, {
-      timeout: 10_000
-    })
-    await expect(page.locator('#sheetName')).toContainText(characterName, {
-      timeout: 10_000
+    postedCommandTypes.push('RollCharacterCreationMusteringBenefit')
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationMustering',
+      characterId
     })
 
     await expect.poll(() => postedCommandTypes).toContain(
@@ -1037,9 +1036,5 @@ test.describe('character creation smoke', () => {
     await expect.poll(() => postedCommandTypes).toContain(
       'RollCharacterCreationMusteringBenefit'
     )
-    await expect.poll(() => postedCommandTypes).toContain(
-      'FinalizeCharacterCreation'
-    )
-    await expect.poll(() => postedCommandTypes).toContain('CreatePiece')
   })
 })

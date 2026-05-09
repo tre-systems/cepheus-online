@@ -16,6 +16,18 @@ export const openUniqueRoom = async (
   return roomId
 }
 
+export const setRoomSeed = async (
+  page: Page,
+  roomId: string,
+  seed: number
+): Promise<void> => {
+  const response = await page.request.post(`/rooms/${roomId}/test/seed`, {
+    data: { seed }
+  })
+
+  expect(response.ok()).toBe(true)
+}
+
 export const openRoom = async (
   page: Page,
   {
