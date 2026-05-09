@@ -67,7 +67,7 @@ import { createAppSession } from './app-session.js'
 import { resolveActorSessionSecret } from './actor-session.js'
 import { createCharacterSheetWiring } from './character-sheet-wiring.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
-import { animateRoll as animateDiceRoll } from './dice-overlay.js'
+import { createDiceOverlayWiring } from './dice-overlay-wiring.js'
 import { createDiceRevealCoordinator } from './dice-reveal-coordinator.js'
 import {
   DEFAULT_APP_LOCATION,
@@ -98,7 +98,6 @@ const appSession = createAppSession({ roomId, actorId, viewerRole })
 let boardController: BoardController | null = null
 let boardControlsWiring: ReturnType<typeof createBoardControlsWiring> | null =
   null
-let diceHideTimer: number | null = null
 const diceRevealCoordinator = createDiceRevealCoordinator()
 const animatedDiceRollActivityIds = new Set<string>()
 let characterCreationController: CharacterCreationController
@@ -323,6 +322,17 @@ const characterCreationPanel = createCharacterCreationPanel({
   closeCharacterSheet: () => characterSheetController.setOpen(false),
   requestRender: () => render()
 })
+
+const diceOverlayWiring = createDiceOverlayWiring({
+  elements: {
+    overlay: els.diceOverlay,
+    stage: els.diceStage
+  },
+  panel: characterCreationPanel,
+  resolveDiceReveal
+})
+
+const animateRoll = diceOverlayWiring.animateRoll
 
 characterCreationController = createCharacterCreationController({
   getState: () => state,
@@ -672,23 +682,6 @@ const render = () => {
   boardController?.render()
   renderRail()
   creationPresenceDock.render(state)
-}
-
-const animateRoll = (roll: LiveDiceRollRevealTarget | DiceRollState): void => {
-  const overlayHost = characterCreationPanel.overlayHost()
-  if (overlayHost && els.diceOverlay.parentElement !== overlayHost) {
-    overlayHost.append(els.diceOverlay)
-  }
-  const overlayContext = characterCreationPanel.overlayContext()
-  els.diceOverlay.classList.toggle('in-creator', overlayContext.inCreator)
-  els.diceOverlay.classList.toggle('in-dialog', overlayContext.inDialog)
-  diceHideTimer = animateDiceRoll({
-    roll,
-    overlay: els.diceOverlay,
-    stage: els.diceStage,
-    hideTimer: diceHideTimer,
-    onReveal: () => resolveDiceReveal(roll.id)
-  })
 }
 
 const canvasContext = els.canvas.getContext('2d')

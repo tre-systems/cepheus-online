@@ -56,6 +56,21 @@ export class TestNode {
     this.children = children
   }
 
+  querySelectorAll(selector: string) {
+    const tagNames = new Set(
+      selector.split(',').map((part) => part.trim().toLowerCase())
+    )
+    const matches: TestNode[] = []
+    const visit = (node: TestNode) => {
+      for (const child of node.children) {
+        if (tagNames.has(child.tagName.toLowerCase())) matches.push(child)
+        visit(child)
+      }
+    }
+    visit(this)
+    return matches
+  }
+
   setAttribute(name: string, value: string) {
     this.dataset[`attr:${name}`] = value
   }

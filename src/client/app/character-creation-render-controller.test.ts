@@ -174,4 +174,61 @@ describe('character creation render controller', () => {
       'character-creation-review'
     )
   })
+
+  it('disables local-only wizard actions for read-only spectator flows', () => {
+    const els = elements()
+    const currentFlow = {
+      ...flow(),
+      step: 'basics'
+    } satisfies CharacterCreationFlow
+    const controller = createCharacterCreationRenderController({
+      document: renderDocument(),
+      elements: els,
+      controller: {
+        currentProjection: () => null,
+        flow: () => currentFlow,
+        readOnly: () => true,
+        reconcileEditableWithProjection: () => currentFlow,
+        setFlow: (nextFlow) => nextFlow
+      },
+      panel: {
+        render: () => true,
+        scrollToTop: () => {}
+      },
+      wizard: {
+        advance: async () => {},
+        autoAdvanceSetup: () => false,
+        startNew: async () => {},
+        syncFields: () => {}
+      },
+      homeworldPublisher: {
+        publishBackgroundCascadeSelection: async () => {},
+        publishProgress: async () => {},
+        publishCascadeResolution: async () => {}
+      },
+      getCommandController: commandController,
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => ({}),
+      commandIdentity: () => ({
+        gameId: asGameId('game-1'),
+        actorId: asUserId('actor-1')
+      }),
+      reportError: () => {}
+    })
+
+    controller.renderWizard()
+
+    const controls = asNode(els.characterCreationFields).querySelectorAll(
+      'button, input, select, textarea'
+    )
+    assert.equal(controls.length > 0, true)
+    assert.deepEqual(
+      controls.map((control) => control.disabled),
+      controls.map(() => true)
+    )
+    assert.equal(
+      asNode(els.characterCreationWizard).classList.contains('read-only'),
+      true
+    )
+  })
 })

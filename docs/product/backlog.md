@@ -356,11 +356,14 @@ result deferral. Death/restart has deterministic browser coverage, semantic
 commission/advancement/term-skill events have checkpoint-plus-tail recovery
 coverage, finalization recovery now proves the server-derived sheet survives
 checkpoint-plus-tail replay, and sheet-side, wizard-render, room asset
-creation, character sheet, room menu, and board controls wiring have been
-extracted from `app.ts`. The remaining leverage point is to convert the
-completed finalization and multi-career smoke into broader
-mobile/spectator coverage while continuing to extract the character creation
-feature boundary from `app.ts`.
+creation, character sheet, room menu, board controls, and dice overlay wiring
+have been extracted from `app.ts`. Late term-skill controls now have
+phone-width usability coverage, and lightweight unit invariants cover single
+primary actions, pending-roll render suppression, and read-only spectator
+controls. The remaining leverage point is to convert the completed
+finalization and multi-career smoke into broader mobile/spectator coverage
+while continuing to extract the character creation feature boundary from
+`app.ts`.
 
 Primary write ownership:
 
@@ -384,19 +387,17 @@ Tasks:
 - Extend two-tab follow tests beyond the currently covered paths: repeated
   multi-term refreshes should reveal only after dice finish and recover from
   server projection on refresh.
-- Add mobile viewport checks for the high-risk creator screens:
-  characteristics, homeworld/background skills, career selection, survival or
-  death, term skills, reenlistment, mustering out, and spectator follow cards.
-  The checks should assert no important action is hidden, disabled by accident,
-  or overlapped at phone widths.
+- Extend mobile viewport checks beyond current early-screen and term-skill
+  coverage to reenlistment, mustering out, finalization, and spectator follow
+  cards. The checks should assert no important action is hidden, disabled by
+  accident, or overlapped at phone widths.
 - Add reveal-timing assertions for every roll-bearing creation action:
   no roll-dependent result text appears before the dice reveal boundary, the
   action button is disabled while the roll is pending, and controls unblock
   only after the reveal has been applied.
-- Add lightweight UI invariants that can run without a full browser where
-  possible: exactly one primary next action for a projected phase, no enabled
-  roll action when a roll is pending, no local-only action for a read-only
-  spectator, and no stale local flow after a server projection advances.
+- Extend the lightweight UI invariants beyond current single-primary,
+  pending-roll, and read-only coverage to stale local flow after a server
+  projection advances.
 - Extract a `characterCreationController` that owns local creator state and
   exposes explicit methods for opening owner mode, opening spectator mode,
   applying authoritative state, submitting choices, and disposing listeners or
@@ -404,9 +405,9 @@ Tasks:
 - Make that controller the only character creation feature boundary used by
   `app.ts`; follow-on rendering work should hang from that boundary rather than
   adding more wizard state to the app shell.
-- Keep all roll animation, result deferral, spectator reveal timing, and button
-  unblocking on `diceRevealCoordinator`; add coverage for every new
-  roll-bearing creation action instead of adding local timing code.
+- Keep all result deferral, spectator reveal timing, and button unblocking on
+  `diceRevealCoordinator`; add coverage for every new roll-bearing creation
+  action instead of adding local timing code.
 - Make the rendered creation UI consume a single creation view model derived
   from authoritative projection plus local pending choices. Server projection
   owns phase, legal actions, progress, roll facts, and completion gates; local

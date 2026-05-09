@@ -157,6 +157,34 @@ describe('character creation lifecycle controller', () => {
     ])
   })
 
+  it('does not render editable local actions while a creation roll is pending', () => {
+    const events: string[] = []
+    const controller = createCharacterCreationLifecycleController({
+      controller: {
+        openFollow: () => flow,
+        refreshFollowed: () => false,
+        shouldRefreshEditable: ({ deferredRollCount = 0 } = {}) => {
+          events.push(`shouldRefreshEditable:${deferredRollCount}`)
+          return deferredRollCount === 0
+        }
+      },
+      panel: {
+        open: () => {},
+        scrollToTop: () => {}
+      },
+      closeCharacterSheet: () => {},
+      renderWizard: () => events.push('renderWizard'),
+      waitForDiceReveal: async () => {},
+      reportError: (message) => events.push(`error:${message}`)
+    })
+
+    controller
+      .planStateRefresh({ deferFollowedCreationRolls: [rollActivity] })
+      .renderAfterAppRender()
+
+    assert.deepEqual(events, ['shouldRefreshEditable:1'])
+  })
+
   it('waits for every deferred reveal before rendering a followed creation', async () => {
     const events: string[] = []
     const revealWaiters = new Map<string, () => void>()

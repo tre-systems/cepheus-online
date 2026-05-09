@@ -456,6 +456,36 @@ const expectMobileCreatorControlsFit = async (page: Page): Promise<void> => {
     .toEqual([])
 }
 
+const expectMobileControlUsable = async (
+  locator: ReturnType<Page['locator']>,
+  label: string
+): Promise<void> => {
+  await locator.scrollIntoViewIfNeeded()
+  await expect(locator, label).toBeVisible()
+  await expect(locator, label).toBeEnabled()
+  await expect
+    .poll(
+      () =>
+        locator.evaluate((element) => {
+          const rect = element.getBoundingClientRect()
+          if (rect.width <= 0 || rect.height <= 0) return false
+
+          const x = Math.min(
+            Math.max(rect.left + rect.width / 2, 0),
+            window.innerWidth - 1
+          )
+          const y = Math.min(
+            Math.max(rect.top + rect.height / 2, 0),
+            window.innerHeight - 1
+          )
+          const topElement = document.elementFromPoint(x, y)
+          return topElement ? element.contains(topElement) : false
+        }),
+      { message: `${label} center point is not covered` }
+    )
+    .toBe(true)
+}
+
 const attachRepeatTravellerContext = async (
   page: Page,
   roomId: string,
@@ -3094,5 +3124,107 @@ test.describe('character creation smoke', () => {
       { timeout: 5_000 }
     )
     await expectMobileCreatorControlsFit(page)
+  })
+
+  test('keeps term skill controls usable at phone width', async ({ page }) => {
+    test.setTimeout(60_000)
+    await page.setViewportSize({ width: 390, height: 844 })
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 13_579)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationQualification',
+      characterId,
+      career: 'Merchant'
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await resolveVisibleCascadeChoices(page)
+
+    const applyBasicTraining = page.getByRole('button', {
+      name: 'Apply basic training'
+    })
+    await expectMobileControlUsable(applyBasicTraining, 'Apply basic training')
+    await applyBasicTraining.click()
+
+    const rollSurvival = page.getByRole('button', { name: 'Roll survival' })
+    await expectMobileControlUsable(rollSurvival, 'Roll survival')
+    await rollSurvival.click()
+    await waitForDiceReveal(page)
+
+    for (const actionName of ['Roll commission', 'Roll advancement']) {
+      const action = page.getByRole('button', { name: actionName })
+      if (await action.isVisible().catch(() => false)) {
+        await expectMobileControlUsable(action, actionName)
+        await action.click()
+        await waitForDiceReveal(page)
+      }
+    }
+
+    const fields = page.locator('#characterCreationFields')
+    await expect(fields).toContainText('Skills and training', {
+      timeout: 5_000
+    })
+    await expectMobileCreatorControlsFit(page)
+
+    const termSkillButtons = fields.locator(
+      '.creation-term-actions button:not([disabled])'
+    )
+    const cascadeButtons = fields.locator('.creation-cascade-choice button')
+    const activeLateControls = fields.locator(
+      '.creation-term-actions button:not([disabled]), .creation-cascade-choice button'
+    )
+    await expect
+      .poll(() => activeLateControls.count())
+      .toBeGreaterThanOrEqual(1)
+
+    const controlCount = Math.min(await activeLateControls.count(), 3)
+    for (let index = 0; index < controlCount; index += 1) {
+      await expectMobileControlUsable(
+        activeLateControls.nth(index),
+        `Late creator control ${index + 1}`
+      )
+    }
+
+    if ((await termSkillButtons.count()) > 0) {
+      await termSkillButtons.first().click()
+      await waitForDiceReveal(page)
+    }
+    await resolveVisibleCascadeChoices(page)
+    await expect(fields.locator('.creation-term-skill-rolls span')).toHaveCount(
+      1,
+      { timeout: 5_000 }
+    )
+    await expectMobileCreatorControlsFit(page)
+    if ((await cascadeButtons.count()) > 0) {
+      await expectMobileControlUsable(cascadeButtons.first(), 'Cascade choice')
+    }
   })
 })

@@ -101,6 +101,13 @@ const assertNoGenericLifecycleAdvance = (
   }
 }
 
+const primaryActionKeys = (
+  plan: ReturnType<typeof deriveCharacterCreationActionPlan>
+): string[] =>
+  (plan?.actions ?? [])
+    .filter((availableAction) => availableAction.variant === 'primary')
+    .map((availableAction) => availableAction.key)
+
 describe('character creation actions', () => {
   it('starts creation for an existing character without creation state', () => {
     const plan = deriveCharacterCreationActionPlan(identity, character(null))
@@ -444,6 +451,7 @@ describe('character creation actions', () => {
       characterId: 'mae' as CharacterId,
       table: 'serviceSkills'
     })
+    assert.deepEqual(primaryActionKeys(plan), ['roll-personal-development'])
   })
 
   it('hides advanced education term skill rolls below EDU 8', () => {
@@ -617,6 +625,7 @@ describe('character creation actions', () => {
       career: 'Scout',
       kind: 'material'
     })
+    assert.deepEqual(primaryActionKeys(plan), ['roll-mustering-cash-scout'])
   })
 
   it('offers only material mustering benefits after the cash limit', () => {
@@ -765,6 +774,64 @@ describe('character creation actions', () => {
       }
     )
     assertNoGenericLifecycleAdvance(plan?.actions ?? [])
+  })
+
+  it('exposes exactly one primary next action for actionable projections', () => {
+    const plans = [
+      deriveCharacterCreationActionPlan(
+        identity,
+        character(creation('CHARACTERISTICS'))
+      ),
+      deriveCharacterCreationActionPlan(
+        identity,
+        character(creation('HOMEWORLD'))
+      ),
+      deriveCharacterCreationActionPlan(
+        identity,
+        character(
+          creation('CAREER_SELECTION', {
+            failedToQualify: true
+          })
+        )
+      ),
+      deriveCharacterCreationActionPlan(
+        identity,
+        character(
+          creation('SKILLS_TRAINING', {
+            terms: [term({ career: 'Scout', survival: 7 })]
+          })
+        )
+      ),
+      deriveCharacterCreationActionPlan(
+        identity,
+        character(
+          creation('MUSTERING_OUT', {
+            terms: [term({ complete: true, musteringOut: true })],
+            careers: [{ name: 'Scout', rank: 0 }]
+          })
+        )
+      ),
+      deriveCharacterCreationActionPlan(
+        identity,
+        character(
+          creation('REENLISTMENT', {
+            terms: [
+              term({
+                canReenlist: true,
+                reEnlistment: 7,
+                survival: 8,
+                skillsAndTraining: ['Pilot-1']
+              })
+            ]
+          })
+        )
+      )
+    ]
+
+    assert.deepEqual(
+      plans.map((plan) => primaryActionKeys(plan).length),
+      [1, 1, 1, 1, 1, 1]
+    )
   })
 
   it('uses the semantic reenlist command for forced reenlistment projections', () => {

@@ -572,6 +572,20 @@ const deriveActions = (
     .flatMap((key) => actionsForLegalKey(key, identity, character, creation))
 }
 
+const withSinglePrimaryAction = (
+  actions: CharacterCreationActionViewModel[]
+): CharacterCreationActionViewModel[] => {
+  let hasPrimary = false
+  return actions.map((availableAction) => {
+    if (availableAction.variant !== 'primary') return availableAction
+    if (!hasPrimary) {
+      hasPrimary = true
+      return availableAction
+    }
+    return { ...availableAction, variant: 'secondary' }
+  })
+}
+
 export const deriveCharacterCreationActionPlan = (
   identity: ClientIdentity,
   character: CharacterState | null
@@ -602,7 +616,7 @@ export const deriveCharacterCreationActionPlan = (
     title: 'Creation',
     status: statusLabel(status),
     summary,
-    actions
+    actions: withSinglePrimaryAction(actions)
   })
 
   switch (status) {
