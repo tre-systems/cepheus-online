@@ -349,16 +349,18 @@ qualification, anagathics, aging, reenlistment, commission, advancement,
 term skill rolls, mustering benefit reveal timing, and post-mustering
 continuation, including mustering completion, finalization, and spectator
 refresh recovery of the projected sheet. Failed qualification now has real
-button-path browser coverage for both Drifter and Draft fallback recovery. The shared
-`diceRevealCoordinator` owns result deferral. Death/restart has deterministic
-browser coverage, semantic commission/advancement/term-skill events have
-checkpoint-plus-tail recovery coverage, finalization recovery now proves the
-server-derived sheet survives checkpoint-plus-tail replay, and sheet-side,
-wizard-render, room asset creation, character sheet, and room menu wiring have been
+button-path browser coverage for both Drifter and Draft fallback recovery, and
+the repeat-runner smoke creates a finalized traveller plus a fallback traveller
+with failure context attachments. The shared `diceRevealCoordinator` owns
+result deferral. Death/restart has deterministic browser coverage, semantic
+commission/advancement/term-skill events have checkpoint-plus-tail recovery
+coverage, finalization recovery now proves the server-derived sheet survives
+checkpoint-plus-tail replay, and sheet-side, wizard-render, room asset
+creation, character sheet, room menu, and board controls wiring have been
 extracted from `app.ts`. The remaining leverage point is to convert the
 completed finalization and multi-career smoke into broader
-repeat/mobile/spectator coverage while continuing to extract the character
-creation feature boundary from `app.ts`.
+mobile/spectator coverage while continuing to extract the character creation
+feature boundary from `app.ts`.
 
 Primary write ownership:
 
@@ -376,10 +378,9 @@ Tasks:
 - Keep the committed full one-term finalization, seeded multi-career,
   failed-qualification Drifter, failed-qualification Draft, and death/restart
   smoke tests healthy while reporting the current phase/action on failure.
-- Extend that smoke into a small repeat runner that creates several disposable
-  travellers, captures console errors, server response failures, current
-  creation status, final sheet summary, and a screenshot or DOM snapshot when
-  the flow gets stuck.
+- Extend the repeat runner from its current two-traveller coverage toward
+  several disposable travellers, including console errors, server response
+  failures, and screenshots or DOM snapshots when the flow gets stuck.
 - Extend two-tab follow tests beyond the currently covered paths: repeated
   multi-term refreshes should reveal only after dice finish and recover from
   server projection on refresh.
@@ -791,7 +792,8 @@ Tasks:
 - Remove the need for manual cleanup after finalization. The canonical sheet is
   derived server-side from creation events and finalization; the client does not
   submit trusted final sheet values.
-- Add UPP display and a plain export block for completed characters.
+- Polish the completed-character UPP display and plain export block as final
+  sheet fields mature.
 - Add refresh-loaded room state coverage for any remaining final-sheet fields
   not covered by the current checkpoint-plus-tail read model test.
 
@@ -943,9 +945,9 @@ The next batch should run like this, in this order:
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.
 4. Extend the automated UX regression slice before more broad creator polish:
-   turn the completed finalization smoke into a multi-character repeat runner,
-   add later-term two-tab spectator follow checks, mobile viewport assertions,
-   and reveal timing coverage for every roll-bearing action.
+   grow the repeat runner beyond its current finalized/fallback pair, add
+   later-term two-tab spectator follow checks, mobile viewport assertions, and
+   reveal timing coverage for every roll-bearing action.
 6. Finish moving legal-action state into server projection: pending decisions,
    requirements, failed-qualification options, remaining term skills, remaining
    mustering benefits, and completion gates. Reject commands that are not legal

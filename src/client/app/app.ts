@@ -1,4 +1,4 @@
-import { asBoardId, asGameId, asUserId, type PieceId } from '../../shared/ids'
+import { asGameId, asUserId, type PieceId } from '../../shared/ids'
 import type { LiveDiceRollRevealTarget } from '../../shared/live-activity'
 import type { ServerMessage } from '../../shared/protocol'
 import type {
@@ -81,7 +81,7 @@ import { createRoomCommandDispatch } from './room-command-dispatch.js'
 import { createRoomAssetCreationWiring } from './room-asset-creation-wiring.js'
 import { createRoomMenuWiring } from './room-menu-wiring.js'
 import { createAppShell, registerAppShellServiceWorker } from './app-shell.js'
-import { renderBoardControls as renderBoardControlElements } from './board-controls.js'
+import { createBoardControlsWiring } from './board-controls-wiring.js'
 
 registerAppShellServiceWorker()
 
@@ -96,6 +96,8 @@ const viewerRole = initialIdentity.viewerRole
 const canSelectBoards = isRefereeViewer(viewerRole)
 const appSession = createAppSession({ roomId, actorId, viewerRole })
 let boardController: BoardController | null = null
+let boardControlsWiring: ReturnType<typeof createBoardControlsWiring> | null =
+  null
 let diceHideTimer: number | null = null
 const diceRevealCoordinator = createDiceRevealCoordinator()
 const animatedDiceRollActivityIds = new Set<string>()
@@ -479,8 +481,6 @@ createCharacterCreationDomController({
   reportError: setError
 })
 
-const currentSelectedBoardId = () => selectSelectedBoardId(state)
-
 const bootstrapScene = async () => {
   setError('')
   for (let i = 0; i < 10; i++) {
@@ -667,23 +667,8 @@ const renderRail = () => {
   renderSheet()
 }
 
-const renderBoardControls = () => {
-  renderBoardControlElements({
-    elements: {
-      boardStatus: els.boardStatus,
-      boardSelect: els.boardSelect,
-      zoomOut: els.zoomOut,
-      zoomReset: els.zoomReset,
-      zoomIn: els.zoomIn
-    },
-    state,
-    canSelectBoards,
-    currentZoom: boardController?.currentZoom() || 1
-  })
-}
-
 const render = () => {
-  renderBoardControls()
+  boardControlsWiring?.render()
   boardController?.render()
   renderRail()
   creationPresenceDock.render(state)
@@ -721,6 +706,28 @@ boardController = createBoardController({
   sendCommand: postBoardCommand,
   setError,
   requestRender: render
+})
+
+boardControlsWiring = createBoardControlsWiring({
+  elements: els,
+  getState: () => state,
+  canSelectBoards,
+  getSelectedBoardId: () => selectSelectedBoardId(state),
+  getCurrentZoom: () => boardController?.currentZoom() || 1,
+  setCameraZoom: (nextZoom) => {
+    boardController?.setCameraZoom(nextZoom)
+  },
+  resetCamera: () => {
+    boardController?.resetCamera()
+  },
+  clearBoardDrag: () => {
+    boardController?.clearDrag()
+  },
+  selectPiece,
+  getCommandIdentity: commandIdentity,
+  postBoardCommand,
+  requestRender: render,
+  reportError: setError
 })
 
 createRoomMenuWiring({
@@ -793,35 +800,6 @@ els.bootstrap.addEventListener('click', () => {
 
 els.refresh.addEventListener('click', () => {
   fetchState().catch((error) => setError(error.message))
-})
-
-els.boardSelect.addEventListener('change', () => {
-  const boardId = els.boardSelect.value
-  if (!boardId || boardId === currentSelectedBoardId() || !canSelectBoards)
-    return
-  selectPiece(null)
-  boardController?.clearDrag()
-  postBoardCommand({
-    type: 'SelectBoard',
-    ...commandIdentity(),
-    boardId: asBoardId(boardId)
-  }).catch((error) => {
-    setError(error.message)
-    render()
-  })
-})
-
-els.zoomOut.addEventListener('click', () => {
-  boardController?.setCameraZoom(boardController.currentZoom() / 1.25)
-})
-
-els.zoomReset.addEventListener('click', () => {
-  boardController?.resetCamera()
-  render()
-})
-
-els.zoomIn.addEventListener('click', () => {
-  boardController?.setCameraZoom(boardController.currentZoom() * 1.25)
 })
 
 els.roll.addEventListener('click', () => {

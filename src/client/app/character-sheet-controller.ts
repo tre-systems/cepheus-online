@@ -19,6 +19,10 @@ import {
   skillsFromText,
   skillRollReason
 } from './character-sheet-view.js'
+import {
+  deriveCharacterUpp,
+  derivePlainCharacterExport
+} from './character-sheet-export-view.js'
 
 type CharacterSheetTab = 'details' | 'action' | 'items' | 'notes'
 
@@ -324,6 +328,19 @@ export const createCharacterSheetController = ({
     if (creationActions.actions) body.append(creationActions.actions)
   }
 
+  const appendPlainCharacterExport = (
+    body: HTMLElement,
+    character: CharacterState | null
+  ) => {
+    const exportText = derivePlainCharacterExport(character)
+    if (!exportText) return
+
+    const block = documentApi.createElement('pre')
+    block.className = 'sheet-export-block'
+    block.textContent = exportText
+    body.append(sheetSectionTitle('Plain Export'), block)
+  }
+
   const creationEventLabel = (type: string) =>
     type
       .toLowerCase()
@@ -409,6 +426,7 @@ export const createCharacterSheetController = ({
       sheetSectionTitle('Profile'),
       sheetRow('Type', character.type || 'PLAYER'),
       sheetRow('Age', character.age == null ? '-' : String(character.age)),
+      sheetRow('UPP', deriveCharacterUpp(character.characteristics)),
       statStrip(character),
       ...creationRows(character.creation),
       sheetSectionTitle('Token'),
@@ -422,6 +440,7 @@ export const createCharacterSheetController = ({
     )
     const editor = editableDetailsForm(piece, character)
     if (editor) body.append(sheetSectionTitle('Edit'), editor)
+    appendPlainCharacterExport(body, character)
     appendDoorActions(body)
   }
 
@@ -603,6 +622,7 @@ export const createCharacterSheetController = ({
       sheetSectionTitle('Profile'),
       sheetRow('Type', character.type || 'PLAYER'),
       sheetRow('Age', character.age == null ? '-' : String(character.age)),
+      sheetRow('UPP', deriveCharacterUpp(character.characteristics)),
       statStrip(character),
       ...creationRows(character.creation),
       sheetSectionTitle('Skills'),
@@ -610,6 +630,7 @@ export const createCharacterSheetController = ({
     )
     const editor = editableDetailsForm(null, character)
     if (editor) body.append(sheetSectionTitle('Edit'), editor)
+    appendPlainCharacterExport(body, character)
     appendDoorActions(body)
   }
 

@@ -457,10 +457,29 @@ describe('character sheet controller', () => {
 
     harness.controller.render()
 
+    findByText(harness.elements.sheetBody, 'UPP')
+    findByText(harness.elements.sheetBody, '6879A6')
     findByText(harness.elements.sheetBody, 'Steps')
     findByText(harness.elements.sheetBody, '2')
     findByText(harness.elements.sheetBody, 'Latest')
     findByText(harness.elements.sheetBody, 'Creation Complete')
+    findByText(harness.elements.sheetBody, 'Plain Export')
+    findByText(
+      harness.elements.sheetBody,
+      [
+        'Scout',
+        'UPP: 6879A6',
+        'Type: PLAYER',
+        'Age: 34',
+        'Career: Scout',
+        'Terms: 1',
+        'Skills: Recon-0, Vacc Suit-0',
+        'Credits: Cr1200',
+        'Equipment: Laser Pistol x1 (3D6)',
+        'Notes:',
+        'Known contacts on Regina.'
+      ].join('\n')
+    )
   })
 
   it('edits items with row controls instead of textarea text', () => {

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page, type TestInfo } from '@playwright/test'
 import { openRoom, openUniqueRoom, setRoomSeed } from './support/app'
 
 type RoomStateMessage = {
@@ -24,6 +24,7 @@ type ProjectedCharacter = NonNullable<
 
 type CharacterCreationProjection = {
   creationComplete?: boolean
+  pendingCascadeSkills?: string[]
   state?: {
     status?: string
   }
@@ -50,6 +51,16 @@ type ProjectedTermSkill = {
   table: string
   tableRoll: number
   skill: string
+}
+
+type RepeatTravellerContext = {
+  label: string
+  seed: number
+  characterId?: string
+  characterName?: string
+  phase: string
+  action: string
+  commandTypes: string[]
 }
 
 const actorSessionKey = (roomId: string, actorId: string): string =>
@@ -445,7 +456,537 @@ const expectMobileCreatorControlsFit = async (page: Page): Promise<void> => {
     .toEqual([])
 }
 
+const attachRepeatTravellerContext = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  testInfo: TestInfo,
+  context: RepeatTravellerContext
+): Promise<void> => {
+  let roomState: RoomStateMessage | null = null
+  try {
+    roomState = await fetchRoomState(page, roomId, actorId)
+  } catch {
+    roomState = null
+  }
+
+  await testInfo.attach(`${context.label}-context.json`, {
+    contentType: 'application/json',
+    body: JSON.stringify(
+      {
+        ...context,
+        url: page.url(),
+        stateSummary: roomState
+          ? {
+              characterCount: Object.keys(roomState.state?.characters ?? {})
+                .length,
+              character: context.characterId
+                ? roomState.state?.characters[context.characterId] ?? null
+                : null
+            }
+          : null
+      },
+      null,
+      2
+    )
+  })
+}
+
+const repeatTravellerStep = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  testInfo: TestInfo,
+  context: RepeatTravellerContext,
+  phase: string,
+  action: string,
+  body: () => Promise<void>
+): Promise<void> => {
+  context.phase = phase
+  context.action = action
+
+  await test.step(`${context.label}: ${phase} / ${action}`, async () => {
+    try {
+      await body()
+    } catch (error) {
+      await attachRepeatTravellerContext(
+        page,
+        roomId,
+        actorId,
+        testInfo,
+        context
+      )
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(
+        `${context.label} failed during ${phase} / ${action}: ${message}`
+      )
+    }
+  })
+}
+
+const postRepeatCommand = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  actorSession: string,
+  context: RepeatTravellerContext,
+  command: Record<string, unknown>
+): Promise<void> => {
+  context.commandTypes.push(String(command.type))
+  await postCommand(page, roomId, actorId, actorSession, command)
+}
+
+const postRepeatCommandIfAccepted = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  actorSession: string,
+  context: RepeatTravellerContext,
+  command: Record<string, unknown>,
+  allowedRejection: RegExp
+): Promise<boolean> => {
+  context.commandTypes.push(String(command.type))
+  const response = await page.request.post(
+    `/rooms/${encodeURIComponent(roomId)}/command`,
+    {
+      headers: {
+        'content-type': 'application/json',
+        'x-cepheus-actor-session': actorSession
+      },
+      data: {
+        type: 'command',
+        requestId: `e2e-repeat-${String(command.type)}-${Date.now()}`,
+        command: {
+          gameId: roomId,
+          actorId,
+          ...command
+        }
+      }
+    }
+  )
+  const responseText = await response.text()
+  if (response.ok()) {
+    expect(JSON.parse(responseText).type, responseText).toBe('commandAccepted')
+    return true
+  }
+  if (allowedRejection.test(responseText)) return false
+  expect(response.ok(), responseText).toBe(true)
+  return false
+}
+
+const firstRepeatCascadeSelection = (cascadeSkill: string): string => {
+  const skill = cascadeSkill.replace(/\*$/, '').replace(/-\d+$/, '')
+  if (skill === 'Aircraft' || skill === 'Vehicle') return 'Grav Vehicle'
+  if (skill === 'Gun Combat') return 'Slug Rifle'
+  if (skill === 'Melee Combat') return 'Blade'
+  if (skill === 'Weapon') return 'Gun Combat'
+  return skill
+}
+
+const resolveRepeatPendingTermCascades = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  actorSession: string,
+  context: RepeatTravellerContext
+): Promise<void> => {
+  if (!context.characterId) throw new Error('Missing repeat character id')
+
+  for (let index = 0; index < 6; index += 1) {
+    const character = await fetchProjectedCharacter(
+      page,
+      roomId,
+      actorId,
+      context.characterId
+    )
+    const pendingCascade = character?.creation?.pendingCascadeSkills?.at(-1)
+    if (!pendingCascade) return
+    await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+      type: 'ResolveCharacterCreationTermCascadeSkill',
+      characterId: context.characterId,
+      cascadeSkill: pendingCascade,
+      selection: firstRepeatCascadeSelection(pendingCascade)
+    })
+  }
+
+  throw new Error('Pending term cascade choices did not settle')
+}
+
+const createRepeatTraveller = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  actorSession: string,
+  context: RepeatTravellerContext
+): Promise<void> => {
+  context.characterId = `repeat-${context.label}-${Date.now()}`
+  context.characterName = `Repeat ${context.label}`
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'CreateCharacter',
+    characterId: context.characterId,
+    characterType: 'PLAYER',
+    name: context.characterName
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'StartCharacterCreation',
+    characterId: context.characterId
+  })
+}
+
+const completeRepeatRequiredTermSkills = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  actorSession: string,
+  context: RepeatTravellerContext
+): Promise<void> => {
+  if (!context.characterId) throw new Error('Missing repeat character id')
+
+  for (let roll = 0; roll < 4; roll += 1) {
+    await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+      type: 'RollCharacterCreationTermSkill',
+      characterId: context.characterId,
+      table: 'personalDevelopment'
+    })
+    await resolveRepeatPendingTermCascades(
+      page,
+      roomId,
+      actorId,
+      actorSession,
+      context
+    )
+
+    const character = await fetchProjectedCharacter(
+      page,
+      roomId,
+      actorId,
+      context.characterId
+    )
+    if (character?.creation?.state?.status !== 'SKILLS_TRAINING') return
+
+    const completed = await postRepeatCommandIfAccepted(
+      page,
+      roomId,
+      actorId,
+      actorSession,
+      context,
+      {
+        type: 'CompleteCharacterCreationSkills',
+        characterId: context.characterId
+      },
+      /required term skills are rolled/i
+    )
+    if (completed) return
+  }
+
+  throw new Error('Required term skills were not completed after four rolls')
+}
+
+const driveRepeatTravellerToFinalized = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  actorSession: string,
+  context: RepeatTravellerContext
+): Promise<void> => {
+  if (!context.characterId) throw new Error('Missing repeat character id')
+  await seedCreationToCareerSelection(page, {
+    roomId,
+    actorId,
+    actorSession,
+    characterId: context.characterId
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'UpdateCharacterSheet',
+    characterId: context.characterId,
+    characteristics: {
+      str: 15,
+      dex: 15,
+      end: 15,
+      int: 15,
+      edu: 15,
+      soc: 15
+    }
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'ResolveCharacterCreationQualification',
+    characterId: context.characterId,
+    career: 'Scout'
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'CompleteCharacterCreationBasicTraining',
+    characterId: context.characterId
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'ResolveCharacterCreationSurvival',
+    characterId: context.characterId
+  })
+  await completeRepeatRequiredTermSkills(
+    page,
+    roomId,
+    actorId,
+    actorSession,
+    context
+  )
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'DecideCharacterCreationAnagathics',
+    characterId: context.characterId,
+    useAnagathics: false
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'ResolveCharacterCreationAging',
+    characterId: context.characterId
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'ResolveCharacterCreationReenlistment',
+    characterId: context.characterId
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'LeaveCharacterCreationCareer',
+    characterId: context.characterId
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'RollCharacterCreationMusteringBenefit',
+    characterId: context.characterId,
+    career: 'Scout',
+    kind: 'material'
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'CompleteCharacterCreationMustering',
+    characterId: context.characterId
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'CompleteCharacterCreation',
+    characterId: context.characterId
+  })
+  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
+    type: 'FinalizeCharacterCreation',
+    characterId: context.characterId,
+    age: 22,
+    characteristics: {
+      str: 15,
+      dex: 15,
+      end: 15,
+      int: 15,
+      edu: 15,
+      soc: 15
+    },
+    skills: ['Admin', 'Advocate', 'Comms', 'Gun Combat-0'],
+    equipment: [],
+    credits: 0,
+    notes: 'Repeat runner finalized Scout.'
+  })
+}
+
 test.describe('character creation smoke', () => {
+  test('repeat-runs disposable seeded travellers with failure context', async ({
+    page
+  }, testInfo) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 13_579)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CreateGame',
+      slug: roomId,
+      name: 'Repeat runner smoke'
+    })
+
+    const finalized: RepeatTravellerContext = {
+      label: 'finalized-scout',
+      seed: 5,
+      phase: 'setup',
+      action: 'not started',
+      commandTypes: []
+    }
+    await repeatTravellerStep(
+      page,
+      roomId,
+      actorId,
+      testInfo,
+      finalized,
+      'setup',
+      'create traveller',
+      async () => {
+        await setRoomSeed(page, roomId, finalized.seed)
+        await createRepeatTraveller(
+          page,
+          roomId,
+          actorId,
+          actorSession,
+          finalized
+        )
+      }
+    )
+    await repeatTravellerStep(
+      page,
+      roomId,
+      actorId,
+      testInfo,
+      finalized,
+      'career',
+      'drive to finalized Scout',
+      async () => {
+        await driveRepeatTravellerToFinalized(
+          page,
+          roomId,
+          actorId,
+          actorSession,
+          finalized
+        )
+      }
+    )
+    await repeatTravellerStep(
+      page,
+      roomId,
+      actorId,
+      testInfo,
+      finalized,
+      'assert',
+      'projected playable sheet',
+      async () => {
+        await expect
+          .poll(async () => {
+            if (!finalized.characterId) return null
+            const character = await fetchProjectedCharacter(
+              page,
+              roomId,
+              actorId,
+              finalized.characterId
+            )
+            return {
+              status: character?.creation?.state?.status,
+              creationComplete: character?.creation?.creationComplete,
+              notes: character?.notes ?? ''
+            }
+          })
+          .toMatchObject({
+            status: 'PLAYABLE',
+            creationComplete: true,
+            notes: expect.stringContaining('Term 1: Scout, survived.')
+          })
+      }
+    )
+
+    const drifter: RepeatTravellerContext = {
+      label: 'fallback-drifter',
+      seed: 4,
+      phase: 'setup',
+      action: 'not started',
+      commandTypes: []
+    }
+    const fallbackRoomId = await openUniqueRoom(page)
+    const fallbackActorId = actorIdFromPage(page)
+    const fallbackActorSession = await actorSessionFromPage(
+      page,
+      fallbackRoomId,
+      fallbackActorId
+    )
+    await postCommand(page, fallbackRoomId, fallbackActorId, fallbackActorSession, {
+      type: 'CreateGame',
+      slug: fallbackRoomId,
+      name: 'Repeat runner fallback smoke'
+    })
+    await repeatTravellerStep(
+      page,
+      fallbackRoomId,
+      fallbackActorId,
+      testInfo,
+      drifter,
+      'setup',
+      'create low-stat traveller',
+      async () => {
+        await setRoomSeed(page, fallbackRoomId, drifter.seed)
+        await createRepeatTraveller(
+          page,
+          fallbackRoomId,
+          fallbackActorId,
+          fallbackActorSession,
+          drifter
+        )
+        if (!drifter.characterId) throw new Error('Missing Drifter character')
+        await seedCreationToCareerSelection(page, {
+          roomId: fallbackRoomId,
+          actorId: fallbackActorId,
+          actorSession: fallbackActorSession,
+          characterId: drifter.characterId
+        })
+        await postRepeatCommand(
+          page,
+          fallbackRoomId,
+          fallbackActorId,
+          fallbackActorSession,
+          drifter,
+          {
+            type: 'UpdateCharacterSheet',
+            characterId: drifter.characterId,
+            characteristics: {
+              str: 2,
+              dex: 2,
+              end: 2,
+              int: 2,
+              edu: 2,
+              soc: 2
+            }
+          }
+        )
+      }
+    )
+    await repeatTravellerStep(
+      page,
+      fallbackRoomId,
+      fallbackActorId,
+      testInfo,
+      drifter,
+      'career',
+      'fail Scout qualification and enter Drifter',
+      async () => {
+        if (!drifter.characterName) throw new Error('Missing Drifter name')
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await expect(page.locator('#boardCanvas')).toBeVisible()
+        await openOrExpectFollowedCreation(page, drifter.characterName)
+
+        const fields = page.locator('#characterCreationFields')
+        const scoutCareer = characterCreationCareerButton(page, 'Scout')
+        await expect(scoutCareer).toBeVisible({ timeout: 5_000 })
+        await scoutCareer.click()
+        await waitForDiceReveal(page)
+
+        await expect(fields.locator('.creation-draft-fallback')).toBeVisible({
+          timeout: 5_000
+        })
+        await expect(fields).toContainText('Qualification failed')
+        await fields.getByRole('button', { name: 'Become a Drifter' }).click()
+        drifter.commandTypes.push('EnterCharacterCreationDrifter')
+        await expect(fields).toContainText(/Drifter|Apply basic training/, {
+          timeout: 5_000
+        })
+      }
+    )
+    await repeatTravellerStep(
+      page,
+      fallbackRoomId,
+      fallbackActorId,
+      testInfo,
+      drifter,
+      'assert',
+      'projected Drifter fallback',
+      async () => {
+        if (!drifter.characterId) throw new Error('Missing Drifter character')
+        const roomState = await fetchRoomState(
+          page,
+          fallbackRoomId,
+          fallbackActorId
+        )
+        const creationJson = JSON.stringify(
+          roomState.state?.characters[drifter.characterId]?.creation ?? null
+        )
+        expect(creationJson).toContain('Drifter')
+      }
+    )
+  })
+
   test('opens the creator and rolls the first characteristic through shared dice', async ({
     page
   }) => {
@@ -1117,7 +1658,7 @@ test.describe('character creation smoke', () => {
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'ResolveCharacterCreationQualification',
       characterId,
-      career: 'Scout'
+      career: 'Merchant'
     })
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'CompleteCharacterCreationBasicTraining',
