@@ -2849,13 +2849,29 @@ describe('room publication flow', () => {
     )
   })
 
-  it('recovers finalized character creation from playable checkpoint plus tail', async () => {
+  it('recovers finalized character creation from interval checkpoint plus tail', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')
     await publishPlayableCharacterCreation(storage, characterId)
 
     const playableCheckpoint = await readCheckpoint(storage, gameId)
     assert.equal(playableCheckpoint?.seq, 38)
+
+    const intervalCheckpointSeq = 64
+    for (
+      let index = (playableCheckpoint?.seq ?? 0) + 1;
+      index <= intervalCheckpointSeq;
+      index += 1
+    ) {
+      const created = await publish(
+        storage,
+        createBoardCommand(asBoardId(`finalization-checkpoint-board-${index}`))
+      )
+      assert.equal(created.ok, true)
+    }
+
+    const intervalCheckpoint = await readCheckpoint(storage, gameId)
+    assert.equal(intervalCheckpoint?.seq, intervalCheckpointSeq)
 
     const finalized = await publish(storage, {
       type: 'FinalizeCharacterCreation',
@@ -2881,27 +2897,58 @@ describe('room publication flow', () => {
     if (!finalized.ok) return
     assert.equal(
       (await readCheckpoint(storage, gameId))?.seq,
-      playableCheckpoint?.seq
+      intervalCheckpoint?.seq
     )
-    assert.deepEqual(
-      (
-        await readEventStreamTail(storage, gameId, playableCheckpoint?.seq ?? 0)
-      ).map((envelope) => envelope.event.type),
-      ['CharacterCreationFinalized']
+    const recoveredTail = await readEventStreamTail(
+      storage,
+      gameId,
+      intervalCheckpoint?.seq ?? 0
     )
+    assert.deepEqual(recoveredTail.map((envelope) => envelope.event.type), [
+      'CharacterCreationFinalized'
+    ])
 
     const recovered = await getProjectedGameState(storage, gameId)
+    const finalizedEvent = recoveredTail.at(-1)?.event
+    assert.equal(finalizedEvent?.type, 'CharacterCreationFinalized')
+    if (finalizedEvent?.type !== 'CharacterCreationFinalized') return
+    const recoveredCharacter = recovered?.characters[characterId]
     assert.deepEqual(recovered, finalized.value.state)
-    assert.equal(recovered?.characters[characterId]?.age, 22)
+    assert.equal(recoveredCharacter?.age, 22)
+    assert.deepEqual(
+      recoveredCharacter?.characteristics,
+      finalizedEvent.characteristics
+    )
+    assert.deepEqual(recoveredCharacter?.skills, finalizedEvent.skills)
+    assert.deepEqual(recoveredCharacter?.equipment, finalizedEvent.equipment)
+    assert.equal(recoveredCharacter?.credits, finalizedEvent.credits)
+    assert.equal(recoveredCharacter?.notes, finalizedEvent.notes)
     assert.equal(
-      JSON.stringify(recovered?.characters[characterId]?.skills) !==
+      JSON.stringify(finalizedEvent.characteristics) !==
+        JSON.stringify({
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }),
+      true,
+      'finalized characteristics should come from the server projection, not the command'
+    )
+    assert.equal(
+      JSON.stringify(finalizedEvent.skills) !==
         JSON.stringify(['Pilot-1', 'Vacc Suit-0']),
-      true
+      true,
+      'finalized skills should come from the server projection, not the command'
     )
     assert.equal(
-      recovered?.characters[characterId]?.equipment[0]?.name !== 'Vacc suit',
-      true
+      finalizedEvent.equipment[0]?.name !== 'Vacc suit',
+      true,
+      'finalized equipment should come from the server projection, not the command'
     )
+    assert.equal(finalizedEvent.credits !== 1200, true)
+    assert.equal(finalizedEvent.notes.includes('Final scout.'), false)
   })
 
   it('recovers semantic commission, advancement, and term skills from checkpoint plus tail', async () => {

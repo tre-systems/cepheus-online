@@ -1,10 +1,4 @@
-import {
-  asBoardId,
-  asCharacterId,
-  asGameId,
-  asUserId,
-  type PieceId
-} from '../../shared/ids'
+import { asBoardId, asGameId, asUserId, type PieceId } from '../../shared/ids'
 import type { LiveDiceRollRevealTarget } from '../../shared/live-activity'
 import type { ServerMessage } from '../../shared/protocol'
 import type {
@@ -58,7 +52,6 @@ import {
   createCharacterCreationRenderController,
   type CharacterCreationRenderController
 } from './character-creation-render-controller.js'
-import { renderCharacterCreationSheetActions } from './character-creation-sheet-actions.js'
 import { cssUrl } from './image-assets.js'
 import { createGameCommand, nextBootstrapCommand } from './bootstrap-flow.js'
 import { fetchRoomState, postRoomCommand } from './room-api.js'
@@ -72,7 +65,7 @@ import {
 import type { DiceCommand } from './app-command-router.js'
 import { createAppSession } from './app-session.js'
 import { resolveActorSessionSecret } from './actor-session.js'
-import { createCharacterSheetController } from './character-sheet-controller.js'
+import { createCharacterSheetWiring } from './character-sheet-wiring.js'
 import { deriveDoorToggleViewModels } from './door-los-view.js'
 import { animateRoll as animateDiceRoll } from './dice-overlay.js'
 import { createDiceRevealCoordinator } from './dice-reveal-coordinator.js'
@@ -598,70 +591,20 @@ const boardDoorActions = (board: BoardState | null): HTMLElement | null => {
   return actions
 }
 
-const characterCreationActions = (
-  character: CharacterState | null
-): {
-  title: string
-  status: string
-  summary: string
-  actions: HTMLElement | null
-} | null => {
-  return renderCharacterCreationSheetActions(character, {
-    document,
-    identity: clientIdentity,
-    dispatch: postCharacterCreationCommand,
-    reportError: setError
-  })
-}
-
-const characterSheetController = createCharacterSheetController({
-  elements: {
-    sheet: els.sheet,
-    sheetName: els.sheetName,
-    sheetBody: els.sheetBody,
-    sheetTabs: els.sheetTabs
-  },
+const characterSheetController = createCharacterSheetWiring({
+  document,
+  elements: els,
   getSelectedPiece: selectedPiece,
   getSelectedCharacter: selectedCharacter,
   getSelectedBoard: selectedBoard,
   getCharacterState: () => state,
   canEditSheetFields: () => isActorRefereeOrOwner(state, asUserId(actorId)),
   getBoardDoorActions: () => ({ actions: boardDoorActions(selectedBoard()) }),
-  sendPatch: (characterId, patch) =>
-    postSheetCommand({
-      type: 'UpdateCharacterSheet',
-      ...commandIdentity(),
-      characterId: asCharacterId(
-        typeof characterId === 'string'
-          ? characterId
-          : (characterId.characterId ?? characterId.id ?? '')
-      ),
-      ...patch
-    }),
-  setVisibility: (piece, visibility) =>
-    postSheetCommand({
-      type: 'SetPieceVisibility',
-      ...commandIdentity(),
-      pieceId: piece.id,
-      visibility
-    }),
-  setFreedom: (piece, freedom) =>
-    postSheetCommand({
-      type: 'SetPieceFreedom',
-      ...commandIdentity(),
-      pieceId: piece.id,
-      freedom
-    }),
-  rollSkill: (_piece, _character, _skill, reason) =>
-    postSheetCommand(
-      buildRollDiceCommand({
-        identity: clientIdentity(),
-        expression: '2d6',
-        reason
-      }) as DiceCommand
-    ),
-  getCharacterCreationActions: characterCreationActions,
-  reportError: (message) => setError(message)
+  getClientIdentity: clientIdentity,
+  getCommandIdentity: commandIdentity,
+  postSheetCommand,
+  postCharacterCreationCommand,
+  reportError: setError
 })
 
 const renderSheet = () => characterSheetController.render()

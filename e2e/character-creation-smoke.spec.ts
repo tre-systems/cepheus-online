@@ -7,10 +7,30 @@ type RoomStateMessage = {
     characters: Record<
       string,
       {
-        creation?: unknown
+        creation?: CharacterCreationProjection
       }
     >
   } | null
+}
+
+type CharacterCreationProjection = {
+  history?: Array<{
+    type?: string
+    termSkill?: {
+      career?: string
+      table?: string
+      tableRoll?: number
+      rawSkill?: string
+      skill?: string | null
+    }
+  }>
+}
+
+type ProjectedTermSkill = {
+  career: string
+  table: string
+  tableRoll: number
+  skill: string
 }
 
 const actorSessionKey = (roomId: string, actorId: string): string =>
@@ -43,6 +63,34 @@ const fetchRoomState = async (
     `/rooms/${encodeURIComponent(roomId)}/state?viewer=referee&user=${encodeURIComponent(actorId)}`
   )
   return (await response.json()) as RoomStateMessage
+}
+
+const latestProjectedTermSkill = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  characterId: string
+): Promise<ProjectedTermSkill | null> => {
+  const message = await fetchRoomState(page, roomId, actorId)
+  const creation = message.state?.characters[characterId]?.creation
+  const termSkill = [...(creation?.history ?? [])]
+    .reverse()
+    .find((event) => event.type === 'ROLL_TERM_SKILL')?.termSkill
+  if (
+    !termSkill?.career ||
+    !termSkill.table ||
+    typeof termSkill.tableRoll !== 'number'
+  ) {
+    return null
+  }
+  const skill = termSkill.skill ?? termSkill.rawSkill
+  if (!skill) return null
+  return {
+    career: termSkill.career,
+    table: termSkill.table,
+    tableRoll: termSkill.tableRoll,
+    skill
+  }
 }
 
 const postCommand = async (
@@ -1453,6 +1501,181 @@ test.describe('character creation smoke', () => {
       await expect
         .poll(() => normalizedText(refreshedOutcome))
         .toBe(finalProjectedOutcome)
+    } finally {
+      await spectator.close()
+    }
+  })
+
+  test('lets a spectator follow a term skill roll without early reveal and recover after refresh', async ({
+    browser,
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 13_579)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationQualification',
+      characterId,
+      career: 'Merchant'
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await resolveVisibleCascadeChoices(page)
+    await page.getByRole('button', { name: 'Apply basic training' }).click()
+
+    const rollSurvival = page.getByRole('button', { name: 'Roll survival' })
+    await expect(rollSurvival).toBeVisible({ timeout: 5_000 })
+    await rollSurvival.click()
+    await waitForDiceReveal(page)
+
+    for (const actionName of ['Roll commission', 'Roll advancement']) {
+      const action = page.getByRole('button', { name: actionName })
+      if (await action.isVisible().catch(() => false)) {
+        await action.click()
+        await waitForDiceReveal(page)
+      }
+    }
+
+    const fields = page.locator('#characterCreationFields')
+    await expect(fields).toContainText('Skills and training', {
+      timeout: 5_000
+    })
+
+    const spectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: 'e2e-spectator',
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(spectator, characterName)
+
+      const spectatorFields = spectator.locator('#characterCreationFields')
+      const spectatorTermSkillRolls = spectatorFields.locator(
+        '.creation-term-skill-rolls span'
+      )
+      const spectatorServiceSkills = spectatorFields
+        .locator('.creation-term-actions')
+        .getByRole('button', { name: 'Service skills' })
+
+      await expect(spectatorFields).toContainText('Skills and training', {
+        timeout: 5_000
+      })
+      await expect(spectatorServiceSkills).toBeDisabled()
+      await expect(spectatorTermSkillRolls).toHaveCount(0)
+      await expect(spectatorFields).not.toContainText(
+        /\d+ on (personalDevelopment|serviceSkills|specialistSkills|advancedEducation)/,
+        { timeout: 100 }
+      )
+
+      const ownerServiceSkills = fields
+        .locator('.creation-term-actions')
+        .getByRole('button', { name: 'Service skills' })
+      const termSkillAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'RollCharacterCreationTermSkill'
+          )
+      )
+      await expect(ownerServiceSkills).toBeVisible({ timeout: 5_000 })
+      await ownerServiceSkills.click()
+      await expect((await termSkillAccepted).ok()).toBe(true)
+
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
+        'Rolling...',
+        { timeout: 100 }
+      )
+      await expect(spectatorTermSkillRolls).toHaveCount(0, { timeout: 100 })
+      await expect(spectatorFields).not.toContainText(
+        /\d+ on (personalDevelopment|serviceSkills|specialistSkills|advancedEducation)/,
+        { timeout: 100 }
+      )
+
+      await waitForDiceReveal(page)
+      await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
+        'Rolling...',
+        { timeout: 5_000 }
+      )
+
+      let termSkill: ProjectedTermSkill | null = null
+      await expect
+        .poll(async () => {
+          termSkill = await latestProjectedTermSkill(
+            page,
+            roomId,
+            actorId,
+            characterId
+          )
+          return termSkill
+        })
+        .not.toBeNull()
+      if (!termSkill) throw new Error('Term skill was not projected')
+
+      await expect(spectatorTermSkillRolls).toHaveCount(1, {
+        timeout: 5_000
+      })
+      await expect(spectatorTermSkillRolls.first()).toContainText(
+        termSkill.skill
+      )
+      await expect(spectatorTermSkillRolls.first()).toContainText(
+        `${termSkill.tableRoll} on ${termSkill.table}`
+      )
+
+      await spectator.reload({ waitUntil: 'domcontentloaded' })
+      await expect(spectator.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(spectator, characterName)
+      await expect(spectatorTermSkillRolls).toHaveCount(1, {
+        timeout: 5_000
+      })
+      await expect(spectatorTermSkillRolls.first()).toContainText(
+        termSkill.skill
+      )
+      await expect(spectatorTermSkillRolls.first()).toContainText(
+        `${termSkill.tableRoll} on ${termSkill.table}`
+      )
+      await expect
+        .poll(() =>
+          latestProjectedTermSkill(
+            spectator,
+            roomId,
+            'e2e-spectator',
+            characterId
+          )
+        )
+        .toEqual(termSkill)
     } finally {
       await spectator.close()
     }
