@@ -756,7 +756,7 @@ test.describe('character creation smoke', () => {
     await expect(rollSurvival).toHaveCount(0)
   })
 
-  test('drives a guaranteed one-term career path through survival, training, aging, and mustering choice', async ({
+  test('drives a seeded multi-career path with spectator follow through mustering', async ({
     browser,
     page
   }) => {
@@ -1017,9 +1017,45 @@ test.describe('character creation smoke', () => {
     })
     postedCommandTypes.push('RollCharacterCreationMusteringBenefit')
     await postCommand(page, roomId, actorId, actorSession, {
-      type: 'CompleteCharacterCreationMustering',
+      type: 'ContinueCharacterCreationAfterMustering',
       characterId
     })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'StartCharacterCareerTerm',
+      characterId,
+      career: 'Scout',
+      drafted: false
+    })
+    postedCommandTypes.push('StartCharacterCareerTerm')
+
+    const roomState = await fetchRoomState(page, roomId, actorId)
+    const creationJson = JSON.stringify(
+      roomState.state?.characters[characterId]?.creation ?? null
+    )
+    expect(creationJson).toContain('Merchant')
+    expect(creationJson).toContain('Scout')
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await page
+      .locator('#creationPresenceDock .creation-presence-card')
+      .filter({ hasText: characterName })
+      .click()
+
+    const secondCareerSpectator = await browser.newPage()
+    try {
+      await openRoom(secondCareerSpectator, {
+        roomId,
+        userId: 'e2e-second-spectator',
+        viewer: 'player'
+      })
+      await openOrExpectFollowedCreation(secondCareerSpectator, characterName)
+      await expect(
+        secondCareerSpectator.locator('#characterCreationFields')
+      ).toContainText(/Scout|Apply basic training/, { timeout: 5_000 })
+    } finally {
+      await secondCareerSpectator.close()
+    }
 
     await expect.poll(() => postedCommandTypes).toContain(
       'CompleteCharacterCreationBasicTraining'

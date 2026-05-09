@@ -2058,6 +2058,18 @@ describe('room publication flow', () => {
       characterId
     })
     await publishCharacterCreationCharacteristics(storage, characterId)
+    const educationFixed = await publish(storage, {
+      type: 'UpdateCharacterSheet',
+      gameId,
+      actorId,
+      characterId,
+      characteristics: { edu: 12 }
+    })
+    assert.equal(
+      educationFixed.ok,
+      true,
+      educationFixed.ok ? undefined : educationFixed.error.message
+    )
 
     const homeworldSet = await publish(storage, {
       type: 'SetCharacterCreationHomeworld',
