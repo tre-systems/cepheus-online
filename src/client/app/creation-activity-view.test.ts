@@ -177,6 +177,77 @@ describe('creation activity view model', () => {
     )
   })
 
+  it('derives spectator cards for survival death and mustering benefit outcomes', () => {
+    const activities: readonly LiveActivityDescriptor[] = [
+      characterActivity({
+        seq: 40,
+        actorId: asUserId('local-user'),
+        transition: 'FINISH_MUSTERING',
+        details: 'Mustering benefit; Scout; cash; Cr10000; table roll 3',
+        status: 'MUSTERING_OUT'
+      }),
+      characterActivity({
+        seq: 41,
+        actorId: asUserId('spectated-user'),
+        transition: 'SURVIVAL_FAILED',
+        details: 'Killed in service; total 3; target 7+; DM 0',
+        status: 'DECEASED'
+      }),
+      characterActivity({
+        seq: 42,
+        actorId: asUserId('spectated-user'),
+        transition: 'FINISH_MUSTERING',
+        details: 'Mustering benefit; Merchant; cash; Cr20000; table roll 4',
+        status: 'MUSTERING_OUT'
+      }),
+      characterActivity({
+        seq: 43,
+        actorId: asUserId('spectated-user'),
+        transition: 'FINISH_MUSTERING',
+        details: 'Mustering benefit; Scout; material; Low Passage; table roll 5',
+        status: 'MUSTERING_OUT'
+      }),
+      characterActivity({
+        seq: 44,
+        actorId: asUserId('spectated-user'),
+        transition: 'FINISH_MUSTERING',
+        details: 'Mustering out complete',
+        status: 'ACTIVE'
+      })
+    ]
+
+    assert.deepEqual(
+      deriveCreationActivityCards(activities, { viewerActorId: 'local-user' }),
+      [
+        {
+          title: 'Killed in service',
+          detail: 'Killed in service; total 3; target 7+; DM 0',
+          tone: 'warning',
+          seq: 41
+        },
+        {
+          title: 'Mustering benefit',
+          detail: 'Mustering benefit; Merchant; cash; Cr20000; table roll 4',
+          tone: 'success',
+          seq: 42
+        },
+        {
+          title: 'Mustering benefit',
+          detail:
+            'Mustering benefit; Scout; material; Low Passage; table roll 5',
+          tone: 'success',
+          seq: 43
+        },
+        {
+          title: 'Mustering complete',
+          detail: 'Mustering out complete',
+          tone: 'success',
+          seq: 44
+        }
+      ]
+    )
+  })
+
   it('derives transient cards from accepted command live activities', () => {
     const creation = characterActivity({
       seq: 50,

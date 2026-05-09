@@ -132,6 +132,22 @@ const fallbackTitle = (transition: string): string => {
   )
 }
 
+const deriveCreationActivityCardTitle = (
+  activity: CharacterCreationActivityDescriptor
+): string => {
+  if (
+    activity.transition === 'FINISH_MUSTERING' &&
+    activity.details?.startsWith('Mustering benefit;')
+  ) {
+    return 'Mustering benefit'
+  }
+
+  return (
+    transitionTitles[activity.transition as keyof typeof transitionTitles] ??
+    fallbackTitle(activity.transition)
+  )
+}
+
 export const deriveCreationActivityCardTone = (
   activity: CharacterCreationActivityDescriptor
 ): CreationActivityCardTone => {
@@ -158,8 +174,7 @@ export const deriveCreationActivityCard = (
   activity: CharacterCreationActivityDescriptor
 ): CreationActivityCardViewModel => ({
   title: boundDisplayText(
-    transitionTitles[activity.transition as keyof typeof transitionTitles] ??
-      fallbackTitle(activity.transition),
+    deriveCreationActivityCardTitle(activity),
     MAX_CREATION_ACTIVITY_TITLE_LENGTH
   ),
   detail: boundDisplayText(

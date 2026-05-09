@@ -16,10 +16,6 @@ import type {
 } from '../../shared/state'
 import { isActorRefereeOrOwner } from '../../shared/viewer.js'
 import {
-  boardList,
-  boardOptionLabel,
-  boardSelectTitle,
-  boardStatusLabel,
   selectedBoard as selectSelectedBoard,
   selectedBoardId as selectSelectedBoardId,
   selectedBoardPieces,
@@ -92,6 +88,7 @@ import { createRoomMenuController } from './room-menu-controller.js'
 import { createRoomCommandDispatch } from './room-command-dispatch.js'
 import { createRoomAssetCreationController } from './room-asset-creation-controller.js'
 import { createAppShell, registerAppShellServiceWorker } from './app-shell.js'
+import { renderBoardControls as renderBoardControlElements } from './board-controls.js'
 
 registerAppShellServiceWorker()
 
@@ -489,8 +486,6 @@ createCharacterCreationDomController({
   reportError: setError
 })
 
-const currentBoardList = () => boardList(state)
-
 const currentSelectedBoardId = () => selectSelectedBoardId(state)
 
 const bootstrapScene = async () => {
@@ -730,25 +725,18 @@ const renderRail = () => {
 }
 
 const renderBoardControls = () => {
-  const boards = currentBoardList()
-  const board = selectedBoard()
-  els.boardStatus.textContent = boardStatusLabel(boards, board)
-
-  const options = boards.map((candidate, index) => {
-    const option = document.createElement('option')
-    option.value = candidate.id
-    option.textContent = boardOptionLabel(candidate, index)
-    return option
+  renderBoardControlElements({
+    elements: {
+      boardStatus: els.boardStatus,
+      boardSelect: els.boardSelect,
+      zoomOut: els.zoomOut,
+      zoomReset: els.zoomReset,
+      zoomIn: els.zoomIn
+    },
+    state,
+    canSelectBoards,
+    currentZoom: boardController?.currentZoom() || 1
   })
-  els.boardSelect.replaceChildren(...options)
-  els.boardSelect.value = board?.id || ''
-  els.boardSelect.disabled = boards.length === 0 || !canSelectBoards
-  els.boardSelect.title = boardSelectTitle(board, canSelectBoards)
-  els.zoomOut.disabled = !board
-  els.zoomReset.disabled = !board
-  els.zoomIn.disabled = !board
-  els.zoomReset.textContent =
-    Math.round((boardController?.currentZoom() || 1) * 100) + '%'
 }
 
 const render = () => {

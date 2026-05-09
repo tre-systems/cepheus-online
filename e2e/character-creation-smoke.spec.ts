@@ -1529,7 +1529,16 @@ test.describe('character creation smoke', () => {
 
     const musterOut = page.getByRole('button', { name: 'Muster out' })
     await expect(musterOut).toBeVisible({ timeout: 5_000 })
+    const leaveCareerAccepted = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes(`/rooms/${roomId}/command`) &&
+        (response.request().postData() ?? '').includes(
+          'LeaveCharacterCreationCareer'
+        )
+    )
     await musterOut.click()
+    await expect((await leaveCareerAccepted).ok()).toBe(true)
 
     await expect(page.locator('#characterCreationFields')).toContainText(
       /Skills|Review the skill list/,
@@ -1541,13 +1550,120 @@ test.describe('character creation smoke', () => {
       /Equipment|Add starting equipment/,
       { timeout: 5_000 }
     )
-    await postCommand(page, roomId, actorId, actorSession, {
-      type: 'RollCharacterCreationMusteringBenefit',
-      characterId,
-      career: 'Merchant',
-      kind: 'cash'
-    })
-    postedCommandTypes.push('RollCharacterCreationMusteringBenefit')
+
+    const musteringSpectator = await browser.newPage()
+    try {
+      await openRoom(musteringSpectator, {
+        roomId,
+        userId: 'e2e-mustering-spectator',
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(musteringSpectator, characterName)
+
+      const spectatorFields = musteringSpectator.locator(
+        '#characterCreationFields'
+      )
+      const spectatorBenefitList = spectatorFields.locator(
+        '.creation-benefit-list'
+      )
+      const rollCashBenefit = page.getByRole('button', { name: 'Roll cash' })
+      const spectatorActivityFeed = musteringSpectator.locator(
+        '#creationActivityFeed'
+      )
+      const musteringBenefitFromProjection = async () => {
+        const creation = (await fetchRoomState(
+          musteringSpectator,
+          roomId,
+          'e2e-mustering-spectator'
+        )).state?.characters[characterId]?.creation as
+          | {
+              history?: Array<{
+                type?: string
+                musteringBenefit?: {
+                  career: string
+                  kind: string
+                  tableRoll: number
+                  value: string
+                }
+              }>
+            }
+          | undefined
+        return (
+          creation?.history?.find(
+            (event) =>
+              event.type === 'FINISH_MUSTERING' &&
+              event.musteringBenefit?.career === 'Merchant' &&
+              event.musteringBenefit.kind === 'cash'
+          )?.musteringBenefit ?? null
+        )
+      }
+
+      await expect(rollCashBenefit).toBeVisible({ timeout: 5_000 })
+      await expect(spectatorFields).not.toContainText(/Merchant: cash \d+ ->/, {
+        timeout: 100
+      })
+      await expect(spectatorBenefitList).toHaveCount(0)
+      await expect(spectatorActivityFeed).not.toContainText(
+        /Mustering benefit|Merchant.*cash|table roll/i,
+        { timeout: 100 }
+      )
+
+      const benefitAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'RollCharacterCreationMusteringBenefit'
+          )
+      )
+      await rollCashBenefit.click()
+      await expect((await benefitAccepted).ok()).toBe(true)
+
+      await expect(
+        musteringSpectator.locator('#diceOverlay.visible')
+      ).toBeVisible({ timeout: 5_000 })
+      await expect(
+        musteringSpectator.locator('#diceStage .roll-total')
+      ).toHaveText('Rolling...', { timeout: 100 })
+      await expect(spectatorFields).not.toContainText(/Merchant: cash \d+ ->/, {
+        timeout: 100
+      })
+      await expect(spectatorBenefitList).toHaveCount(0, { timeout: 100 })
+      await expect(spectatorActivityFeed).not.toContainText(
+        /Mustering benefit|Merchant.*cash|table roll/i,
+        { timeout: 100 }
+      )
+
+      await waitForDiceReveal(page)
+      await expect(
+        musteringSpectator.locator('#diceStage .roll-total')
+      ).not.toHaveText('Rolling...', { timeout: 5_000 })
+
+      const projectedBenefit = await musteringBenefitFromProjection()
+      if (!projectedBenefit) {
+        throw new Error('Mustering benefit was not projected')
+      }
+      const projectedBenefitText =
+        `Merchant; cash; Cr${projectedBenefit.value}; ` +
+        `table roll ${projectedBenefit.tableRoll}`
+      await expect(spectatorActivityFeed).toContainText('Mustering benefit', {
+        timeout: 5_000
+      })
+      await expect(spectatorActivityFeed).toContainText(projectedBenefitText)
+
+      await musteringSpectator.reload({ waitUntil: 'domcontentloaded' })
+      await expect(musteringSpectator.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(musteringSpectator, characterName)
+      await expect(spectatorFields).toContainText('Terms served', {
+        timeout: 5_000
+      })
+      await expect
+        .poll(async () => musteringBenefitFromProjection())
+        .toEqual(projectedBenefit)
+    } finally {
+      await musteringSpectator.close()
+    }
+
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'ContinueCharacterCreationAfterMustering',
       characterId
