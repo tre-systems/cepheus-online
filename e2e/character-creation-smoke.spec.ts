@@ -230,6 +230,59 @@ const openOrExpectFollowedCreation = async (
   ).toBeVisible({ timeout: 5_000 })
 }
 
+const visibleHorizontalOverflow = async (
+  page: Page,
+  selector: string
+): Promise<string[]> =>
+  page.locator(selector).evaluateAll((elements) => {
+    const viewportWidth = document.documentElement.clientWidth
+
+    return elements.flatMap((element) => {
+      const rect = element.getBoundingClientRect()
+      const style = window.getComputedStyle(element)
+      const isVisible =
+        rect.width > 0 &&
+        rect.height > 0 &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        Number(style.opacity) !== 0
+
+      if (!isVisible || (rect.left >= -1 && rect.right <= viewportWidth + 1)) {
+        return []
+      }
+
+      const id = element.id ? `#${element.id}` : ''
+      const classes = [...element.classList].map((name) => `.${name}`).join('')
+      const label = element.textContent?.trim().replace(/\s+/g, ' ').slice(0, 48)
+      return [`${element.tagName.toLowerCase()}${id}${classes} ${label}`]
+    })
+  })
+
+const expectMobileCreatorControlsFit = async (page: Page): Promise<void> => {
+  await expect(
+    page.getByRole('complementary', { name: 'Character creator' })
+  ).toBeVisible({ timeout: 5_000 })
+
+  await expect
+    .poll(() =>
+      visibleHorizontalOverflow(
+        page,
+        [
+          '#characterCreatorPanel',
+          '#characterCreationFields',
+          '#characterCreationFields button',
+          '#characterCreationFields select',
+          '#characterCreationFields input',
+          '#characterCreationFields textarea',
+          '#characterCreationFields .creation-stat-card',
+          '#characterCreationFields .creation-card',
+          '#characterCreationFields .creation-career-choice'
+        ].join(',')
+      )
+    )
+    .toEqual([])
+}
+
 test.describe('character creation smoke', () => {
   test('opens the creator and rolls the first characteristic through shared dice', async ({
     page
@@ -1072,5 +1125,85 @@ test.describe('character creation smoke', () => {
     await expect.poll(() => postedCommandTypes).toContain(
       'RollCharacterCreationMusteringBenefit'
     )
+  })
+
+  test('keeps early character creation screens usable at phone width', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    const roomId = await openUniqueRoom(page)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await expect(page.locator('#characterCreationFields')).toContainText(
+      'Characteristics',
+      { timeout: 5_000 }
+    )
+    await expectMobileCreatorControlsFit(page)
+
+    await seedCreationToHomeworld(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await expect(page.locator('#characterCreationFields')).toContainText(
+      'Homeworld',
+      { timeout: 5_000 }
+    )
+    await expectMobileCreatorControlsFit(page)
+
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'SetCharacterCreationHomeworld',
+      characterId,
+      homeworld: {
+        name: null,
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid']
+      }
+    })
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await expect(page.locator('#characterCreationFields')).toContainText(
+      'Background skills',
+      { timeout: 5_000 }
+    )
+    await expectMobileCreatorControlsFit(page)
+
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationCascadeSkill',
+      characterId,
+      cascadeSkill: 'Gun Combat-0',
+      selection: 'Slug Rifle'
+    })
+    for (const skill of ['Admin', 'Advocate', 'Comms']) {
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'SelectCharacterCreationBackgroundSkill',
+        characterId,
+        skill
+      })
+    }
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationHomeworld',
+      characterId
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await expect(page.locator('#characterCreationFields')).toContainText(
+      'Career',
+      { timeout: 5_000 }
+    )
+    await expectMobileCreatorControlsFit(page)
   })
 })
