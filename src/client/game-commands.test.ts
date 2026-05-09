@@ -14,6 +14,7 @@ import type {
   CharacterCreationProjection,
   GameState
 } from '../shared/state'
+import type { LiveActivityDescriptor } from '../shared/live-activity'
 import {
   applyServerMessage,
   buildBootstrapCommands,
@@ -644,6 +645,40 @@ describe('client command helpers', () => {
     ])
   })
 
+  it('preserves pending dice reveal targets from redacted accepted messages', () => {
+    const activity = {
+      id: asEventId('game-1:8'),
+      eventId: asEventId('game-1:8'),
+      gameId: identity.gameId,
+      seq: 8,
+      actorId: identity.actorId,
+      createdAt: '2026-05-06T10:00:00.000Z',
+      type: 'diceRoll' as const,
+      expression: '2d6',
+      reason: 'Hidden table roll',
+      reveal: {
+        revealAt: '2026-05-06T10:00:02.500Z',
+        delayMs: 2500
+      }
+    } as unknown as LiveActivityDescriptor
+    const result = applyServerMessage(state, {
+      type: 'commandAccepted',
+      requestId: 'req-1',
+      state,
+      eventSeq: 8,
+      liveActivities: [activity]
+    })
+
+    assert.deepEqual(result.diceRollActivities, [
+      {
+        id: 'game-1:8',
+        revealAt: '2026-05-06T10:00:02.500Z'
+      }
+    ])
+    assert.equal('rolls' in result.diceRollActivities[0], false)
+    assert.equal('total' in result.diceRollActivities[0], false)
+  })
+
   it('maps room state dice activity reveal metadata for the overlay', () => {
     const activities = deriveServerMessageDiceRollActivities({
       type: 'roomState',
@@ -694,6 +729,43 @@ describe('client command helpers', () => {
         total: 11
       }
     ])
+  })
+
+  it('derives pending dice reveal targets from redacted room state activities', () => {
+    const activities = deriveServerMessageDiceRollActivities({
+      type: 'roomState',
+      state: {
+        ...state,
+        diceLog: []
+      },
+      eventSeq: 8,
+      liveActivities: [
+        {
+          id: asEventId('game-1:8'),
+          eventId: asEventId('game-1:8'),
+          gameId: identity.gameId,
+          seq: 8,
+          actorId: identity.actorId,
+          createdAt: '2026-05-06T10:00:00.000Z',
+          type: 'diceRoll',
+          expression: '2d6',
+          reason: 'Hidden table roll',
+          reveal: {
+            revealAt: '2026-05-06T10:00:02.500Z',
+            delayMs: 2500
+          }
+        } as unknown as LiveActivityDescriptor
+      ]
+    })
+
+    assert.deepEqual(activities, [
+      {
+        id: 'game-1:8',
+        revealAt: '2026-05-06T10:00:02.500Z'
+      }
+    ])
+    assert.equal('rolls' in activities[0], false)
+    assert.equal('total' in activities[0], false)
   })
 
   it('marks stale command rejections for reload', () => {

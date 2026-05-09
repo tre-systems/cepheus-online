@@ -1,13 +1,15 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { asGameId } from '../../shared/ids'
+import type { GameEvent } from '../../shared/events'
+import { asGameId, asUserId } from '../../shared/ids'
+import { LIVE_DICE_RESULT_REVEAL_DELAY_MS } from '../../shared/live-activity'
 import type { DurableObjectState } from '../cloudflare'
 import type { Env } from '../env'
 import { GameRoomDO } from './game-room-do'
 import type { PublicationTelemetryEvent } from './publication-telemetry'
 import { createMemoryStorage } from './test-support'
-import { gameSeedKey, readEventStream } from './storage'
+import { appendEvents, gameSeedKey, readEventStream } from './storage'
 
 type TestSocket = WebSocket & {
   sent: string[]
@@ -71,6 +73,34 @@ const assertPreRevealDiceDetailsHidden = (rawMessage: unknown) => {
   )
   assert.equal('rolls' in activity, false, 'pre-reveal activity omits rolls')
   assert.equal('total' in activity, false, 'pre-reveal activity omits total')
+}
+
+const assertRoomStateDiceDetailsHidden = (rawMessage: unknown) => {
+  const message = asRecord(rawMessage)
+  assert.equal(message.type, 'roomState')
+  const state = asRecord(message.state)
+  const diceLog = state.diceLog
+
+  assert.equal(Array.isArray(diceLog), true)
+  const roll = asRecord((diceLog as unknown[])[0])
+
+  assert.equal(roll.reason, 'Refresh roll')
+  assert.equal('rolls' in roll, false, 'pre-reveal dice log omits rolls')
+  assert.equal('total' in roll, false, 'pre-reveal dice log omits total')
+}
+
+const assertRoomStateDiceDetailsVisible = (rawMessage: unknown) => {
+  const message = asRecord(rawMessage)
+  assert.equal(message.type, 'roomState')
+  const state = asRecord(message.state)
+  const diceLog = state.diceLog
+
+  assert.equal(Array.isArray(diceLog), true)
+  const roll = asRecord((diceLog as unknown[])[0])
+
+  assert.equal(roll.reason, 'Refresh roll')
+  assert.deepEqual(roll.rolls, [4, 3])
+  assert.equal(roll.total, 7)
 }
 
 const createRoom = (
@@ -202,6 +232,22 @@ const startCharacterCreationBody = () =>
     characterId: 'scout',
     expectedSeq: 2
   })
+
+const createRefreshDiceEvents = (): GameEvent[] => [
+  {
+    type: 'GameCreated',
+    slug: 'game-1',
+    name: 'Spinward Test',
+    ownerId: asUserId('user-1')
+  },
+  {
+    type: 'DiceRolled',
+    expression: '2d6',
+    reason: 'Refresh roll',
+    rolls: [4, 3],
+    total: 7
+  }
+]
 
 describe('GameRoomDO HTTP skeleton', () => {
   it('accepts a local test seed for deterministic browser journeys', async () => {
@@ -574,6 +620,56 @@ describe('GameRoomDO HTTP skeleton', () => {
 
     assert.equal(response.status, 200)
     assert.deepEqual(message.state.pieces, {})
+  })
+
+  it('keeps pre-reveal dice details out of player and spectator room state refreshes', async () => {
+    const storage = createMemoryStorage()
+    const createdAt = new Date(Date.now() + 1000).toISOString()
+    await appendEvents(
+      storage,
+      asGameId('game-1'),
+      asUserId('user-1'),
+      createRefreshDiceEvents(),
+      createdAt
+    )
+    const room = createRoom([], new Map(), storage)
+
+    for (const url of [
+      'https://cepheus.test/rooms/game-1/state?viewer=player&user=user-2',
+      'https://cepheus.test/rooms/game-1/state?viewer=spectator&user=user-3'
+    ]) {
+      const response = await room.fetch(new Request(url))
+      const message = await response.json()
+
+      assert.equal(response.status, 200)
+      assertRoomStateDiceDetailsHidden(message)
+    }
+  })
+
+  it('reveals dice details in player and spectator room state refreshes after reveal time', async () => {
+    const storage = createMemoryStorage()
+    const createdAt = new Date(
+      Date.now() - LIVE_DICE_RESULT_REVEAL_DELAY_MS - 1000
+    ).toISOString()
+    await appendEvents(
+      storage,
+      asGameId('game-1'),
+      asUserId('user-1'),
+      createRefreshDiceEvents(),
+      createdAt
+    )
+    const room = createRoom([], new Map(), storage)
+
+    for (const url of [
+      'https://cepheus.test/rooms/game-1/state?viewer=player&user=user-2',
+      'https://cepheus.test/rooms/game-1/state?viewer=spectator&user=user-3'
+    ]) {
+      const response = await room.fetch(new Request(url))
+      const message = await response.json()
+
+      assert.equal(response.status, 200)
+      assertRoomStateDiceDetailsVisible(message)
+    }
   })
 
   it('broadcasts HTTP dice rolls to connected sockets', async () => {

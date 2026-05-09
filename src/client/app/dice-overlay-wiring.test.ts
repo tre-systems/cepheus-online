@@ -2,7 +2,11 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import type { LiveDiceRollRevealTarget } from '../../shared/live-activity'
-import type { AnimateRollOptions } from './dice-overlay'
+import type { ClientDiceRollActivity } from '../game-commands'
+import type {
+  AnimatePendingRollOptions,
+  AnimateRollOptions
+} from './dice-overlay'
 import { createDiceOverlayWiring } from './dice-overlay-wiring'
 
 class FakeClassList {
@@ -109,5 +113,54 @@ describe('dice overlay wiring', () => {
       { name: 'in-creator', force: false },
       { name: 'in-dialog', force: true }
     ])
+  })
+
+  it('uses pending animation for redacted dice reveal targets', () => {
+    const overlay = new FakeElement()
+    const stage = new FakeElement()
+    const host = new FakeElement()
+    const revealed: string[] = []
+    const animationOptions: AnimateRollOptions[] = []
+    const pendingAnimationOptions: AnimatePendingRollOptions[] = []
+    const pendingRoll: ClientDiceRollActivity = {
+      id: 'roll-pending',
+      revealAt: '2026-05-09T12:00:00.000Z'
+    }
+
+    const wiring = createDiceOverlayWiring({
+      elements: {
+        overlay: overlay as unknown as HTMLElement,
+        stage: stage as unknown as HTMLElement
+      },
+      panel: {
+        overlayHost: () => host as unknown as HTMLElement,
+        overlayContext: () => ({ inCreator: false, inDialog: false })
+      },
+      resolveDiceReveal: (rollId) => {
+        revealed.push(rollId)
+      },
+      animateRoll: (options) => {
+        animationOptions.push(options)
+        return 42
+      },
+      animatePendingRoll: (options) => {
+        pendingAnimationOptions.push(options)
+        return 43
+      }
+    })
+
+    wiring.animateRoll(pendingRoll)
+
+    assert.equal(animationOptions.length, 0)
+    const options = pendingAnimationOptions[0]
+    if (!options) throw new Error('Expected pending animation options')
+    assert.equal(options.roll.id, 'roll-pending')
+    assert.equal(options.roll.revealAt, '2026-05-09T12:00:00.000Z')
+    assert.equal(options.overlay, overlay)
+    assert.equal(options.stage, stage)
+    assert.equal(options.hideTimer, null)
+
+    options.onReveal?.()
+    assert.deepEqual(revealed, ['roll-pending'])
   })
 })

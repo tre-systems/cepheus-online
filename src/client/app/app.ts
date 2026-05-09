@@ -52,7 +52,7 @@ import {
   type CharacterCreationRenderController
 } from './character-creation-render-controller.js'
 import { cssUrl } from './image-assets.js'
-import { createGameCommand, nextBootstrapCommand } from './bootstrap-flow.js'
+import { createGameCommand } from './bootstrap-flow.js'
 import { fetchRoomState, postRoomCommand } from './room-api.js'
 import {
   applyServerMessage as applyClientServerMessage,
@@ -83,6 +83,7 @@ import { createAppRefreshWiring } from './app-refresh-wiring.js'
 import { createDiceCommandWiring } from './dice-command-wiring.js'
 import { createAppLifecycleWiring } from './app-lifecycle-wiring.js'
 import { createCharacterSheetControlsWiring } from './character-sheet-controls-wiring.js'
+import { createRoomBootstrapScene } from './room-bootstrap-scene.js'
 
 registerAppShellServiceWorker()
 
@@ -492,15 +493,13 @@ createCharacterCreationDomController({
   reportError: setError
 })
 
-const bootstrapScene = async () => {
-  setError('')
-  for (let i = 0; i < 10; i++) {
-    const command = nextBootstrapCommand({ ...bootstrapIdentity(), state })
-    if (!command) break
-    await postCommand(command, 'bootstrap-' + i)
-  }
-  await fetchState()
-}
+const roomBootstrapScene = createRoomBootstrapScene({
+  getIdentity: bootstrapIdentity,
+  getState: () => state,
+  postCommand,
+  fetchState,
+  clearError: () => setError('')
+})
 
 const roomConnectionController = createRoomConnectionController({
   webSocketConstructor: WebSocket,
@@ -793,7 +792,7 @@ createAppLifecycleWiring({
   windowTarget: window,
   bootstrapButton: els.bootstrap,
   render,
-  bootstrapScene,
+  bootstrapScene: roomBootstrapScene.run,
   reportError: setError,
   appBootstrap: {
     connectivityStatus: roomConnectionController.connectivitySnapshot().status,
