@@ -5,7 +5,7 @@ into ordered implementation slices while preserving clear ownership for parallel
 agents. Shipped work belongs in `git log`; this file is for active or future
 work that still needs a named home.
 
-Last reviewed: 2026-05-09.
+Last reviewed: 2026-05-13.
 
 ## North Star
 
@@ -121,11 +121,12 @@ for board, dice, door, sheet, and character creation commands. Room command
 submission now lives behind `room-command-dispatch`, so request IDs, HTTP
 posting, accepted-message checks, and domain dispatch wrappers are no longer
 embedded directly in `app.ts`. The initiative/character rail now has its own
-controller, `AppSession` exists, and `app.ts` is type-checked, but `app.ts` is
-still too large and still owns too much character-creation feature
-orchestration. The next architecture cleanup is to draw a clearer feature
-boundary around character creation and move the rendered wizard toward a
-signal-driven, projection-fed renderer.
+controller, `AppSession` exists, character creation is mounted through
+`createCharacterCreationFeature`, and `app.ts` is type-checked. `app.ts` is
+still a composition shell rather than a tiny boot file, but it no longer owns
+the internal creator panel, wizard, publication, finalization, activity feed,
+presence dock, or dice overlay graph. The next architecture cleanup is to move
+the rendered wizard toward a signal-driven, projection-fed view model.
 
 Primary write ownership:
 
@@ -150,9 +151,6 @@ Tasks:
   open modal state, form drafts, and pending dice animation are discardable.
 - Keep shrinking `src/client/app/app.ts` into typed dependencies rather than
   letting it grow as the long-term composition and orchestration file.
-- Extract character creation behind a feature boundary with explicit inputs:
-  authoritative projection, transient local form state, command adapter,
-  reveal coordinator, and dispose hooks.
 - Move character creation rendering toward dependency-free signals or an
   equivalent local reactive primitive so state changes update the view without
   adding another global store or framework.
@@ -178,9 +176,9 @@ state, saves checkpoints, checks stored projection parity through a named
 parity helper, returns one state-bearing response, and records telemetry for
 accepted/rejected/internal publication outcomes. Checkpoint decisions now return
 named reasons for the current creation, interval, and character-completion
-boundaries. `projectGameState` now uses an exhaustive event-handler registry,
-but the handlers still live in one shared projector module rather than domain
-modules.
+boundaries. `projectGameState` now uses an exhaustive event-handler registry
+composed from domain projector modules for game, character creation, board, and
+dice events.
 
 Primary write ownership:
 
@@ -194,8 +192,6 @@ Primary write ownership:
 
 Tasks:
 
-- Split the current exhaustive event-handler registry into domain projector
-  modules without changing event semantics.
 - Define and implement a clear projection parity policy. Avoid the bad middle
   ground where an event has already been appended but the client receives a
   rejected command because parity failed.
@@ -368,11 +364,13 @@ suppression for characteristic, aging, reenlistment, and mustering benefit
 actions, read-only spectator controls, redacted dice activity handling, board
 door command dispatch, and stale local flow replacement after server projection
 advances. The seeded multi-career smoke now includes spectator recovery for a
-live term-skill roll after reveal, refresh, and close/reopen, plus reenlistment
-refresh recovery after a revealed roll, while the repeat-runner smoke covers
-three disposable travellers with console and server-response failure context.
-The remaining leverage point is repeated multi-term spectator recovery while
-continuing to extract the character creation feature boundary from `app.ts`.
+live term-skill roll after reveal, refresh, and close/reopen, reenlistment
+refresh recovery after a revealed roll, and repeated multi-term spectator
+projection recovery through a later Scout term and mustering benefit. The
+repeat-runner smoke covers three disposable travellers with console and
+server-response failure context. The remaining leverage point is making the
+creator render from a single projection-fed view model so these browser tests
+exercise a simpler state graph.
 
 Primary write ownership:
 
@@ -393,9 +391,9 @@ Tasks:
 - Extend the repeat runner beyond its current three-traveller coverage only
   when new branches are added. It now records console errors, server response
   failures, and screenshots or DOM snapshots when the flow gets stuck.
-- Extend two-tab follow tests beyond the currently covered term-skill path:
-  repeated multi-term refreshes should reveal only after dice finish and recover
-  from server projection on refresh.
+- Extend two-tab follow tests as new branches are added. Current coverage
+  includes term-skill, reenlistment, later-term refreshes, and mustering benefit
+  reveal/recovery from the server projection.
 - Extend mobile viewport checks only when new controls are introduced. Current
   early-screen, term-skill, reenlistment, mustering-out, finalization, and
   spectator follow-card controls have phone-width coverage that asserts no
@@ -409,13 +407,9 @@ Tasks:
   duplicate characteristic, aging, reenlistment, and mustering benefit roll
   suppression, read-only controls, and stale local flow replacement after
   server projection advances.
-- Extract a `characterCreationController` that owns local creator state and
-  exposes explicit methods for opening owner mode, opening spectator mode,
-  applying authoritative state, submitting choices, and disposing listeners or
-  timers.
-- Make that controller the only character creation feature boundary used by
-  `app.ts`; follow-on rendering work should hang from that boundary rather than
-  adding more wizard state to the app shell.
+- Keep `createCharacterCreationFeature` as the only character creation feature
+  boundary used by `app.ts`; follow-on rendering work should hang from that
+  boundary rather than adding more wizard state to the app shell.
 - Keep all result deferral, spectator reveal timing, and button unblocking on
   `diceRevealCoordinator`; add coverage for every new roll-bearing creation
   action instead of adding local timing code.
@@ -956,19 +950,18 @@ The next batch should run like this, in this order:
    the server hard-deprecates the generic command path before persistence while
    preserving historical replay compatibility for old
    `CharacterCreationTransitioned` events.
-2. Finish the next architecture cleanup already underway: shrink `app.ts`,
-   extract the character creation feature boundary, move rendering toward a
-   signal-driven projection-fed model, finish the projector registry split by
-   moving character creation handlers into a domain module, and keep
-   publication parity plus viewer-safe responses on the single publication
+2. Continue the architecture cleanup already underway: keep `app.ts` shrinking
+   toward a boot/composition shell, move character creation rendering toward a
+   signal-driven projection-fed model, keep projector domain modules small, and
+   keep publication parity plus viewer-safe responses on the single publication
    path.
 3. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.
 4. Extend the automated UX regression slice before more broad creator polish:
-   grow the repeat runner beyond its current finalized/fallback pair, add
-   later-term two-tab spectator follow checks, mobile viewport assertions, and
-   reveal timing coverage for every roll-bearing action.
+   grow the repeat runner when new SRD branches are added, keep later-term
+   two-tab spectator follow checks healthy, add mobile viewport assertions for
+   new controls, and keep reveal timing coverage for every roll-bearing action.
 6. Finish moving legal-action state into server projection: pending decisions,
    requirements, failed-qualification options, remaining term skills, remaining
    mustering benefits, and completion gates. Reject commands that are not legal

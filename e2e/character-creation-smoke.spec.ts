@@ -311,6 +311,59 @@ const normalizedText = async (
 ): Promise<string> =>
   ((await locator.textContent()) ?? '').replace(/\s+/g, ' ').trim()
 
+const spectatorCreationProjectionSnapshot = async (
+  page: Page,
+  roomId: string,
+  spectatorId: string,
+  characterId: string
+): Promise<string> => {
+  const character = await fetchProjectedCharacter(
+    page,
+    roomId,
+    spectatorId,
+    characterId,
+    'spectator'
+  )
+  return JSON.stringify(character?.creation ?? null)
+}
+
+const expectSpectatorRefreshPreservesCreationProjection = async ({
+  spectator,
+  roomId,
+  spectatorId,
+  characterId,
+  characterName
+}: {
+  spectator: Page
+  roomId: string
+  spectatorId: string
+  characterId: string
+  characterName: string
+}): Promise<string> => {
+  const liveProjection = await spectatorCreationProjectionSnapshot(
+    spectator,
+    roomId,
+    spectatorId,
+    characterId
+  )
+
+  await spectator.reload({ waitUntil: 'domcontentloaded' })
+  await expect(spectator.locator('#boardCanvas')).toBeVisible()
+  await openOrExpectFollowedCreation(spectator, characterName)
+  await expect
+    .poll(() =>
+      spectatorCreationProjectionSnapshot(
+        spectator,
+        roomId,
+        spectatorId,
+        characterId
+      )
+    )
+    .toBe(liveProjection)
+
+  return liveProjection
+}
+
 const rollCareerOutcomeWithSpectatorReveal = async ({
   owner,
   spectator,
@@ -3358,10 +3411,13 @@ test.describe('character creation smoke', () => {
       await expect(spectatorFields).toContainText(projectedBenefitText, {
         timeout: 5_000
       })
-
-      await musteringSpectator.reload({ waitUntil: 'domcontentloaded' })
-      await expect(musteringSpectator.locator('#boardCanvas')).toBeVisible()
-      await openOrExpectFollowedCreation(musteringSpectator, characterName)
+      await expectSpectatorRefreshPreservesCreationProjection({
+        spectator: musteringSpectator,
+        roomId,
+        spectatorId: 'e2e-mustering-spectator',
+        characterId,
+        characterName
+      })
       await expect(spectatorFields).toContainText(projectedBenefitText, {
         timeout: 5_000
       })
@@ -3411,6 +3467,50 @@ test.describe('character creation smoke', () => {
       ).toContainText(/Scout|Apply basic training/, { timeout: 5_000 })
     } finally {
       await secondCareerSpectator.close()
+    }
+
+    const secondTermSpectatorId = 'e2e-second-term-spectator'
+    const secondTermSpectator = await browser.newPage()
+    try {
+      await openRoom(secondTermSpectator, {
+        roomId,
+        userId: secondTermSpectatorId,
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(secondTermSpectator, characterName)
+
+      const spectatorFields = secondTermSpectator.locator(
+        '#characterCreationFields'
+      )
+      const spectatorTermResolution = spectatorFields.locator(
+        '.creation-term-resolution'
+      )
+
+      await expect(spectatorFields).toContainText('Scout term', {
+        timeout: 5_000
+      })
+      await expect(spectatorFields).toContainText(
+        /Aging \d+:.*Reenlistment \d+:/,
+        { timeout: 5_000 }
+      )
+      const secondTermResolutionText =
+        await normalizedText(spectatorTermResolution)
+      expect(secondTermResolutionText).toMatch(/Reenlistment \d+:/)
+      await expectSpectatorRefreshPreservesCreationProjection({
+        spectator: secondTermSpectator,
+        roomId,
+        spectatorId: secondTermSpectatorId,
+        characterId,
+        characterName
+      })
+      await expect
+        .poll(() => normalizedText(spectatorTermResolution))
+        .toBe(secondTermResolutionText)
+      await expect(spectatorFields).toContainText(/Aging \d+:/, {
+        timeout: 5_000
+      })
+    } finally {
+      await secondTermSpectator.close()
     }
 
     await expect.poll(() => postedCommandTypes).toContain(

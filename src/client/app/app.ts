@@ -19,39 +19,11 @@ import {
   createBoardController,
   type BoardController
 } from './board-controller.js'
-import { createCharacterCreationPanel } from './character-creation-panel.js'
 import {
-  createCharacterCreationCommandController,
-  type CharacterCreationCommandController
-} from './character-creation-command-controller.js'
-import {
-  createCharacterCreationController,
-  type CharacterCreationController
-} from './character-creation-controller.js'
-import {
-  createCreationActivityFeedController,
-  creationActivityRevealDelayMs
-} from './creation-activity-feed.js'
-import { createCreationPresenceDock } from './creation-presence-dock.js'
-import { createCharacterCreationHomeworldPublisher } from './character-creation-homeworld-publisher.js'
-import { createCharacterCreationLifecycleController } from './character-creation-lifecycle-controller.js'
-import { createCharacterCreationPublicationController } from './character-creation-publication-controller.js'
-import {
-  createCharacterCreationFinalizationController,
-  type CharacterCreationFinalizationController
-} from './character-creation-finalization-controller.js'
-import {
-  createCharacterCreationWizardController,
-  type CharacterCreationWizardController
-} from './character-creation-wizard-controller.js'
-import { createCharacterCreationDomController } from './character-creation-dom-controller.js'
-import type { CharacterCreationDraft } from './character-creation-flow.js'
-import {
-  createCharacterCreationRenderController,
-  type CharacterCreationRenderController
-} from './character-creation-render-controller.js'
+  createCharacterCreationFeature,
+  type CharacterCreationFeature
+} from './character-creation-feature.js'
 import { createCharacterRailController } from './character-rail-controller.js'
-import { createGameCommand } from './bootstrap-flow.js'
 import { fetchRoomState, postRoomCommand } from './room-api.js'
 import {
   applyServerMessage as applyClientServerMessage,
@@ -61,7 +33,6 @@ import {
 import { createAppSession } from './app-session.js'
 import { resolveActorSessionSecret } from './actor-session.js'
 import { createCharacterSheetWiring } from './character-sheet-wiring.js'
-import { createDiceOverlayWiring } from './dice-overlay-wiring.js'
 import { createDiceRevealCoordinator } from './dice-reveal-coordinator.js'
 import {
   DEFAULT_APP_LOCATION,
@@ -100,13 +71,7 @@ let boardControlsWiring: ReturnType<typeof createBoardControlsWiring> | null =
   null
 const diceRevealCoordinator = createDiceRevealCoordinator()
 const animatedDiceRollActivityIds = new Set<string>()
-let characterCreationController: CharacterCreationController
-let characterCreationLifecycleController: ReturnType<
-  typeof createCharacterCreationLifecycleController
->
-let characterCreationFinalizationController: CharacterCreationFinalizationController
-let characterCreationWizardController: CharacterCreationWizardController
-let characterCreationRenderController: CharacterCreationRenderController
+let characterCreationFeature: CharacterCreationFeature
 const setStatus = (text: string): void => {
   els.status.textContent = text
 }
@@ -138,12 +103,12 @@ const currentSelectedPieceId = (): PieceId | null =>
   appSession.snapshot().selectedPieceId
 
 const selectPiece = (pieceId: PieceId | null): void => {
-  characterCreationController?.setSelectedCharacterId(null)
+  characterCreationFeature?.clearSelectedCharacter()
   appSession.selectPiece(pieceId)
 }
 
 const selectedCharacter = (): CharacterState | null => {
-  const characterId = characterCreationController?.selectedCharacterId()
+  const characterId = characterCreationFeature?.selectedCharacterId()
   return characterId ? (state?.characters[characterId] ?? null) : null
 }
 
@@ -172,9 +137,9 @@ const handleServerMessage = (message: ServerMessage): void => {
       })
     }
   }
-  creationActivityFeedController.show(
+  characterCreationFeature.showActivity(
     application,
-    creationActivityRevealDelayMs(liveActivityApplication.diceRollActivities)
+    liveActivityApplication.diceRollActivities
   )
   for (const activity of liveActivityApplication.diceRollActivities) {
     animatedDiceRollActivityIds.add(activity.id)
@@ -255,241 +220,10 @@ const {
   postCharacterCreationCommands
 } = commandDispatch
 
-const characterCreationPublicationController =
-  createCharacterCreationPublicationController({
-    getFlow: () => characterCreationController.flow(),
-    getState: () => state,
-    isReadOnly: () => characterCreationController.readOnly(),
-    identity: clientIdentity,
-    createGame: () =>
-      postCommand(
-        createGameCommand(bootstrapIdentity()),
-        requestId('create-game-for-character-creation')
-      ),
-    postCharacterCreationCommands,
-    reportError: setError
-  })
-
-const ensureCharacterCreationPublished = () =>
-  characterCreationPublicationController.ensurePublished()
-
-const characterCreationHomeworldPublisher =
-  createCharacterCreationHomeworldPublisher({
-    getState: () => state,
-    isReadOnly: () => characterCreationController.readOnly(),
-    commandIdentity,
-    ensurePublished: ensureCharacterCreationPublished,
-    postCharacterCreationCommand,
-    requestId,
-    setError
-  })
-
-let characterCreationCommandController: CharacterCreationCommandController
-
 const fetchState = async (): Promise<void> => {
   const message = await fetchRoomState({ roomId, viewerRole, actorId })
   handleServerMessage(message)
 }
-
-const characterCreationSeed = (): Pick<
-  CharacterCreationDraft,
-  'name' | 'equipment' | 'credits' | 'notes'
-> => ({
-  name: '',
-  equipment: [],
-  credits: 0,
-  notes: ''
-})
-
-const characterCreationPanel = createCharacterCreationPanel({
-  elements: {
-    panel: els.characterCreator,
-    body: els.creatorBody,
-    roomDialog: els.roomDialog,
-    fallbackOverlayHost: document.querySelector('.app-shell'),
-    title: els.characterCreatorTitle,
-    startSection: els.creatorStartSection,
-    quickSection: els.creatorQuickSection,
-    startWizardButton: els.startCharacterWizard,
-    wizard: els.characterCreationWizard,
-    steps: els.characterCreationSteps,
-    status: els.characterCreationStatus,
-    fields: els.characterCreationFields,
-    backWizardButton: els.backCharacterWizard,
-    nextWizardButton: els.nextCharacterWizard,
-    actions: els.creatorActions
-  },
-  closeCharacterSheet: () => characterSheetController.setOpen(false),
-  requestRender: () => render()
-})
-
-const diceOverlayWiring = createDiceOverlayWiring({
-  elements: {
-    overlay: els.diceOverlay,
-    stage: els.diceStage
-  },
-  panel: characterCreationPanel,
-  resolveDiceReveal
-})
-
-const animateRoll = diceOverlayWiring.animateRoll
-
-characterCreationController = createCharacterCreationController({
-  getState: () => state,
-  isPanelOpen: () => characterCreationPanel.isOpen(),
-  closePanel: () => characterCreationPanel.close()
-})
-
-characterCreationLifecycleController =
-  createCharacterCreationLifecycleController({
-    controller: characterCreationController,
-    panel: characterCreationPanel,
-    closeCharacterSheet: () => characterSheetController.setOpen(false),
-    renderWizard: () => renderCharacterCreationWizard(),
-    waitForDiceReveal,
-    reportError: setError
-  })
-
-characterCreationFinalizationController =
-  createCharacterCreationFinalizationController({
-    getFlow: () => characterCreationController.flow(),
-    setFlow: (flow) => {
-      characterCreationController.setFlow(flow)
-    },
-    getState: () => state,
-    getSelectedBoard: () => selectedBoard(),
-    getSelectedBoardPieces: () => boardPieces(),
-    identity: clientIdentity,
-    bootstrapIdentity,
-    requestId,
-    syncFields: () => syncCharacterCreationWizardFields(),
-    reportError: setError,
-    renderWizard: () => renderCharacterCreationWizard(),
-    closePanel: () => characterCreationPanel.close(),
-    openCharacterSheet: () => characterSheetController.setOpen(true),
-    renderApp: () => render(),
-    selectPiece,
-    createGame: postCommand,
-    createBoard: postBoardCommand,
-    postCharacterCreationCommands,
-    postBoardCommand
-  })
-
-const creationActivityFeedController = createCreationActivityFeedController({
-  elements: { feed: els.creationActivityFeed },
-  getViewerActorId: () => actorId,
-  shouldSuppressCards: () =>
-    characterCreationPanel.isOpen() && !characterCreationController.readOnly(),
-  setTimeout: window.setTimeout.bind(window),
-  clearTimeout: window.clearTimeout.bind(window)
-})
-
-const creationPresenceDock = createCreationPresenceDock({
-  elements: {
-    dock: els.creationPresenceDock,
-    characterCreator: els.characterCreator,
-    sheet: els.sheet
-  },
-  getRoomId: () => roomId,
-  getActorId: () => actorId,
-  openCharacterCreationFollow: characterCreationLifecycleController.openFollow,
-  localStorage: window.localStorage
-})
-
-creationPresenceDock.hydrate()
-
-characterCreationWizardController = createCharacterCreationWizardController({
-  controller: characterCreationController,
-  fieldsRoot: els.characterCreationFields,
-  panel: characterCreationPanel,
-  getState: () => state,
-  getSeed: characterCreationSeed,
-  currentProjection: () => characterCreationController.currentProjection(),
-  homeworldPublisher: characterCreationHomeworldPublisher,
-  selectPiece,
-  closeCharacterSheet: () => characterSheetController.setOpen(false),
-  ensurePublished: ensureCharacterCreationPublished,
-  finish: () => characterCreationFinalizationController.finish(),
-  renderWizard: () => renderCharacterCreationWizard(),
-  setError
-})
-
-const startNewCharacterCreationWizard = () =>
-  characterCreationWizardController.startNew()
-
-const autoAdvanceCharacterCreationSetup = () =>
-  characterCreationWizardController.autoAdvanceSetup()
-
-const syncCharacterCreationWizardFields = () =>
-  characterCreationWizardController.syncFields()
-
-const renderCharacterCreationWizardControls = () =>
-  characterCreationRenderController.renderWizardControls()
-
-const renderCharacterCreationWizard = () =>
-  characterCreationRenderController.renderWizard()
-
-characterCreationRenderController = createCharacterCreationRenderController({
-  document,
-  elements: {
-    backCharacterWizard: els.backCharacterWizard,
-    nextCharacterWizard: els.nextCharacterWizard,
-    creatorActions: els.creatorActions,
-    characterCreationStatus: els.characterCreationStatus,
-    characterCreationSteps: els.characterCreationSteps,
-    characterCreationFields: els.characterCreationFields,
-    characterCreationWizard: els.characterCreationWizard
-  },
-  controller: characterCreationController,
-  panel: characterCreationPanel,
-  wizard: characterCreationWizardController,
-  homeworldPublisher: characterCreationHomeworldPublisher,
-  getCommandController: () => characterCreationCommandController,
-  ensurePublished: ensureCharacterCreationPublished,
-  postCharacterCreationCommand,
-  commandIdentity,
-  reportError: setError
-})
-
-characterCreationCommandController = createCharacterCreationCommandController({
-  getFlow: () => characterCreationController.flow(),
-  setFlow: (flow) => {
-    characterCreationController.setFlow(flow)
-  },
-  setError,
-  isReadOnly: () => characterCreationController.readOnly(),
-  syncFields: syncCharacterCreationWizardFields,
-  getState: () => state,
-  flushHomeworldProgress: () => characterCreationHomeworldPublisher.flush(),
-  ensurePublished: ensureCharacterCreationPublished,
-  postCharacterCreationCommand,
-  commandIdentity,
-  requestId,
-  waitForDiceRevealOrDelay,
-  syncFlowFromRoomState: characterCreationController.syncFlowFromRoomState,
-  autoAdvanceSetup: autoAdvanceCharacterCreationSetup,
-  renderWizard: renderCharacterCreationWizard,
-  scrollToTop: () => characterCreationPanel.scrollToTop()
-})
-
-createCharacterCreationDomController({
-  elements: {
-    createCharacterRail: els.createCharacterRail,
-    characterCreatorClose: els.characterCreatorClose,
-    startCharacterWizard: els.startCharacterWizard,
-    backCharacterWizard: els.backCharacterWizard,
-    nextCharacterWizard: els.nextCharacterWizard,
-    characterCreationFields: els.characterCreationFields
-  },
-  controller: characterCreationController,
-  wizard: characterCreationWizardController,
-  panel: characterCreationPanel,
-  homeworldPublisher: characterCreationHomeworldPublisher,
-  renderWizardControls: renderCharacterCreationWizardControls,
-  renderWizard: renderCharacterCreationWizard,
-  renderApp: () => render(),
-  reportError: setError
-})
 
 const roomBootstrapScene = createRoomBootstrapScene({
   getIdentity: bootstrapIdentity,
@@ -534,10 +268,9 @@ const applyState = (
   const diceRevealApplication =
     diceRevealCoordinator.recordStateApplied(nextState)
   state = appSession.setAuthoritativeState(nextState).authoritativeState
-  const creationRefreshPlan =
-    characterCreationLifecycleController.planStateRefresh({
-      deferFollowedCreationRolls
-    })
+  const creationRefreshPlan = characterCreationFeature.planStateRefresh({
+    deferFollowedCreationRolls
+  })
   const latestRoll = state?.diceLog?.[state.diceLog.length - 1] || null
   render()
   creationRefreshPlan.renderAfterAppRender()
@@ -595,6 +328,34 @@ const characterSheetController = createCharacterSheetWiring({
   reportError: setError
 })
 
+characterCreationFeature = createCharacterCreationFeature({
+  document,
+  elements: els,
+  getState: () => state,
+  getActorId: () => actorId,
+  getRoomId: () => roomId,
+  identity: clientIdentity,
+  commandIdentity,
+  bootstrapIdentity,
+  requestId,
+  getSelectedBoard: selectedBoard,
+  getSelectedBoardPieces: boardPieces,
+  selectPiece,
+  closeCharacterSheet: () => characterSheetController.setOpen(false),
+  openCharacterSheet: () => characterSheetController.setOpen(true),
+  renderApp: () => render(),
+  createGame: postCommand,
+  postBoardCommand,
+  postCharacterCreationCommand,
+  postCharacterCreationCommands,
+  waitForDiceReveal,
+  waitForDiceRevealOrDelay,
+  resolveDiceReveal,
+  reportError: setError
+})
+
+const animateRoll = characterCreationFeature.animateRoll
+
 const renderSheet = () => characterSheetController.render()
 
 const characterRailController = createCharacterRailController({
@@ -604,7 +365,7 @@ const characterRailController = createCharacterRailController({
   getSelectedPieceId: currentSelectedPieceId,
   selectPiece,
   openCharacterSheet: () => characterSheetController.setOpen(true),
-  startCharacterCreation: startNewCharacterCreationWizard,
+  startCharacterCreation: characterCreationFeature.startNew,
   renderSheet,
   requestRender: () => render(),
   reportError: setError
@@ -614,7 +375,7 @@ const render = () => {
   boardControlsWiring?.render()
   boardController?.render()
   characterRailController.render()
-  creationPresenceDock.render(state)
+  characterCreationFeature.renderPresence(state)
 }
 
 const canvasContext = els.canvas.getContext('2d')
@@ -669,10 +430,9 @@ createRoomMenuWiring({
   },
   setAppSessionRoomIdentity: appSession.setRoomIdentity,
   resetDiceRevealTracking: () => diceRevealCoordinator.resetStateTracking(),
-  clearSelectedCharacter: () =>
-    characterCreationController.setSelectedCharacterId(null),
-  clearCreationActivityFeed: () => creationActivityFeedController.clear(),
-  hydrateCreationPresenceDock: () => creationPresenceDock.hydrate(),
+  clearSelectedCharacter: characterCreationFeature.clearSelectedCharacter,
+  clearCreationActivityFeed: characterCreationFeature.clearActivityFeed,
+  hydrateCreationPresenceDock: characterCreationFeature.hydratePresence,
   selectPiece,
   clearBoardDrag: () => boardController?.clearDrag(),
   closeCharacterSheet: () => characterSheetController.setOpen(false),
@@ -703,7 +463,7 @@ createCharacterSheetControlsWiring({
   getCurrentSelectedPieceId: currentSelectedPieceId,
   getSelectedPiece: selectedPiece,
   selectPiece,
-  openCharacterCreationPanel: () => characterCreationPanel.open(),
+  openCharacterCreationPanel: characterCreationFeature.openPanel,
   requestRender: render
 })
 
