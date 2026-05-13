@@ -1,4 +1,5 @@
 import {
+  deriveCharacterCreationHistoryEvent,
   deriveTotalBackgroundSkillAllowance,
   leaveCareerTerm,
   projectCareerCreationActionPlan,
@@ -53,6 +54,18 @@ const requiredTermSkillCount = ({
 
 const backgroundSkillAllowance = (character: CharacterState): number =>
   deriveTotalBackgroundSkillAllowance(character.characteristics.edu)
+
+const appendCharacterCreationHistory = (
+  character: CharacterState,
+  event: GameEvent,
+  context: { canEnterDraft?: boolean } = {}
+) => {
+  const historyEvent = deriveCharacterCreationHistoryEvent(event, context)
+
+  return historyEvent
+    ? [...(character.creation?.history ?? []), historyEvent]
+    : [...(character.creation?.history ?? [])]
+}
 
 const recordMusteringBenefit = (
   terms: readonly CareerTerm[],
@@ -319,10 +332,7 @@ const rawCharacterEventHandlers = {
       creationComplete: event.creationComplete,
       terms,
       careers,
-      history: [
-        ...(character.creation.history ?? []),
-        structuredClone(creationEvent)
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -355,10 +365,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'SET_CHARACTERISTICS' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -382,10 +389,7 @@ const rawCharacterEventHandlers = {
       creationComplete: event.creationComplete,
       pendingDecisions: [],
       terms,
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'MISHAP_RESOLVED' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -403,10 +407,7 @@ const rawCharacterEventHandlers = {
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
       pendingDecisions: [],
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'DEATH_CONFIRMED' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -436,10 +437,7 @@ const rawCharacterEventHandlers = {
       creationComplete: event.creationComplete,
       pendingDecisions: [],
       terms,
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'COMPLETE_BASIC_TRAINING' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -452,20 +450,7 @@ const rawCharacterEventHandlers = {
     const character = nextState.characters[event.characterId]
     if (!character?.creation) return nextState
 
-    const creationEvent = event.passed
-      ? {
-          type: 'SELECT_CAREER' as const,
-          isNewCareer: true,
-          qualification: structuredClone(event.qualification)
-        }
-      : {
-          type: 'SELECT_CAREER' as const,
-          isNewCareer: false,
-          qualification: structuredClone(event.qualification),
-          failedQualificationOptions: [...event.failedQualificationOptions],
-          canEnterDraft: character.creation.canEnterDraft
-        }
-
+    const canEnterDraft = character.creation.canEnterDraft
     if (event.passed) {
       startProjectedCareerTerm({
         character,
@@ -478,10 +463,9 @@ const rawCharacterEventHandlers = {
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
       failedToQualify: !event.passed,
-      history: [
-        ...(character.creation.history ?? []),
-        structuredClone(creationEvent)
-      ]
+      history: appendCharacterCreationHistory(character, event, {
+        canEnterDraft
+      })
     }
     nextState.eventSeq = envelope.seq
 
@@ -504,14 +488,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        {
-          type: 'SELECT_CAREER',
-          isNewCareer: true,
-          drafted: true
-        }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -533,14 +510,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        {
-          type: 'SELECT_CAREER',
-          isNewCareer: true,
-          failedQualificationOptions: ['Drifter']
-        }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -553,17 +523,6 @@ const rawCharacterEventHandlers = {
     const character = nextState.characters[event.characterId]
     if (!character?.creation) return nextState
 
-    const creationEvent = event.passed
-      ? {
-          type: 'SURVIVAL_PASSED' as const,
-          canCommission: event.canCommission,
-          canAdvance: event.canAdvance,
-          survival: structuredClone(event.survival)
-        }
-      : {
-          type: 'SURVIVAL_FAILED' as const,
-          survival: structuredClone(event.survival)
-        }
     const lastTermIndex = character.creation.terms.length - 1
     const terms = character.creation.terms.map((term, index) =>
       index === lastTermIndex
@@ -588,10 +547,7 @@ const rawCharacterEventHandlers = {
         ? event.pendingDecisions.map((decision) => ({ ...decision }))
         : [],
       terms,
-      history: [
-        ...(character.creation.history ?? []),
-        structuredClone(creationEvent)
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -604,19 +560,11 @@ const rawCharacterEventHandlers = {
     const character = nextState.characters[event.characterId]
     if (!character?.creation) return nextState
 
-    const creationEvent = {
-      type: 'COMPLETE_COMMISSION' as const,
-      commission: structuredClone(event.commission)
-    }
-
     character.creation = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        structuredClone(creationEvent)
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -633,10 +581,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'SKIP_COMMISSION' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -649,11 +594,6 @@ const rawCharacterEventHandlers = {
     const character = nextState.characters[event.characterId]
     if (!character?.creation) return nextState
 
-    const creationEvent = {
-      type: 'COMPLETE_ADVANCEMENT' as const,
-      advancement: structuredClone(event.advancement),
-      rank: event.rank ? structuredClone(event.rank) : null
-    }
     const terms = recordActiveTermAdvancement(
       character.creation.terms,
       event.advancement.total
@@ -672,10 +612,7 @@ const rawCharacterEventHandlers = {
       creationComplete: event.creationComplete,
       terms,
       careers,
-      history: [
-        ...(character.creation.history ?? []),
-        structuredClone(creationEvent)
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -692,10 +629,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'SKIP_ADVANCEMENT' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -735,13 +669,7 @@ const rawCharacterEventHandlers = {
       creationComplete: event.creationComplete,
       terms,
       pendingCascadeSkills: [...event.pendingCascadeSkills],
-      history: [
-        ...(character.creation.history ?? []),
-        {
-          type: 'ROLL_TERM_SKILL',
-          termSkill: structuredClone(event.termSkill)
-        }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -762,13 +690,7 @@ const rawCharacterEventHandlers = {
       characteristicChanges: event.aging.characteristicChanges.map(
         (change) => ({ ...change })
       ),
-      history: [
-        ...(character.creation.history ?? []),
-        {
-          type: 'COMPLETE_AGING',
-          aging: structuredClone(event.aging)
-        }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -810,14 +732,7 @@ const rawCharacterEventHandlers = {
         event.termIndex,
         event.useAnagathics
       ),
-      history: [
-        ...(character.creation.history ?? []),
-        {
-          type: 'DECIDE_ANAGATHICS',
-          useAnagathics: event.useAnagathics,
-          termIndex: event.termIndex
-        }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -846,13 +761,7 @@ const rawCharacterEventHandlers = {
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
       terms,
-      history: [
-        ...(character.creation.history ?? []),
-        {
-          type: 'RESOLVE_REENLISTMENT',
-          reenlistment: structuredClone(event.reenlistment)
-        }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -873,12 +782,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        {
-          type: event.forced ? 'FORCED_REENLIST' : 'REENLIST'
-        }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -901,13 +805,7 @@ const rawCharacterEventHandlers = {
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
       terms,
-      history: [
-        ...(character.creation.history ?? []),
-        {
-          type:
-            event.outcome === 'blocked' ? 'REENLIST_BLOCKED' : 'LEAVE_CAREER'
-        }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -935,14 +833,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       terms,
       pendingCascadeSkills: [...event.pendingCascadeSkills],
-      history: [
-        ...(character.creation.history ?? []),
-        {
-          type: 'RESOLVE_TERM_CASCADE_SKILL',
-          cascadeSkill: event.cascadeSkill,
-          selection: event.selection
-        }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -959,10 +850,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'COMPLETE_SKILLS' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -975,11 +863,6 @@ const rawCharacterEventHandlers = {
     const character = nextState.characters[event.characterId]
     if (!character?.creation) return nextState
 
-    const creationEvent = {
-      type: 'FINISH_MUSTERING' as const,
-      musteringBenefit: structuredClone(event.musteringBenefit)
-    }
-
     character.creation = {
       ...character.creation,
       state: structuredClone(event.state),
@@ -989,10 +872,7 @@ const rawCharacterEventHandlers = {
         event.musteringBenefit.career,
         event.musteringBenefit.value
       ),
-      history: [
-        ...(character.creation.history ?? []),
-        structuredClone(creationEvent)
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     if (event.musteringBenefit.kind === 'cash') {
       character.credits += event.musteringBenefit.credits
@@ -1021,10 +901,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'CONTINUE_CAREER' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1041,10 +918,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'FINISH_MUSTERING' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1061,10 +935,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'CREATION_COMPLETE' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1100,10 +971,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      history: [
-        ...(character.creation.history ?? []),
-        { type: 'COMPLETE_HOMEWORLD' }
-      ]
+      history: appendCharacterCreationHistory(character, event)
     }
     nextState.eventSeq = envelope.seq
 
