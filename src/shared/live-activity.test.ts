@@ -306,6 +306,85 @@ describe('live activity derivation', () => {
     })
   })
 
+  it('derives semantic characteristic roll activity with reveal metadata', () => {
+    const activity = deriveLiveActivity(
+      envelope(5, {
+        type: 'CharacterCreationCharacteristicRolled',
+        characterId,
+        rollEventId: asEventId('game-1:4'),
+        characteristic: 'soc',
+        value: 9,
+        characteristicsComplete: true,
+        state: {
+          status: 'HOMEWORLD',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    )
+
+    assert.deepEqual(activity, {
+      id: asEventId('game-1:5'),
+      eventId: asEventId('game-1:5'),
+      gameId,
+      seq: 5,
+      actorId,
+      createdAt: '2026-05-03T00:00:05.000Z',
+      type: 'characterCreation',
+      characterId,
+      transition: 'CHARACTERISTIC_ROLLED',
+      details: 'SOC characteristic 9',
+      reveal: {
+        rollEventId: asEventId('game-1:4'),
+        revealAt: '2026-05-03T00:00:07.500Z',
+        delayMs: LIVE_DICE_RESULT_REVEAL_DELAY_MS
+      },
+      status: 'HOMEWORLD',
+      creationComplete: false
+    })
+  })
+
+  it('derives semantic characteristic completion with reveal metadata', () => {
+    const activity = deriveLiveActivity(
+      envelope(6, {
+        type: 'CharacterCreationCharacteristicsCompleted',
+        characterId,
+        rollEventId: asEventId('game-1:4'),
+        state: {
+          status: 'HOMEWORLD',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    )
+
+    assert.deepEqual(activity, {
+      id: asEventId('game-1:6'),
+      eventId: asEventId('game-1:6'),
+      gameId,
+      seq: 6,
+      actorId,
+      createdAt: '2026-05-03T00:00:06.000Z',
+      type: 'characterCreation',
+      characterId,
+      transition: 'SET_CHARACTERISTICS',
+      details: 'Characteristics assigned',
+      reveal: {
+        rollEventId: asEventId('game-1:4'),
+        revealAt: '2026-05-03T00:00:08.500Z',
+        delayMs: LIVE_DICE_RESULT_REVEAL_DELAY_MS
+      },
+      status: 'HOMEWORLD',
+      creationComplete: false
+    })
+  })
+
   it('derives compact semantic survival activity', () => {
     const activity = deriveLiveActivity(
       envelope(6, {

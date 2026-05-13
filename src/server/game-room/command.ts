@@ -2022,6 +2022,11 @@ export const deriveEventsForCommand = (
       const complete = Object.values(characteristics).every(
         (value) => value !== null
       )
+      const nextState = complete
+        ? transitionCareerCreationState(character.creation.state, {
+            type: 'SET_CHARACTERISTICS'
+          })
+        : character.creation.state
       const events: GameEvent[] = [
         {
           type: 'DiceRolled',
@@ -2031,22 +2036,22 @@ export const deriveEventsForCommand = (
           total: rolled.value.total
         },
         {
-          type: 'CharacterSheetUpdated',
+          type: 'CharacterCreationCharacteristicRolled',
           characterId: command.characterId,
-          characteristics: {
-            [command.characteristic]: rolled.value.total
-          }
+          rollEventId,
+          characteristic: command.characteristic,
+          value: rolled.value.total,
+          characteristicsComplete: complete,
+          state: nextState,
+          creationComplete: complete && nextState.status === 'PLAYABLE'
         }
       ]
 
       if (complete) {
-        const nextState = transitionCareerCreationState(
-          character.creation.state,
-          { type: 'SET_CHARACTERISTICS' }
-        )
         events.push({
           type: 'CharacterCreationCharacteristicsCompleted',
           characterId: command.characterId,
+          rollEventId,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
         })

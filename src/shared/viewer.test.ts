@@ -295,6 +295,80 @@ describe('viewer filtering', () => {
     })
   })
 
+  it('redacts explicit reveal metadata activity details without relying on transition names', () => {
+    const state = buildState()
+    const activities = buildLiveActivities()
+    const creationActivity = activities[1]
+
+    assert.equal(creationActivity?.type, 'characterCreation')
+    if (creationActivity?.type !== 'characterCreation') return
+
+    creationActivity.transition = 'BACKGROUND_SKILL_SELECTED'
+    creationActivity.details = 'Background skill: Admin'
+    creationActivity.reveal = {
+      rollEventId: asEventId('game-1:3'),
+      revealAt: futureRevealAt,
+      delayMs: 2500
+    }
+
+    const filtered = filterLiveActivitiesForViewer(
+      activities,
+      state,
+      {
+        userId: asUserId('player'),
+        role: 'PLAYER'
+      },
+      { nowMs }
+    )
+
+    const filteredCreationActivity = filtered[1]
+
+    assert.equal(filteredCreationActivity?.type, 'characterCreation')
+    if (filteredCreationActivity?.type !== 'characterCreation') return
+    assert.equal('details' in filteredCreationActivity, false)
+    assert.deepEqual(filteredCreationActivity.reveal, {
+      rollEventId: asEventId('game-1:3'),
+      revealAt: futureRevealAt,
+      delayMs: 2500
+    })
+  })
+
+  it('keeps legacy characteristic completion details safe before fallback reveal', () => {
+    const state = buildState()
+    const activities = buildLiveActivities(
+      '2026-05-03T00:00:02.000Z',
+      pastRevealAt
+    )
+    const creationActivity = activities[1]
+
+    assert.equal(creationActivity?.type, 'characterCreation')
+    if (creationActivity?.type !== 'characterCreation') return
+
+    creationActivity.transition = 'SET_CHARACTERISTICS'
+    creationActivity.details = 'Characteristics assigned'
+
+    const filtered = filterLiveActivitiesForViewer(
+      activities,
+      state,
+      {
+        userId: asUserId('player'),
+        role: 'PLAYER'
+      },
+      { nowMs }
+    )
+
+    const diceActivity = filtered[0]
+    const filteredCreationActivity = filtered[1]
+
+    assert.equal(diceActivity?.type, 'diceRoll')
+    if (diceActivity?.type !== 'diceRoll') return
+    assert.deepEqual(diceActivity.rolls, [3, 4])
+    assert.equal(diceActivity.total, 7)
+    assert.equal(filteredCreationActivity?.type, 'characterCreation')
+    if (filteredCreationActivity?.type !== 'characterCreation') return
+    assert.equal('details' in filteredCreationActivity, false)
+  })
+
   it('keeps pre-reveal dice and roll-dependent activity details visible to owners and referees', () => {
     const state = buildState()
     state.ownerId = asUserId('owner')

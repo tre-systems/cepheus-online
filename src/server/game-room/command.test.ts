@@ -6,7 +6,7 @@ import {
   type CareerCreationEvent,
   type CareerCreationStatus
 } from '../../shared/characterCreation'
-import { asCharacterId, asGameId, asUserId } from '../../shared/ids'
+import { asCharacterId, asEventId, asGameId, asUserId } from '../../shared/ids'
 import type {
   CharacterCreationHomeworld,
   CharacterCreationProjection,
@@ -136,14 +136,31 @@ describe('deriveEventsForCommand error categories', () => {
       result.value.map((event) => event.type),
       [
         'DiceRolled',
-        'CharacterSheetUpdated',
+        'CharacterCreationCharacteristicRolled',
         'CharacterCreationCharacteristicsCompleted'
       ]
     )
+    const roll = result.value[0]
+    const rolledCharacteristic = result.value[1]
     const completion = result.value.at(-1)
+    assert.equal(roll?.type, 'DiceRolled')
+    if (roll?.type !== 'DiceRolled') return
+    assert.equal(
+      rolledCharacteristic?.type,
+      'CharacterCreationCharacteristicRolled'
+    )
+    if (rolledCharacteristic?.type !== 'CharacterCreationCharacteristicRolled') {
+      return
+    }
+    assert.equal(rolledCharacteristic.characterId, characterId)
+    assert.equal(rolledCharacteristic.rollEventId, asEventId('game-1:2'))
+    assert.equal(rolledCharacteristic.characteristic, 'soc')
+    assert.equal(rolledCharacteristic.value, roll.total)
+    assert.equal(rolledCharacteristic.characteristicsComplete, true)
     assert.equal(completion?.type, 'CharacterCreationCharacteristicsCompleted')
     if (completion?.type !== 'CharacterCreationCharacteristicsCompleted') return
     assert.equal(completion.characterId, characterId)
+    assert.equal(completion.rollEventId, asEventId('game-1:2'))
     assert.equal(completion.state.status, 'HOMEWORLD')
     assert.equal(completion.creationComplete, false)
   })

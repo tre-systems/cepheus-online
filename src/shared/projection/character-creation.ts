@@ -158,6 +158,7 @@ type CharacterEventType =
   | 'CharacterSheetUpdated'
   | 'CharacterCreationStarted'
   | 'CharacterCreationTransitioned'
+  | 'CharacterCreationCharacteristicRolled'
   | 'CharacterCreationCharacteristicsCompleted'
   | 'CharacterCreationBasicTrainingCompleted'
   | 'CharacterCreationQualificationResolved'
@@ -311,6 +312,22 @@ const rawCharacterEventHandlers = {
         structuredClone(creationEvent)
       ]
     }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationCharacteristicRolled: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    character.characteristics = {
+      ...character.characteristics,
+      [event.characteristic]: event.value
+    }
+
     nextState.eventSeq = envelope.seq
 
     return nextState

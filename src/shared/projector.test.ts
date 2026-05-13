@@ -319,7 +319,100 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 7)
   })
 
-  it('projects semantic characteristic completion with legacy history', () => {
+  it('projects semantic characteristic rolls into the character sheet', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'CHARACTERISTICS',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationCharacteristicRolled',
+        characterId,
+        rollEventId: asEventId('game-1:3'),
+        characteristic: 'str',
+        value: 8,
+        characteristicsComplete: false,
+        state: {
+          status: 'CHARACTERISTICS',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(5, {
+        type: 'CharacterCreationCharacteristicRolled',
+        characterId,
+        rollEventId: asEventId('game-1:4'),
+        characteristic: 'soc',
+        value: 10,
+        characteristicsComplete: true,
+        state: {
+          status: 'HOMEWORLD',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(6, {
+        type: 'CharacterCreationCharacteristicsCompleted',
+        characterId,
+        rollEventId: asEventId('game-1:4'),
+        state: {
+          status: 'HOMEWORLD',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const character = state?.characters[characterId]
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(character?.characteristics.str, 8)
+    assert.equal(character?.characteristics.soc, 10)
+    assert.equal(creation?.state.status, 'HOMEWORLD')
+    assert.equal(creation?.creationComplete, false)
+    assert.deepEqual(creation?.history, [{ type: 'SET_CHARACTERISTICS' }])
+    assert.equal(state?.eventSeq, 6)
+  })
+
+  it('projects legacy characteristic completion with legacy history', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {

@@ -445,6 +445,18 @@ export const deriveLiveActivity = (
         creationComplete: event.creationComplete
       }
 
+    case 'CharacterCreationCharacteristicRolled':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'CHARACTERISTIC_ROLLED',
+        details: `${event.characteristic.toUpperCase()} characteristic ${event.value}`,
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
     case 'CharacterCreationCharacteristicsCompleted':
       return {
         ...baseActivity(envelope),
@@ -452,6 +464,7 @@ export const deriveLiveActivity = (
         characterId: event.characterId,
         transition: 'SET_CHARACTERISTICS',
         details: 'Characteristics assigned',
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -945,7 +958,8 @@ export const deriveLiveActivities = (
 
   for (const envelope of envelopes) {
     const activity = deriveLiveActivity(envelope)
-    if (activity) activities.push(activity)
+    if (!activity) continue
+    activities.push(activity)
   }
 
   return activities

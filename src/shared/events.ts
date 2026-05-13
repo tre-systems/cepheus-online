@@ -21,6 +21,7 @@ import type {
 } from './characterCreation'
 import type {
   CharacterCreationSheet,
+  CharacteristicKey,
   CharacterCreationHomeworld,
   CharacterCreationProjection,
   CharacterSheetPatch,
@@ -70,8 +71,19 @@ export type GameEvent =
       creationComplete: boolean
     }
   | {
+      type: 'CharacterCreationCharacteristicRolled'
+      characterId: CharacterId
+      rollEventId?: EventId
+      characteristic: CharacteristicKey
+      value: number
+      characteristicsComplete: boolean
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
       type: 'CharacterCreationCharacteristicsCompleted'
       characterId: CharacterId
+      rollEventId?: EventId
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

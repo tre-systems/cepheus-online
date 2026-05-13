@@ -562,8 +562,9 @@ Tasks:
   the UI.
 - Finish the remaining `AdvanceCharacterCreation` migration in this order:
   1. Done: replace the server-persisted generic `SET_CHARACTERISTICS` after the sixth
-     stat roll with `CharacterCreationCharacteristicsCompleted`, preserving the
-     semantic roll facts already emitted for individual characteristic rolls.
+     stat roll with `CharacterCreationCharacteristicsCompleted`; individual
+     stat rolls now emit `CharacterCreationCharacteristicRolled` facts instead
+     of generic `CharacterSheetUpdated` patches.
   2. Done: move bootstrap/demo creation and custom-piece production paths off
      generic `SET_CHARACTERISTICS` and `SELECT_CAREER`.
   3. Done: remove the local draft fallback in
@@ -580,7 +581,9 @@ Tasks:
   7. Keep `CharacterCreationTransitioned` only for historical replay while new
      production rules work emits semantic events.
 - Finish updating `deriveLiveActivities()` to read semantic events directly
-  instead of parsing coarse transition payloads where possible.
+  instead of parsing coarse transition payloads where possible. Done for
+  characteristic, qualification, survival, commission, advancement, term skill,
+  aging, reenlistment, and mustering rolls.
 - Add protocol fixtures for every new command, event envelope, accepted
   response, rejected response, and viewer-safe live activity.
 

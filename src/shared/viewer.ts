@@ -29,8 +29,9 @@ const canViewerSeeUnrevealedDice = (
   viewer: GameViewer
 ): boolean => viewer.role === 'REFEREE' || viewer.userId === state.ownerId
 
-const rollDependentCreationTransitions = new Set<string>([
+const legacyRollDependentCreationTransitions = new Set<string>([
   'SELECT_CAREER',
+  'SET_CHARACTERISTICS',
   'SURVIVAL_PASSED',
   'SURVIVAL_FAILED',
   'COMPLETE_COMMISSION',
@@ -56,7 +57,8 @@ const hasRollDependentCreationDetails = (
   activity: CharacterCreationActivityDescriptor
 ): boolean =>
   activity.details !== undefined &&
-  rollDependentCreationTransitions.has(activity.transition)
+  (activity.reveal !== undefined ||
+    legacyRollDependentCreationTransitions.has(activity.transition))
 
 const isFutureCharacterCreationReveal = (
   activity: CharacterCreationActivityDescriptor,

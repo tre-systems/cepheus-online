@@ -6,6 +6,7 @@ import type { Command, GameCommand } from '../../shared/commands'
 import {
   asBoardId,
   asCharacterId,
+  asEventId,
   asGameId,
   asPieceId,
   asUserId
@@ -530,6 +531,10 @@ describe('room publication flow', () => {
       persisted.at(-1)?.event.type,
       'CharacterCreationCharacteristicsCompleted'
     )
+    const finalEvent = persisted.at(-1)?.event
+    assert.equal(finalEvent?.type, 'CharacterCreationCharacteristicsCompleted')
+    if (finalEvent?.type !== 'CharacterCreationCharacteristicsCompleted') return
+    assert.equal(finalEvent.rollEventId, asEventId(`${gameId}:14`))
     assert.equal(
       persisted.some(
         (envelope) =>
@@ -543,13 +548,15 @@ describe('room publication flow', () => {
     assert.deepEqual(creation?.history, [{ type: 'SET_CHARACTERISTICS' }])
     assert.deepEqual(
       lastRoll.value.liveActivities.map((activity) => activity.type),
-      ['diceRoll', 'characterCreation']
+      ['diceRoll', 'characterCreation', 'characterCreation']
     )
     const activity = lastRoll.value.liveActivities.at(-1)
     assert.equal(activity?.type, 'characterCreation')
     if (activity?.type !== 'characterCreation') return
     assert.equal(activity.transition, 'SET_CHARACTERISTICS')
     assert.equal(activity.details, 'Characteristics assigned')
+    assert.equal(activity.reveal?.rollEventId, asEventId(`${gameId}:14`))
+    assert.equal(activity.reveal?.delayMs, LIVE_DICE_RESULT_REVEAL_DELAY_MS)
     assert.equal(activity.status, 'HOMEWORLD')
     assert.equal(activity.creationComplete, false)
   })
