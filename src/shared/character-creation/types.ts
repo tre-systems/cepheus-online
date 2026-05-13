@@ -285,6 +285,7 @@ export interface CareerCreationActionProjection {
   failedToQualify?: boolean
   characteristicChanges?: readonly AgingChange[]
   pendingCascadeSkills?: readonly string[]
+  pendingDecisions?: readonly CareerCreationPendingDecision[]
   requiredTermSkillCount?: number
   creationComplete?: boolean
   history?: readonly CareerCreationEvent[]

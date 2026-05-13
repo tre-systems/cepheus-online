@@ -1,5 +1,6 @@
 import { deriveRemainingCareerBenefits } from './benefits'
 import { CEPHEUS_SRD_RULESET } from './cepheus-srd-ruleset'
+import { deriveBasicTrainingPlan } from './career-rules'
 import { canCompleteCreation, canOfferNewCareer } from './term-lifecycle'
 import type {
   CareerCreationActionContext,
@@ -135,11 +136,18 @@ export const deriveRemainingCareerCreationBenefits = (
 export const deriveCareerCreationPendingDecisions = (
   creation: CareerCreationActionProjection
 ): CareerCreationPendingDecision[] => {
-  const decisions: CareerCreationPendingDecision[] = []
+  const decisions: CareerCreationPendingDecision[] = [
+    ...(creation.pendingDecisions ?? []).map((decision) => ({ ...decision }))
+  ]
+  const pushDecision = (decision: CareerCreationPendingDecision) => {
+    if (!decisions.some((candidate) => candidate.key === decision.key)) {
+      decisions.push(decision)
+    }
+  }
   const term = lastTerm(creation)
 
   if ((creation.pendingCascadeSkills?.length ?? 0) > 0) {
-    decisions.push({ key: 'cascadeSkillResolution' })
+    pushDecision({ key: 'cascadeSkillResolution' })
   }
 
   if (
@@ -148,7 +156,16 @@ export const deriveCareerCreationPendingDecisions = (
     !term.completedBasicTraining &&
     term.skillsAndTraining.length === 0
   ) {
-    decisions.push({ key: 'basicTrainingSkillSelection' })
+    const basicTraining = deriveBasicTrainingPlan({
+      career: term.career,
+      serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
+      completedTermCount: Math.max(0, (creation.terms?.length ?? 1) - 1),
+      previousCareerNames:
+        creation.terms?.slice(0, -1).map((previous) => previous.career) ?? []
+    })
+    if (basicTraining.kind === 'choose-one') {
+      pushDecision({ key: 'basicTrainingSkillSelection' })
+    }
   }
 
   if (
@@ -156,29 +173,29 @@ export const deriveCareerCreationPendingDecisions = (
     term &&
     term.skills.length < (creation.requiredTermSkillCount ?? 1)
   ) {
-    decisions.push({ key: 'skillTrainingSelection' })
+    pushDecision({ key: 'skillTrainingSelection' })
   }
 
   if ((creation.characteristicChanges?.length ?? 0) > 0) {
-    decisions.push({ key: 'agingResolution' })
+    pushDecision({ key: 'agingResolution' })
   }
 
   if (shouldDecideAnagathics(creation)) {
-    decisions.push({ key: 'anagathicsDecision' })
+    pushDecision({ key: 'anagathicsDecision' })
   }
 
   if (
     creation.state.status === 'REENLISTMENT' &&
     deriveCareerCreationReenlistmentOutcome(creation) === 'unresolved'
   ) {
-    decisions.push({ key: 'reenlistmentResolution' })
+    pushDecision({ key: 'reenlistmentResolution' })
   }
 
   if (
     creation.state.status === 'MUSTERING_OUT' &&
     deriveRemainingCareerCreationBenefits(creation) > 0
   ) {
-    decisions.push({ key: 'musteringBenefitSelection' })
+    pushDecision({ key: 'musteringBenefitSelection' })
   }
 
   return decisions

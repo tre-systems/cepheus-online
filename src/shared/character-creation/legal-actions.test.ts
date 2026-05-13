@@ -552,6 +552,25 @@ describe('career creation legal action planner', () => {
           ]
         })
       ),
+      []
+    )
+    assert.deepEqual(
+      deriveCareerCreationPendingDecisions(
+        projection('BASIC_TRAINING', {
+          terms: [
+            term({
+              career: 'Scout',
+              completedBasicTraining: true,
+              skillsAndTraining: ['Vacc Suit-0']
+            }),
+            term({
+              career: 'Merchant',
+              completedBasicTraining: false,
+              skillsAndTraining: []
+            })
+          ]
+        })
+      ),
       [{ key: 'basicTrainingSkillSelection' }]
     )
     assert.deepEqual(
@@ -559,6 +578,12 @@ describe('career creation legal action planner', () => {
         projection('BASIC_TRAINING', {
           terms: [
             term({
+              career: 'Scout',
+              completedBasicTraining: true,
+              skillsAndTraining: ['Vacc Suit-0']
+            }),
+            term({
+              career: 'Merchant',
               completedBasicTraining: false,
               skillsAndTraining: []
             })

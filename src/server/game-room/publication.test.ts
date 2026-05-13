@@ -2954,9 +2954,10 @@ describe('room publication flow', () => {
       gameId,
       intervalCheckpoint?.seq ?? 0
     )
-    assert.deepEqual(recoveredTail.map((envelope) => envelope.event.type), [
-      'CharacterCreationFinalized'
-    ])
+    assert.deepEqual(
+      recoveredTail.map((envelope) => envelope.event.type),
+      ['CharacterCreationFinalized']
+    )
 
     const recovered = await getProjectedGameState(storage, gameId)
     const finalizedEvent = recoveredTail.at(-1)?.event

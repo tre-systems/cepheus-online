@@ -14,6 +14,7 @@ import type {
   CareerCreationDraftFact,
   CareerCreationEvent,
   CareerCreationRankFact,
+  CareerCreationPendingDecision,
   CareerCreationReenlistmentFact,
   CareerCreationReenlistmentOutcome,
   CareerCreationTermSkillFact,
@@ -129,6 +130,7 @@ export type GameEvent =
       survival: CareerCreationCheckFact
       canCommission: boolean
       canAdvance: boolean
+      pendingDecisions?: CareerCreationPendingDecision[]
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

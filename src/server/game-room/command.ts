@@ -1,7 +1,6 @@
 import type { Command, GameCommand } from '../../shared/commands'
 import {
   canRollCashBenefit,
-  canTransitionCareerCreationState,
   createCareerCreationState,
   careerSkillWithLevel,
   deriveAgingRollModifier,
@@ -491,12 +490,12 @@ const validateBasicTrainingCompletion = (
   )
   if (!status.ok) return status
 
-  const decisions = requireNoBlockingCharacterCreationDecisions(
+  const legalAction = requireLegalCharacterCreationAction(
     character.creation,
-    'basicTrainingSkillSelection',
+    ['completeBasicTraining'],
     'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions'
   )
-  if (!decisions.ok) return decisions
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -598,6 +597,23 @@ const validateCareerSelection = (
   return ok(character.creation)
 }
 
+const validateQualificationResolution = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  const creation = validateCareerSelection(character)
+  if (!creation.ok) return creation
+  if (creation.value.failedToQualify) {
+    return err(
+      commandError(
+        'invalid_command',
+        'Qualification is not available after failed qualification'
+      )
+    )
+  }
+
+  return creation
+}
+
 const previousCareerNames = (creation: CharacterCreationProjection): string[] =>
   creation.careers.map((career) => career.name)
 
@@ -633,6 +649,56 @@ const validateCareerCanBeSelected = (
   }
 
   return ok(undefined)
+}
+
+const validateMishapResolution = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'MISHAP',
+    'MISHAP_RESOLVED'
+  )
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['resolveMishap'],
+    'MISHAP_RESOLVED is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
+
+  return ok(character.creation)
+}
+
+const validateDeathConfirmation = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'MISHAP',
+    'DEATH_CONFIRMED'
+  )
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['confirmDeath'],
+    'DEATH_CONFIRMED is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
+
+  return ok(character.creation)
 }
 
 const validateSurvivalResolution = (
@@ -1320,7 +1386,7 @@ const resolveSurvivalCreationEvent = ({
 }): Result<
   Pick<
     CharacterCreationSurvivalResolvedEvent,
-    'passed' | 'survival' | 'canCommission' | 'canAdvance'
+    'passed' | 'survival' | 'canCommission' | 'canAdvance' | 'pendingDecisions'
   >,
   CommandError
 > => {
@@ -2118,7 +2184,7 @@ export const deriveEventsForCommand = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateCareerSelection(character)
+      const creation = validateQualificationResolution(character)
       if (!creation.ok) return creation
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career
@@ -2593,23 +2659,12 @@ export const deriveEventsForCommand = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
+      const creation = validateMishapResolution(character)
+      if (!creation.ok) return creation
       const creationEvent = { type: 'MISHAP_RESOLVED' } as const
-      if (
-        !canTransitionCareerCreationState(
-          character.creation.state,
-          creationEvent
-        )
-      ) {
-        return err(
-          commandError(
-            'invalid_command',
-            `MISHAP_RESOLVED is not valid from ${character.creation.state.status}`
-          )
-        )
-      }
 
       const nextState = transitionCareerCreationState(
-        character.creation.state,
+        creation.value.state,
         creationEvent
       )
 
@@ -2630,23 +2685,12 @@ export const deriveEventsForCommand = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
+      const creation = validateDeathConfirmation(character)
+      if (!creation.ok) return creation
       const creationEvent = { type: 'DEATH_CONFIRMED' } as const
-      if (
-        !canTransitionCareerCreationState(
-          character.creation.state,
-          creationEvent
-        )
-      ) {
-        return err(
-          commandError(
-            'invalid_command',
-            `DEATH_CONFIRMED is not valid from ${character.creation.state.status}`
-          )
-        )
-      }
 
       const nextState = transitionCareerCreationState(
-        character.creation.state,
+        creation.value.state,
         creationEvent
       )
 

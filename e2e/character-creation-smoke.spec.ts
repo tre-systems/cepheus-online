@@ -12,6 +12,7 @@ type RoomStateMessage = {
         equipment?: Array<{ name?: string; quantity?: number; notes?: string }>
         notes?: string
         skills?: string[]
+        characteristics?: Record<string, number | null>
         creation?: CharacterCreationProjection
       }
     >
@@ -1448,6 +1449,127 @@ test.describe('character creation smoke', () => {
       await spectator.reload({ waitUntil: 'domcontentloaded' })
       await openOrExpectFollowedCreation(spectator, characterName)
       await expect(spectatorStrValue).toHaveText(rolledStr, { timeout: 5_000 })
+    } finally {
+      await spectator.close()
+    }
+  })
+
+  test('lets a spectator follow semantic characteristic rolls without early reveal and recover after refresh', async ({
+    browser,
+    page
+  }) => {
+    test.setTimeout(45_000)
+    const roomId = await openUniqueRoom(page)
+    const actorId = actorIdFromPage(page)
+    await page.locator('#createCharacterRailButton').click()
+
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    const spectatorId = 'e2e-spectator'
+    const spectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: spectatorId,
+        viewer: 'spectator'
+      })
+
+      await openOrExpectFollowedCreation(spectator, characterName)
+
+      const ownerStatValue = (stat: string) =>
+        page
+          .locator('#characterCreationFields .creation-stat-cell')
+          .filter({ hasText: stat })
+          .locator('strong')
+      const spectatorStatValue = (stat: string) =>
+        spectator
+          .locator('#characterCreationFields .creation-stat-cell')
+          .filter({ hasText: stat })
+          .locator('strong')
+
+      await page.getByRole('button', { name: 'Roll Str' }).click()
+
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
+        'Rolling...',
+        { timeout: 100 }
+      )
+      await expect(spectatorStatValue('Str')).toHaveCount(0)
+
+      await waitForDiceReveal(page)
+      await expect(ownerStatValue('Str')).toHaveText(/\d+/, {
+        timeout: 5_000
+      })
+      const rolledStr = (await ownerStatValue('Str').textContent()) ?? ''
+      await expect(spectatorStatValue('Str')).toHaveText(rolledStr, {
+        timeout: 5_000
+      })
+
+      await spectator.reload({ waitUntil: 'domcontentloaded' })
+      await openOrExpectFollowedCreation(spectator, characterName)
+      await expect(spectatorStatValue('Str')).toHaveText(rolledStr, {
+        timeout: 5_000
+      })
+
+      for (const stat of ['Dex', 'End', 'Int', 'Edu'] as const) {
+        await page.getByRole('button', { name: `Roll ${stat}` }).click()
+        await waitForDiceReveal(page)
+        await expect(ownerStatValue(stat)).toHaveText(/\d+/, {
+          timeout: 5_000
+        })
+        const rolledValue = (await ownerStatValue(stat).textContent()) ?? ''
+        await expect(spectatorStatValue(stat)).toHaveText(rolledValue, {
+          timeout: 5_000
+        })
+      }
+
+      await page.getByRole('button', { name: 'Roll Soc' }).click()
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
+        'Rolling...',
+        { timeout: 100 }
+      )
+      await expect(spectator.locator('#characterCreationFields')).not.toContainText(
+        'Homeworld',
+        { timeout: 100 }
+      )
+
+      await waitForDiceReveal(page)
+      await expect(spectator.locator('#characterCreationFields')).toContainText(
+        'Homeworld',
+        { timeout: 5_000 }
+      )
+      const ownerCharacter = await fetchProjectedCharacter(
+        page,
+        roomId,
+        actorId,
+        characterId
+      )
+      const spectatorCharacter = await fetchProjectedCharacter(
+        spectator,
+        roomId,
+        spectatorId,
+        characterId,
+        'spectator'
+      )
+      expect(spectatorCharacter?.characteristics?.soc).toBe(
+        ownerCharacter?.characteristics?.soc
+      )
+      expect(spectatorCharacter?.creation?.state?.status).toBe('HOMEWORLD')
+
+      await expectSpectatorRefreshPreservesCreationProjection({
+        spectator,
+        roomId,
+        spectatorId,
+        characterId,
+        characterName
+      })
     } finally {
       await spectator.close()
     }

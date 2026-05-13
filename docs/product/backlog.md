@@ -76,11 +76,10 @@ Each wave should make later work simpler, safer, or more testable.
 1. Finish the architecture seams that are already partially present: thin
    client composition root, one command router, one server publication pipeline,
    one projection/filter path, and protocol fixtures.
-2. Finish replacing coarse character creation transition events with semantic
-   commands/events where generic transitions still remain. Commands remain
-   intent, events record accepted facts with dice and outcome data, and any
-   remaining roll-bearing generic facts are either migrated or rejected with
-   stable errors.
+2. Keep new character creation work on semantic commands/events while
+   preserving historical generic transition replay. Commands remain intent,
+   events record accepted facts with dice and outcome data, and
+   compatibility-only generic facts stay fenced from new production writes.
 3. Keep moving the server projection toward the source of truth for every
    creation gate:
    pending choices, legal actions, term facts, final sheet fields, and refresh
@@ -464,9 +463,11 @@ coordinator can schedule reveal fallback from redacted targets. Roll-bearing
 semantic character creation events now carry optional `rollEventId`
 correlation, and character creation live activities can expose explicit reveal
 metadata while keeping the previous timestamp fallback for legacy events. The
-remaining risk is that characteristic rolls still travel through
-`CharacterSheetUpdated`, and creation-specific projection history should move
-toward a semantic timeline once roll correlation is complete.
+remaining risk is creation-specific projection history:
+`CharacterCreationCharacteristicsCompleted` still records legacy
+`SET_CHARACTERISTICS` history for read-model compatibility, and the history
+timeline should move toward semantic facts once the remaining legacy activity
+fallbacks are retired.
 
 Primary write ownership:
 
@@ -491,9 +492,9 @@ Tasks:
   boundary, without weakening server-side viewer filtering or refresh recovery.
 - Add regression coverage for each new semantic roll-bearing creation event so
   the persisted fact, filtered state, live activity, and reveal timing agree.
-- Replace transition-name-based creation activity redaction with explicit
-  reveal metadata once every roll-bearing creation fact, including
-  characteristics, has a semantic roll event or correlation field.
+- Continue replacing transition-name-based creation activity redaction with
+  explicit reveal metadata for any remaining legacy or compatibility-only
+  roll-dependent activity paths.
 - Keep reveal timing on `diceRevealCoordinator`; feature modules should consume
   revealed view models instead of running local timers for outcome text.
 
@@ -975,11 +976,11 @@ The next batch should run like this, in this order:
    signal-driven projection-fed model, keep projector domain modules small, and
    keep publication parity plus viewer-safe responses on the single publication
    path.
-3. Finish explicit roll-to-creation-event correlation before replacing creation
-   history with a semantic timeline. Most roll-bearing semantic events now point
-   at the dice event that drives reveal timing; the remaining hard edge is
-   characteristic rolls, which still need a semantic fact or carefully scoped
-   correlation before the transition-name fallback can be removed.
+3. Replace creation history with a semantic timeline after retiring the
+   remaining legacy activity fallbacks. Roll-bearing semantic events, including
+   characteristic rolls, now point at the dice event that drives reveal timing;
+   the remaining hard edge is legacy `SET_CHARACTERISTICS` history/activity
+   compatibility.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.

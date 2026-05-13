@@ -368,6 +368,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
+      pendingDecisions: [],
       terms,
       history: [
         ...(character.creation.history ?? []),
@@ -389,6 +390,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
+      pendingDecisions: [],
       history: [
         ...(character.creation.history ?? []),
         { type: 'DEATH_CONFIRMED' }
@@ -420,6 +422,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
+      pendingDecisions: [],
       terms,
       history: [
         ...(character.creation.history ?? []),
@@ -563,6 +566,9 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
+      pendingDecisions: event.pendingDecisions
+        ? event.pendingDecisions.map((decision) => ({ ...decision }))
+        : [],
       terms,
       history: [
         ...(character.creation.history ?? []),

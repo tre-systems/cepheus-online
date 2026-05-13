@@ -204,7 +204,8 @@ describe('creation activity view model', () => {
         seq: 43,
         actorId: asUserId('spectated-user'),
         transition: 'FINISH_MUSTERING',
-        details: 'Mustering benefit; Scout; material; Low Passage; table roll 5',
+        details:
+          'Mustering benefit; Scout; material; Low Passage; table roll 5',
         status: 'MUSTERING_OUT'
       }),
       characterActivity({

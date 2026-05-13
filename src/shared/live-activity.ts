@@ -452,7 +452,10 @@ export const deriveLiveActivity = (
         characterId: event.characterId,
         transition: 'CHARACTERISTIC_ROLLED',
         details: `${event.characteristic.toUpperCase()} characteristic ${event.value}`,
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -464,7 +467,10 @@ export const deriveLiveActivity = (
         characterId: event.characterId,
         transition: 'SET_CHARACTERISTICS',
         details: 'Characteristics assigned',
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -600,7 +606,10 @@ export const deriveLiveActivity = (
             canAdvance: event.canAdvance
           })
         ),
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -619,7 +628,10 @@ export const deriveLiveActivity = (
             modifier: event.commission.modifier
           })
         ),
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -649,7 +661,10 @@ export const deriveLiveActivity = (
             rank: event.rank
           })
         ),
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -676,7 +691,10 @@ export const deriveLiveActivity = (
             aging: event.aging
           })
         ),
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -713,7 +731,10 @@ export const deriveLiveActivity = (
             modifier: event.reenlistment.modifier
           })
         ),
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -759,7 +780,10 @@ export const deriveLiveActivity = (
             termSkill: event.termSkill
           })
         ),
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -793,7 +817,10 @@ export const deriveLiveActivity = (
             musteringBenefit: event.musteringBenefit
           })
         ),
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -891,7 +918,10 @@ export const deriveLiveActivity = (
             .filter(Boolean)
             .join('; ')
         ),
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -905,7 +935,10 @@ export const deriveLiveActivity = (
         ...compactCharacterCreationDetails(
           `Draft ${event.draft.tableRoll}; ${event.draft.acceptedCareer}`
         ),
-        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }

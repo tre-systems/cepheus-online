@@ -93,7 +93,13 @@ const activityPayload = (
 ) =>
   liveActivities.length === 0
     ? {}
-    : { liveActivities: filterLiveActivitiesForViewer(liveActivities, state, viewer) }
+    : {
+        liveActivities: filterLiveActivitiesForViewer(
+          liveActivities,
+          state,
+          viewer
+        )
+      }
 
 const MAX_COMMAND_BODY_BYTES = 64 * 1024
 const MAX_TEST_SEED_BODY_BYTES = 1024

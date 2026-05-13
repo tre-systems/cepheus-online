@@ -149,7 +149,9 @@ describe('deriveEventsForCommand error categories', () => {
       rolledCharacteristic?.type,
       'CharacterCreationCharacteristicRolled'
     )
-    if (rolledCharacteristic?.type !== 'CharacterCreationCharacteristicRolled') {
+    if (
+      rolledCharacteristic?.type !== 'CharacterCreationCharacteristicRolled'
+    ) {
       return
     }
     assert.equal(rolledCharacteristic.characterId, characterId)
@@ -760,6 +762,41 @@ describe('deriveEventsForCommand error categories', () => {
     )
   })
 
+  it('blocks semantic basic training completion while basic training choices are unresolved', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationBasicTraining',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('BASIC_TRAINING', {
+        pendingDecisions: [{ key: 'basicTrainingSkillSelection' }],
+        terms: [
+          {
+            career: 'Merchant',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions'
+    )
+  })
+
   it('blocks semantic basic training completion outside basic training', () => {
     const result = runCommand(
       {
@@ -967,6 +1004,30 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(
       qualification.state.status,
       qualification.passed ? 'BASIC_TRAINING' : 'CAREER_SELECTION'
+    )
+  })
+
+  it('blocks repeated qualification after failed qualification', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationQualification',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout'
+      },
+      createCreation('CAREER_SELECTION', {
+        failedToQualify: true,
+        canEnterDraft: true
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Qualification is not available after failed qualification'
     )
   })
 
@@ -2023,6 +2084,7 @@ describe('deriveEventsForCommand error categories', () => {
         characterId
       },
       createCreation('MISHAP', {
+        pendingDecisions: [{ key: 'mishapResolution' }],
         terms: [
           {
             career: 'Scout',
@@ -2058,6 +2120,28 @@ describe('deriveEventsForCommand error categories', () => {
     ])
   })
 
+  it('blocks mishap resolution when death confirmation is the projected outcome', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationMishap',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('MISHAP', {
+        pendingDecisions: [{ key: 'survivalResolution' }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'MISHAP_RESOLVED is blocked by unresolved character creation decisions'
+    )
+  })
+
   it('emits semantic death confirmation with server-derived transition', () => {
     const result = runCommand(
       {
@@ -2066,7 +2150,9 @@ describe('deriveEventsForCommand error categories', () => {
         actorId,
         characterId
       },
-      createCreation('MISHAP')
+      createCreation('MISHAP', {
+        pendingDecisions: [{ key: 'survivalResolution' }]
+      })
     )
 
     assert.equal(result.ok, true)
@@ -2085,6 +2171,28 @@ describe('deriveEventsForCommand error categories', () => {
         creationComplete: false
       }
     ])
+  })
+
+  it('blocks death confirmation when mishap resolution is the projected outcome', () => {
+    const result = runCommand(
+      {
+        type: 'ConfirmCharacterCreationDeath',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('MISHAP', {
+        pendingDecisions: [{ key: 'mishapResolution' }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'DEATH_CONFIRMED is blocked by unresolved character creation decisions'
+    )
   })
 
   it('rejects generic mishap and death transitions', () => {

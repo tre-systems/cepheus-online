@@ -99,9 +99,7 @@ const latestDiceRoll = (
 ): DiceRollState | null =>
   response.state?.diceLog?.[response.state.diceLog.length - 1] ?? null
 
-const hasDiceRollResult = (
-  roll: DiceRollState | null
-): roll is DiceRollState =>
+const hasDiceRollResult = (roll: DiceRollState | null): roll is DiceRollState =>
   Array.isArray(roll?.rolls) && typeof roll?.total === 'number'
 
 const syncAndRender = (

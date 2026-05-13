@@ -63,7 +63,8 @@ const hasRollDependentCreationDetails = (
 const isFutureCharacterCreationReveal = (
   activity: CharacterCreationActivityDescriptor,
   nowMs: number
-): boolean => Date.parse(deriveCharacterCreationActivityRevealAt(activity)) > nowMs
+): boolean =>
+  Date.parse(deriveCharacterCreationActivityRevealAt(activity)) > nowMs
 
 export const resolveViewerForState = (
   state: GameState,

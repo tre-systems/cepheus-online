@@ -1,12 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import {
-  asCharacterId,
-  asEventId,
-  asGameId,
-  asUserId
-} from '../../shared/ids'
+import { asCharacterId, asEventId, asGameId, asUserId } from '../../shared/ids'
 import type { LiveActivityDescriptor } from '../../shared/live-activity'
 import type { ClientDiceRollActivity } from '../game-commands'
 import {
