@@ -182,6 +182,73 @@ describe('character creation controller', () => {
     dispose()
   })
 
+  it('derives a projection-fed view model from controller state', () => {
+    const controller = createCharacterCreationController({
+      getState: () => stateWithCreation(creation('BASIC_TRAINING')),
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+
+    assert.equal(controller.viewModel().mode, 'empty')
+    assert.equal(controller.viewModel().projection.present, false)
+
+    controller.setFlow(localFlow)
+
+    assert.equal(controller.viewModel().mode, 'editable')
+    assert.equal(controller.viewModel().characterId, characterId)
+    assert.equal(controller.viewModel().wizard?.step, 'characteristics')
+    assert.equal(controller.viewModel().projection.status, 'BASIC_TRAINING')
+    assert.equal(controller.viewModel().wizard?.projectedStep, 'skills')
+
+    controller.setReadOnly(true)
+
+    assert.equal(controller.viewModel().mode, 'read-only')
+    assert.equal(controller.viewModel().controlsDisabled, true)
+    assert.equal(controller.viewModel().wizard?.controlsDisabled, true)
+  })
+
+  it('publishes a coherent view model for batched follow updates', () => {
+    const controller = createCharacterCreationController({
+      getState: () => stateWithCreation(creation('BASIC_TRAINING')),
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+    const observed: Array<{
+      mode: string
+      step: string | null
+      readOnly: boolean
+      status: string | null
+    }> = []
+    const dispose = effect(() => {
+      const viewModel = controller.viewModelSignal.value
+      observed.push({
+        mode: viewModel.mode,
+        step: viewModel.flow?.step ?? null,
+        readOnly: viewModel.readOnly,
+        status: viewModel.projection.status
+      })
+    })
+
+    controller.openFollow(characterId)
+
+    assert.deepEqual(observed, [
+      {
+        mode: 'empty',
+        step: null,
+        readOnly: false,
+        status: null
+      },
+      {
+        mode: 'read-only',
+        step: 'skills',
+        readOnly: true,
+        status: 'BASIC_TRAINING'
+      }
+    ])
+
+    dispose()
+  })
+
   it('does not clear editable flow when room state changes', () => {
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(creation('BASIC_TRAINING')),

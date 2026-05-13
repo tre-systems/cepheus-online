@@ -15,11 +15,16 @@ import {
 } from './character-creation-follow.js'
 import { flowFromProjectedCharacter } from './character-creation-projection.js'
 import { shouldSyncEditableCharacterCreationFlowWithProjection } from './character-creation-sync.js'
+import {
+  deriveCharacterCreationViewModel,
+  type CharacterCreationViewModel
+} from './character-creation-view-model.js'
 
 export interface CharacterCreationController {
   flowSignal: ReadonlySignal<CharacterCreationFlow | null>
   readOnlySignal: ReadonlySignal<boolean>
   selectedCharacterIdSignal: ReadonlySignal<CharacterId | null>
+  viewModelSignal: ReadonlySignal<CharacterCreationViewModel>
   flow: () => CharacterCreationFlow | null
   setFlow: (flow: CharacterCreationFlow | null) => CharacterCreationFlow | null
   readOnly: () => boolean
@@ -29,6 +34,7 @@ export interface CharacterCreationController {
     characterId: CharacterId | null
   ) => CharacterId | null
   currentProjection: () => CharacterCreationProjection | null
+  viewModel: () => CharacterCreationViewModel
   openFollow: (
     characterId: CharacterId,
     options?: { readOnly?: boolean }
@@ -61,6 +67,26 @@ export const createCharacterCreationController = ({
   const flow = signal<CharacterCreationFlow | null>(null)
   const readOnly = signal(false)
   const selectedCharacterId = signal<CharacterId | null>(null)
+  const projectionRevision = signal(0)
+
+  const currentProjection = (): CharacterCreationProjection | null => {
+    projectionRevision.value
+    const currentFlow = flow.value
+    if (!currentFlow) return null
+    return projectedCharacterCreation(getState(), currentFlow.draft.characterId)
+  }
+
+  const bumpProjectionRevision = (): void => {
+    projectionRevision.update((revision) => revision + 1)
+  }
+
+  const viewModel = scope.computed(() =>
+    deriveCharacterCreationViewModel({
+      flow: flow.value,
+      projection: currentProjection(),
+      readOnly: readOnly.value
+    })
+  )
 
   const setFlow = (
     nextFlow: CharacterCreationFlow | null
@@ -85,21 +111,15 @@ export const createCharacterCreationController = ({
     flowSignal: flow,
     readOnlySignal: readOnly,
     selectedCharacterIdSignal: selectedCharacterId,
+    viewModelSignal: viewModel,
     flow: () => flow.value,
     setFlow,
     readOnly: () => readOnly.value,
     setReadOnly,
     selectedCharacterId: () => selectedCharacterId.value,
     setSelectedCharacterId,
-
-    currentProjection: () => {
-      const currentFlow = flow.value
-      if (!currentFlow) return null
-      return projectedCharacterCreation(
-        getState(),
-        currentFlow.draft.characterId
-      )
-    },
+    currentProjection,
+    viewModel: () => viewModel.value,
 
     openFollow: (characterId, { readOnly: nextReadOnly = true } = {}) => {
       const character = getState()?.characters[characterId] ?? null
@@ -107,6 +127,7 @@ export const createCharacterCreationController = ({
       if (!nextFlow) return null
 
       batch(() => {
+        bumpProjectionRevision()
         selectedCharacterId.value = characterId
         flow.value = nextFlow
         readOnly.value = nextReadOnly
@@ -115,16 +136,20 @@ export const createCharacterCreationController = ({
     },
 
     syncFlowFromRoomState: (roomState, characterId, fallbackFlow = null) => {
-      flow.value = syncCharacterCreationFlowFromRoomState({
-        currentFlow: flow.value,
-        roomState,
-        characterId,
-        fallbackFlow
+      batch(() => {
+        bumpProjectionRevision()
+        flow.value = syncCharacterCreationFlowFromRoomState({
+          currentFlow: flow.value,
+          roomState,
+          characterId,
+          fallbackFlow
+        })
       })
       return flow.value
     },
 
     reconcileEditableWithProjection: (creation) => {
+      bumpProjectionRevision()
       const currentFlow = flow.value
       if (
         shouldSyncEditableCharacterCreationFlowWithProjection({
@@ -159,6 +184,7 @@ export const createCharacterCreationController = ({
       })
 
       batch(() => {
+        bumpProjectionRevision()
         flow.value = refresh.flow
         readOnly.value = refresh.readOnly
         if (!refresh.flow) {

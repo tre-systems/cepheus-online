@@ -43,7 +43,6 @@ import {
   renderCharacterCreationTermHistory as renderCharacterCreationTermHistoryView
 } from './character-creation-review-view.js'
 import { renderCharacterCreationTermResolution as renderCharacterCreationTermResolutionView } from './character-creation-term-resolution-view.js'
-import { deriveCharacterCreationViewModel } from './character-creation-view-model.js'
 
 export type CharacterCreationRenderControllerElements = Pick<
   RequiredAppElements,
@@ -71,6 +70,7 @@ export interface CharacterCreationRenderControllerDeps {
     | 'readOnly'
     | 'reconcileEditableWithProjection'
     | 'setFlow'
+    | 'viewModel'
   >
   panel: Pick<CharacterCreationPanelController, 'render' | 'scrollToTop'>
   wizard: Pick<
@@ -129,11 +129,7 @@ export const createCharacterCreationRenderController = ({
       // Keep setup steps linear even when reopening a flow that is already valid.
     }
 
-    const viewModel = deriveCharacterCreationViewModel({
-      flow: controller.flow(),
-      projection: controller.currentProjection(),
-      readOnly: controller.readOnly()
-    })
+    const viewModel = controller.viewModel()
     if (!panel.render(viewModel.flow) || !viewModel.flow) return
     const flow = viewModel.flow
     elements.characterCreationSteps.replaceChildren()

@@ -148,5 +148,57 @@
       ]
     },
     "maxSerializedBytes": 1600
+  },
+  {
+    "name": "semantic skills and aging live activity companion",
+    "message": {
+      "type": "commandAccepted",
+      "requestId": "req-skills-aging",
+      "state": {
+        "id": "game-1",
+        "slug": "game-1",
+        "name": "Spinward Test",
+        "ownerId": "user-1",
+        "players": {},
+        "characters": {},
+        "boards": {},
+        "pieces": {},
+        "diceLog": [],
+        "selectedBoardId": null,
+        "eventSeq": 12
+      },
+      "eventSeq": 12,
+      "liveActivities": [
+        {
+          "id": "game-1:12",
+          "eventId": "game-1:12",
+          "gameId": "game-1",
+          "seq": 12,
+          "actorId": "user-1",
+          "createdAt": "2026-05-03T00:00:12.000Z",
+          "type": "characterCreation",
+          "characterId": "char-1",
+          "transition": "AGING_LOSSES_RESOLVED",
+          "details": "Aging losses applied; 2 selections",
+          "status": "REENLISTMENT",
+          "creationComplete": false
+        },
+        {
+          "id": "game-1:13",
+          "eventId": "game-1:13",
+          "gameId": "game-1",
+          "seq": 13,
+          "actorId": "user-1",
+          "createdAt": "2026-05-03T00:00:13.000Z",
+          "type": "characterCreation",
+          "characterId": "char-1",
+          "transition": "COMPLETE_SKILLS",
+          "details": "Skills and training complete",
+          "status": "AGING",
+          "creationComplete": false
+        }
+      ]
+    },
+    "maxSerializedBytes": 1100
   }
 ]

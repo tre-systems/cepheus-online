@@ -318,6 +318,82 @@
     "maxSerializedBytes": 360
   },
   {
+    "name": "semantic aging loss activity",
+    "event": {
+      "type": "CharacterCreationAgingLossesResolved",
+      "characterId": "char-1",
+      "selectedLosses": [
+        {
+          "type": "PHYSICAL",
+          "modifier": -1,
+          "characteristic": "str"
+        },
+        {
+          "type": "PHYSICAL",
+          "modifier": -1,
+          "characteristic": "dex"
+        }
+      ],
+      "characteristicPatch": {
+        "str": 6,
+        "dex": 7
+      },
+      "state": {
+        "status": "REENLISTMENT",
+        "context": {
+          "canCommission": false,
+          "canAdvance": false
+        }
+      },
+      "creationComplete": false
+    },
+    "activity": {
+      "id": "game-1:9",
+      "eventId": "game-1:9",
+      "gameId": "game-1",
+      "seq": 9,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:09.000Z",
+      "type": "characterCreation",
+      "characterId": "char-1",
+      "transition": "AGING_LOSSES_RESOLVED",
+      "details": "Aging losses applied; 2 selections",
+      "status": "REENLISTMENT",
+      "creationComplete": false
+    },
+    "maxSerializedBytes": 410
+  },
+  {
+    "name": "semantic skills completion activity",
+    "event": {
+      "type": "CharacterCreationSkillsCompleted",
+      "characterId": "char-1",
+      "state": {
+        "status": "AGING",
+        "context": {
+          "canCommission": true,
+          "canAdvance": false
+        }
+      },
+      "creationComplete": false
+    },
+    "activity": {
+      "id": "game-1:9",
+      "eventId": "game-1:9",
+      "gameId": "game-1",
+      "seq": 9,
+      "actorId": "user-1",
+      "createdAt": "2026-05-03T00:00:09.000Z",
+      "type": "characterCreation",
+      "characterId": "char-1",
+      "transition": "COMPLETE_SKILLS",
+      "details": "Skills and training complete",
+      "status": "AGING",
+      "creationComplete": false
+    },
+    "maxSerializedBytes": 380
+  },
+  {
     "name": "bounded dice roll activity",
     "event": {
       "type": "DiceRolled",

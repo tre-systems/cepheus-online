@@ -268,8 +268,9 @@ character creation outcomes, protocol fixtures prove bounded viewer-safe
 messages, publication returns derived activity alongside state, HTTP commands
 broadcast character creation activity to connected sockets, and the browser
 uses the shared dice renderer for tactical and creation rolls. The next work is
-to harden two-tab follow behavior, keep reveal timing centralized, and widen
-the compact follow cards as the remaining semantic events land.
+to harden two-tab follow behavior and keep reveal timing centralized as the
+remaining semantic branches land. Semantic aging-loss resolution and skills
+completion now emit compact activity descriptors and protocol fixtures.
 
 Primary write ownership:
 
@@ -346,47 +347,24 @@ Done when:
 
 ### Slice 0F: Automated UX Regression And Creation Client Architecture
 
-Status: partially done. Playwright browser smoke now runs in `npm run
-verify:full`, the owner happy path now reaches mustering, finalization, sheet
-open, and token creation, and a seeded multi-career browser journey covers a
-Merchant term, mustering, Scout continuation, and two-tab spectator follow.
-Two-tab follow coverage exists for characteristic, homeworld/background,
-qualification, anagathics, aging, reenlistment, commission, advancement,
-term skill rolls, mustering benefit reveal timing, and post-mustering
-continuation, including mustering completion, finalization, and spectator
-refresh recovery of the projected sheet. Failed qualification now has real
-button-path browser coverage for both Drifter and Draft fallback recovery, and
-the repeat-runner smoke creates a finalized traveller plus a fallback traveller
-with failure context attachments. The shared `diceRevealCoordinator` owns
-result deferral. Death/restart has deterministic browser coverage, semantic
-commission/advancement/term-skill events have checkpoint-plus-tail recovery
-coverage, finalization recovery now proves the server-derived sheet survives
-checkpoint-plus-tail replay, and sheet-side, wizard-render, room asset
-creation, character sheet, room menu, board controls, board door actions,
-character rail, dice overlay, refresh button, dice command, app lifecycle,
-character-sheet control, and room bootstrap wiring have been extracted from
-`app.ts`. Late term-skill,
-reenlistment, mustering-out, finalization, and spectator follow-card controls
-now have phone-width usability coverage, and lightweight unit invariants cover
-single-primary actions, pending-roll render suppression, duplicate roll-submit
-suppression for characteristic, aging, reenlistment, and mustering benefit
-actions, read-only spectator controls, redacted dice activity handling, board
-door command dispatch, and stale local flow replacement after server projection
-advances. The seeded multi-career smoke now includes spectator recovery for a
-live term-skill roll after reveal, refresh, and close/reopen, reenlistment
-refresh recovery after a revealed roll, and repeated multi-term spectator
-projection recovery through a later Scout term and mustering benefit. The
-repeat-runner smoke covers three disposable travellers with console and
-server-response failure context. The remaining leverage point is making the
-creator render from a single projection-fed view model so these browser tests
-exercise a simpler state graph.
+Status: partially done. Playwright browser smoke runs in `npm run
+verify:full`; owner, failed-qualification, death/restart, seeded multi-career,
+two-tab spectator follow, reveal-timing, refresh recovery, and phone-width
+control paths have executable coverage. `app.ts` is now a composition shell,
+and character creation is mounted through `createCharacterCreationFeature`
+with dedicated controller, renderer, publication, lifecycle, command, and
+follow modules. The character creation controller now owns a projection-fed
+view-model signal consumed by the render controller. The remaining leverage
+point is expanding that model until individual step views consume one coherent
+shape for phase, legal actions, pending choices, and button state.
 
 Primary write ownership:
 
 - `src/client/app/app.ts`
-- new `src/client/app/character-creation-controller.ts`
-- new `src/client/app/character-creation-renderer.ts`
-- new `src/client/app/character-creation-command-adapter.ts`
+- `src/client/app/character-creation-controller.ts`
+- `src/client/app/character-creation-renderer.ts`
+- `src/client/app/character-creation-command-controller.ts`
+- `src/client/app/character-creation-render-controller.ts`
 - `src/client/app/dice-reveal-coordinator.ts`
 - browser/E2E specs or smoke scripts under `e2e/` or `scripts/`
 - `docs/engineering/testing-strategy.md`
@@ -394,42 +372,28 @@ Primary write ownership:
 
 Tasks:
 
-- Keep the committed full one-term finalization, seeded multi-career,
-  failed-qualification Drifter, failed-qualification Draft, and death/restart
-  smoke tests healthy while reporting the current phase/action on failure.
-- Extend the repeat runner beyond its current three-traveller coverage only
-  when new branches are added. It now records console errors, server response
-  failures, and screenshots or DOM snapshots when the flow gets stuck.
-- Extend two-tab follow tests as new branches are added. Current coverage
-  includes term-skill, reenlistment, later-term refreshes, and mustering benefit
-  reveal/recovery from the server projection.
-- Extend mobile viewport checks only when new controls are introduced. Current
-  early-screen, term-skill, reenlistment, mustering-out, finalization, and
-  spectator follow-card controls have phone-width coverage that asserts no
-  important action is hidden, disabled by accident, or overlapped.
-- Add reveal-timing assertions for every roll-bearing creation action:
-  no roll-dependent result text appears before the dice reveal boundary, and
-  controls unblock only after the reveal has been applied. Duplicate submit
-  suppression for rendered roll controls now has unit coverage.
-- Extend the lightweight UI invariants as new edge cases are found; current
+- Keep the committed browser scenarios healthy and extend them when new SRD
+  branches are added. Existing scenarios already cover owner finalization,
+  multi-career follow, failed-qualification Drifter and Draft fallback,
+  death/restart, refresh recovery, mobile controls, and failure artifacts.
+- Keep the lightweight UI invariants current as new controls land. Existing
   coverage includes single-primary actions, pending-roll render suppression,
-  duplicate characteristic, aging, reenlistment, and mustering benefit roll
-  suppression, read-only controls, and stale local flow replacement after
-  server projection advances.
+  duplicate roll-submit suppression, read-only controls, redacted dice
+  activity, and stale local flow replacement after server projection advances.
 - Keep `createCharacterCreationFeature` as the only character creation feature
   boundary used by `app.ts`; follow-on rendering work should hang from that
   boundary rather than adding more wizard state to the app shell.
 - Keep all result deferral, spectator reveal timing, and button unblocking on
   `diceRevealCoordinator`; add coverage for every new roll-bearing creation
   action instead of adding local timing code.
-- Make the rendered creation UI consume a single creation view model derived
-  from authoritative projection plus local pending choices. Server projection
-  owns phase, legal actions, progress, roll facts, and completion gates; local
-  state owns only unsubmitted choices and transient UI controls.
+- Expand the rendered creation UI's single view model until step views consume
+  projection-derived phase, legal actions, progress, roll facts, and completion
+  gates. Local state should own only unsubmitted choices and transient UI
+  controls.
 - Move the creation renderer toward a signal-driven model for local UI state,
   pending command state, and reveal-coordinator output while keeping the signal
   layer private to the feature.
-- Move browser action wiring behind a command adapter that always uses the
+- Keep browser action wiring behind controller/adapters that always use the
   existing client command router. Roll-bearing commands should be impossible to
   double-submit from the same rendered control.
 - Keep a smaller local command available for rapid character creation UX
@@ -437,14 +401,13 @@ Tasks:
 
 Done when:
 
-- A single command can reproduce the owner finalization happy path plus common
-  death/fallback branches in a real browser.
-- A single command can verify spectator follow behavior across two browser
-  contexts or tabs.
-- Browser failures leave enough artifacts to fix the bug without manually
-  replaying the whole flow.
-- `app.ts` no longer owns character creation orchestration directly.
-- Roll reveal timing is enforced by one coordinator and tested as a contract.
+- Existing browser commands continue to reproduce owner finalization,
+  death/fallback branches, and spectator follow across two browser contexts.
+- Browser failures continue to leave enough artifacts to fix the bug without
+  manually replaying the whole flow.
+- `app.ts` stays out of character creation internals.
+- Roll reveal timing stays enforced by one coordinator and tested as a
+  contract.
 - New creator UX work starts by adding or updating an executable scenario,
   not by relying on manual clicking as the primary regression check.
 
@@ -466,8 +429,8 @@ metadata while keeping the previous timestamp fallback for legacy events. The
 remaining risk is creation-specific projection history:
 `CharacterCreationCharacteristicsCompleted` still records legacy
 `SET_CHARACTERISTICS` history for read-model compatibility, and the history
-timeline should move toward semantic facts once the remaining legacy activity
-fallbacks are retired.
+timeline should move toward semantic facts while preserving historical replay
+compatibility.
 
 Primary write ownership:
 
@@ -584,7 +547,8 @@ Tasks:
 - Finish updating `deriveLiveActivities()` to read semantic events directly
   instead of parsing coarse transition payloads where possible. Done for
   characteristic, qualification, survival, commission, advancement, term skill,
-  aging, reenlistment, and mustering rolls.
+  aging, aging-loss resolution, reenlistment, skills completion, and mustering
+  rolls.
 - Add protocol fixtures for every new command, event envelope, accepted
   response, rejected response, and viewer-safe live activity.
 
@@ -978,8 +942,9 @@ The next batch should run like this, in this order:
    path.
 3. Replace creation history with a semantic timeline after retiring the
    remaining legacy activity fallbacks. Roll-bearing semantic events, including
-   characteristic rolls, now point at the dice event that drives reveal timing;
-   the remaining hard edge is legacy `SET_CHARACTERISTICS` history/activity
+   characteristic rolls, now point at the dice event that drives reveal timing.
+   Semantic creation history mapping is centralized, but the projected
+   `history` model still stores legacy `CareerCreationEvent` entries for
    compatibility.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with

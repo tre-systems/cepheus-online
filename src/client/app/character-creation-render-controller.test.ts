@@ -12,6 +12,7 @@ import {
   type CharacterCreationRenderControllerElements,
   type CharacterCreationRenderControllerDeps
 } from './character-creation-render-controller'
+import { deriveCharacterCreationViewModel } from './character-creation-view-model'
 import { asNode, TestDocument, TestNode } from './test-dom.test-helper'
 
 const flow = (): CharacterCreationFlow => ({
@@ -75,7 +76,13 @@ describe('character creation render controller', () => {
         flow: () => null,
         readOnly: () => false,
         reconcileEditableWithProjection: () => null,
-        setFlow: (nextFlow) => nextFlow
+        setFlow: (nextFlow) => nextFlow,
+        viewModel: () =>
+          deriveCharacterCreationViewModel({
+            flow: null,
+            projection: null,
+            readOnly: false
+          })
       },
       panel: {
         render: () => false,
@@ -125,7 +132,13 @@ describe('character creation render controller', () => {
           calls.push('reconcile')
           return currentFlow
         },
-        setFlow: (nextFlow) => nextFlow
+        setFlow: (nextFlow) => nextFlow,
+        viewModel: () =>
+          deriveCharacterCreationViewModel({
+            flow: currentFlow,
+            projection: null,
+            readOnly: false
+          })
       },
       panel: {
         render: (panelFlow) => {
@@ -189,7 +202,13 @@ describe('character creation render controller', () => {
         flow: () => currentFlow,
         readOnly: () => true,
         reconcileEditableWithProjection: () => currentFlow,
-        setFlow: (nextFlow) => nextFlow
+        setFlow: (nextFlow) => nextFlow,
+        viewModel: () =>
+          deriveCharacterCreationViewModel({
+            flow: currentFlow,
+            projection: null,
+            readOnly: true
+          })
       },
       panel: {
         render: () => true,

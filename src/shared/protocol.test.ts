@@ -273,6 +273,24 @@ describe('protocol validation', () => {
     )
   })
 
+  it('covers semantic character creation activity transitions in server fixtures', () => {
+    const transitions = serverFixtureLiveActivities().flatMap((activity) =>
+      activity.type === 'characterCreation' ? [activity.transition] : []
+    )
+
+    assert.deepEqual(
+      new Set(transitions),
+      new Set([
+        'AGING_LOSSES_RESOLVED',
+        'COMPLETE_SKILLS',
+        'CONTINUE_CAREER',
+        'LEAVE_CAREER',
+        'REENLIST',
+        'SELECT_CAREER'
+      ])
+    )
+  })
+
   it('accepts a command envelope with a typed command', () => {
     const result = decodeClientMessage({
       type: 'command',
