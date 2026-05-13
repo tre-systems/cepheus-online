@@ -142,8 +142,8 @@ describe('character creation render controller', () => {
           })
       },
       panel: {
-        render: (panelFlow) => {
-          assert.equal(panelFlow, currentFlow)
+        render: (panelViewModel) => {
+          assert.equal(panelViewModel.title, 'Iona Vesh')
           calls.push('panel')
           return true
         },
@@ -251,6 +251,95 @@ describe('character creation render controller', () => {
     const nextStep = asNode(els.characterCreationFields).children[0]
     assert.equal(nextStep?.children[0]?.textContent, 'Sentinel phase')
     assert.equal(nextStep?.children[1]?.textContent, 'Sentinel prompt')
+  })
+
+  it('renders the characteristic grid from the controller view model', () => {
+    const els = elements()
+    const currentFlow = {
+      ...flow(),
+      step: 'characteristics',
+      draft: createInitialCharacterDraft(asCharacterId('render-sentinel'), {
+        name: 'Sentinel',
+        characteristics: {
+          str: null,
+          dex: null,
+          end: null,
+          int: null,
+          edu: null,
+          soc: null
+        }
+      })
+    } satisfies CharacterCreationFlow
+    const baseViewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: null,
+      readOnly: false
+    })
+    const controller = createCharacterCreationRenderController({
+      document: renderDocument(),
+      elements: els,
+      controller: {
+        currentProjection: () => null,
+        flow: () => currentFlow,
+        readOnly: () => false,
+        reconcileEditableWithProjection: () => currentFlow,
+        setFlow: (nextFlow) => nextFlow,
+        viewModel: () => ({
+          ...baseViewModel,
+          wizard: baseViewModel.wizard
+            ? {
+                ...baseViewModel.wizard,
+                characteristics: {
+                  open: true,
+                  stats: [
+                    {
+                      key: 'str',
+                      label: 'Sentinel Str',
+                      value: '11',
+                      modifier: '+1',
+                      missing: false,
+                      errors: [],
+                      rollLabel: 'Roll sentinel'
+                    }
+                  ]
+                }
+              }
+            : null
+        })
+      },
+      panel: {
+        render: () => true,
+        scrollToTop: () => {}
+      },
+      wizard: {
+        advance: async () => {},
+        autoAdvanceSetup: () => false,
+        startNew: async () => {},
+        syncFields: () => {}
+      },
+      homeworldPublisher: {
+        publishBackgroundCascadeSelection: async () => {},
+        publishProgress: async () => {},
+        publishCascadeResolution: async () => {}
+      },
+      getCommandController: commandController,
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => ({}),
+      commandIdentity: () => ({
+        gameId: asGameId('game-1'),
+        actorId: asUserId('actor-1')
+      }),
+      reportError: () => {}
+    })
+
+    controller.renderWizard()
+
+    const fields = asNode(els.characterCreationFields)
+    const grid = fields.children[1]?.children[0]
+    assert.equal(grid?.className, 'creation-stat-grid dice-stat-grid')
+    assert.equal(grid?.children.length, 1)
+    assert.equal(grid?.children[0]?.children[0]?.textContent, 'Sentinel Str')
+    assert.equal(grid?.children[0]?.children[1]?.children[0]?.textContent, '11')
   })
 
   it('disables local-only wizard actions for read-only spectator flows', () => {

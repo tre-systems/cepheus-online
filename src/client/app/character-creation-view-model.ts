@@ -8,10 +8,12 @@ import type {
 import { creationStepFromStatus } from './character-creation-projection.js'
 import {
   deriveCharacterCreationButtonStates,
+  deriveCharacterCreationCharacteristicGridViewModel,
   deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationValidationSummary,
   type CharacterCreationButtonStates,
+  type CharacterCreationCharacteristicGridViewModel,
   type CharacterCreationNextStepViewModel,
   type CharacterCreationStepProgressItem,
   type CharacterCreationValidationSummary
@@ -48,10 +50,12 @@ export interface CharacterCreationWizardViewModel {
   buttons: CharacterCreationButtonStates
   validation: CharacterCreationValidationSummary
   nextStep: CharacterCreationNextStepViewModel
+  characteristics: CharacterCreationCharacteristicGridViewModel | null
 }
 
 export interface CharacterCreationViewModel {
   mode: CharacterCreationViewModelMode
+  title: string
   characterId: CharacterId | null
   flow: CharacterCreationFlow | null
   readOnly: boolean
@@ -167,7 +171,8 @@ const wizardViewModel = ({
     progress: deriveCharacterCreationStepProgressItems(flow),
     buttons: deriveCharacterCreationButtonStates(flow),
     validation: deriveCharacterCreationValidationSummary(flow),
-    nextStep: deriveCharacterCreationNextStepViewModel(flow)
+    nextStep: deriveCharacterCreationNextStepViewModel(flow),
+    characteristics: deriveCharacterCreationCharacteristicGridViewModel(flow)
   }
 }
 
@@ -182,6 +187,7 @@ export const deriveCharacterCreationViewModel = ({
 
   return {
     mode: !flow ? 'empty' : readOnly ? 'read-only' : 'editable',
+    title: flow?.draft.name.trim() || 'Create traveller',
     characterId: flow?.draft.characterId ?? null,
     flow,
     readOnly,

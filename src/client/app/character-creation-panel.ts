@@ -1,4 +1,4 @@
-import type { CharacterCreationFlow } from './character-creation-flow.js'
+import type { CharacterCreationViewModel } from './character-creation-view-model.js'
 
 export interface CharacterCreationPanelElements {
   panel: HTMLElement
@@ -32,7 +32,9 @@ export interface CharacterCreationPanelController {
   open: () => void
   close: () => void
   scrollToTop: () => void
-  render: (flow: CharacterCreationFlow | null) => boolean
+  render: (
+    viewModel: Pick<CharacterCreationViewModel, 'mode' | 'title'>
+  ) => boolean
 }
 
 export const createCharacterCreationPanel = ({
@@ -88,9 +90,11 @@ export const createCharacterCreationPanel = ({
     elements.nextWizardButton.title = ''
   }
 
-  const render = (flow: CharacterCreationFlow | null) => {
-    const hasFlow = Boolean(flow)
-    elements.title.textContent = flow?.draft?.name?.trim() || 'Create traveller'
+  const render = (
+    viewModel: Pick<CharacterCreationViewModel, 'mode' | 'title'>
+  ) => {
+    const hasFlow = viewModel.mode !== 'empty'
+    elements.title.textContent = viewModel.title
     elements.panel.classList.toggle('flow-active', hasFlow)
     elements.startSection.hidden = hasFlow
     if (elements.quickSection) elements.quickSection.hidden = hasFlow

@@ -15,6 +15,7 @@ import {
   deriveCharacterCreationButtonStates,
   deriveCharacterCreationCareerOptionViewModels,
   deriveCharacterCreationCareerRollButton,
+  deriveCharacterCreationCharacteristicGridViewModel,
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationCtaLabels,
   deriveCharacterCreationDeathViewModel,
@@ -790,6 +791,85 @@ describe('character creation view helpers', () => {
           missing: false
         },
         { key: 'soc', label: 'Soc', value: '-', modifier: '-', missing: true }
+      ]
+    )
+  })
+
+  it('derives characteristic grid data once for renderers', () => {
+    const flow = {
+      step: 'characteristics' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        characteristics: {
+          str: 6,
+          dex: 9,
+          end: null,
+          int: 8,
+          edu: 12,
+          soc: 4
+        }
+      })
+    }
+
+    assert.deepEqual(
+      deriveCharacterCreationCharacteristicGridViewModel(flow)?.stats.map(
+        ({ key, value, modifier, missing, errors, rollLabel }) => ({
+          key,
+          value,
+          modifier,
+          missing,
+          errors,
+          rollLabel
+        })
+      ),
+      [
+        {
+          key: 'str',
+          value: '6',
+          modifier: '',
+          missing: false,
+          errors: [],
+          rollLabel: 'Roll Str'
+        },
+        {
+          key: 'dex',
+          value: '9',
+          modifier: '+1',
+          missing: false,
+          errors: [],
+          rollLabel: 'Roll Dex'
+        },
+        {
+          key: 'end',
+          value: '',
+          modifier: '',
+          missing: true,
+          errors: ['END is required'],
+          rollLabel: 'Roll End'
+        },
+        {
+          key: 'int',
+          value: '8',
+          modifier: '',
+          missing: false,
+          errors: [],
+          rollLabel: 'Roll Int'
+        },
+        {
+          key: 'edu',
+          value: '12',
+          modifier: '+2',
+          missing: false,
+          errors: [],
+          rollLabel: 'Roll Edu'
+        },
+        {
+          key: 'soc',
+          value: '4',
+          modifier: '-1',
+          missing: false,
+          errors: [],
+          rollLabel: 'Roll Soc'
+        }
       ]
     )
   })

@@ -1,7 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { CharacterCreationFlow } from './character-creation-flow'
 import { createCharacterCreationPanel } from './character-creation-panel'
 
 class TestClassList {
@@ -151,7 +150,10 @@ describe('character creation panel controller', () => {
     elements.nextWizardButton.textContent = 'Create character'
     elements.nextWizardButton.title = 'Blocked'
 
-    assert.equal(controller.render(null), false)
+    assert.equal(
+      controller.render({ mode: 'empty', title: 'Create traveller' }),
+      false
+    )
 
     assert.equal(elements.title.textContent, 'Create traveller')
     assert.equal(elements.panel.classList.contains('flow-active'), false)
@@ -180,9 +182,7 @@ describe('character creation panel controller', () => {
     elements.fields.children = [existingField]
 
     assert.equal(
-      controller.render({
-        draft: { name: ' Iona Vesh ' }
-      } as CharacterCreationFlow),
+      controller.render({ mode: 'editable', title: 'Iona Vesh' }),
       true
     )
 
@@ -218,9 +218,7 @@ describe('character creation panel controller', () => {
     })
 
     assert.equal(
-      controller.render({
-        draft: { name: 'Character 3' }
-      } as CharacterCreationFlow),
+      controller.render({ mode: 'editable', title: 'Character 3' }),
       true
     )
 

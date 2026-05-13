@@ -1,13 +1,6 @@
-import type { CharacteristicKey } from '../../shared/state.js'
-import type {
-  CharacterCreationCharacteristicRollKey,
-  CharacterCreationFlow
-} from './character-creation-flow.js'
+import type { CharacterCreationCharacteristicRollKey } from './character-creation-flow.js'
 import { bindAsyncActionButton } from './async-action-button.js'
-import {
-  deriveCharacterCreationFieldViewModels,
-  formatCharacterCreationCharacteristicModifier
-} from './character-creation-view.js'
+import type { CharacterCreationCharacteristicGridViewModel } from './character-creation-view.js'
 
 export interface CharacterCreationCharacteristicsDocument {
   createElement(tagName: 'button'): HTMLButtonElement
@@ -23,34 +16,32 @@ export interface CharacterCreationCharacteristicsViewDeps {
 
 export const renderCharacterCreationCharacteristicGrid = (
   document: CharacterCreationCharacteristicsDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationCharacteristicGridViewModel,
   { rollCharacteristic, reportError }: CharacterCreationCharacteristicsViewDeps
 ): HTMLElement => {
-  const fields = deriveCharacterCreationFieldViewModels(flow)
   const grid = document.createElement('div')
   grid.className = 'creation-stat-grid dice-stat-grid'
-  for (const field of fields) {
+  for (const stat of viewModel.stats) {
     const cell = document.createElement('div')
     cell.className = 'creation-stat-cell dice-stat-cell'
     const name = document.createElement('span')
-    name.textContent = field.label
+    name.textContent = stat.label
     const row = document.createElement('span')
     row.className = 'creation-stat-value-row'
     const modifier = document.createElement('small')
-    if (field.value === '' || field.value === null) {
+    if (stat.missing) {
       const rollButton = document.createElement('button')
       rollButton.type = 'button'
       rollButton.className = 'stat-die-button'
-      rollButton.setAttribute('aria-label', `Roll ${field.label}`)
-      rollButton.title = `Roll ${field.label}`
+      rollButton.setAttribute('aria-label', stat.rollLabel)
+      rollButton.title = stat.rollLabel
       for (let index = 0; index < 5; index += 1) {
         const pip = document.createElement('span')
         pip.className = 'stat-die-pip'
         rollButton.append(pip)
       }
-      const characteristicKey = field.key as CharacteristicKey
       bindAsyncActionButton(rollButton, () =>
-        rollCharacteristic(characteristicKey).catch((error) =>
+        rollCharacteristic(stat.key).catch((error) =>
           reportError(error.message)
         )
       )
@@ -58,17 +49,15 @@ export const renderCharacterCreationCharacteristicGrid = (
       row.append(rollButton, modifier)
     } else {
       const value = document.createElement('strong')
-      value.textContent = field.value
-      modifier.textContent = formatCharacterCreationCharacteristicModifier(
-        field.value
-      )
+      value.textContent = stat.value
+      modifier.textContent = stat.modifier
       row.append(value, modifier)
     }
     cell.append(name, row)
-    if (field.errors.length > 0 && field.value !== '') {
+    if (stat.errors.length > 0 && !stat.missing) {
       const error = document.createElement('small')
       error.className = 'creation-stat-error'
-      error.textContent = field.errors.join(', ')
+      error.textContent = stat.errors.join(', ')
       cell.append(error)
     }
     grid.append(cell)

@@ -10,6 +10,7 @@ import {
   renderCharacterCreationCharacteristicGrid,
   type CharacterCreationCharacteristicsDocument
 } from './character-creation-characteristics-view'
+import { deriveCharacterCreationCharacteristicGridViewModel } from './character-creation-view'
 import { asNode, testDocument } from './test-dom.test-helper'
 
 const document =
@@ -25,6 +26,16 @@ const flow = (
   })
 })
 
+const viewModel = (
+  characteristics: CharacterCreationFlow['draft']['characteristics']
+) => {
+  const model = deriveCharacterCreationCharacteristicGridViewModel(
+    flow(characteristics)
+  )
+  if (model === null) throw new Error('Expected characteristic grid view model')
+  return model
+}
+
 describe('character creation characteristics view', () => {
   it('renders roll buttons for missing characteristics', async () => {
     const rolled: string[] = []
@@ -32,7 +43,7 @@ describe('character creation characteristics view', () => {
     const node = asNode(
       renderCharacterCreationCharacteristicGrid(
         document,
-        flow({
+        viewModel({
           str: null,
           dex: null,
           end: null,
@@ -69,7 +80,7 @@ describe('character creation characteristics view', () => {
     const node = asNode(
       renderCharacterCreationCharacteristicGrid(
         document,
-        flow({
+        viewModel({
           str: 6,
           dex: 9,
           end: 7,

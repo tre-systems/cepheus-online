@@ -126,6 +126,21 @@ export interface CharacterCreationStatStripItem {
   missing: boolean
 }
 
+export interface CharacterCreationCharacteristicGridItem {
+  key: CharacteristicKey
+  label: string
+  value: string
+  modifier: string
+  missing: boolean
+  errors: string[]
+  rollLabel: string
+}
+
+export interface CharacterCreationCharacteristicGridViewModel {
+  open: boolean
+  stats: CharacterCreationCharacteristicGridItem[]
+}
+
 export interface CharacterCreationNextStepViewModel {
   step: CharacterCreationViewStep
   phase: string
@@ -603,6 +618,33 @@ export const deriveCharacterCreationStatStrip = (
       missing: value === null
     }
   })
+
+export const deriveCharacterCreationCharacteristicGridViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationCharacteristicGridViewModel | null => {
+  if (flow.step !== 'characteristics') return null
+
+  return {
+    open: true,
+    stats: deriveCharacterCreationFieldViewModels(flow, 'characteristics').map(
+      (field) => {
+        const key = field.key as CharacteristicKey
+        const missing = field.value === ''
+        return {
+          key,
+          label: field.label,
+          value: field.value,
+          modifier: missing
+            ? ''
+            : formatCharacterCreationCharacteristicModifier(field.value),
+          missing,
+          errors: [...field.errors],
+          rollLabel: `Roll ${field.label}`
+        }
+      }
+    )
+  }
+}
 
 const valueText = (value: string | number | null | undefined): string => {
   if (value === null || value === undefined) return ''

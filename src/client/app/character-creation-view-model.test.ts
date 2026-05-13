@@ -68,6 +68,7 @@ describe('character creation view model', () => {
     })
 
     assert.equal(viewModel.mode, 'empty')
+    assert.equal(viewModel.title, 'Create traveller')
     assert.equal(viewModel.characterId, null)
     assert.equal(viewModel.flow, null)
     assert.equal(viewModel.wizard, null)
@@ -93,6 +94,7 @@ describe('character creation view model', () => {
     })
 
     assert.equal(viewModel.mode, 'editable')
+    assert.equal(viewModel.title, 'Iona Vesh')
     assert.equal(viewModel.characterId, characterId)
     assert.equal(viewModel.readOnly, false)
     assert.equal(viewModel.controlsDisabled, false)
@@ -104,6 +106,7 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.projectedStepCurrent, true)
     assert.equal(viewModel.wizard?.controlsDisabled, false)
     assert.equal(viewModel.wizard?.nextStep.phase, 'Homeworld')
+    assert.equal(viewModel.wizard?.characteristics, null)
     assert.equal(viewModel.wizard?.progress.length, 7)
     assert.deepEqual(viewModel.pending.backgroundCascadeSkills, [
       'Gun Combat-0'
@@ -115,6 +118,45 @@ describe('character creation view model', () => {
     assert.equal(
       viewModel.pending.summary,
       '1 background cascade choice pending'
+    )
+  })
+
+  it('includes characteristic grid state for the characteristics step', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'characteristics',
+        draft: createInitialCharacterDraft(characterId, {
+          characteristics: {
+            str: 7,
+            dex: null,
+            end: 8,
+            int: null,
+            edu: null,
+            soc: null
+          }
+        })
+      }),
+      projection: projection('CHARACTERISTICS'),
+      readOnly: false
+    })
+
+    assert.deepEqual(
+      viewModel.wizard?.characteristics?.stats.map(
+        ({ key, value, missing, rollLabel }) => ({
+          key,
+          value,
+          missing,
+          rollLabel
+        })
+      ),
+      [
+        { key: 'str', value: '7', missing: false, rollLabel: 'Roll Str' },
+        { key: 'dex', value: '', missing: true, rollLabel: 'Roll Dex' },
+        { key: 'end', value: '8', missing: false, rollLabel: 'Roll End' },
+        { key: 'int', value: '', missing: true, rollLabel: 'Roll Int' },
+        { key: 'edu', value: '', missing: true, rollLabel: 'Roll Edu' },
+        { key: 'soc', value: '', missing: true, rollLabel: 'Roll Soc' }
+      ]
     )
   })
 

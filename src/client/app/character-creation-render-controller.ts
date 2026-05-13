@@ -30,6 +30,8 @@ import {
 import type { CharacterCreationHomeworldPublisher } from './character-creation-homeworld-publisher.js'
 import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './character-creation-mustering-view.js'
 import type { CharacterCreationPanelController } from './character-creation-panel.js'
+import type { CharacterCreationCharacteristicGridViewModel } from './character-creation-view.js'
+import type { CharacterCreationViewModel } from './character-creation-view-model.js'
 import {
   renderCharacterCreationBasicTrainingButton as renderCharacterCreationBasicTrainingButtonView,
   renderCharacterCreationCharacteristicRollButton as renderCharacterCreationCharacteristicRollButtonView,
@@ -130,7 +132,7 @@ export const createCharacterCreationRenderController = ({
     }
 
     const viewModel = controller.viewModel()
-    if (!panel.render(viewModel.flow) || !viewModel.flow) return
+    if (!panel.render(viewModel) || !viewModel.flow) return
     if (!viewModel.wizard) return
     const flow = viewModel.flow
     elements.characterCreationSteps.replaceChildren()
@@ -138,7 +140,7 @@ export const createCharacterCreationRenderController = ({
       renderCharacterCreationNextStep(viewModel.wizard.nextStep),
       flow.step === 'review'
         ? renderCharacterCreationReview(flow)
-        : renderCharacterCreationFields(flow)
+        : renderCharacterCreationFields(viewModel)
     )
     elements.characterCreationWizard.hidden = false
     elements.characterCreationWizard.classList.toggle(
@@ -175,11 +177,19 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationFields = (
-    flow: CharacterCreationFlow
+    viewModel: CharacterCreationViewModel
   ): DocumentFragment => {
     const fragment = document.createDocumentFragment()
+    const flow = viewModel.flow
+    if (!flow) return fragment
     if (flow.step === 'characteristics') {
-      fragment.append(renderCharacterCreationCharacteristicGrid(flow))
+      if (viewModel.wizard?.characteristics) {
+        fragment.append(
+          renderCharacterCreationCharacteristicGrid(
+            viewModel.wizard.characteristics
+          )
+        )
+      }
       return fragment
     }
     if (flow.step === 'career') {
@@ -375,9 +385,9 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationCharacteristicGrid = (
-    flow: CharacterCreationFlow
+    viewModel: CharacterCreationCharacteristicGridViewModel
   ): HTMLElement => {
-    return renderCharacterCreationCharacteristicGridView(document, flow, {
+    return renderCharacterCreationCharacteristicGridView(document, viewModel, {
       rollCharacteristic: (characteristicKey) =>
         getCommandController().rollCharacteristic(characteristicKey),
       reportError
