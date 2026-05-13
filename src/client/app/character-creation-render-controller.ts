@@ -43,6 +43,7 @@ import {
   renderCharacterCreationTermHistory as renderCharacterCreationTermHistoryView
 } from './character-creation-review-view.js'
 import { renderCharacterCreationTermResolution as renderCharacterCreationTermResolutionView } from './character-creation-term-resolution-view.js'
+import { deriveCharacterCreationViewModel } from './character-creation-view-model.js'
 
 export type CharacterCreationRenderControllerElements = Pick<
   RequiredAppElements,
@@ -128,8 +129,13 @@ export const createCharacterCreationRenderController = ({
       // Keep setup steps linear even when reopening a flow that is already valid.
     }
 
-    const flow = controller.flow()
-    if (!panel.render(flow) || !flow) return
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: controller.flow(),
+      projection: controller.currentProjection(),
+      readOnly: controller.readOnly()
+    })
+    if (!panel.render(viewModel.flow) || !viewModel.flow) return
+    const flow = viewModel.flow
     elements.characterCreationSteps.replaceChildren()
     elements.characterCreationFields.replaceChildren(
       renderCharacterCreationNextStep(flow),
@@ -140,9 +146,9 @@ export const createCharacterCreationRenderController = ({
     elements.characterCreationWizard.hidden = false
     elements.characterCreationWizard.classList.toggle(
       'read-only',
-      controller.readOnly()
+      viewModel.readOnly
     )
-    if (controller.readOnly()) {
+    if (viewModel.controlsDisabled) {
       for (const control of Array.from(
         elements.characterCreationFields.querySelectorAll<
           | HTMLButtonElement

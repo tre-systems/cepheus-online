@@ -300,6 +300,11 @@ describe('game state projection', () => {
       { type: 'SET_CHARACTERISTICS' },
       { type: 'CREATION_COMPLETE' }
     ])
+    assert.deepEqual(creation?.actionPlan, {
+      status: 'PLAYABLE',
+      pendingDecisions: [],
+      legalActions: []
+    })
     assert.equal(character?.age, 34)
     assert.deepEqual(character?.characteristics, {
       str: 7,

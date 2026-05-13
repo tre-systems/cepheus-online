@@ -125,8 +125,9 @@ controller, `AppSession` exists, character creation is mounted through
 `createCharacterCreationFeature`, and `app.ts` is type-checked. `app.ts` is
 still a composition shell rather than a tiny boot file, but it no longer owns
 the internal creator panel, wizard, publication, finalization, activity feed,
-presence dock, or dice overlay graph. The next architecture cleanup is to move
-the rendered wizard toward a signal-driven, projection-fed view model.
+presence dock, or dice overlay graph. The rendered wizard now has a small
+DOM-free `deriveCharacterCreationViewModel` foundation; the next architecture
+cleanup is to expand that into a signal-driven, projection-fed renderer.
 
 Primary write ownership:
 
@@ -151,6 +152,9 @@ Tasks:
   open modal state, form drafts, and pending dice animation are discardable.
 - Keep shrinking `src/client/app/app.ts` into typed dependencies rather than
   letting it grow as the long-term composition and orchestration file.
+- Expand the new creation view model until rendering consumes one
+  projection-fed shape for phase, legal actions, pending choices, and button
+  state.
 - Move character creation rendering toward dependency-free signals or an
   equivalent local reactive primitive so state changes update the view without
   adding another global store or framework.
@@ -179,6 +183,9 @@ named reasons for the current creation, interval, and character-completion
 boundaries. `projectGameState` now uses an exhaustive event-handler registry
 composed from domain projector modules for game, character creation, board, and
 dice events.
+Semantic character creation command validation now has a small helper module
+for loading creation command context and centralizing status, legal-action, and
+pending-decision checks.
 
 Primary write ownership:
 
@@ -205,6 +212,9 @@ Tasks:
   reconstructs from checkpoint plus tail.
 - Add telemetry hooks or structured test seams for projection mismatch,
   invalid command, and stale command outcomes without logging secrets.
+- Continue extracting semantic character creation command handlers from the
+  large command switch into narrow helpers without bypassing the publication
+  pipeline.
 
 Done when:
 
@@ -955,10 +965,15 @@ The next batch should run like this, in this order:
    signal-driven projection-fed model, keep projector domain modules small, and
    keep publication parity plus viewer-safe responses on the single publication
    path.
-3. Plan and execute the viewer filtering/reveal timing slice: one filtering
+3. Add explicit roll-to-creation-event correlation before replacing creation
+   history with a semantic timeline. Roll-bearing semantic events should point
+   at the dice event that drives their reveal timing, so HTTP, WebSocket,
+   replay/reconnect, activity history, and future Discord logging share one
+   reveal contract.
+4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.
-4. Extend the automated UX regression slice before more broad creator polish:
+5. Extend the automated UX regression slice before more broad creator polish:
    grow the repeat runner when new SRD branches are added, keep later-term
    two-tab spectator follow checks healthy, add mobile viewport assertions for
    new controls, and keep reveal timing coverage for every roll-bearing action.

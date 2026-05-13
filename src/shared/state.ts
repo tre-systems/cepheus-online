@@ -3,6 +3,7 @@ import type {
   CareerCreationEvent,
   AgingChange,
   BackgroundHomeworld,
+  CareerCreationActionPlan,
   CareerCreationState,
   CareerRank,
   CareerTerm
@@ -58,6 +59,7 @@ export interface CharacterCreationProjection {
   homeworld?: CharacterCreationHomeworld | null
   backgroundSkills?: string[]
   pendingCascadeSkills?: string[]
+  actionPlan?: CareerCreationActionPlan
   history?: CareerCreationEvent[]
 }
 

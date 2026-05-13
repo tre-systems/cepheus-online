@@ -9,12 +9,10 @@ import {
   deriveCashBenefitRollModifier,
   deriveBasicTrainingPlan,
   deriveCareerQualificationDm,
-  deriveCareerCreationActionContext,
   deriveCareerCreationReenlistmentOutcome,
   deriveFailedQualificationOptions,
   deriveRemainingCareerBenefits,
   deriveMaterialBenefitRollModifier,
-  deriveLegalCareerCreationActionKeysForProjection,
   deriveSurvivalPromotionOptions,
   evaluateCareerCheck,
   deriveBackgroundSkillPlan,
@@ -48,6 +46,13 @@ import type {
   GameState
 } from '../../shared/state'
 import type { CommandError } from '../../shared/protocol'
+import {
+  loadCharacterCreationCommandContext,
+  requireCharacterCreationStatus,
+  requireLegalCharacterCreationAction,
+  requireNoBlockingCharacterCreationDecisions,
+  requireNoPendingCharacterCreationDecisions
+} from './character-creation-command-helpers'
 
 export interface CommandContext {
   state: GameState | null
@@ -461,17 +466,12 @@ const validateCreationCompletion = (
     )
   }
 
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['completeCreation'],
+    'CREATION_COMPLETE is blocked by unresolved character creation decisions'
   )
-  if (!legalActions.includes('completeCreation')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'CREATION_COMPLETE is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -484,27 +484,19 @@ const validateBasicTrainingCompletion = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'BASIC_TRAINING') {
-    return err(
-      commandError(
-        'invalid_command',
-        `COMPLETE_BASIC_TRAINING is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const actionContext = deriveCareerCreationActionContext(character.creation)
-  const blockingDecision = actionContext.pendingDecisions?.find(
-    (decision) => decision.key !== 'basicTrainingSkillSelection'
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'BASIC_TRAINING',
+    'COMPLETE_BASIC_TRAINING'
   )
-  if (blockingDecision) {
-    return err(
-      commandError(
-        'invalid_command',
-        'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const decisions = requireNoBlockingCharacterCreationDecisions(
+    character.creation,
+    'basicTrainingSkillSelection',
+    'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions'
+  )
+  if (!decisions.ok) return decisions
 
   return ok(character.creation)
 }
@@ -555,26 +547,19 @@ const validateHomeworldCompletion = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'HOMEWORLD') {
-    return err(
-      commandError(
-        'invalid_command',
-        `COMPLETE_HOMEWORLD is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'HOMEWORLD',
+    'COMPLETE_HOMEWORLD'
   )
-  if (!legalActions.includes('completeHomeworld')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'COMPLETE_HOMEWORLD is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['completeHomeworld'],
+    'COMPLETE_HOMEWORLD is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
   if (!hasCompleteBackgroundChoices(character)) {
     return err(
       commandError(
@@ -595,23 +580,17 @@ const validateCareerSelection = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'CAREER_SELECTION') {
-    return err(
-      commandError(
-        'invalid_command',
-        `CAREER_SELECTION is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-  const actionContext = deriveCareerCreationActionContext(character.creation)
-  if ((actionContext.pendingDecisions?.length ?? 0) > 0) {
-    return err(
-      commandError(
-        'invalid_command',
-        'CAREER_SELECTION is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'CAREER_SELECTION',
+    'CAREER_SELECTION'
+  )
+  if (!status.ok) return status
+  const decisions = requireNoPendingCharacterCreationDecisions(
+    character.creation,
+    'CAREER_SELECTION is blocked by unresolved character creation decisions'
+  )
+  if (!decisions.ok) return decisions
   if (character.creation.terms.length >= 7) {
     return err(commandError('invalid_command', 'Maximum terms reached'))
   }
@@ -664,26 +643,19 @@ const validateSurvivalResolution = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'SURVIVAL') {
-    return err(
-      commandError(
-        'invalid_command',
-        `SURVIVAL is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'SURVIVAL',
+    'SURVIVAL'
   )
-  if (!legalActions.includes('rollSurvival')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'SURVIVAL is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['rollSurvival'],
+    'SURVIVAL is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -696,26 +668,19 @@ const validateCommissionResolution = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'COMMISSION') {
-    return err(
-      commandError(
-        'invalid_command',
-        `COMMISSION is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'COMMISSION',
+    'COMMISSION'
   )
-  if (!legalActions.includes('rollCommission')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'COMMISSION is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['rollCommission'],
+    'COMMISSION is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -728,26 +693,19 @@ const validateCommissionSkip = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'COMMISSION') {
-    return err(
-      commandError(
-        'invalid_command',
-        `SKIP_COMMISSION is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'COMMISSION',
+    'SKIP_COMMISSION'
   )
-  if (!legalActions.includes('skipCommission')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'SKIP_COMMISSION is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['skipCommission'],
+    'SKIP_COMMISSION is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -760,26 +718,19 @@ const validateAdvancementResolution = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'ADVANCEMENT') {
-    return err(
-      commandError(
-        'invalid_command',
-        `ADVANCEMENT is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'ADVANCEMENT',
+    'ADVANCEMENT'
   )
-  if (!legalActions.includes('rollAdvancement')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'ADVANCEMENT is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['rollAdvancement'],
+    'ADVANCEMENT is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -792,26 +743,19 @@ const validateAdvancementSkip = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'ADVANCEMENT') {
-    return err(
-      commandError(
-        'invalid_command',
-        `SKIP_ADVANCEMENT is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'ADVANCEMENT',
+    'SKIP_ADVANCEMENT'
   )
-  if (!legalActions.includes('skipAdvancement')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'SKIP_ADVANCEMENT is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['skipAdvancement'],
+    'SKIP_ADVANCEMENT is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -824,26 +768,19 @@ const validateAgingResolution = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'AGING') {
-    return err(
-      commandError(
-        'invalid_command',
-        `AGING is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'AGING',
+    'AGING'
   )
-  if (!legalActions.includes('resolveAging')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'AGING is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['resolveAging'],
+    'AGING is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -856,26 +793,19 @@ const validateAnagathicsDecision = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'AGING') {
-    return err(
-      commandError(
-        'invalid_command',
-        `ANAGATHICS_DECISION is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'AGING',
+    'ANAGATHICS_DECISION'
   )
-  if (!legalActions.includes('decideAnagathics')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'ANAGATHICS_DECISION is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['decideAnagathics'],
+    'ANAGATHICS_DECISION is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -888,26 +818,19 @@ const validateReenlistmentResolution = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'REENLISTMENT') {
-    return err(
-      commandError(
-        'invalid_command',
-        `REENLISTMENT is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'REENLISTMENT',
+    'REENLISTMENT'
   )
-  if (!legalActions.includes('rollReenlistment')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'REENLISTMENT is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['rollReenlistment'],
+    'REENLISTMENT is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -920,29 +843,19 @@ const validateCareerReenlistment = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'REENLISTMENT') {
-    return err(
-      commandError(
-        'invalid_command',
-        `REENLIST is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'REENLISTMENT',
+    'REENLIST'
   )
-  if (
-    !legalActions.includes('reenlist') &&
-    !legalActions.includes('forcedReenlist')
-  ) {
-    return err(
-      commandError(
-        'invalid_command',
-        'REENLIST is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['reenlist', 'forcedReenlist'],
+    'REENLIST is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -955,26 +868,19 @@ const validateCareerLeave = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'REENLISTMENT') {
-    return err(
-      commandError(
-        'invalid_command',
-        `LEAVE_CAREER is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'REENLISTMENT',
+    'LEAVE_CAREER'
   )
-  if (!legalActions.includes('leaveCareer')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'LEAVE_CAREER is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['leaveCareer'],
+    'LEAVE_CAREER is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -993,17 +899,12 @@ const validateAgingLossResolution = (
     )
   }
 
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['resolveAging'],
+    'AGING_LOSSES are blocked by unresolved character creation decisions'
   )
-  if (!legalActions.includes('resolveAging')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'AGING_LOSSES are blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -1054,27 +955,19 @@ const validateMusteringBenefitRoll = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'MUSTERING_OUT') {
-    return err(
-      commandError(
-        'invalid_command',
-        `MUSTERING_BENEFIT is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const actionContext = deriveCareerCreationActionContext(character.creation)
-  const blockingDecision = actionContext.pendingDecisions?.find(
-    (decision) => decision.key !== 'musteringBenefitSelection'
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'MUSTERING_OUT',
+    'MUSTERING_BENEFIT'
   )
-  if (blockingDecision) {
-    return err(
-      commandError(
-        'invalid_command',
-        'MUSTERING_BENEFIT is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const decisions = requireNoBlockingCharacterCreationDecisions(
+    character.creation,
+    'musteringBenefitSelection',
+    'MUSTERING_BENEFIT is blocked by unresolved character creation decisions'
+  )
+  if (!decisions.ok) return decisions
 
   const remainingInCareer = deriveRemainingCareerBenefits({
     termsInCareer: termsInCareer(character.creation, career),
@@ -1101,26 +994,19 @@ const validateMusteringCompletion = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'MUSTERING_OUT') {
-    return err(
-      commandError(
-        'invalid_command',
-        `FINISH_MUSTERING is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'MUSTERING_OUT',
+    'FINISH_MUSTERING'
   )
-  if (!legalActions.includes('finishMustering')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'FINISH_MUSTERING is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['finishMustering'],
+    'FINISH_MUSTERING is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -1133,26 +1019,19 @@ const validateMusteringContinuation = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'MUSTERING_OUT') {
-    return err(
-      commandError(
-        'invalid_command',
-        `CONTINUE_CAREER is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
-
-  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
-    character.creation
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'MUSTERING_OUT',
+    'CONTINUE_CAREER'
   )
-  if (!legalActions.includes('continueCareer')) {
-    return err(
-      commandError(
-        'invalid_command',
-        'CONTINUE_CAREER is blocked by unresolved character creation decisions'
-      )
-    )
-  }
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['continueCareer'],
+    'CONTINUE_CAREER is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -2099,23 +1978,15 @@ export const deriveEventsForCommand = (
     }
 
     case 'RollCharacterCreationCharacteristic': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
-      if (!canMutateCharacter(state.value, character, command.actorId)) {
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { state, character } = loaded.value
+      if (!canMutateCharacter(state, character, command.actorId)) {
         return notAllowed(
           'Only the character owner or referee can roll character creation'
-        )
-      }
-      if (!character.creation) {
-        return err(
-          commandError(
-            'missing_entity',
-            'Character creation has not been started'
-          )
         )
       }
       if (character.creation.state.status !== 'CHARACTERISTICS') {
@@ -2184,12 +2055,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'CompleteCharacterCreationBasicTraining': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateBasicTrainingCompletion(character)
       if (!creation.ok) return creation
       const trainingSkills = deriveBasicTrainingSkills(creation.value)
@@ -2211,12 +2082,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'CompleteCharacterCreationHomeworld': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateHomeworldCompletion(character)
       if (!creation.ok) return creation
 
@@ -2235,12 +2106,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationQualification': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateCareerSelection(character)
       if (!creation.ok) return creation
       const career = requireNonEmptyString(command.career, 'career')
@@ -2298,12 +2169,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationDraft': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateCareerSelection(character)
       if (!creation.ok) return creation
       if (!creation.value.failedToQualify) {
@@ -2362,12 +2233,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'EnterCharacterCreationDrifter': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateCareerSelection(character)
       if (!creation.ok) return creation
       if (!creation.value.failedToQualify) {
@@ -2399,12 +2270,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationSurvival': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateSurvivalResolution(character)
       if (!creation.ok) return creation
 
@@ -2464,12 +2335,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationCommission': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateCommissionResolution(character)
       if (!creation.ok) return creation
 
@@ -2518,12 +2389,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'SkipCharacterCreationCommission': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateCommissionSkip(character)
       if (!creation.ok) return creation
 
@@ -2542,12 +2413,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationAdvancement': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateAdvancementResolution(character)
       if (!creation.ok) return creation
 
@@ -2597,12 +2468,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'SkipCharacterCreationAdvancement': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateAdvancementSkip(character)
       if (!creation.ok) return creation
 
@@ -2621,12 +2492,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationAging': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateAgingResolution(character)
       if (!creation.ok) return creation
 
@@ -2673,12 +2544,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationAgingLosses': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateAgingLossResolution(character)
       if (!creation.ok) return creation
 
@@ -2704,20 +2575,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationMishap': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
-      if (!character.creation) {
-        return err(
-          commandError(
-            'missing_entity',
-            'Character creation has not been started'
-          )
-        )
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creationEvent = { type: 'MISHAP_RESOLVED' } as const
       if (
         !canTransitionCareerCreationState(
@@ -2749,20 +2612,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ConfirmCharacterCreationDeath': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
-      if (!character.creation) {
-        return err(
-          commandError(
-            'missing_entity',
-            'Character creation has not been started'
-          )
-        )
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creationEvent = { type: 'DEATH_CONFIRMED' } as const
       if (
         !canTransitionCareerCreationState(
@@ -2794,13 +2649,13 @@ export const deriveEventsForCommand = (
     }
 
     case 'DecideCharacterCreationAnagathics': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
-      if (!canMutateCharacter(state.value, character, command.actorId)) {
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { state, character } = loaded.value
+      if (!canMutateCharacter(state, character, command.actorId)) {
         return notAllowed(
           'Only the character owner or referee can decide anagathics'
         )
@@ -2831,12 +2686,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationReenlistment': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateReenlistmentResolution(character)
       if (!creation.ok) return creation
 
@@ -2885,12 +2740,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ReenlistCharacterCreationCareer': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateCareerReenlistment(character)
       if (!creation.ok) return creation
 
@@ -2933,12 +2788,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'LeaveCharacterCreationCareer': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateCareerLeave(character)
       if (!creation.ok) return creation
 
@@ -2977,12 +2832,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'RollCharacterCreationTermSkill': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateTermSkillRoll(character, command.table)
       if (!creation.ok) return creation
 
@@ -3033,12 +2888,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'CompleteCharacterCreationSkills': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateSkillsCompletion(character)
       if (!creation.ok) return creation
 
@@ -3057,20 +2912,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationTermCascadeSkill': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
-      if (!character.creation) {
-        return err(
-          commandError(
-            'missing_entity',
-            'Character creation has not been started'
-          )
-        )
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       if (character.creation.state.status !== 'SKILLS_TRAINING') {
         return err(
           commandError(
@@ -3125,12 +2972,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'RollCharacterCreationMusteringBenefit': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career
       const creation = validateMusteringBenefitRoll(character, career.value)
@@ -3181,12 +3028,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ContinueCharacterCreationAfterMustering': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateMusteringContinuation(character)
       if (!creation.ok) return creation
 
@@ -3205,12 +3052,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'CompleteCharacterCreationMustering': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = validateMusteringCompletion(character)
       if (!creation.ok) return creation
 
@@ -3229,13 +3076,13 @@ export const deriveEventsForCommand = (
     }
 
     case 'CompleteCharacterCreation': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
-      if (!canMutateCharacter(state.value, character, command.actorId)) {
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { state, character } = loaded.value
+      if (!canMutateCharacter(state, character, command.actorId)) {
         return notAllowed(
           'Only the character owner or referee can complete character creation'
         )
@@ -3258,20 +3105,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'SetCharacterCreationHomeworld': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
-      if (!character.creation) {
-        return err(
-          commandError(
-            'missing_entity',
-            'Character creation has not been started'
-          )
-        )
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       if (character.creation.state.status !== 'HOMEWORLD') {
         return notAllowed(
           `Homeworld cannot be set from ${character.creation.state.status}`
@@ -3297,12 +3136,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'SelectCharacterCreationBackgroundSkill': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = requireHomeworldCreation(character)
       if (!creation.ok) return creation
       if (
@@ -3338,12 +3177,12 @@ export const deriveEventsForCommand = (
     }
 
     case 'ResolveCharacterCreationCascadeSkill': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
       const creation = requireHomeworldCreation(character)
       if (!creation.ok) return creation
       const cascadeSkill = normalizeBackgroundSkill(command.cascadeSkill)
@@ -3381,23 +3220,15 @@ export const deriveEventsForCommand = (
     }
 
     case 'StartCharacterCareerTerm': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
-      if (!isReferee(state.value, command.actorId)) {
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { state, character } = loaded.value
+      if (!isReferee(state, command.actorId)) {
         return notAllowed(
           'Only the referee can start character career terms directly'
-        )
-      }
-      if (!character.creation) {
-        return err(
-          commandError(
-            'missing_entity',
-            'Character creation has not been started'
-          )
         )
       }
       if (character.creation.state.status !== 'CAREER_SELECTION') {

@@ -504,3 +504,12 @@ export const deriveCareerCreationActionPlan = (
     legalActions: deriveLegalCareerCreationActions(creation.state, context)
   }
 }
+
+export const projectCareerCreationActionPlan = <
+  TCreation extends CareerCreationActionProjection
+>(
+  creation: TCreation
+): TCreation & { actionPlan: CareerCreationActionPlan } => ({
+  ...creation,
+  actionPlan: deriveCareerCreationActionPlan(creation)
+})

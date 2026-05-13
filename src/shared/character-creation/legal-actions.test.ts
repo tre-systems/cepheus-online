@@ -13,6 +13,7 @@ import {
   deriveLegalCareerCreationActionKeysForProjection,
   deriveLegalCareerCreationActions,
   deriveRemainingCareerCreationBenefits,
+  projectCareerCreationActionPlan,
   resolveSurvivalFailureOutcome
 } from './index'
 import type { CareerCreationActionProjection, CareerTerm } from './types'
@@ -517,6 +518,25 @@ describe('career creation legal action planner', () => {
       status: 'SKILLS_TRAINING',
       pendingDecisions: [{ key: 'cascadeSkillResolution' }],
       legalActions: []
+    })
+  })
+
+  it('projects the shared action plan onto creation state without mutating input', () => {
+    const creation = projection('SURVIVAL')
+    const projected = projectCareerCreationActionPlan(creation)
+
+    assert.equal((creation as { actionPlan?: unknown }).actionPlan, undefined)
+    assert.deepEqual(projected.actionPlan, {
+      status: 'SURVIVAL',
+      pendingDecisions: [],
+      legalActions: [
+        {
+          key: 'rollSurvival',
+          status: 'SURVIVAL',
+          commandTypes: ['ResolveCharacterCreationSurvival'],
+          rollRequirement: { key: 'survival', dice: '2d6' }
+        }
+      ]
     })
   })
 

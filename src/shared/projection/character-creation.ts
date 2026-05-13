@@ -1,11 +1,17 @@
-import { leaveCareerTerm, startCareerTerm } from '../characterCreation'
+import {
+  leaveCareerTerm,
+  projectCareerCreationActionPlan,
+  startCareerTerm
+} from '../characterCreation'
+import type { GameEvent } from '../events'
 import type { CareerRank, CareerTerm } from '../characterCreation'
 import { requireState } from './state'
-import type { EventHandlerMap } from './types'
+import type { EventHandler, EventHandlerMap } from './types'
 import type {
   CharacterCharacteristics,
   CharacterState,
-  CharacterSheetPatch
+  CharacterSheetPatch,
+  GameState
 } from '../state'
 
 const defaultCharacteristics = (): CharacterCharacteristics => ({
@@ -113,6 +119,40 @@ const startProjectedCareerTerm = ({
   }
 }
 
+const refreshCharacterCreationActionPlans = (
+  state: GameState | null
+): GameState | null => {
+  if (!state) return state
+
+  for (const character of Object.values(state.characters)) {
+    if (!character.creation) continue
+    character.creation = projectCareerCreationActionPlan(character.creation)
+  }
+
+  return state
+}
+
+const withCharacterCreationActionPlans = <
+  THandlers extends EventHandlerMap<CharacterEventType>
+>(
+  handlers: THandlers
+): THandlers => {
+  const wrapped = {} as THandlers
+
+  for (const type of Object.keys(handlers) as (keyof THandlers)[]) {
+    const handler = handlers[type] as EventHandler<GameEvent>
+    wrapped[type] = ((
+      state: GameState | null,
+      envelope: Parameters<EventHandler<GameEvent>>[1]
+    ) =>
+      refreshCharacterCreationActionPlans(
+        handler(state, envelope)
+      )) as THandlers[typeof type]
+  }
+
+  return wrapped
+}
+
 type CharacterEventType =
   | 'CharacterCreated'
   | 'CharacterSheetUpdated'
@@ -150,7 +190,7 @@ type CharacterEventType =
   | 'CharacterCreationFinalized'
   | 'CharacterCareerTermStarted'
 
-export const characterEventHandlers = {
+const rawCharacterEventHandlers = {
   CharacterCreated: (state, envelope) => {
     const event = envelope.event
     const nextState = requireState(state, event.type)
@@ -1088,3 +1128,7 @@ export const characterEventHandlers = {
     return nextState
   }
 } satisfies EventHandlerMap<CharacterEventType>
+
+export const characterEventHandlers = withCharacterCreationActionPlans(
+  rawCharacterEventHandlers
+)
