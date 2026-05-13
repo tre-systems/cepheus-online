@@ -14,6 +14,7 @@ import {
   renderCharacterCreationNextStep,
   type CharacterCreationRendererDocument
 } from './character-creation-renderer'
+import { deriveCharacterCreationNextStepViewModel } from './character-creation-view'
 import { asNode, testDocument, type TestNode } from './test-dom.test-helper'
 
 const document = testDocument as unknown as CharacterCreationRendererDocument
@@ -162,14 +163,19 @@ const findNode = (
 describe('character creation renderer', () => {
   it('renders the next-step review action through callbacks', async () => {
     const events: string[] = []
+    const currentFlow = reviewFlow()
     const node = asNode(
-      renderCharacterCreationNextStep(document, reviewFlow(), {
-        advanceStep: async () => {
-          events.push('advance')
-        },
-        reportError: (message) => events.push(message),
-        resolveBackgroundCascadeSkill: () => {}
-      })
+      renderCharacterCreationNextStep(
+        document,
+        deriveCharacterCreationNextStepViewModel(currentFlow),
+        {
+          advanceStep: async () => {
+            events.push('advance')
+          },
+          reportError: (message) => events.push(message),
+          resolveBackgroundCascadeSkill: () => {}
+        }
+      )
     )
 
     assert.equal(node.className, 'creation-next-step')
@@ -185,13 +191,17 @@ describe('character creation renderer', () => {
     const events: string[] = []
     for (const flow of [completeFlow('skills'), completeFlow('equipment')]) {
       const node = asNode(
-        renderCharacterCreationNextStep(document, flow, {
-          advanceStep: async () => {
-            events.push(flow.step)
-          },
-          reportError: (message) => events.push(message),
-          resolveBackgroundCascadeSkill: () => {}
-        })
+        renderCharacterCreationNextStep(
+          document,
+          deriveCharacterCreationNextStepViewModel(flow),
+          {
+            advanceStep: async () => {
+              events.push(flow.step)
+            },
+            reportError: (message) => events.push(message),
+            resolveBackgroundCascadeSkill: () => {}
+          }
+        )
       )
 
       const actions = findNode(

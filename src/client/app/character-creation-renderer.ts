@@ -10,7 +10,7 @@ import {
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationDeathViewModel,
   deriveCharacterCreationFieldViewModels,
-  deriveCharacterCreationNextStepViewModel,
+  type CharacterCreationNextStepViewModel,
   type CharacterCreationPendingCascadeChoiceViewModel
 } from './character-creation-view.js'
 
@@ -66,14 +66,13 @@ export interface CharacterCreationDraftFieldsRendererDeps {
 
 export const renderCharacterCreationNextStep = (
   document: CharacterCreationRendererDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationNextStepViewModel,
   {
     advanceStep,
     reportError,
     resolveBackgroundCascadeSkill
   }: CharacterCreationNextStepRendererDeps
 ): HTMLElement => {
-  const viewModel = deriveCharacterCreationNextStepViewModel(flow)
   const panel = document.createElement('section')
   panel.className = 'creation-next-step'
 
@@ -101,7 +100,7 @@ export const renderCharacterCreationNextStep = (
 
   if (
     !viewModel.primaryAction.disabled &&
-    ['skills', 'equipment', 'review'].includes(flow.step)
+    ['skills', 'equipment', 'review'].includes(viewModel.step)
   ) {
     const primary = document.createElement('button')
     primary.type = 'button'
@@ -122,7 +121,7 @@ export const renderCharacterCreationNextStep = (
       )
     )
   }
-  if (!['characteristics', 'homeworld'].includes(flow.step)) {
+  if (!['characteristics', 'homeworld'].includes(viewModel.step)) {
     panel.append(stats)
   }
   if (actions.childElementCount > 0) panel.append(actions)

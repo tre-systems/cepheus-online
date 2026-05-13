@@ -13,6 +13,7 @@ import {
   type CharacterCreationRenderControllerDeps
 } from './character-creation-render-controller'
 import { deriveCharacterCreationViewModel } from './character-creation-view-model'
+import type { CharacterCreationNextStepViewModel } from './character-creation-view'
 import { asNode, TestDocument, TestNode } from './test-dom.test-helper'
 
 const flow = (): CharacterCreationFlow => ({
@@ -186,6 +187,70 @@ describe('character creation render controller', () => {
       asNode(els.characterCreationFields).children[1]?.className,
       'character-creation-review'
     )
+  })
+
+  it('renders the next-step panel from the controller view model', () => {
+    const els = elements()
+    const currentFlow = flow()
+    const baseViewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: null,
+      readOnly: false
+    })
+    const sentinelNextStep = {
+      ...baseViewModel.wizard?.nextStep,
+      phase: 'Sentinel phase',
+      prompt: 'Sentinel prompt'
+    } as CharacterCreationNextStepViewModel
+    const controller = createCharacterCreationRenderController({
+      document: renderDocument(),
+      elements: els,
+      controller: {
+        currentProjection: () => null,
+        flow: () => currentFlow,
+        readOnly: () => false,
+        reconcileEditableWithProjection: () => currentFlow,
+        setFlow: (nextFlow) => nextFlow,
+        viewModel: () => ({
+          ...baseViewModel,
+          wizard: baseViewModel.wizard
+            ? {
+                ...baseViewModel.wizard,
+                nextStep: sentinelNextStep
+              }
+            : null
+        })
+      },
+      panel: {
+        render: () => true,
+        scrollToTop: () => {}
+      },
+      wizard: {
+        advance: async () => {},
+        autoAdvanceSetup: () => false,
+        startNew: async () => {},
+        syncFields: () => {}
+      },
+      homeworldPublisher: {
+        publishBackgroundCascadeSelection: async () => {},
+        publishProgress: async () => {},
+        publishCascadeResolution: async () => {}
+      },
+      getCommandController: commandController,
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => ({}),
+      commandIdentity: () => ({
+        gameId: asGameId('game-1'),
+        actorId: asUserId('actor-1')
+      }),
+      reportError: () => {}
+    })
+
+    controller.renderWizard()
+
+    const nextStep = asNode(els.characterCreationFields).children[0]
+    assert.equal(nextStep?.children[0]?.textContent, 'Sentinel phase')
+    assert.equal(nextStep?.children[1]?.textContent, 'Sentinel prompt')
   })
 
   it('disables local-only wizard actions for read-only spectator flows', () => {

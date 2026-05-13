@@ -131,10 +131,11 @@ export const createCharacterCreationRenderController = ({
 
     const viewModel = controller.viewModel()
     if (!panel.render(viewModel.flow) || !viewModel.flow) return
+    if (!viewModel.wizard) return
     const flow = viewModel.flow
     elements.characterCreationSteps.replaceChildren()
     elements.characterCreationFields.replaceChildren(
-      renderCharacterCreationNextStep(flow),
+      renderCharacterCreationNextStep(viewModel.wizard.nextStep),
       flow.step === 'review'
         ? renderCharacterCreationReview(flow)
         : renderCharacterCreationFields(flow)
@@ -160,9 +161,11 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationNextStep = (
-    flow: CharacterCreationFlow
+    viewModel: NonNullable<
+      ReturnType<CharacterCreationController['viewModel']>['wizard']
+    >['nextStep']
   ): HTMLElement => {
-    return renderCharacterCreationNextStepView(document, flow, {
+    return renderCharacterCreationNextStepView(document, viewModel, {
       advanceStep: wizard.advance,
       reportError,
       resolveBackgroundCascadeSkill: ({ scope, cascadeSkill, selection }) => {
