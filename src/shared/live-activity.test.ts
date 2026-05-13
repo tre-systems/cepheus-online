@@ -6,6 +6,7 @@ import { describe, it } from 'node:test'
 import type { EventEnvelope } from './events'
 import { asCharacterId, asEventId, asGameId, asUserId } from './ids'
 import {
+  deriveCharacterCreationActivityRevealAt,
   deriveLiveActivities,
   deriveLiveActivity,
   deriveLiveDiceRollRevealTarget,
@@ -222,6 +223,57 @@ describe('live activity derivation', () => {
     })
   })
 
+  it('derives character creation reveal timing from explicit metadata when present', () => {
+    const activity: LiveActivityDescriptor = {
+      id: asEventId('game-1:3'),
+      eventId: asEventId('game-1:3'),
+      gameId,
+      seq: 3,
+      actorId,
+      createdAt: '2026-05-03T00:00:00.000Z',
+      type: 'characterCreation',
+      characterId,
+      transition: 'SURVIVAL_PASSED',
+      details:
+        'Survival passed; total 8; target 7+; DM 0; commission unavailable; advancement unavailable',
+      reveal: {
+        rollEventId: asEventId('game-1:2'),
+        revealAt: '2026-05-03T00:00:04.500Z',
+        delayMs: LIVE_DICE_RESULT_REVEAL_DELAY_MS
+      },
+      status: 'SKILLS_TRAINING',
+      creationComplete: false
+    }
+
+    assert.equal(
+      deriveCharacterCreationActivityRevealAt(activity),
+      '2026-05-03T00:00:04.500Z'
+    )
+  })
+
+  it('keeps character creation reveal timing compatible without explicit metadata', () => {
+    const activity: LiveActivityDescriptor = {
+      id: asEventId('game-1:3'),
+      eventId: asEventId('game-1:3'),
+      gameId,
+      seq: 3,
+      actorId,
+      createdAt: '2026-05-03T00:00:03.000Z',
+      type: 'characterCreation',
+      characterId,
+      transition: 'SURVIVAL_PASSED',
+      details:
+        'Survival passed; total 8; target 7+; DM 0; commission unavailable; advancement unavailable',
+      status: 'SKILLS_TRAINING',
+      creationComplete: false
+    }
+
+    assert.equal(
+      deriveCharacterCreationActivityRevealAt(activity),
+      '2026-05-03T00:00:05.500Z'
+    )
+  })
+
   it('derives direct characteristic completion activity', () => {
     const activity = deriveLiveActivity(
       envelope(3, {
@@ -259,6 +311,7 @@ describe('live activity derivation', () => {
       envelope(6, {
         type: 'CharacterCreationSurvivalResolved',
         characterId,
+        rollEventId: asEventId('game-1:5'),
         passed: true,
         survival: {
           expression: '2d6',
@@ -294,6 +347,11 @@ describe('live activity derivation', () => {
       transition: 'SURVIVAL_PASSED',
       details:
         'Survival passed; total 8; target 7+; DM 0; commission unavailable; advancement unavailable',
+      reveal: {
+        rollEventId: asEventId('game-1:5'),
+        revealAt: '2026-05-03T00:00:08.500Z',
+        delayMs: LIVE_DICE_RESULT_REVEAL_DELAY_MS
+      },
       status: 'SKILLS_TRAINING',
       creationComplete: false
     })

@@ -85,6 +85,7 @@ export type GameEvent =
   | {
       type: 'CharacterCreationQualificationResolved'
       characterId: CharacterId
+      rollEventId?: EventId
       career: string
       passed: boolean
       qualification: CareerCreationCheckFact
@@ -96,6 +97,7 @@ export type GameEvent =
   | {
       type: 'CharacterCreationDraftResolved'
       characterId: CharacterId
+      rollEventId?: EventId
       draft: CareerCreationDraftFact
       state: CharacterCreationProjection['state']
       creationComplete: boolean
@@ -110,6 +112,7 @@ export type GameEvent =
   | {
       type: 'CharacterCreationSurvivalResolved'
       characterId: CharacterId
+      rollEventId?: EventId
       passed: boolean
       survival: CareerCreationCheckFact
       canCommission: boolean
@@ -120,6 +123,7 @@ export type GameEvent =
   | {
       type: 'CharacterCreationCommissionResolved'
       characterId: CharacterId
+      rollEventId?: EventId
       passed: boolean
       commission: CareerCreationCheckFact
       state: CharacterCreationProjection['state']
@@ -134,6 +138,7 @@ export type GameEvent =
   | {
       type: 'CharacterCreationAdvancementResolved'
       characterId: CharacterId
+      rollEventId?: EventId
       passed: boolean
       advancement: CareerCreationCheckFact
       rank: CareerCreationRankFact | null
@@ -149,6 +154,7 @@ export type GameEvent =
   | {
       type: 'CharacterCreationAgingResolved'
       characterId: CharacterId
+      rollEventId?: EventId
       aging: CareerCreationAgingFact
       state: CharacterCreationProjection['state']
       creationComplete: boolean
@@ -184,6 +190,7 @@ export type GameEvent =
   | {
       type: 'CharacterCreationReenlistmentResolved'
       characterId: CharacterId
+      rollEventId?: EventId
       outcome: CareerCreationReenlistmentFact['outcome']
       reenlistment: CareerCreationReenlistmentFact
       state: CharacterCreationProjection['state']
@@ -212,6 +219,7 @@ export type GameEvent =
   | {
       type: 'CharacterCreationTermSkillRolled'
       characterId: CharacterId
+      rollEventId?: EventId
       termSkill: CareerCreationTermSkillFact
       termSkills: string[]
       skillsAndTraining: string[]
@@ -237,6 +245,7 @@ export type GameEvent =
   | {
       type: 'CharacterCreationMusteringBenefitRolled'
       characterId: CharacterId
+      rollEventId?: EventId
       musteringBenefit: CareerCreationBenefitFact
       state: CharacterCreationProjection['state']
       creationComplete: boolean

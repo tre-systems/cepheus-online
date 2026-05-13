@@ -35,7 +35,7 @@ import type { CareerCreationTermSkillTable } from '../../shared/characterCreatio
 import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
 import { rollDiceExpression } from '../../shared/dice'
 import type { GameEvent } from '../../shared/events'
-import type { PieceId } from '../../shared/ids'
+import { asEventId, type PieceId } from '../../shared/ids'
 import { deriveEventRng } from '../../shared/prng'
 import { err, ok, type Result } from '../../shared/result'
 import type {
@@ -1797,6 +1797,7 @@ export const deriveEventsForCommand = (
       )
     }
   }
+  const rollEventId = asEventId(`${command.gameId}:${context.nextSeq}`)
 
   switch (command.type) {
     case 'CreateGame': {
@@ -2161,6 +2162,7 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationQualificationResolved',
           characterId: command.characterId,
+          rollEventId,
           ...resolved.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
@@ -2225,6 +2227,7 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationDraftResolved',
           characterId: command.characterId,
+          rollEventId,
           ...resolved.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
@@ -2327,6 +2330,7 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationSurvivalResolved',
           characterId: command.characterId,
+          rollEventId,
           ...resolved.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
@@ -2381,6 +2385,7 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationCommissionResolved',
           characterId: command.characterId,
+          rollEventId,
           ...resolved.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
@@ -2460,6 +2465,7 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationAdvancementResolved',
           characterId: command.characterId,
+          rollEventId,
           ...resolved.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
@@ -2536,6 +2542,7 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationAgingResolved',
           characterId: command.characterId,
+          rollEventId,
           ...resolved,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
@@ -2732,6 +2739,7 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationReenlistmentResolved',
           characterId: command.characterId,
+          rollEventId,
           ...resolved.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
@@ -2880,6 +2888,7 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationTermSkillRolled',
           characterId: command.characterId,
+          rollEventId,
           ...resolved.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'
@@ -3020,6 +3029,7 @@ export const deriveEventsForCommand = (
         {
           type: 'CharacterCreationMusteringBenefitRolled',
           characterId: command.characterId,
+          rollEventId,
           ...resolved.value,
           state: nextState,
           creationComplete: nextState.status === 'PLAYABLE'

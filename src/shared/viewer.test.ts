@@ -251,6 +251,50 @@ describe('viewer filtering', () => {
     }
   })
 
+  it('uses explicit character creation reveal metadata when filtering activity details', () => {
+    const state = buildState()
+    const activities = buildLiveActivities(
+      '2026-05-03T00:00:00.000Z',
+      pastRevealAt
+    )
+    const creationActivity = activities[1]
+
+    assert.equal(creationActivity?.type, 'characterCreation')
+    if (creationActivity?.type !== 'characterCreation') return
+
+    creationActivity.reveal = {
+      rollEventId: asEventId('game-1:3'),
+      revealAt: futureRevealAt,
+      delayMs: 2500
+    }
+
+    const filtered = filterLiveActivitiesForViewer(
+      activities,
+      state,
+      {
+        userId: asUserId('player'),
+        role: 'PLAYER'
+      },
+      { nowMs }
+    )
+
+    const diceActivity = filtered[0]
+    const filteredCreationActivity = filtered[1]
+
+    assert.equal(diceActivity?.type, 'diceRoll')
+    if (diceActivity?.type !== 'diceRoll') return
+    assert.deepEqual(diceActivity.rolls, [3, 4])
+    assert.equal(diceActivity.total, 7)
+    assert.equal(filteredCreationActivity?.type, 'characterCreation')
+    if (filteredCreationActivity?.type !== 'characterCreation') return
+    assert.equal('details' in filteredCreationActivity, false)
+    assert.deepEqual(filteredCreationActivity.reveal, {
+      rollEventId: asEventId('game-1:3'),
+      revealAt: futureRevealAt,
+      delayMs: 2500
+    })
+  })
+
   it('keeps pre-reveal dice and roll-dependent activity details visible to owners and referees', () => {
     const state = buildState()
     state.ownerId = asUserId('owner')

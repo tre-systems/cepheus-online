@@ -460,9 +460,13 @@ preserving reveal metadata. Live activity filtering now also strips unrevealed
 dice results and roll-dependent character creation activity details from
 player/spectator views. Owner and referee views retain unrevealed dice details,
 player/spectator views reveal them after the boundary, and the client
-coordinator can schedule reveal fallback from redacted targets. The remaining
-risk is that creation-specific projection history and new local reveal timing
-can drift as new semantic events land.
+coordinator can schedule reveal fallback from redacted targets. Roll-bearing
+semantic character creation events now carry optional `rollEventId`
+correlation, and character creation live activities can expose explicit reveal
+metadata while keeping the previous timestamp fallback for legacy events. The
+remaining risk is that characteristic rolls still travel through
+`CharacterSheetUpdated`, and creation-specific projection history should move
+toward a semantic timeline once roll correlation is complete.
 
 Primary write ownership:
 
@@ -487,6 +491,9 @@ Tasks:
   boundary, without weakening server-side viewer filtering or refresh recovery.
 - Add regression coverage for each new semantic roll-bearing creation event so
   the persisted fact, filtered state, live activity, and reveal timing agree.
+- Replace transition-name-based creation activity redaction with explicit
+  reveal metadata once every roll-bearing creation fact, including
+  characteristics, has a semantic roll event or correlation field.
 - Keep reveal timing on `diceRevealCoordinator`; feature modules should consume
   revealed view models instead of running local timers for outcome text.
 
@@ -965,11 +972,11 @@ The next batch should run like this, in this order:
    signal-driven projection-fed model, keep projector domain modules small, and
    keep publication parity plus viewer-safe responses on the single publication
    path.
-3. Add explicit roll-to-creation-event correlation before replacing creation
-   history with a semantic timeline. Roll-bearing semantic events should point
-   at the dice event that drives their reveal timing, so HTTP, WebSocket,
-   replay/reconnect, activity history, and future Discord logging share one
-   reveal contract.
+3. Finish explicit roll-to-creation-event correlation before replacing creation
+   history with a semantic timeline. Most roll-bearing semantic events now point
+   at the dice event that drives reveal timing; the remaining hard edge is
+   characteristic rolls, which still need a semantic fact or carefully scoped
+   correlation before the transition-name fallback can be removed.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.

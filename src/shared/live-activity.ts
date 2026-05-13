@@ -42,11 +42,18 @@ export interface LiveDiceRollRevealTarget {
   total: number
 }
 
+export interface CharacterCreationActivityRevealMetadata {
+  rollEventId: EventId
+  revealAt: string
+  delayMs: number
+}
+
 export interface CharacterCreationActivityDescriptor extends LiveActivityBase {
   type: 'characterCreation'
   characterId: CharacterId
   transition: string
   details?: string
+  reveal?: CharacterCreationActivityRevealMetadata
   status: CareerCreationStatus
   creationComplete: boolean
 }
@@ -71,6 +78,11 @@ export const deriveLiveDiceRollRevealTarget = (
     total: activity.total
   }
 }
+
+export const deriveCharacterCreationActivityRevealAt = (
+  activity: CharacterCreationActivityDescriptor
+): string =>
+  activity.reveal?.revealAt ?? deriveLiveActivityRevealAt(activity.createdAt)
 
 const baseActivity = (envelope: EventEnvelope): LiveActivityBase => ({
   id: envelope.id,
@@ -381,6 +393,20 @@ const compactCharacterCreationDetails = (
   value: string | null
 ): { details?: string } => (value ? { details: boundedText(value) } : {})
 
+const characterCreationRevealMetadata = (
+  rollEventId: EventId | undefined,
+  createdAt: string
+): { reveal?: CharacterCreationActivityRevealMetadata } =>
+  rollEventId
+    ? {
+        reveal: {
+          rollEventId,
+          revealAt: deriveLiveActivityRevealAt(createdAt),
+          delayMs: LIVE_DICE_RESULT_REVEAL_DELAY_MS
+        }
+      }
+    : {}
+
 export const deriveLiveActivity = (
   envelope: EventEnvelope
 ): LiveActivityDescriptor | null => {
@@ -561,6 +587,7 @@ export const deriveLiveActivity = (
             canAdvance: event.canAdvance
           })
         ),
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -579,6 +606,7 @@ export const deriveLiveActivity = (
             modifier: event.commission.modifier
           })
         ),
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -608,6 +636,7 @@ export const deriveLiveActivity = (
             rank: event.rank
           })
         ),
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -634,6 +663,7 @@ export const deriveLiveActivity = (
             aging: event.aging
           })
         ),
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -670,6 +700,7 @@ export const deriveLiveActivity = (
             modifier: event.reenlistment.modifier
           })
         ),
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -715,6 +746,7 @@ export const deriveLiveActivity = (
             termSkill: event.termSkill
           })
         ),
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -748,6 +780,7 @@ export const deriveLiveActivity = (
             musteringBenefit: event.musteringBenefit
           })
         ),
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -845,6 +878,7 @@ export const deriveLiveActivity = (
             .filter(Boolean)
             .join('; ')
         ),
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -858,6 +892,7 @@ export const deriveLiveActivity = (
         ...compactCharacterCreationDetails(
           `Draft ${event.draft.tableRoll}; ${event.draft.acceptedCareer}`
         ),
+        ...characterCreationRevealMetadata(event.rollEventId, envelope.createdAt),
         status: event.state.status,
         creationComplete: event.creationComplete
       }

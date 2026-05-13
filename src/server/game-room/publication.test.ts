@@ -824,8 +824,10 @@ describe('room publication flow', () => {
     if (!resolved.ok) return
     assert.equal(typeof (await storage.get(gameSeedKey(gameId))), 'number')
     const storedEvents = await readEventStream(storage, gameId)
-    const diceEvent = storedEvents.at(-2)?.event
-    const storedEvent = storedEvents.at(-1)?.event
+    const diceEnvelope = storedEvents.at(-2)
+    const storedEnvelope = storedEvents.at(-1)
+    const diceEvent = diceEnvelope?.event
+    const storedEvent = storedEnvelope?.event
     assert.equal(diceEvent?.type, 'DiceRolled')
     assert.equal(storedEvent?.type, 'CharacterCreationReenlistmentResolved')
     if (
@@ -835,6 +837,7 @@ describe('room publication flow', () => {
       return
     }
     assert.equal(diceEvent.expression, '2d6')
+    assert.equal(storedEvent.rollEventId, diceEnvelope?.id)
     assert.equal(diceEvent.reason, 'Scout reenlistment')
     assert.deepEqual(diceEvent.rolls, storedEvent.reenlistment.rolls)
     assert.equal(diceEvent.total, storedEvent.reenlistment.total)
@@ -1108,8 +1111,10 @@ describe('room publication flow', () => {
     assert.equal(rolled.ok, true)
     if (!rolled.ok) return
     const storedEvents = await readEventStream(storage, gameId)
-    const diceEvent = storedEvents.at(-2)?.event
-    const benefitEvent = storedEvents.at(-1)?.event
+    const diceEnvelope = storedEvents.at(-2)
+    const benefitEnvelope = storedEvents.at(-1)
+    const diceEvent = diceEnvelope?.event
+    const benefitEvent = benefitEnvelope?.event
     assert.equal(diceEvent?.type, 'DiceRolled')
     assert.equal(benefitEvent?.type, 'CharacterCreationMusteringBenefitRolled')
     if (
@@ -1119,6 +1124,7 @@ describe('room publication flow', () => {
       return
     }
     assert.equal(diceEvent.reason, 'Scout material mustering benefit')
+    assert.equal(benefitEvent.rollEventId, diceEnvelope?.id)
     assert.deepEqual(diceEvent.rolls, benefitEvent.musteringBenefit.roll.rolls)
     assert.deepEqual(benefitEvent.musteringBenefit, {
       career: 'Scout',
@@ -1736,8 +1742,10 @@ describe('room publication flow', () => {
     if (!resolved.ok) return
     assert.equal(typeof (await storage.get(gameSeedKey(gameId))), 'number')
     const storedEvents = await readEventStream(storage, gameId)
-    const diceEvent = storedEvents.at(-2)?.event
-    const storedEvent = storedEvents.at(-1)?.event
+    const diceEnvelope = storedEvents.at(-2)
+    const storedEnvelope = storedEvents.at(-1)
+    const diceEvent = diceEnvelope?.event
+    const storedEvent = storedEnvelope?.event
     assert.equal(diceEvent?.type, 'DiceRolled')
     assert.equal(storedEvent?.type, 'CharacterCreationSurvivalResolved')
     if (
@@ -1747,6 +1755,7 @@ describe('room publication flow', () => {
       return
     }
     assert.equal(diceEvent.expression, '2d6')
+    assert.equal(storedEvent.rollEventId, diceEnvelope?.id)
     assert.equal(diceEvent.reason, 'Scout survival')
     assert.deepEqual(diceEvent.rolls, storedEvent.survival.rolls)
     assert.equal(diceEvent.total, storedEvent.survival.total)
@@ -1857,8 +1866,10 @@ describe('room publication flow', () => {
     if (!resolved.ok) return
     assert.equal(typeof (await storage.get(gameSeedKey(gameId))), 'number')
     const storedEvents = await readEventStream(storage, gameId)
-    const diceEvent = storedEvents.at(-2)?.event
-    const storedEvent = storedEvents.at(-1)?.event
+    const diceEnvelope = storedEvents.at(-2)
+    const storedEnvelope = storedEvents.at(-1)
+    const diceEvent = diceEnvelope?.event
+    const storedEvent = storedEnvelope?.event
     assert.equal(diceEvent?.type, 'DiceRolled')
     assert.equal(storedEvent?.type, 'CharacterCreationCommissionResolved')
     if (
@@ -1868,6 +1879,7 @@ describe('room publication flow', () => {
       return
     }
     assert.equal(diceEvent.expression, '2d6')
+    assert.equal(storedEvent.rollEventId, diceEnvelope?.id)
     assert.equal(diceEvent.reason, 'Merchant commission')
     assert.deepEqual(diceEvent.rolls, storedEvent.commission.rolls)
     assert.equal(diceEvent.total, storedEvent.commission.total)
@@ -1993,8 +2005,10 @@ describe('room publication flow', () => {
     assert.equal(resolved.ok, true)
     if (!resolved.ok) return
     const storedEvents = await readEventStream(storage, gameId)
-    const diceEvent = storedEvents.at(-2)?.event
-    const storedEvent = storedEvents.at(-1)?.event
+    const diceEnvelope = storedEvents.at(-2)
+    const storedEnvelope = storedEvents.at(-1)
+    const diceEvent = diceEnvelope?.event
+    const storedEvent = storedEnvelope?.event
     assert.equal(diceEvent?.type, 'DiceRolled')
     assert.equal(storedEvent?.type, 'CharacterCreationAdvancementResolved')
     if (
@@ -2004,6 +2018,7 @@ describe('room publication flow', () => {
       return
     }
     assert.equal(diceEvent.expression, '2d6')
+    assert.equal(storedEvent.rollEventId, diceEnvelope?.id)
     assert.equal(diceEvent.reason, 'Merchant advancement')
     assert.deepEqual(diceEvent.rolls, storedEvent.advancement.rolls)
     assert.equal(diceEvent.total, storedEvent.advancement.total)

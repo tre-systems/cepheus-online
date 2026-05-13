@@ -388,6 +388,7 @@ describe('deriveEventsForCommand error categories', () => {
       {
         type: 'CharacterCreationMusteringBenefitRolled',
         characterId,
+        rollEventId: 'game-1:2',
         musteringBenefit: {
           career: 'Scout',
           kind: 'material',
@@ -942,6 +943,7 @@ describe('deriveEventsForCommand error categories', () => {
     const qualification = result.value[1]
     if (qualification?.type !== 'CharacterCreationQualificationResolved') return
     assert.equal(qualification.characterId, characterId)
+    assert.equal(qualification.rollEventId, 'game-1:2')
     assert.equal(qualification.career, 'Scout')
     assert.equal(qualification.qualification.expression, '2d6')
     assert.equal(qualification.qualification.success, qualification.passed)
@@ -972,6 +974,7 @@ describe('deriveEventsForCommand error categories', () => {
     const draft = result.value[1]
     if (draft?.type !== 'CharacterCreationDraftResolved') return
     assert.equal(draft.characterId, characterId)
+    assert.equal(draft.rollEventId, 'game-1:2')
     assert.equal(draft.draft.roll.expression, '1d6')
     assert.equal(draft.state.status, 'BASIC_TRAINING')
   })
@@ -1043,6 +1046,7 @@ describe('deriveEventsForCommand error categories', () => {
       {
         type: 'CharacterCreationSurvivalResolved',
         characterId,
+        rollEventId: 'game-1:2',
         passed: true,
         survival: {
           expression: '2d6',
@@ -1107,6 +1111,7 @@ describe('deriveEventsForCommand error categories', () => {
       {
         type: 'CharacterCreationSurvivalResolved',
         characterId,
+        rollEventId: 'game-1:2',
         passed: false,
         survival: {
           expression: '2d6',
@@ -1195,6 +1200,7 @@ describe('deriveEventsForCommand error categories', () => {
       {
         type: 'CharacterCreationCommissionResolved',
         characterId,
+        rollEventId: 'game-1:2',
         passed: true,
         commission: {
           expression: '2d6',
@@ -1376,6 +1382,7 @@ describe('deriveEventsForCommand error categories', () => {
       {
         type: 'CharacterCreationAdvancementResolved',
         characterId,
+        rollEventId: 'game-1:2',
         passed: true,
         advancement: {
           expression: '2d6',
@@ -1524,6 +1531,7 @@ describe('deriveEventsForCommand error categories', () => {
       {
         type: 'CharacterCreationAgingResolved',
         characterId,
+        rollEventId: 'game-1:2',
         aging: {
           roll: {
             expression: '2d6',
@@ -2133,6 +2141,7 @@ describe('deriveEventsForCommand error categories', () => {
       {
         type: 'CharacterCreationReenlistmentResolved',
         characterId,
+        rollEventId: 'game-1:2',
         outcome: 'allowed',
         reenlistment: {
           expression: '2d6',
@@ -2597,6 +2606,7 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.value[0].reason, 'Merchant serviceSkills')
     assert.equal(result.value[1]?.type, 'CharacterCreationTermSkillRolled')
     if (result.value[1]?.type !== 'CharacterCreationTermSkillRolled') return
+    assert.equal(result.value[1].rollEventId, 'game-1:2')
     assert.equal(result.value[1].termSkill.career, 'Merchant')
     assert.equal(result.value[1].termSkill.table, 'serviceSkills')
     assert.equal(result.value[1].termSkill.roll.expression, '1d6')

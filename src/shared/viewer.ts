@@ -1,6 +1,6 @@
 import type { UserId } from './ids'
 import {
-  deriveLiveActivityRevealAt,
+  deriveCharacterCreationActivityRevealAt,
   type CharacterCreationActivityDescriptor,
   type LiveActivityDescriptor
 } from './live-activity'
@@ -61,7 +61,7 @@ const hasRollDependentCreationDetails = (
 const isFutureCharacterCreationReveal = (
   activity: CharacterCreationActivityDescriptor,
   nowMs: number
-): boolean => Date.parse(deriveLiveActivityRevealAt(activity.createdAt)) > nowMs
+): boolean => Date.parse(deriveCharacterCreationActivityRevealAt(activity)) > nowMs
 
 export const resolveViewerForState = (
   state: GameState,
