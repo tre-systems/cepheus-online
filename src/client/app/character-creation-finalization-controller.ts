@@ -69,22 +69,13 @@ const deriveServerBackedFinalizationCommands = (
   const commands: CharacterCreationCommand[] = []
 
   if (character.creation.state.status === 'MUSTERING_OUT') {
-    commands.push(
-      {
-        type: 'CompleteCharacterCreationMustering',
-        ...baseCommand
-      },
-      {
-        type: 'CompleteCharacterCreation',
-        ...baseCommand
-      }
-    )
-  } else if (character.creation.state.status === 'ACTIVE') {
     commands.push({
-      type: 'CompleteCharacterCreation',
+      type: 'CompleteCharacterCreationMustering',
       ...baseCommand
     })
-  } else if (character.creation.state.status !== 'PLAYABLE') {
+  } else if (character.creation.state.status === 'ACTIVE') {
+    // Finalization is the legal ACTIVE -> PLAYABLE transition.
+  } else {
     return []
   }
 

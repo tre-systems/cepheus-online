@@ -313,7 +313,8 @@ const publishCreationCompletion = (
 
 const publishPlayableCharacterCreation = async (
   storage: ReturnType<typeof createMemoryStorage>,
-  characterId = asCharacterId('char-1')
+  characterId = asCharacterId('char-1'),
+  options: { complete?: boolean } = {}
 ): Promise<void> => {
   await publish(storage, createGameCommand())
   await storage.put(gameSeedKey(gameId), 5)
@@ -405,7 +406,12 @@ const publishPlayableCharacterCreation = async (
     ).ok,
     true
   )
-  assert.equal((await publishCreationCompletion(storage, characterId)).ok, true)
+  if (options.complete ?? true) {
+    assert.equal(
+      (await publishCreationCompletion(storage, characterId)).ok,
+      true
+    )
+  }
 }
 
 describe('room publication flow', () => {
@@ -1556,6 +1562,7 @@ describe('room publication flow', () => {
       creation?.terms.map((entry) => entry.career),
       ['Scout']
     )
+    assert.equal(creation?.state.status, 'BASIC_TRAINING')
     assert.deepEqual(creation?.careers, [{ name: 'Scout', rank: 0 }])
     assert.equal(term.value.state.eventSeq, homeworld.value.state.eventSeq + 1)
 
@@ -2715,7 +2722,7 @@ describe('room publication flow', () => {
     )
   })
 
-  it('publishes final character creation sheets only after playable', async () => {
+  it('publishes final character creation sheets only from active completion', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')
     await publish(storage, createGameCommand())
@@ -2834,11 +2841,6 @@ describe('room publication flow', () => {
       ).ok,
       true
     )
-    assert.equal(
-      (await publishCreationCompletion(storage, characterId)).ok,
-      true
-    )
-
     const finalized = await publish(storage, {
       type: 'FinalizeCharacterCreation',
       gameId,
@@ -2862,6 +2864,8 @@ describe('room publication flow', () => {
     assert.equal(finalized.ok, true)
     if (!finalized.ok) return
     const character = finalized.value.state.characters[characterId]
+    assert.equal(character?.creation?.state.status, 'PLAYABLE')
+    assert.equal(character?.creation?.creationComplete, true)
     assert.equal(character?.age, 22)
     assert.equal(
       JSON.stringify(character?.skills) !==
@@ -2879,10 +2883,12 @@ describe('room publication flow', () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')
     const hiddenPieceId = asPieceId('hidden-finalized-sheet-piece')
-    await publishPlayableCharacterCreation(storage, characterId)
+    await publishPlayableCharacterCreation(storage, characterId, {
+      complete: false
+    })
 
-    const playableCheckpoint = await readCheckpoint(storage, gameId)
-    assert.equal(playableCheckpoint?.seq, 38)
+    const activeCheckpoint = await readCheckpoint(storage, gameId)
+    assert.equal(activeCheckpoint?.seq, 1)
 
     const board = await publish(
       storage,
@@ -2950,7 +2956,7 @@ describe('room publication flow', () => {
     if (!finalized.ok) return
     assert.equal(
       (await readCheckpoint(storage, gameId))?.seq,
-      intervalCheckpoint?.seq
+      finalized.value.state.eventSeq
     )
     const recoveredTail = await readEventStreamTail(
       storage,
@@ -2959,7 +2965,7 @@ describe('room publication flow', () => {
     )
     assert.deepEqual(
       recoveredTail.map((envelope) => envelope.event.type),
-      ['CharacterCreationFinalized']
+      ['CharacterCreationCompleted', 'CharacterCreationFinalized']
     )
 
     const recovered = await getProjectedGameState(storage, gameId)
@@ -3730,7 +3736,7 @@ describe('room publication flow', () => {
     assert.equal(rejected.error.code, 'invalid_command')
     assert.equal(
       rejected.error.message,
-      'Career terms cannot start from CHARACTERISTICS'
+      'CAREER_SELECTION is not valid from CHARACTERISTICS'
     )
     assert.equal((await readEventStream(storage, gameId)).length, 3)
   })

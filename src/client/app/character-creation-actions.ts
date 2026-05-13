@@ -476,10 +476,16 @@ const actionsForLegalKey = (
     case 'completeCreation':
       return [
         action('creation-complete', 'Make playable', {
-          type: 'CompleteCharacterCreation',
+          type: 'FinalizeCharacterCreation',
           gameId: identity.gameId,
           actorId: identity.actorId,
-          characterId: character.id
+          characterId: character.id,
+          notes: character.notes,
+          age: character.age,
+          characteristics: { ...character.characteristics },
+          skills: [...character.skills],
+          equipment: character.equipment.map((item) => ({ ...item })),
+          credits: character.credits
         })
       ]
     case 'rollReenlistment':

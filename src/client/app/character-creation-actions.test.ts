@@ -269,7 +269,7 @@ describe('character creation actions', () => {
         continue
       }
       if (eventType === 'CREATION_COMPLETE') {
-        assert.equal(command?.type, 'CompleteCharacterCreation')
+        assert.equal(command?.type, 'FinalizeCharacterCreation')
         continue
       }
       if (eventType === 'LEAVE_CAREER') {

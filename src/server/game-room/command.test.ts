@@ -85,6 +85,18 @@ const createState = (
   eventSeq: 1
 })
 
+const completedTerm = () => ({
+  career: 'Scout',
+  skills: ['Pilot-1'],
+  skillsAndTraining: ['Pilot-1'],
+  benefits: ['Low Passage'],
+  complete: true,
+  canReenlist: false,
+  completedBasicTraining: true,
+  musteringOut: true,
+  anagathics: false
+})
+
 const runCommand = (
   command: Parameters<typeof deriveEventsForCommand>[0],
   creation: CharacterCreationProjection | null,
@@ -100,6 +112,26 @@ const runCommand = (
 
   return deriveEventsForCommand(command, context)
 }
+
+const finalizeCommand = () => ({
+  type: 'FinalizeCharacterCreation' as const,
+  gameId,
+  actorId,
+  characterId,
+  notes: 'client notes',
+  age: 99,
+  characteristics: {
+    str: 15,
+    dex: 15,
+    end: 15,
+    int: 15,
+    edu: 15,
+    soc: 15
+  },
+  skills: ['Impossible-9'],
+  equipment: [{ name: 'Yacht', quantity: 1, notes: 'Forged' }],
+  credits: 999999
+})
 
 describe('deriveEventsForCommand error categories', () => {
   it('emits semantic characteristic completion after the final stat roll', () => {
@@ -190,6 +222,60 @@ describe('deriveEventsForCommand error categories', () => {
           }
         ],
         characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'CREATION_COMPLETE is blocked by unresolved character creation decisions'
+    )
+  })
+
+  it('finalizes active creation through the legal completion action', () => {
+    const result = runCommand(
+      finalizeCommand(),
+      createCreation('ACTIVE', {
+        terms: [completedTerm()],
+        careers: [{ name: 'Scout', rank: 0 }],
+        history: [{ type: 'COMPLETE_SKILLS' }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.length, 2)
+    assert.deepEqual(result.value[0], {
+      type: 'CharacterCreationCompleted',
+      characterId,
+      state: createCareerCreationState('PLAYABLE'),
+      creationComplete: true
+    })
+    assert.equal(result.value[1]?.type, 'CharacterCreationFinalized')
+    if (result.value[1]?.type !== 'CharacterCreationFinalized') return
+    assert.equal(result.value[1].age, null)
+    assert.deepEqual(result.value[1].characteristics, {
+      str: null,
+      dex: null,
+      end: null,
+      int: null,
+      edu: 8,
+      soc: null
+    })
+    assert.deepEqual(result.value[1].skills, ['Pilot-1'])
+    assert.deepEqual(result.value[1].equipment, [])
+    assert.equal(result.value[1].credits, 0)
+    assert.equal(result.value[1].notes.includes('Rules source'), true)
+  })
+
+  it('rejects finalization after creation has already become playable', () => {
+    const result = runCommand(
+      finalizeCommand(),
+      createCreation('PLAYABLE', {
+        terms: [completedTerm()],
+        creationComplete: true
       })
     )
 
@@ -932,7 +1018,9 @@ describe('deriveEventsForCommand error categories', () => {
         requestedCareer: 'Draft',
         acceptedCareer: 'Scout',
         career: 'Scout',
-        drafted: true
+        drafted: true,
+        state: createCareerCreationState('BASIC_TRAINING'),
+        creationComplete: false
       }
     ])
   })

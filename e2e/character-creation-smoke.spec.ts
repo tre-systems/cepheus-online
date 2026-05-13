@@ -922,10 +922,6 @@ const driveRepeatTravellerToFinalized = async (
     characterId: context.characterId
   })
   await postRepeatCommand(page, roomId, actorId, actorSession, context, {
-    type: 'CompleteCharacterCreation',
-    characterId: context.characterId
-  })
-  await postRepeatCommand(page, roomId, actorId, actorSession, context, {
     type: 'FinalizeCharacterCreation',
     characterId: context.characterId,
     age: 22,
@@ -2932,12 +2928,6 @@ test.describe('character creation smoke', () => {
         })
         .toBe('ACTIVE')
 
-      await postCommand(page, roomId, actorId, actorSession, {
-        type: 'CompleteCharacterCreation',
-        characterId
-      })
-      postedCommandTypes.push('CompleteCharacterCreation')
-
       const finalizedNotes = [
         'Rules source: Cepheus Engine SRD.',
         'Term 1: Merchant, survived.',
@@ -2964,9 +2954,6 @@ test.describe('character creation smoke', () => {
 
       await expect.poll(() => postedCommandTypes).toContain(
         'CompleteCharacterCreationMustering'
-      )
-      await expect.poll(() => postedCommandTypes).toContain(
-        'CompleteCharacterCreation'
       )
       await expect.poll(() => postedCommandTypes).toContain(
         'FinalizeCharacterCreation'
@@ -3586,7 +3573,9 @@ test.describe('character creation smoke', () => {
       await openOrExpectFollowedCreation(secondCareerSpectator, characterName)
       await expect(
         secondCareerSpectator.locator('#characterCreationFields')
-      ).toContainText(/Scout|Apply basic training/, { timeout: 5_000 })
+      ).toContainText(/Skills|Scout|Review the skill list/, {
+        timeout: 5_000
+      })
     } finally {
       await secondCareerSpectator.close()
     }
@@ -3604,20 +3593,22 @@ test.describe('character creation smoke', () => {
       const spectatorFields = secondTermSpectator.locator(
         '#characterCreationFields'
       )
-      const spectatorTermResolution = spectatorFields.locator(
-        '.creation-term-resolution'
-      )
 
-      await expect(spectatorFields).toContainText('Scout term', {
+      await expect(spectatorFields).toContainText(/Skills|Review the skill list/, {
         timeout: 5_000
       })
-      await expect(spectatorFields).toContainText(
-        /Aging \d+:.*Reenlistment \d+:/,
-        { timeout: 5_000 }
-      )
-      const secondTermResolutionText =
-        await normalizedText(spectatorTermResolution)
-      expect(secondTermResolutionText).toMatch(/Reenlistment \d+:/)
+      await expect
+        .poll(async () => {
+          const state = await fetchRoomState(
+            secondTermSpectator,
+            roomId,
+            secondTermSpectatorId
+          )
+          return state.state?.characters[characterId]?.creation?.terms.map(
+            (term) => term.career
+          )
+        })
+        .toEqual(['Merchant', 'Scout'])
       await expectSpectatorRefreshPreservesCreationProjection({
         spectator: secondTermSpectator,
         roomId,
@@ -3626,11 +3617,17 @@ test.describe('character creation smoke', () => {
         characterName
       })
       await expect
-        .poll(() => normalizedText(spectatorTermResolution))
-        .toBe(secondTermResolutionText)
-      await expect(spectatorFields).toContainText(/Aging \d+:/, {
-        timeout: 5_000
-      })
+        .poll(async () => {
+          const state = await fetchRoomState(
+            secondTermSpectator,
+            roomId,
+            secondTermSpectatorId
+          )
+          return state.state?.characters[characterId]?.creation?.terms.map(
+            (term) => term.career
+          )
+        })
+        .toEqual(['Merchant', 'Scout'])
     } finally {
       await secondTermSpectator.close()
     }

@@ -63,9 +63,7 @@ const piece = (id = 'existing-piece'): PieceState => ({
 })
 
 const characterCreation = (
-  status: NonNullable<
-    CharacterState['creation']
-  >['state']['status'] = 'PLAYABLE'
+  status: NonNullable<CharacterState['creation']>['state']['status'] = 'ACTIVE'
 ): NonNullable<CharacterState['creation']> => ({
   state: {
     status,
@@ -398,11 +396,7 @@ describe('character creation finalization controller', () => {
 
     assert.deepEqual(
       harness.postedCharacterCommands[0]?.map((command) => command.type),
-      [
-        'CompleteCharacterCreationMustering',
-        'CompleteCharacterCreation',
-        'FinalizeCharacterCreation'
-      ]
+      ['CompleteCharacterCreationMustering', 'FinalizeCharacterCreation']
     )
   })
 

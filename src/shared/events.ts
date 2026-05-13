@@ -324,6 +324,8 @@ export type GameEvent =
       acceptedCareer: string
       career: string
       drafted: boolean
+      state?: CharacterCreationProjection['state']
+      creationComplete?: boolean
     }
   | {
       type: 'BoardCreated'

@@ -1706,11 +1706,20 @@ describe('game state projection', () => {
         requestedCareer: 'Draft',
         acceptedCareer: 'Navy',
         career: 'Navy',
-        drafted: true
+        drafted: true,
+        state: {
+          status: 'BASIC_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
       })
     ])
 
     const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'BASIC_TRAINING')
     assert.deepEqual(
       creation?.terms.map((term) => ({
         career: term.career,

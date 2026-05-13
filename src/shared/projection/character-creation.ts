@@ -1174,6 +1174,13 @@ const rawCharacterEventHandlers = {
       acceptedCareer,
       drafted: event.drafted
     })
+    character.creation = {
+      ...character.creation,
+      ...(event.state ? { state: structuredClone(event.state) } : {}),
+      ...(event.creationComplete === undefined
+        ? {}
+        : { creationComplete: event.creationComplete })
+    }
     nextState.eventSeq = envelope.seq
 
     return nextState

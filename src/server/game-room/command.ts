@@ -594,6 +594,12 @@ const validateCareerSelection = (
     'CAREER_SELECTION is blocked by unresolved character creation decisions'
   )
   if (!decisions.ok) return decisions
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['selectCareer'],
+    'CAREER_SELECTION is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
   if (character.creation.terms.length >= 7) {
     return err(commandError('invalid_command', 'Maximum terms reached'))
   }
@@ -1944,19 +1950,16 @@ export const deriveEventsForCommand = (
           )
         )
       }
-      if (character.creation.state.status !== 'PLAYABLE') {
-        return err(
-          commandError(
-            'invalid_command',
-            `Character creation cannot finalize from ${character.creation.state.status}`
-          )
-        )
-      }
       if (!canMutateCharacter(state.value, character, command.actorId)) {
         return notAllowed(
           'Only the character owner or referee can finalize character creation'
         )
       }
+      const creation = validateCreationCompletion(character)
+      if (!creation.ok) return creation
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'CREATION_COMPLETE'
+      })
       const serverSheet = deriveCharacterCreationSheet(character)
       const sheet = validateCharacterCreationSheet({
         ...command,
@@ -1965,6 +1968,12 @@ export const deriveEventsForCommand = (
       if (!sheet.ok) return sheet
 
       return ok([
+        {
+          type: 'CharacterCreationCompleted',
+          characterId: command.characterId,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
+        },
         {
           type: 'CharacterCreationFinalized',
           characterId: command.characterId,
@@ -3302,18 +3311,17 @@ export const deriveEventsForCommand = (
           'Only the referee can start character career terms directly'
         )
       }
-      if (character.creation.state.status !== 'CAREER_SELECTION') {
-        return err(
-          commandError(
-            'invalid_command',
-            `Career terms cannot start from ${character.creation.state.status}`
-          )
-        )
-      }
+      const creation = validateCareerSelection(character)
+      if (!creation.ok) return creation
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career
       const acceptedCareer = career.value.trim()
       const requestedCareer = command.drafted ? 'Draft' : acceptedCareer
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'SELECT_CAREER',
+        isNewCareer: true,
+        drafted: command.drafted ?? false
+      })
 
       return ok([
         {
@@ -3322,7 +3330,9 @@ export const deriveEventsForCommand = (
           requestedCareer,
           acceptedCareer,
           career: acceptedCareer,
-          drafted: command.drafted ?? false
+          drafted: command.drafted ?? false,
+          state: nextState,
+          creationComplete: nextState.status === 'PLAYABLE'
         }
       ])
     }
