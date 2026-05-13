@@ -1,5 +1,9 @@
 import type { UserId } from './ids'
-import type { LiveActivityDescriptor } from './live-activity'
+import {
+  deriveLiveActivityRevealAt,
+  type CharacterCreationActivityDescriptor,
+  type LiveActivityDescriptor
+} from './live-activity'
 import type { GameState, PlayerState, PieceState } from './state'
 
 export type ViewerRole = PlayerState['role']
@@ -24,6 +28,40 @@ const canViewerSeeUnrevealedDice = (
   state: Pick<GameState, 'ownerId'>,
   viewer: GameViewer
 ): boolean => viewer.role === 'REFEREE' || viewer.userId === state.ownerId
+
+const rollDependentCreationTransitions = new Set<string>([
+  'SELECT_CAREER',
+  'SURVIVAL_PASSED',
+  'SURVIVAL_FAILED',
+  'COMPLETE_COMMISSION',
+  'COMMISSION_PASSED',
+  'COMMISSION_FAILED',
+  'COMPLETE_ADVANCEMENT',
+  'ADVANCEMENT_PASSED',
+  'ADVANCEMENT_FAILED',
+  'ROLL_TERM_SKILL',
+  'TERM_SKILL_ROLLED',
+  'COMPLETE_AGING',
+  'RESOLVE_REENLISTMENT',
+  'REENLIST_FORCED',
+  'REENLIST_ALLOWED',
+  'REENLIST_BLOCKED',
+  'FINISH_MUSTERING',
+  'CAREER_QUALIFICATION_PASSED',
+  'CAREER_QUALIFICATION_FAILED',
+  'DRAFT_RESOLVED'
+])
+
+const hasRollDependentCreationDetails = (
+  activity: CharacterCreationActivityDescriptor
+): boolean =>
+  activity.details !== undefined &&
+  rollDependentCreationTransitions.has(activity.transition)
+
+const isFutureCharacterCreationReveal = (
+  activity: CharacterCreationActivityDescriptor,
+  nowMs: number
+): boolean => Date.parse(deriveLiveActivityRevealAt(activity.createdAt)) > nowMs
 
 export const resolveViewerForState = (
   state: GameState,
@@ -85,16 +123,23 @@ export const filterLiveActivitiesForViewer = (
   return activities.map((activity) => {
     if (
       canViewerSeeUnrevealedDice(state, resolvedViewer) ||
-      activity.type !== 'diceRoll' ||
-      Date.parse(activity.reveal.revealAt) <= nowMs
+      (activity.type === 'diceRoll' &&
+        Date.parse(activity.reveal.revealAt) <= nowMs) ||
+      (activity.type === 'characterCreation' &&
+        (!hasRollDependentCreationDetails(activity) ||
+          !isFutureCharacterCreationReveal(activity, nowMs)))
     ) {
       return activity
     }
 
     const filtered = structuredClone(activity)
-    delete (filtered as unknown as Record<string, unknown>).rolls
-    delete (filtered as unknown as Record<string, unknown>).total
-    delete (filtered as unknown as Record<string, unknown>).rollsOmitted
+    if (filtered.type === 'diceRoll') {
+      delete (filtered as unknown as Record<string, unknown>).rolls
+      delete (filtered as unknown as Record<string, unknown>).total
+      delete (filtered as unknown as Record<string, unknown>).rollsOmitted
+    } else {
+      delete (filtered as unknown as Record<string, unknown>).details
+    }
 
     return filtered
   })

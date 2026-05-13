@@ -75,6 +75,30 @@ const assertPreRevealDiceDetailsHidden = (rawMessage: unknown) => {
   assert.equal('total' in activity, false, 'pre-reveal activity omits total')
 }
 
+const assertPreRevealDiceDetailsVisible = (rawMessage: unknown) => {
+  const message = asRecord(rawMessage)
+  assert.equal(
+    message.type === 'commandAccepted' || message.type === 'roomState',
+    true
+  )
+  const state = asRecord(message.state)
+  const diceLog = state.diceLog
+
+  assert.equal(Array.isArray(diceLog), true)
+  const roll = asRecord((diceLog as unknown[])[0])
+
+  assert.equal(Array.isArray(roll.rolls), true)
+  assert.equal(typeof roll.total, 'number')
+
+  const liveActivities = message.liveActivities
+
+  assert.equal(Array.isArray(liveActivities), true)
+  const activity = asRecord((liveActivities as unknown[])[0])
+  assert.equal(activity?.type, 'diceRoll')
+  assert.deepEqual(activity.rolls, roll.rolls)
+  assert.equal(activity.total, roll.total)
+}
+
 const assertRoomStateDiceDetailsHidden = (rawMessage: unknown) => {
   const message = asRecord(rawMessage)
   assert.equal(message.type, 'roomState')
@@ -743,6 +767,33 @@ describe('GameRoomDO HTTP skeleton', () => {
       ...parseMessages(spectator)
     ]) {
       assertPreRevealDiceDetailsHidden(message)
+    }
+  })
+
+  it('keeps pre-reveal dice details visible in owner and referee activity messages', async () => {
+    const referee = createSocket()
+    const tags = new Map<WebSocket, string[]>([
+      [referee, roomSocketTags('referee', 'user-4')]
+    ])
+    const room = createRoom([referee], tags)
+    await postCommand(room, createGameBody())
+    referee.sent.length = 0
+
+    const response = await postCommand(
+      room,
+      commandBody('roll-dice-owner', {
+        type: 'RollDice',
+        actorId: 'user-1',
+        expression: '2d6',
+        reason: 'Table roll'
+      })
+    )
+    const responseMessage = await response.json()
+
+    assert.equal(response.status, 200)
+    assertPreRevealDiceDetailsVisible(responseMessage)
+    for (const message of parseMessages(referee)) {
+      assertPreRevealDiceDetailsVisible(message)
     }
   })
 

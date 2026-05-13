@@ -120,11 +120,12 @@ Status: partially done. A typed app command router exists with route coverage
 for board, dice, door, sheet, and character creation commands. Room command
 submission now lives behind `room-command-dispatch`, so request IDs, HTTP
 posting, accepted-message checks, and domain dispatch wrappers are no longer
-embedded directly in `app.ts`. `AppSession` exists and `app.ts` is type-checked,
-but `app.ts` is still too large and still owns too much character-creation
-feature orchestration. The next architecture cleanup is to draw a clearer
-feature boundary around character creation and move the rendered wizard toward
-a signal-driven, projection-fed renderer.
+embedded directly in `app.ts`. The initiative/character rail now has its own
+controller, `AppSession` exists, and `app.ts` is type-checked, but `app.ts` is
+still too large and still owns too much character-creation feature
+orchestration. The next architecture cleanup is to draw a clearer feature
+boundary around character creation and move the rendered wizard toward a
+signal-driven, projection-fed renderer.
 
 Primary write ownership:
 
@@ -356,9 +357,10 @@ result deferral. Death/restart has deterministic browser coverage, semantic
 commission/advancement/term-skill events have checkpoint-plus-tail recovery
 coverage, finalization recovery now proves the server-derived sheet survives
 checkpoint-plus-tail replay, and sheet-side, wizard-render, room asset
-creation, character sheet, room menu, board controls, board door actions, dice
-overlay, refresh button, dice command, app lifecycle, character-sheet control,
-and room bootstrap wiring have been extracted from `app.ts`. Late term-skill,
+creation, character sheet, room menu, board controls, board door actions,
+character rail, dice overlay, refresh button, dice command, app lifecycle,
+character-sheet control, and room bootstrap wiring have been extracted from
+`app.ts`. Late term-skill,
 reenlistment, mustering-out, finalization, and spectator follow-card controls
 now have phone-width usability coverage, and lightweight unit invariants cover
 single-primary actions, pending-roll render suppression, duplicate roll-submit
@@ -366,10 +368,10 @@ suppression for characteristic, aging, reenlistment, and mustering benefit
 actions, read-only spectator controls, redacted dice activity handling, board
 door command dispatch, and stale local flow replacement after server projection
 advances. The seeded multi-career smoke now includes spectator recovery for a
-live term-skill roll after reveal, refresh, and close/reopen, while the
-repeat-runner smoke covers three disposable travellers with console and
-server-response failure context. The remaining leverage point is to broaden
-multi-term spectator recovery beyond the current term-skill path while
+live term-skill roll after reveal, refresh, and close/reopen, plus reenlistment
+refresh recovery after a revealed roll, while the repeat-runner smoke covers
+three disposable travellers with console and server-response failure context.
+The remaining leverage point is repeated multi-term spectator recovery while
 continuing to extract the character creation feature boundary from `app.ts`.
 
 Primary write ownership:
@@ -450,11 +452,13 @@ protocol fixtures cover viewer-filtered messages, while `diceRevealCoordinator`
 defers client-visible roll results for several creation paths. State-bearing
 HTTP command responses, WebSocket broadcasts, and room state refreshes now
 redact pre-reveal dice `rolls` and `total` for player/spectator viewers while
-preserving reveal metadata. Owner and referee views retain unrevealed dice
-details, player/spectator views reveal them after the boundary, and the client
+preserving reveal metadata. Live activity filtering now also strips unrevealed
+dice results and roll-dependent character creation activity details from
+player/spectator views. Owner and referee views retain unrevealed dice details,
+player/spectator views reveal them after the boundary, and the client
 coordinator can schedule reveal fallback from redacted targets. The remaining
-risk is that creation-specific projection details, future activity history, and
-new local reveal timing can drift as new semantic events land.
+risk is that creation-specific projection history and new local reveal timing
+can drift as new semantic events land.
 
 Primary write ownership:
 
@@ -470,8 +474,8 @@ Primary write ownership:
 Tasks:
 
 - Extend the viewer-filtering contract from state-bearing HTTP responses,
-  WebSocket broadcasts, and room state refreshes to future replay/activity
-  history.
+  WebSocket broadcasts, room state refreshes, and live activities to future
+  replay/activity history.
 - Extend the current owner/referee/player/spectator dice fixtures to creation
   projection details while roll-dependent details are unrevealed, revealed
   live, and recovered after refresh.
@@ -954,9 +958,10 @@ The next batch should run like this, in this order:
    `CharacterCreationTransitioned` events.
 2. Finish the next architecture cleanup already underway: shrink `app.ts`,
    extract the character creation feature boundary, move rendering toward a
-   signal-driven projection-fed model, split the projector registry by domain,
-   and keep publication parity plus viewer-safe responses on the single
-   publication path.
+   signal-driven projection-fed model, finish the projector registry split by
+   moving character creation handlers into a domain module, and keep
+   publication parity plus viewer-safe responses on the single publication
+   path.
 3. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.

@@ -50,11 +50,13 @@ export interface FollowedCharacterCreationRefresh {
 
 export const refreshFollowedCharacterCreationFlowFromState = ({
   state,
+  currentFlow,
   selectedCharacterId,
   readOnly,
   panelOpen
 }: {
   state: GameState | null
+  currentFlow: CharacterCreationFlow | null
   selectedCharacterId: CharacterId | null
   readOnly: boolean
   panelOpen: boolean
@@ -69,7 +71,14 @@ export const refreshFollowedCharacterCreationFlowFromState = ({
   }
 
   const character = state?.characters[selectedCharacterId] ?? null
-  const flow = character ? flowFromProjectedCharacter(character) : null
+  const flow = character?.creation
+    ? syncCharacterCreationFlowFromRoomState({
+        currentFlow,
+        roomState: state,
+        characterId: selectedCharacterId,
+        fallbackFlow: currentFlow
+      })
+    : null
   if (!flow) {
     return {
       flow: null,

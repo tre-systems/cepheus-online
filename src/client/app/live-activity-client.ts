@@ -41,3 +41,11 @@ export const prepareLiveActivityApplication = (
     animateLatestDiceLog: application.diceRollActivities.length === 0
   }
 }
+
+export const hasRedactedCreationActivityDetails = (
+  application: Pick<ClientMessageApplication, 'liveActivities'>
+): boolean =>
+  application.liveActivities.some(
+    (activity) =>
+      activity.type === 'characterCreation' && activity.details === undefined
+  )

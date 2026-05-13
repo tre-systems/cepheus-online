@@ -1,16 +1,29 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { asBoardId, asGameId, asPieceId, asUserId } from './ids'
+import {
+  asBoardId,
+  asCharacterId,
+  asEventId,
+  asGameId,
+  asPieceId,
+  asUserId
+} from './ids'
+import type { LiveActivityDescriptor } from './live-activity'
 import type { GameState } from './state'
-import { filterGameStateForViewer, isActorRefereeOrOwner } from './viewer'
+import {
+  filterGameStateForViewer,
+  filterLiveActivitiesForViewer,
+  isActorRefereeOrOwner
+} from './viewer'
 
 const nowMs = Date.parse('2026-05-03T00:00:03.000Z')
+const gameId = asGameId('game-1')
 const futureRevealAt = '2026-05-03T00:00:04.500Z'
 const pastRevealAt = '2026-05-03T00:00:02.500Z'
 
 const buildState = (): GameState => ({
-  id: asGameId('game-1'),
+  id: gameId,
   slug: 'game-1',
   name: 'Spinward Test',
   ownerId: asUserId('referee'),
@@ -71,6 +84,44 @@ const addDiceRoll = (state: GameState, revealAt: string): void => {
     total: 7
   })
 }
+
+const buildLiveActivities = (
+  createdAt = '2026-05-03T00:00:02.000Z',
+  revealAt = futureRevealAt
+): LiveActivityDescriptor[] => [
+  {
+    id: asEventId('game-1:3'),
+    eventId: asEventId('game-1:3'),
+    gameId,
+    seq: 3,
+    actorId: asUserId('player'),
+    createdAt,
+    type: 'diceRoll',
+    expression: '2d6',
+    reason: 'Scout survival',
+    rolls: [3, 4],
+    total: 7,
+    reveal: {
+      revealAt,
+      delayMs: 2500
+    }
+  },
+  {
+    id: asEventId('game-1:4'),
+    eventId: asEventId('game-1:4'),
+    gameId,
+    seq: 4,
+    actorId: asUserId('player'),
+    createdAt,
+    type: 'characterCreation',
+    characterId: asCharacterId('char-1'),
+    transition: 'SURVIVAL_PASSED',
+    details:
+      'Survival passed; total 7; target 7+; DM 0; commission unavailable; advancement unavailable',
+    status: 'SKILLS_TRAINING',
+    creationComplete: false
+  }
+]
 
 describe('viewer filtering', () => {
   it('keeps referee state complete', () => {
@@ -170,6 +221,100 @@ describe('viewer filtering', () => {
 
       assert.deepEqual(filtered.diceLog[0]?.rolls, [3, 4])
       assert.equal(filtered.diceLog[0]?.total, 7)
+    }
+  })
+
+  it('redacts pre-reveal dice and roll-dependent activity details from players and spectators', () => {
+    for (const role of ['PLAYER', 'SPECTATOR'] as const) {
+      const state = buildState()
+      const filtered = filterLiveActivitiesForViewer(
+        buildLiveActivities(),
+        state,
+        {
+          userId: asUserId(role.toLowerCase()),
+          role
+        },
+        { nowMs }
+      )
+
+      const diceActivity = filtered[0]
+      const creationActivity = filtered[1]
+
+      assert.equal(diceActivity?.type, 'diceRoll')
+      if (diceActivity?.type !== 'diceRoll') return
+      assert.equal('rolls' in diceActivity, false)
+      assert.equal('total' in diceActivity, false)
+      assert.equal('rollsOmitted' in diceActivity, false)
+      assert.equal(creationActivity?.type, 'characterCreation')
+      if (creationActivity?.type !== 'characterCreation') return
+      assert.equal('details' in creationActivity, false)
+    }
+  })
+
+  it('keeps pre-reveal dice and roll-dependent activity details visible to owners and referees', () => {
+    const state = buildState()
+    state.ownerId = asUserId('owner')
+    state.players[asUserId('owner')] = {
+      userId: asUserId('owner'),
+      role: 'PLAYER'
+    }
+
+    for (const viewer of [
+      { userId: asUserId('referee'), role: 'REFEREE' as const },
+      { userId: asUserId('owner'), role: 'PLAYER' as const }
+    ]) {
+      const filtered = filterLiveActivitiesForViewer(
+        buildLiveActivities(),
+        state,
+        viewer,
+        { nowMs }
+      )
+
+      const diceActivity = filtered[0]
+      const creationActivity = filtered[1]
+
+      assert.equal(diceActivity?.type, 'diceRoll')
+      if (diceActivity?.type !== 'diceRoll') return
+      assert.deepEqual(diceActivity.rolls, [3, 4])
+      assert.equal(diceActivity.total, 7)
+      assert.equal(creationActivity?.type, 'characterCreation')
+      if (creationActivity?.type !== 'characterCreation') return
+      assert.equal(
+        creationActivity.details,
+        'Survival passed; total 7; target 7+; DM 0; commission unavailable; advancement unavailable'
+      )
+    }
+  })
+
+  it('reveals dice and roll-dependent activity details to players and spectators after reveal', () => {
+    for (const role of ['PLAYER', 'SPECTATOR'] as const) {
+      const state = buildState()
+      const filtered = filterLiveActivitiesForViewer(
+        buildLiveActivities(
+          '2026-05-03T00:00:00.000Z',
+          '2026-05-03T00:00:02.500Z'
+        ),
+        state,
+        {
+          userId: asUserId(role.toLowerCase()),
+          role
+        },
+        { nowMs }
+      )
+
+      const diceActivity = filtered[0]
+      const creationActivity = filtered[1]
+
+      assert.equal(diceActivity?.type, 'diceRoll')
+      if (diceActivity?.type !== 'diceRoll') return
+      assert.deepEqual(diceActivity.rolls, [3, 4])
+      assert.equal(diceActivity.total, 7)
+      assert.equal(creationActivity?.type, 'characterCreation')
+      if (creationActivity?.type !== 'characterCreation') return
+      assert.equal(
+        creationActivity.details,
+        'Survival passed; total 7; target 7+; DM 0; commission unavailable; advancement unavailable'
+      )
     }
   })
 

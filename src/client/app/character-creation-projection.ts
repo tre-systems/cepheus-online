@@ -218,8 +218,13 @@ export const flowFromProjectedCharacter = (
     ...creation.terms.flatMap((term) => term.skillsAndTraining)
   ])
 
+  const step =
+    creation.state.status === 'MUSTERING_OUT' && musteringBenefits.length > 0
+      ? 'equipment'
+      : creationStepFromStatus(creation.state.status)
+
   return {
-    step: creationStepFromStatus(creation.state.status),
+    step,
     draft: createInitialCharacterDraft(character.id, {
       name: character.name,
       characterType: character.type,

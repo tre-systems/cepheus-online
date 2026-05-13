@@ -1,15 +1,22 @@
 import type { EventEnvelope, GameEvent } from './events'
 import { leaveCareerTerm, startCareerTerm } from './characterCreation'
 import type { CareerRank, CareerTerm } from './characterCreation'
+import { boardEventHandlers } from './projection/board'
+import { diceEventHandlers } from './projection/dice'
+import { gameEventHandlers } from './projection/game'
+import { requireState } from './projection/state'
+import type {
+  EventEnvelopeFor,
+  EventHandler,
+  EventHandlerMap,
+  EventHandlerRegistry
+} from './projection/types'
 import type {
   CharacterCharacteristics,
   CharacterState,
   CharacterSheetPatch,
   GameState
 } from './state'
-
-const diceRevealAt = (createdAt: string): string =>
-  new Date(Date.parse(createdAt) + 2500).toISOString()
 
 const defaultCharacteristics = (): CharacterCharacteristics => ({
   str: null,
@@ -116,38 +123,6 @@ const startProjectedCareerTerm = ({
   }
 }
 
-type EventEnvelopeFor<TEvent extends GameEvent> = Omit<
-  EventEnvelope,
-  'event'
-> & {
-  event: TEvent
-}
-
-type EventHandler<TEvent extends GameEvent> = (
-  state: GameState | null,
-  envelope: EventEnvelopeFor<TEvent>
-) => GameState | null
-
-type EventHandlerRegistry = {
-  [TType in GameEvent['type']]: EventHandler<
-    Extract<GameEvent, { type: TType }>
-  >
-}
-
-type EventHandlerMap<TEventType extends GameEvent['type']> = {
-  [TType in TEventType]: EventHandler<Extract<GameEvent, { type: TType }>>
-}
-
-const requireState = (
-  state: GameState | null,
-  eventType: string
-): GameState => {
-  if (!state) throw new Error(`${eventType} before GameCreated`)
-  return state
-}
-
-type GameEventType = 'GameCreated'
-
 type CharacterEventType =
   | 'CharacterCreated'
   | 'CharacterSheetUpdated'
@@ -184,42 +159,6 @@ type CharacterEventType =
   | 'CharacterCreationCascadeSkillResolved'
   | 'CharacterCreationFinalized'
   | 'CharacterCareerTermStarted'
-
-type BoardEventType =
-  | 'BoardCreated'
-  | 'BoardSelected'
-  | 'DoorStateChanged'
-  | 'PieceCreated'
-  | 'PieceMoved'
-  | 'PieceVisibilityChanged'
-  | 'PieceFreedomChanged'
-
-type DiceEventType = 'DiceRolled'
-
-const gameEventHandlers = {
-  GameCreated: (_state, envelope) => {
-    const event = envelope.event
-
-    return {
-      id: envelope.gameId,
-      slug: event.slug,
-      name: event.name,
-      ownerId: event.ownerId,
-      players: {
-        [event.ownerId]: {
-          userId: event.ownerId,
-          role: 'REFEREE'
-        }
-      },
-      characters: {},
-      boards: {},
-      pieces: {},
-      diceLog: [],
-      selectedBoardId: null,
-      eventSeq: envelope.seq
-    }
-  }
-} satisfies EventHandlerMap<GameEventType>
 
 const characterEventHandlers = {
   CharacterCreated: (state, envelope) => {
@@ -1159,138 +1098,6 @@ const characterEventHandlers = {
     return nextState
   }
 } satisfies EventHandlerMap<CharacterEventType>
-
-const boardEventHandlers = {
-  BoardCreated: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-
-    nextState.boards[event.boardId] = {
-      id: event.boardId,
-      name: event.name,
-      imageAssetId: event.imageAssetId,
-      url: event.url,
-      width: event.width,
-      height: event.height,
-      scale: event.scale,
-      doors: {}
-    }
-    nextState.selectedBoardId = nextState.selectedBoardId ?? event.boardId
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  BoardSelected: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    if (!nextState.boards[event.boardId]) return nextState
-
-    nextState.selectedBoardId = event.boardId
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  DoorStateChanged: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    if (!nextState.boards[event.boardId]) return nextState
-
-    nextState.boards[event.boardId].doors[event.doorId] = {
-      id: event.doorId,
-      open: event.open
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  PieceCreated: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-
-    nextState.pieces[event.pieceId] = {
-      id: event.pieceId,
-      boardId: event.boardId,
-      characterId: event.characterId,
-      imageAssetId: event.imageAssetId,
-      name: event.name,
-      x: event.x,
-      y: event.y,
-      z: 0,
-      width: event.width ?? 50,
-      height: event.height ?? 50,
-      scale: event.scale ?? 1,
-      visibility: 'PREVIEW',
-      freedom: 'LOCKED'
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  PieceMoved: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const piece = nextState.pieces[event.pieceId]
-    if (!piece) return nextState
-
-    piece.x = event.x
-    piece.y = event.y
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  PieceVisibilityChanged: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const piece = nextState.pieces[event.pieceId]
-    if (!piece) return nextState
-
-    piece.visibility = event.visibility
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  PieceFreedomChanged: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const piece = nextState.pieces[event.pieceId]
-    if (!piece) return nextState
-
-    piece.freedom = event.freedom
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  }
-} satisfies EventHandlerMap<BoardEventType>
-
-const diceEventHandlers = {
-  DiceRolled: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-
-    nextState.diceLog.push({
-      id: envelope.id,
-      actorId: envelope.actorId,
-      createdAt: envelope.createdAt,
-      revealAt: diceRevealAt(envelope.createdAt),
-      expression: event.expression,
-      reason: event.reason,
-      rolls: event.rolls,
-      total: event.total
-    })
-    if (nextState.diceLog.length > 20) {
-      nextState.diceLog.splice(0, nextState.diceLog.length - 20)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  }
-} satisfies EventHandlerMap<DiceEventType>
 
 const eventHandlers = {
   ...gameEventHandlers,

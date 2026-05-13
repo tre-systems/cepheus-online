@@ -152,6 +152,7 @@ export const createCharacterCreationController = ({
 
       const refresh = refreshFollowedCharacterCreationFlowFromState({
         state: getState(),
+        currentFlow: flow.value,
         selectedCharacterId: selectedCharacterId.value,
         readOnly: readOnly.value,
         panelOpen: isPanelOpen()

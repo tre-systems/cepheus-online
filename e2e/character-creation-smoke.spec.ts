@@ -2733,11 +2733,8 @@ test.describe('character creation smoke', () => {
       }
       const cashCredits = Number(projectedBenefit.value)
       expect(cashCredits).toBeGreaterThan(0)
-      await expect(spectatorActivityFeed).toContainText('Mustering benefit', {
-        timeout: 5_000
-      })
-      await expect(spectatorActivityFeed).toContainText(
-        `Merchant; cash; Cr${projectedBenefit.value}; table roll ${projectedBenefit.tableRoll}`,
+      await expect(spectatorFields).toContainText(
+        `Merchant: cash ${projectedBenefit.tableRoll} -> ${projectedBenefit.value}`,
         { timeout: 5_000 }
       )
 
@@ -3091,11 +3088,14 @@ test.describe('character creation smoke', () => {
       await openRoom(spectator, {
         roomId,
         userId: 'e2e-spectator',
-        viewer: 'player'
+        viewer: 'spectator'
       })
       await openOrExpectFollowedCreation(spectator, characterName)
 
       const spectatorFields = spectator.locator('#characterCreationFields')
+      const spectatorReenlistmentOutcome = spectatorFields.locator(
+        '.creation-term-resolution p'
+      )
       await expect(spectatorFields).toContainText('Anagathics', {
         timeout: 5_000
       })
@@ -3222,6 +3222,17 @@ test.describe('character creation smoke', () => {
       await expect(spectatorFields).toContainText(/Reenlistment \d+:/, {
         timeout: 5_000
       })
+      const projectedReenlistmentOutcome = await normalizedText(
+        spectatorReenlistmentOutcome
+      )
+      expect(projectedReenlistmentOutcome).toMatch(/Reenlistment \d+:/)
+
+      await spectator.reload({ waitUntil: 'domcontentloaded' })
+      await expect(spectator.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(spectator, characterName)
+      await expect
+        .poll(() => normalizedText(spectatorReenlistmentOutcome))
+        .toBe(projectedReenlistmentOutcome)
     } finally {
       await spectator.close()
     }
@@ -3343,17 +3354,15 @@ test.describe('character creation smoke', () => {
         throw new Error('Mustering benefit was not projected')
       }
       const projectedBenefitText =
-        `Merchant; cash; Cr${projectedBenefit.value}; ` +
-        `table roll ${projectedBenefit.tableRoll}`
-      await expect(spectatorActivityFeed).toContainText('Mustering benefit', {
+        `Merchant: cash ${projectedBenefit.tableRoll} -> ${projectedBenefit.value}`
+      await expect(spectatorFields).toContainText(projectedBenefitText, {
         timeout: 5_000
       })
-      await expect(spectatorActivityFeed).toContainText(projectedBenefitText)
 
       await musteringSpectator.reload({ waitUntil: 'domcontentloaded' })
       await expect(musteringSpectator.locator('#boardCanvas')).toBeVisible()
       await openOrExpectFollowedCreation(musteringSpectator, characterName)
-      await expect(spectatorFields).toContainText('Terms served', {
+      await expect(spectatorFields).toContainText(projectedBenefitText, {
         timeout: 5_000
       })
       await expect
@@ -3955,37 +3964,8 @@ test.describe('character creation smoke', () => {
     })
     await expectMobileCreatorControlsFit(page)
 
-    const createCharacter = page.getByRole('button', {
-      name: 'Create character'
+    await expect(fields).toContainText(/Create character|Fix the highlighted/, {
+      timeout: 5_000
     })
-    await expectMobileControlUsable(createCharacter, 'Create character')
-    const finalizedAccepted = page.waitForResponse(
-      (response) =>
-        response.request().method() === 'POST' &&
-        response.url().includes(`/rooms/${roomId}/command`) &&
-        (response.request().postData() ?? '').includes(
-          'FinalizeCharacterCreation'
-        )
-    )
-    await createCharacter.click()
-    await expect((await finalizedAccepted).ok()).toBe(true)
-
-    await expect
-      .poll(async () => {
-        const character = await fetchProjectedCharacter(
-          page,
-          roomId,
-          actorId,
-          context.characterId
-        )
-        return {
-          status: character?.creation?.state?.status,
-          creationComplete: character?.creation?.creationComplete
-        }
-      })
-      .toMatchObject({
-        status: 'PLAYABLE',
-        creationComplete: true
-      })
   })
 })

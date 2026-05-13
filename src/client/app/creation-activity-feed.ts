@@ -6,6 +6,7 @@ import {
   deriveCreationActivityCardsFromApplication,
   type CreationActivityCardViewModel
 } from './creation-activity-view.js'
+import { hasRedactedCreationActivityDetails } from './live-activity-client.js'
 
 export interface CreationActivityFeedElements {
   feed: HTMLElement
@@ -97,6 +98,14 @@ export const createCreationActivityFeedController = ({
     clear,
     show(application, delayMs = 0) {
       if (shouldSuppressCards()) return
+      if (
+        hasRedactedCreationActivityDetails(application) &&
+        application.diceRollActivities.some(
+          (activity) => activity.total === undefined
+        )
+      ) {
+        return
+      }
 
       const cards = deriveCreationActivityCardsFromApplication(application, {
         viewerActorId: getViewerActorId()

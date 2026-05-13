@@ -1,9 +1,17 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import {
+  asCharacterId,
+  asEventId,
+  asGameId,
+  asUserId
+} from '../../shared/ids'
+import type { LiveActivityDescriptor } from '../../shared/live-activity'
 import type { ClientDiceRollActivity } from '../game-commands'
 import {
   filterPendingDiceRollActivities,
+  hasRedactedCreationActivityDetails,
   prepareLiveActivityApplication
 } from './live-activity-client'
 
@@ -12,6 +20,25 @@ const activity = (id: string, total: number = 7): ClientDiceRollActivity => ({
   revealAt: '2026-05-06T10:00:02.500Z',
   rolls: [3, total - 3],
   total
+})
+
+const creationActivity = ({
+  details
+}: {
+  details?: string
+}): LiveActivityDescriptor => ({
+  id: asEventId('game-1:20'),
+  eventId: asEventId('game-1:20'),
+  gameId: asGameId('game-1'),
+  seq: 20,
+  actorId: asUserId('other-user'),
+  createdAt: '2026-05-06T10:00:00.000Z',
+  type: 'characterCreation',
+  characterId: asCharacterId('character-1'),
+  transition: 'FINISH_MUSTERING',
+  details,
+  status: 'MUSTERING_OUT',
+  creationComplete: false
 })
 
 describe('live activity client helpers', () => {
@@ -78,5 +105,20 @@ describe('live activity client helpers', () => {
     assert.deepEqual(prepared.diceRollActivities, [])
     assert.deepEqual([...prepared.deferDiceRevealIds], [])
     assert.equal(prepared.animateLatestDiceLog, true)
+  })
+
+  it('identifies redacted character creation activity details', () => {
+    assert.equal(
+      hasRedactedCreationActivityDetails({
+        liveActivities: [creationActivity({ details: undefined })]
+      }),
+      true
+    )
+    assert.equal(
+      hasRedactedCreationActivityDetails({
+        liveActivities: [creationActivity({ details: 'Mustering benefit' })]
+      }),
+      false
+    )
   })
 })

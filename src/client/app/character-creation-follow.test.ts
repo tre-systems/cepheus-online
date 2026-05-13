@@ -212,6 +212,7 @@ describe('character creation follow helpers', () => {
   it('refreshes followed read-only flows and closes missing projections', () => {
     const refreshed = refreshFollowedCharacterCreationFlowFromState({
       state: stateWithCreation(creation('BASIC_TRAINING')),
+      currentFlow: null,
       selectedCharacterId: characterId,
       readOnly: true,
       panelOpen: true
@@ -224,6 +225,7 @@ describe('character creation follow helpers', () => {
 
     const missing = refreshFollowedCharacterCreationFlowFromState({
       state: stateWithCreation(null),
+      currentFlow: null,
       selectedCharacterId: characterId,
       readOnly: true,
       panelOpen: true
@@ -232,6 +234,23 @@ describe('character creation follow helpers', () => {
     assert.equal(missing.flow, null)
     assert.equal(missing.readOnly, false)
     assert.equal(missing.shouldClose, true)
+  })
+
+  it('keeps followed post-career equipment setup ahead of an older projection step', () => {
+    const equipmentFlow = {
+      ...fallbackFlow,
+      step: 'equipment' as const
+    }
+    const refreshed = refreshFollowedCharacterCreationFlowFromState({
+      state: stateWithCreation(creation('MUSTERING_OUT')),
+      currentFlow: equipmentFlow,
+      selectedCharacterId: characterId,
+      readOnly: true,
+      panelOpen: true
+    })
+
+    assert.equal(refreshed.flow, equipmentFlow)
+    assert.equal(refreshed.shouldRender, true)
   })
 
   it('refreshes editable flows only when no dice reveal deferral is pending', () => {

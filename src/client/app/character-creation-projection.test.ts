@@ -160,4 +160,51 @@ describe('character creation projection helpers', () => {
 
     assert.deepEqual(flow.draft.skills, ['Pilot-1', 'Survival-0'])
   })
+
+  it('keeps plain mustering out on skills but opens equipment once benefits exist', () => {
+    const plainMusteringFlow = flowFromProjectedCharacter(
+      character({
+        ...agingProjection(),
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        }
+      })
+    )
+    const benefitMusteringFlow = flowFromProjectedCharacter(
+      character({
+        ...agingProjection([
+          {
+            type: 'FINISH_MUSTERING',
+            musteringBenefit: {
+              career: 'Scout',
+              kind: 'cash',
+              roll: {
+                expression: '1d6',
+                rolls: [4],
+                total: 4
+              },
+              modifier: 0,
+              tableRoll: 4,
+              value: '20000',
+              credits: 20000
+            }
+          }
+        ]),
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        }
+      })
+    )
+
+    assert.equal(plainMusteringFlow?.step, 'career')
+    assert.equal(benefitMusteringFlow?.step, 'equipment')
+  })
 })

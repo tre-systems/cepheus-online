@@ -12,8 +12,7 @@ import { isActorRefereeOrOwner } from '../../shared/viewer.js'
 import {
   selectedBoard as selectSelectedBoard,
   selectedBoardId as selectSelectedBoardId,
-  selectedBoardPieces,
-  pieceImageUrl
+  selectedBoardPieces
 } from './board-view.js'
 import { getAppElements, requireAppElements } from './app-elements.js'
 import {
@@ -51,7 +50,7 @@ import {
   createCharacterCreationRenderController,
   type CharacterCreationRenderController
 } from './character-creation-render-controller.js'
-import { cssUrl } from './image-assets.js'
+import { createCharacterRailController } from './character-rail-controller.js'
 import { createGameCommand } from './bootstrap-flow.js'
 import { fetchRoomState, postRoomCommand } from './room-api.js'
 import {
@@ -598,68 +597,23 @@ const characterSheetController = createCharacterSheetWiring({
 
 const renderSheet = () => characterSheetController.render()
 
-const renderRail = () => {
-  const pieces = boardPieces()
-  if (pieces.length === 0) {
-    const empty = document.createElement('button')
-    empty.className = 'rail-piece rail-create-piece'
-    empty.type = 'button'
-    empty.title = 'Create traveller'
-    empty.setAttribute('aria-label', 'Create traveller')
-    const score = document.createElement('span')
-    score.className = 'rail-score'
-    score.textContent = '+'
-    const avatar = document.createElement('span')
-    avatar.className = 'rail-avatar'
-    avatar.textContent = '+'
-    empty.append(score, avatar)
-    empty.addEventListener('click', () => {
-      startNewCharacterCreationWizard().catch((error) =>
-        setError(error.message)
-      )
-    })
-    els.initiativeRail.replaceChildren(empty)
-    renderSheet()
-    return
-  }
-
-  els.initiativeRail.replaceChildren(
-    ...pieces.map((piece, index) => {
-      const selectedPieceId = currentSelectedPieceId()
-      const button = document.createElement('button')
-      button.className =
-        'rail-piece' + (piece.id === selectedPieceId ? ' selected' : '')
-      button.type = 'button'
-      button.title = piece.name
-      const score = document.createElement('span')
-      score.className = 'rail-score'
-      score.textContent = String(Math.max(1, 7 - index))
-      const avatar = document.createElement('span')
-      avatar.className = 'rail-avatar'
-      const imageUrl = pieceImageUrl(piece)
-      if (imageUrl) {
-        avatar.style.backgroundImage = cssUrl(imageUrl)
-        avatar.style.backgroundSize = 'cover'
-        avatar.style.backgroundPosition = 'center'
-      } else {
-        avatar.textContent = (piece.name || '?').slice(0, 1).toUpperCase()
-      }
-      button.append(score, avatar)
-      button.addEventListener('click', () => {
-        selectPiece(piece.id)
-        characterSheetController.setOpen(true)
-        render()
-      })
-      return button
-    })
-  )
-  renderSheet()
-}
+const characterRailController = createCharacterRailController({
+  document,
+  rail: els.initiativeRail,
+  getPieces: boardPieces,
+  getSelectedPieceId: currentSelectedPieceId,
+  selectPiece,
+  openCharacterSheet: () => characterSheetController.setOpen(true),
+  startCharacterCreation: startNewCharacterCreationWizard,
+  renderSheet,
+  requestRender: () => render(),
+  reportError: setError
+})
 
 const render = () => {
   boardControlsWiring?.render()
   boardController?.render()
-  renderRail()
+  characterRailController.render()
   creationPresenceDock.render(state)
 }
 
