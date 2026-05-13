@@ -1005,7 +1005,13 @@ describe('room publication flow', () => {
 
     assert.equal(losses.ok, true)
     if (!losses.ok) return
-    assert.equal(losses.value.liveActivities.length, 0)
+    assert.equal(losses.value.liveActivities.length, 1)
+    const lossActivity = losses.value.liveActivities[0]
+    assert.equal(lossActivity?.type, 'characterCreation')
+    if (lossActivity?.type !== 'characterCreation') return
+    assert.equal(lossActivity.transition, 'AGING_LOSSES_RESOLVED')
+    assert.equal(lossActivity.details, 'Aging losses applied; 2 selections')
+    assert.equal(lossActivity.status, 'REENLISTMENT')
     assert.deepEqual(
       losses.value.state.characters[characterId]?.creation
         ?.characteristicChanges,

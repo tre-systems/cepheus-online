@@ -699,6 +699,22 @@ export const deriveLiveActivity = (
         creationComplete: event.creationComplete
       }
 
+    case 'CharacterCreationAgingLossesResolved':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'AGING_LOSSES_RESOLVED',
+        ...compactCharacterCreationDetails(
+          [
+            'Aging losses applied',
+            countLabel(event.selectedLosses.length, 'selection')
+          ].join('; ')
+        ),
+        status: event.state.status,
+        creationComplete: event.creationComplete
+      }
+
     case 'CharacterCreationAnagathicsDecided':
       return {
         ...baseActivity(envelope),
@@ -803,6 +819,17 @@ export const deriveLiveActivity = (
         ),
         status: 'SKILLS_TRAINING',
         creationComplete: false
+      }
+
+    case 'CharacterCreationSkillsCompleted':
+      return {
+        ...baseActivity(envelope),
+        type: 'characterCreation',
+        characterId: event.characterId,
+        transition: 'COMPLETE_SKILLS',
+        details: 'Skills and training complete',
+        status: event.state.status,
+        creationComplete: event.creationComplete
       }
 
     case 'CharacterCreationMusteringBenefitRolled':

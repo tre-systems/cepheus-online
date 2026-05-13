@@ -9,6 +9,7 @@ import {
   deriveCharacterCreationActivityRevealAt,
   deriveLiveActivities,
   deriveLiveActivity,
+  deriveLiveActivityRevealAt,
   deriveLiveDiceRollRevealTarget,
   LIVE_DICE_RESULT_REVEAL_DELAY_MS,
   type LiveActivityDescriptor,
@@ -1200,6 +1201,236 @@ describe('live activity derivation', () => {
         ['FINISH_MUSTERING', 'Mustering out complete', 'ACTIVE']
       ]
     )
+  })
+
+  it('derives semantic aging-loss and skills-completion activity details', () => {
+    const activities = deriveLiveActivities([
+      envelope(3, {
+        type: 'CharacterCreationAgingLossesResolved',
+        characterId,
+        selectedLosses: [
+          { type: 'PHYSICAL', characteristic: 'str', modifier: -1 },
+          { type: 'PHYSICAL', characteristic: 'dex', modifier: -1 }
+        ],
+        characteristicPatch: {
+          str: 6,
+          dex: 7
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(4, {
+        type: 'CharacterCreationSkillsCompleted',
+        characterId,
+        state: {
+          status: 'AGING',
+          context: {
+            canCommission: true,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    assert.deepEqual(
+      activities.map((activity) =>
+        activity.type === 'characterCreation'
+          ? [activity.transition, activity.details, activity.status]
+          : null
+      ),
+      [
+        [
+          'AGING_LOSSES_RESOLVED',
+          'Aging losses applied; 2 selections',
+          'REENLISTMENT'
+        ],
+        ['COMPLETE_SKILLS', 'Skills and training complete', 'AGING']
+      ]
+    )
+  })
+
+  it('attaches delayed reveal metadata to semantic character roll activity', () => {
+    const state = {
+      status: 'SKILLS_TRAINING' as const,
+      context: {
+        canCommission: true,
+        canAdvance: true
+      }
+    }
+    const check = {
+      expression: '2d6' as const,
+      rolls: [4, 4],
+      total: 8,
+      characteristic: 'int' as const,
+      modifier: 1,
+      target: 7,
+      success: true
+    }
+    const cases: EventEnvelope['event'][] = [
+      {
+        type: 'CharacterCreationQualificationResolved',
+        characterId,
+        rollEventId: asEventId('game-1:1'),
+        career: 'Scout',
+        passed: true,
+        qualification: check,
+        previousCareerCount: 0,
+        failedQualificationOptions: [],
+        state,
+        creationComplete: false
+      },
+      {
+        type: 'CharacterCreationDraftResolved',
+        characterId,
+        rollEventId: asEventId('game-1:2'),
+        draft: {
+          roll: {
+            expression: '1d6',
+            rolls: [4],
+            total: 4
+          },
+          tableRoll: 4,
+          acceptedCareer: 'Merchant'
+        },
+        state,
+        creationComplete: false
+      },
+      {
+        type: 'CharacterCreationCommissionResolved',
+        characterId,
+        rollEventId: asEventId('game-1:3'),
+        passed: true,
+        commission: check,
+        state,
+        creationComplete: false
+      },
+      {
+        type: 'CharacterCreationAdvancementResolved',
+        characterId,
+        rollEventId: asEventId('game-1:4'),
+        passed: true,
+        advancement: check,
+        rank: null,
+        state,
+        creationComplete: false
+      },
+      {
+        type: 'CharacterCreationAgingResolved',
+        characterId,
+        rollEventId: asEventId('game-1:5'),
+        aging: {
+          roll: {
+            expression: '2d6',
+            rolls: [3, 4],
+            total: 7
+          },
+          modifier: -1,
+          age: 34,
+          characteristicChanges: []
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      },
+      {
+        type: 'CharacterCreationReenlistmentResolved',
+        characterId,
+        rollEventId: asEventId('game-1:6'),
+        outcome: 'allowed',
+        reenlistment: {
+          expression: '2d6',
+          rolls: [3, 4],
+          total: 7,
+          characteristic: null,
+          modifier: 0,
+          target: 6,
+          success: true,
+          outcome: 'allowed'
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      },
+      {
+        type: 'CharacterCreationTermSkillRolled',
+        characterId,
+        rollEventId: asEventId('game-1:7'),
+        termSkill: {
+          career: 'Merchant',
+          table: 'serviceSkills',
+          roll: {
+            expression: '1d6',
+            rolls: [1],
+            total: 1
+          },
+          tableRoll: 1,
+          rawSkill: 'Broker',
+          skill: 'Broker-1',
+          characteristic: null,
+          pendingCascadeSkill: null
+        },
+        termSkills: ['Broker-1'],
+        skillsAndTraining: ['Broker-0', 'Broker-1'],
+        pendingCascadeSkills: [],
+        state,
+        creationComplete: false
+      },
+      {
+        type: 'CharacterCreationMusteringBenefitRolled',
+        characterId,
+        rollEventId: asEventId('game-1:8'),
+        musteringBenefit: {
+          career: 'Merchant',
+          kind: 'cash',
+          roll: {
+            expression: '1d6',
+            rolls: [4],
+            total: 4
+          },
+          modifier: 0,
+          tableRoll: 4,
+          value: '20000',
+          credits: 20000
+        },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ]
+
+    for (const [index, event] of cases.entries()) {
+      const activity = deriveLiveActivity(envelope(index + 2, event))
+
+      assert.equal(activity?.type, 'characterCreation')
+      if (activity?.type !== 'characterCreation') continue
+      assert.deepEqual(activity.reveal, {
+        rollEventId: asEventId(`game-1:${index + 1}`),
+        revealAt: deriveLiveActivityRevealAt(activity.createdAt),
+        delayMs: LIVE_DICE_RESULT_REVEAL_DELAY_MS
+      })
+    }
   })
 
   it('derives finalization summary without full sheet details', () => {
