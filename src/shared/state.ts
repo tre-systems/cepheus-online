@@ -59,8 +59,10 @@ export interface CharacterCreationProjection {
   creationComplete: boolean
   homeworld?: CharacterCreationHomeworld | null
   backgroundSkills?: string[]
+  backgroundSkillAllowance?: number
   pendingCascadeSkills?: string[]
   pendingDecisions?: CareerCreationPendingDecision[]
+  requiredTermSkillCount?: number
   actionPlan?: CareerCreationActionPlan
   history?: CareerCreationEvent[]
 }

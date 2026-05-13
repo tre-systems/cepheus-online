@@ -617,6 +617,22 @@ describe('game state projection', () => {
 
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'SKILLS_TRAINING')
+    assert.equal(creation?.requiredTermSkillCount, 2)
+    assert.deepEqual(creation?.actionPlan, {
+      status: 'SKILLS_TRAINING',
+      pendingDecisions: [{ key: 'skillTrainingSelection' }],
+      legalActions: [
+        {
+          key: 'completeSkills',
+          status: 'SKILLS_TRAINING',
+          commandTypes: [
+            'RollCharacterCreationTermSkill',
+            'CompleteCharacterCreationSkills'
+          ],
+          rollRequirement: { key: 'termSkill', dice: '1d6' }
+        }
+      ]
+    })
     assert.equal(creation?.terms[0]?.survival, 8)
     assert.deepEqual(creation?.history, [
       {

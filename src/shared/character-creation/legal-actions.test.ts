@@ -521,6 +521,32 @@ describe('career creation legal action planner', () => {
     })
   })
 
+  it('derives pending decisions from unresolved projected homeworld choices', () => {
+    const creation = projection('HOMEWORLD', {
+      backgroundSkillAllowance: 3,
+      backgroundSkills: ['Zero-G-0'],
+      pendingCascadeSkills: []
+    })
+
+    assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
+      { key: 'homeworldSkillSelection' }
+    ])
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(creation),
+      []
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('HOMEWORLD', {
+          backgroundSkillAllowance: 3,
+          backgroundSkills: ['Zero-G-0', 'Admin-0', 'Broker-0'],
+          pendingCascadeSkills: []
+        })
+      ),
+      ['completeHomeworld']
+    )
+  })
+
   it('projects the shared action plan onto creation state without mutating input', () => {
     const creation = projection('SURVIVAL')
     const projected = projectCareerCreationActionPlan(creation)
@@ -634,7 +660,7 @@ describe('career creation legal action planner', () => {
     ])
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(creation),
-      []
+      ['completeSkills']
     )
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(

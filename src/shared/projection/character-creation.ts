@@ -1,4 +1,5 @@
 import {
+  deriveTotalBackgroundSkillAllowance,
   leaveCareerTerm,
   projectCareerCreationActionPlan,
   startCareerTerm
@@ -41,6 +42,17 @@ const applyCharacterSheetPatch = (
   }
   if (patch.credits !== undefined) character.credits = patch.credits
 }
+
+const requiredTermSkillCount = ({
+  canCommission,
+  canAdvance
+}: {
+  canCommission: boolean
+  canAdvance: boolean
+}): number => (!canCommission && !canAdvance ? 2 : 1)
+
+const backgroundSkillAllowance = (character: CharacterState): number =>
+  deriveTotalBackgroundSkillAllowance(character.characteristics.edu)
 
 const recordMusteringBenefit = (
   terms: readonly CareerTerm[],
@@ -566,6 +578,12 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
+      requiredTermSkillCount: event.passed
+        ? requiredTermSkillCount({
+            canCommission: event.canCommission,
+            canAdvance: event.canAdvance
+          })
+        : character.creation.requiredTermSkillCount,
       pendingDecisions: event.pendingDecisions
         ? event.pendingDecisions.map((decision) => ({ ...decision }))
         : [],
@@ -1063,6 +1081,8 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       homeworld: structuredClone(event.homeworld),
       backgroundSkills: [...event.backgroundSkills],
+      backgroundSkillAllowance:
+        event.backgroundSkillAllowance ?? backgroundSkillAllowance(character),
       pendingCascadeSkills: [...event.pendingCascadeSkills]
     }
     nextState.eventSeq = envelope.seq
@@ -1099,6 +1119,10 @@ const rawCharacterEventHandlers = {
     character.creation = {
       ...character.creation,
       backgroundSkills: [...event.backgroundSkills],
+      backgroundSkillAllowance:
+        event.backgroundSkillAllowance ??
+        character.creation.backgroundSkillAllowance ??
+        backgroundSkillAllowance(character),
       pendingCascadeSkills: [...event.pendingCascadeSkills]
     }
     nextState.eventSeq = envelope.seq
@@ -1115,6 +1139,10 @@ const rawCharacterEventHandlers = {
     character.creation = {
       ...character.creation,
       backgroundSkills: [...event.backgroundSkills],
+      backgroundSkillAllowance:
+        event.backgroundSkillAllowance ??
+        character.creation.backgroundSkillAllowance ??
+        backgroundSkillAllowance(character),
       pendingCascadeSkills: [...event.pendingCascadeSkills]
     }
     nextState.eventSeq = envelope.seq

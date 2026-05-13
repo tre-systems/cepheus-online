@@ -287,6 +287,7 @@ export type GameEvent =
       characterId: CharacterId
       homeworld: CharacterCreationHomeworld
       backgroundSkills: string[]
+      backgroundSkillAllowance?: number
       pendingCascadeSkills: string[]
     }
   | {
@@ -300,6 +301,7 @@ export type GameEvent =
       characterId: CharacterId
       skill: string
       backgroundSkills: string[]
+      backgroundSkillAllowance?: number
       pendingCascadeSkills: string[]
     }
   | {
@@ -308,6 +310,7 @@ export type GameEvent =
       cascadeSkill: string
       selection: string
       backgroundSkills: string[]
+      backgroundSkillAllowance?: number
       pendingCascadeSkills: string[]
     }
   | ({

@@ -2145,6 +2145,7 @@ describe('room publication flow', () => {
             tradeCodes: ['Asteroid']
           },
           backgroundSkills: ['Zero-G-0'],
+          backgroundSkillAllowance: 3,
           pendingCascadeSkills: ['Gun Combat-0']
         },
         {
@@ -2152,6 +2153,7 @@ describe('room publication flow', () => {
           characterId,
           skill: 'Admin-0',
           backgroundSkills: ['Zero-G-0', 'Admin-0'],
+          backgroundSkillAllowance: 3,
           pendingCascadeSkills: ['Gun Combat-0']
         },
         {
@@ -2160,6 +2162,7 @@ describe('room publication flow', () => {
           cascadeSkill: 'Gun Combat-0',
           selection: 'Slug Rifle',
           backgroundSkills: ['Zero-G-0', 'Admin-0', 'Slug Rifle-0'],
+          backgroundSkillAllowance: 3,
           pendingCascadeSkills: []
         }
       ]

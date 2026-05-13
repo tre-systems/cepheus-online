@@ -313,6 +313,9 @@ const requiredBackgroundSelectionCount = (character: CharacterState): number =>
     ? deriveTotalBackgroundSkillAllowance(character.characteristics.edu)
     : 0
 
+const backgroundSkillAllowance = (character: CharacterState): number =>
+  deriveTotalBackgroundSkillAllowance(character.characteristics.edu)
+
 const hasCompleteBackgroundChoices = (character: CharacterState): boolean => {
   const creation = character.creation
   if (!creation?.homeworld || !hasBackgroundHomeworld(creation.homeworld)) {
@@ -553,12 +556,6 @@ const validateHomeworldCompletion = (
   )
   if (!status.ok) return status
 
-  const legalAction = requireLegalCharacterCreationAction(
-    character.creation,
-    ['completeHomeworld'],
-    'COMPLETE_HOMEWORLD is blocked by unresolved character creation decisions'
-  )
-  if (!legalAction.ok) return legalAction
   if (!hasCompleteBackgroundChoices(character)) {
     return err(
       commandError(
@@ -567,6 +564,13 @@ const validateHomeworldCompletion = (
       )
     )
   }
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['completeHomeworld'],
+    'COMPLETE_HOMEWORLD is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -3182,6 +3186,7 @@ export const deriveEventsForCommand = (
         homeworld: homeworld.value,
         rules: CEPHEUS_SRD_RULESET
       })
+      const allowance = backgroundSkillAllowance(character)
 
       return ok([
         {
@@ -3189,6 +3194,7 @@ export const deriveEventsForCommand = (
           characterId: command.characterId,
           homeworld: homeworld.value,
           backgroundSkills: backgroundPlan.backgroundSkills,
+          backgroundSkillAllowance: allowance,
           pendingCascadeSkills: backgroundPlan.pendingCascadeSkills
         }
       ])
@@ -3230,6 +3236,9 @@ export const deriveEventsForCommand = (
           characterId: command.characterId,
           skill: skill.value,
           backgroundSkills: uniqueSkills(backgroundSkills),
+          backgroundSkillAllowance:
+            creation.value.backgroundSkillAllowance ??
+            backgroundSkillAllowance(character),
           pendingCascadeSkills: uniqueSkills(pendingCascadeSkills)
         }
       ])
@@ -3273,6 +3282,9 @@ export const deriveEventsForCommand = (
           cascadeSkill: cascadeSkill.value,
           selection: selection.value,
           backgroundSkills: uniqueSkills(resolution.backgroundSkills),
+          backgroundSkillAllowance:
+            creation.value.backgroundSkillAllowance ??
+            backgroundSkillAllowance(character),
           pendingCascadeSkills: uniqueSkills(resolution.pendingCascadeSkills)
         }
       ])

@@ -62,6 +62,22 @@ const lastTerm = (
 ): NonNullable<CareerCreationActionProjection['terms']>[number] | null =>
   creation.terms?.[creation.terms.length - 1] ?? null
 
+const backgroundSelectionCount = (
+  creation: CareerCreationActionProjection
+): number =>
+  (creation.backgroundSkills?.length ?? 0) +
+  (creation.pendingCascadeSkills?.length ?? 0)
+
+const hasIncompleteHomeworldSelection = (
+  creation: CareerCreationActionProjection
+): boolean => {
+  if (creation.state.status !== 'HOMEWORLD') return false
+  const allowance = creation.backgroundSkillAllowance ?? 0
+  if (allowance <= 0) return false
+
+  return backgroundSelectionCount(creation) < allowance
+}
+
 const termsInCareer = (
   creation: CareerCreationActionProjection,
   career: string
@@ -148,6 +164,10 @@ export const deriveCareerCreationPendingDecisions = (
 
   if ((creation.pendingCascadeSkills?.length ?? 0) > 0) {
     pushDecision({ key: 'cascadeSkillResolution' })
+  }
+
+  if (hasIncompleteHomeworldSelection(creation)) {
+    pushDecision({ key: 'homeworldSkillSelection' })
   }
 
   if (
@@ -277,9 +297,7 @@ export const deriveLegalCareerCreationActionKeys = (
         ? []
         : ['setCharacteristics']
     case 'HOMEWORLD':
-      return hasPendingDecision(context, 'homeworldSkillSelection')
-        ? []
-        : ['completeHomeworld']
+      return noPendingDecisions ? ['completeHomeworld'] : []
     case 'CAREER_SELECTION':
       if (hasPendingDecision(context, 'careerQualification')) return []
       if (options.failedToQualify) {
@@ -328,7 +346,10 @@ export const deriveLegalCareerCreationActionKeys = (
       if (!state.context.canAdvance || !noPendingDecisions) return []
       return ['rollAdvancement', 'skipAdvancement']
     case 'SKILLS_TRAINING':
-      return noPendingDecisions ? ['completeSkills'] : []
+      return noPendingDecisions ||
+        hasOnlyPendingDecision(context, 'skillTrainingSelection')
+        ? ['completeSkills']
+        : []
     case 'AGING':
       if (
         context.pendingDecisions?.length === 1 &&
