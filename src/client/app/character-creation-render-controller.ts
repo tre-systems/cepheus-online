@@ -30,7 +30,10 @@ import {
 import type { CharacterCreationHomeworldPublisher } from './character-creation-homeworld-publisher.js'
 import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './character-creation-mustering-view.js'
 import type { CharacterCreationPanelController } from './character-creation-panel.js'
-import type { CharacterCreationCharacteristicGridViewModel } from './character-creation-view.js'
+import type {
+  CharacterCreationCharacteristicGridViewModel,
+  CharacterCreationHomeworldViewModel
+} from './character-creation-view.js'
 import type { CharacterCreationViewModel } from './character-creation-view-model.js'
 import {
   renderCharacterCreationBasicTrainingButton as renderCharacterCreationBasicTrainingButtonView,
@@ -215,7 +218,11 @@ export const createCharacterCreationRenderController = ({
       return fragment
     }
     if (flow.step === 'homeworld') {
-      fragment.append(renderCharacterCreationHomeworld(flow))
+      if (viewModel.wizard?.homeworld) {
+        fragment.append(
+          renderCharacterCreationHomeworld(viewModel.wizard.homeworld)
+        )
+      }
       return fragment
     }
     fragment.append(
@@ -241,9 +248,9 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationHomeworld = (
-    flow: CharacterCreationFlow
+    viewModel: CharacterCreationHomeworldViewModel
   ): HTMLElement => {
-    return renderCharacterCreationHomeworldView(document, flow, {
+    return renderCharacterCreationHomeworldView(document, viewModel, {
       toggleBackgroundSkill: ({ label, selected, cascade }) => {
         const flow = controller.flow()
         if (!flow) return

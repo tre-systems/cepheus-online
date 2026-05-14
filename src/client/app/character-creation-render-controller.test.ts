@@ -342,6 +342,113 @@ describe('character creation render controller', () => {
     assert.equal(grid?.children[0]?.children[1]?.children[0]?.textContent, '11')
   })
 
+  it('renders homeworld fields from the controller view model', () => {
+    const els = elements()
+    const currentFlow = {
+      ...flow(),
+      step: 'homeworld',
+      draft: createInitialCharacterDraft(asCharacterId('render-homeworld'), {
+        name: 'Homeworld Sentinel',
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        homeworld: {
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid']
+        }
+      })
+    } satisfies CharacterCreationFlow
+    const baseViewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: null,
+      readOnly: false
+    })
+    const controller = createCharacterCreationRenderController({
+      document: renderDocument(),
+      elements: els,
+      controller: {
+        currentProjection: () => null,
+        flow: () => currentFlow,
+        readOnly: () => false,
+        reconcileEditableWithProjection: () => currentFlow,
+        setFlow: (nextFlow) => nextFlow,
+        viewModel: () => ({
+          ...baseViewModel,
+          wizard: baseViewModel.wizard
+            ? {
+                ...baseViewModel.wizard,
+                homeworld: baseViewModel.wizard.homeworld
+                  ? {
+                      ...baseViewModel.wizard.homeworld,
+                      fields: [
+                        {
+                          key: 'homeworld.lawLevel',
+                          label: 'Sentinel law',
+                          kind: 'text',
+                          step: 'homeworld',
+                          value: 'Sentinel Law',
+                          required: true,
+                          errors: []
+                        }
+                      ],
+                      lawLevelOptions: [
+                        {
+                          value: 'Sentinel Law',
+                          label: 'Sentinel Law',
+                          selected: true
+                        }
+                      ],
+                      tradeCodeOptions: []
+                    }
+                  : null
+              }
+            : null
+        })
+      },
+      panel: {
+        render: () => true,
+        scrollToTop: () => {}
+      },
+      wizard: {
+        advance: async () => {},
+        autoAdvanceSetup: () => false,
+        startNew: async () => {},
+        syncFields: () => {}
+      },
+      homeworldPublisher: {
+        publishBackgroundCascadeSelection: async () => {},
+        publishProgress: async () => {},
+        publishCascadeResolution: async () => {}
+      },
+      getCommandController: commandController,
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => ({}),
+      commandIdentity: () => ({
+        gameId: asGameId('game-1'),
+        actorId: asUserId('actor-1')
+      }),
+      reportError: () => {}
+    })
+
+    controller.renderWizard()
+
+    const homeworld = asNode(els.characterCreationFields).children[1]
+      ?.children[0]
+    const fieldGrid = homeworld?.children[0]
+    const lawField = fieldGrid?.children[0]
+    assert.equal(homeworld?.className, 'creation-homeworld')
+    assert.equal(lawField?.children[0]?.textContent, 'Sentinel law *')
+    assert.equal(
+      lawField?.children[1]?.children[1]?.textContent,
+      'Sentinel Law'
+    )
+  })
+
   it('disables local-only wizard actions for read-only spectator flows', () => {
     const els = elements()
     const currentFlow = {

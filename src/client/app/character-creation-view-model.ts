@@ -9,11 +9,13 @@ import { creationStepFromStatus } from './character-creation-projection.js'
 import {
   deriveCharacterCreationButtonStates,
   deriveCharacterCreationCharacteristicGridViewModel,
+  deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationValidationSummary,
   type CharacterCreationButtonStates,
   type CharacterCreationCharacteristicGridViewModel,
+  type CharacterCreationHomeworldViewModel,
   type CharacterCreationNextStepViewModel,
   type CharacterCreationStepProgressItem,
   type CharacterCreationValidationSummary
@@ -51,6 +53,7 @@ export interface CharacterCreationWizardViewModel {
   validation: CharacterCreationValidationSummary
   nextStep: CharacterCreationNextStepViewModel
   characteristics: CharacterCreationCharacteristicGridViewModel | null
+  homeworld: CharacterCreationHomeworldViewModel | null
 }
 
 export interface CharacterCreationViewModel {
@@ -172,7 +175,11 @@ const wizardViewModel = ({
     buttons: deriveCharacterCreationButtonStates(flow),
     validation: deriveCharacterCreationValidationSummary(flow),
     nextStep: deriveCharacterCreationNextStepViewModel(flow),
-    characteristics: deriveCharacterCreationCharacteristicGridViewModel(flow)
+    characteristics: deriveCharacterCreationCharacteristicGridViewModel(flow),
+    homeworld:
+      flow.step === 'homeworld'
+        ? deriveCharacterCreationHomeworldViewModel(flow)
+        : null
   }
 }
 

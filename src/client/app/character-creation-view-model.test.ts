@@ -107,6 +107,10 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.controlsDisabled, false)
     assert.equal(viewModel.wizard?.nextStep.phase, 'Homeworld')
     assert.equal(viewModel.wizard?.characteristics, null)
+    assert.equal(viewModel.wizard?.homeworld?.summary.lawLevel, 'No Law')
+    assert.deepEqual(viewModel.wizard?.homeworld?.summary.tradeCodes, [
+      'Asteroid'
+    ])
     assert.equal(viewModel.wizard?.progress.length, 7)
     assert.deepEqual(viewModel.pending.backgroundCascadeSkills, [
       'Gun Combat-0'
@@ -158,6 +162,7 @@ describe('character creation view model', () => {
         { key: 'soc', value: '', missing: true, rollLabel: 'Roll Soc' }
       ]
     )
+    assert.equal(viewModel.wizard?.homeworld, null)
   })
 
   it('captures read-only and pending aging state without changing flow identity', () => {

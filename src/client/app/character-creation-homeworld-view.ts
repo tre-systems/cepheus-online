@@ -1,13 +1,12 @@
-import type { CharacterCreationFlow } from './character-creation-flow.js'
 import {
   deriveCharacterCreationCascadeSkillChoiceViewModels,
-  deriveCharacterCreationHomeworldViewModel,
   type CharacterCreationCascadeSkillChoiceViewModel,
   type CharacterCreationFieldViewModel,
   type CharacterCreationHomeworldOptionViewModel,
   type CharacterCreationHomeworldViewModel,
   type CharacterCreationPendingCascadeChoiceViewModel
 } from './character-creation-view.js'
+import type { CharacterCreationFlow } from './character-creation-flow.js'
 
 export interface CharacterCreationHomeworldDocument {
   createElement(tagName: 'button'): HTMLButtonElement
@@ -33,13 +32,12 @@ export interface CharacterCreationHomeworldViewDeps {
 
 export const renderCharacterCreationHomeworld = (
   document: CharacterCreationHomeworldDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationHomeworldViewModel,
   deps: Pick<
     CharacterCreationHomeworldViewDeps,
     'toggleBackgroundSkill' | 'resolveCascadeSkill'
   >
 ): HTMLElement => {
-  const viewModel = deriveCharacterCreationHomeworldViewModel(flow)
   const wrapper = document.createElement('div')
   wrapper.className = 'creation-homeworld'
 

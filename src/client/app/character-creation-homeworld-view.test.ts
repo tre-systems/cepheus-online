@@ -12,7 +12,10 @@ import {
   renderCharacterCreationTermCascadeChoices,
   type CharacterCreationHomeworldDocument
 } from './character-creation-homeworld-view'
-import type { CharacterCreationPendingCascadeChoiceViewModel } from './character-creation-view'
+import {
+  deriveCharacterCreationHomeworldViewModel,
+  type CharacterCreationPendingCascadeChoiceViewModel
+} from './character-creation-view'
 import { asNode, type TestNode, testDocument } from './test-dom.test-helper'
 
 const document = testDocument as unknown as CharacterCreationHomeworldDocument
@@ -44,10 +47,13 @@ const walk = (node: TestNode): TestNode[] => [
   ...node.children.flatMap((child) => walk(child))
 ]
 
+const viewModel = (overrides: Partial<CharacterCreationFlow['draft']> = {}) =>
+  deriveCharacterCreationHomeworldViewModel(flow(overrides))
+
 describe('character creation homeworld view', () => {
   it('renders homeworld select fields with parent sync metadata', () => {
     const node = asNode(
-      renderCharacterCreationHomeworld(document, flow(), {
+      renderCharacterCreationHomeworld(document, viewModel(), {
         toggleBackgroundSkill: () => {},
         resolveCascadeSkill: () => {}
       })
@@ -73,7 +79,7 @@ describe('character creation homeworld view', () => {
       cascade: boolean
     }> = []
     const node = asNode(
-      renderCharacterCreationHomeworld(document, flow(), {
+      renderCharacterCreationHomeworld(document, viewModel(), {
         toggleBackgroundSkill: (option) => selected.push(option),
         resolveCascadeSkill: () => {}
       })
