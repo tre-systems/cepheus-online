@@ -46,6 +46,13 @@ export type ProjectedCharacter = NonNullable<
   RoomStateMessage['state']
 >['characters'][string]
 
+export type ProjectedTermSkill = {
+  career: string
+  table: string
+  tableRoll: number
+  skill: string
+}
+
 const actorSessionKey = (roomId: string, actorId: string): string =>
   `cepheus.actorSession.${roomId}.${actorId}`
 
@@ -88,6 +95,195 @@ export const fetchProjectedCharacter = async (
 ): Promise<ProjectedCharacter | null> => {
   const message = await fetchRoomState(page, roomId, actorId, viewer)
   return message.state?.characters[characterId] ?? null
+}
+
+export const latestProjectedTermSkill = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  characterId: string
+): Promise<ProjectedTermSkill | null> => {
+  const message = await fetchRoomState(page, roomId, actorId)
+  const creation = message.state?.characters[characterId]?.creation
+  const termSkill = [...(creation?.history ?? [])]
+    .reverse()
+    .find((event) => event.type === 'ROLL_TERM_SKILL')?.termSkill
+  if (
+    !termSkill?.career ||
+    !termSkill.table ||
+    typeof termSkill.tableRoll !== 'number'
+  ) {
+    return null
+  }
+  const skill = termSkill.skill ?? termSkill.rawSkill
+  if (!skill) return null
+  return {
+    career: termSkill.career,
+    table: termSkill.table,
+    tableRoll: termSkill.tableRoll,
+    skill
+  }
+}
+
+export const creationCharacterIds = async (
+  page: Page,
+  roomId: string,
+  actorId: string
+): Promise<string[]> => {
+  const message = await fetchRoomState(page, roomId, actorId)
+  if (message.type !== 'roomState' || !message.state) return []
+  return Object.entries(message.state.characters)
+    .filter(([, character]) => Boolean(character.creation))
+    .map(([characterId]) => characterId)
+}
+
+export const waitForDiceReveal = async (page: Page): Promise<void> => {
+  await expect(page.locator('#diceOverlay.visible')).toBeVisible({
+    timeout: 5_000
+  })
+  await expect(page.locator('#diceStage .roll-total')).not.toHaveText(
+    'Rolling...',
+    { timeout: 5_000 }
+  )
+}
+
+export const normalizedText = async (
+  locator: ReturnType<Page['locator']>
+): Promise<string> =>
+  ((await locator.textContent()) ?? '').replace(/\s+/g, ' ').trim()
+
+export const openOrExpectFollowedCreation = async (
+  page: Page,
+  characterName: string
+): Promise<void> => {
+  const card = page
+    .locator('#creationPresenceDock .creation-presence-card')
+    .filter({ hasText: characterName })
+  if (await card.isVisible().catch(() => false)) {
+    await card.click()
+  }
+  await expect(
+    page.getByRole('complementary', { name: 'Character creator' })
+  ).toBeVisible({ timeout: 5_000 })
+}
+
+export const spectatorCreationProjectionSnapshot = async (
+  page: Page,
+  roomId: string,
+  spectatorId: string,
+  characterId: string
+): Promise<string> => {
+  const character = await fetchProjectedCharacter(
+    page,
+    roomId,
+    spectatorId,
+    characterId,
+    'spectator'
+  )
+  return JSON.stringify(character?.creation ?? null)
+}
+
+export const expectSpectatorRefreshPreservesCreationProjection = async ({
+  spectator,
+  roomId,
+  spectatorId,
+  characterId,
+  characterName
+}: {
+  spectator: Page
+  roomId: string
+  spectatorId: string
+  characterId: string
+  characterName: string
+}): Promise<string> => {
+  const liveProjection = await spectatorCreationProjectionSnapshot(
+    spectator,
+    roomId,
+    spectatorId,
+    characterId
+  )
+
+  await spectator.reload({ waitUntil: 'domcontentloaded' })
+  await expect(spectator.locator('#boardCanvas')).toBeVisible()
+  await openOrExpectFollowedCreation(spectator, characterName)
+  await expect
+    .poll(() =>
+      spectatorCreationProjectionSnapshot(
+        spectator,
+        roomId,
+        spectatorId,
+        characterId
+      )
+    )
+    .toBe(liveProjection)
+
+  return liveProjection
+}
+
+export const rollCareerOutcomeWithSpectatorReveal = async ({
+  owner,
+  spectator,
+  roomId,
+  actionName,
+  commandType,
+  fieldName,
+  outcomePattern
+}: {
+  owner: Page
+  spectator: Page
+  roomId: string
+  actionName: 'Roll commission' | 'Roll advancement'
+  commandType:
+    | 'ResolveCharacterCreationCommission'
+    | 'ResolveCharacterCreationAdvancement'
+  fieldName: 'commissionRoll' | 'advancementRoll'
+  outcomePattern: RegExp
+}): Promise<string | null> => {
+  const ownerAction = owner.getByRole('button', { name: actionName })
+  if (!(await ownerAction.isVisible().catch(() => false))) return null
+
+  const spectatorFields = spectator.locator('#characterCreationFields')
+  const spectatorRoll = spectator.locator(
+    `[data-character-creation-field="${fieldName}"]`
+  )
+  const spectatorOutcome = spectatorFields.locator('.creation-career-outcome')
+
+  await expect(spectatorRoll).toHaveValue('')
+  await expect(spectatorOutcome).not.toContainText(outcomePattern, {
+    timeout: 100
+  })
+
+  const commandAccepted = owner.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      response.url().includes(`/rooms/${roomId}/command`) &&
+      (response.request().postData() ?? '').includes(commandType)
+  )
+  await ownerAction.click()
+  await expect((await commandAccepted).ok()).toBe(true)
+
+  await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+    timeout: 5_000
+  })
+  await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
+    'Rolling...',
+    { timeout: 100 }
+  )
+  await expect(spectatorRoll).toHaveValue('', { timeout: 100 })
+  await expect(spectatorOutcome).not.toContainText(outcomePattern, {
+    timeout: 100
+  })
+
+  await waitForDiceReveal(owner)
+  await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
+    'Rolling...',
+    { timeout: 5_000 }
+  )
+  await expect(spectatorOutcome).toContainText(outcomePattern, {
+    timeout: 5_000
+  })
+
+  return normalizedText(spectatorOutcome)
 }
 
 export const postCommand = async (
