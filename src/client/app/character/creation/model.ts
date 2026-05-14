@@ -54,8 +54,13 @@ export type CharacterCreationViewModelMode = 'empty' | 'editable' | 'read-only'
 export interface CharacterCreationProjectionViewModel {
   present: boolean
   status: CharacterCreationProjection['state']['status'] | null
+  statusLabel: string
   step: CharacterCreationStep | null
   creationComplete: boolean
+  isActive: boolean
+  isPlayable: boolean
+  isDeceased: boolean
+  termCount: number
   completedTermCount: number
   historyCount: number
 }
@@ -130,8 +135,13 @@ const projectionViewModel = (
       summary: {
         present: false,
         status: null,
+        statusLabel: 'Creation',
         step: null,
         creationComplete: false,
+        isActive: false,
+        isPlayable: false,
+        isDeceased: false,
+        termCount: 0,
         completedTermCount: 0,
         historyCount: 0
       },
@@ -145,8 +155,13 @@ const projectionViewModel = (
     summary: {
       present: true,
       status: readModel.status,
+      statusLabel: readModel.statusLabel,
       step: readModel.step,
       creationComplete: readModel.creationComplete,
+      isActive: readModel.isActive,
+      isPlayable: readModel.isPlayable,
+      isDeceased: readModel.isDeceased,
+      termCount: readModel.termCount,
       completedTermCount: readModel.completedTermCount,
       historyCount: readModel.historyCount
     },

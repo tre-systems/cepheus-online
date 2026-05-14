@@ -143,6 +143,9 @@ describe('character creation view model', () => {
     assert.equal(viewModel.flow, null)
     assert.equal(viewModel.wizard, null)
     assert.equal(viewModel.projection.present, false)
+    assert.equal(viewModel.projection.statusLabel, 'Creation')
+    assert.equal(viewModel.projection.isActive, false)
+    assert.equal(viewModel.projection.termCount, 0)
     assert.equal(viewModel.pending.hasPendingResolution, false)
     assert.equal(
       viewModel.pending.summary,
@@ -170,7 +173,12 @@ describe('character creation view model', () => {
     assert.equal(viewModel.controlsDisabled, false)
     assert.equal(viewModel.projection.present, true)
     assert.equal(viewModel.projection.status, 'HOMEWORLD')
+    assert.equal(viewModel.projection.statusLabel, 'Homeworld')
     assert.equal(viewModel.projection.step, 'homeworld')
+    assert.equal(viewModel.projection.isActive, true)
+    assert.equal(viewModel.projection.isPlayable, false)
+    assert.equal(viewModel.projection.isDeceased, false)
+    assert.equal(viewModel.projection.termCount, 0)
     assert.equal(viewModel.projection.historyCount, 1)
     assert.equal(viewModel.wizard?.step, 'homeworld')
     assert.equal(viewModel.wizard?.projectedStepCurrent, true)
