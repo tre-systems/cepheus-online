@@ -1,0 +1,163 @@
+import type { GameCommand } from '../../shared/commands'
+import type { GameEvent } from '../../shared/events'
+import type { CommandError } from '../../shared/protocol'
+import { err, ok, type Result } from '../../shared/result'
+import type { GameState } from '../../shared/state'
+import {
+  canMutateCharacter,
+  commandError,
+  type CommandContext,
+  isReferee,
+  notAllowed,
+  requireFiniteCoordinate,
+  requireFiniteOrNull,
+  requireGame,
+  requireNonEmptyString
+} from './command-helpers'
+
+type CreateCharacterCommand = Extract<GameCommand, { type: 'CreateCharacter' }>
+type UpdateCharacterSheetCommand = Extract<
+  GameCommand,
+  { type: 'UpdateCharacterSheet' }
+>
+
+type CharacterCommand = CreateCharacterCommand | UpdateCharacterSheetCommand
+
+const validateCharacterSheetPatch = (
+  command: UpdateCharacterSheetCommand
+): Result<void, CommandError> => {
+  if (command.notes !== undefined && typeof command.notes !== 'string') {
+    return err(commandError('invalid_command', 'notes must be a string'))
+  }
+  if (command.age !== undefined) {
+    const age = requireFiniteOrNull(command.age, 'age')
+    if (!age.ok) return age
+  }
+  if (command.characteristics !== undefined) {
+    for (const [key, value] of Object.entries(command.characteristics)) {
+      const characteristic = requireFiniteOrNull(
+        value,
+        `characteristics.${key}`
+      )
+      if (!characteristic.ok) return characteristic
+    }
+  }
+  if (command.skills !== undefined) {
+    for (const [index, skill] of command.skills.entries()) {
+      const value = requireNonEmptyString(skill, `skills[${index}]`)
+      if (!value.ok) return value
+    }
+  }
+  if (command.equipment !== undefined) {
+    for (const [index, item] of command.equipment.entries()) {
+      const name = requireNonEmptyString(item.name, `equipment[${index}].name`)
+      if (!name.ok) return name
+      const quantity = requireFiniteCoordinate(
+        item.quantity,
+        `equipment[${index}].quantity`
+      )
+      if (!quantity.ok) return quantity
+    }
+  }
+  if (command.credits !== undefined) {
+    const credits = requireFiniteCoordinate(command.credits, 'credits')
+    if (!credits.ok) return credits
+  }
+
+  return ok(undefined)
+}
+
+const characterSheetPatchFields = (command: UpdateCharacterSheetCommand) => ({
+  ...(command.notes === undefined ? {} : { notes: command.notes }),
+  ...(command.age === undefined ? {} : { age: command.age }),
+  ...(command.characteristics === undefined
+    ? {}
+    : { characteristics: command.characteristics }),
+  ...(command.skills === undefined ? {} : { skills: command.skills }),
+  ...(command.equipment === undefined ? {} : { equipment: command.equipment }),
+  ...(command.credits === undefined ? {} : { credits: command.credits })
+})
+
+const hasAuthoritativeSheetFieldPatch = (
+  command: UpdateCharacterSheetCommand
+): boolean =>
+  command.age !== undefined ||
+  command.characteristics !== undefined ||
+  command.skills !== undefined ||
+  command.equipment !== undefined ||
+  command.credits !== undefined
+
+const validateCharacterSheetAuthority = (
+  state: GameState,
+  command: UpdateCharacterSheetCommand
+): Result<void, CommandError> => {
+  if (
+    !isReferee(state, command.actorId) &&
+    hasAuthoritativeSheetFieldPatch(command)
+  ) {
+    return notAllowed(
+      'Server-authored character creation fields can only be corrected by a referee'
+    )
+  }
+
+  return ok(undefined)
+}
+
+export const deriveCharacterCommandEvents = (
+  command: CharacterCommand,
+  context: CommandContext
+): Result<GameEvent[], CommandError> => {
+  switch (command.type) {
+    case 'CreateCharacter': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      if (state.value.characters[command.characterId]) {
+        return err(commandError('duplicate_entity', 'Character already exists'))
+      }
+
+      return ok([
+        {
+          type: 'CharacterCreated',
+          characterId: command.characterId,
+          ownerId: command.actorId,
+          characterType: command.characterType,
+          name: command.name
+        }
+      ])
+    }
+
+    case 'UpdateCharacterSheet': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed('Only the character owner or referee can edit a sheet')
+      }
+      const authority = validateCharacterSheetAuthority(state.value, command)
+      if (!authority.ok) return authority
+      const patch = validateCharacterSheetPatch(command)
+      if (!patch.ok) return patch
+
+      return ok([
+        {
+          type: 'CharacterSheetUpdated',
+          characterId: command.characterId,
+          ...characterSheetPatchFields(command)
+        }
+      ])
+    }
+
+    default: {
+      const exhaustive: never = command
+      return err(
+        commandError(
+          'invalid_command',
+          `Unhandled character command ${(exhaustive as { type: string }).type}`
+        )
+      )
+    }
+  }
+}

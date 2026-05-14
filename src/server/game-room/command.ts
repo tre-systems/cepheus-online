@@ -1,4 +1,4 @@
-import type { Command, GameCommand } from '../../shared/commands'
+import type { GameCommand } from '../../shared/commands'
 import {
   canRollCashBenefit,
   createCareerCreationState,
@@ -35,15 +35,14 @@ import type { CareerCreationTermSkillTable } from '../../shared/characterCreatio
 import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
 import { rollDiceExpression } from '../../shared/dice'
 import type { GameEvent } from '../../shared/events'
-import { asEventId, type PieceId } from '../../shared/ids'
+import { asEventId } from '../../shared/ids'
 import { deriveEventRng } from '../../shared/prng'
 import { err, ok, type Result } from '../../shared/result'
 import type {
   CharacterCreationHomeworld,
   CharacterCreationProjection,
   CharacterCreationSheet,
-  CharacterState,
-  GameState
+  CharacterState
 } from '../../shared/state'
 import type { CommandError } from '../../shared/protocol'
 import {
@@ -53,204 +52,24 @@ import {
   requireNoBlockingCharacterCreationDecisions,
   requireNoPendingCharacterCreationDecisions
 } from './character-creation-command-helpers'
+import { deriveBoardCommandEvents } from './board-command-handlers'
+import { deriveCharacterCommandEvents } from './character-command-handlers'
+import {
+  canMutateCharacter,
+  commandError,
+  isReferee,
+  notAllowed,
+  requireFiniteCoordinate,
+  requireFiniteOrNull,
+  requireGame,
+  requireNonEmptyString,
+  type CommandContext,
+  validateExpectedSeq
+} from './command-helpers'
+import { deriveDiceCommandEvents } from './dice-command-handlers'
+import { deriveGameCommandEvents } from './game-command-handlers'
 
-export interface CommandContext {
-  state: GameState | null
-  currentSeq: number
-  nextSeq: number
-  gameSeed: number
-}
-
-const commandError = (
-  code: CommandError['code'],
-  message: string
-): CommandError => ({
-  code,
-  message
-})
-
-const notAllowed = (message: string): Result<never, CommandError> =>
-  err(commandError('not_allowed', message))
-
-const requireGame = (
-  state: GameState | null
-): Result<GameState, CommandError> =>
-  state
-    ? ok(state)
-    : err(commandError('game_not_found', 'Game has not been created'))
-
-const requireFinitePositive = (
-  value: number,
-  label: string
-): Result<number, CommandError> => {
-  if (!Number.isFinite(value) || value <= 0) {
-    return err(commandError('invalid_command', `${label} must be positive`))
-  }
-
-  return ok(value)
-}
-
-const requireFiniteCoordinate = (
-  value: number,
-  label: string
-): Result<number, CommandError> => {
-  if (!Number.isFinite(value)) {
-    return err(commandError('invalid_command', `${label} must be finite`))
-  }
-
-  return ok(value)
-}
-
-const requireFiniteOrNull = (
-  value: number | null,
-  label: string
-): Result<number | null, CommandError> => {
-  if (value !== null && !Number.isFinite(value)) {
-    return err(commandError('invalid_command', `${label} must be finite`))
-  }
-
-  return ok(value)
-}
-
-const requireNonEmptyString = (
-  value: string,
-  label: string
-): Result<string, CommandError> => {
-  if (!value.trim()) {
-    return err(commandError('invalid_command', `${label} cannot be empty`))
-  }
-
-  return ok(value)
-}
-
-const isReferee = (state: GameState, actorId: Command['actorId']): boolean =>
-  state.ownerId === actorId || state.players[actorId]?.role === 'REFEREE'
-
-const canMutateCharacter = (
-  state: GameState,
-  character: CharacterState,
-  actorId: Command['actorId']
-): boolean =>
-  isReferee(state, actorId) ||
-  character.ownerId === null ||
-  character.ownerId === actorId
-
-const canMutatePiece = (
-  state: GameState,
-  pieceId: PieceId,
-  actorId: Command['actorId']
-): boolean => {
-  if (isReferee(state, actorId)) return true
-  const piece = state.pieces[pieceId]
-  if (!piece) return false
-  if (piece.freedom === 'SHARE') return true
-  if (!piece.characterId) return piece.freedom !== 'LOCKED'
-
-  const character = state.characters[piece.characterId]
-  return Boolean(character && canMutateCharacter(state, character, actorId))
-}
-
-const validateExpectedSeq = (
-  command: GameCommand,
-  currentSeq: number
-): Result<void, CommandError> => {
-  if (!('expectedSeq' in command) || command.expectedSeq === undefined) {
-    return ok(undefined)
-  }
-
-  if (command.expectedSeq !== currentSeq) {
-    return err(
-      commandError(
-        'stale_command',
-        `Expected sequence ${command.expectedSeq}, current sequence is ${currentSeq}`
-      )
-    )
-  }
-
-  return ok(undefined)
-}
-
-const validateCharacterSheetPatch = (
-  command: Extract<Command, { type: 'UpdateCharacterSheet' }>
-): Result<void, CommandError> => {
-  if (command.notes !== undefined && typeof command.notes !== 'string') {
-    return err(commandError('invalid_command', 'notes must be a string'))
-  }
-  if (command.age !== undefined) {
-    const age = requireFiniteOrNull(command.age, 'age')
-    if (!age.ok) return age
-  }
-  if (command.characteristics !== undefined) {
-    for (const [key, value] of Object.entries(command.characteristics)) {
-      const characteristic = requireFiniteOrNull(
-        value,
-        `characteristics.${key}`
-      )
-      if (!characteristic.ok) return characteristic
-    }
-  }
-  if (command.skills !== undefined) {
-    for (const [index, skill] of command.skills.entries()) {
-      const value = requireNonEmptyString(skill, `skills[${index}]`)
-      if (!value.ok) return value
-    }
-  }
-  if (command.equipment !== undefined) {
-    for (const [index, item] of command.equipment.entries()) {
-      const name = requireNonEmptyString(item.name, `equipment[${index}].name`)
-      if (!name.ok) return name
-      const quantity = requireFiniteCoordinate(
-        item.quantity,
-        `equipment[${index}].quantity`
-      )
-      if (!quantity.ok) return quantity
-    }
-  }
-  if (command.credits !== undefined) {
-    const credits = requireFiniteCoordinate(command.credits, 'credits')
-    if (!credits.ok) return credits
-  }
-
-  return ok(undefined)
-}
-
-const characterSheetPatchFields = (
-  command: Extract<Command, { type: 'UpdateCharacterSheet' }>
-) => ({
-  ...(command.notes === undefined ? {} : { notes: command.notes }),
-  ...(command.age === undefined ? {} : { age: command.age }),
-  ...(command.characteristics === undefined
-    ? {}
-    : { characteristics: command.characteristics }),
-  ...(command.skills === undefined ? {} : { skills: command.skills }),
-  ...(command.equipment === undefined ? {} : { equipment: command.equipment }),
-  ...(command.credits === undefined ? {} : { credits: command.credits })
-})
-
-const hasAuthoritativeSheetFieldPatch = (
-  command: Extract<Command, { type: 'UpdateCharacterSheet' }>
-): boolean =>
-  command.age !== undefined ||
-  command.characteristics !== undefined ||
-  command.skills !== undefined ||
-  command.equipment !== undefined ||
-  command.credits !== undefined
-
-const validateCharacterSheetAuthority = (
-  state: GameState,
-  command: Extract<Command, { type: 'UpdateCharacterSheet' }>
-): Result<void, CommandError> => {
-  if (
-    !isReferee(state, command.actorId) &&
-    hasAuthoritativeSheetFieldPatch(command)
-  ) {
-    return notAllowed(
-      'Server-authored character creation fields can only be corrected by a referee'
-    )
-  }
-
-  return ok(undefined)
-}
+export type { CommandContext } from './command-helpers'
 
 const normalizeHomeworld = (
   homeworld: CharacterCreationHomeworld
@@ -1908,62 +1727,15 @@ export const deriveEventsForCommand = (
 
   switch (command.type) {
     case 'CreateGame': {
-      if (context.state) {
-        return err(commandError('game_exists', 'Game already exists'))
-      }
-
-      return ok([
-        {
-          type: 'GameCreated',
-          slug: command.slug,
-          name: command.name,
-          ownerId: command.actorId
-        }
-      ])
+      return deriveGameCommandEvents(command, context)
     }
 
     case 'CreateCharacter': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      if (state.value.characters[command.characterId]) {
-        return err(commandError('duplicate_entity', 'Character already exists'))
-      }
-
-      return ok([
-        {
-          type: 'CharacterCreated',
-          characterId: command.characterId,
-          ownerId: command.actorId,
-          characterType: command.characterType,
-          name: command.name
-        }
-      ])
+      return deriveCharacterCommandEvents(command, context)
     }
 
     case 'UpdateCharacterSheet': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const character = state.value.characters[command.characterId]
-      if (!character) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
-      if (!canMutateCharacter(state.value, character, command.actorId)) {
-        return notAllowed(
-          'Only the character owner or referee can edit a sheet'
-        )
-      }
-      const authority = validateCharacterSheetAuthority(state.value, command)
-      if (!authority.ok) return authority
-      const patch = validateCharacterSheetPatch(command)
-      if (!patch.ok) return patch
-
-      return ok([
-        {
-          type: 'CharacterSheetUpdated',
-          characterId: command.characterId,
-          ...characterSheetPatchFields(command)
-        }
-      ])
+      return deriveCharacterCommandEvents(command, context)
     }
 
     case 'FinalizeCharacterCreation': {
@@ -3377,210 +3149,20 @@ export const deriveEventsForCommand = (
     }
 
     case 'CreateBoard': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      if (!isReferee(state.value, command.actorId)) {
-        return notAllowed('Only a referee can create boards')
-      }
-      if (state.value.boards[command.boardId]) {
-        return err(commandError('duplicate_entity', 'Board already exists'))
-      }
-      const width = requireFinitePositive(command.width, 'width')
-      if (!width.ok) return width
-      const height = requireFinitePositive(command.height, 'height')
-      if (!height.ok) return height
-      const scale = requireFinitePositive(command.scale, 'scale')
-      if (!scale.ok) return scale
-
-      return ok([
-        {
-          type: 'BoardCreated',
-          boardId: command.boardId,
-          name: command.name,
-          imageAssetId: command.imageAssetId ?? null,
-          url: command.url ?? null,
-          width: command.width,
-          height: command.height,
-          scale: command.scale
-        }
-      ])
+      return deriveBoardCommandEvents(command, context)
     }
 
-    case 'SelectBoard': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      if (!isReferee(state.value, command.actorId)) {
-        return notAllowed('Only a referee can select the active board')
-      }
-      if (!state.value.boards[command.boardId]) {
-        return err(commandError('missing_entity', 'Board does not exist'))
-      }
-
-      return ok([
-        {
-          type: 'BoardSelected',
-          boardId: command.boardId
-        }
-      ])
-    }
-
-    case 'SetDoorOpen': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      if (!isReferee(state.value, command.actorId)) {
-        return notAllowed('Only a referee can open or close map doors')
-      }
-      if (!state.value.boards[command.boardId]) {
-        return err(commandError('missing_entity', 'Board does not exist'))
-      }
-      const doorId = requireNonEmptyString(command.doorId, 'doorId')
-      if (!doorId.ok) return doorId
-
-      return ok([
-        {
-          type: 'DoorStateChanged',
-          boardId: command.boardId,
-          doorId: doorId.value,
-          open: command.open
-        }
-      ])
-    }
-
-    case 'CreatePiece': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      if (!isReferee(state.value, command.actorId)) {
-        return notAllowed('Only a referee can create pieces')
-      }
-      if (!state.value.boards[command.boardId]) {
-        return err(commandError('missing_entity', 'Board does not exist'))
-      }
-      if (
-        command.characterId !== undefined &&
-        command.characterId !== null &&
-        !state.value.characters[command.characterId]
-      ) {
-        return err(commandError('missing_entity', 'Character does not exist'))
-      }
-      if (state.value.pieces[command.pieceId]) {
-        return err(commandError('duplicate_entity', 'Piece already exists'))
-      }
-      const x = requireFiniteCoordinate(command.x, 'x')
-      if (!x.ok) return x
-      const y = requireFiniteCoordinate(command.y, 'y')
-      if (!y.ok) return y
-      if (command.width !== undefined) {
-        const width = requireFinitePositive(command.width, 'width')
-        if (!width.ok) return width
-      }
-      if (command.height !== undefined) {
-        const height = requireFinitePositive(command.height, 'height')
-        if (!height.ok) return height
-      }
-      if (command.scale !== undefined) {
-        const scale = requireFinitePositive(command.scale, 'scale')
-        if (!scale.ok) return scale
-      }
-
-      return ok([
-        {
-          type: 'PieceCreated',
-          pieceId: command.pieceId,
-          boardId: command.boardId,
-          characterId: command.characterId ?? null,
-          name: command.name,
-          imageAssetId: command.imageAssetId ?? null,
-          x: command.x,
-          y: command.y,
-          ...(command.width === undefined ? {} : { width: command.width }),
-          ...(command.height === undefined ? {} : { height: command.height }),
-          ...(command.scale === undefined ? {} : { scale: command.scale })
-        }
-      ])
-    }
-
-    case 'MovePiece': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      if (!state.value.pieces[command.pieceId]) {
-        return err(commandError('missing_entity', 'Piece does not exist'))
-      }
-      if (!canMutatePiece(state.value, command.pieceId, command.actorId)) {
-        return notAllowed('Only a controller or referee can move this piece')
-      }
-      const x = requireFiniteCoordinate(command.x, 'x')
-      if (!x.ok) return x
-      const y = requireFiniteCoordinate(command.y, 'y')
-      if (!y.ok) return y
-
-      return ok([
-        {
-          type: 'PieceMoved',
-          pieceId: command.pieceId,
-          x: command.x,
-          y: command.y
-        }
-      ])
-    }
-
-    case 'SetPieceVisibility': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      if (!state.value.pieces[command.pieceId]) {
-        return err(commandError('missing_entity', 'Piece does not exist'))
-      }
-      if (!isReferee(state.value, command.actorId)) {
-        return notAllowed('Only a referee can change piece visibility')
-      }
-
-      return ok([
-        {
-          type: 'PieceVisibilityChanged',
-          pieceId: command.pieceId,
-          visibility: command.visibility
-        }
-      ])
-    }
-
+    case 'SelectBoard':
+    case 'SetDoorOpen':
+    case 'CreatePiece':
+    case 'MovePiece':
+    case 'SetPieceVisibility':
     case 'SetPieceFreedom': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      if (!state.value.pieces[command.pieceId]) {
-        return err(commandError('missing_entity', 'Piece does not exist'))
-      }
-      if (!isReferee(state.value, command.actorId)) {
-        return notAllowed('Only a referee can change piece control')
-      }
-
-      return ok([
-        {
-          type: 'PieceFreedomChanged',
-          pieceId: command.pieceId,
-          freedom: command.freedom
-        }
-      ])
+      return deriveBoardCommandEvents(command, context)
     }
 
     case 'RollDice': {
-      const state = requireGame(context.state)
-      if (!state.ok) return state
-      const rolled = rollDiceExpression(
-        command.expression,
-        deriveEventRng(context.gameSeed, context.nextSeq)
-      )
-      if (!rolled.ok) {
-        return err(commandError('invalid_command', rolled.error))
-      }
-
-      return ok([
-        {
-          type: 'DiceRolled',
-          expression: rolled.value.expression,
-          reason: command.reason,
-          total: rolled.value.total,
-          rolls: rolled.value.rolls
-        }
-      ])
+      return deriveDiceCommandEvents(command, context)
     }
 
     default: {

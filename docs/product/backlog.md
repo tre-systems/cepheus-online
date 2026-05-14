@@ -759,12 +759,16 @@ Done when:
 
 ### Slice 0H: Architecture Consolidation
 
-Status: proposed after the 2026-05-14 architecture review. The core direction
-is still fit for purpose: server-ordered commands/events, Durable Object room
-authority, replayable projections, viewer filtering, and a dependency-light
-client address the product's real risks. The maintenance risk is now local
-complexity and repeated pattern knowledge, especially around character
-creation command handling, client routing metadata, and overlapping docs.
+Status: in progress after the 2026-05-14 architecture review. The core
+direction is still fit for purpose: server-ordered commands/events, Durable
+Object room authority, replayable projections, viewer filtering, and a
+dependency-light client address the product's real risks. A shared command
+metadata registry now owns route/domain, seeded-dice, and stale-sequence policy
+for the client router and publication path. The server command dispatcher has
+started splitting into domain handlers for game, board/door/piece, and generic
+dice commands, plus character creation setup/sheet patch commands. The
+character creation state machine remains the large high-risk handler to split
+later.
 
 Primary write ownership:
 
@@ -784,14 +788,16 @@ Tasks:
 - Keep the current CQRS/event-sourced architecture. Do not switch direction
   unless the product goal changes away from real-time, referee-filtered,
   recoverable tabletop play.
-- Split the large server command switch by domain: game, board, dice, and
-  character creation command handlers. Keep `runCommandPublication()` as the
-  only persistence, projection, checkpoint, parity, telemetry, and response
-  path.
-- Introduce a small shared command metadata registry for stable facts such as
-  command route/domain, seeded-dice requirement, and stale-sequence policy.
-  Use it to remove duplicated command-type lists from publication and the
-  client command router.
+- Continue splitting the large server command switch by domain. Game,
+  board/door/piece, generic dice, and character sheet command handlers are
+  extracted; character creation state-machine handling still needs to move
+  without weakening the ownership and rules gates. Keep
+  `runCommandPublication()` as the only persistence, projection, checkpoint,
+  parity, telemetry, and response path.
+- Done: introduce a small shared command metadata registry for stable facts
+  such as command route/domain, seeded-dice requirement, and stale-sequence
+  policy. Use it to remove duplicated command-type lists from publication and
+  the client command router.
 - Finish the character creation read-model consolidation. Step views should
   consume one projection-fed view model for status, legal actions, pending
   choices, progress, roll facts, and button state; local UI state should hold
