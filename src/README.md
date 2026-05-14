@@ -25,7 +25,10 @@ src/client/  browser DOM, Canvas, CSS, WebSocket client, and local UI state
 - `src/server/index.ts`: Worker entrypoint, health route, room routing, and
   static browser fallback.
 - `src/client/app/`: dependency-free browser shell, mobile-first PWA metadata,
-  icon, service worker, Canvas board, and dice UI source assets.
+  icon, service worker, Canvas board, and dice UI source assets. Feature code is
+  grouped under short-named folders such as `core/`, `room/`, `board/`,
+  `dice/`, `character/`, `activity/`, `assets/`, `piece/`, and `pwa/`; the
+  root contains the composition shell and static app assets.
 - `src/server/static-client.ts`: static client asset response helper backed by
   generated assets from `npm run build:client`.
 - `src/server/game-room/`: `GameRoomDO`, chunked event storage, checkpoints,

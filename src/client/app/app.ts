@@ -13,46 +13,46 @@ import {
   selectedBoard as selectSelectedBoard,
   selectedBoardId as selectSelectedBoardId,
   selectedBoardPieces
-} from './board-view.js'
-import { getAppElements, requireAppElements } from './app-elements.js'
+} from './board/view.js'
+import { getAppElements, requireAppElements } from './core/elements.js'
 import {
   createBoardController,
   type BoardController
-} from './board-controller.js'
+} from './board/controller.js'
 import {
   createCharacterCreationFeature,
   type CharacterCreationFeature
-} from './character-creation-feature.js'
-import { createCharacterRailController } from './character-rail-controller.js'
-import { fetchRoomState, postRoomCommand } from './room-api.js'
+} from './character/creation/feature.js'
+import { createCharacterRailController } from './character/rail/controller.js'
+import { fetchRoomState, postRoomCommand } from './room/api.js'
 import {
   applyServerMessage as applyClientServerMessage,
   type ClientDiceRollActivity,
   type ClientIdentity
 } from '../game-commands.js'
-import { createAppSession } from './app-session.js'
-import { resolveActorSessionSecret } from './actor-session.js'
-import { createCharacterSheetWiring } from './character-sheet-wiring.js'
-import { createDiceRevealCoordinator } from './dice-reveal-coordinator.js'
+import { createAppSession } from './core/session.js'
+import { resolveActorSessionSecret } from './core/actor-session.js'
+import { createCharacterSheetWiring } from './character/sheet/wiring.js'
+import { createDiceRevealCoordinator } from './dice/reveal-coordinator.js'
 import {
   DEFAULT_APP_LOCATION,
   isRefereeViewer,
   resolveAppLocationIdentity
-} from './app-location.js'
-import { createRoomConnectionController } from './room-connection-controller.js'
-import { prepareLiveActivityApplication } from './live-activity-client.js'
-import { createRequestIdFactory } from './request-id.js'
-import { createRoomCommandDispatch } from './room-command-dispatch.js'
-import { createRoomAssetCreationWiring } from './room-asset-creation-wiring.js'
-import { createRoomMenuWiring } from './room-menu-wiring.js'
-import { createAppShell, registerAppShellServiceWorker } from './app-shell.js'
-import { createBoardControlsWiring } from './board-controls-wiring.js'
-import { createAppRefreshWiring } from './app-refresh-wiring.js'
-import { createDiceCommandWiring } from './dice-command-wiring.js'
-import { createAppLifecycleWiring } from './app-lifecycle-wiring.js'
-import { createCharacterSheetControlsWiring } from './character-sheet-controls-wiring.js'
-import { createRoomBootstrapScene } from './room-bootstrap-scene.js'
-import { createBoardDoorActions } from './board-door-actions.js'
+} from './core/location.js'
+import { createRoomConnectionController } from './room/connection.js'
+import { prepareLiveActivityApplication } from './activity/client.js'
+import { createRequestIdFactory } from './core/request-id.js'
+import { createRoomCommandDispatch } from './room/command-dispatch.js'
+import { createRoomAssetCreationWiring } from './room/assets/wiring.js'
+import { createRoomMenuWiring } from './room/menu/wiring.js'
+import { createAppShell, registerAppShellServiceWorker } from './core/shell.js'
+import { createBoardControlsWiring } from './board/controls-wiring.js'
+import { createAppRefreshWiring } from './core/refresh.js'
+import { createDiceCommandWiring } from './dice/commands.js'
+import { createAppLifecycleWiring } from './core/lifecycle.js'
+import { createCharacterSheetControlsWiring } from './character/sheet/controls-wiring.js'
+import { createRoomBootstrapScene } from './room/bootstrap-scene.js'
+import { createBoardDoorActions } from './board/doors.js'
 
 registerAppShellServiceWorker()
 

@@ -1,0 +1,529 @@
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
+
+import type {
+  BoardId,
+  CharacterId,
+  GameId,
+  PieceId,
+  UserId
+} from '../../../../shared/ids'
+import type {
+  BoardState,
+  CharacterSheetPatch,
+  CharacterState,
+  GameState,
+  PieceFreedom,
+  PieceState,
+  PieceVisibility
+} from '../../../../shared/state'
+import {
+  createCharacterSheetController,
+  nullableNumberFromValue
+} from './controller'
+
+class TestClassList {
+  private classes = new Set<string>()
+
+  toggle(name: string, force?: boolean) {
+    const shouldInclude = force ?? !this.classes.has(name)
+    if (shouldInclude) this.classes.add(name)
+    else this.classes.delete(name)
+    return shouldInclude
+  }
+
+  contains(name: string) {
+    return this.classes.has(name)
+  }
+}
+
+class TestElement {
+  tagName: string
+  children: TestElement[] = []
+  className = ''
+  classList = new TestClassList()
+  dataset: Record<string, string> = {}
+  textContent = ''
+  title = ''
+  type = ''
+  name = ''
+  inputMode = ''
+  autocomplete = ''
+  value = ''
+  placeholder = ''
+  spellcheck = true
+  disabled = false
+  private listeners: Record<string, (() => void)[]> = {}
+
+  constructor(tagName: string) {
+    this.tagName = tagName
+  }
+
+  append(...nodes: TestElement[]) {
+    this.children.push(...nodes)
+  }
+
+  replaceChildren(...nodes: TestElement[]) {
+    this.children = nodes
+  }
+
+  addEventListener(type: string, listener: () => void) {
+    this.listeners[type] = [...(this.listeners[type] || []), listener]
+  }
+
+  click() {
+    for (const listener of this.listeners.click || []) listener()
+  }
+}
+
+const documentApi = {
+  createElement: (tagName: string) => new TestElement(tagName)
+}
+
+const asElement = (element: TestElement) => element as unknown as HTMLElement
+
+const findAll = (
+  element: TestElement,
+  predicate: (candidate: TestElement) => boolean
+): TestElement[] => [
+  ...(predicate(element) ? [element] : []),
+  ...element.children.flatMap((child) => findAll(child, predicate))
+]
+
+const findByText = (element: TestElement, text: string) => {
+  const match = findAll(
+    element,
+    (candidate) => candidate.textContent === text
+  )[0]
+  if (!match) throw new Error(`Expected element with text "${text}"`)
+  return match
+}
+
+const characterId = 'scout-character' as CharacterId
+
+const character = (
+  overrides: Partial<CharacterState> = {}
+): CharacterState => ({
+  id: characterId,
+  ownerId: null,
+  type: 'PLAYER',
+  name: 'Scout',
+  active: true,
+  notes: 'Known contacts on Regina.',
+  age: 34,
+  characteristics: {
+    str: 6,
+    dex: 8,
+    end: 7,
+    int: 9,
+    edu: 10,
+    soc: 6
+  },
+  skills: ['Recon-0', 'Vacc Suit-0'],
+  equipment: [{ name: 'Laser Pistol', quantity: 1, notes: '3D6' }],
+  credits: 1200,
+  creation: null,
+  ...overrides
+})
+
+const piece = (overrides: Partial<PieceState> = {}): PieceState => ({
+  id: 'scout-token' as PieceId,
+  boardId: 'main-board' as BoardId,
+  characterId,
+  imageAssetId: null,
+  name: 'Scout Token',
+  x: 12,
+  y: 18,
+  z: 0,
+  width: 50,
+  height: 50,
+  scale: 1,
+  visibility: 'VISIBLE',
+  freedom: 'UNLOCKED',
+  ...overrides
+})
+
+const gameState = (characters: GameState['characters']): GameState => ({
+  id: 'game' as GameId,
+  slug: 'game',
+  name: 'Game',
+  ownerId: 'owner' as UserId,
+  players: {},
+  characters,
+  boards: {},
+  pieces: {},
+  diceLog: [],
+  selectedBoardId: null,
+  eventSeq: 0
+})
+
+const board = (): BoardState => ({
+  id: 'main-board' as BoardId,
+  name: 'Main Board',
+  imageAssetId: null,
+  url: null,
+  width: 1000,
+  height: 1000,
+  scale: 50,
+  doors: {}
+})
+
+const createHarness = (options: {
+  selectedPiece: PieceState | null
+  state: GameState | null
+  doorActions?: TestElement | null
+  canEditSheetFields?: boolean
+}) => {
+  const sheet = new TestElement('aside')
+  const sheetName = new TestElement('h2')
+  const sheetBody = new TestElement('div')
+  const detailTab = new TestElement('button')
+  detailTab.dataset.sheetTab = 'details'
+  const actionTab = new TestElement('button')
+  actionTab.dataset.sheetTab = 'action'
+  const itemsTab = new TestElement('button')
+  itemsTab.dataset.sheetTab = 'items'
+  const patches: { target: string; patch: CharacterSheetPatch }[] = []
+  const visibility: PieceVisibility[] = []
+  const freedom: PieceFreedom[] = []
+  const rolls: string[] = []
+  const errors: string[] = []
+
+  const controller = createCharacterSheetController({
+    elements: {
+      sheet: asElement(sheet),
+      sheetName: asElement(sheetName),
+      sheetBody: asElement(sheetBody),
+      sheetTabs: [
+        asElement(detailTab),
+        asElement(actionTab),
+        asElement(itemsTab)
+      ]
+    },
+    document: documentApi as unknown as Document,
+    getSelectedPiece: () => options.selectedPiece,
+    getSelectedBoard: () => board(),
+    getCharacterState: () => options.state,
+    canEditSheetFields: () => options.canEditSheetFields ?? true,
+    getBoardDoorActions: () => ({
+      actions: options.doorActions ? asElement(options.doorActions) : null
+    }),
+    sendPatch: (target, patch) => {
+      patches.push({ target: String(target), patch })
+      return Promise.resolve()
+    },
+    setVisibility: (_piece, nextVisibility) => {
+      visibility.push(nextVisibility)
+      return Promise.resolve()
+    },
+    setFreedom: (_piece, nextFreedom) => {
+      freedom.push(nextFreedom)
+      return Promise.resolve()
+    },
+    rollSkill: (_piece, _character, _skill, reason) => {
+      rolls.push(reason)
+      return Promise.resolve()
+    },
+    reportError: (message) => errors.push(message)
+  })
+
+  return {
+    controller,
+    elements: { sheet, sheetName, sheetBody, detailTab, actionTab, itemsTab },
+    calls: { patches, visibility, freedom, rolls, errors }
+  }
+}
+
+describe('character sheet controller', () => {
+  it('renders the empty selection state and controls open state', () => {
+    const doorActions = new TestElement('div')
+    doorActions.textContent = 'Open Airlock'
+    const harness = createHarness({
+      selectedPiece: null,
+      state: gameState({}),
+      doorActions
+    })
+
+    harness.controller.setOpen(true)
+    harness.controller.render()
+
+    assert.equal(harness.controller.isOpen(), true)
+    assert.equal(harness.elements.sheet.classList.contains('open'), true)
+    assert.equal(harness.elements.sheetName.textContent, 'No piece')
+    findByText(harness.elements.sheetBody, 'No active token')
+    findByText(harness.elements.sheetBody, 'Main Board')
+    findByText(harness.elements.sheetBody, 'Doors')
+    findByText(harness.elements.sheetBody, 'Open Airlock')
+  })
+
+  it('renders skill actions and sends skill editor patches', () => {
+    const scout = character()
+    const harness = createHarness({
+      selectedPiece: piece(),
+      state: gameState({ [characterId]: scout })
+    })
+
+    harness.controller.selectTab('action')
+
+    assert.equal(harness.elements.actionTab.classList.contains('active'), true)
+    assert.equal(harness.elements.sheetName.textContent, 'Scout')
+    const recon = findByText(harness.elements.sheetBody, 'Recon-0')
+    recon.click()
+    assert.deepEqual(harness.calls.rolls, ['Scout: Recon-0'])
+
+    const textarea = findAll(
+      harness.elements.sheetBody,
+      (candidate) => candidate.tagName === 'textarea'
+    )[0]
+    if (!textarea) throw new Error('Expected skills textarea')
+    textarea.value = 'Pilot-1, Recon-0\nVacc Suit-0'
+    findByText(harness.elements.sheetBody, 'Save skills').click()
+
+    assert.deepEqual(harness.calls.patches, [
+      {
+        target: characterId,
+        patch: { skills: ['Pilot-1', 'Recon-0', 'Vacc Suit-0'] }
+      }
+    ])
+  })
+
+  it('sends stat editor patches when canonical sheet fields are editable', () => {
+    const scout = character()
+    const harness = createHarness({
+      selectedPiece: piece(),
+      state: gameState({ [characterId]: scout })
+    })
+
+    harness.controller.render()
+
+    const inputs = findAll(
+      harness.elements.sheetBody,
+      (candidate) => candidate.tagName === 'input'
+    )
+    const age = inputs.find((input) => input.name === 'age')
+    const str = inputs.find((input) => input.name === 'str')
+    if (!age || !str) throw new Error('Expected age and STR inputs')
+    age.value = '35'
+    str.value = '7'
+    findByText(harness.elements.sheetBody, 'Save').click()
+
+    assert.deepEqual(harness.calls.patches, [
+      {
+        target: characterId,
+        patch: {
+          age: 35,
+          characteristics: {
+            str: 7,
+            dex: 8,
+            end: 7,
+            int: 9,
+            edu: 10,
+            soc: 6
+          }
+        }
+      }
+    ])
+  })
+
+  it('keeps canonical sheet fields read-only when only notes are editable', () => {
+    const scout = character()
+    const harness = createHarness({
+      selectedPiece: piece(),
+      state: gameState({ [characterId]: scout }),
+      canEditSheetFields: false
+    })
+
+    harness.controller.render()
+    assert.equal(harness.elements.sheetName.textContent, 'Scout')
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.tagName === 'input'
+      ).length,
+      0
+    )
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.textContent === 'Edit'
+      ).length,
+      0
+    )
+
+    harness.controller.selectTab('action')
+    findByText(harness.elements.sheetBody, 'Recon-0').click()
+    assert.deepEqual(harness.calls.rolls, ['Scout: Recon-0'])
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.tagName === 'textarea'
+      ).length,
+      0
+    )
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.textContent === 'Save skills'
+      ).length,
+      0
+    )
+
+    harness.controller.selectTab('items')
+    findByText(harness.elements.sheetBody, 'Laser Pistol')
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.tagName === 'input'
+      ).length,
+      0
+    )
+    assert.equal(
+      findAll(
+        harness.elements.sheetBody,
+        (candidate) => candidate.textContent === 'Save items'
+      ).length,
+      0
+    )
+
+    harness.controller.selectTab('notes')
+    const notes = findAll(
+      harness.elements.sheetBody,
+      (candidate) => candidate.tagName === 'textarea'
+    )[0]
+    if (!notes) throw new Error('Expected notes textarea')
+    notes.value = 'Updated notes'
+    findByText(harness.elements.sheetBody, 'Save').click()
+
+    assert.deepEqual(harness.calls.patches, [
+      {
+        target: characterId,
+        patch: { notes: 'Updated notes' }
+      }
+    ])
+  })
+
+  it('sends token visibility and freedom actions from details', () => {
+    const harness = createHarness({
+      selectedPiece: piece({ characterId: null }),
+      state: gameState({})
+    })
+
+    harness.controller.render()
+    findByText(harness.elements.sheetBody, 'preview').click()
+    findByText(harness.elements.sheetBody, 'Lock').click()
+
+    assert.deepEqual(harness.calls.visibility, ['PREVIEW'])
+    assert.deepEqual(harness.calls.freedom, ['LOCKED'])
+  })
+
+  it('renders recovered character creation history in details', () => {
+    const scout = character({
+      creation: {
+        state: {
+          status: 'PLAYABLE',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: true,
+        history: [
+          { type: 'SET_CHARACTERISTICS' },
+          { type: 'CREATION_COMPLETE' }
+        ]
+      }
+    })
+    const harness = createHarness({
+      selectedPiece: piece(),
+      state: gameState({ [characterId]: scout })
+    })
+
+    harness.controller.render()
+
+    findByText(harness.elements.sheetBody, 'UPP')
+    findByText(harness.elements.sheetBody, '6879A6')
+    findByText(harness.elements.sheetBody, 'Steps')
+    findByText(harness.elements.sheetBody, '2')
+    findByText(harness.elements.sheetBody, 'Latest')
+    findByText(harness.elements.sheetBody, 'Creation Complete')
+    findByText(harness.elements.sheetBody, 'Plain Export')
+    findByText(
+      harness.elements.sheetBody,
+      [
+        'Scout',
+        'UPP: 6879A6',
+        'Type: PLAYER',
+        'Age: 34',
+        'Career: Scout',
+        'Terms: 1',
+        'Skills: Recon-0, Vacc Suit-0',
+        'Credits: Cr1200',
+        'Equipment: Laser Pistol x1 (3D6)',
+        'Notes:',
+        'Known contacts on Regina.'
+      ].join('\n')
+    )
+  })
+
+  it('edits items with row controls instead of textarea text', () => {
+    const scout = character()
+    const harness = createHarness({
+      selectedPiece: piece(),
+      state: gameState({ [characterId]: scout })
+    })
+
+    harness.controller.selectTab('items')
+
+    assert.equal(harness.elements.itemsTab.classList.contains('active'), true)
+    findByText(harness.elements.sheetBody, 'Laser Pistol')
+    const inputs = findAll(
+      harness.elements.sheetBody,
+      (candidate) => candidate.tagName === 'input'
+    )
+    const nameInput = inputs.find((input) => input.name === 'equipmentName')
+    const quantityInput = inputs.find(
+      (input) => input.name === 'equipmentQuantity'
+    )
+    const notesInput = inputs.find((input) => input.name === 'equipmentNotes')
+    if (!nameInput || !quantityInput || !notesInput) {
+      throw new Error('Expected equipment row inputs')
+    }
+    nameInput.value = 'Cutlass'
+    quantityInput.value = '2'
+    notesInput.value = 'Ceremonial'
+    findByText(harness.elements.sheetBody, 'Save items').click()
+
+    assert.deepEqual(harness.calls.patches, [
+      {
+        target: characterId,
+        patch: {
+          credits: 1200,
+          equipment: [{ name: 'Cutlass', quantity: 2, notes: 'Ceremonial' }]
+        }
+      }
+    ])
+  })
+
+  it('parses nullable numeric form values', () => {
+    assert.equal(nullableNumberFromValue(''), null)
+    assert.equal(nullableNumberFromValue(' 42 '), 42)
+    assert.equal(nullableNumberFromValue('not a number'), null)
+  })
+})

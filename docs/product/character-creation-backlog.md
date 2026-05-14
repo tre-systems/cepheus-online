@@ -563,9 +563,9 @@ Expected file areas:
 - `src/shared/protocol.ts`
 - `src/shared/state.ts`
 - `src/server/`
-- `src/client/app/character-creation-flow.ts`
-- `src/client/app/character-sheet-controller.ts`
-- `src/client/app/character-sheet-view.ts`
+- `src/client/app/character/creation/flow.ts`
+- `src/client/app/character/sheet/controller.ts`
+- `src/client/app/character/sheet/view.ts`
 - `src/client/app/app.ts`
 - `e2e/character-creation-smoke.spec.ts`
 - colocated client/shared/server tests, following current repo patterns

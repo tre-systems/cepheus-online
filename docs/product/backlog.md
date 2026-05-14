@@ -117,7 +117,7 @@ Agents A, B, C, D, and E.
 
 Status: partially done. A typed app command router exists with route coverage
 for board, dice, door, sheet, and character creation commands. Room command
-submission now lives behind `room-command-dispatch`, so request IDs, HTTP
+submission now lives behind `room/command-dispatch`, so request IDs, HTTP
 posting, accepted-message checks, and domain dispatch wrappers are no longer
 embedded directly in `app.ts`. The initiative/character rail now has its own
 controller, `AppSession` exists, character creation is mounted through
@@ -131,11 +131,11 @@ cleanup is to expand that into a signal-driven, projection-fed renderer.
 Primary write ownership:
 
 - `src/client/app/app.ts`
-- new client kernel/session/router modules under `src/client/app/`
-- `src/client/app/board-controller.ts`
-- `src/client/app/room-menu-controller.ts`
-- `src/client/app/character-sheet-controller.ts`
-- `src/client/app/character-creation-*.ts`
+- new client kernel/session/router modules under `src/client/app/core/`
+- `src/client/app/board/controller.ts`
+- `src/client/app/room/menu/controller.ts`
+- `src/client/app/character/sheet/controller.ts`
+- `src/client/app/character/creation/*.ts`
 - focused client tests
 
 Tasks:
@@ -278,7 +278,7 @@ Primary write ownership:
 - `src/shared/protocol.ts`
 - `src/server/game-room/publication.ts`
 - `src/server/game-room/game-room-do.ts`
-- `src/client/app/dice-overlay.ts`
+- `src/client/app/dice/overlay.ts`
 - new client live-activity modules under `src/client/app/`
 - server/client live activity tests
 
@@ -320,8 +320,8 @@ checks.
 
 Primary write ownership:
 
-- `src/client/app/service-worker.ts`
-- `src/client/app/pwa-install.ts`
+- `src/client/app/pwa/service-worker.ts`
+- `src/client/app/pwa/install.ts`
 - new client connectivity/update helpers
 - `scripts/`
 - `.github/workflows/`
@@ -361,11 +361,11 @@ shape for phase, legal actions, pending choices, and button state.
 Primary write ownership:
 
 - `src/client/app/app.ts`
-- `src/client/app/character-creation-controller.ts`
-- `src/client/app/character-creation-renderer.ts`
-- `src/client/app/character-creation-command-controller.ts`
-- `src/client/app/character-creation-render-controller.ts`
-- `src/client/app/dice-reveal-coordinator.ts`
+- `src/client/app/character/creation/controller.ts`
+- `src/client/app/character/creation/renderer.ts`
+- `src/client/app/character/creation/command-controller.ts`
+- `src/client/app/character/creation/render-controller.ts`
+- `src/client/app/dice/reveal-coordinator.ts`
 - browser/E2E specs or smoke scripts under `e2e/` or `scripts/`
 - `docs/engineering/testing-strategy.md`
 - `package.json` and CI workflow files if browser automation is added
@@ -439,8 +439,8 @@ Primary write ownership:
 - `src/server/game-room/projection.ts`
 - `src/shared/protocol.ts`
 - `src/shared/state.ts`
-- `src/client/app/dice-reveal-coordinator.ts`
-- `src/client/app/character-creation-follow.ts`
+- `src/client/app/dice/reveal-coordinator.ts`
+- `src/client/app/character/creation/follow.ts`
 - viewer filtering, protocol, and browser follow tests
 
 Tasks:
@@ -486,7 +486,7 @@ Primary write ownership:
 - `docs/product/character-creation-backlog.md`
 - `src/shared/character-creation/`
 - character creation command/event/projection code
-- `src/client/app/character-creation-*.ts`
+- `src/client/app/character/creation/*.ts`
 - character sheet integration tests
 
 ### Slice 1A: Semantic Commands And Events
@@ -532,7 +532,7 @@ Tasks:
   2. Done: move bootstrap/demo creation and custom-piece production paths off
      generic `SET_CHARACTERISTICS` and `SELECT_CAREER`.
   3. Done: remove the local draft fallback in
-     `src/client/app/character-creation-flow.ts` and exclude generic advance
+     `src/client/app/character/creation/flow.ts` and exclude generic advance
      from typed client character-creation dispatch.
   4. Done: reject all current generic transition facts server-side before
      persistence, including skill rolls, cascade choices, anagathics, and
@@ -653,7 +653,7 @@ Tasks:
 - Carry choose-one basic training decisions as projected pending decisions,
   not client-only draft state.
 - Remove the remaining local draft fallback in
-  `src/client/app/character-creation-flow.ts` now that semantic qualification,
+  `src/client/app/character/creation/flow.ts` now that semantic qualification,
   draft, Drifter, and career-term events exist.
 - Keep the direct `StartCharacterCareerTerm` path referee-only while the normal
   player path goes through qualification, Draft, Drifter fallback, or other
@@ -831,8 +831,8 @@ Purpose: make the board useful for a real table session.
 Primary write ownership:
 
 - `src/shared/mapAssets.ts`
-- `src/client/app/map-asset-*.ts`
-- `src/client/app/door-los-view.ts`
+- `src/client/app/assets/map-*.ts`
+- `src/client/app/board/los-view.ts`
 - board/piece creation flows
 - map asset docs and tests
 - future referee mode surfaces
