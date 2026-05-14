@@ -106,10 +106,7 @@ export const renderCharacterCreationNextStep = (
   }
   skills.textContent = viewModel.skills.summary
 
-  if (
-    !viewModel.primaryAction.disabled &&
-    ['skills', 'equipment', 'review'].includes(viewModel.step)
-  ) {
+  if (!viewModel.primaryAction.disabled) {
     const primary = document.createElement('button')
     primary.type = 'button'
     primary.textContent = viewModel.primaryAction.label

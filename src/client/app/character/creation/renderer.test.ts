@@ -192,9 +192,20 @@ describe('character creation renderer', () => {
     assert.deepEqual(events, ['advance'])
   })
 
-  it('renders primary step actions for skills and equipment', async () => {
+  it('renders primary next-step actions for every valid wizard step', async () => {
     const events: string[] = []
-    for (const flow of [completeFlow('skills'), completeFlow('equipment')]) {
+    const steps = [
+      'basics',
+      'characteristics',
+      'homeworld',
+      'career',
+      'skills',
+      'equipment',
+      'review'
+    ] as const
+
+    for (const step of steps) {
+      const flow = completeFlow(step)
       const node = asNode(
         renderCharacterCreationNextStep(
           document,
@@ -218,7 +229,7 @@ describe('character creation renderer', () => {
       await Promise.resolve()
     }
 
-    assert.deepEqual(events, ['skills', 'equipment'])
+    assert.deepEqual(events, [...steps])
   })
 
   it('renders death restart controls when editable', async () => {
