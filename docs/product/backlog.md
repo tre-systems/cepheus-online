@@ -1301,9 +1301,11 @@ The next batch should run like this, in this order:
    coverage now spans the active SRD semantic event set. The projection now
    also records a redaction-safe semantic `timeline` with event ids, sequence,
    timestamps, semantic event type, and optional roll correlation, while the
-   shared creation read model exposes that timeline for client migration. The
-   legacy `history` model remains for compatibility until the client no longer
-   depends on `CareerCreationEvent` entries.
+   shared creation read model exposes that timeline for client migration.
+   Finalization notes now derive from projected terms rather than legacy
+   history. The legacy `history` model remains for compatibility until richer
+   projection fields replace the client helpers that still need detailed
+   career-roll and mustering-benefit facts.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.

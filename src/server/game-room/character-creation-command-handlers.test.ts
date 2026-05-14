@@ -148,6 +148,7 @@ describe('character creation setup command handlers', () => {
           homeworld: null,
           backgroundSkills: [],
           pendingCascadeSkills: [],
+          timeline: [],
           history: []
         }
       }
@@ -1514,8 +1515,7 @@ describe('character creation setup command handlers', () => {
       context(
         createCreation('ACTIVE', {
           terms: [completedTerm()],
-          careers: [{ name: 'Scout', rank: 0 }],
-          history: [{ type: 'COMPLETE_SKILLS' }]
+          careers: [{ name: 'Scout', rank: 0 }]
         })
       )
     )

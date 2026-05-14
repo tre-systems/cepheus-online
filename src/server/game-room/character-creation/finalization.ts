@@ -25,12 +25,11 @@ const derivedCreationNotes = (character: CharacterState): string => {
   if (!creation) return character.notes
   const notes = character.notes.trim() ? [character.notes.trim()] : []
 
-  if (creation.history && creation.history.length > 0) {
+  if (creation.terms.length > 0) {
     notes.push('Rules source: Cepheus Engine SRD.')
     for (const [index, term] of creation.terms.entries()) {
       const survival =
-        creation.history.some((event) => event.type === 'SURVIVAL_FAILED') &&
-        index === creation.terms.length - 1
+        term.survival !== undefined && !term.complete && !term.musteringOut
           ? 'mishap'
           : 'survived'
       notes.push(`Term ${index + 1}: ${term.career}, ${survival}.`)
