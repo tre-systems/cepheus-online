@@ -13,6 +13,7 @@ import type {
   CareerCreationActionContext,
   CareerCreationActionPlan,
   CareerCreationStatus,
+  CharacterCreationTimelineEntry,
   CareerRank,
   CareerTerm
 } from './types'
@@ -35,6 +36,8 @@ export interface CharacterCreationProjectionReadModel {
   termCount: number
   completedTermCount: number
   historyCount: number
+  timelineCount: number
+  timeline: CharacterCreationTimelineEntry[]
   activeTerm: CareerTerm | null
   terms: CareerTerm[]
   careers: CareerRank[]
@@ -101,6 +104,10 @@ const cloneEquipment = (
   equipment: readonly CharacterEquipmentItem[]
 ): CharacterEquipmentItem[] => equipment.map((item) => ({ ...item }))
 
+const cloneTimelineEntry = (
+  entry: CharacterCreationTimelineEntry
+): CharacterCreationTimelineEntry => ({ ...entry })
+
 export const deriveCharacterCreationProjectionReadModel = (
   creation: CharacterCreationProjection
 ): CharacterCreationProjectionReadModel => {
@@ -126,6 +133,8 @@ export const deriveCharacterCreationProjectionReadModel = (
       (term) => term.complete || term.musteringOut
     ).length,
     historyCount: creation.history?.length ?? 0,
+    timelineCount: creation.timeline?.length ?? 0,
+    timeline: (creation.timeline ?? []).map(cloneTimelineEntry),
     activeTerm: terms.at(-1) ?? null,
     terms,
     careers: creation.careers.map((career) => ({ ...career })),

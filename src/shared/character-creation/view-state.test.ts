@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { asCharacterId, asUserId } from '../ids'
+import { asCharacterId, asEventId, asUserId } from '../ids'
 import type { CharacterCreationProjection, CharacterState } from '../state'
 import { createCareerCreationState } from './state-machine'
 import { deriveCareerCreationActionPlan } from './legal-actions'
@@ -58,6 +58,14 @@ describe('character creation shared view state', () => {
     const projected = projection({
       backgroundSkills: ['Admin-0'],
       backgroundSkillAllowance: 2,
+      timeline: [
+        {
+          eventId: asEventId('event-1'),
+          seq: 1,
+          createdAt: '2026-05-14T10:00:00.000Z',
+          eventType: 'CharacterCreationHomeworldSet'
+        }
+      ],
       history: [{ type: 'SET_CHARACTERISTICS' }]
     })
     const readModel = deriveCharacterCreationProjectionReadModel(projected)
@@ -68,6 +76,15 @@ describe('character creation shared view state', () => {
     assert.equal(readModel.isActive, true)
     assert.equal(readModel.creationComplete, false)
     assert.equal(readModel.historyCount, 1)
+    assert.equal(readModel.timelineCount, 1)
+    assert.deepEqual(readModel.timeline, [
+      {
+        eventId: asEventId('event-1'),
+        seq: 1,
+        createdAt: '2026-05-14T10:00:00.000Z',
+        eventType: 'CharacterCreationHomeworldSet'
+      }
+    ])
     assert.deepEqual(readModel.pendingDecisions, [
       { key: 'homeworldSkillSelection' }
     ])

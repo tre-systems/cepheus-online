@@ -175,6 +175,7 @@ describe('character creation view model', () => {
     assert.equal(viewModel.projection.statusLabel, 'Creation')
     assert.equal(viewModel.projection.isActive, false)
     assert.equal(viewModel.projection.termCount, 0)
+    assert.equal(viewModel.projection.timelineCount, 0)
     assert.equal(viewModel.pending.hasPendingResolution, false)
     assert.equal(
       viewModel.pending.summary,
@@ -209,6 +210,7 @@ describe('character creation view model', () => {
     assert.equal(viewModel.projection.isDeceased, false)
     assert.equal(viewModel.projection.termCount, 0)
     assert.equal(viewModel.projection.historyCount, 1)
+    assert.equal(viewModel.projection.timelineCount, 0)
     assert.equal(viewModel.wizard?.step, 'homeworld')
     assert.equal(viewModel.wizard?.projectedStepCurrent, true)
     assert.equal(viewModel.wizard?.controlsDisabled, false)
