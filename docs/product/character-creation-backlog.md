@@ -372,8 +372,9 @@ Status: mostly done. Qualification, failed-qualification options, Draft,
 Drifter fallback, drafted terms, and visible qualification/draft dice events are
 server-backed. Production career entry paths, including bootstrap/demo and
 custom-piece creation, are off generic `SELECT_CAREER`; the local draft
-fallback no longer replays generic career events. Remaining work is to prove the
-branch in browser smoke and tighten copy/provenance.
+fallback no longer replays generic career events. Browser coverage now exercises
+the failed-qualification Draft and Drifter paths, so the remaining work is to
+keep that coverage green and tighten copy/provenance.
 
 Tasks:
 
@@ -381,8 +382,8 @@ Tasks:
 - Carry requested career, accepted career, drafted status, qualification
   penalty, failed-qualification options, and basic-training choice as projected
   facts.
-- Add browser coverage for failed qualification, Draft roll, Drifter fallback,
-  and refresh recovery.
+- Keep browser coverage for failed qualification, Draft roll, Drifter fallback,
+  and refresh recovery current as the UI is refactored.
 - Tighten player-facing copy and provenance around qualification and draft
   outcomes.
 
@@ -532,7 +533,8 @@ Acceptance:
     survival, term skills, aging, reenlistment, and mustering
   - keep deterministic two-term, multi-career spectator coverage through
     finalization and final-sheet recovery green
-  - failed qualification to Draft
+  - keep failed qualification to Draft and Drifter coverage green as the flow
+    changes
   - one mustering-out and finalization path
   - spectator reveal timing for later term rolls
   - spectator reload/new-join while a roll is still unrevealed, proving dice,

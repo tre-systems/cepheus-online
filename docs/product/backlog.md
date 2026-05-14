@@ -120,7 +120,8 @@ Owns:
 
 - Slice 0B: Publication And Projection Hardening
 - Slice 0C: Protocol Contracts And Validation, for command wire contracts
-- Slice 0H: Architecture Consolidation, for command metadata and handler split
+- Slice 0H: Architecture Consolidation, for command metadata maintenance and
+  the remaining handler split
 
 Primary write area:
 
@@ -136,14 +137,15 @@ Parallel boundaries:
 - Do not change character creation UI rendering in this stream.
 - Do not add new SRD rules branches here unless they are needed to preserve an
   existing command while splitting handlers.
-- Publish any command metadata shape before other streams depend on it.
+- Use the shared command metadata registry when adding or changing commands;
+  coordinate registry changes before other streams depend on new policy.
 
 Done when:
 
 - Command handling is split by game, board, dice, and character creation
   domains while `runCommandPublication()` remains the only persistence path.
-- Route/domain, seeded-dice, and stale-sequence policy come from one metadata
-  source instead of repeated command-type lists.
+- Route/domain, seeded-dice, and stale-sequence policy continue to come from
+  the shared metadata source instead of repeated command-type lists.
 
 ### Stream B: Character Creation Projection And Rules State
 
@@ -369,7 +371,8 @@ Done when:
 
 Start with Streams A-D in parallel, with Stream E running opportunistically:
 
-- Stream A splits command handling and introduces command metadata.
+- Stream A splits command handling and maintains the shared command metadata
+  registry.
 - Stream B moves legal-action and pending-choice state into projection.
 - Stream C consumes that projection through one creator view model and keeps
   `app.ts` thin.
@@ -672,8 +675,8 @@ Tasks:
   boundary used by `app.ts`; follow-on rendering work should hang from that
   boundary rather than adding more wizard state to the app shell.
 - Keep all result deferral, spectator reveal timing, and button unblocking on
-  `diceRevealCoordinator`; add coverage for every new roll-bearing creation
-  action instead of adding local timing code.
+  `diceRevealCoordinator`; extend coverage when new roll-bearing creation
+  actions are added instead of adding local timing code.
 - Expand the rendered creation UI's single view model until step views consume
   projection-derived phase, legal actions, progress, roll facts, and completion
   gates. Local state should own only unsubmitted choices and transient UI
@@ -794,10 +797,10 @@ Tasks:
   without weakening the ownership and rules gates. Keep
   `runCommandPublication()` as the only persistence, projection, checkpoint,
   parity, telemetry, and response path.
-- Done: introduce a small shared command metadata registry for stable facts
-  such as command route/domain, seeded-dice requirement, and stale-sequence
-  policy. Use it to remove duplicated command-type lists from publication and
-  the client command router.
+- Keep using the shared command metadata registry for stable facts such as
+  command route/domain, seeded-dice requirement, and stale-sequence policy.
+  New commands should update that registry rather than adding duplicated
+  command-type lists to publication or the client command router.
 - Finish the character creation read-model consolidation. Step views should
   consume one projection-fed view model for status, legal actions, pending
   choices, progress, roll facts, and button state; local UI state should hold
@@ -877,26 +880,10 @@ Tasks:
 - Maintain backward compatibility only for historical replay and protocol
   decode stability. New rules work should add semantic events first, then adapt
   the UI.
-- Finish the remaining `AdvanceCharacterCreation` migration in this order:
-  1. Done: replace the server-persisted generic `SET_CHARACTERISTICS` after the sixth
-     stat roll with `CharacterCreationCharacteristicsCompleted`; individual
-     stat rolls now emit `CharacterCreationCharacteristicRolled` facts instead
-     of generic `CharacterSheetUpdated` patches.
-  2. Done: move bootstrap/demo creation and custom-piece production paths off
-     generic `SET_CHARACTERISTICS` and `SELECT_CAREER`.
-  3. Done: remove the local draft fallback in
-     `src/client/app/character/creation/flow.ts` and exclude generic advance
-     from typed client character-creation dispatch.
-  4. Done: reject all current generic transition facts server-side before
-     persistence, including skill rolls, cascade choices, anagathics, and
-     reset.
-  5. Done: replace the per-event generic command branch with a hard
-     deprecated-command response while keeping protocol decode compatibility.
-  6. Done: remove shortcut sheet mutation paths from custom pieces and
-     character creation finalization, and fence player `UpdateCharacterSheet`
-     patches to notes only.
-  7. Keep `CharacterCreationTransitioned` only for historical replay while new
-     production rules work emits semantic events.
+- Keep the completed `AdvanceCharacterCreation` migration fenced: current
+  production flows use semantic commands/events, generic transition facts reject
+  before persistence, shortcut sheet mutation paths are closed, and
+  `CharacterCreationTransitioned` remains only for historical replay.
 - Finish updating `deriveLiveActivities()` to read semantic events directly
   instead of parsing coarse transition payloads where possible. Done for
   characteristic, qualification, survival, commission, advancement, term skill,
@@ -1004,14 +991,14 @@ career entry.
 
 Tasks:
 
-- Remove the remaining local draft fallback in
-  `src/client/app/character/creation/flow.ts` now that semantic qualification,
-  draft, Drifter, and career-term events exist.
+- Keep failed-qualification routing on the semantic qualification, Draft,
+  Drifter, and career-term events; the old local draft fallback is no longer a
+  production path.
 - Keep the direct `StartCharacterCareerTerm` path referee-only while the normal
   player path goes through qualification, Draft, Drifter fallback, or other
   explicit legal actions.
-- Add browser coverage for failed qualification, Draft roll, Drifter fallback,
-  and refresh recovery.
+- Keep the existing browser coverage for failed qualification, Draft roll,
+  Drifter fallback, and refresh recovery green as career-entry UI changes.
 - Tighten career-entry provenance for requested career, accepted/drafted
   career, prior-career penalty, and basic training source skills.
 
@@ -1293,11 +1280,12 @@ The next batch should run like this, in this order:
    the server hard-deprecates the generic command path before persistence while
    preserving historical replay compatibility for old
    `CharacterCreationTransitioned` events.
-2. Execute the architecture consolidation slice: split command handling by
-   domain, add command metadata for route and seeded-dice policy, keep `app.ts`
-   shrinking toward a boot/composition shell, move character creation rendering
-   toward one projection-fed model, and keep publication parity plus
-   viewer-safe responses on the single publication path.
+2. Execute the architecture consolidation slice: keep splitting command
+   handling by domain, use the shared command metadata registry for route and
+   seeded-dice policy, keep `app.ts` shrinking toward a boot/composition shell,
+   move character creation rendering toward one projection-fed model, and keep
+   publication parity plus viewer-safe responses on the single publication
+   path.
 3. Replace creation history with a semantic timeline after retiring the
    remaining legacy activity fallbacks. Roll-bearing semantic events, including
    characteristic rolls, now point at the dice event that drives reveal timing.

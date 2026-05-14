@@ -19,8 +19,10 @@ test plan should continue to grow in layers as implementation expands.
   current character creation browser smoke.
 - `npm run test:e2e`: Playwright browser tests against a local Wrangler dev
   Worker. Run `npm run build:client` first when client assets changed.
-- `npm run test:e2e:character-creation`: focused Playwright smoke for opening
-  the character creation UI in a disposable room.
+- `npm run test:e2e:character-creation`: focused Playwright coverage for
+  deterministic character creation flows in disposable rooms, including
+  owner/spectator follow, failed-qualification Draft/Drifter paths, refresh
+  recovery, mobile controls, and failure artifacts.
 - Current tests cover shared protocol/dice/projection behavior, event envelope
   versioning, chunk-boundary storage, import boundaries, stale `expectedSeq`
   rejection, Durable Object HTTP flow, Worker static fallback including PWA
