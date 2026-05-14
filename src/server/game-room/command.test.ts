@@ -558,7 +558,7 @@ describe('deriveEventsForCommand error categories', () => {
             career: 'Scout',
             skills: ['Vacc Suit-1'],
             skillsAndTraining: ['Vacc Suit-1'],
-            benefits: [],
+            benefits: ['5000', '10000', '50000'],
             complete: true,
             canReenlist: false,
             completedBasicTraining: true,
@@ -599,45 +599,7 @@ describe('deriveEventsForCommand error categories', () => {
             anagathics: false
           }
         ],
-        careers: [{ name: 'Scout', rank: 0 }],
-        history: [
-          {
-            type: 'FINISH_MUSTERING',
-            musteringBenefit: {
-              career: 'Scout',
-              kind: 'cash',
-              roll: { expression: '2d6', rolls: [1, 1], total: 2 },
-              modifier: 0,
-              tableRoll: 2,
-              value: '5000',
-              credits: 5000
-            }
-          },
-          {
-            type: 'FINISH_MUSTERING',
-            musteringBenefit: {
-              career: 'Scout',
-              kind: 'cash',
-              roll: { expression: '2d6', rolls: [2, 2], total: 4 },
-              modifier: 0,
-              tableRoll: 4,
-              value: '10000',
-              credits: 10000
-            }
-          },
-          {
-            type: 'FINISH_MUSTERING',
-            musteringBenefit: {
-              career: 'Scout',
-              kind: 'cash',
-              roll: { expression: '2d6', rolls: [3, 3], total: 6 },
-              modifier: 0,
-              tableRoll: 6,
-              value: '50000',
-              credits: 50000
-            }
-          }
-        ]
+        careers: [{ name: 'Scout', rank: 0 }]
       })
     )
 

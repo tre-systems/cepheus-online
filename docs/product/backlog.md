@@ -1304,7 +1304,8 @@ The next batch should run like this, in this order:
    shared creation read model exposes that timeline for client migration.
    Finalization notes now derive from projected terms rather than legacy
    history, and the client can recover mustering-benefit display from projected
-   term benefits when legacy history is absent. Boundary checks now keep new
+   term benefits when legacy history is absent. Server and client cash benefit
+   limit checks now use projected term benefits. Boundary checks now keep new
    client creator code from reading legacy history outside the compatibility
    projection helper. The legacy `history` model remains for compatibility
    until richer projection fields replace the client helpers that still need

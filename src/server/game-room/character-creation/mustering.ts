@@ -65,11 +65,12 @@ const benefitsReceivedInCareer = (
     .reduce((total, term) => total + term.benefits.length, 0)
 
 const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
-  (creation.history ?? []).filter(
-    (event) =>
-      event.type === 'FINISH_MUSTERING' &&
-      event.musteringBenefit?.kind === 'cash'
-  ).length
+  creation.terms.reduce(
+    (total, term) =>
+      total +
+      term.benefits.filter((benefit) => /^\d+$/.test(benefit.trim())).length,
+    0
+  )
 
 const hasGamblingSkill = (character: CharacterState): boolean => {
   const creation = character.creation
