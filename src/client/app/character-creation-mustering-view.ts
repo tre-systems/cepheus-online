@@ -1,11 +1,6 @@
 import type { BenefitKind } from '../../shared/character-creation/types.js'
-import {
-  canRollCharacterCreationMusteringBenefit,
-  characterCreationMusteringBenefitRollModifier,
-  remainingMusteringBenefits,
-  type CharacterCreationFlow
-} from './character-creation-flow.js'
 import { bindAsyncActionButton } from './async-action-button.js'
+import type { CharacterCreationMusteringOutViewModel } from './character-creation-view.js'
 
 export interface CharacterCreationMusteringDocument {
   createElement(tagName: 'button'): HTMLButtonElement
@@ -19,52 +14,36 @@ export interface CharacterCreationMusteringViewDeps {
 
 export const renderCharacterCreationMusteringOut = (
   document: CharacterCreationMusteringDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationMusteringOutViewModel,
   { rollMusteringBenefit, reportError }: CharacterCreationMusteringViewDeps
 ): HTMLElement => {
   const panel = document.createElement('div')
   panel.className = 'creation-mustering-out'
   const title = document.createElement('strong')
-  title.textContent = 'Mustering out'
-  const remaining = remainingMusteringBenefits(flow.draft)
+  title.textContent = viewModel.title
   const summary = document.createElement('p')
-  summary.textContent =
-    flow.draft.completedTerms.length === 0
-      ? 'No career terms completed yet.'
-      : remaining > 0
-        ? `${remaining} benefit ${remaining === 1 ? 'roll' : 'rolls'} remaining.`
-        : 'Benefits complete.'
+  summary.textContent = viewModel.summary
 
   const benefitList = document.createElement('div')
   benefitList.className = 'creation-benefit-list'
-  for (const benefit of flow.draft.musteringBenefits) {
+  for (const benefit of viewModel.benefits) {
     const item = document.createElement('span')
-    item.textContent = `${benefit.career}: ${benefit.kind} ${benefit.roll} -> ${benefit.value}`
+    item.textContent = benefit.label
     benefitList.append(item)
   }
 
   const actions = document.createElement('div')
   actions.className = 'creation-term-actions'
-  const benefitActions = [
-    ['cash', 'Roll cash'],
-    ['material', 'Roll benefit']
-  ] satisfies readonly [BenefitKind, string][]
-  for (const [kind, label] of benefitActions) {
+  for (const action of viewModel.actions) {
     const button = document.createElement('button')
     button.type = 'button'
-    button.textContent = label
-    const modifier = characterCreationMusteringBenefitRollModifier({
-      draft: flow.draft,
-      kind
-    })
-    button.disabled =
-      remaining <= 0 ||
-      !canRollCharacterCreationMusteringBenefit({ draft: flow.draft, kind })
-    if (modifier !== 0) {
-      button.title = `${modifier > 0 ? '+' : ''}${modifier} DM`
-    }
+    button.textContent = action.label
+    button.disabled = action.disabled
+    if (action.title) button.title = action.title
     bindAsyncActionButton(button, () =>
-      rollMusteringBenefit(kind).catch((error) => reportError(error.message))
+      rollMusteringBenefit(action.kind).catch((error) =>
+        reportError(error.message)
+      )
     )
     actions.append(button)
   }

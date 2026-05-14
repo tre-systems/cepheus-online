@@ -330,6 +330,7 @@ describe('character creation renderer', () => {
         button.textContent = 'Training'
         return button
       },
+      musteringOut: null,
       renderMusteringOut: () => {
         const panel = document.createElement('section')
         panel.textContent = 'Mustering'
@@ -356,5 +357,28 @@ describe('character creation renderer', () => {
       node.children[node.children.length - 1]?.textContent,
       'Training'
     )
+  })
+
+  it('renders delegated mustering out model on the equipment step', () => {
+    const flow = completeFlow('equipment')
+    const fragment = renderCharacterCreationDraftFields(document, flow, {
+      renderCharacteristicRollButton: () => null,
+      renderCareerRollButton: () => null,
+      renderBasicTrainingButton: () => null,
+      musteringOut: {
+        title: 'Sentinel mustering',
+        summary: 'Sentinel summary',
+        benefits: [],
+        actions: []
+      },
+      renderMusteringOut: (viewModel) => {
+        const panel = document.createElement('section')
+        panel.textContent = viewModel.title
+        return panel
+      }
+    })
+    const node = asNode(fragment)
+
+    assert.equal(node.children[0]?.textContent, 'Sentinel mustering')
   })
 })

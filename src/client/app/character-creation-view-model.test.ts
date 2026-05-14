@@ -421,4 +421,80 @@ describe('character creation view model', () => {
       ]
     })
   })
+
+  it('includes mustering out state for the equipment step', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'equipment',
+        draft: createInitialCharacterDraft(characterId, {
+          completedTerms: [completedTerm(), completedTerm()],
+          musteringBenefits: [
+            {
+              career: 'Merchant',
+              kind: 'cash',
+              roll: 2,
+              value: '10000',
+              credits: 10000
+            }
+          ]
+        })
+      }),
+      projection: projection('MUSTERING_OUT'),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.musteringOut?.title, 'Mustering out')
+    assert.equal(
+      viewModel.wizard?.musteringOut?.summary,
+      '1 benefit roll remaining.'
+    )
+    assert.deepEqual(viewModel.wizard?.musteringOut?.benefits, [
+      { label: 'Merchant: cash 2 -> 10000' }
+    ])
+    assert.deepEqual(
+      viewModel.wizard?.musteringOut?.actions.map(
+        ({ kind, label, disabled }) => ({ kind, label, disabled })
+      ),
+      [
+        { kind: 'cash', label: 'Roll cash', disabled: false },
+        { kind: 'material', label: 'Roll benefit', disabled: false }
+      ]
+    )
+  })
+
+  it('includes term history and review summaries', () => {
+    const careerHistory = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'career',
+        draft: createInitialCharacterDraft(characterId, {
+          completedTerms: [completedTerm()]
+        })
+      }),
+      projection: projection('CAREER_SELECTION'),
+      readOnly: false
+    })
+
+    assert.equal(careerHistory.wizard?.termHistory?.title, 'Terms served')
+    assert.equal(
+      careerHistory.wizard?.termHistory?.terms[0]?.startsWith(
+        '1. Merchant: survived'
+      ),
+      true
+    )
+
+    const review = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'review',
+        draft: createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          completedTerms: [completedTerm()]
+        })
+      }),
+      projection: projection('ACTIVE'),
+      readOnly: false
+    })
+
+    assert.equal(review.wizard?.review?.title, 'Iona Vesh')
+    assert.equal(review.wizard?.review?.sections[0]?.label, 'Basics')
+  })
 })

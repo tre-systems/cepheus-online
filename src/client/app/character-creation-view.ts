@@ -18,7 +18,10 @@ import {
   isCascadeCareerSkill,
   parseCareerSkill
 } from '../../shared/character-creation/skills.js'
-import type { FailedQualificationOption } from '../../shared/character-creation/types.js'
+import type {
+  BenefitKind,
+  FailedQualificationOption
+} from '../../shared/character-creation/types.js'
 import type {
   CharacterCharacteristics,
   CharacterEquipmentItem,
@@ -34,6 +37,8 @@ import type {
 } from './character-creation-flow.js'
 import {
   characterCreationSteps,
+  canRollCharacterCreationMusteringBenefit,
+  characterCreationMusteringBenefitRollModifier,
   deriveCharacterCreationBasicTrainingAction,
   deriveCharacterCreationAgingChangeOptions,
   deriveCharacterCreationAnagathicsDecision,
@@ -44,6 +49,7 @@ import {
   deriveNextCharacterCreationCharacteristicRoll,
   deriveNextCharacterCreationReenlistmentRoll,
   isCharacterCreationCareerTermResolved,
+  remainingMusteringBenefits,
   remainingCharacterCreationTermSkillRolls,
   requiredCharacterCreationTermSkillRolls,
   validateCurrentCharacterCreationStep
@@ -172,6 +178,11 @@ export interface CharacterCreationReviewSummary {
   title: string
   subtitle: string
   sections: CharacterCreationReviewSection[]
+}
+
+export interface CharacterCreationTermHistoryViewModel {
+  title: string
+  terms: string[]
 }
 
 export type CharacterCreationFormValues = Partial<
@@ -516,6 +527,24 @@ export interface CharacterCreationTermResolutionViewModel {
   title: string
   message: string
   actions: CharacterCreationTermResolutionActionViewModel[]
+}
+
+export interface CharacterCreationMusteringBenefitViewModel {
+  label: string
+}
+
+export interface CharacterCreationMusteringActionViewModel {
+  kind: BenefitKind
+  label: string
+  disabled: boolean
+  title: string
+}
+
+export interface CharacterCreationMusteringOutViewModel {
+  title: string
+  summary: string
+  benefits: CharacterCreationMusteringBenefitViewModel[]
+  actions: CharacterCreationMusteringActionViewModel[]
 }
 
 interface CharacterCreationHomeworldDraftFields {
@@ -1472,6 +1501,47 @@ export const deriveCharacterCreationTermResolutionViewModel = (
   }
 }
 
+export const deriveCharacterCreationMusteringOutViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationMusteringOutViewModel => {
+  const remaining = remainingMusteringBenefits(flow.draft)
+  const summary =
+    flow.draft.completedTerms.length === 0
+      ? 'No career terms completed yet.'
+      : remaining > 0
+        ? `${remaining} benefit ${remaining === 1 ? 'roll' : 'rolls'} remaining.`
+        : 'Benefits complete.'
+  const benefitActions = [
+    ['cash', 'Roll cash'],
+    ['material', 'Roll benefit']
+  ] satisfies readonly [BenefitKind, string][]
+
+  return {
+    title: 'Mustering out',
+    summary,
+    benefits: flow.draft.musteringBenefits.map((benefit) => ({
+      label: `${benefit.career}: ${benefit.kind} ${benefit.roll} -> ${benefit.value}`
+    })),
+    actions: benefitActions.map(([kind, label]) => {
+      const modifier = characterCreationMusteringBenefitRollModifier({
+        draft: flow.draft,
+        kind
+      })
+      return {
+        kind,
+        label,
+        disabled:
+          remaining <= 0 ||
+          !canRollCharacterCreationMusteringBenefit({
+            draft: flow.draft,
+            kind
+          }),
+        title: modifier === 0 ? '' : `${modifier > 0 ? '+' : ''}${modifier} DM`
+      }
+    })
+  }
+}
+
 export const deriveCharacterCreationFieldViewModels = (
   flow: CharacterCreationFlow,
   step: CharacterCreationViewStep = flow.step
@@ -2014,5 +2084,18 @@ export const deriveCharacterCreationReviewSummary = (
         ]
       }
     ]
+  }
+}
+
+export const deriveCharacterCreationTermHistoryViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationTermHistoryViewModel | null => {
+  if (flow.draft.completedTerms.length === 0) return null
+
+  return {
+    title: 'Terms served',
+    terms: flow.draft.completedTerms.map((term, index) =>
+      formatCharacterCreationCompletedTermSummary(term, index)
+    )
   }
 }

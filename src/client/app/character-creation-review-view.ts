@@ -1,7 +1,6 @@
-import type { CharacterCreationFlow } from './character-creation-flow.js'
-import {
-  deriveCharacterCreationReviewSummary,
-  formatCharacterCreationCompletedTermSummary
+import type {
+  CharacterCreationReviewSummary,
+  CharacterCreationTermHistoryViewModel
 } from './character-creation-view.js'
 
 export type CharacterCreationReviewDocument = Pick<
@@ -11,19 +10,16 @@ export type CharacterCreationReviewDocument = Pick<
 
 export const renderCharacterCreationTermHistory = (
   document: CharacterCreationReviewDocument,
-  flow: CharacterCreationFlow
-): HTMLElement | DocumentFragment => {
-  if (flow.draft.completedTerms.length === 0) {
-    return document.createDocumentFragment()
-  }
+  viewModel: CharacterCreationTermHistoryViewModel
+): HTMLElement => {
   const panel = document.createElement('div')
   panel.className = 'creation-term-history'
   const title = document.createElement('strong')
-  title.textContent = 'Terms served'
+  title.textContent = viewModel.title
   const list = document.createElement('div')
-  for (const [index, term] of flow.draft.completedTerms.entries()) {
+  for (const term of viewModel.terms) {
     const item = document.createElement('span')
-    item.textContent = formatCharacterCreationCompletedTermSummary(term, index)
+    item.textContent = term
     list.append(item)
   }
   panel.append(title, list)
@@ -32,9 +28,8 @@ export const renderCharacterCreationTermHistory = (
 
 export const renderCharacterCreationReview = (
   document: CharacterCreationReviewDocument,
-  flow: CharacterCreationFlow
+  summary: CharacterCreationReviewSummary
 ): HTMLElement => {
-  const summary = deriveCharacterCreationReviewSummary(flow)
   const review = document.createElement('div')
   review.className = 'character-creation-review'
   const title = document.createElement('strong')

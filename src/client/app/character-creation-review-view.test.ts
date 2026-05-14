@@ -11,6 +11,10 @@ import {
   renderCharacterCreationTermHistory,
   type CharacterCreationReviewDocument
 } from './character-creation-review-view'
+import {
+  deriveCharacterCreationReviewSummary,
+  deriveCharacterCreationTermHistoryViewModel
+} from './character-creation-view'
 
 class TestNode {
   tagName: string
@@ -123,19 +127,20 @@ const completeFlow = (): CharacterCreationFlow => ({
 })
 
 describe('character creation review view', () => {
-  it('returns an empty fragment when no terms are complete', () => {
+  it('derives no term history model when no terms are complete', () => {
     const flow = completeFlow()
     flow.draft.completedTerms = []
 
-    const node = asNode(renderCharacterCreationTermHistory(testDocument, flow))
-
-    assert.equal(node.tagName, '#fragment')
-    assert.deepEqual(node.children, [])
+    assert.equal(deriveCharacterCreationTermHistoryViewModel(flow), null)
   })
 
   it('renders completed term history', () => {
+    const viewModel = deriveCharacterCreationTermHistoryViewModel(
+      completeFlow()
+    )
+    if (!viewModel) throw new Error('Expected term history model')
     const node = asNode(
-      renderCharacterCreationTermHistory(testDocument, completeFlow())
+      renderCharacterCreationTermHistory(testDocument, viewModel)
     )
 
     assert.equal(node.className, 'creation-term-history')
@@ -148,7 +153,10 @@ describe('character creation review view', () => {
 
   it('renders review summary sections from a character creation flow', () => {
     const node = asNode(
-      renderCharacterCreationReview(testDocument, completeFlow())
+      renderCharacterCreationReview(
+        testDocument,
+        deriveCharacterCreationReviewSummary(completeFlow())
+      )
     )
 
     assert.equal(node.className, 'character-creation-review')

@@ -38,8 +38,11 @@ import type {
   CharacterCreationCareerSelectionViewModel,
   CharacterCreationCharacteristicGridViewModel,
   CharacterCreationHomeworldViewModel,
+  CharacterCreationMusteringOutViewModel,
   CharacterCreationReenlistmentRollViewModel,
+  CharacterCreationReviewSummary,
   CharacterCreationTermCascadeChoicesViewModel,
+  CharacterCreationTermHistoryViewModel,
   CharacterCreationTermResolutionViewModel,
   CharacterCreationTermSkillTrainingViewModel
 } from './character-creation-view.js'
@@ -151,8 +154,8 @@ export const createCharacterCreationRenderController = ({
     elements.characterCreationSteps.replaceChildren()
     elements.characterCreationFields.replaceChildren(
       renderCharacterCreationNextStep(viewModel.wizard.nextStep),
-      flow.step === 'review'
-        ? renderCharacterCreationReview(flow)
+      flow.step === 'review' && viewModel.wizard.review
+        ? renderCharacterCreationReview(viewModel.wizard.review)
         : renderCharacterCreationFields(viewModel)
     )
     elements.characterCreationWizard.hidden = false
@@ -261,7 +264,11 @@ export const createCharacterCreationRenderController = ({
           renderCharacterCreationTermResolution(viewModel.wizard.termResolution)
         )
       }
-      fragment.append(renderCharacterCreationTermHistory(flow))
+      if (viewModel.wizard?.termHistory) {
+        fragment.append(
+          renderCharacterCreationTermHistory(viewModel.wizard.termHistory)
+        )
+      }
       return fragment
     }
     if (flow.step === 'homeworld') {
@@ -278,6 +285,7 @@ export const createCharacterCreationRenderController = ({
           renderCharacterCreationCharacteristicRollButton,
         renderCareerRollButton: renderCharacterCreationCareerRollButtonFromFlow,
         renderBasicTrainingButton: renderCharacterCreationBasicTrainingButton,
+        musteringOut: viewModel.wizard?.musteringOut ?? null,
         renderMusteringOut: renderCharacterCreationMusteringOut
       })
     )
@@ -494,9 +502,9 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationTermHistory = (
-    flow: CharacterCreationFlow
-  ): HTMLElement | DocumentFragment => {
-    return renderCharacterCreationTermHistoryView(document, flow)
+    viewModel: CharacterCreationTermHistoryViewModel
+  ): HTMLElement => {
+    return renderCharacterCreationTermHistoryView(document, viewModel)
   }
 
   const renderCharacterCreationCharacteristicRollButton = (
@@ -537,9 +545,9 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationMusteringOut = (
-    flow: CharacterCreationFlow
+    viewModel: CharacterCreationMusteringOutViewModel
   ): HTMLElement => {
-    return renderCharacterCreationMusteringOutView(document, flow, {
+    return renderCharacterCreationMusteringOutView(document, viewModel, {
       rollMusteringBenefit: (kind) =>
         getCommandController().rollMusteringBenefit(kind),
       reportError
@@ -547,9 +555,9 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationReview = (
-    flow: CharacterCreationFlow
+    viewModel: CharacterCreationReviewSummary
   ): HTMLElement => {
-    return renderCharacterCreationReviewView(document, flow)
+    return renderCharacterCreationReviewView(document, viewModel)
   }
 
   return {

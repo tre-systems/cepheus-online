@@ -10,6 +10,7 @@ import {
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationDeathViewModel,
   deriveCharacterCreationFieldViewModels,
+  type CharacterCreationMusteringOutViewModel,
   type CharacterCreationNextStepViewModel,
   type CharacterCreationPendingCascadeChoiceViewModel
 } from './character-creation-view.js'
@@ -61,7 +62,10 @@ export interface CharacterCreationDraftFieldsRendererDeps {
   ) => HTMLElement | null
   renderCareerRollButton: (flow: CharacterCreationFlow) => HTMLElement | null
   renderBasicTrainingButton: (flow: CharacterCreationFlow) => HTMLElement | null
-  renderMusteringOut: (flow: CharacterCreationFlow) => HTMLElement
+  musteringOut: CharacterCreationMusteringOutViewModel | null
+  renderMusteringOut: (
+    viewModel: CharacterCreationMusteringOutViewModel
+  ) => HTMLElement
 }
 
 export const renderCharacterCreationNextStep = (
@@ -242,6 +246,7 @@ export const renderCharacterCreationDraftFields = (
     renderCharacteristicRollButton,
     renderCareerRollButton,
     renderBasicTrainingButton,
+    musteringOut,
     renderMusteringOut
   }: CharacterCreationDraftFieldsRendererDeps
 ): DocumentFragment => {
@@ -261,8 +266,8 @@ export const renderCharacterCreationDraftFields = (
   if (characteristicRollButton) fragment.append(characteristicRollButton)
   if (careerRollButton) fragment.append(careerRollButton)
   if (basicTrainingButton) fragment.append(basicTrainingButton)
-  if (flow.step === 'equipment') {
-    fragment.prepend(renderMusteringOut(flow))
+  if (flow.step === 'equipment' && musteringOut) {
+    fragment.prepend(renderMusteringOut(musteringOut))
   }
   return fragment
 }

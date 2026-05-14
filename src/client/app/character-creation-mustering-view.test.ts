@@ -11,6 +11,7 @@ import {
   renderCharacterCreationMusteringOut,
   type CharacterCreationMusteringDocument
 } from './character-creation-mustering-view'
+import { deriveCharacterCreationMusteringOutViewModel } from './character-creation-view'
 import {
   asNode,
   testDocument as sharedTestDocument
@@ -57,10 +58,14 @@ const flow = (overrides: Partial<CharacterCreationFlow['draft']> = {}) =>
     })
   }) satisfies CharacterCreationFlow
 
+const musteringViewModel = (
+  overrides: Partial<CharacterCreationFlow['draft']> = {}
+) => deriveCharacterCreationMusteringOutViewModel(flow(overrides))
+
 describe('character creation mustering view', () => {
   it('renders remaining benefit rolls and existing benefits', () => {
     const node = asNode(
-      renderCharacterCreationMusteringOut(testDocument, flow(), {
+      renderCharacterCreationMusteringOut(testDocument, musteringViewModel(), {
         rollMusteringBenefit: async () => {},
         reportError: () => {}
       })
@@ -80,7 +85,7 @@ describe('character creation mustering view', () => {
     const node = asNode(
       renderCharacterCreationMusteringOut(
         testDocument,
-        flow({
+        musteringViewModel({
           completedTerms: [
             completedTerm(),
             completedTerm(),
@@ -138,7 +143,7 @@ describe('character creation mustering view', () => {
     const rolled: string[] = []
     let resolveRoll: () => void = () => {}
     const node = asNode(
-      renderCharacterCreationMusteringOut(testDocument, flow(), {
+      renderCharacterCreationMusteringOut(testDocument, musteringViewModel(), {
         rollMusteringBenefit: (kind) => {
           rolled.push(kind)
           return new Promise<void>((resolve) => {

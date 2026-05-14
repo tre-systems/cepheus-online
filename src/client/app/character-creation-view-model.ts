@@ -15,10 +15,13 @@ import {
   deriveCharacterCreationAgingRollViewModel,
   deriveCharacterCreationAnagathicsDecisionViewModel,
   deriveCharacterCreationHomeworldViewModel,
+  deriveCharacterCreationMusteringOutViewModel,
   deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationReenlistmentRollViewModel,
+  deriveCharacterCreationReviewSummary,
   deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationTermCascadeChoicesViewModel,
+  deriveCharacterCreationTermHistoryViewModel,
   deriveCharacterCreationTermResolutionViewModel,
   deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary,
@@ -30,10 +33,13 @@ import {
   type CharacterCreationCareerSelectionViewModel,
   type CharacterCreationCharacteristicGridViewModel,
   type CharacterCreationHomeworldViewModel,
+  type CharacterCreationMusteringOutViewModel,
   type CharacterCreationNextStepViewModel,
   type CharacterCreationReenlistmentRollViewModel,
+  type CharacterCreationReviewSummary,
   type CharacterCreationStepProgressItem,
   type CharacterCreationTermCascadeChoicesViewModel,
+  type CharacterCreationTermHistoryViewModel,
   type CharacterCreationTermResolutionViewModel,
   type CharacterCreationTermSkillTrainingViewModel,
   type CharacterCreationValidationSummary
@@ -79,6 +85,9 @@ export interface CharacterCreationWizardViewModel {
   termCascadeChoices: CharacterCreationTermCascadeChoicesViewModel | null
   termResolution: CharacterCreationTermResolutionViewModel | null
   termSkills: CharacterCreationTermSkillTrainingViewModel | null
+  musteringOut: CharacterCreationMusteringOutViewModel | null
+  termHistory: CharacterCreationTermHistoryViewModel | null
+  review: CharacterCreationReviewSummary | null
   characteristics: CharacterCreationCharacteristicGridViewModel | null
   homeworld: CharacterCreationHomeworldViewModel | null
 }
@@ -213,6 +222,15 @@ const wizardViewModel = ({
       deriveCharacterCreationTermCascadeChoicesViewModel(flow),
     termResolution: deriveCharacterCreationTermResolutionViewModel(flow),
     termSkills: deriveCharacterCreationTermSkillTrainingViewModel(flow),
+    musteringOut:
+      flow.step === 'equipment'
+        ? deriveCharacterCreationMusteringOutViewModel(flow)
+        : null,
+    termHistory: deriveCharacterCreationTermHistoryViewModel(flow),
+    review:
+      flow.step === 'review'
+        ? deriveCharacterCreationReviewSummary(flow)
+        : null,
     characteristics: deriveCharacterCreationCharacteristicGridViewModel(flow),
     homeworld:
       flow.step === 'homeworld'
