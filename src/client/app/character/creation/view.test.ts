@@ -1050,13 +1050,24 @@ describe('character creation view helpers', () => {
         'Recon-0',
         'Piloting-0'
       ],
+      kind: 'all',
       disabled: false
     })
 
     assert.equal(
       deriveCharacterCreationBasicTrainingButton({
         ...flow,
-        draft: { ...flow.draft, skills: ['Pilot-0'] }
+        draft: {
+          ...flow.draft,
+          skills: [
+            'Comms-0',
+            'Electronics-0',
+            'Gun Combat-0',
+            'Gunnery-0',
+            'Recon-0',
+            'Piloting-0'
+          ]
+        }
       }),
       null
     )

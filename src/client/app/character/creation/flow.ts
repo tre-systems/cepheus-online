@@ -2193,36 +2193,62 @@ export const applyCharacterCreationMusteringBenefit = ({
 export const deriveCharacterCreationBasicTrainingAction = (
   flow: CharacterCreationFlow
 ): CharacterCreationBasicTrainingAction | null => {
-  if (flow.step !== 'skills' || flow.draft.skills.length > 0) return null
+  if (flow.step !== 'skills') return null
   const careerName = flow.draft.careerPlan?.career.trim()
   if (!careerName) return null
-  const careerDefinition = findCareerDefinition(careerName)
-  if (!careerDefinition) return null
+  const plan = deriveBasicTrainingPlan({
+    career: careerName,
+    serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
+    completedTermCount: flow.draft.completedTerms.length,
+    previousCareerNames: flow.draft.completedTerms.map((term) => term.career)
+  })
+  if (plan.kind === 'none') return null
 
-  const skills = careerDefinition.serviceSkills
+  const skills = plan.skills
     .map((skill) => normalizeCareerSkill(skill, 0))
     .filter((skill): skill is string => skill !== null)
   if (skills.length === 0) return null
+  if (
+    plan.kind === 'all' &&
+    skills.every((skill) => flow.draft.skills.includes(skill))
+  ) {
+    return null
+  }
 
   return {
-    label: 'Apply basic training',
-    reason: `First ${careerName} term grants service skills at level 0`,
+    label:
+      plan.kind === 'choose-one'
+        ? 'Choose basic training'
+        : 'Apply basic training',
+    reason:
+      plan.kind === 'choose-one'
+        ? `Choose one ${careerName} service skill at level 0`
+        : `First ${careerName} term grants service skills at level 0`,
     skills,
-    kind: 'all'
+    kind: plan.kind
   }
 }
 
 export const applyCharacterCreationBasicTraining = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  selectedSkill?: string
 ): CharacterCreationWizardResult => {
   const action = deriveCharacterCreationBasicTrainingAction(flow)
   if (!action) {
     const validation = validateCurrentCharacterCreationStep(flow)
     return { flow, validation, moved: false }
   }
+  const skills =
+    action.kind === 'choose-one'
+      ? action.skills.filter((skill) => skill === selectedSkill).slice(0, 1)
+      : action.skills
+  if (skills.length === 0) {
+    const validation = validateCurrentCharacterCreationStep(flow)
+    return { flow, validation, moved: false }
+  }
 
   const updatedFlow = updateCharacterCreationFields(flow, {
-    skills: action.skills
+    skills: normalizeSkillList([...flow.draft.skills, ...skills])
   })
   return {
     flow: updatedFlow,

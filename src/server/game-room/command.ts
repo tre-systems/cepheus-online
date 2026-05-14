@@ -505,7 +505,8 @@ const validateBasicTrainingCompletion = (
 }
 
 const deriveBasicTrainingSkills = (
-  creation: CharacterCreationProjection
+  creation: CharacterCreationProjection,
+  selectedSkill?: string
 ): Result<string[], CommandError> => {
   const currentTerm = creation.terms.at(-1)
   if (!currentTerm) {
@@ -524,6 +525,14 @@ const deriveBasicTrainingSkills = (
   })
 
   if (plan.kind === 'all') {
+    if (selectedSkill) {
+      return err(
+        commandError(
+          'invalid_command',
+          'Basic training skill choices are only valid for later career terms'
+        )
+      )
+    }
     return ok(
       plan.skills
         .map((skill) => normalizeCareerSkill(skill, 0))
@@ -531,15 +540,36 @@ const deriveBasicTrainingSkills = (
     )
   }
   if (plan.kind === 'none') {
+    if (selectedSkill) {
+      return err(
+        commandError(
+          'invalid_command',
+          'This career term does not grant basic training'
+        )
+      )
+    }
     return ok([])
   }
 
-  return err(
-    commandError(
-      'invalid_command',
-      'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions'
+  const normalizedChoices = plan.skills
+    .map((skill) => normalizeCareerSkill(skill, 0))
+    .filter((skill): skill is string => skill !== null)
+  const normalizedSelection = selectedSkill
+    ? normalizeCareerSkill(selectedSkill, 0)
+    : null
+  if (
+    !normalizedSelection ||
+    !normalizedChoices.includes(normalizedSelection)
+  ) {
+    return err(
+      commandError(
+        'invalid_command',
+        'Choose one valid basic training skill for this career term'
+      )
     )
-  )
+  }
+
+  return ok([normalizedSelection])
 }
 
 const validateHomeworldCompletion = (
@@ -2146,7 +2176,10 @@ export const deriveEventsForCommand = (
       const { character } = loaded.value
       const creation = validateBasicTrainingCompletion(character)
       if (!creation.ok) return creation
-      const trainingSkills = deriveBasicTrainingSkills(creation.value)
+      const trainingSkills = deriveBasicTrainingSkills(
+        creation.value,
+        command.skill
+      )
       if (!trainingSkills.ok) return trainingSkills
 
       const nextState = transitionCareerCreationState(creation.value.state, {

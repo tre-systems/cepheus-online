@@ -19,6 +19,7 @@ const defaultActionContext = {
   remainingMusteringBenefits: 0,
   canContinueCareer: false,
   canCompleteCreation: false,
+  canResolveBasicTrainingSelection: false,
   reenlistmentOutcome: 'unresolved',
   failedToQualify: false,
   canEnterDraft: true
@@ -123,6 +124,34 @@ const shouldDecideAnagathics = (
   if (!CEPHEUS_SRD_RULESET.careerBasics[term.career]) return false
 
   return term.survival !== undefined
+}
+
+const canResolveBasicTrainingSelection = (
+  creation: CareerCreationActionProjection,
+  pendingDecisions: readonly CareerCreationPendingDecision[]
+): boolean => {
+  if (
+    creation.state.status !== 'BASIC_TRAINING' ||
+    pendingDecisions.length === 0 ||
+    !pendingDecisions.every(
+      (decision) => decision.key === 'basicTrainingSkillSelection'
+    )
+  ) {
+    return false
+  }
+  const term = lastTerm(creation)
+  if (!term) return false
+  const previousTerms = creation.terms?.slice(0, -1) ?? []
+  return (
+    deriveBasicTrainingPlan({
+      career: term.career,
+      serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
+      completedTermCount: previousTerms.length,
+      previousCareerNames: previousTerms.map(
+        (previousTerm) => previousTerm.career
+      )
+    }).kind === 'choose-one'
+  )
 }
 
 const basicTrainingCommandTypes = [
@@ -244,6 +273,10 @@ export const deriveCareerCreationActionContext = (
   const remainingMusteringBenefits =
     deriveRemainingCareerCreationBenefits(creation)
   const terms = creation.terms ?? []
+  const canResolveBasicTraining = canResolveBasicTrainingSelection(
+    creation,
+    pendingDecisions
+  )
 
   return {
     pendingDecisions,
@@ -259,6 +292,9 @@ export const deriveCareerCreationActionContext = (
     canCompleteCreation:
       creation.creationComplete !== true &&
       canCompleteCreation({ noOutstandingSelections, terms }),
+    ...(canResolveBasicTraining
+      ? { canResolveBasicTrainingSelection: true }
+      : {}),
     reenlistmentOutcome: deriveCareerCreationReenlistmentOutcome(creation),
     ...(creation.failedToQualify === undefined
       ? {}
@@ -305,7 +341,9 @@ export const deriveLegalCareerCreationActionKeys = (
       }
       return ['selectCareer']
     case 'BASIC_TRAINING':
-      return noPendingDecisions ? ['completeBasicTraining'] : []
+      return noPendingDecisions || options.canResolveBasicTrainingSelection
+        ? ['completeBasicTraining']
+        : []
     case 'SURVIVAL':
       return noPendingDecisions ? ['rollSurvival'] : []
     case 'MISHAP':

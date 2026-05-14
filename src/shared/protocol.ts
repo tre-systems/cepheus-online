@@ -1096,11 +1096,14 @@ export const decodeCommand = (
     case 'CompleteCharacterCreationBasicTraining': {
       const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
       if (!characterId.ok) return characterId
+      const skill = parseOptionalString(raw.skill, 'skill')
+      if (!skill.ok) return skill
 
       return ok({
         type: 'CompleteCharacterCreationBasicTraining',
         ...base.value,
-        characterId: characterId.value
+        characterId: characterId.value,
+        ...(skill.value === null ? {} : { skill: skill.value })
       })
     }
 

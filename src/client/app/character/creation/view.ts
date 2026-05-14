@@ -119,6 +119,7 @@ export interface CharacterCreationBasicTrainingButton {
   label: string
   reason: string
   skills: string[]
+  kind: 'all' | 'choose-one' | 'none'
   disabled: boolean
 }
 
@@ -709,6 +710,7 @@ export const deriveCharacterCreationBasicTrainingButton = (
     label: action.label,
     reason: action.reason,
     skills: [...action.skills],
+    kind: action.kind,
     disabled: false
   }
 }

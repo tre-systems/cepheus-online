@@ -201,6 +201,7 @@ export type CharacterCreationBasicTrainingCommand = {
   actorId: UserId
   expectedSeq?: number
   characterId: CharacterId
+  skill?: string
 }
 
 export type CharacterCreationHomeworldCommand = {

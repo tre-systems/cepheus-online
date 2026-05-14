@@ -3,9 +3,23 @@ import { expect, type Page } from '@playwright/test'
 export type CharacterCreationProjection = {
   creationComplete?: boolean
   pendingCascadeSkills?: string[]
+  characteristicChanges?: Array<{
+    type: 'PHYSICAL' | 'MENTAL'
+    modifier: number
+  }>
+  actionPlan?: {
+    legalActions?: Array<{
+      key: string
+      commandTypes?: string[]
+    }>
+  }
   state?: {
     status?: string
   }
+  terms?: Array<{
+    career: string
+    skillsAndTraining?: string[]
+  }>
   history?: Array<{
     type?: string
     musteringBenefit?: {

@@ -53,7 +53,7 @@ export interface CharacterCreationCommandController {
   resolveFailedQualificationOption: (
     option: 'Drifter' | 'Draft'
   ) => Promise<void>
-  completeBasicTraining: () => Promise<void>
+  completeBasicTraining: (skill?: string) => Promise<void>
   rollTermSkill: (table: CharacterCreationTermSkillTable) => Promise<void>
   rollMusteringBenefit: (kind: BenefitKind) => Promise<void>
   rollReenlistment: () => Promise<void>
@@ -433,17 +433,18 @@ export const createCharacterCreationCommandController = (
       )
     },
 
-    completeBasicTraining: async () => {
+    completeBasicTraining: async (skill) => {
       const flow = guardEditableFlow()
       if (!flow) return
-      const fallbackFlow = applyCharacterCreationBasicTraining(flow).flow
+      const fallbackFlow = applyCharacterCreationBasicTraining(flow, skill).flow
 
       await ensurePublished()
       const response = await postCharacterCreationCommand(
         {
           type: 'CompleteCharacterCreationBasicTraining',
           ...commandIdentity(),
-          characterId: flow.draft.characterId
+          characterId: flow.draft.characterId,
+          ...(skill ? { skill } : {})
         },
         requestId('complete-character-basic-training')
       )

@@ -583,6 +583,53 @@ describe('character creation flow', () => {
     assert.equal(deriveCharacterCreationBasicTrainingAction(result.flow), null)
   })
 
+  it('applies one basic training skill when entering a later new career', () => {
+    let flow = createCharacterCreationFlow(characterId, {
+      name: 'Iona Vesh',
+      characteristics: completeDraft().characteristics,
+      skills: ['Comms-0'],
+      completedTerms: [
+        {
+          career: 'Scout',
+          drafted: false,
+          age: 22,
+          qualificationRoll: 8,
+          survivalRoll: 7,
+          survivalPassed: true,
+          canCommission: false,
+          commissionRoll: null,
+          commissionPassed: null,
+          canAdvance: false,
+          advancementRoll: null,
+          advancementPassed: null,
+          reenlistmentRoll: 4,
+          reenlistmentOutcome: 'blocked'
+        }
+      ],
+      careerPlan: selectCharacterCreationCareerPlan('Merchant', {
+        qualificationRoll: 9,
+        qualificationPassed: true
+      })
+    })
+    flow = { ...flow, step: 'skills' }
+
+    const action = deriveCharacterCreationBasicTrainingAction(flow)
+    assert.equal(action?.kind, 'choose-one')
+    assert.equal(action?.reason, 'Choose one Merchant service skill at level 0')
+    assert.deepEqual(action?.skills, [
+      'Comms-0',
+      'Engineering-0',
+      'Gun Combat-0',
+      'Melee Combat-0',
+      'Broker-0',
+      'Vehicle-0'
+    ])
+
+    const result = applyCharacterCreationBasicTraining(flow, 'Broker-0')
+    assert.deepEqual(result.flow.draft.skills, ['Comms-0', 'Broker-0'])
+    assert.deepEqual(applyCharacterCreationBasicTraining(flow).flow, flow)
+  })
+
   it('walks SRD career checks with server dice roll totals', () => {
     let flow = createCharacterCreationFlow(characterId, {
       name: 'Iona Vesh',

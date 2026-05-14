@@ -780,7 +780,8 @@ describe('protocol validation', () => {
       gameId: 'game-1',
       actorId: 'user-1',
       characterId: 'char-1',
-      expectedSeq: 7
+      expectedSeq: 7,
+      skill: 'Broker-0'
     })
 
     assert.equal(result.ok, true)
@@ -789,6 +790,7 @@ describe('protocol validation', () => {
     if (result.value.type !== 'CompleteCharacterCreationBasicTraining') return
     assert.equal(result.value.characterId, 'char-1')
     assert.equal(result.value.expectedSeq, 7)
+    assert.equal(result.value.skill, 'Broker-0')
   })
 
   it('accepts semantic homeworld completion commands', () => {

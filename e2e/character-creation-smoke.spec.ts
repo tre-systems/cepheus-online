@@ -46,6 +46,250 @@ const resolveVisibleCascadeChoices = async (page: Page): Promise<void> => {
   }
 }
 
+const cascadeSelectionFor = (cascadeSkill: string): string => {
+  const normalized = cascadeSkill.replace(/\*$/, '')
+  switch (normalized) {
+    case 'Aircraft':
+      return 'Grav Vehicle'
+    case 'Animals':
+      return 'Survival'
+    case 'Gun Combat':
+      return 'Slug Rifle'
+    case 'Gunnery':
+      return 'Turret Weapons'
+    case 'Melee Combat':
+      return 'Slashing Weapons'
+    case 'Sciences':
+      return 'Life Sciences'
+    case 'Vehicle':
+      return 'Grav Vehicle'
+    case 'Watercraft':
+      return 'Motorboats'
+    case 'Weapon':
+      return 'Gun Combat'
+    default:
+      return normalized
+  }
+}
+
+const resolveProjectedTermCascadeSkills = async ({
+  page,
+  roomId,
+  actorId,
+  actorSession,
+  characterId
+}: {
+  page: Page
+  roomId: string
+  actorId: string
+  actorSession: string
+  characterId: string
+}): Promise<void> => {
+  for (let index = 0; index < 8; index += 1) {
+    const character = await fetchProjectedCharacter(
+      page,
+      roomId,
+      actorId,
+      characterId
+    )
+    const pendingCascadeSkill = character?.creation?.pendingCascadeSkills?.[0]
+    if (!pendingCascadeSkill) return
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationTermCascadeSkill',
+      characterId,
+      cascadeSkill: pendingCascadeSkill,
+      selection: cascadeSelectionFor(pendingCascadeSkill)
+    })
+  }
+}
+
+const legalCreationActionKeys = async ({
+  page,
+  roomId,
+  actorId,
+  characterId
+}: {
+  page: Page
+  roomId: string
+  actorId: string
+  characterId: string
+}): Promise<string[]> => {
+  const character = await fetchProjectedCharacter(
+    page,
+    roomId,
+    actorId,
+    characterId
+  )
+  return character?.creation?.actionPlan?.legalActions?.map(
+    (action) => action.key
+  ) ?? []
+}
+
+const selectedAgingLosses = (
+  changes: Array<{ type: 'PHYSICAL' | 'MENTAL'; modifier: number }>
+): Array<{
+  type: 'PHYSICAL' | 'MENTAL'
+  modifier: number
+  characteristic: 'str' | 'dex' | 'end' | 'int' | 'edu' | 'soc'
+}> => {
+  const physical = ['str', 'dex', 'end'] as const
+  const mental = ['int', 'edu', 'soc'] as const
+  let physicalIndex = 0
+  let mentalIndex = 0
+  return changes.map((change) => ({
+    ...change,
+    characteristic:
+      change.type === 'PHYSICAL'
+        ? physical[Math.min(physicalIndex++, physical.length - 1)]
+        : mental[Math.min(mentalIndex++, mental.length - 1)]
+  }))
+}
+
+const completeSecondScoutTermAndFinalize = async ({
+  page,
+  roomId,
+  actorId,
+  actorSession,
+  characterId
+}: {
+  page: Page
+  roomId: string
+  actorId: string
+  actorSession: string
+  characterId: string
+}): Promise<void> => {
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'CompleteCharacterCreationBasicTraining',
+    characterId,
+    skill: 'Comms-0'
+  })
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'ResolveCharacterCreationSurvival',
+    characterId
+  })
+  for (const table of ['serviceSkills', 'specialistSkills'] as const) {
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'RollCharacterCreationTermSkill',
+      characterId,
+      table
+    })
+    await resolveProjectedTermCascadeSkills({
+      page,
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+  }
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'CompleteCharacterCreationSkills',
+    characterId
+  })
+
+  let legalActions = await legalCreationActionKeys({
+    page,
+    roomId,
+    actorId,
+    characterId
+  })
+  if (legalActions.includes('decideAnagathics')) {
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'DecideCharacterCreationAnagathics',
+      characterId,
+      useAnagathics: false
+    })
+  }
+  legalActions = await legalCreationActionKeys({
+    page,
+    roomId,
+    actorId,
+    characterId
+  })
+  if (legalActions.includes('resolveAging')) {
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationAging',
+      characterId
+    })
+    const agingCharacter = await fetchProjectedCharacter(
+      page,
+      roomId,
+      actorId,
+      characterId
+    )
+    const changes = agingCharacter?.creation?.characteristicChanges ?? []
+    if (changes.length > 0) {
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'ResolveCharacterCreationAgingLosses',
+        characterId,
+        selectedLosses: selectedAgingLosses(changes)
+      })
+    }
+  }
+
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'ResolveCharacterCreationReenlistment',
+    characterId
+  })
+  legalActions = await legalCreationActionKeys({
+    page,
+    roomId,
+    actorId,
+    characterId
+  })
+  if (!legalActions.includes('leaveCareer')) {
+    throw new Error(
+      `Expected Scout term to be able to leave career; legal actions were ${legalActions.join(', ')}`
+    )
+  }
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'LeaveCharacterCreationCareer',
+    characterId
+  })
+
+  for (let index = 0; index < 4; index += 1) {
+    legalActions = await legalCreationActionKeys({
+      page,
+      roomId,
+      actorId,
+      characterId
+    })
+    if (!legalActions.includes('resolveMusteringBenefit')) break
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'RollCharacterCreationMusteringBenefit',
+      characterId,
+      career: 'Scout',
+      kind: 'material'
+    })
+  }
+  legalActions = await legalCreationActionKeys({
+    page,
+    roomId,
+    actorId,
+    characterId
+  })
+  if (legalActions.includes('finishMustering')) {
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationMustering',
+      characterId
+    })
+  }
+  legalActions = await legalCreationActionKeys({
+    page,
+    roomId,
+    actorId,
+    characterId
+  })
+  if (!legalActions.includes('completeCreation')) {
+    throw new Error(
+      `Expected creation completion to be legal; legal actions were ${legalActions.join(', ')}`
+    )
+  }
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'FinalizeCharacterCreation',
+    characterId
+  })
+}
+
 const characterCreationCareerButton = (page: Page, career: string) =>
   page
     .locator('#characterCreationFields .creation-career-list button')
@@ -3199,6 +3443,64 @@ test.describe('character creation smoke', () => {
         .toEqual(['Merchant', 'Scout'])
     } finally {
       await secondTermSpectator.close()
+    }
+
+    const finalizationSpectatorId = 'e2e-finalization-spectator'
+    const finalizationSpectator = await browser.newPage()
+    try {
+      await openRoom(finalizationSpectator, {
+        roomId,
+        userId: finalizationSpectatorId,
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(finalizationSpectator, characterName)
+
+      await completeSecondScoutTermAndFinalize({
+        page,
+        roomId,
+        actorId,
+        actorSession,
+        characterId
+      })
+
+      await expect(
+        finalizationSpectator.locator('#creationActivityFeed')
+      ).toContainText('Character finalized', { timeout: 5_000 })
+
+      const projectedFinalizedSheet = async () => {
+        const character = await fetchProjectedCharacter(
+          finalizationSpectator,
+          roomId,
+          finalizationSpectatorId,
+          characterId,
+          'spectator'
+        )
+        if (!character) return null
+        return {
+          status: character.creation?.state?.status,
+          creationComplete: character.creation?.creationComplete,
+          terms: character.creation?.terms?.map((term) => term.career) ?? [],
+          notes: character.notes ?? '',
+          skillCount: character.skills?.length ?? 0
+        }
+      }
+
+      await expect.poll(projectedFinalizedSheet).toMatchObject({
+        status: 'PLAYABLE',
+        creationComplete: true,
+        terms: ['Merchant', 'Scout']
+      })
+      const liveSheet = await projectedFinalizedSheet()
+      if (!liveSheet) throw new Error('Finalized sheet was not projected')
+      expect(liveSheet.notes).toContain('Term 1: Merchant')
+      expect(liveSheet.notes).toContain('Term 2: Scout')
+      expect(liveSheet.skillCount).toBeGreaterThan(0)
+
+      await finalizationSpectator.reload({ waitUntil: 'domcontentloaded' })
+      await expect(finalizationSpectator.locator('#boardCanvas')).toBeVisible()
+      await expect.poll(projectedFinalizedSheet).toEqual(liveSheet)
+    } finally {
+      await finalizationSpectator.close()
     }
 
     await expect.poll(() => postedCommandTypes).toContain(

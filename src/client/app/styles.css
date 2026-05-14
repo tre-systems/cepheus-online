@@ -2259,6 +2259,14 @@ h1 {
   line-height: 1.2;
 }
 
+.character-creation-roll-action .creation-training-skills button {
+  width: auto;
+  min-height: 34px;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
 .creation-draft-fallback {
   display: grid;
   gap: 8px;

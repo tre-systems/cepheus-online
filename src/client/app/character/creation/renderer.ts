@@ -53,7 +53,7 @@ export interface CharacterCreationCharacteristicRollRendererDeps {
 export interface CharacterCreationBasicTrainingRendererDeps {
   hasFlow: () => boolean
   syncFields: () => void
-  completeBasicTraining: () => Promise<void>
+  completeBasicTraining: (skill?: string) => Promise<void>
   reportError: (message: string) => void
 }
 
@@ -215,20 +215,37 @@ export const renderCharacterCreationBasicTrainingButton = (
 
   const wrapper = document.createElement('div')
   wrapper.className = 'character-creation-roll-action'
+  const bindTrainingButton = (button: HTMLButtonElement, skill?: string) => {
+    bindAsyncActionButton(button, () => {
+      if (!hasFlow()) return
+      syncFields()
+      reportError('')
+      return completeBasicTraining(skill).catch((error) =>
+        reportError(error.message)
+      )
+    })
+  }
   const button = document.createElement('button')
   button.type = 'button'
   button.textContent = viewModel.label
   button.disabled = viewModel.disabled
-  bindAsyncActionButton(button, () => {
-    if (!hasFlow()) return
-    syncFields()
-    reportError('')
-    return completeBasicTraining().catch((error) => reportError(error.message))
-  })
+  bindTrainingButton(button)
   const hint = document.createElement('small')
   hint.textContent = viewModel.reason
   const skills = document.createElement('div')
   skills.className = 'creation-training-skills'
+  if (viewModel.kind === 'choose-one') {
+    for (const skill of viewModel.skills) {
+      const skillButton = document.createElement('button')
+      skillButton.type = 'button'
+      skillButton.textContent = skill
+      skillButton.disabled = viewModel.disabled
+      bindTrainingButton(skillButton, skill)
+      skills.append(skillButton)
+    }
+    wrapper.append(hint, skills)
+    return wrapper
+  }
   for (const skill of viewModel.skills) {
     const chip = document.createElement('span')
     chip.textContent = skill

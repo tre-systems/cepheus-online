@@ -131,12 +131,11 @@ tests before it is considered done.
   and qualification penalties, with dedicated persisted roll facts.
 - [x] Resolve the Draft by rolling the `theDraft` table when eligible, then
   mark draft use on the term.
-- [~] Apply basic training from `serviceSkills`: all service skills at level 0
+- [x] Apply basic training from `serviceSkills`: all service skills at level 0
   in the first term ever, one selected service skill for a first term in a new
   career, none when returning. Current planner can block on
-  `basicTrainingSkillSelection`. Semantic completion is server-backed. Gap:
-  choose-one basic training decisions still need richer projected state and UI
-  affordances.
+  `basicTrainingSkillSelection`. Semantic completion is server-backed and the
+  browser renders the choose-one service skill as explicit buttons.
 - [~] Roll survival from `careerBasics`; on failure, enter mishap/death or legal
   exit handling. Current legal action: `rollSurvival`. Semantic survival
   command/event and roll facts are server-backed. Gap: mishap/death outcome
@@ -531,8 +530,8 @@ Acceptance:
 - Add browser smoke tests with deterministic dice inputs for:
   - full one-term path from characteristics through homeworld/background,
     survival, term skills, aging, reenlistment, and mustering
-  - extend deterministic two-term, multi-career spectator coverage through
-    finalization and final-sheet recovery
+  - keep deterministic two-term, multi-career spectator coverage through
+    finalization and final-sheet recovery green
   - failed qualification to Draft
   - one mustering-out and finalization path
   - spectator reveal timing for later term rolls

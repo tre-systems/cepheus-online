@@ -266,6 +266,7 @@ export interface CareerCreationActionContext {
   remainingMusteringBenefits?: number
   canContinueCareer?: boolean
   canCompleteCreation?: boolean
+  canResolveBasicTrainingSelection?: boolean
   reenlistmentOutcome?: CareerCreationReenlistmentOutcome
   failedToQualify?: boolean
   canEnterDraft?: boolean

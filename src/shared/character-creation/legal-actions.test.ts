@@ -616,7 +616,7 @@ describe('career creation legal action planner', () => {
           ]
         })
       ),
-      []
+      ['completeBasicTraining']
     )
     assert.deepEqual(
       deriveCareerCreationPendingDecisions(

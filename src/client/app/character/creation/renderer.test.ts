@@ -110,8 +110,27 @@ const reviewFlow = (): CharacterCreationFlow => completeFlow('review')
 const basicTrainingFlow = (): CharacterCreationFlow => ({
   step: 'skills',
   draft: {
-    ...completeFlow('skills').draft,
-    skills: []
+    ...createInitialCharacterDraft(characterId, {
+      characterType: 'PLAYER',
+      name: 'Iona Vesh',
+      age: 18,
+      characteristics
+    }),
+    backgroundSkills: ['Zero-G-0', 'Slug Pistol-0', 'Admin-0'],
+    careerPlan: {
+      career: 'Scout',
+      qualificationRoll: 8,
+      qualificationPassed: true,
+      survivalRoll: 9,
+      survivalPassed: true,
+      commissionRoll: null,
+      commissionPassed: null,
+      advancementRoll: null,
+      advancementPassed: null,
+      canCommission: false,
+      canAdvance: false,
+      drafted: false
+    }
   }
 })
 

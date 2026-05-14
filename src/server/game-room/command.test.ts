@@ -867,7 +867,109 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(
       result.error.message,
-      'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions'
+      'Choose one valid basic training skill for this career term'
+    )
+  })
+
+  it('emits semantic basic training completion with a selected later-career skill', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationBasicTraining',
+        gameId,
+        actorId,
+        characterId,
+        skill: 'Broker'
+      },
+      createCreation('BASIC_TRAINING', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Vacc Suit-0'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          },
+          {
+            career: 'Merchant',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationBasicTrainingCompleted',
+        characterId,
+        trainingSkills: ['Broker-0'],
+        state: {
+          status: 'SURVIVAL',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('rejects invalid later-career basic training skill selections', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreationBasicTraining',
+        gameId,
+        actorId,
+        characterId,
+        skill: 'Recon'
+      },
+      createCreation('BASIC_TRAINING', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Vacc Suit-0'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          },
+          {
+            career: 'Merchant',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Choose one valid basic training skill for this career term'
     )
   })
 

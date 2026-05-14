@@ -992,13 +992,12 @@ flow helpers exist. Production career entry paths, including bootstrap/demo and
 custom-piece creation, are now off generic `SELECT_CAREER`. Direct player use
 of `StartCharacterCareerTerm` is blocked server-side and covered by a
 regression test, so that bypass is no longer an active backlog item. The
-remaining work is to carry richer basic-training choices in projection and
-tighten the browser affordances around failed qualification and draft fallback.
+remaining work is to tighten the browser affordances around failed
+qualification and draft fallback, and to keep improving provenance display for
+career entry.
 
 Tasks:
 
-- Carry choose-one basic training decisions as projected pending decisions,
-  not client-only draft state.
 - Remove the remaining local draft fallback in
   `src/client/app/character/creation/flow.ts` now that semantic qualification,
   draft, Drifter, and career-term events exist.
@@ -1157,11 +1156,10 @@ Tasks:
   reenlistment, mustering, and finalization.
 - Keep dice reveal timing consistent with tactical dice and avoid exposing
   resolved roll-dependent text before reveal.
-- Extend the deterministic two-tab E2E journey so one player creates a
-  two-term, multi-career traveller while a spectator follows from before
-  qualification through finalization. Assert the spectator sees the same
-  projected steps, final terms, and final playable sheet without any pre-reveal
-  roll result leakage.
+- Keep the deterministic two-tab E2E journey for a two-term, multi-career
+  traveller green. It now follows from before qualification through
+  finalization, asserts the final Merchant/Scout terms, and verifies spectator
+  recovery of the playable sheet after refresh.
 - Add a pre-reveal reload/new-join regression for spectators: if a roll is
   still unrevealed, refreshed or newly opened spectator views must keep dice,
   roll-dependent outcome text, projected term skill/benefit details, and
