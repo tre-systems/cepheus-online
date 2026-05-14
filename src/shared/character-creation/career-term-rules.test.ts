@@ -22,7 +22,9 @@ import {
   deriveRemainingCashBenefits,
   deriveCashBenefitRollModifier,
   deriveCareerBenefitCount,
+  deriveMaterialBenefitEffect,
   deriveMaterialBenefitRollModifier,
+  normalizeMaterialBenefitValue,
   resolveCareerBenefit
 } from './benefits'
 
@@ -289,5 +291,22 @@ describe('SRD career term rules alignment', () => {
       }),
       { kind: 'cash', value: '20000', credits: 20000 }
     )
+  })
+
+  it('normalizes and classifies material mustering benefits', () => {
+    assert.equal(
+      normalizeMaterialBenefitValue('1D6  Ship Shares'),
+      '1D6 Ship Shares'
+    )
+    assert.deepEqual(deriveMaterialBenefitEffect('-'), { kind: 'none' })
+    assert.deepEqual(deriveMaterialBenefitEffect('+1 Edu'), {
+      kind: 'characteristic',
+      characteristic: 'edu',
+      modifier: 1
+    })
+    assert.deepEqual(deriveMaterialBenefitEffect('High  Passage'), {
+      kind: 'equipment',
+      item: 'High Passage'
+    })
   })
 })

@@ -481,13 +481,13 @@ describe('deriveEventsForCommand error categories', () => {
         gameId,
         actorId,
         characterId,
-        career: 'Scout',
+        career: 'Aerospace',
         kind: 'material'
       },
       createCreation('MUSTERING_OUT', {
         terms: [
           {
-            career: 'Scout',
+            career: 'Aerospace',
             skills: ['Vacc Suit-1'],
             skillsAndTraining: ['Vacc Suit-1'],
             benefits: [],
@@ -498,7 +498,7 @@ describe('deriveEventsForCommand error categories', () => {
             anagathics: false
           }
         ],
-        careers: [{ name: 'Scout', rank: 0 }]
+        careers: [{ name: 'Aerospace', rank: 0 }]
       })
     )
 
@@ -508,7 +508,7 @@ describe('deriveEventsForCommand error categories', () => {
       {
         type: 'DiceRolled',
         expression: '2d6',
-        reason: 'Scout material mustering benefit',
+        reason: 'Aerospace material mustering benefit',
         rolls: [4, 4],
         total: 8
       },
@@ -517,7 +517,7 @@ describe('deriveEventsForCommand error categories', () => {
         characterId,
         rollEventId: 'game-1:2',
         musteringBenefit: {
-          career: 'Scout',
+          career: 'Aerospace',
           kind: 'material',
           roll: {
             expression: '2d6',
@@ -526,7 +526,7 @@ describe('deriveEventsForCommand error categories', () => {
           },
           modifier: 0,
           tableRoll: 8,
-          value: '-',
+          value: '+1 Soc',
           credits: 0,
           materialItem: null
         },

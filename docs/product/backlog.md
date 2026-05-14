@@ -1112,15 +1112,17 @@ Done when:
 
 Status: partially done. SRD benefit count, cash/material benefit roll
 modifiers, cash limits, benefit table resolution, semantic mustering benefit
-events, mustering completion events, and multi-career continuation are covered.
-Remaining work is UI polish for benefit choices, payouts, material item
-presentation, provenance, and final sheet/export quality.
+events, mustering completion events, multi-career continuation, compact
+cash/material payout cards, normalized material benefit labels, and material
+characteristic gains are covered. Remaining work is deeper material item
+metadata, benefit-choice copy, provenance, and final sheet/export quality.
 
 Tasks:
 
-- Polish mustering benefit choice and payout presentation, including clear
-  cash/material labels and material item metadata where the SRD table provides
-  it.
+- Continue polishing mustering benefit choices and richer material item
+  metadata where the SRD table provides it. Cash/material payout cards,
+  material characteristic gains, and roll/DM/table-roll provenance are in
+  place.
 - Keep continuing into a new career after mustering out covered as new edge
   cases are added.
 - Keep regression coverage proving remaining benefit counts are projection-fed

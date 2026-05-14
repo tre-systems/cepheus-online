@@ -152,8 +152,12 @@ export interface CharacterCreationMusteringBenefit {
   career: string
   kind: BenefitKind
   roll: number
+  diceRoll?: number | null
+  modifier?: number | null
+  tableRoll?: number | null
   value: string
   credits: number
+  materialItem?: string | null
 }
 
 export interface CharacterCreationDraft {
@@ -470,8 +474,14 @@ const cloneMusteringBenefits = (
     career: benefit.career,
     kind: benefit.kind,
     roll: benefit.roll,
+    ...(benefit.diceRoll != null ? { diceRoll: benefit.diceRoll } : {}),
+    ...(benefit.modifier != null ? { modifier: benefit.modifier } : {}),
+    ...(benefit.tableRoll != null ? { tableRoll: benefit.tableRoll } : {}),
     value: benefit.value,
-    credits: benefit.credits
+    credits: benefit.credits,
+    ...(benefit.materialItem != null
+      ? { materialItem: benefit.materialItem }
+      : {})
   }))
 
 const cloneHomeworld = (

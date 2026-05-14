@@ -1,3 +1,4 @@
+import type { CharacteristicKey } from '../state'
 import type { BenefitKind, BenefitTables, CareerBenefit } from './types'
 
 export const CEPHEUS_SRD_MAX_CASH_BENEFITS = 3
@@ -57,6 +58,48 @@ export const deriveMaterialBenefitRollModifier = ({
   currentRank: number
 }): number => (currentRank > 4 ? 1 : 0)
 
+export type MaterialBenefitEffect =
+  | { kind: 'none' }
+  | {
+      kind: 'characteristic'
+      characteristic: CharacteristicKey
+      modifier: number
+    }
+  | { kind: 'equipment'; item: string }
+
+const characteristicLabels: Record<string, CharacteristicKey> = {
+  str: 'str',
+  dex: 'dex',
+  end: 'end',
+  int: 'int',
+  edu: 'edu',
+  soc: 'soc'
+}
+
+export const normalizeMaterialBenefitValue = (value: string): string =>
+  value.replace(/\s+/g, ' ').trim()
+
+export const deriveMaterialBenefitEffect = (
+  value: string
+): MaterialBenefitEffect => {
+  const normalized = normalizeMaterialBenefitValue(value)
+  if (!normalized || normalized === '-') return { kind: 'none' }
+
+  const characteristicMatch = /^\+(\d+)\s+(str|dex|end|int|edu|soc)$/i.exec(
+    normalized
+  )
+  if (characteristicMatch) {
+    const modifier = Number.parseInt(characteristicMatch[1] ?? '', 10)
+    const characteristic =
+      characteristicLabels[characteristicMatch[2]?.toLowerCase() ?? '']
+    if (Number.isFinite(modifier) && characteristic) {
+      return { kind: 'characteristic', characteristic, modifier }
+    }
+  }
+
+  return { kind: 'equipment', item: normalized }
+}
+
 const clampedBenefitRoll = (
   table: Record<string, unknown> | undefined,
   roll: number
@@ -95,7 +138,9 @@ export const resolveCareerBenefit = ({
   }
 
   const table = tables.materialBenefits[career]
-  const value = table?.[clampedBenefitRoll(table, roll)] ?? 'Unknown Benefit'
+  const value = normalizeMaterialBenefitValue(
+    table?.[clampedBenefitRoll(table, roll)] ?? 'Unknown Benefit'
+  )
   return {
     kind: 'material',
     value,

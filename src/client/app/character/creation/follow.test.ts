@@ -205,6 +205,9 @@ describe('character creation follow helpers', () => {
         career: 'Scout',
         kind: 'material',
         roll: 11,
+        diceRoll: 11,
+        modifier: 0,
+        tableRoll: 11,
         value: 'Low Passage',
         credits: 0
       }

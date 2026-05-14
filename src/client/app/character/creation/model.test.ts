@@ -586,7 +586,12 @@ describe('character creation view model', () => {
       '1 benefit roll remaining.'
     )
     assert.deepEqual(viewModel.wizard?.musteringOut?.benefits, [
-      { label: 'Merchant: cash 2 -> 10000' }
+      {
+        label: 'Merchant Cash',
+        valueLabel: 'Cr10000',
+        rollLabel: 'Table 2',
+        metaLabel: 'Credits'
+      }
     ])
     assert.deepEqual(
       viewModel.wizard?.musteringOut?.actions.map(

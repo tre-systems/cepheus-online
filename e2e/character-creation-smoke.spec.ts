@@ -2845,7 +2845,7 @@ test.describe('character creation smoke', () => {
       const rollCashBenefit = page.getByRole('button', { name: 'Roll cash' })
       await expect(rollCashBenefit).toBeVisible({ timeout: 5_000 })
       await expect(spectatorBenefitList).toHaveCount(0)
-      await expect(spectatorFields).not.toContainText(/Merchant: cash \d+ ->/, {
+      await expect(spectatorFields).not.toContainText(/Merchant Cash.*Cr\d+/s, {
         timeout: 100
       })
 
@@ -2868,7 +2868,7 @@ test.describe('character creation smoke', () => {
         { timeout: 100 }
       )
       await expect(spectatorBenefitList).toHaveCount(0, { timeout: 100 })
-      await expect(spectatorFields).not.toContainText(/Merchant: cash \d+ ->/, {
+      await expect(spectatorFields).not.toContainText(/Merchant Cash.*Cr\d+/s, {
         timeout: 100
       })
 
@@ -2884,8 +2884,15 @@ test.describe('character creation smoke', () => {
       }
       const cashCredits = Number(projectedBenefit.value)
       expect(cashCredits).toBeGreaterThan(0)
+      await expect(spectatorFields).toContainText('Merchant Cash', {
+        timeout: 5_000
+      })
       await expect(spectatorFields).toContainText(
-        `Merchant: cash ${projectedBenefit.tableRoll} -> ${projectedBenefit.value}`,
+        `Cr${projectedBenefit.value}`,
+        { timeout: 5_000 }
+      )
+      await expect(spectatorFields).toContainText(
+        `Roll ${projectedBenefit.roll.total}`,
         { timeout: 5_000 }
       )
 
@@ -3415,7 +3422,7 @@ test.describe('character creation smoke', () => {
       }
 
       await expect(rollCashBenefit).toBeVisible({ timeout: 5_000 })
-      await expect(spectatorFields).not.toContainText(/Merchant: cash \d+ ->/, {
+      await expect(spectatorFields).not.toContainText(/Merchant Cash.*Cr\d+/s, {
         timeout: 100
       })
       await expect(spectatorBenefitList).toHaveCount(0)
@@ -3459,20 +3466,23 @@ test.describe('character creation smoke', () => {
       if (!projectedBenefit) {
         throw new Error('Mustering benefit was not projected')
       }
-      const projectedBenefitText =
-        `Merchant: cash ${projectedBenefit.tableRoll} -> ${projectedBenefit.value}`
-      await expect(spectatorFields).toContainText(projectedBenefitText, {
+      await expect(spectatorFields).toContainText('Merchant Cash', {
         timeout: 5_000
       })
+      await expect(spectatorFields).toContainText(
+        `Cr${projectedBenefit.value}`,
+        { timeout: 5_000 }
+      )
+      await expect(spectatorFields).toContainText(
+        `Roll ${projectedBenefit.roll.total}`,
+        { timeout: 5_000 }
+      )
       await expectSpectatorRefreshPreservesCreationProjection({
         spectator: musteringSpectator,
         roomId,
         spectatorId: 'e2e-mustering-spectator',
         characterId,
         characterName
-      })
-      await expect(spectatorFields).toContainText(projectedBenefitText, {
-        timeout: 5_000
       })
       await expect
         .poll(async () => musteringBenefitFromProjection())

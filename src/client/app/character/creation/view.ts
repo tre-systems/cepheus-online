@@ -33,6 +33,7 @@ import type {
   CharacterCreationCompletedTerm,
   CharacterCreationDraftPatch,
   CharacterCreationFlow,
+  CharacterCreationMusteringBenefit,
   CharacterCreationStep,
   CharacterCreationValidation
 } from './flow.js'
@@ -544,6 +545,9 @@ export interface CharacterCreationTermResolutionViewModel {
 
 export interface CharacterCreationMusteringBenefitViewModel {
   label: string
+  valueLabel: string
+  rollLabel: string
+  metaLabel: string
 }
 
 export interface CharacterCreationMusteringActionViewModel {
@@ -559,6 +563,32 @@ export interface CharacterCreationMusteringOutViewModel {
   benefits: CharacterCreationMusteringBenefitViewModel[]
   actions: CharacterCreationMusteringActionViewModel[]
 }
+
+const formatCredits = (credits: number): string => `Cr${credits}`
+
+const musteringBenefitKindLabel = (kind: BenefitKind): string =>
+  kind === 'cash' ? 'Cash' : 'Material'
+
+const musteringBenefitValueLabel = (
+  benefit: CharacterCreationMusteringBenefit
+): string =>
+  benefit.kind === 'cash' ? formatCredits(benefit.credits) : benefit.value
+
+const musteringBenefitRollLabel = (
+  benefit: CharacterCreationMusteringBenefit
+): string => {
+  const diceRoll = benefit.diceRoll ?? null
+  const modifier = benefit.modifier ?? null
+  const tableRoll = benefit.tableRoll ?? benefit.roll
+  if (diceRoll === null || modifier === null) return `Table ${benefit.roll}`
+  if (modifier === 0) return `Roll ${diceRoll}`
+  return `Roll ${diceRoll} ${signedModifier(modifier)} DM = ${tableRoll}`
+}
+
+export const formatCharacterCreationMusteringBenefitSummary = (
+  benefit: CharacterCreationMusteringBenefit
+): string =>
+  `${benefit.career} ${musteringBenefitKindLabel(benefit.kind).toLowerCase()}: ${musteringBenefitValueLabel(benefit)}`
 
 interface CharacterCreationHomeworldDraftFields {
   homeWorld?: {
@@ -1550,7 +1580,13 @@ export const deriveCharacterCreationMusteringOutViewModel = (
     title: 'Mustering out',
     summary,
     benefits: flow.draft.musteringBenefits.map((benefit) => ({
-      label: `${benefit.career}: ${benefit.kind} ${benefit.roll} -> ${benefit.value}`
+      label: `${benefit.career} ${musteringBenefitKindLabel(benefit.kind)}`,
+      valueLabel: musteringBenefitValueLabel(benefit),
+      rollLabel: musteringBenefitRollLabel(benefit),
+      metaLabel:
+        benefit.kind === 'cash'
+          ? 'Credits'
+          : (benefit.materialItem ?? benefit.value)
     })),
     actions: benefitActions.map(([kind, label]) => {
       const modifier = characterCreationMusteringBenefitRollModifier({
@@ -1946,7 +1982,7 @@ const musteringReviewItems = (
 
   return draft.musteringBenefits.map((benefit, index) => ({
     label: `Benefit ${index + 1}`,
-    value: `${benefit.career} ${benefit.kind} ${benefit.roll}: ${benefit.value}`
+    value: `${formatCharacterCreationMusteringBenefitSummary(benefit)} (${musteringBenefitRollLabel(benefit)})`
   }))
 }
 

@@ -2494,13 +2494,53 @@ h1 {
   gap: 4px;
 }
 
-.creation-term-history span,
-.creation-benefit-list span {
+.creation-term-history span {
   border-left: 2px solid rgba(72, 255, 173, 0.58);
   padding-left: 7px;
   color: var(--text);
   font-size: 11px;
   line-height: 1.3;
+}
+
+.creation-benefit-list {
+  gap: 6px;
+}
+
+.creation-benefit-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  border: 1px solid rgba(72, 255, 173, 0.28);
+  background: rgba(0, 9, 7, 0.42);
+  padding: 7px;
+}
+
+.creation-benefit-card span {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.creation-benefit-card strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 820;
+  line-height: 1.15;
+}
+
+.creation-benefit-card small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 680;
+  line-height: 1.15;
+}
+
+.creation-benefit-card small:last-child {
+  justify-self: end;
+  text-align: right;
 }
 
 .creation-roll-action,

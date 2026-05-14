@@ -1649,6 +1649,20 @@ describe('game state projection', () => {
       credits: 0,
       materialItem: 'Low Passage'
     }
+    const characteristicBenefit = {
+      career: 'Scout',
+      kind: 'material' as const,
+      roll: {
+        expression: '2d6' as const,
+        rolls: [1, 1],
+        total: 2
+      },
+      modifier: 0,
+      tableRoll: 2,
+      value: '+1 Edu',
+      credits: 0,
+      materialItem: null
+    }
     const state = projectGameState([
       envelope(1, {
         type: 'GameCreated',
@@ -1664,6 +1678,13 @@ describe('game state projection', () => {
         name: 'Scout'
       }),
       envelope(3, {
+        type: 'CharacterSheetUpdated',
+        characterId,
+        characteristics: {
+          edu: 8
+        }
+      }),
+      envelope(4, {
         type: 'CharacterCreationStarted',
         characterId,
         creation: {
@@ -1695,10 +1716,23 @@ describe('game state projection', () => {
           history: []
         }
       }),
-      envelope(4, {
+      envelope(5, {
         type: 'CharacterCreationMusteringBenefitRolled',
         characterId,
         musteringBenefit,
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(6, {
+        type: 'CharacterCreationMusteringBenefitRolled',
+        characterId,
+        musteringBenefit: characteristicBenefit,
         state: {
           status: 'MUSTERING_OUT',
           context: {
@@ -1711,9 +1745,13 @@ describe('game state projection', () => {
     ])
 
     const character = state?.characters[characterId]
-    assert.deepEqual(character?.creation?.terms[0]?.benefits, ['Low Passage'])
+    assert.deepEqual(character?.creation?.terms[0]?.benefits, [
+      'Low Passage',
+      '+1 Edu'
+    ])
     assert.deepEqual(character?.creation?.terms[0]?.facts?.musteringBenefits, [
-      musteringBenefit
+      musteringBenefit,
+      characteristicBenefit
     ])
     assert.deepEqual(character?.equipment, [
       {
@@ -1722,11 +1760,12 @@ describe('game state projection', () => {
         notes: 'Mustering benefit: Scout'
       }
     ])
+    assert.equal(character?.characteristics.edu, 9)
     assert.deepEqual(character?.creation?.history?.at(-1), {
       type: 'FINISH_MUSTERING',
-      musteringBenefit
+      musteringBenefit: characteristicBenefit
     })
-    assert.equal(state?.eventSeq, 4)
+    assert.equal(state?.eventSeq, 6)
   })
 
   it('projects semantic mustering completion into active creation state', () => {

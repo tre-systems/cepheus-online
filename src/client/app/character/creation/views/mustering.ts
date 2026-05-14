@@ -27,8 +27,17 @@ export const renderCharacterCreationMusteringOut = (
   const benefitList = document.createElement('div')
   benefitList.className = 'creation-benefit-list'
   for (const benefit of viewModel.benefits) {
-    const item = document.createElement('span')
-    item.textContent = benefit.label
+    const item = document.createElement('div')
+    item.className = 'creation-benefit-card'
+    const label = document.createElement('span')
+    label.textContent = benefit.label
+    const value = document.createElement('strong')
+    value.textContent = benefit.valueLabel
+    const roll = document.createElement('small')
+    roll.textContent = benefit.rollLabel
+    const meta = document.createElement('small')
+    meta.textContent = benefit.metaLabel
+    item.append(label, value, roll, meta)
     benefitList.append(item)
   }
 

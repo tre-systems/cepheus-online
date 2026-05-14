@@ -3,6 +3,7 @@ import {
   deriveCareerCreationComplete,
   deriveCashBenefitRollModifier,
   deriveMaterialBenefitRollModifier,
+  deriveMaterialBenefitEffect,
   deriveRemainingCareerBenefits,
   resolveCareerBenefit,
   transitionCareerCreationState
@@ -219,6 +220,8 @@ const resolveMusteringBenefitCreationEvent = ({
     kind,
     roll: tableRoll
   })
+  const materialEffect =
+    kind === 'material' ? deriveMaterialBenefitEffect(benefit.value) : null
 
   return ok({
     musteringBenefit: {
@@ -234,7 +237,7 @@ const resolveMusteringBenefitCreationEvent = ({
       value: benefit.value,
       credits: benefit.credits,
       materialItem:
-        kind === 'material' && benefit.value !== '-' ? benefit.value : null
+        materialEffect?.kind === 'equipment' ? materialEffect.item : null
     }
   })
 }

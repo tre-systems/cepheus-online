@@ -176,8 +176,14 @@ export const musteringBenefitsFromProjection = (
       career: benefit.career,
       kind: benefit.kind,
       roll: benefit.tableRoll,
+      diceRoll: benefit.roll.total,
+      modifier: benefit.modifier,
+      tableRoll: benefit.tableRoll,
       value: benefit.value,
-      credits: benefit.credits
+      credits: benefit.credits,
+      ...(benefit.materialItem != null
+        ? { materialItem: benefit.materialItem }
+        : {})
     }))
   )
 

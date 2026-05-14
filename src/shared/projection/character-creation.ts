@@ -1,6 +1,7 @@
 import {
   deriveCharacterCreationHistoryEvent,
   deriveCharacterCreationTimelineEntry,
+  deriveMaterialBenefitEffect,
   deriveTotalBackgroundSkillAllowance,
   leaveCareerTerm,
   projectCareerCreationActionPlan,
@@ -1066,15 +1067,25 @@ const rawCharacterEventHandlers = {
     }
     if (event.musteringBenefit.kind === 'cash') {
       character.credits += event.musteringBenefit.credits
-    } else if (event.musteringBenefit.materialItem) {
-      character.equipment = [
-        ...character.equipment,
-        {
-          name: event.musteringBenefit.materialItem,
-          quantity: 1,
-          notes: `Mustering benefit: ${event.musteringBenefit.career}`
+    } else {
+      const effect = deriveMaterialBenefitEffect(event.musteringBenefit.value)
+      if (effect.kind === 'characteristic') {
+        character.characteristics = {
+          ...character.characteristics,
+          [effect.characteristic]:
+            (character.characteristics[effect.characteristic] ?? 0) +
+            effect.modifier
         }
-      ]
+      } else if (effect.kind === 'equipment') {
+        character.equipment = [
+          ...character.equipment,
+          {
+            name: effect.item,
+            quantity: 1,
+            notes: `Mustering benefit: ${event.musteringBenefit.career}`
+          }
+        ]
+      }
     }
     nextState.eventSeq = envelope.seq
 

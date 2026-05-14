@@ -188,6 +188,10 @@ export const waitForDiceReveal = async (page: Page): Promise<void> => {
   await expect(page.locator('#diceOverlay.visible')).toBeVisible({
     timeout: 5_000
   })
+  await expect(page.locator('#diceStage .roll-total')).toHaveText(
+    'Rolling...',
+    { timeout: 5_000 }
+  )
   await expect(page.locator('#diceStage .roll-total')).not.toHaveText(
     'Rolling...',
     { timeout: 5_000 }

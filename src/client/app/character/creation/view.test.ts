@@ -1613,7 +1613,7 @@ describe('character creation view helpers', () => {
       {
         key: 'mustering-out',
         label: 'Mustering out',
-        items: [{ label: 'Benefit 1', value: 'Scout cash 2: 10000' }]
+        items: [{ label: 'Benefit 1', value: 'Scout cash: Cr10000 (Table 2)' }]
       },
       {
         key: 'equipment',
