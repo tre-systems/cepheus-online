@@ -487,7 +487,7 @@ const actionDefinitions = {
     commandTypes: ['CompleteCharacterCreationMustering']
   },
   completeCreation: {
-    commandTypes: ['CompleteCharacterCreation', 'FinalizeCharacterCreation']
+    commandTypes: ['FinalizeCharacterCreation']
   }
 } satisfies Record<
   CareerCreationActionKey,

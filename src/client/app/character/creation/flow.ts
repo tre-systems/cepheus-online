@@ -2436,14 +2436,12 @@ export const deriveFinalizeCharacterCreationCommand = (
   draft: CharacterCreationDraft,
   { identity, state = null }: CharacterCreationCommandOptions
 ): FinalizeCharacterCreationCommand => {
-  const sheet = deriveCharacterCreationSheet(draft)
   return buildSequencedCommand(
     {
       type: 'FinalizeCharacterCreation',
       gameId: identity.gameId,
       actorId: identity.actorId,
-      characterId: draft.characterId,
-      ...sheet
+      characterId: draft.characterId
     },
     state
   ) as FinalizeCharacterCreationCommand

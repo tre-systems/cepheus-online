@@ -951,10 +951,7 @@ describe('career creation legal action planner', () => {
           {
             key: 'completeCreation',
             status: 'ACTIVE',
-            commandTypes: [
-              'CompleteCharacterCreation',
-              'FinalizeCharacterCreation'
-            ]
+            commandTypes: ['FinalizeCharacterCreation']
           }
         ]
       }

@@ -704,20 +704,7 @@ const driveRepeatTravellerToFinalized = async (
   })
   await postRepeatCommand(page, roomId, actorId, actorSession, context, {
     type: 'FinalizeCharacterCreation',
-    characterId: context.characterId,
-    age: 22,
-    characteristics: {
-      str: 15,
-      dex: 15,
-      end: 15,
-      int: 15,
-      edu: 15,
-      soc: 15
-    },
-    skills: ['Admin', 'Advocate', 'Comms', 'Gun Combat-0'],
-    equipment: [],
-    credits: 0,
-    notes: 'Repeat runner finalized Scout.'
+    characterId: context.characterId
   })
 }
 
@@ -2716,27 +2703,9 @@ test.describe('character creation smoke', () => {
         })
         .toBe('ACTIVE')
 
-      const finalizedNotes = [
-        'Rules source: Cepheus Engine SRD.',
-        'Term 1: Merchant, survived.',
-        `Mustering out: Merchant cash ${projectedBenefit.tableRoll} -> ${projectedBenefit.value}.`
-      ].join('\n')
       await postCommand(page, roomId, actorId, actorSession, {
         type: 'FinalizeCharacterCreation',
-        characterId,
-        age: 22,
-        characteristics: {
-          str: 15,
-          dex: 15,
-          end: 15,
-          int: 15,
-          edu: 15,
-          soc: 15
-        },
-        skills: ['Admin', 'Advocate', 'Comms', 'Steward-1'],
-        equipment: [],
-        credits: cashCredits,
-        notes: finalizedNotes
+        characterId
       })
       postedCommandTypes.push('FinalizeCharacterCreation')
 

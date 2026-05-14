@@ -528,20 +528,7 @@ describe('protocol validation', () => {
       {
         type: 'FinalizeCharacterCreation',
         ...base,
-        characterId: 'char-1',
-        age: 34,
-        characteristics: {
-          str: 7,
-          dex: 8,
-          end: 7,
-          int: 9,
-          edu: 8,
-          soc: 6
-        },
-        skills: ['Pilot-1'],
-        equipment: [],
-        credits: 1200,
-        notes: 'Ready'
+        characterId: 'char-1'
       },
       {
         type: 'StartCharacterCareerTerm',
@@ -1084,7 +1071,7 @@ describe('protocol validation', () => {
     )
   })
 
-  it('accepts full character creation finalization commands', () => {
+  it('accepts intent-only character creation finalization commands', () => {
     const result = decodeClientMessage({
       type: 'command',
       requestId: 'req-finalize',
@@ -1092,20 +1079,7 @@ describe('protocol validation', () => {
         type: 'FinalizeCharacterCreation',
         gameId: 'game-1',
         actorId: 'user-1',
-        characterId: 'char-1',
-        age: 34,
-        characteristics: {
-          str: 7,
-          dex: 8,
-          end: 7,
-          int: 9,
-          edu: 8,
-          soc: 6
-        },
-        skills: ['Pilot-1', 'Vacc Suit-0'],
-        equipment: [{ name: 'Vacc suit', quantity: 1, notes: '' }],
-        credits: 1200,
-        notes: 'Generated character.'
+        characterId: 'char-1'
       }
     })
 
@@ -1116,15 +1090,7 @@ describe('protocol validation', () => {
     const { command } = result.value
     assert.equal(command.type, 'FinalizeCharacterCreation')
     if (command.type !== 'FinalizeCharacterCreation') return
-    assert.deepEqual(command.characteristics, {
-      str: 7,
-      dex: 8,
-      end: 7,
-      int: 9,
-      edu: 8,
-      soc: 6
-    })
-    assert.deepEqual(command.skills, ['Pilot-1', 'Vacc Suit-0'])
+    assert.equal(command.characterId, 'char-1')
   })
 
   it('rejects malformed character creation event commands', () => {
@@ -1357,10 +1323,10 @@ describe('protocol validation', () => {
     )
   })
 
-  it('rejects oversized character creation skill array entries', () => {
+  it('ignores client-authored sheet fields on character creation finalization', () => {
     const result = decodeClientMessage({
       type: 'command',
-      requestId: 'req-finalize-oversize-skill',
+      requestId: 'req-finalize-forged-sheet',
       command: {
         type: 'FinalizeCharacterCreation',
         gameId: 'game-1',
@@ -1382,41 +1348,19 @@ describe('protocol validation', () => {
       }
     })
 
-    assert.equal(result.ok, false)
-    if (result.ok) return
-    assert.equal(result.error.code, 'invalid_command')
-    assert.equal(result.error.message, 'skills[0] cannot exceed 200 characters')
-  })
-
-  it('rejects invalid character creation skill array entries', () => {
-    const result = decodeClientMessage({
-      type: 'command',
-      requestId: 'req-finalize-invalid-skill',
-      command: {
-        type: 'FinalizeCharacterCreation',
-        gameId: 'game-1',
-        actorId: 'user-1',
-        characterId: 'char-1',
-        age: 34,
-        characteristics: {
-          str: 7,
-          dex: 8,
-          end: 7,
-          int: 9,
-          edu: 8,
-          soc: 6
-        },
-        skills: ['Pilot-1', 7],
-        equipment: [],
-        credits: 1200,
-        notes: 'Generated character.'
-      }
-    })
-
-    assert.equal(result.ok, false)
-    if (result.ok) return
-    assert.equal(result.error.code, 'invalid_command')
-    assert.equal(result.error.message, 'skills[1] must be a string')
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    const { command } = result.value
+    assert.equal(command.type, 'FinalizeCharacterCreation')
+    if (command.type !== 'FinalizeCharacterCreation') return
+    assert.deepEqual(Object.keys(command).sort(), [
+      'actorId',
+      'characterId',
+      'gameId',
+      'type'
+    ])
   })
 
   it('accepts door state commands for board occluders', () => {

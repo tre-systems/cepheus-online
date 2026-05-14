@@ -270,6 +270,29 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.value[1].notes.includes('Rules source'), true)
   })
 
+  it('keeps legacy completion from creating playable characters without a final sheet', () => {
+    const result = runCommand(
+      {
+        type: 'CompleteCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('ACTIVE', {
+        terms: [completedTerm()],
+        careers: [{ name: 'Scout', rank: 0 }],
+        history: [{ type: 'COMPLETE_SKILLS' }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(
+      result.value.map((event) => event.type),
+      ['CharacterCreationCompleted', 'CharacterCreationFinalized']
+    )
+  })
+
   it('rejects finalization after creation has already become playable', () => {
     const result = runCommand(
       finalizeCommand(),

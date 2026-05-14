@@ -423,25 +423,25 @@ const normalizeBackgroundSkill = (
 }
 
 const validateCharacterCreationSheet = (
-  command: Extract<Command, { type: 'FinalizeCharacterCreation' }>
+  sheet: CharacterCreationSheet
 ): Result<void, CommandError> => {
-  if (typeof command.notes !== 'string') {
+  if (typeof sheet.notes !== 'string') {
     return err(commandError('invalid_command', 'notes must be a string'))
   }
-  const age = requireFiniteOrNull(command.age, 'age')
+  const age = requireFiniteOrNull(sheet.age, 'age')
   if (!age.ok) return age
 
-  for (const [key, value] of Object.entries(command.characteristics)) {
+  for (const [key, value] of Object.entries(sheet.characteristics)) {
     const characteristic = requireFiniteOrNull(value, `characteristics.${key}`)
     if (!characteristic.ok) return characteristic
   }
 
-  for (const [index, skill] of command.skills.entries()) {
+  for (const [index, skill] of sheet.skills.entries()) {
     const value = requireNonEmptyString(skill, `skills[${index}]`)
     if (!value.ok) return value
   }
 
-  for (const [index, item] of command.equipment.entries()) {
+  for (const [index, item] of sheet.equipment.entries()) {
     const name = requireNonEmptyString(item.name, `equipment[${index}].name`)
     if (!name.ok) return name
     const quantity = requireFiniteCoordinate(
@@ -451,7 +451,7 @@ const validateCharacterCreationSheet = (
     if (!quantity.ok) return quantity
   }
 
-  const credits = requireFiniteCoordinate(command.credits, 'credits')
+  const credits = requireFiniteCoordinate(sheet.credits, 'credits')
   if (!credits.ok) return credits
 
   return ok(undefined)
@@ -1962,10 +1962,7 @@ export const deriveEventsForCommand = (
         type: 'CREATION_COMPLETE'
       })
       const serverSheet = deriveCharacterCreationSheet(character)
-      const sheet = validateCharacterCreationSheet({
-        ...command,
-        ...serverSheet
-      })
+      const sheet = validateCharacterCreationSheet(serverSheet)
       if (!sheet.ok) return sheet
 
       return ok([
@@ -3166,6 +3163,9 @@ export const deriveEventsForCommand = (
       const nextState = transitionCareerCreationState(creation.value.state, {
         type: 'CREATION_COMPLETE'
       })
+      const serverSheet = deriveCharacterCreationSheet(character)
+      const sheet = validateCharacterCreationSheet(serverSheet)
+      if (!sheet.ok) return sheet
 
       return ok([
         {
@@ -3173,6 +3173,11 @@ export const deriveEventsForCommand = (
           characterId: command.characterId,
           state: nextState,
           creationComplete: deriveCareerCreationComplete(nextState)
+        },
+        {
+          type: 'CharacterCreationFinalized',
+          characterId: command.characterId,
+          ...serverSheet
         }
       ])
     }

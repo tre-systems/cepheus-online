@@ -2767,20 +2767,7 @@ describe('room publication flow', () => {
       type: 'FinalizeCharacterCreation',
       gameId,
       actorId,
-      characterId,
-      age: 34,
-      characteristics: {
-        str: 7,
-        dex: 8,
-        end: 7,
-        int: 9,
-        edu: 8,
-        soc: 6
-      },
-      skills: ['Pilot-1'],
-      equipment: [],
-      credits: 1200,
-      notes: 'Too early.'
+      characterId
     })
 
     assert.equal(early.ok, false)
@@ -2866,20 +2853,7 @@ describe('room publication flow', () => {
       type: 'FinalizeCharacterCreation',
       gameId,
       actorId,
-      characterId,
-      age: 34,
-      characteristics: {
-        str: 7,
-        dex: 8,
-        end: 7,
-        int: 9,
-        edu: 8,
-        soc: 6
-      },
-      skills: ['Pilot-1', 'Vacc Suit-0'],
-      equipment: [{ name: 'Vacc suit', quantity: 1, notes: 'Carried' }],
-      credits: 1200,
-      notes: 'Final scout.'
+      characterId
     })
 
     assert.equal(finalized.ok, true)
@@ -2957,20 +2931,7 @@ describe('room publication flow', () => {
       type: 'FinalizeCharacterCreation',
       gameId,
       actorId,
-      characterId,
-      age: 34,
-      characteristics: {
-        str: 7,
-        dex: 8,
-        end: 7,
-        int: 9,
-        edu: 8,
-        soc: 6
-      },
-      skills: ['Pilot-1', 'Vacc Suit-0'],
-      equipment: [{ name: 'Vacc suit', quantity: 1, notes: 'Carried' }],
-      credits: 1200,
-      notes: 'Final scout.'
+      characterId
     })
 
     assert.equal(finalized.ok, true)

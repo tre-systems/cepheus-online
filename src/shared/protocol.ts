@@ -17,7 +17,6 @@ import type { GameCommand } from './commands'
 import type { GameState } from './state'
 import type { LiveActivityDescriptor } from './live-activity'
 import type {
-  CharacterCreationSheet,
   CharacterCreationHomeworld,
   CharacterEquipmentItem,
   CharacteristicKey,
@@ -280,22 +279,6 @@ const parseCharacteristicsPatch = (
   return ok(patch)
 }
 
-const parseCharacteristics = (
-  raw: unknown,
-  label: string
-): Result<CharacterCreationSheet['characteristics'], CommandError> => {
-  const patch = parseCharacteristicsPatch(raw, label)
-  if (!patch.ok) return patch
-
-  for (const key of characteristicKeys) {
-    if (!patch.value || patch.value[key] === undefined) {
-      return err(invalidCommand(`${label}.${key} is required`))
-    }
-  }
-
-  return ok(patch.value as CharacterCreationSheet['characteristics'])
-}
-
 const parseEquipment = (
   raw: unknown,
   label: string
@@ -373,36 +356,6 @@ const parseCharacterSheetPatch = (
   }
 
   return ok(patch)
-}
-
-const parseCharacterCreationSheet = (
-  raw: Record<string, unknown>
-): Result<CharacterCreationSheet, CommandError> => {
-  if (!isString(raw.notes)) {
-    return err(invalidCommand('notes must be a string'))
-  }
-  const age = parseNullableNumber(raw.age, 'age')
-  if (!age.ok) return age
-  const characteristics = parseCharacteristics(
-    raw.characteristics,
-    'characteristics'
-  )
-  if (!characteristics.ok) return characteristics
-  const skills = parseStringArray(raw.skills, 'skills')
-  if (!skills.ok) return skills
-  const equipment = parseEquipment(raw.equipment, 'equipment')
-  if (!equipment.ok) return equipment
-  const credits = parseNumber(raw.credits, 'credits')
-  if (!credits.ok) return credits
-
-  return ok({
-    notes: raw.notes,
-    age: age.value,
-    characteristics: characteristics.value,
-    skills: skills.value,
-    equipment: equipment.value,
-    credits: credits.value
-  })
 }
 
 const parseHomeworldTradeCodes = (
@@ -1516,14 +1469,11 @@ export const decodeCommand = (
     case 'FinalizeCharacterCreation': {
       const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
       if (!characterId.ok) return characterId
-      const sheet = parseCharacterCreationSheet(raw)
-      if (!sheet.ok) return sheet
 
       return ok({
         type: 'FinalizeCharacterCreation',
         ...base.value,
-        characterId: characterId.value,
-        ...sheet.value
+        characterId: characterId.value
       })
     }
 

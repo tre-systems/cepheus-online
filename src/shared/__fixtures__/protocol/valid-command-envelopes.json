@@ -443,26 +443,7 @@
         "gameId": "cepheus-run",
         "actorId": "referee-1",
         "expectedSeq": 23,
-        "characterId": "crew-scout-1",
-        "age": 34,
-        "characteristics": {
-          "str": 7,
-          "dex": 8,
-          "end": 7,
-          "int": 9,
-          "edu": 8,
-          "soc": 6
-        },
-        "skills": ["Pilot-1", "Vacc Suit-0"],
-        "equipment": [
-          {
-            "name": "Vacc suit",
-            "quantity": 1,
-            "notes": ""
-          }
-        ],
-        "credits": 1200,
-        "notes": "Generated character."
+        "characterId": "crew-scout-1"
       }
     },
     "commandType": "FinalizeCharacterCreation",

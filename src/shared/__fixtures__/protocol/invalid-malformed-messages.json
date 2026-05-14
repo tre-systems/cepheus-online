@@ -273,23 +273,10 @@
       "command": {
         "type": "FinalizeCharacterCreation",
         "gameId": "cepheus-run",
-        "actorId": "referee-1",
-        "characterId": "crew-scout-1",
-        "age": 34,
-        "characteristics": {
-          "str": 7,
-          "dex": 8,
-          "end": 7,
-          "int": 9,
-          "edu": 8
-        },
-        "skills": ["Pilot-1"],
-        "equipment": [],
-        "credits": 1200,
-        "notes": "Generated character."
+        "actorId": "referee-1"
       }
     },
     "errorCode": "invalid_command",
-    "errorMessage": "characteristics.soc is required"
+    "errorMessage": "characterId must be a string"
   }
 ]

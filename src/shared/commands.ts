@@ -7,7 +7,6 @@ import type {
   CareerCreationTermSkillTable
 } from './characterCreation'
 import type {
-  CharacterCreationSheet,
   CharacterCreationHomeworld,
   CharacteristicKey,
   CharacterSheetPatch,
@@ -81,13 +80,13 @@ export type Command =
       cascadeSkill: string
       selection: string
     }
-  | ({
+  | {
       type: 'FinalizeCharacterCreation'
       gameId: GameId
       actorId: UserId
       expectedSeq?: number
       characterId: CharacterId
-    } & CharacterCreationSheet)
+    }
   | {
       type: 'StartCharacterCareerTerm'
       gameId: GameId
