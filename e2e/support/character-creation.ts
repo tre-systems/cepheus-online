@@ -41,6 +41,11 @@ export type CharacterCreationProjection = {
 export type RoomStateMessage = {
   type: 'roomState'
   state: {
+    diceLog?: Array<{
+      revealAt?: string
+      rolls?: number[]
+      total?: number
+    }>
     characters: Record<
       string,
       {
@@ -54,6 +59,12 @@ export type RoomStateMessage = {
       }
     >
   } | null
+  liveActivities?: Array<{
+    type?: string
+    details?: unknown
+    rolls?: number[]
+    total?: number
+  }>
 }
 
 export type ProjectedCharacter = NonNullable<

@@ -1,4 +1,10 @@
-import { expect, test, type Page, type TestInfo } from '@playwright/test'
+import {
+  expect,
+  test,
+  type Page,
+  type Response,
+  type TestInfo
+} from '@playwright/test'
 import { openRoom, openUniqueRoom, setRoomSeed } from './support/app'
 import {
   activeCreationCharacterId,
@@ -2419,7 +2425,7 @@ test.describe('character creation smoke', () => {
     }
   })
 
-  test('lets a spectator follow a term skill roll without early reveal and recover after refresh', async ({
+  test('lets spectators reload and join a term skill roll without early reveal and recover after refresh', async ({
     browser,
     page
   }) => {
@@ -2482,11 +2488,14 @@ test.describe('character creation smoke', () => {
       timeout: 5_000
     })
 
+    const spectatorId = 'e2e-spectator'
+    const lateSpectatorId = 'e2e-term-skill-late-spectator'
     const spectator = await browser.newPage()
+    const lateSpectator = await browser.newPage()
     try {
       await openRoom(spectator, {
         roomId,
-        userId: 'e2e-spectator',
+        userId: spectatorId,
         viewer: 'spectator'
       })
       await openOrExpectFollowedCreation(spectator, characterName)
@@ -2498,16 +2507,33 @@ test.describe('character creation smoke', () => {
       const spectatorServiceSkills = spectatorFields
         .locator('.creation-term-actions')
         .getByRole('button', { name: 'Service skills' })
+      const termSkillPattern =
+        /\d+ on (personalDevelopment|serviceSkills|specialistSkills|advancedEducation)/
+      const expectRedactedTermSkillState = async (
+        stateResponse: Response
+      ): Promise<void> => {
+        const message = (await stateResponse.json()) as RoomStateMessage
+        const latestRoll = message.state?.diceLog?.at(-1)
+        const creationActivity = message.liveActivities?.find(
+          (activity) => activity.type === 'characterCreation'
+        )
+
+        expect(message.type).toBe('roomState')
+        expect(latestRoll).toBeTruthy()
+        expect(typeof latestRoll?.revealAt).toBe('string')
+        expect(latestRoll?.rolls).toBeUndefined()
+        expect(latestRoll?.total).toBeUndefined()
+        expect(creationActivity?.details).toBeUndefined()
+      }
 
       await expect(spectatorFields).toContainText('Skills and training', {
         timeout: 5_000
       })
       await expect(spectatorServiceSkills).toBeDisabled()
       await expect(spectatorTermSkillRolls).toHaveCount(0)
-      await expect(spectatorFields).not.toContainText(
-        /\d+ on (personalDevelopment|serviceSkills|specialistSkills|advancedEducation)/,
-        { timeout: 100 }
-      )
+      await expect(spectatorFields).not.toContainText(termSkillPattern, {
+        timeout: 100
+      })
 
       const ownerServiceSkills = fields
         .locator('.creation-term-actions')
@@ -2532,16 +2558,51 @@ test.describe('character creation smoke', () => {
         { timeout: 100 }
       )
       await expect(spectatorTermSkillRolls).toHaveCount(0, { timeout: 100 })
-      await expect(spectatorFields).not.toContainText(
-        /\d+ on (personalDevelopment|serviceSkills|specialistSkills|advancedEducation)/,
-        { timeout: 100 }
+      await expect(spectatorFields).not.toContainText(termSkillPattern, {
+        timeout: 100
+      })
+
+      const waitForSpectatorState = (spectatorPage: Page, userId: string) =>
+        spectatorPage.waitForResponse((response) => {
+          const url = new URL(response.url())
+          return (
+            response.request().method() === 'GET' &&
+            url.pathname === `/rooms/${roomId}/state` &&
+            url.searchParams.get('viewer') === 'spectator' &&
+            url.searchParams.get('user') === userId
+          )
+        })
+      const reloadedState = waitForSpectatorState(spectator, spectatorId)
+      const joinedState = waitForSpectatorState(lateSpectator, lateSpectatorId)
+
+      await Promise.all([
+        spectator.reload({ waitUntil: 'domcontentloaded' }),
+        openRoom(lateSpectator, {
+          roomId,
+          userId: lateSpectatorId,
+          viewer: 'spectator'
+        })
+      ])
+      const [reloadState, joinState] = await Promise.all([
+        reloadedState,
+        joinedState
+      ])
+      await Promise.all([
+        expectRedactedTermSkillState(reloadState),
+        expectRedactedTermSkillState(joinState)
+      ])
+
+      await expect(spectator.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(spectator, characterName)
+      await openOrExpectFollowedCreation(lateSpectator, characterName)
+      const lateSpectatorFields = lateSpectator.locator(
+        '#characterCreationFields'
+      )
+      const lateSpectatorTermSkillRolls = lateSpectatorFields.locator(
+        '.creation-term-skill-rolls span'
       )
 
       await waitForDiceReveal(page)
-      await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
-        'Rolling...',
-        { timeout: 5_000 }
-      )
 
       let termSkill: ProjectedTermSkill | null = null
       await expect
@@ -2566,6 +2627,15 @@ test.describe('character creation smoke', () => {
       await expect(spectatorTermSkillRolls.first()).toContainText(
         `${termSkill.tableRoll} on ${termSkill.table}`
       )
+      await expect(lateSpectatorTermSkillRolls).toHaveCount(1, {
+        timeout: 5_000
+      })
+      await expect(lateSpectatorTermSkillRolls.first()).toContainText(
+        termSkill.skill
+      )
+      await expect(lateSpectatorTermSkillRolls.first()).toContainText(
+        `${termSkill.tableRoll} on ${termSkill.table}`
+      )
 
       await spectator.reload({ waitUntil: 'domcontentloaded' })
       await expect(spectator.locator('#boardCanvas')).toBeVisible()
@@ -2584,13 +2654,14 @@ test.describe('character creation smoke', () => {
           latestProjectedTermSkill(
             spectator,
             roomId,
-            'e2e-spectator',
+            spectatorId,
             characterId
           )
         )
         .toEqual(termSkill)
     } finally {
       await spectator.close()
+      await lateSpectator.close()
     }
   })
 
