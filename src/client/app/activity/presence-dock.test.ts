@@ -127,6 +127,47 @@ describe('creation presence dock helpers', () => {
     assert.deepEqual(summaries, [])
   })
 
+  it('keeps deceased creation results followable after reload', () => {
+    const deceased = character('deceased', {
+      state: { status: 'DECEASED', context: creationContext },
+      terms: [
+        {
+          career: 'Scout',
+          skills: [],
+          skillsAndTraining: [],
+          benefits: [],
+          complete: true,
+          canReenlist: false,
+          completedBasicTraining: true,
+          musteringOut: false,
+          anagathics: false
+        }
+      ],
+      careers: [],
+      canEnterDraft: false,
+      failedToQualify: false,
+      characteristicChanges: [],
+      creationComplete: false
+    })
+
+    const summaries = activeCreationSummaries(
+      gameState({ deceased }),
+      new Set()
+    )
+
+    assert.deepEqual(summaries, [
+      {
+        id: asCharacterId('deceased'),
+        name: 'deceased',
+        ownerId: asUserId('owner'),
+        status: 'DECEASED',
+        statusLabel: 'Deceased',
+        rolledCharacteristics: 2,
+        terms: 1
+      }
+    ])
+  })
+
   it('auto-opens a single remote active creation read-only', () => {
     const active = character(
       'active',

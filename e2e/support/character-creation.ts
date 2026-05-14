@@ -181,15 +181,23 @@ export const openOrExpectFollowedCreation = async (
   page: Page,
   characterName: string
 ): Promise<void> => {
+  const panel = page.locator('#characterCreator')
   const card = page
     .locator('#creationPresenceDock .creation-presence-card')
     .filter({ hasText: characterName })
-  if (await card.isVisible().catch(() => false)) {
-    await card.click()
+
+  const deadline = Date.now() + 20_000
+  while (Date.now() < deadline) {
+    if (await panel.isVisible().catch(() => false)) return
+    if (await card.isVisible().catch(() => false)) {
+      await card.click()
+      await expect(panel).toBeVisible({ timeout: 5_000 })
+      return
+    }
+    await page.waitForTimeout(100)
   }
-  await expect(
-    page.getByRole('complementary', { name: 'Character creator' })
-  ).toBeVisible({ timeout: 5_000 })
+
+  await expect(panel).toBeVisible({ timeout: 5_000 })
 }
 
 export const spectatorCreationProjectionSnapshot = async (
