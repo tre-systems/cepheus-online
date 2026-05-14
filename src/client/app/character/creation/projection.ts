@@ -182,18 +182,30 @@ export const careerPlanFromProjection = (
   }
 }
 
-export const flowFromProjectedCharacter = (
-  character: CharacterState
-): CharacterCreationFlow | null => {
-  const creation = character.creation
-  if (!creation) return null
+const isCashMusteringBenefitValue = (value: string): boolean =>
+  /^\d+$/.test(value.trim())
 
-  const completedTerms = creation.terms
-    .filter((term) => term.complete || term.musteringOut)
-    .map(completedTermFromProjection)
-  const musteringBenefits: CharacterCreationMusteringBenefit[] = (
-    creation.history ?? []
+const musteringBenefitsFromProjectedTerms = (
+  creation: CharacterCreationProjection
+): CharacterCreationMusteringBenefit[] =>
+  creation.terms.flatMap((term) =>
+    term.benefits.map((value) => {
+      const isCash = isCashMusteringBenefitValue(value)
+
+      return {
+        career: term.career,
+        kind: isCash ? 'cash' : 'material',
+        roll: 0,
+        value,
+        credits: isCash ? Number(value) : 0
+      }
+    })
   )
+
+export const musteringBenefitsFromProjection = (
+  creation: CharacterCreationProjection
+): CharacterCreationMusteringBenefit[] => {
+  const benefits = (creation.history ?? [])
     .filter((event) => event.type === 'FINISH_MUSTERING')
     .flatMap((event) => {
       const benefit = event.musteringBenefit
@@ -209,6 +221,22 @@ export const flowFromProjectedCharacter = (
           ]
         : []
     })
+
+  return benefits.length > 0
+    ? benefits
+    : musteringBenefitsFromProjectedTerms(creation)
+}
+
+export const flowFromProjectedCharacter = (
+  character: CharacterState
+): CharacterCreationFlow | null => {
+  const creation = character.creation
+  if (!creation) return null
+
+  const completedTerms = creation.terms
+    .filter((term) => term.complete || term.musteringOut)
+    .map(completedTermFromProjection)
+  const musteringBenefits = musteringBenefitsFromProjection(creation)
 
   const creationSkills = normalizeSkillList([
     ...character.skills,

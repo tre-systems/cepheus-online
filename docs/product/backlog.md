@@ -1303,9 +1303,10 @@ The next batch should run like this, in this order:
    timestamps, semantic event type, and optional roll correlation, while the
    shared creation read model exposes that timeline for client migration.
    Finalization notes now derive from projected terms rather than legacy
-   history. The legacy `history` model remains for compatibility until richer
-   projection fields replace the client helpers that still need detailed
-   career-roll and mustering-benefit facts.
+   history, and the client can recover mustering-benefit display from projected
+   term benefits when legacy history is absent. The legacy `history` model
+   remains for compatibility until richer projection fields replace the client
+   helpers that still need detailed career-roll facts.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.

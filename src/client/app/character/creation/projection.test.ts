@@ -12,7 +12,10 @@ import {
   deriveNextCharacterCreationAgingRoll,
   deriveCharacterCreationTermSkillTableActions
 } from './flow'
-import { flowFromProjectedCharacter } from './projection'
+import {
+  flowFromProjectedCharacter,
+  musteringBenefitsFromProjection
+} from './projection'
 
 const characterId = asCharacterId('character-1')
 
@@ -412,5 +415,54 @@ describe('character creation projection helpers', () => {
 
     assert.equal(plainMusteringFlow?.step, 'career')
     assert.equal(benefitMusteringFlow?.step, 'equipment')
+  })
+
+  it('recovers mustering benefits from projected terms without legacy history', () => {
+    const creation: CharacterCreationProjection = {
+      ...agingProjection(),
+      state: {
+        status: 'MUSTERING_OUT',
+        context: {
+          canCommission: false,
+          canAdvance: false
+        }
+      },
+      terms: [
+        {
+          career: 'Scout',
+          skills: [],
+          skillsAndTraining: [],
+          benefits: ['Low Passage', '20000'],
+          complete: true,
+          canReenlist: false,
+          completedBasicTraining: true,
+          musteringOut: true,
+          anagathics: false,
+          survival: 8
+        }
+      ],
+      history: []
+    }
+
+    assert.deepEqual(musteringBenefitsFromProjection(creation), [
+      {
+        career: 'Scout',
+        kind: 'material',
+        roll: 0,
+        value: 'Low Passage',
+        credits: 0
+      },
+      {
+        career: 'Scout',
+        kind: 'cash',
+        roll: 0,
+        value: '20000',
+        credits: 20000
+      }
+    ])
+    assert.equal(
+      flowFromProjectedCharacter(character(creation))?.step,
+      'equipment'
+    )
   })
 })
