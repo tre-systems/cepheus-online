@@ -293,6 +293,7 @@ export const rollCareerOutcomeWithSpectatorReveal = async ({
     'Rolling...',
     { timeout: 5_000 }
   )
+  await expect(spectatorRoll).toHaveValue(/\d+/, { timeout: 5_000 })
   await expect(spectatorOutcome).toContainText(outcomePattern, {
     timeout: 5_000
   })
