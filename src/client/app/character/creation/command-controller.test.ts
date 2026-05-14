@@ -269,6 +269,119 @@ describe('character creation command controller', () => {
     assert.deepEqual(commands, [])
   })
 
+  it('completes skills after resolving the final term cascade skill', async () => {
+    const flow = careerFlow()
+    const commands: CharacterCreationCommand[] = []
+    const syncedStates: Array<GameState | null> = []
+    const stateAfterCascade: GameState = {
+      ...stateWithDice(diceRoll()),
+      characters: {
+        [flow.draft.characterId]: projectedDraftCharacter(flow, {
+          state: {
+            status: 'SKILLS_TRAINING',
+            context: {
+              canCommission: true,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Rogue',
+              skills: ['Natural Weapons-0'],
+              skillsAndTraining: ['Natural Weapons-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 8
+            }
+          ],
+          careers: [{ name: 'Rogue', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          pendingCascadeSkills: [],
+          history: []
+        })
+      }
+    }
+    const creationAfterCascade =
+      stateAfterCascade.characters[flow.draft.characterId].creation
+    if (!creationAfterCascade) {
+      throw new Error('Expected cascade fixture to include creation state')
+    }
+    const stateAfterComplete: GameState = {
+      ...stateAfterCascade,
+      characters: {
+        [flow.draft.characterId]: {
+          ...stateAfterCascade.characters[flow.draft.characterId],
+          creation: {
+            ...creationAfterCascade,
+            state: {
+              status: 'AGING',
+              context: {
+                canCommission: true,
+                canAdvance: false
+              }
+            }
+          }
+        }
+      }
+    }
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: () => {},
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async (command) => {
+        commands.push(command)
+        return {
+          state:
+            command.type === 'CompleteCharacterCreationSkills'
+              ? stateAfterComplete
+              : stateAfterCascade
+        }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {},
+      syncFlowFromRoomState: (state) => {
+        syncedStates.push(state)
+        return flow
+      },
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {},
+      scrollToTop: () => {}
+    })
+
+    await controller.publishTermCascadeResolution(
+      flow,
+      'Melee Combat',
+      'Natural Weapons',
+      flow
+    )
+
+    assert.deepEqual(
+      commands.map((command) => command.type),
+      [
+        'ResolveCharacterCreationTermCascadeSkill',
+        'CompleteCharacterCreationSkills'
+      ]
+    )
+    assert.equal(
+      syncedStates[0]?.characters[flow.draft.characterId]?.creation?.state
+        .status,
+      'AGING'
+    )
+  })
+
   it('rolls a characteristic, waits for reveal, and syncs fallback flow', async () => {
     let flow: CharacterCreationFlow | null = characteristicFlow()
     const commands: CharacterCreationCommand[] = []

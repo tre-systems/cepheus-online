@@ -123,6 +123,17 @@ const syncAndRender = (
   scrollToTop()
 }
 
+const shouldCompleteSkillsAfterTermCascade = (
+  state: GameState | null,
+  characterId: CharacterCreationFlow['draft']['characterId']
+): boolean => {
+  const creation = state?.characters[characterId]?.creation
+  return (
+    creation?.state.status === 'SKILLS_TRAINING' &&
+    (creation.pendingCascadeSkills?.length ?? 0) === 0
+  )
+}
+
 export const createCharacterCreationCommandController = (
   deps: CharacterCreationCommandControllerDeps
 ): CharacterCreationCommandController => {
@@ -203,9 +214,22 @@ export const createCharacterCreationCommandController = (
         },
         requestId('resolve-character-term-cascade')
       )
+      const nextResponse = shouldCompleteSkillsAfterTermCascade(
+        response.state,
+        flow.draft.characterId
+      )
+        ? await postCharacterCreationCommand(
+            {
+              type: 'CompleteCharacterCreationSkills',
+              ...commandIdentity(),
+              characterId: flow.draft.characterId
+            },
+            requestId('complete-character-skills')
+          )
+        : response
       syncAndRender(
         { syncFlowFromRoomState, renderWizard, scrollToTop },
-        response,
+        nextResponse,
         fallbackFlow
       )
     },

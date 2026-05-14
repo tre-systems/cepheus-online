@@ -483,7 +483,7 @@ export const createCharacterCreationRenderController = ({
           flow,
           continueCareer
         })
-        if (!result.moved) return
+        if (result.flow === flow) return
 
         await ensurePublished()
         await postCharacterCreationCommand({

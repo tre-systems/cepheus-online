@@ -68,44 +68,53 @@ export const careerPlanFromProjection = (
   if (!activeTerm) return null
 
   const history = creation.history ?? []
-  let selectCareerIndex = -1
+  let termStartIndex = -1
   for (let index = history.length - 1; index >= 0; index -= 1) {
-    if (history[index].type === 'SELECT_CAREER') {
-      selectCareerIndex = index
+    if (
+      history[index].type === 'SELECT_CAREER' ||
+      history[index].type === 'REENLIST' ||
+      history[index].type === 'FORCED_REENLIST'
+    ) {
+      termStartIndex = index
       break
     }
   }
   const currentTermHistory =
-    selectCareerIndex >= 0 ? history.slice(selectCareerIndex) : history
-  const selectCareer = [...currentTermHistory]
+    termStartIndex >= 0 ? history.slice(termStartIndex) : history
+  const currentTermFactHistory =
+    currentTermHistory[0]?.type === 'REENLIST' ||
+    currentTermHistory[0]?.type === 'FORCED_REENLIST'
+      ? currentTermHistory.slice(1)
+      : currentTermHistory
+  const selectCareer = [...currentTermFactHistory]
     .reverse()
     .find((event) => event.type === 'SELECT_CAREER')
-  const survival = [...currentTermHistory]
+  const survival = [...currentTermFactHistory]
     .reverse()
     .find(
       (event) =>
         event.type === 'SURVIVAL_PASSED' || event.type === 'SURVIVAL_FAILED'
     )
-  const commission = [...currentTermHistory]
+  const commission = [...currentTermFactHistory]
     .reverse()
     .find(
       (event) =>
         event.type === 'COMPLETE_COMMISSION' || event.type === 'SKIP_COMMISSION'
     )
-  const advancement = [...currentTermHistory]
+  const advancement = [...currentTermFactHistory]
     .reverse()
     .find(
       (event) =>
         event.type === 'COMPLETE_ADVANCEMENT' ||
         event.type === 'SKIP_ADVANCEMENT'
     )
-  const aging = [...currentTermHistory]
+  const aging = [...currentTermFactHistory]
     .reverse()
     .find((event) => event.type === 'COMPLETE_AGING')
-  const anagathicsDecision = [...currentTermHistory]
+  const anagathicsDecision = [...currentTermFactHistory]
     .reverse()
     .find((event) => event.type === 'DECIDE_ANAGATHICS')
-  const reenlistment = [...currentTermHistory]
+  const reenlistment = [...currentTermFactHistory]
     .reverse()
     .find(
       (event) =>
@@ -114,7 +123,7 @@ export const careerPlanFromProjection = (
         event.type === 'REENLIST_BLOCKED' ||
         event.type === 'FORCED_REENLIST'
     )
-  const termSkillRolls = currentTermHistory
+  const termSkillRolls = currentTermFactHistory
     .filter((event) => event.type === 'ROLL_TERM_SKILL')
     .map((event) => ({
       table: event.termSkill.table,

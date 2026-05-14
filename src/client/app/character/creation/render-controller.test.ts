@@ -255,6 +255,110 @@ describe('character creation render controller', () => {
     assert.equal(nextStep?.children[1]?.textContent, 'Sentinel prompt')
   })
 
+  it('posts reenlistment when continuing a completed term without changing wizard step', async () => {
+    const els = elements()
+    const currentFlow = {
+      step: 'career' as const,
+      draft: createInitialCharacterDraft(asCharacterId('reenlist-click'), {
+        characterType: 'PLAYER',
+        name: 'Iona Vesh',
+        age: 22,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        skills: ['Streetwise-0'],
+        careerPlan: {
+          career: 'Rogue',
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 9,
+          survivalPassed: true,
+          commissionRoll: 11,
+          commissionPassed: true,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: true,
+          canAdvance: false,
+          drafted: false,
+          termSkillRolls: [
+            { table: 'personalDevelopment', roll: 1, skill: 'Streetwise' }
+          ],
+          agingRoll: 10,
+          agingMessage: 'No aging effects.',
+          agingSelections: [],
+          reenlistmentRoll: 8,
+          reenlistmentOutcome: 'allowed'
+        }
+      })
+    } satisfies CharacterCreationFlow
+    const posted: string[] = []
+    const nextFlows: CharacterCreationFlow[] = []
+    const controller = createCharacterCreationRenderController({
+      document: renderDocument(),
+      elements: els,
+      controller: {
+        currentProjection: () => null,
+        flow: () => currentFlow,
+        readOnly: () => false,
+        reconcileEditableWithProjection: () => currentFlow,
+        setFlow: (flow) => {
+          if (flow) {
+            nextFlows.push(flow)
+          }
+          return flow
+        },
+        viewModel: () =>
+          deriveCharacterCreationViewModel({
+            flow: currentFlow,
+            projection: null,
+            readOnly: false
+          })
+      },
+      panel: {
+        render: () => true,
+        scrollToTop: () => {}
+      },
+      wizard: {
+        advance: async () => {},
+        autoAdvanceSetup: () => false,
+        startNew: async () => {},
+        syncFields: () => {}
+      },
+      homeworldPublisher: {
+        publishBackgroundCascadeSelection: async () => {},
+        publishProgress: async () => {},
+        publishCascadeResolution: async () => {}
+      },
+      getCommandController: commandController,
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async (command) => {
+        posted.push(command.type)
+        return {}
+      },
+      commandIdentity: () => ({
+        gameId: asGameId('game-1'),
+        actorId: asUserId('actor-1')
+      }),
+      reportError: () => {}
+    })
+
+    controller.renderWizard()
+    const serve = walk(asNode(els.characterCreationFields)).find(
+      (node) => node.textContent === 'Serve another term'
+    )
+    serve?.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.deepEqual(posted, ['ReenlistCharacterCreationCareer'])
+    assert.equal(nextFlows[0]?.draft.completedTerms.length, 1)
+    assert.equal(nextFlows[0]?.draft.careerPlan?.career, 'Rogue')
+  })
+
   it('renders the characteristic grid from the controller view model', () => {
     const els = elements()
     const currentFlow = {

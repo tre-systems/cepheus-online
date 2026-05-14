@@ -24,6 +24,7 @@ import {
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationReviewSummary,
+  deriveCharacterCreationSkillStrip,
   deriveCharacterCreationStatStrip,
   deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationTermSkillTrainingViewModel,
@@ -795,6 +796,30 @@ describe('character creation view helpers', () => {
     )
   })
 
+  it('derives a compact sorted skill strip from background and career skills', () => {
+    const flow = completeFlow()
+    flow.draft.backgroundSkills = ['Zero-G-0', 'Admin-0']
+    flow.draft.skills = [
+      'Vacc Suit-0',
+      'Pilot-1',
+      'Broker-2',
+      'Recon-1',
+      'Pilot-1'
+    ]
+
+    assert.deepEqual(deriveCharacterCreationSkillStrip(flow), {
+      skills: [
+        'Broker-2',
+        'Pilot-2',
+        'Recon-1',
+        'Admin-0',
+        'Vacc Suit-0',
+        'Zero-G-0'
+      ],
+      summary: 'Broker-2, Pilot-2, Recon-1, Admin-0, Vacc Suit-0, Zero-G-0'
+    })
+  })
+
   it('derives characteristic grid data once for renderers', () => {
     const flow = {
       step: 'characteristics' as const,
@@ -952,6 +977,7 @@ describe('character creation view helpers', () => {
         { label: 'Soc', value: '6', modifier: '0', missing: false }
       ]
     )
+    assert.equal(viewModel.skills.summary, 'Admin-0, Broker-0, Zero-G-0')
   })
 
   it('derives terminal death copy after failed survival', () => {
@@ -1166,6 +1192,25 @@ describe('character creation view helpers', () => {
     })
     assert.deepEqual(
       deriveCharacterCreationValidationSummary(completeFlow(), 'review'),
+      {
+        ok: true,
+        step: 'review',
+        errors: [],
+        errorCount: 0,
+        message: 'Ready to continue'
+      }
+    )
+    assert.deepEqual(
+      deriveCharacterCreationValidationSummary(
+        {
+          ...completeFlow(),
+          draft: {
+            ...completeFlow().draft,
+            careerPlan: null
+          }
+        },
+        'review'
+      ),
       {
         ok: true,
         step: 'review',
@@ -1556,6 +1601,28 @@ describe('character creation view helpers', () => {
         ]
       }
     ])
+  })
+
+  it('derives review career details from completed terms after mustering out', () => {
+    const summary = deriveCharacterCreationReviewSummary({
+      ...completeFlow(),
+      draft: {
+        ...completeFlow().draft,
+        careerPlan: null
+      }
+    })
+
+    assert.deepEqual(summary.sections[2], {
+      key: 'career',
+      label: 'Career',
+      items: [
+        { label: 'Career', value: 'Scout' },
+        { label: 'Qualification', value: '8 (passed)' },
+        { label: 'Survival', value: '9 (passed)' },
+        { label: 'Commission', value: 'Not available' },
+        { label: 'Advancement', value: 'Not available' }
+      ]
+    })
   })
 
   it('formats equipment text for textarea controls', () => {

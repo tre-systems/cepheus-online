@@ -86,6 +86,8 @@ export const renderCharacterCreationNextStep = (
   prompt.textContent = viewModel.prompt
   const stats = document.createElement('div')
   stats.className = 'creation-stat-strip'
+  const skills = document.createElement('p')
+  skills.className = 'creation-skill-strip'
   const actions = document.createElement('div')
   actions.className = 'creation-next-step-actions'
 
@@ -101,6 +103,7 @@ export const renderCharacterCreationNextStep = (
     item.append(label, value, modifier)
     stats.append(item)
   }
+  skills.textContent = viewModel.skills.summary
 
   if (
     !viewModel.primaryAction.disabled &&
@@ -125,9 +128,10 @@ export const renderCharacterCreationNextStep = (
       )
     )
   }
-  if (!['characteristics', 'homeworld'].includes(viewModel.step)) {
+  if (viewModel.step !== 'characteristics') {
     panel.append(stats)
   }
+  if (viewModel.skills.skills.length > 0) panel.append(skills)
   if (actions.childElementCount > 0) panel.append(actions)
   return panel
 }

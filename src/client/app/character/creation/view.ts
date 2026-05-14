@@ -16,7 +16,8 @@ import {
   careerSkillWithLevel,
   formatCareerSkill,
   isCascadeCareerSkill,
-  parseCareerSkill
+  parseCareerSkill,
+  tallyCareerSkills
 } from '../../../../shared/character-creation/skills.js'
 import type {
   BenefitKind,
@@ -137,6 +138,11 @@ export interface CharacterCreationStatStripItem {
   missing: boolean
 }
 
+export interface CharacterCreationSkillStripViewModel {
+  skills: string[]
+  summary: string
+}
+
 export interface CharacterCreationCharacteristicGridItem {
   key: CharacteristicKey
   label: string
@@ -161,6 +167,7 @@ export interface CharacterCreationNextStepViewModel {
   secondaryAction: CharacterCreationButtonState | null
   validation: CharacterCreationValidationSummary
   stats: CharacterCreationStatStripItem[]
+  skills: CharacterCreationSkillStripViewModel
 }
 
 export interface CharacterCreationReviewItem {
@@ -724,6 +731,20 @@ export const deriveCharacterCreationStatStrip = (
     }
   })
 
+export const deriveCharacterCreationSkillStrip = (
+  flow: Pick<CharacterCreationFlow, 'draft'>
+): CharacterCreationSkillStripViewModel => {
+  const skills = tallyCareerSkills([
+    ...flow.draft.backgroundSkills,
+    ...flow.draft.skills
+  ])
+
+  return {
+    skills,
+    summary: skills.join(', ')
+  }
+}
+
 export const deriveCharacterCreationCharacteristicGridViewModel = (
   flow: CharacterCreationFlow
 ): CharacterCreationCharacteristicGridViewModel | null => {
@@ -1252,7 +1273,8 @@ export const deriveCharacterCreationNextStepViewModel = (
     primaryAction: buttons.primary,
     secondaryAction: buttons.secondary,
     validation,
-    stats: deriveCharacterCreationStatStrip(flow)
+    stats: deriveCharacterCreationStatStrip(flow),
+    skills: deriveCharacterCreationSkillStrip(flow)
   }
 }
 
@@ -1827,37 +1849,51 @@ const outcomeValue = (
 }
 
 const careerReviewItems = (
-  careerPlan: CharacterCreationCareerPlan | null
-): CharacterCreationReviewItem[] => [
-  { label: 'Career', value: itemValue(careerPlan?.career.trim() ?? '') },
-  {
-    label: 'Qualification',
-    value: outcomeValue(
-      careerPlan?.qualificationRoll,
-      careerPlan?.qualificationPassed
-    )
-  },
-  {
-    label: 'Survival',
-    value: outcomeValue(careerPlan?.survivalRoll, careerPlan?.survivalPassed)
-  },
-  {
-    label: 'Commission',
-    value: outcomeValue(
-      careerPlan?.commissionRoll,
-      careerPlan?.commissionPassed,
-      careerPlan?.canCommission === false ? 'Not available' : 'Not set'
-    )
-  },
-  {
-    label: 'Advancement',
-    value: outcomeValue(
-      careerPlan?.advancementRoll,
-      careerPlan?.advancementPassed,
-      careerPlan?.canAdvance === false ? 'Not available' : 'Not set'
-    )
-  }
-]
+  draft: CharacterCreationFlow['draft']
+): CharacterCreationReviewItem[] => {
+  const careerPlan = draft.careerPlan
+  const completedTerm = draft.completedTerms.at(-1)
+  const career = careerPlan?.career.trim() || completedTerm?.career || ''
+
+  return [
+    { label: 'Career', value: itemValue(career) },
+    {
+      label: 'Qualification',
+      value: outcomeValue(
+        careerPlan?.qualificationRoll ?? completedTerm?.qualificationRoll,
+        careerPlan?.qualificationPassed ??
+          (completedTerm ? completedTerm.qualificationRoll !== null : null)
+      )
+    },
+    {
+      label: 'Survival',
+      value: outcomeValue(
+        careerPlan?.survivalRoll ?? completedTerm?.survivalRoll,
+        careerPlan?.survivalPassed ?? completedTerm?.survivalPassed
+      )
+    },
+    {
+      label: 'Commission',
+      value: outcomeValue(
+        careerPlan?.commissionRoll ?? completedTerm?.commissionRoll,
+        careerPlan?.commissionPassed ?? completedTerm?.commissionPassed,
+        (careerPlan?.canCommission ?? completedTerm?.canCommission) === false
+          ? 'Not available'
+          : 'Not set'
+      )
+    },
+    {
+      label: 'Advancement',
+      value: outcomeValue(
+        careerPlan?.advancementRoll ?? completedTerm?.advancementRoll,
+        careerPlan?.advancementPassed ?? completedTerm?.advancementPassed,
+        (careerPlan?.canAdvance ?? completedTerm?.canAdvance) === false
+          ? 'Not available'
+          : 'Not set'
+      )
+    }
+  ]
+}
 
 const termHistoryReviewItems = (
   draft: CharacterCreationFlow['draft']
@@ -2057,7 +2093,7 @@ export const deriveCharacterCreationReviewSummary = (
       {
         key: 'career',
         label: characterCreationStepLabels.career,
-        items: careerReviewItems(draft.careerPlan)
+        items: careerReviewItems(draft)
       },
       {
         key: 'career-history',

@@ -177,8 +177,13 @@ describe('character creation renderer', () => {
 
     assert.equal(node.className, 'creation-next-step')
     assert.equal(node.children[0]?.textContent, 'Review')
-    assert.equal(node.children[3]?.className, 'creation-next-step-actions')
-    node.children[3]?.children[0]?.click()
+    assert.equal(node.children[3]?.className, 'creation-skill-strip')
+    assert.equal(
+      node.children[3]?.textContent,
+      'Pilot-1, Admin-0, Slug Pistol-0, Vacc Suit-0, Zero-G-0'
+    )
+    assert.equal(node.children[4]?.className, 'creation-next-step-actions')
+    node.children[4]?.children[0]?.click()
     await Promise.resolve()
 
     assert.deepEqual(events, ['advance'])

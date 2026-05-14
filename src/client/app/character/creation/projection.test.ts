@@ -9,7 +9,8 @@ import type {
 } from '../../../../shared/state'
 import {
   deriveCharacterCreationAnagathicsDecision,
-  deriveNextCharacterCreationAgingRoll
+  deriveNextCharacterCreationAgingRoll,
+  deriveCharacterCreationTermSkillTableActions
 } from './flow'
 import { flowFromProjectedCharacter } from './projection'
 
@@ -159,6 +160,211 @@ describe('character creation projection helpers', () => {
     if (!flow) throw new Error('Expected projected flow')
 
     assert.deepEqual(flow.draft.skills, ['Pilot-1', 'Survival-0'])
+  })
+
+  it('starts a fresh active plan after reenlisting for another term', () => {
+    const flow = flowFromProjectedCharacter(
+      character({
+        ...agingProjection([
+          ...resolvedTermSkillHistory,
+          {
+            type: 'COMPLETE_AGING',
+            aging: {
+              roll: {
+                expression: '2d6',
+                rolls: [5, 5],
+                total: 10
+              },
+              age: 22,
+              modifier: 0,
+              characteristicChanges: []
+            }
+          },
+          {
+            type: 'RESOLVE_REENLISTMENT',
+            reenlistment: {
+              expression: '2d6',
+              rolls: [4, 4],
+              total: 8,
+              characteristic: null,
+              modifier: 0,
+              target: 0,
+              success: true,
+              outcome: 'allowed'
+            }
+          },
+          { type: 'REENLIST' },
+          {
+            type: 'SURVIVAL_PASSED',
+            canCommission: true,
+            canAdvance: false,
+            survival: {
+              expression: '2d6',
+              rolls: [3, 3],
+              total: 6,
+              characteristic: 'end',
+              modifier: 0,
+              target: 5,
+              success: true
+            }
+          }
+        ]),
+        state: {
+          status: 'COMMISSION',
+          context: {
+            canCommission: true,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Pilot-1'],
+            skillsAndTraining: ['Pilot-1'],
+            benefits: [],
+            complete: true,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8,
+            reEnlistment: 8
+          },
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 6
+          }
+        ]
+      })
+    )
+    if (!flow) throw new Error('Expected projected flow')
+
+    assert.equal(flow.step, 'career')
+    assert.equal(flow.draft.completedTerms.length, 1)
+    assert.equal(flow.draft.careerPlan?.career, 'Scout')
+    assert.equal(flow.draft.careerPlan?.survivalRoll, 6)
+    assert.equal(flow.draft.careerPlan?.commissionRoll, null)
+    assert.equal(flow.draft.careerPlan?.agingRoll, null)
+    assert.equal(flow.draft.careerPlan?.reenlistmentRoll, null)
+  })
+
+  it('requires anagathics decision before aging a reenlisted active term', () => {
+    const flow = flowFromProjectedCharacter(
+      character({
+        ...agingProjection([
+          ...resolvedTermSkillHistory,
+          {
+            type: 'DECIDE_ANAGATHICS',
+            useAnagathics: false,
+            termIndex: 0
+          },
+          {
+            type: 'COMPLETE_AGING',
+            aging: {
+              roll: {
+                expression: '2d6',
+                rolls: [5, 5],
+                total: 10
+              },
+              age: 22,
+              modifier: 0,
+              characteristicChanges: []
+            }
+          },
+          {
+            type: 'RESOLVE_REENLISTMENT',
+            reenlistment: {
+              expression: '2d6',
+              rolls: [4, 4],
+              total: 8,
+              characteristic: null,
+              modifier: 0,
+              target: 4,
+              success: true,
+              outcome: 'allowed'
+            }
+          },
+          { type: 'REENLIST' },
+          {
+            type: 'SURVIVAL_PASSED',
+            canCommission: true,
+            canAdvance: false,
+            survival: {
+              expression: '2d6',
+              rolls: [3, 3],
+              total: 6,
+              characteristic: 'end',
+              modifier: 0,
+              target: 5,
+              success: true
+            }
+          },
+          {
+            type: 'COMPLETE_COMMISSION',
+            commission: {
+              expression: '2d6',
+              rolls: [1, 2],
+              total: 3,
+              characteristic: 'str',
+              modifier: 0,
+              target: 6,
+              success: false
+            }
+          },
+          termSkillEvent('Gambling-1')
+        ]),
+        state: {
+          status: 'AGING',
+          context: {
+            canCommission: true,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Pilot-1'],
+            skillsAndTraining: ['Pilot-1'],
+            benefits: [],
+            complete: true,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 8,
+            reEnlistment: 8
+          },
+          {
+            career: 'Scout',
+            skills: ['Gambling-1'],
+            skillsAndTraining: ['Gambling-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 6
+          }
+        ]
+      })
+    )
+    if (!flow) throw new Error('Expected projected flow')
+
+    assert.equal(deriveCharacterCreationTermSkillTableActions(flow).length, 0)
+    assert.deepEqual(deriveCharacterCreationAnagathicsDecision(flow), {
+      label: 'Decide anagathics',
+      reason: 'Iona Vesh Scout anagathics'
+    })
+    assert.equal(deriveNextCharacterCreationAgingRoll(flow), null)
   })
 
   it('keeps plain mustering out on skills but opens equipment once benefits exist', () => {

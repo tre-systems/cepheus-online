@@ -1980,6 +1980,16 @@ h1 {
   font-weight: 760;
 }
 
+.creation-skill-strip {
+  margin: -2px 0 0;
+  border-bottom: 1px solid rgba(72, 255, 173, 0.14);
+  padding: 0 0 9px;
+  color: rgba(244, 255, 248, 0.84);
+  font-size: 12px;
+  font-weight: 620;
+  line-height: 1.35;
+}
+
 .skill-review {
   border: 1px solid rgba(72, 255, 173, 0.22);
   background:

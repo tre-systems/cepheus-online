@@ -754,6 +754,9 @@ const validateReviewHomeworld = (draft: CharacterCreationDraft): string[] =>
     ? []
     : validateHomeworld(draft)
 
+const validateReviewCareer = (draft: CharacterCreationDraft): string[] =>
+  draft.completedTerms.length > 0 ? [] : validateCareer(draft)
+
 const validationErrorsForStep = (
   step: CharacterCreationStep,
   draft: CharacterCreationDraft
@@ -776,7 +779,7 @@ const validationErrorsForStep = (
         ...validateBasics(draft),
         ...validateCharacteristics(draft),
         ...validateReviewHomeworld(draft),
-        ...validateCareer(draft),
+        ...validateReviewCareer(draft),
         ...validateSkills(draft),
         ...validateEquipment(draft)
       ]
