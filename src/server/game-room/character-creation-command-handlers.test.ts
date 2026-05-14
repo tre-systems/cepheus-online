@@ -106,6 +106,19 @@ const completedTerm = () => ({
   anagathics: false
 })
 
+const activeScoutTerm = () => ({
+  career: 'Scout',
+  skills: ['Vacc Suit-1'],
+  skillsAndTraining: ['Vacc Suit-1'],
+  benefits: [],
+  complete: false,
+  canReenlist: true,
+  completedBasicTraining: true,
+  musteringOut: false,
+  anagathics: false,
+  survival: 8
+})
+
 describe('character creation setup command handlers', () => {
   it('starts a server-backed character creation projection', () => {
     const result = deriveCharacterCreationCommandEvents(
@@ -895,6 +908,198 @@ describe('character creation setup command handlers', () => {
           context: {
             canCommission: false,
             canAdvance: true
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits aging roll facts from server dice', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationAging',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('AGING', {
+          terms: [activeScoutTerm()],
+          history: [
+            { type: 'DECIDE_ANAGATHICS', useAnagathics: false, termIndex: 0 }
+          ]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout aging',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationAgingResolved',
+        characterId,
+        rollEventId: 'game-1:2',
+        aging: {
+          roll: {
+            expression: '2d6',
+            rolls: [4, 4],
+            total: 8
+          },
+          modifier: -1,
+          age: 22,
+          characteristicChanges: []
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits anagathics decisions for the active term', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'DecideCharacterCreationAnagathics',
+        gameId,
+        actorId,
+        characterId,
+        useAnagathics: true
+      },
+      context(
+        createCreation('AGING', {
+          terms: [activeScoutTerm()]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationAnagathicsDecided',
+        characterId,
+        useAnagathics: true,
+        termIndex: 0,
+        state: {
+          status: 'AGING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits aging loss choices as characteristic patches', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationAgingLosses',
+        gameId,
+        actorId,
+        characterId,
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'dex' }
+        ]
+      },
+      context(
+        createCreation('REENLISTMENT', {
+          characteristicChanges: [
+            { type: 'PHYSICAL', modifier: -1 },
+            { type: 'PHYSICAL', modifier: -1 }
+          ],
+          terms: [activeScoutTerm()]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationAgingLossesResolved',
+        characterId,
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' },
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'dex' }
+        ],
+        characteristicPatch: {
+          str: 0,
+          dex: 0
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits reenlistment roll facts from server dice', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationReenlistment',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('REENLISTMENT', {
+          terms: [activeScoutTerm()],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout reenlistment',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationReenlistmentResolved',
+        characterId,
+        rollEventId: 'game-1:2',
+        outcome: 'allowed',
+        reenlistment: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: null,
+          modifier: 0,
+          target: 6,
+          success: true,
+          outcome: 'allowed'
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
           }
         },
         creationComplete: false
