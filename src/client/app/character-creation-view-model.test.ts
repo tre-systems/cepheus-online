@@ -4,7 +4,10 @@ import { describe, it } from 'node:test'
 import { asCharacterId } from '../../shared/ids'
 import type { CharacterCreationProjection } from '../../shared/state'
 import {
+  applyCharacterCreationCareerPlan,
   createInitialCharacterDraft,
+  selectCharacterCreationCareerPlan,
+  type CharacterCreationCompletedTerm,
   type CharacterCreationFlow
 } from './character-creation-flow'
 import {
@@ -57,6 +60,73 @@ const projection = (
   creationComplete: false,
   history: [],
   ...overrides
+})
+
+const completedTerm = (): CharacterCreationCompletedTerm => ({
+  career: 'Merchant',
+  drafted: false,
+  age: 22,
+  qualificationRoll: 8,
+  survivalRoll: 8,
+  survivalPassed: true,
+  canCommission: false,
+  commissionRoll: null,
+  commissionPassed: null,
+  canAdvance: false,
+  advancementRoll: null,
+  advancementPassed: null,
+  termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Comms' }],
+  anagathics: false,
+  agingRoll: null,
+  agingSelections: [],
+  reenlistmentRoll: 7,
+  reenlistmentOutcome: 'allowed'
+})
+
+const resolvedCareerFlow = ({
+  completedTerms = [],
+  termSkillRolls = [
+    { table: 'serviceSkills' as const, roll: 1, skill: 'Comms' }
+  ]
+}: {
+  completedTerms?: CharacterCreationCompletedTerm[]
+  termSkillRolls?: NonNullable<
+    CharacterCreationFlow['draft']['careerPlan']
+  >['termSkillRolls']
+} = {}): CharacterCreationFlow => ({
+  step: 'career',
+  draft: applyCharacterCreationCareerPlan(
+    createInitialCharacterDraft(characterId, {
+      name: 'Iona Vesh',
+      age: 22,
+      characteristics: {
+        str: 7,
+        dex: 8,
+        end: 7,
+        int: 9,
+        edu: 8,
+        soc: 6
+      },
+      completedTerms,
+      careerPlan: selectCharacterCreationCareerPlan('Merchant')
+    }),
+    {
+      ...selectCharacterCreationCareerPlan('Merchant'),
+      qualificationRoll: 8,
+      qualificationPassed: true,
+      survivalRoll: 8,
+      survivalPassed: true,
+      commissionRoll: -1,
+      commissionPassed: false,
+      advancementRoll: null,
+      advancementPassed: null,
+      canCommission: true,
+      canAdvance: false,
+      drafted: false,
+      anagathics: false,
+      termSkillRolls
+    }
+  )
 })
 
 describe('character creation view model', () => {
@@ -196,6 +266,14 @@ describe('character creation view model', () => {
     assert.equal(viewModel.controlsDisabled, true)
     assert.equal(viewModel.wizard?.controlsDisabled, true)
     assert.equal(viewModel.wizard?.projectedStep, 'career')
+    assert.equal(
+      viewModel.wizard?.termCascadeChoices?.title,
+      'Choose a specialty'
+    )
+    assert.equal(
+      viewModel.wizard?.termCascadeChoices?.choices[0]?.cascadeSkill,
+      'Aircraft-1'
+    )
     assert.equal(viewModel.pending.hasPendingResolution, true)
     assert.deepEqual(viewModel.pending.termCascadeSkills, ['Aircraft-1'])
     assert.equal(viewModel.pending.agingChangeCount, 1)
@@ -238,5 +316,109 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.careerRoll?.key, 'survivalRoll')
     assert.equal(viewModel.wizard?.careerRoll?.label, 'Roll survival')
     assert.equal(viewModel.wizard?.homeworld, null)
+  })
+
+  it('includes term skill training state for resolved career terms', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow({ termSkillRolls: [] }),
+      projection: projection('SKILLS_TRAINING'),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.termSkills?.title, 'Skills and training')
+    assert.equal(viewModel.wizard?.termSkills?.required, 1)
+    assert.equal(viewModel.wizard?.termSkills?.remaining, 1)
+    assert.deepEqual(
+      viewModel.wizard?.termSkills?.actions.map((action) => action.table),
+      [
+        'personalDevelopment',
+        'serviceSkills',
+        'specialistSkills',
+        'advancedEducation'
+      ]
+    )
+  })
+
+  it('includes aging and reenlistment prompt state for career terms', () => {
+    const reenlistment = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow(),
+      projection: projection('REENLISTMENT'),
+      readOnly: false
+    })
+
+    assert.equal(
+      reenlistment.wizard?.reenlistmentRoll?.label,
+      'Roll reenlistment'
+    )
+    assert.equal(
+      reenlistment.wizard?.termResolution?.message,
+      'Roll reenlistment before deciding what happens next.'
+    )
+    assert.equal(reenlistment.wizard?.agingRoll, null)
+
+    const aging = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow({
+        completedTerms: [completedTerm(), completedTerm(), completedTerm()]
+      }),
+      projection: projection('AGING'),
+      readOnly: false
+    })
+
+    assert.equal(aging.wizard?.agingRoll?.label, 'Roll aging')
+    assert.equal(aging.wizard?.agingRoll?.reason, 'Iona Vesh aging')
+    assert.equal(aging.wizard?.reenlistmentRoll, null)
+  })
+
+  it('includes anagathics decision state for eligible career terms', () => {
+    const base = resolvedCareerFlow()
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: {
+        ...base,
+        draft: {
+          ...base.draft,
+          careerPlan: base.draft.careerPlan
+            ? {
+                ...base.draft.careerPlan,
+                anagathics: null
+              }
+            : null
+        }
+      },
+      projection: projection('AGING'),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.anagathicsDecision?.title, 'Anagathics')
+    assert.equal(
+      viewModel.wizard?.anagathicsDecision?.useLabel,
+      'Use anagathics'
+    )
+    assert.equal(viewModel.wizard?.agingRoll, null)
+    assert.equal(viewModel.wizard?.reenlistmentRoll, null)
+  })
+
+  it('includes pending aging choice state', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'career',
+        draft: {
+          ...flow().draft,
+          pendingAgingChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+        }
+      }),
+      projection: projection('AGING'),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.agingChoices?.title, 'Aging effects')
+    assert.deepEqual(viewModel.wizard?.agingChoices?.choices[0], {
+      index: 0,
+      label: 'physical -1',
+      options: [
+        { characteristic: 'str', label: 'STR' },
+        { characteristic: 'dex', label: 'DEX' },
+        { characteristic: 'end', label: 'END' }
+      ]
+    })
   })
 })

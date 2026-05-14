@@ -14,6 +14,7 @@ import {
 } from './character-creation-homeworld-view'
 import {
   deriveCharacterCreationHomeworldViewModel,
+  deriveCharacterCreationTermCascadeChoicesViewModel,
   type CharacterCreationPendingCascadeChoiceViewModel
 } from './character-creation-view'
 import { asNode, type TestNode, testDocument } from './test-dom.test-helper'
@@ -49,6 +50,17 @@ const walk = (node: TestNode): TestNode[] => [
 
 const viewModel = (overrides: Partial<CharacterCreationFlow['draft']> = {}) =>
   deriveCharacterCreationHomeworldViewModel(flow(overrides))
+
+const termCascadeViewModel = (
+  overrides: Partial<CharacterCreationFlow['draft']> = {}
+) => {
+  const model = deriveCharacterCreationTermCascadeChoicesViewModel({
+    ...flow(overrides),
+    step: 'career'
+  })
+  if (!model) throw new Error('Expected term cascade view model')
+  return model
+}
 
 describe('character creation homeworld view', () => {
   it('renders homeworld select fields with parent sync metadata', () => {
@@ -148,7 +160,7 @@ describe('character creation homeworld view', () => {
     const node = asNode(
       renderCharacterCreationTermCascadeChoices(
         document,
-        flow({ pendingTermCascadeSkills: ['Gun Combat-0'] }),
+        termCascadeViewModel({ pendingTermCascadeSkills: ['Gun Combat-0'] }),
         { resolveCascadeSkill: (choice) => choices.push(choice) }
       )
     )

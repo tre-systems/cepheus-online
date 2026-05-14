@@ -11,17 +11,31 @@ import {
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerSelectionViewModel,
   deriveCharacterCreationCharacteristicGridViewModel,
+  deriveCharacterCreationAgingChoicesViewModel,
+  deriveCharacterCreationAgingRollViewModel,
+  deriveCharacterCreationAnagathicsDecisionViewModel,
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationNextStepViewModel,
+  deriveCharacterCreationReenlistmentRollViewModel,
   deriveCharacterCreationStepProgressItems,
+  deriveCharacterCreationTermCascadeChoicesViewModel,
+  deriveCharacterCreationTermResolutionViewModel,
+  deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary,
+  type CharacterCreationAgingChoicesViewModel,
+  type CharacterCreationAgingRollViewModel,
+  type CharacterCreationAnagathicsDecisionViewModel,
   type CharacterCreationButtonStates,
   type CharacterCreationCareerRollButton,
   type CharacterCreationCareerSelectionViewModel,
   type CharacterCreationCharacteristicGridViewModel,
   type CharacterCreationHomeworldViewModel,
   type CharacterCreationNextStepViewModel,
+  type CharacterCreationReenlistmentRollViewModel,
   type CharacterCreationStepProgressItem,
+  type CharacterCreationTermCascadeChoicesViewModel,
+  type CharacterCreationTermResolutionViewModel,
+  type CharacterCreationTermSkillTrainingViewModel,
   type CharacterCreationValidationSummary
 } from './character-creation-view.js'
 
@@ -58,6 +72,13 @@ export interface CharacterCreationWizardViewModel {
   nextStep: CharacterCreationNextStepViewModel
   careerSelection: CharacterCreationCareerSelectionViewModel | null
   careerRoll: CharacterCreationCareerRollButton | null
+  reenlistmentRoll: CharacterCreationReenlistmentRollViewModel | null
+  agingRoll: CharacterCreationAgingRollViewModel | null
+  agingChoices: CharacterCreationAgingChoicesViewModel | null
+  anagathicsDecision: CharacterCreationAnagathicsDecisionViewModel | null
+  termCascadeChoices: CharacterCreationTermCascadeChoicesViewModel | null
+  termResolution: CharacterCreationTermResolutionViewModel | null
+  termSkills: CharacterCreationTermSkillTrainingViewModel | null
   characteristics: CharacterCreationCharacteristicGridViewModel | null
   homeworld: CharacterCreationHomeworldViewModel | null
 }
@@ -183,6 +204,15 @@ const wizardViewModel = ({
     nextStep: deriveCharacterCreationNextStepViewModel(flow),
     careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow),
     careerRoll: deriveCharacterCreationCareerRollButton(flow),
+    reenlistmentRoll: deriveCharacterCreationReenlistmentRollViewModel(flow),
+    agingRoll: deriveCharacterCreationAgingRollViewModel(flow),
+    agingChoices: deriveCharacterCreationAgingChoicesViewModel(flow),
+    anagathicsDecision:
+      deriveCharacterCreationAnagathicsDecisionViewModel(flow),
+    termCascadeChoices:
+      deriveCharacterCreationTermCascadeChoicesViewModel(flow),
+    termResolution: deriveCharacterCreationTermResolutionViewModel(flow),
+    termSkills: deriveCharacterCreationTermSkillTrainingViewModel(flow),
     characteristics: deriveCharacterCreationCharacteristicGridViewModel(flow),
     homeworld:
       flow.step === 'homeworld'

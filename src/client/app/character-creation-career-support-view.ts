@@ -1,14 +1,13 @@
 import type { CharacteristicKey } from '../../shared/state.js'
-import {
-  deriveCharacterCreationAgingChangeOptions,
-  deriveCharacterCreationAnagathicsDecision,
-  deriveNextCharacterCreationAgingRoll,
-  deriveNextCharacterCreationReenlistmentRoll,
-  type CharacterCreationFlow,
-  type CharacterCreationTermSkillTable
-} from './character-creation-flow.js'
+import type { CharacterCreationTermSkillTable } from './character-creation-flow.js'
 import { bindAsyncActionButton } from './async-action-button.js'
-import { deriveCharacterCreationTermSkillTrainingViewModel } from './character-creation-view.js'
+import type {
+  CharacterCreationAgingChoicesViewModel,
+  CharacterCreationAgingRollViewModel,
+  CharacterCreationAnagathicsDecisionViewModel,
+  CharacterCreationReenlistmentRollViewModel,
+  CharacterCreationTermSkillTrainingViewModel
+} from './character-creation-view.js'
 
 export interface CharacterCreationCareerSupportDocument {
   createElement(tagName: 'button'): HTMLButtonElement
@@ -27,7 +26,7 @@ export interface CharacterCreationCareerSupportViewDeps {
 
 export const renderCharacterCreationTermSkillTables = (
   document: CharacterCreationCareerSupportDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationTermSkillTrainingViewModel,
   {
     rollTermSkill,
     reportError
@@ -36,9 +35,6 @@ export const renderCharacterCreationTermSkillTables = (
     'rollTermSkill' | 'reportError'
   >
 ): HTMLElement | DocumentFragment => {
-  const viewModel = deriveCharacterCreationTermSkillTrainingViewModel(flow)
-  if (!viewModel) return document.createDocumentFragment()
-
   const panel = document.createElement('div')
   panel.className = 'creation-term-skills'
   const title = document.createElement('strong')
@@ -85,7 +81,7 @@ export const renderCharacterCreationTermSkillTables = (
 
 export const renderCharacterCreationReenlistmentRollButton = (
   document: CharacterCreationCareerSupportDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationReenlistmentRollViewModel,
   {
     rollReenlistment,
     reportError
@@ -93,80 +89,71 @@ export const renderCharacterCreationReenlistmentRollButton = (
     CharacterCreationCareerSupportViewDeps,
     'rollReenlistment' | 'reportError'
   >
-): HTMLElement | null => {
-  const action = deriveNextCharacterCreationReenlistmentRoll(flow)
-  if (!action) return null
-
+): HTMLElement => {
   const panel = document.createElement('div')
   panel.className = 'creation-roll-action'
   const button = document.createElement('button')
   button.type = 'button'
-  button.textContent = action.label
+  button.textContent = viewModel.label
   bindAsyncActionButton(button, () =>
     rollReenlistment().catch((error) => reportError(error.message))
   )
   const note = document.createElement('small')
-  note.textContent = action.reason
+  note.textContent = viewModel.reason
   panel.append(button, note)
   return panel
 }
 
 export const renderCharacterCreationAgingRollButton = (
   document: CharacterCreationCareerSupportDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationAgingRollViewModel,
   {
     rollAging,
     reportError
   }: Pick<CharacterCreationCareerSupportViewDeps, 'rollAging' | 'reportError'>
-): HTMLElement | null => {
-  const action = deriveNextCharacterCreationAgingRoll(flow)
-  if (!action) return null
-
+): HTMLElement => {
   const panel = document.createElement('div')
   panel.className = 'creation-roll-action'
   const button = document.createElement('button')
   button.type = 'button'
-  button.textContent = action.label
+  button.textContent = viewModel.label
   bindAsyncActionButton(button, () =>
     rollAging().catch((error) => reportError(error.message))
   )
   const note = document.createElement('small')
-  const modifier = action.modifier === 0 ? '' : ` (${action.modifier})`
-  note.textContent = `${action.reason}${modifier}`
+  const modifier = viewModel.modifierText ? ` (${viewModel.modifierText})` : ''
+  note.textContent = `${viewModel.reason}${modifier}`
   panel.append(button, note)
   return panel
 }
 
 export const renderCharacterCreationAgingChoices = (
   document: CharacterCreationCareerSupportDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationAgingChoicesViewModel,
   {
     applyAgingChange
   }: Pick<CharacterCreationCareerSupportViewDeps, 'applyAgingChange'>
-): HTMLElement | DocumentFragment => {
-  const changes = deriveCharacterCreationAgingChangeOptions(flow)
-  if (changes.length === 0) return document.createDocumentFragment()
-
+): HTMLElement => {
   const panel = document.createElement('div')
   panel.className = 'creation-term-skills'
   const title = document.createElement('strong')
-  title.textContent = 'Aging effects'
+  title.textContent = viewModel.title
   const text = document.createElement('p')
-  text.textContent = 'Choose where each aging effect applies.'
+  text.textContent = viewModel.prompt
   panel.append(title, text)
 
-  for (const change of changes) {
+  for (const change of viewModel.choices) {
     const row = document.createElement('div')
     row.className = 'creation-term-actions'
     const label = document.createElement('small')
-    label.textContent = `${change.type.toLowerCase()} ${change.modifier}`
+    label.textContent = change.label
     row.append(label)
     for (const option of change.options) {
       const button = document.createElement('button')
       button.type = 'button'
-      button.textContent = option.toUpperCase()
+      button.textContent = option.label
       button.addEventListener('click', () => {
-        applyAgingChange(change.index, option)
+        applyAgingChange(change.index, option.characteristic)
       })
       row.append(button)
     }
@@ -178,7 +165,7 @@ export const renderCharacterCreationAgingChoices = (
 
 export const renderCharacterCreationAnagathicsDecision = (
   document: CharacterCreationCareerSupportDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationAnagathicsDecisionViewModel,
   {
     decideAnagathics,
     reportError
@@ -186,31 +173,27 @@ export const renderCharacterCreationAnagathicsDecision = (
     CharacterCreationCareerSupportViewDeps,
     'decideAnagathics' | 'reportError'
   >
-): HTMLElement | DocumentFragment => {
-  const decision = deriveCharacterCreationAnagathicsDecision(flow)
-  if (!decision) return document.createDocumentFragment()
-
+): HTMLElement => {
   const panel = document.createElement('div')
   panel.className = 'creation-term-resolution'
   const title = document.createElement('strong')
-  title.textContent = 'Anagathics'
+  title.textContent = viewModel.title
   const text = document.createElement('p')
-  text.textContent =
-    'Choose whether this term used anagathics before aging and reenlistment.'
+  text.textContent = viewModel.prompt
   const actions = document.createElement('div')
   actions.className = 'creation-term-actions'
 
   const use = document.createElement('button')
   use.type = 'button'
-  use.textContent = 'Use anagathics'
-  use.title = decision.reason
+  use.textContent = viewModel.useLabel
+  use.title = viewModel.reason
   bindAsyncActionButton(use, () =>
     decideAnagathics(true).catch((error) => reportError(error.message))
   )
 
   const skip = document.createElement('button')
   skip.type = 'button'
-  skip.textContent = 'Skip'
+  skip.textContent = viewModel.skipLabel
   bindAsyncActionButton(skip, () =>
     decideAnagathics(false).catch((error) => reportError(error.message))
   )

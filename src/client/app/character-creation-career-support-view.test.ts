@@ -18,6 +18,13 @@ import {
   renderCharacterCreationTermSkillTables,
   type CharacterCreationCareerSupportDocument
 } from './character-creation-career-support-view'
+import {
+  deriveCharacterCreationAgingChoicesViewModel,
+  deriveCharacterCreationAgingRollViewModel,
+  deriveCharacterCreationAnagathicsDecisionViewModel,
+  deriveCharacterCreationReenlistmentRollViewModel,
+  deriveCharacterCreationTermSkillTrainingViewModel
+} from './character-creation-view'
 import { asNode, testDocument } from './test-dom.test-helper'
 
 const document =
@@ -85,6 +92,36 @@ const careerFlow = (
   )
 })
 
+const termSkillViewModel = (flow: CharacterCreationFlow) => {
+  const viewModel = deriveCharacterCreationTermSkillTrainingViewModel(flow)
+  if (viewModel === null) throw new Error('Expected term skill model')
+  return viewModel
+}
+
+const reenlistmentViewModel = (flow: CharacterCreationFlow) => {
+  const viewModel = deriveCharacterCreationReenlistmentRollViewModel(flow)
+  if (viewModel === null) throw new Error('Expected reenlistment model')
+  return viewModel
+}
+
+const agingRollViewModel = (flow: CharacterCreationFlow) => {
+  const viewModel = deriveCharacterCreationAgingRollViewModel(flow)
+  if (viewModel === null) throw new Error('Expected aging roll model')
+  return viewModel
+}
+
+const agingChoicesViewModel = (flow: CharacterCreationFlow) => {
+  const viewModel = deriveCharacterCreationAgingChoicesViewModel(flow)
+  if (viewModel === null) throw new Error('Expected aging choices model')
+  return viewModel
+}
+
+const anagathicsViewModel = (flow: CharacterCreationFlow) => {
+  const viewModel = deriveCharacterCreationAnagathicsDecisionViewModel(flow)
+  if (viewModel === null) throw new Error('Expected anagathics model')
+  return viewModel
+}
+
 describe('character creation career support view', () => {
   it('renders term skill tables and reports roll errors', async () => {
     const flow = careerFlow({}, { termSkillRolls: [] })
@@ -92,15 +129,19 @@ describe('character creation career support view', () => {
     let error = ''
 
     const node = asNode(
-      renderCharacterCreationTermSkillTables(document, flow, {
-        rollTermSkill: async (table) => {
-          rolled.push(table)
-          throw new Error('No roll')
-        },
-        reportError: (message) => {
-          error = message
+      renderCharacterCreationTermSkillTables(
+        document,
+        termSkillViewModel(flow),
+        {
+          rollTermSkill: async (table) => {
+            rolled.push(table)
+            throw new Error('No roll')
+          },
+          reportError: (message) => {
+            error = message
+          }
         }
-      })
+      )
     )
 
     assert.equal(node.className, 'creation-term-skills')
@@ -124,7 +165,7 @@ describe('character creation career support view', () => {
 
     const reenlistmentElement = renderCharacterCreationReenlistmentRollButton(
       document,
-      careerFlow({ age: 22 }, { anagathics: false }),
+      reenlistmentViewModel(careerFlow({ age: 22 }, { anagathics: false })),
       {
         rollReenlistment: async () => {
           events.push('reenlist')
@@ -140,11 +181,13 @@ describe('character creation career support view', () => {
 
     const agingElement = renderCharacterCreationAgingRollButton(
       document,
-      careerFlow(
-        {
-          completedTerms: [completedTerm(), completedTerm(), completedTerm()]
-        },
-        { anagathics: false }
+      agingRollViewModel(
+        careerFlow(
+          {
+            completedTerms: [completedTerm(), completedTerm(), completedTerm()]
+          },
+          { anagathics: false }
+        )
       ),
       {
         rollAging: async () => {
@@ -172,7 +215,7 @@ describe('character creation career support view', () => {
 
     const element = renderCharacterCreationReenlistmentRollButton(
       document,
-      careerFlow({ age: 22 }, { anagathics: false }),
+      reenlistmentViewModel(careerFlow({ age: 22 }, { anagathics: false })),
       {
         rollReenlistment: () => {
           events.push('reenlist')
@@ -208,11 +251,13 @@ describe('character creation career support view', () => {
 
     const element = renderCharacterCreationAgingRollButton(
       document,
-      careerFlow(
-        {
-          completedTerms: [completedTerm(), completedTerm(), completedTerm()]
-        },
-        { anagathics: false }
+      agingRollViewModel(
+        careerFlow(
+          {
+            completedTerms: [completedTerm(), completedTerm(), completedTerm()]
+          },
+          { anagathics: false }
+        )
       ),
       {
         rollAging: () => {
@@ -254,11 +299,15 @@ describe('character creation career support view', () => {
     const selections: Array<[number, string]> = []
 
     const node = asNode(
-      renderCharacterCreationAgingChoices(document, aged, {
-        applyAgingChange: (index, characteristic) => {
-          selections.push([index, characteristic])
+      renderCharacterCreationAgingChoices(
+        document,
+        agingChoicesViewModel(aged),
+        {
+          applyAgingChange: (index, characteristic) => {
+            selections.push([index, characteristic])
+          }
         }
-      })
+      )
     )
 
     assert.equal(node.className, 'creation-term-skills')
@@ -273,12 +322,16 @@ describe('character creation career support view', () => {
   it('renders anagathics decisions through callbacks', async () => {
     const decisions: boolean[] = []
     const node = asNode(
-      renderCharacterCreationAnagathicsDecision(document, careerFlow(), {
-        decideAnagathics: async (useAnagathics) => {
-          decisions.push(useAnagathics)
-        },
-        reportError: () => {}
-      })
+      renderCharacterCreationAnagathicsDecision(
+        document,
+        anagathicsViewModel(careerFlow()),
+        {
+          decideAnagathics: async (useAnagathics) => {
+            decisions.push(useAnagathics)
+          },
+          reportError: () => {}
+        }
+      )
     )
 
     assert.equal(node.className, 'creation-term-resolution')

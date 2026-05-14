@@ -35,10 +35,15 @@ import type {
 import {
   characterCreationSteps,
   deriveCharacterCreationBasicTrainingAction,
+  deriveCharacterCreationAgingChangeOptions,
+  deriveCharacterCreationAnagathicsDecision,
   deriveCharacterCreationCareerSkipAction,
   deriveCharacterCreationTermSkillTableActions,
+  deriveNextCharacterCreationAgingRoll,
   deriveNextCharacterCreationCareerRoll,
   deriveNextCharacterCreationCharacteristicRoll,
+  deriveNextCharacterCreationReenlistmentRoll,
+  isCharacterCreationCareerTermResolved,
   remainingCharacterCreationTermSkillRolls,
   requiredCharacterCreationTermSkillRolls,
   validateCurrentCharacterCreationStep
@@ -455,6 +460,62 @@ export interface CharacterCreationTermSkillTrainingViewModel {
   remaining: number
   rolled: CharacterCreationTermSkillRollViewModel[]
   actions: CharacterCreationTermSkillTableViewModel[]
+}
+
+export interface CharacterCreationReenlistmentRollViewModel {
+  label: string
+  reason: string
+}
+
+export interface CharacterCreationAgingRollViewModel {
+  label: string
+  reason: string
+  modifier: number
+  modifierText: string
+}
+
+export interface CharacterCreationAgingChoiceOptionViewModel {
+  characteristic: CharacteristicKey
+  label: string
+}
+
+export interface CharacterCreationAgingChoiceViewModel {
+  index: number
+  label: string
+  options: CharacterCreationAgingChoiceOptionViewModel[]
+}
+
+export interface CharacterCreationAgingChoicesViewModel {
+  open: boolean
+  title: string
+  prompt: string
+  choices: CharacterCreationAgingChoiceViewModel[]
+}
+
+export interface CharacterCreationTermCascadeChoicesViewModel {
+  open: boolean
+  title: string
+  prompt: string
+  choices: CharacterCreationCascadeSkillChoiceViewModel[]
+}
+
+export interface CharacterCreationAnagathicsDecisionViewModel {
+  title: string
+  prompt: string
+  reason: string
+  useLabel: string
+  skipLabel: string
+}
+
+export interface CharacterCreationTermResolutionActionViewModel {
+  label: string
+  continueCareer: boolean
+}
+
+export interface CharacterCreationTermResolutionViewModel {
+  title: string
+  message: string
+  actions: CharacterCreationTermResolutionActionViewModel[]
 }
 
 interface CharacterCreationHomeworldDraftFields {
@@ -1221,6 +1282,193 @@ export const deriveCharacterCreationTermSkillTrainingViewModel = (
       reason: action.reason,
       disabled: action.disabled
     }))
+  }
+}
+
+export const deriveCharacterCreationReenlistmentRollViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationReenlistmentRollViewModel | null => {
+  const action = deriveNextCharacterCreationReenlistmentRoll(flow)
+  if (!action) return null
+
+  return {
+    label: action.label,
+    reason: action.reason
+  }
+}
+
+export const deriveCharacterCreationAgingRollViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationAgingRollViewModel | null => {
+  const action = deriveNextCharacterCreationAgingRoll(flow)
+  if (!action) return null
+
+  const modifier =
+    action.modifier === 0
+      ? ''
+      : action.modifier > 0
+        ? `+${action.modifier}`
+        : String(action.modifier)
+
+  return {
+    label: action.label,
+    reason: action.reason,
+    modifier: action.modifier,
+    modifierText: modifier
+  }
+}
+
+export const deriveCharacterCreationAgingChoicesViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationAgingChoicesViewModel | null => {
+  const choices = deriveCharacterCreationAgingChangeOptions(flow)
+  if (choices.length === 0) return null
+
+  return {
+    open: true,
+    title: 'Aging effects',
+    prompt: 'Choose where each aging effect applies.',
+    choices: choices.map((choice) => ({
+      index: choice.index,
+      label: `${choice.type.toLowerCase()} ${choice.modifier}`,
+      options: choice.options.map((option) => ({
+        characteristic: option,
+        label: option.toUpperCase()
+      }))
+    }))
+  }
+}
+
+export const deriveCharacterCreationTermCascadeChoicesViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationTermCascadeChoicesViewModel | null => {
+  if (flow.step !== 'career') return null
+
+  const choices = deriveCharacterCreationCascadeSkillChoiceViewModels(
+    flow.draft.pendingTermCascadeSkills
+  )
+  if (choices.length === 0) return null
+
+  return {
+    open: true,
+    title: 'Choose a specialty',
+    prompt: 'Resolve the rolled cascade skill before continuing.',
+    choices
+  }
+}
+
+export const deriveCharacterCreationAnagathicsDecisionViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationAnagathicsDecisionViewModel | null => {
+  const decision = deriveCharacterCreationAnagathicsDecision(flow)
+  if (!decision) return null
+
+  return {
+    title: 'Anagathics',
+    prompt:
+      'Choose whether this term used anagathics before aging and reenlistment.',
+    reason: decision.reason,
+    useLabel: 'Use anagathics',
+    skipLabel: 'Skip'
+  }
+}
+
+export const deriveCharacterCreationTermResolutionViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationTermResolutionViewModel | null => {
+  if (flow.step !== 'career') return null
+
+  const plan = flow.draft.careerPlan
+  if (!plan?.career) return null
+
+  const title = 'Career term'
+  if (!isCharacterCreationCareerTermResolved(flow.draft)) {
+    return {
+      title,
+      message: 'Roll each required check. The next roll appears above.',
+      actions: []
+    }
+  }
+
+  if (deriveCharacterCreationTermSkillTableActions(flow).length > 0) {
+    return {
+      title,
+      message: 'Roll this term’s skills before deciding what happens next.',
+      actions: []
+    }
+  }
+
+  if (flow.draft.pendingTermCascadeSkills.length > 0) {
+    return {
+      title,
+      message:
+        'Choose the rolled skill specialty before deciding what happens next.',
+      actions: []
+    }
+  }
+
+  if (deriveCharacterCreationAnagathicsDecision(flow)) {
+    return {
+      title,
+      message:
+        'Decide whether this term used anagathics before deciding what happens next.',
+      actions: []
+    }
+  }
+
+  if (deriveNextCharacterCreationAgingRoll(flow)) {
+    return {
+      title,
+      message: 'Roll aging before deciding what happens next.',
+      actions: []
+    }
+  }
+
+  if (flow.draft.pendingAgingChanges.length > 0) {
+    return {
+      title,
+      message: 'Apply aging effects before deciding what happens next.',
+      actions: []
+    }
+  }
+
+  if (plan.survivalPassed === true && !plan.reenlistmentOutcome) {
+    return {
+      title,
+      message: 'Roll reenlistment before deciding what happens next.',
+      actions: []
+    }
+  }
+
+  if (plan.survivalPassed !== true) {
+    return {
+      title,
+      message:
+        'Killed in service. This character cannot muster out or become playable.',
+      actions: []
+    }
+  }
+
+  const actions: CharacterCreationTermResolutionActionViewModel[] = []
+  if (
+    plan.reenlistmentOutcome === 'allowed' ||
+    plan.reenlistmentOutcome === 'forced'
+  ) {
+    actions.push({
+      label:
+        plan.reenlistmentOutcome === 'forced'
+          ? 'Serve required term'
+          : 'Serve another term',
+      continueCareer: true
+    })
+  }
+
+  actions.push({ label: 'Muster out', continueCareer: false })
+
+  return {
+    title,
+    message: formatCharacterCreationReenlistmentOutcome(plan),
+    actions
   }
 }
 

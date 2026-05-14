@@ -1,12 +1,11 @@
-import {
-  deriveCharacterCreationCascadeSkillChoiceViewModels,
-  type CharacterCreationCascadeSkillChoiceViewModel,
-  type CharacterCreationFieldViewModel,
-  type CharacterCreationHomeworldOptionViewModel,
-  type CharacterCreationHomeworldViewModel,
-  type CharacterCreationPendingCascadeChoiceViewModel
+import type {
+  CharacterCreationCascadeSkillChoiceViewModel,
+  CharacterCreationFieldViewModel,
+  CharacterCreationHomeworldOptionViewModel,
+  CharacterCreationHomeworldViewModel,
+  CharacterCreationPendingCascadeChoiceViewModel,
+  CharacterCreationTermCascadeChoicesViewModel
 } from './character-creation-view.js'
-import type { CharacterCreationFlow } from './character-creation-flow.js'
 
 export interface CharacterCreationHomeworldDocument {
   createElement(tagName: 'button'): HTMLButtonElement
@@ -89,24 +88,18 @@ export const renderCharacterCreationHomeworld = (
 
 export const renderCharacterCreationTermCascadeChoices = (
   document: CharacterCreationHomeworldDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationTermCascadeChoicesViewModel,
   deps: Pick<CharacterCreationHomeworldViewDeps, 'resolveCascadeSkill'>
-): HTMLElement | DocumentFragment => {
-  if (flow.draft.pendingTermCascadeSkills.length === 0) {
-    return document.createDocumentFragment()
-  }
-
+): HTMLElement => {
   const panel = document.createElement('div')
   panel.className = 'creation-term-skills'
   const title = document.createElement('strong')
-  title.textContent = 'Choose a specialty'
+  title.textContent = viewModel.title
   const text = document.createElement('p')
-  text.textContent = 'Resolve the rolled cascade skill before continuing.'
+  text.textContent = viewModel.prompt
   panel.append(title, text)
 
-  for (const cascade of deriveCharacterCreationCascadeSkillChoiceViewModels(
-    flow.draft.pendingTermCascadeSkills
-  )) {
+  for (const cascade of viewModel.choices) {
     panel.append(
       renderCharacterCreationCascadeChoice(document, cascade, 'term', deps)
     )

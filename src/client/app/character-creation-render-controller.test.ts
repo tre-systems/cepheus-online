@@ -535,7 +535,51 @@ describe('character creation render controller', () => {
                         }
                       ]
                     }
-                  : null
+                  : null,
+                termSkills: {
+                  open: true,
+                  title: 'Sentinel training',
+                  prompt: 'Sentinel term skill prompt',
+                  required: 1,
+                  remaining: 1,
+                  rolled: [],
+                  actions: []
+                },
+                agingRoll: {
+                  label: 'Roll sentinel aging',
+                  reason: 'Sentinel aging reason',
+                  modifier: -1,
+                  modifierText: '-1'
+                },
+                reenlistmentRoll: {
+                  label: 'Roll sentinel reenlistment',
+                  reason: 'Sentinel reenlistment reason'
+                },
+                anagathicsDecision: {
+                  title: 'Sentinel anagathics',
+                  prompt: 'Sentinel anagathics prompt',
+                  reason: 'Sentinel anagathics reason',
+                  useLabel: 'Use sentinel anagathics',
+                  skipLabel: 'Skip sentinel anagathics'
+                },
+                termCascadeChoices: {
+                  open: true,
+                  title: 'Sentinel cascade title',
+                  prompt: 'Sentinel cascade prompt',
+                  choices: [
+                    {
+                      cascadeSkill: 'Gun Combat-0',
+                      label: 'Sentinel cascade',
+                      level: 0,
+                      options: []
+                    }
+                  ]
+                },
+                termResolution: {
+                  title: 'Sentinel term resolution',
+                  message: 'Sentinel term resolution message',
+                  actions: []
+                }
               }
             : null
         })
@@ -572,8 +616,32 @@ describe('character creation render controller', () => {
       (node) => node.textContent === 'Sentinel career title'
     )
     const option = nodes.find((node) => node.textContent === 'Sentinel Career')
+    const training = nodes.find(
+      (node) => node.textContent === 'Sentinel training'
+    )
+    const aging = nodes.find(
+      (node) => node.textContent === 'Roll sentinel aging'
+    )
+    const reenlistment = nodes.find(
+      (node) => node.textContent === 'Roll sentinel reenlistment'
+    )
+    const anagathics = nodes.find(
+      (node) => node.textContent === 'Sentinel anagathics'
+    )
+    const cascade = nodes.find(
+      (node) => node.textContent === 'Sentinel cascade title'
+    )
+    const resolution = nodes.find(
+      (node) => node.textContent === 'Sentinel term resolution'
+    )
     assert.equal(title?.tagName, 'strong')
     assert.equal(option?.className, 'creation-career-title')
+    assert.equal(training?.tagName, 'strong')
+    assert.equal(aging?.tagName, 'button')
+    assert.equal(reenlistment?.tagName, 'button')
+    assert.equal(anagathics?.tagName, 'strong')
+    assert.equal(cascade?.tagName, 'strong')
+    assert.equal(resolution?.tagName, 'strong')
   })
 
   it('disables local-only wizard actions for read-only spectator flows', () => {

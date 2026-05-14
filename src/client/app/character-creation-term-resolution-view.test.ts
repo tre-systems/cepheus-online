@@ -10,6 +10,7 @@ import {
   renderCharacterCreationTermResolution,
   type CharacterCreationTermResolutionDocument
 } from './character-creation-term-resolution-view'
+import { deriveCharacterCreationTermResolutionViewModel } from './character-creation-view'
 import { asNode, testDocument } from './test-dom.test-helper'
 
 const document =
@@ -62,21 +63,26 @@ const survivedPlan = (
 })
 
 describe('character creation term resolution view', () => {
-  it('returns an empty fragment when no career is selected', () => {
-    const node = asNode(
-      renderCharacterCreationTermResolution(document, baseFlow(null), {
-        completeTerm: () => {}
-      })
-    )
+  const viewModel = (flow: CharacterCreationFlow) => {
+    const model = deriveCharacterCreationTermResolutionViewModel(flow)
+    if (!model) throw new Error('Expected term resolution view model')
+    return model
+  }
 
-    assert.equal(node.tagName, '#fragment')
+  it('derives no view model when no career is selected', () => {
+    assert.equal(
+      deriveCharacterCreationTermResolutionViewModel(baseFlow(null)),
+      null
+    )
   })
 
   it('renders blockers for unresolved checks, skill rolls, and death', () => {
     const unresolved = asNode(
       renderCharacterCreationTermResolution(
         document,
-        baseFlow(survivedPlan({ survivalRoll: null, survivalPassed: null })),
+        viewModel(
+          baseFlow(survivedPlan({ survivalRoll: null, survivalPassed: null }))
+        ),
         { completeTerm: () => {} }
       )
     )
@@ -88,7 +94,7 @@ describe('character creation term resolution view', () => {
     const skills = asNode(
       renderCharacterCreationTermResolution(
         document,
-        baseFlow(survivedPlan({ termSkillRolls: [] })),
+        viewModel(baseFlow(survivedPlan({ termSkillRolls: [] }))),
         { completeTerm: () => {} }
       )
     )
@@ -100,12 +106,14 @@ describe('character creation term resolution view', () => {
     const dead = asNode(
       renderCharacterCreationTermResolution(
         document,
-        baseFlow(
-          survivedPlan({
-            survivalRoll: 3,
-            survivalPassed: false,
-            termSkillRolls: []
-          })
+        viewModel(
+          baseFlow(
+            survivedPlan({
+              survivalRoll: 3,
+              survivalPassed: false,
+              termSkillRolls: []
+            })
+          )
         ),
         { completeTerm: () => {} }
       )
@@ -122,8 +130,13 @@ describe('character creation term resolution view', () => {
     const node = asNode(
       renderCharacterCreationTermResolution(
         document,
-        baseFlow(
-          survivedPlan({ reenlistmentRoll: 7, reenlistmentOutcome: 'allowed' })
+        viewModel(
+          baseFlow(
+            survivedPlan({
+              reenlistmentRoll: 7,
+              reenlistmentOutcome: 'allowed'
+            })
+          )
         ),
         {
           completeTerm: (continueCareer) => {
@@ -149,8 +162,13 @@ describe('character creation term resolution view', () => {
     const node = asNode(
       renderCharacterCreationTermResolution(
         document,
-        baseFlow(
-          survivedPlan({ reenlistmentRoll: 12, reenlistmentOutcome: 'forced' })
+        viewModel(
+          baseFlow(
+            survivedPlan({
+              reenlistmentRoll: 12,
+              reenlistmentOutcome: 'forced'
+            })
+          )
         ),
         {
           completeTerm: (continueCareer) => {

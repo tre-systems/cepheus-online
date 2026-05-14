@@ -31,10 +31,17 @@ import type { CharacterCreationHomeworldPublisher } from './character-creation-h
 import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './character-creation-mustering-view.js'
 import type { CharacterCreationPanelController } from './character-creation-panel.js'
 import type {
+  CharacterCreationAgingChoicesViewModel,
+  CharacterCreationAgingRollViewModel,
+  CharacterCreationAnagathicsDecisionViewModel,
   CharacterCreationCareerRollButton,
   CharacterCreationCareerSelectionViewModel,
   CharacterCreationCharacteristicGridViewModel,
-  CharacterCreationHomeworldViewModel
+  CharacterCreationHomeworldViewModel,
+  CharacterCreationReenlistmentRollViewModel,
+  CharacterCreationTermCascadeChoicesViewModel,
+  CharacterCreationTermResolutionViewModel,
+  CharacterCreationTermSkillTrainingViewModel
 } from './character-creation-view.js'
 import { deriveCharacterCreationCareerRollButton } from './character-creation-view.js'
 import type { CharacterCreationViewModel } from './character-creation-view-model.js'
@@ -208,21 +215,52 @@ export const createCharacterCreationRenderController = ({
         ? renderCharacterCreationCareerRollButton(viewModel.wizard.careerRoll)
         : null
       if (careerRollButton) fragment.append(careerRollButton)
-      fragment.append(renderCharacterCreationAnagathicsDecision(flow))
-      const agingRollButton = renderCharacterCreationAgingRollButton(flow)
-      if (agingRollButton) fragment.append(agingRollButton)
-      fragment.append(renderCharacterCreationAgingChoices(flow))
-      const reenlistmentRollButton =
-        renderCharacterCreationReenlistmentRollButton(flow)
-      if (reenlistmentRollButton) fragment.append(reenlistmentRollButton)
-      fragment.append(renderCharacterCreationTermSkillTables(flow))
-      fragment.append(renderCharacterCreationTermCascadeChoices(flow))
+      if (viewModel.wizard?.anagathicsDecision) {
+        fragment.append(
+          renderCharacterCreationAnagathicsDecision(
+            viewModel.wizard.anagathicsDecision
+          )
+        )
+      }
+      if (viewModel.wizard?.agingRoll) {
+        fragment.append(
+          renderCharacterCreationAgingRollButton(viewModel.wizard.agingRoll)
+        )
+      }
+      if (viewModel.wizard?.agingChoices) {
+        fragment.append(
+          renderCharacterCreationAgingChoices(viewModel.wizard.agingChoices)
+        )
+      }
+      if (viewModel.wizard?.reenlistmentRoll) {
+        fragment.append(
+          renderCharacterCreationReenlistmentRollButton(
+            viewModel.wizard.reenlistmentRoll
+          )
+        )
+      }
+      if (viewModel.wizard?.termSkills) {
+        fragment.append(
+          renderCharacterCreationTermSkillTables(viewModel.wizard.termSkills)
+        )
+      }
+      if (viewModel.wizard?.termCascadeChoices) {
+        fragment.append(
+          renderCharacterCreationTermCascadeChoices(
+            viewModel.wizard.termCascadeChoices
+          )
+        )
+      }
       if (viewModel.wizard?.careerSelection) {
         fragment.append(
           renderCharacterCreationCareerPicker(viewModel.wizard.careerSelection)
         )
       }
-      fragment.append(renderCharacterCreationTermResolution(flow))
+      if (viewModel.wizard?.termResolution) {
+        fragment.append(
+          renderCharacterCreationTermResolution(viewModel.wizard.termResolution)
+        )
+      }
       fragment.append(renderCharacterCreationTermHistory(flow))
       return fragment
     }
@@ -299,45 +337,49 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationTermSkillTables = (
-    flow: CharacterCreationFlow
+    viewModel: CharacterCreationTermSkillTrainingViewModel
   ): HTMLElement | DocumentFragment => {
-    return renderCharacterCreationTermSkillTablesView(document, flow, {
+    return renderCharacterCreationTermSkillTablesView(document, viewModel, {
       rollTermSkill: (table) => getCommandController().rollTermSkill(table),
       reportError
     })
   }
 
   const renderCharacterCreationReenlistmentRollButton = (
-    flow: CharacterCreationFlow
-  ): HTMLElement | null => {
-    return renderCharacterCreationReenlistmentRollButtonView(document, flow, {
-      rollReenlistment: () => getCommandController().rollReenlistment(),
-      reportError
-    })
+    viewModel: CharacterCreationReenlistmentRollViewModel
+  ): HTMLElement => {
+    return renderCharacterCreationReenlistmentRollButtonView(
+      document,
+      viewModel,
+      {
+        rollReenlistment: () => getCommandController().rollReenlistment(),
+        reportError
+      }
+    )
   }
 
   const renderCharacterCreationAgingRollButton = (
-    flow: CharacterCreationFlow
-  ): HTMLElement | null => {
-    return renderCharacterCreationAgingRollButtonView(document, flow, {
+    viewModel: CharacterCreationAgingRollViewModel
+  ): HTMLElement => {
+    return renderCharacterCreationAgingRollButtonView(document, viewModel, {
       rollAging: () => getCommandController().rollAging(),
       reportError
     })
   }
 
   const renderCharacterCreationAgingChoices = (
-    flow: CharacterCreationFlow
-  ): HTMLElement | DocumentFragment => {
-    return renderCharacterCreationAgingChoicesView(document, flow, {
+    viewModel: CharacterCreationAgingChoicesViewModel
+  ): HTMLElement => {
+    return renderCharacterCreationAgingChoicesView(document, viewModel, {
       applyAgingChange: (index, characteristic) =>
         getCommandController().resolveAgingLoss(index, characteristic)
     })
   }
 
   const renderCharacterCreationAnagathicsDecision = (
-    flow: CharacterCreationFlow
-  ): HTMLElement | DocumentFragment => {
-    return renderCharacterCreationAnagathicsDecisionView(document, flow, {
+    viewModel: CharacterCreationAnagathicsDecisionViewModel
+  ): HTMLElement => {
+    return renderCharacterCreationAnagathicsDecisionView(document, viewModel, {
       decideAnagathics: (useAnagathics) =>
         getCommandController().decideAnagathics(useAnagathics),
       reportError
@@ -345,9 +387,9 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationTermCascadeChoices = (
-    flow: CharacterCreationFlow
-  ): HTMLElement | DocumentFragment => {
-    return renderCharacterCreationTermCascadeChoicesView(document, flow, {
+    viewModel: CharacterCreationTermCascadeChoicesViewModel
+  ): HTMLElement => {
+    return renderCharacterCreationTermCascadeChoicesView(document, viewModel, {
       resolveCascadeSkill: ({ scope, cascadeSkill, selection }) => {
         resolveCharacterCreationCascadeChoice(scope, cascadeSkill, selection)
       }
@@ -423,9 +465,9 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationTermResolution = (
-    flow: CharacterCreationFlow
-  ): HTMLElement | DocumentFragment => {
-    return renderCharacterCreationTermResolutionView(document, flow, {
+    viewModel: CharacterCreationTermResolutionViewModel
+  ): HTMLElement => {
+    return renderCharacterCreationTermResolutionView(document, viewModel, {
       completeTerm: async (continueCareer) => {
         const flow = controller.flow()
         if (!flow) return
