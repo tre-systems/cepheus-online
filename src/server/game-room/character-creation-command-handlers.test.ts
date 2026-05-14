@@ -17,6 +17,11 @@ import type { CommandContext } from './command-helpers'
 const gameId = asGameId('game-1')
 const actorId = asUserId('user-1')
 const characterId = asCharacterId('char-1')
+const homeworld = {
+  name: 'Erit',
+  lawLevel: 'Low Law',
+  tradeCodes: ['Industrial']
+}
 
 const createCreation = (
   status: CareerCreationStatus = 'CHARACTERISTICS',
@@ -78,11 +83,15 @@ const createState = (
   eventSeq: 1
 })
 
-const context = (creation: CharacterCreationProjection | null): CommandContext => ({
+const context = (
+  creation: CharacterCreationProjection | null,
+  overrides: Partial<Pick<CommandContext, 'gameSeed' | 'nextSeq'>> = {}
+): CommandContext => ({
   state: createState(creation),
   currentSeq: 1,
   nextSeq: 2,
-  gameSeed: 1234
+  gameSeed: 1234,
+  ...overrides
 })
 
 const completedTerm = () => ({
@@ -148,6 +157,626 @@ describe('character creation setup command handlers', () => {
     if (result.ok) return
     assert.equal(result.error.code, 'invalid_command')
     assert.equal(result.error.message.includes('deprecated'), true)
+  })
+
+  it('sets a normalized homeworld and derives background skill allowance', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'SetCharacterCreationHomeworld',
+        gameId,
+        actorId,
+        characterId,
+        homeworld: {
+          name: ' Erit ',
+          lawLevel: ' Low Law ',
+          tradeCodes: [' Industrial ', 'Industrial']
+        }
+      },
+      context(createCreation('HOMEWORLD'))
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const event = result.value[0]
+    assert.equal(event?.type, 'CharacterCreationHomeworldSet')
+    if (event?.type !== 'CharacterCreationHomeworldSet') return
+    assert.deepEqual(event.homeworld, homeworld)
+    assert.equal(event.backgroundSkillAllowance, 3)
+  })
+
+  it('selects and resolves background skills through semantic events', () => {
+    const selected = deriveCharacterCreationCommandEvents(
+      {
+        type: 'SelectCharacterCreationBackgroundSkill',
+        gameId,
+        actorId,
+        characterId,
+        skill: 'Gun Combat*'
+      },
+      context(createCreation('HOMEWORLD', { homeworld }))
+    )
+
+    assert.equal(selected.ok, true)
+    if (!selected.ok) return
+    const selectedEvent = selected.value[0]
+    assert.equal(
+      selectedEvent?.type,
+      'CharacterCreationBackgroundSkillSelected'
+    )
+    if (selectedEvent?.type !== 'CharacterCreationBackgroundSkillSelected') {
+      return
+    }
+    assert.deepEqual(selectedEvent.backgroundSkills, [])
+    assert.deepEqual(selectedEvent.pendingCascadeSkills, ['Gun Combat-0'])
+
+    const resolved = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationCascadeSkill',
+        gameId,
+        actorId,
+        characterId,
+        cascadeSkill: 'Gun Combat-0',
+        selection: 'Slug Pistol'
+      },
+      context(
+        createCreation('HOMEWORLD', {
+          homeworld,
+          pendingCascadeSkills: ['Gun Combat-0']
+        })
+      )
+    )
+
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    const resolvedEvent = resolved.value[0]
+    assert.equal(resolvedEvent?.type, 'CharacterCreationCascadeSkillResolved')
+    if (resolvedEvent?.type !== 'CharacterCreationCascadeSkillResolved') return
+    assert.deepEqual(resolvedEvent.backgroundSkills, ['Slug Pistol-0'])
+    assert.deepEqual(resolvedEvent.pendingCascadeSkills, [])
+  })
+
+  it('completes homeworld setup when background choices are resolved', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'CompleteCharacterCreationHomeworld',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('HOMEWORLD', {
+          homeworld,
+          backgroundSkills: ['Zero-G-0', 'Admin-0', 'Broker-0']
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationHomeworldCompleted',
+        characterId,
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('completes basic training from the active career term', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'CompleteCharacterCreationBasicTraining',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('BASIC_TRAINING', {
+          terms: [
+            {
+              career: 'Scout',
+              skills: [],
+              skillsAndTraining: ['Vacc Suit-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: false,
+              musteringOut: false,
+              anagathics: false
+            }
+          ]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationBasicTrainingCompleted',
+        characterId,
+        trainingSkills: ['Vacc Suit-0'],
+        state: {
+          status: 'SURVIVAL',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('starts a career term with requested and accepted career facts', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'StartCharacterCareerTerm',
+        gameId,
+        actorId,
+        characterId,
+        career: ' Scout ',
+        drafted: true
+      },
+      context(createCreation('CAREER_SELECTION'))
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCareerTermStarted',
+        characterId,
+        requestedCareer: 'Draft',
+        acceptedCareer: 'Scout',
+        career: 'Scout',
+        drafted: true,
+        state: createCareerCreationState('BASIC_TRAINING'),
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('rejects direct career term starts from character owners who are not referees', () => {
+    const playerId = asUserId('player-1')
+    const refereeId = asUserId('referee-1')
+    const state = createState(createCreation('CAREER_SELECTION'))
+    const character = state.characters[characterId]
+    assert.equal(Boolean(character), true)
+    if (!character) return
+    state.ownerId = refereeId
+    state.characters[characterId] = {
+      ...character,
+      ownerId: playerId
+    }
+
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'StartCharacterCareerTerm',
+        gameId,
+        actorId: playerId,
+        characterId,
+        career: 'Scout'
+      },
+      {
+        state,
+        currentSeq: 1,
+        nextSeq: 2,
+        gameSeed: 1234
+      }
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'not_allowed')
+    assert.equal(
+      result.error.message,
+      'Only the referee can start character career terms directly'
+    )
+  })
+
+  it('emits qualification roll facts from career selection', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationQualification',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout'
+      },
+      context(createCreation('CAREER_SELECTION'))
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value[0]?.type, 'DiceRolled')
+    assert.equal(
+      result.value[1]?.type,
+      'CharacterCreationQualificationResolved'
+    )
+    const qualification = result.value[1]
+    if (qualification?.type !== 'CharacterCreationQualificationResolved') return
+    assert.equal(qualification.characterId, characterId)
+    assert.equal(qualification.rollEventId, 'game-1:2')
+    assert.equal(qualification.career, 'Scout')
+    assert.equal(qualification.qualification.expression, '2d6')
+    assert.equal(qualification.qualification.success, qualification.passed)
+    assert.equal(
+      qualification.state.status,
+      qualification.passed ? 'BASIC_TRAINING' : 'CAREER_SELECTION'
+    )
+  })
+
+  it('blocks repeated qualification after failed qualification', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationQualification',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout'
+      },
+      context(
+        createCreation('CAREER_SELECTION', {
+          failedToQualify: true,
+          canEnterDraft: true
+        })
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Qualification is not available after failed qualification'
+    )
+  })
+
+  it('emits draft roll facts after failed qualification', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationDraft',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('CAREER_SELECTION', {
+          failedToQualify: true,
+          canEnterDraft: true
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value[0]?.type, 'DiceRolled')
+    assert.equal(result.value[1]?.type, 'CharacterCreationDraftResolved')
+    const draft = result.value[1]
+    if (draft?.type !== 'CharacterCreationDraftResolved') return
+    assert.equal(draft.characterId, characterId)
+    assert.equal(draft.rollEventId, 'game-1:2')
+    assert.equal(draft.draft.roll.expression, '1d6')
+    assert.equal(draft.state.status, 'BASIC_TRAINING')
+  })
+
+  it('enters the Drifter fallback without a roll', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'EnterCharacterCreationDrifter',
+        gameId,
+        actorId,
+        characterId,
+        option: 'Drifter'
+      },
+      context(
+        createCreation('CAREER_SELECTION', {
+          failedToQualify: true,
+          canEnterDraft: true
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationDrifterEntered',
+        characterId,
+        acceptedCareer: 'Drifter',
+        state: createCareerCreationState('BASIC_TRAINING'),
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits survival pass facts from server dice', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationSurvival',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('SURVIVAL', {
+          terms: [
+            {
+              career: 'Scout',
+              skills: [],
+              skillsAndTraining: ['Vacc Suit-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout survival',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationSurvivalResolved',
+        characterId,
+        rollEventId: 'game-1:2',
+        passed: true,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: true
+        },
+        canCommission: false,
+        canAdvance: false,
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits survival failure facts from server dice', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationSurvival',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('SURVIVAL', {
+          terms: [
+            {
+              career: 'Scout',
+              skills: [],
+              skillsAndTraining: ['Vacc Suit-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        }),
+        { gameSeed: 2 }
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout survival',
+        rolls: [4, 2],
+        total: 6
+      },
+      {
+        type: 'CharacterCreationSurvivalResolved',
+        characterId,
+        rollEventId: 'game-1:2',
+        passed: false,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 2],
+          total: 6,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: false
+        },
+        canCommission: false,
+        canAdvance: false,
+        state: {
+          status: 'DECEASED',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks survival resolution outside survival', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationSurvival',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(createCreation('BASIC_TRAINING'))
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'SURVIVAL is not valid from BASIC_TRAINING'
+    )
+  })
+
+  it('emits mishap resolution with server-derived transition', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationMishap',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('MISHAP', {
+          pendingDecisions: [{ key: 'mishapResolution' }],
+          terms: [
+            {
+              career: 'Scout',
+              skills: ['Vacc Suit-1'],
+              skillsAndTraining: ['Vacc Suit-1'],
+              benefits: [],
+              complete: false,
+              canReenlist: false,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 3
+            }
+          ]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationMishapResolved',
+        characterId,
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks mishap resolution when death confirmation is projected', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationMishap',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('MISHAP', {
+          pendingDecisions: [{ key: 'survivalResolution' }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'MISHAP_RESOLVED is blocked by unresolved character creation decisions'
+    )
+  })
+
+  it('emits death confirmation with server-derived transition', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ConfirmCharacterCreationDeath',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('MISHAP', {
+          pendingDecisions: [{ key: 'survivalResolution' }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationDeathConfirmed',
+        characterId,
+        state: {
+          status: 'DECEASED',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks death confirmation when mishap resolution is projected', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ConfirmCharacterCreationDeath',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('MISHAP', {
+          pendingDecisions: [{ key: 'mishapResolution' }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'DEATH_CONFIRMED is blocked by unresolved character creation decisions'
+    )
   })
 
   it('finalizes a server-derived character sheet', () => {
