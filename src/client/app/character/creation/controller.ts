@@ -87,6 +87,9 @@ export const createCharacterCreationController = ({
     deriveCharacterCreationViewModel({
       flow: flow.value,
       projection: currentProjection(),
+      character: flow.value
+        ? (getState()?.characters[flow.value.draft.characterId] ?? null)
+        : null,
       readOnly: readOnly.value
     })
   )

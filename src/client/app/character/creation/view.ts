@@ -568,7 +568,7 @@ interface CharacterCreationHomeworldDraftFields {
   pendingCascadeSkills?: readonly string[]
 }
 
-const characteristicDefinitions: {
+export const characteristicDefinitions: {
   key: CharacteristicKey
   label: string
 }[] = [

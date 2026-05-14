@@ -1,12 +1,18 @@
 import type { CharacterId } from '../../../../shared/ids'
 import {
+  deriveCharacterCreationReadModel,
   deriveCharacterCreationProjectionReadModel,
+  type CharacterCreationReadModel,
   type CharacterCreationProjectionReadModel
 } from '../../../../shared/character-creation/view-state.js'
-import type { CharacterCreationProjection } from '../../../../shared/state'
+import type {
+  CharacterCreationProjection,
+  CharacterState
+} from '../../../../shared/state'
 import type { CharacterCreationActionPlan } from './actions.js'
 import type { CharacterCreationFlow, CharacterCreationStep } from './flow.js'
 import {
+  characteristicDefinitions,
   deriveCharacterCreationButtonStates,
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerSelectionViewModel,
@@ -27,6 +33,7 @@ import {
   deriveCharacterCreationTermResolutionViewModel,
   deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary,
+  formatCharacterCreationCharacteristicModifier,
   type CharacterCreationAgingChoicesViewModel,
   type CharacterCreationAgingRollViewModel,
   type CharacterCreationAnagathicsDecisionViewModel,
@@ -112,6 +119,7 @@ export interface CharacterCreationViewModel {
   controlsDisabled: boolean
   projection: CharacterCreationProjectionViewModel
   projectionReadModel: CharacterCreationProjectionReadModel | null
+  characterReadModel: CharacterCreationReadModel | null
   pending: CharacterCreationPendingViewModel
   wizard: CharacterCreationWizardViewModel | null
   actionPlan: CharacterCreationActionPlan | null
@@ -120,6 +128,7 @@ export interface CharacterCreationViewModel {
 export interface DeriveCharacterCreationViewModelOptions {
   flow: CharacterCreationFlow | null
   projection: CharacterCreationProjection | null
+  character?: CharacterState | null
   readOnly: boolean
   actionPlan?: CharacterCreationActionPlan | null
 }
@@ -166,6 +175,33 @@ const projectionViewModel = (
       historyCount: readModel.historyCount
     },
     readModel
+  }
+}
+
+const projectedCharacteristicGridViewModel = (
+  readModel: CharacterCreationReadModel | null
+): CharacterCreationCharacteristicGridViewModel | null => {
+  if (!readModel || readModel.status !== 'CHARACTERISTICS') return null
+
+  return {
+    open: true,
+    stats: characteristicDefinitions.map(({ key, label }) => {
+      const value = readModel.sheet.characteristics[key]
+      const valueText = value === null ? '' : String(value)
+      const missing = value === null
+
+      return {
+        key,
+        label,
+        value: valueText,
+        modifier: missing
+          ? ''
+          : formatCharacterCreationCharacteristicModifier(value),
+        missing,
+        errors: [],
+        rollLabel: `Roll ${label}`
+      }
+    })
   }
 }
 
@@ -238,10 +274,12 @@ const pendingViewModel = (
 const wizardViewModel = ({
   flow,
   projection,
+  characterReadModel,
   readOnly
 }: {
   flow: CharacterCreationFlow | null
   projection: CharacterCreationProjectionViewModel
+  characterReadModel: CharacterCreationReadModel | null
   readOnly: boolean
 }): CharacterCreationWizardViewModel | null => {
   if (!flow) return null
@@ -277,7 +315,9 @@ const wizardViewModel = ({
       flow.step === 'review'
         ? deriveCharacterCreationReviewSummary(flow)
         : null,
-    characteristics: deriveCharacterCreationCharacteristicGridViewModel(flow),
+    characteristics:
+      projectedCharacteristicGridViewModel(characterReadModel) ??
+      deriveCharacterCreationCharacteristicGridViewModel(flow),
     homeworld:
       flow.step === 'homeworld'
         ? deriveCharacterCreationHomeworldViewModel(flow)
@@ -288,13 +328,18 @@ const wizardViewModel = ({
 export const deriveCharacterCreationViewModel = ({
   flow,
   projection,
+  character = null,
   readOnly,
   actionPlan = null
 }: DeriveCharacterCreationViewModelOptions): CharacterCreationViewModel => {
   const projected = projectionViewModel(projection)
+  const characterReadModel = character
+    ? deriveCharacterCreationReadModel(character)
+    : null
   const wizard = wizardViewModel({
     flow,
     projection: projected.summary,
+    characterReadModel,
     readOnly
   })
 
@@ -307,6 +352,7 @@ export const deriveCharacterCreationViewModel = ({
     controlsDisabled: readOnly,
     projection: projected.summary,
     projectionReadModel: projected.readModel,
+    characterReadModel,
     pending: pendingViewModel(flow, projection),
     wizard,
     actionPlan

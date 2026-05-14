@@ -2,7 +2,10 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { asCharacterId } from '../../../../shared/ids'
-import type { CharacterCreationProjection } from '../../../../shared/state'
+import type {
+  CharacterCreationProjection,
+  CharacterState
+} from '../../../../shared/state'
 import {
   applyCharacterCreationCareerPlan,
   createInitialCharacterDraft,
@@ -81,6 +84,32 @@ const completedTerm = (): CharacterCreationCompletedTerm => ({
   agingSelections: [],
   reenlistmentRoll: 7,
   reenlistmentOutcome: 'allowed'
+})
+
+const character = (
+  creation: CharacterCreationProjection,
+  overrides: Partial<CharacterState> = {}
+): CharacterState => ({
+  id: characterId,
+  ownerId: null,
+  type: 'PLAYER',
+  name: 'Iona Vesh',
+  active: true,
+  notes: '',
+  age: 18,
+  characteristics: {
+    str: null,
+    dex: null,
+    end: null,
+    int: null,
+    edu: null,
+    soc: null
+  },
+  skills: [],
+  equipment: [],
+  credits: 0,
+  creation,
+  ...overrides
 })
 
 const resolvedCareerFlow = ({
@@ -241,6 +270,57 @@ describe('character creation view model', () => {
       ]
     )
     assert.equal(viewModel.wizard?.homeworld, null)
+  })
+
+  it('uses projected character characteristics when the read model is available', () => {
+    const currentProjection = projection('CHARACTERISTICS')
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'characteristics',
+        draft: createInitialCharacterDraft(characterId, {
+          characteristics: {
+            str: null,
+            dex: null,
+            end: null,
+            int: null,
+            edu: null,
+            soc: null
+          }
+        })
+      }),
+      projection: currentProjection,
+      character: character(currentProjection, {
+        characteristics: {
+          str: 9,
+          dex: null,
+          end: null,
+          int: null,
+          edu: null,
+          soc: null
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.characterReadModel?.rolledCharacteristicCount, 1)
+    assert.deepEqual(
+      viewModel.wizard?.characteristics?.stats.map(
+        ({ key, value, missing, modifier }) => ({
+          key,
+          value,
+          missing,
+          modifier
+        })
+      ),
+      [
+        { key: 'str', value: '9', missing: false, modifier: '+1' },
+        { key: 'dex', value: '', missing: true, modifier: '' },
+        { key: 'end', value: '', missing: true, modifier: '' },
+        { key: 'int', value: '', missing: true, modifier: '' },
+        { key: 'edu', value: '', missing: true, modifier: '' },
+        { key: 'soc', value: '', missing: true, modifier: '' }
+      ]
+    )
   })
 
   it('captures read-only and pending aging state without changing flow identity', () => {
