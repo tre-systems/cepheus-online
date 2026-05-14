@@ -172,6 +172,65 @@ describe('character creation setup command handlers', () => {
     assert.equal(result.error.message.includes('deprecated'), true)
   })
 
+  it('emits characteristic roll facts from server dice', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationCharacteristic',
+        gameId,
+        actorId,
+        characterId,
+        characteristic: 'str'
+      },
+      context(createCreation('CHARACTERISTICS'))
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'STR characteristic',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationCharacteristicRolled',
+        characterId,
+        rollEventId: 'game-1:2',
+        characteristic: 'str',
+        value: 8,
+        characteristicsComplete: false,
+        state: {
+          status: 'CHARACTERISTICS',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('blocks duplicate characteristic rolls', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationCharacteristic',
+        gameId,
+        actorId,
+        characterId,
+        characteristic: 'edu'
+      },
+      context(createCreation('CHARACTERISTICS'))
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'EDU has already been rolled')
+  })
+
   it('sets a normalized homeworld and derives background skill allowance', () => {
     const result = deriveCharacterCreationCommandEvents(
       {
