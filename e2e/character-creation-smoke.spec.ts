@@ -1274,6 +1274,84 @@ test.describe('character creation smoke', () => {
     }
   })
 
+  test('keeps spectator follow selection isolated across active creations during reveal', async ({
+    browser,
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 24_680)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    await page.locator('#createCharacterRailButton').click()
+
+    const firstCharacterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    await activeCreationCharacterId(page, roomId, actorId)
+
+    const secondCharacterId = 'follow-selection-isolation-second'
+    const secondCharacterName = 'Follow Selection Isolation Second'
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CreateCharacter',
+      characterId: secondCharacterId,
+      characterType: 'PLAYER',
+      name: secondCharacterName
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'StartCharacterCreation',
+      characterId: secondCharacterId
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, firstCharacterName)
+
+    const spectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: 'e2e-follow-isolation-spectator',
+        viewer: 'spectator'
+      })
+
+      const spectatorTitle = spectator.locator('#characterCreatorTitle')
+      const spectatorStrValue = spectator
+        .locator('#characterCreationFields .creation-stat-cell')
+        .filter({ hasText: 'Str' })
+        .locator('strong')
+      const dock = spectator.locator('#creationPresenceDock')
+      const secondCard = dock
+        .locator('.creation-presence-card')
+        .filter({ hasText: secondCharacterName })
+
+      await expect(dock.locator('.creation-presence-card')).toHaveCount(2)
+      await secondCard.click()
+      await expect(spectatorTitle).toHaveText(secondCharacterName)
+      await expect(spectatorStrValue).toHaveCount(0)
+
+      const characteristicAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'RollCharacterCreationCharacteristic'
+          )
+      )
+      await page.getByRole('button', { name: 'Roll Str' }).click()
+      await expect((await characteristicAccepted).ok()).toBe(true)
+
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expect(spectatorTitle).toHaveText(secondCharacterName)
+      await expect(spectatorStrValue).toHaveCount(0, { timeout: 100 })
+
+      await waitForDiceReveal(page)
+    } finally {
+      await spectator.close()
+    }
+  })
+
   test('lets a spectator follow semantic characteristic rolls without early reveal and recover after refresh', async ({
     browser,
     page
