@@ -76,7 +76,8 @@ export const requireNonEmptyString = (
 export const isReferee = (
   state: GameState,
   actorId: Command['actorId']
-): boolean => state.ownerId === actorId || state.players[actorId]?.role === 'REFEREE'
+): boolean =>
+  state.ownerId === actorId || state.players[actorId]?.role === 'REFEREE'
 
 export const canMutateCharacter = (
   state: GameState,

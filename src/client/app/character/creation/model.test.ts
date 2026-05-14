@@ -463,10 +463,7 @@ describe('character creation view model', () => {
       readOnly: false
     })
 
-    assert.equal(
-      viewModel.wizard?.basicTraining?.label,
-      'Apply basic training'
-    )
+    assert.equal(viewModel.wizard?.basicTraining?.label, 'Apply basic training')
     assert.deepEqual(viewModel.wizard?.basicTraining?.skills, [
       'Comms-0',
       'Electronics-0',

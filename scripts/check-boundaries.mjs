@@ -30,7 +30,10 @@ walk('src')
 
 const isTestFile = (path) => path.endsWith('.test.ts')
 const isGeneratedFile = (path) => path.endsWith('.generated.ts')
-const isAllowedTsNocheck = (path) => path === 'src/client/app/app.ts'
+const rawRoomApiImportAllowed = new Set([
+  'src/client/app/app.ts',
+  'src/client/app/room/command-dispatch.ts'
+])
 
 const failures = []
 
@@ -59,7 +62,7 @@ for (const path of sourceFiles) {
   const text = readFileSync(resolve(root, path), 'utf8')
   const lines = text.split('\n')
 
-  if (!isTestFile(path) && !isAllowedTsNocheck(path)) {
+  if (!isTestFile(path)) {
     checkLinePattern({
       path,
       lines,
@@ -74,6 +77,21 @@ for (const path of sourceFiles) {
       lines,
       pattern: /\.innerHTML\s*=/,
       message: 'use src/client/dom.ts trusted HTML helpers'
+    })
+  }
+
+  if (
+    path.startsWith('src/client/app/') &&
+    !isTestFile(path) &&
+    !rawRoomApiImportAllowed.has(path)
+  ) {
+    checkLinePattern({
+      path,
+      lines,
+      pattern:
+        /import\s+\{[^}]*\b(fetchRoomState|postRoomCommand)\b[^}]*\}\s+from\s+['"].*\/room\/api(?:\.js)?['"]/,
+      message:
+        'feature modules must use room/command-dispatch instead of raw room HTTP helpers'
     })
   }
 

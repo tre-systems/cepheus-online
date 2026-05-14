@@ -1,4 +1,5 @@
 import type { GameCommand } from '../../shared/commands'
+import type { CommandTypeForHandlerDomain } from '../../shared/command-metadata'
 import { rollDiceExpression } from '../../shared/dice'
 import type { GameEvent } from '../../shared/events'
 import type { CommandError } from '../../shared/protocol'
@@ -10,10 +11,13 @@ import {
   requireGame
 } from './command-helpers'
 
-type RollDiceCommand = Extract<GameCommand, { type: 'RollDice' }>
+type DiceCommand = Extract<
+  GameCommand,
+  { type: CommandTypeForHandlerDomain<'dice'> }
+>
 
 export const deriveDiceCommandEvents = (
-  command: RollDiceCommand,
+  command: DiceCommand,
   context: CommandContext
 ): Result<GameEvent[], CommandError> => {
   const state = requireGame(context.state)

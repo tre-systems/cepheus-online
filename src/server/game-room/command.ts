@@ -76,7 +76,10 @@ export const deriveEventsForCommand = (
     default: {
       const exhaustive: never = handlerDomain
       return err(
-        commandError('invalid_command', `Unhandled command domain ${exhaustive}`)
+        commandError(
+          'invalid_command',
+          `Unhandled command domain ${exhaustive}`
+        )
       )
     }
   }

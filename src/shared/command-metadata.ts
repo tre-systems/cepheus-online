@@ -62,7 +62,7 @@ const defineCommandMetadata = <
   return Object.fromEntries(entries) as Record<keyof T, CommandMetadata>
 }
 
-const commandMetadata = defineCommandMetadata({
+const commandMetadataDefinitions = {
   CreateGame: {
     route: 'game',
     usesSeededDice: false,
@@ -278,7 +278,45 @@ const commandMetadata = defineCommandMetadata({
     usesSeededDice: true,
     autoAddExpectedSeq: true
   }
-} satisfies Record<NonDeprecatedGameCommandType, CommandMetadataDefinition>)
+} satisfies Record<NonDeprecatedGameCommandType, CommandMetadataDefinition>
+
+export type CommandTypeForRoute<TRoute extends CommandRoute> = {
+  [TType in keyof typeof commandMetadataDefinitions]: (typeof commandMetadataDefinitions)[TType]['route'] extends TRoute
+    ? TType
+    : never
+}[keyof typeof commandMetadataDefinitions]
+
+type DefaultHandlerDomainFor<
+  TType extends NonDeprecatedGameCommandType,
+  TRoute extends CommandRoute
+> = TType extends 'CreateCharacter'
+  ? 'character'
+  : TRoute extends 'sheet'
+    ? 'character'
+    : TRoute extends 'door'
+      ? 'board'
+      : TRoute extends 'characterCreation'
+        ? 'characterCreation'
+        : TRoute
+
+type HandlerDomainFor<TType extends keyof typeof commandMetadataDefinitions> =
+  (typeof commandMetadataDefinitions)[TType] extends {
+    readonly handlerDomain: infer TDomain extends CommandHandlerDomain
+  }
+    ? TDomain
+    : DefaultHandlerDomainFor<
+        TType,
+        (typeof commandMetadataDefinitions)[TType]['route']
+      >
+
+export type CommandTypeForHandlerDomain<TDomain extends CommandHandlerDomain> =
+  {
+    [TType in keyof typeof commandMetadataDefinitions]: HandlerDomainFor<TType> extends TDomain
+      ? TType
+      : never
+  }[keyof typeof commandMetadataDefinitions]
+
+const commandMetadata = defineCommandMetadata(commandMetadataDefinitions)
 
 export const commandMetadataByType = commandMetadata
 

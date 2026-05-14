@@ -1,4 +1,5 @@
 import type { GameCommand } from '../../shared/commands'
+import type { CommandTypeForHandlerDomain } from '../../shared/command-metadata'
 import type { GameEvent } from '../../shared/events'
 import type { CommandError } from '../../shared/protocol'
 import { err, ok, type Result } from '../../shared/result'
@@ -16,16 +17,7 @@ import {
 
 type BoardCommand = Extract<
   GameCommand,
-  {
-    type:
-      | 'CreateBoard'
-      | 'SelectBoard'
-      | 'SetDoorOpen'
-      | 'CreatePiece'
-      | 'MovePiece'
-      | 'SetPieceVisibility'
-      | 'SetPieceFreedom'
-  }
+  { type: CommandTypeForHandlerDomain<'board'> }
 >
 
 export const deriveBoardCommandEvents = (

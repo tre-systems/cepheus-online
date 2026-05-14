@@ -166,6 +166,16 @@ describe('character creation timeline mapping', () => {
         expected: { type: 'COMPLETE_COMMISSION', commission: check(true) }
       },
       {
+        name: 'commission skip',
+        event: {
+          type: 'CharacterCreationCommissionSkipped',
+          characterId,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'SKIP_COMMISSION' }
+      },
+      {
         name: 'advancement',
         event: {
           type: 'CharacterCreationAdvancementResolved',
@@ -193,6 +203,16 @@ describe('character creation timeline mapping', () => {
             bonusSkill: 'Pilot-0'
           }
         }
+      },
+      {
+        name: 'advancement skip',
+        event: {
+          type: 'CharacterCreationAdvancementSkipped',
+          characterId,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'SKIP_ADVANCEMENT' }
       },
       {
         name: 'term skill',
@@ -230,6 +250,144 @@ describe('character creation timeline mapping', () => {
         }
       },
       {
+        name: 'term cascade skill',
+        event: {
+          type: 'CharacterCreationTermCascadeSkillResolved',
+          characterId,
+          cascadeSkill: 'Gun Combat-1',
+          selection: 'Slug Rifle-1',
+          termSkills: ['Slug Rifle-1'],
+          skillsAndTraining: ['Slug Rifle-1'],
+          pendingCascadeSkills: []
+        },
+        expected: {
+          type: 'RESOLVE_TERM_CASCADE_SKILL',
+          cascadeSkill: 'Gun Combat-1',
+          selection: 'Slug Rifle-1'
+        }
+      },
+      {
+        name: 'skills completed',
+        event: {
+          type: 'CharacterCreationSkillsCompleted',
+          characterId,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'COMPLETE_SKILLS' }
+      },
+      {
+        name: 'aging',
+        event: {
+          type: 'CharacterCreationAgingResolved',
+          characterId,
+          aging: {
+            roll: { expression: '2d6', rolls: [3, 4], total: 7 },
+            modifier: -1,
+            age: 38,
+            characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+          },
+          state,
+          creationComplete: false
+        },
+        expected: {
+          type: 'COMPLETE_AGING',
+          aging: {
+            roll: { expression: '2d6', rolls: [3, 4], total: 7 },
+            modifier: -1,
+            age: 38,
+            characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+          }
+        }
+      },
+      {
+        name: 'anagathics',
+        event: {
+          type: 'CharacterCreationAnagathicsDecided',
+          characterId,
+          useAnagathics: true,
+          termIndex: 1,
+          state,
+          creationComplete: false
+        },
+        expected: {
+          type: 'DECIDE_ANAGATHICS',
+          useAnagathics: true,
+          termIndex: 1
+        }
+      },
+      {
+        name: 'reenlistment',
+        event: {
+          type: 'CharacterCreationReenlistmentResolved',
+          characterId,
+          outcome: 'allowed',
+          reenlistment: {
+            ...check(true, 8),
+            outcome: 'allowed'
+          },
+          state,
+          creationComplete: false
+        },
+        expected: {
+          type: 'RESOLVE_REENLISTMENT',
+          reenlistment: {
+            ...check(true, 8),
+            outcome: 'allowed'
+          }
+        }
+      },
+      {
+        name: 'forced reenlistment',
+        event: {
+          type: 'CharacterCreationCareerReenlisted',
+          characterId,
+          outcome: 'forced',
+          career: 'Scout',
+          forced: true,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'FORCED_REENLIST' }
+      },
+      {
+        name: 'allowed reenlistment',
+        event: {
+          type: 'CharacterCreationCareerReenlisted',
+          characterId,
+          outcome: 'allowed',
+          career: 'Scout',
+          forced: false,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'REENLIST' }
+      },
+      {
+        name: 'career leave',
+        event: {
+          type: 'CharacterCreationCareerLeft',
+          characterId,
+          outcome: 'allowed',
+          retirement: false,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'LEAVE_CAREER' }
+      },
+      {
+        name: 'career leave blocked',
+        event: {
+          type: 'CharacterCreationCareerLeft',
+          characterId,
+          outcome: 'blocked',
+          retirement: false,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'REENLIST_BLOCKED' }
+      },
+      {
         name: 'mustering benefit',
         event: {
           type: 'CharacterCreationMusteringBenefitRolled',
@@ -258,6 +416,46 @@ describe('character creation timeline mapping', () => {
             credits: 10000
           }
         }
+      },
+      {
+        name: 'continue career after mustering',
+        event: {
+          type: 'CharacterCreationAfterMusteringContinued',
+          characterId,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'CONTINUE_CAREER' }
+      },
+      {
+        name: 'mustering completed',
+        event: {
+          type: 'CharacterCreationMusteringCompleted',
+          characterId,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'FINISH_MUSTERING' }
+      },
+      {
+        name: 'mishap',
+        event: {
+          type: 'CharacterCreationMishapResolved',
+          characterId,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'MISHAP_RESOLVED' }
+      },
+      {
+        name: 'death',
+        event: {
+          type: 'CharacterCreationDeathConfirmed',
+          characterId,
+          state,
+          creationComplete: false
+        },
+        expected: { type: 'DEATH_CONFIRMED' }
       },
       {
         name: 'completion',

@@ -9,8 +9,8 @@ test plan should continue to grow in layers as implementation expands.
 - `npm run check:docs`: dependency-free internal Markdown link check for
   root docs, `data/`, and `docs/`.
 - `npm run check:boundaries`: dependency-free source-boundary checks for
-  direct HTML writes, accidental shared-layer randomness/logging, and new
-  `ts-nocheck` files.
+  direct HTML writes, accidental shared-layer randomness/logging, raw room HTTP
+  imports from feature modules, and new `ts-nocheck` files.
 - `npm test`: compiles source and co-located `*.test.ts` files to a temporary
   CommonJS build and runs Node's built-in test runner.
 - `npm run verify:quick`: rebuilds served client assets, then runs lint,

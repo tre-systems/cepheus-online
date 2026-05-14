@@ -1,24 +1,47 @@
 import {
   careerSkillWithLevel,
+  deriveCareerCreationComplete,
   isCascadeCareerSkill,
   normalizeCareerSkill,
-  resolveCareerSkillTableRoll
+  resolveCascadeCareerSkill,
+  resolveCareerSkillTableRoll,
+  transitionCareerCreationState
 } from '../../../shared/characterCreation'
 import type { CareerCreationTermSkillTable } from '../../../shared/characterCreation'
 import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { GameCommand } from '../../../shared/commands'
+import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
+import type { EventId } from '../../../shared/ids'
+import { deriveEventRng } from '../../../shared/prng'
 import type { CommandError } from '../../../shared/protocol'
 import { err, ok, type Result } from '../../../shared/result'
 import type {
   CharacterCreationProjection,
   CharacterState
 } from '../../../shared/state'
-import { commandError } from '../command-helpers'
+import { loadCharacterCreationCommandContext } from '../character-creation-command-helpers'
+import {
+  commandError,
+  type CommandContext,
+  requireNonEmptyString
+} from '../command-helpers'
+import { normalizeBackgroundSkill } from './homeworld'
 import { uniqueSkills } from './utils'
 
 type CharacterCreationTermSkillRolledEvent = Extract<
   GameEvent,
   { type: 'CharacterCreationTermSkillRolled' }
+>
+
+type CharacterCreationSkillCommand = Extract<
+  GameCommand,
+  {
+    type:
+      | 'CompleteCharacterCreationSkills'
+      | 'ResolveCharacterCreationTermCascadeSkill'
+      | 'RollCharacterCreationTermSkill'
+  }
 >
 
 const termSkillTables = {
@@ -238,4 +261,153 @@ export const resolveTermSkillCreationEvent = ({
       ...(pendingCascadeSkill ? [pendingCascadeSkill] : [])
     ])
   })
+}
+
+export const deriveSkillCommandEvents = (
+  command: CharacterCreationSkillCommand,
+  context: CommandContext,
+  rollEventId: EventId
+): Result<GameEvent[], CommandError> => {
+  switch (command.type) {
+    case 'RollCharacterCreationTermSkill': {
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
+      const creation = validateTermSkillRoll(character, command.table)
+      if (!creation.ok) return creation
+
+      const rolled = rollDiceExpression(
+        '1d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const resolved = resolveTermSkillCreationEvent({
+        creation: creation.value,
+        table: command.table,
+        roll: {
+          expression: '1d6',
+          rolls: rolled.value.rolls,
+          total: rolled.value.total
+        }
+      })
+      if (!resolved.ok) return resolved
+
+      const afterRollCount = activeTermSkillCount(creation.value) + 1
+      const nextState =
+        afterRollCount >= requiredTermSkillCount(creation.value) &&
+        resolved.value.pendingCascadeSkills.length === 0
+          ? transitionCareerCreationState(creation.value.state, {
+              type: 'COMPLETE_SKILLS'
+            })
+          : creation.value.state
+
+      return ok([
+        {
+          type: 'DiceRolled',
+          expression: '1d6',
+          reason: `${resolved.value.termSkill.career} ${command.table}`,
+          rolls: [...resolved.value.termSkill.roll.rolls],
+          total: resolved.value.termSkill.roll.total
+        },
+        {
+          type: 'CharacterCreationTermSkillRolled',
+          characterId: command.characterId,
+          rollEventId,
+          ...resolved.value,
+          state: nextState,
+          creationComplete: deriveCareerCreationComplete(nextState)
+        }
+      ])
+    }
+
+    case 'CompleteCharacterCreationSkills': {
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
+      const creation = validateSkillsCompletion(character)
+      if (!creation.ok) return creation
+
+      const nextState = transitionCareerCreationState(creation.value.state, {
+        type: 'COMPLETE_SKILLS'
+      })
+
+      return ok([
+        {
+          type: 'CharacterCreationSkillsCompleted',
+          characterId: command.characterId,
+          state: nextState,
+          creationComplete: deriveCareerCreationComplete(nextState)
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationTermCascadeSkill': {
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
+      if (character.creation.state.status !== 'SKILLS_TRAINING') {
+        return err(
+          commandError(
+            'invalid_command',
+            `TERM_CASCADE_SKILL is not valid from ${character.creation.state.status}`
+          )
+        )
+      }
+      const cascadeSkill = normalizeBackgroundSkill(command.cascadeSkill)
+      if (!cascadeSkill.ok) return cascadeSkill
+      const selection = requireNonEmptyString(command.selection, 'selection')
+      if (!selection.ok) return selection
+      if (
+        !(character.creation.pendingCascadeSkills ?? []).includes(
+          cascadeSkill.value
+        )
+      ) {
+        return err(
+          commandError('missing_entity', 'Pending cascade skill does not exist')
+        )
+      }
+
+      const term = character.creation.terms.at(-1)
+      const resolution = resolveCascadeCareerSkill({
+        pendingCascadeSkills: character.creation.pendingCascadeSkills ?? [],
+        termSkills: [],
+        cascadeSkill: cascadeSkill.value,
+        selection: selection.value
+      })
+      const termSkills = uniqueSkills([
+        ...(term?.skills ?? []).filter((skill) => skill !== cascadeSkill.value),
+        ...resolution.termSkills
+      ])
+      const skillsAndTraining = uniqueSkills([
+        ...(term?.skillsAndTraining ?? []).filter(
+          (skill) => skill !== cascadeSkill.value
+        ),
+        ...resolution.termSkills
+      ])
+
+      return ok([
+        {
+          type: 'CharacterCreationTermCascadeSkillResolved',
+          characterId: command.characterId,
+          cascadeSkill: cascadeSkill.value,
+          selection: selection.value,
+          termSkills,
+          skillsAndTraining,
+          pendingCascadeSkills: uniqueSkills(resolution.pendingCascadeSkills)
+        }
+      ])
+    }
+  }
 }

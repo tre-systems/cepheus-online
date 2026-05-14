@@ -416,8 +416,10 @@ controller, `AppSession` exists, character creation is mounted through
 still a composition shell rather than a tiny boot file, but it no longer owns
 the internal creator panel, wizard, publication, finalization, activity feed,
 presence dock, or dice overlay graph. The rendered wizard now has a small
-DOM-free `deriveCharacterCreationViewModel` foundation; the next architecture
-cleanup is to expand that into a signal-driven, projection-fed renderer.
+DOM-free `deriveCharacterCreationViewModel` foundation. Boundary checks now
+prevent extracted client feature modules from importing the raw room HTTP
+helpers directly; the next architecture cleanup is to expand the creator into a
+signal-driven, projection-fed renderer.
 
 Primary write ownership:
 
@@ -436,6 +438,7 @@ Tasks:
   overlay, and character creation.
 - Keep all command submission on the existing client command router and remove
   direct room API calls from extracted feature modules as `app.ts` shrinks.
+  Done for the current feature modules and guarded by `check:boundaries`.
 - Split canvas and button input into a three-layer path: DOM/canvas capture,
   pure input interpretation, then command routing.
 - Keep local planning state separate from authoritative state: drag previews,
@@ -769,9 +772,11 @@ dependency-light client address the product's real risks. A shared command
 metadata registry now owns route/domain, seeded-dice, and stale-sequence policy
 for the client router and publication path. The server command dispatcher has
 started splitting into domain handlers for game, board/door/piece, and generic
-dice commands, plus character creation setup/sheet patch commands. The
-character creation state machine remains the large high-risk handler to split
-later.
+dice commands, plus character creation setup, finalization, career-entry,
+homeworld/background, basic-training, survival/death, promotion, lifecycle,
+skills, mustering, and sheet patch commands. The remaining command dispatcher
+work is consolidation and test hardening rather than another large character
+creation handler split.
 
 Primary write ownership:
 
@@ -791,9 +796,9 @@ Tasks:
 - Keep the current CQRS/event-sourced architecture. Do not switch direction
   unless the product goal changes away from real-time, referee-filtered,
   recoverable tabletop play.
-- Continue splitting the large server command switch by domain. Game,
-  board/door/piece, generic dice, and character sheet command handlers are
-  extracted; character creation state-machine handling still needs to move
+- Continue keeping server command handling split by domain. Game,
+  board/door/piece, generic dice, character sheet, and character creation
+  handlers are extracted; future command work should preserve that shape
   without weakening the ownership and rules gates. Keep
   `runCommandPublication()` as the only persistence, projection, checkpoint,
   parity, telemetry, and response path.
@@ -1285,11 +1290,15 @@ The next batch should run like this, in this order:
    seeded-dice policy, keep `app.ts` shrinking toward a boot/composition shell,
    move character creation rendering toward one projection-fed model, and keep
    publication parity plus viewer-safe responses on the single publication
-   path.
+   path. Done for the server command handler split: game, board/door/piece,
+   dice, sheet, and character creation commands now route through focused
+   domain modules, and the character creation router derives its handled
+   command type from shared command metadata.
 3. Replace creation history with a semantic timeline after retiring the
    remaining legacy activity fallbacks. Roll-bearing semantic events, including
    characteristic rolls, now point at the dice event that drives reveal timing.
-   Semantic creation history mapping is centralized, but the projected
+   Semantic creation history mapping is centralized and lifecycle mapping
+   coverage now spans the active SRD semantic event set, but the projected
    `history` model still stores legacy `CareerCreationEvent` entries for
    compatibility.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering

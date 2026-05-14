@@ -1,0 +1,308 @@
+import {
+  deriveCareerCreationComplete,
+  deriveSurvivalPromotionOptions,
+  evaluateCareerCheck,
+  transitionCareerCreationState
+} from '../../../shared/characterCreation'
+import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { GameCommand } from '../../../shared/commands'
+import { rollDiceExpression } from '../../../shared/dice'
+import type { GameEvent } from '../../../shared/events'
+import type { EventId } from '../../../shared/ids'
+import { deriveEventRng } from '../../../shared/prng'
+import type { CommandError } from '../../../shared/protocol'
+import { err, ok, type Result } from '../../../shared/result'
+import type {
+  CharacterCreationProjection,
+  CharacterState
+} from '../../../shared/state'
+import {
+  loadCharacterCreationCommandContext,
+  requireCharacterCreationStatus,
+  requireLegalCharacterCreationAction
+} from '../character-creation-command-helpers'
+import { commandError, type CommandContext } from '../command-helpers'
+
+type CharacterCreationSurvivalCommand = Extract<
+  GameCommand,
+  {
+    type:
+      | 'ConfirmCharacterCreationDeath'
+      | 'ResolveCharacterCreationMishap'
+      | 'ResolveCharacterCreationSurvival'
+  }
+>
+
+type CharacterCreationSurvivalResolvedEvent = Extract<
+  GameEvent,
+  { type: 'CharacterCreationSurvivalResolved' }
+>
+
+const validateMishapResolution = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'MISHAP',
+    'MISHAP_RESOLVED'
+  )
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['resolveMishap'],
+    'MISHAP_RESOLVED is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
+
+  return ok(character.creation)
+}
+
+const validateDeathConfirmation = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'MISHAP',
+    'DEATH_CONFIRMED'
+  )
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['confirmDeath'],
+    'DEATH_CONFIRMED is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
+
+  return ok(character.creation)
+}
+
+const validateSurvivalResolution = (
+  character: CharacterState
+): Result<CharacterCreationProjection, CommandError> => {
+  if (!character.creation) {
+    return err(
+      commandError('missing_entity', 'Character creation has not been started')
+    )
+  }
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'SURVIVAL',
+    'SURVIVAL'
+  )
+  if (!status.ok) return status
+
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['rollSurvival'],
+    'SURVIVAL is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
+
+  return ok(character.creation)
+}
+
+const currentCareerRank = (
+  creation: CharacterCreationProjection,
+  career: string
+): number => creation.careers.find((entry) => entry.name === career)?.rank ?? 0
+
+const resolveSurvivalCreationEvent = ({
+  character,
+  creation,
+  roll
+}: {
+  character: CharacterState
+  creation: CharacterCreationProjection
+  roll: { expression: '2d6'; rolls: number[]; total: number }
+}): Result<
+  Pick<
+    CharacterCreationSurvivalResolvedEvent,
+    'passed' | 'survival' | 'canCommission' | 'canAdvance' | 'pendingDecisions'
+  >,
+  CommandError
+> => {
+  const career = creation.terms.at(-1)?.career
+  if (!career) {
+    return err(
+      commandError('missing_entity', 'No active career term is available')
+    )
+  }
+
+  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  if (!basics) {
+    return err(
+      commandError('invalid_command', `Career ${career} is not supported`)
+    )
+  }
+
+  const outcome = evaluateCareerCheck({
+    check: basics.Survival,
+    characteristics: character.characteristics,
+    roll: roll.total
+  })
+  if (!outcome) {
+    return err(
+      commandError('invalid_command', `Career ${career} has no survival check`)
+    )
+  }
+
+  const promotionOptions = outcome.success
+    ? deriveSurvivalPromotionOptions(
+        basics,
+        currentCareerRank(creation, career)
+      )
+    : { canCommission: false, canAdvance: false }
+
+  return ok({
+    passed: outcome.success,
+    survival: {
+      expression: roll.expression,
+      rolls: [...roll.rolls],
+      total: roll.total,
+      characteristic: outcome.check.characteristic,
+      modifier: outcome.modifier,
+      target: outcome.check.target,
+      success: outcome.success
+    },
+    canCommission: promotionOptions.canCommission,
+    canAdvance: promotionOptions.canAdvance
+  })
+}
+
+export const deriveSurvivalCommandEvents = (
+  command: CharacterCreationSurvivalCommand,
+  context: CommandContext,
+  rollEventId: EventId
+): Result<GameEvent[], CommandError> => {
+  switch (command.type) {
+    case 'ResolveCharacterCreationSurvival': {
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
+      const creation = validateSurvivalResolution(character)
+      if (!creation.ok) return creation
+
+      const rolled = rollDiceExpression(
+        '2d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+
+      const resolved = resolveSurvivalCreationEvent({
+        character,
+        creation: creation.value,
+        roll: {
+          expression: '2d6',
+          rolls: rolled.value.rolls,
+          total: rolled.value.total
+        }
+      })
+      if (!resolved.ok) return resolved
+
+      const creationEvent = resolved.value.passed
+        ? {
+            type: 'SURVIVAL_PASSED' as const,
+            canCommission: resolved.value.canCommission,
+            canAdvance: resolved.value.canAdvance,
+            survival: resolved.value.survival
+          }
+        : {
+            type: 'SURVIVAL_FAILED' as const,
+            survival: resolved.value.survival
+          }
+      const nextState = transitionCareerCreationState(
+        creation.value.state,
+        creationEvent
+      )
+
+      const career = creation.value.terms.at(-1)?.career ?? 'Career'
+
+      return ok([
+        {
+          type: 'DiceRolled',
+          expression: '2d6',
+          reason: `${career} survival`,
+          rolls: [...resolved.value.survival.rolls],
+          total: resolved.value.survival.total
+        },
+        {
+          type: 'CharacterCreationSurvivalResolved',
+          characterId: command.characterId,
+          rollEventId,
+          ...resolved.value,
+          state: nextState,
+          creationComplete: deriveCareerCreationComplete(nextState)
+        }
+      ])
+    }
+
+    case 'ResolveCharacterCreationMishap': {
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
+      const creation = validateMishapResolution(character)
+      if (!creation.ok) return creation
+      const creationEvent = { type: 'MISHAP_RESOLVED' } as const
+
+      const nextState = transitionCareerCreationState(
+        creation.value.state,
+        creationEvent
+      )
+
+      return ok([
+        {
+          type: 'CharacterCreationMishapResolved',
+          characterId: command.characterId,
+          state: nextState,
+          creationComplete: deriveCareerCreationComplete(nextState)
+        }
+      ])
+    }
+
+    case 'ConfirmCharacterCreationDeath': {
+      const loaded = loadCharacterCreationCommandContext(
+        context.state,
+        command.characterId
+      )
+      if (!loaded.ok) return loaded
+      const { character } = loaded.value
+      const creation = validateDeathConfirmation(character)
+      if (!creation.ok) return creation
+      const creationEvent = { type: 'DEATH_CONFIRMED' } as const
+
+      const nextState = transitionCareerCreationState(
+        creation.value.state,
+        creationEvent
+      )
+
+      return ok([
+        {
+          type: 'CharacterCreationDeathConfirmed',
+          characterId: command.characterId,
+          state: nextState,
+          creationComplete: deriveCareerCreationComplete(nextState)
+        }
+      ])
+    }
+  }
+}

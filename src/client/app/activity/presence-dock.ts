@@ -45,7 +45,10 @@ export const activeCreationSummaries = (
   for (const character of Object.values(state.characters)) {
     const creation = deriveCharacterCreationReadModel(character)
     const isFollowableCreation = creation?.isActive || creation?.isDeceased
-    if (!isFollowableCreation || dismissedCreationPresenceIds.has(character.id)) {
+    if (
+      !isFollowableCreation ||
+      dismissedCreationPresenceIds.has(character.id)
+    ) {
       continue
     }
 

@@ -1,16 +1,17 @@
 import type { GameCommand } from '../../shared/commands'
+import type { CommandTypeForHandlerDomain } from '../../shared/command-metadata'
 import type { GameEvent } from '../../shared/events'
 import type { CommandError } from '../../shared/protocol'
 import { err, ok, type Result } from '../../shared/result'
-import {
-  commandError,
-  type CommandContext
-} from './command-helpers'
+import { commandError, type CommandContext } from './command-helpers'
 
-type CreateGameCommand = Extract<GameCommand, { type: 'CreateGame' }>
+type GameOnlyCommand = Extract<
+  GameCommand,
+  { type: CommandTypeForHandlerDomain<'game'> }
+>
 
 export const deriveGameCommandEvents = (
-  command: CreateGameCommand,
+  command: GameOnlyCommand,
   context: CommandContext
 ): Result<GameEvent[], CommandError> => {
   if (context.state) {

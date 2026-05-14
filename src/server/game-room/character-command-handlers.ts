@@ -1,4 +1,5 @@
 import type { GameCommand } from '../../shared/commands'
+import type { CommandTypeForHandlerDomain } from '../../shared/command-metadata'
 import type { GameEvent } from '../../shared/events'
 import type { CommandError } from '../../shared/protocol'
 import { err, ok, type Result } from '../../shared/result'
@@ -15,13 +16,15 @@ import {
   requireNonEmptyString
 } from './command-helpers'
 
-type CreateCharacterCommand = Extract<GameCommand, { type: 'CreateCharacter' }>
 type UpdateCharacterSheetCommand = Extract<
   GameCommand,
   { type: 'UpdateCharacterSheet' }
 >
 
-type CharacterCommand = CreateCharacterCommand | UpdateCharacterSheetCommand
+type CharacterCommand = Extract<
+  GameCommand,
+  { type: CommandTypeForHandlerDomain<'character'> }
+>
 
 const validateCharacterSheetPatch = (
   command: UpdateCharacterSheetCommand
@@ -134,7 +137,9 @@ export const deriveCharacterCommandEvents = (
         return err(commandError('missing_entity', 'Character does not exist'))
       }
       if (!canMutateCharacter(state.value, character, command.actorId)) {
-        return notAllowed('Only the character owner or referee can edit a sheet')
+        return notAllowed(
+          'Only the character owner or referee can edit a sheet'
+        )
       }
       const authority = validateCharacterSheetAuthority(state.value, command)
       if (!authority.ok) return authority
