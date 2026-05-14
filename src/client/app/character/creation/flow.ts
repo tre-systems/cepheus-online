@@ -120,6 +120,7 @@ export interface CharacterCreationCompletedTerm {
   career: string
   drafted: boolean
   anagathics?: boolean
+  anagathicsCost?: number | null
   age: number | null
   rank?: number | null
   rankTitle?: string | null
@@ -436,6 +437,9 @@ const cloneCompletedTerms = (
     career: term.career,
     drafted: term.drafted,
     ...(term.anagathics === true ? { anagathics: true } : {}),
+    ...(term.anagathicsCost != null
+      ? { anagathicsCost: term.anagathicsCost }
+      : {}),
     age: term.age,
     ...(term.rank != null ? { rank: term.rank } : {}),
     ...(term.rankTitle != null ? { rankTitle: term.rankTitle } : {}),

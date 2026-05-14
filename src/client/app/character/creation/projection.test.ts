@@ -16,6 +16,7 @@ import {
   deriveCharacterCreationTermSkillTableActions
 } from './flow'
 import {
+  completedTermFromProjection,
   flowFromProjectedCharacter,
   musteringBenefitsFromProjection
 } from './projection'
@@ -267,6 +268,18 @@ describe('character creation projection helpers', () => {
     if (!flow) throw new Error('Expected projected flow')
 
     assert.deepEqual(flow.draft.skills, ['Pilot-1', 'Survival-0'])
+  })
+
+  it('keeps anagathics cost on completed projected terms', () => {
+    assert.equal(
+      completedTermFromProjection({
+        ...agingProjection().terms[0],
+        complete: true,
+        anagathics: true,
+        anagathicsCost: 20000
+      }).anagathicsCost,
+      20000
+    )
   })
 
   it('starts a fresh active plan after reenlisting for another term', () => {

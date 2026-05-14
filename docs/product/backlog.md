@@ -386,10 +386,11 @@ Current Character Creation completion focus:
 - Keep extending deterministic two-tab browser journeys for multi-term and
   multi-career travellers, especially through finalization, spectator refresh,
   and no early roll reveal.
-- Finish projection-owned polish for mustering presentation and anagathics
-  provenance. Final-sheet/export display now includes UPP, readable
+- Finish projection-owned polish for mustering presentation. Final-sheet/export
+  display now includes UPP, readable
   characteristics, sorted skills, careers/ranks, term history, benefits,
-  credits, equipment, and notes from the projected read model.
+  anagathics cost provenance, credits, equipment, and notes from the projected
+  read model.
 - Polish the creator UX so each step shows one clear next action and the final
   sheet is useful in real play.
 
@@ -1092,7 +1093,8 @@ Tasks:
 - Use the correct aging modifier from term count and anagathics use.
 - Present legal aging characteristic loss choices only when required.
 - Persist characteristic changes with term provenance.
-- Implement optional anagathics survival and cost/payment flow.
+- Complete optional anagathics survival/payment consequences beyond the existing
+  decision, cost deduction, and projection/export provenance.
 - Polish reenlistment UI/provenance for mandatory retirement after seven terms,
   forced reenlistment on 12, allowed reenlistment, blocked reenlistment, and
   voluntary career exit. The server command/event split is done; this is now
@@ -1334,8 +1336,8 @@ The next batch should run like this, in this order:
    layouts, and multi-term continuation.
 8. Keep optional mishap tables behind an explicit variant; default failed
    survival remains Classic Traveller-style death.
-9. Complete anagathics survival/cost handling, multi-career continuation after
-   mustering, final sheet/export polish, and provenance. Each slice should add
+9. Complete anagathics survival/payment edge cases, multi-career continuation
+   after mustering, final sheet/export polish, and provenance. Each slice should add
    semantic events where needed, projection replay tests, protocol fixtures,
    and compact activity descriptors.
 10. Finish live following on top of semantic facts: follower cards, dice reveal

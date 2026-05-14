@@ -235,9 +235,13 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
     )
   }
   if (facts?.anagathicsDecision) {
+    const anagathicsCost =
+      facts.anagathicsDecision.useAnagathics && term.anagathicsCost != null
+        ? ` (Cr${term.anagathicsCost})`
+        : ''
     parts.push(
       facts.anagathicsDecision.useAnagathics
-        ? 'used anagathics'
+        ? `used anagathics${anagathicsCost}`
         : 'no anagathics'
     )
   }

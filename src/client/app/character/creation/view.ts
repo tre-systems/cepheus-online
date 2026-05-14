@@ -374,7 +374,12 @@ export const formatCharacterCreationCompletedTermSummary = (
           term.agingMessage ? ` ${term.agingMessage}` : ''
         }`
       : ''
-  const anagathics = term.anagathics === true ? '; anagathics' : ''
+  const anagathics =
+    term.anagathics === true
+      ? `; anagathics${
+          term.anagathicsCost != null ? ` (Cr${term.anagathicsCost})` : ''
+        }`
+      : ''
   const reenlistment =
     term.reenlistmentOutcome && term.reenlistmentRoll !== null
       ? `; reenlistment ${term.reenlistmentRoll} ${term.reenlistmentOutcome}`

@@ -32,6 +32,7 @@ export const completedTermFromProjection = (
     career: term.career,
     drafted: term.draft === 1,
     anagathics: term.anagathics,
+    anagathicsCost: term.anagathicsCost ?? null,
     age: facts?.aging?.age ?? null,
     rank:
       advancement && !advancement.skipped

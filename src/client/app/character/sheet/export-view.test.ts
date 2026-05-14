@@ -222,6 +222,24 @@ describe('character sheet export view', () => {
     )
   })
 
+  it('includes projected anagathics cost in term history exports', () => {
+    const creation = finalizedCreation()
+    const term = creation.terms[0]
+    term.anagathics = true
+    term.anagathicsCost = 20000
+    term.facts = {
+      ...term.facts,
+      anagathicsDecision: { useAnagathics: true, termIndex: 0 }
+    }
+
+    assert.equal(
+      /used anagathics \(Cr20000\)/.test(
+        derivePlainCharacterExport(character({ creation })) ?? ''
+      ),
+      true
+    )
+  })
+
   it('omits export text before creation is finalized', () => {
     assert.equal(
       derivePlainCharacterExport(
