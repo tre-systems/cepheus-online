@@ -42,7 +42,6 @@ import { err, ok, type Result } from '../../shared/result'
 import type {
   CharacterCreationHomeworld,
   CharacterCreationProjection,
-  CharacterCreationSheet,
   CharacterState
 } from '../../shared/state'
 import {
@@ -58,11 +57,11 @@ import {
   type CommandContext,
   isReferee,
   notAllowed,
-  requireFiniteCoordinate,
-  requireFiniteOrNull,
   requireGame,
   requireNonEmptyString
 } from './command-helpers'
+import { deriveCompletionEvents } from './character-creation/finalization'
+import { uniqueSkills } from './character-creation/utils'
 
 export const GENERIC_CHARACTER_CREATION_DEPRECATED_MESSAGE =
   'AdvanceCharacterCreation is deprecated; use semantic character creation commands'
@@ -223,20 +222,6 @@ type CharacterCreationMusteringBenefitRolledEvent = Extract<
   { type: 'CharacterCreationMusteringBenefitRolled' }
 >
 
-const uniqueSkills = (skills: readonly string[]): string[] => {
-  const unique: string[] = []
-  const seen = new Set<string>()
-
-  for (const skill of skills) {
-    const key = skill.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    unique.push(skill)
-  }
-
-  return unique
-}
-
 const normalizeHomeworld = (
   homeworld: CharacterCreationHomeworld
 ): Result<CharacterCreationHomeworld, CommandError> => {
@@ -351,100 +336,6 @@ const normalizeBackgroundSkill = (
   }
 
   return ok(normalized)
-}
-
-const derivedCreationNotes = (character: CharacterState): string => {
-  const creation = character.creation
-  if (!creation) return character.notes
-  const notes = character.notes.trim() ? [character.notes.trim()] : []
-
-  if (creation.history && creation.history.length > 0) {
-    notes.push('Rules source: Cepheus Engine SRD.')
-    for (const [index, term] of creation.terms.entries()) {
-      const survival =
-        creation.history.some((event) => event.type === 'SURVIVAL_FAILED') &&
-        index === creation.terms.length - 1
-          ? 'mishap'
-          : 'survived'
-      notes.push(`Term ${index + 1}: ${term.career}, ${survival}.`)
-    }
-  }
-
-  return notes.join('\n')
-}
-
-const deriveCharacterCreationSheet = (
-  character: CharacterState
-): CharacterCreationSheet => {
-  const creation = character.creation
-  const creationSkills = uniqueSkills([
-    ...(creation?.backgroundSkills ?? []),
-    ...(creation?.terms.flatMap((term) => term.skillsAndTraining) ?? []),
-    ...character.skills
-  ])
-
-  return {
-    notes: derivedCreationNotes(character),
-    age: character.age,
-    characteristics: { ...character.characteristics },
-    skills: creationSkills,
-    equipment: character.equipment.map((item) => ({ ...item })),
-    credits: character.credits
-  }
-}
-
-const validateCharacterCreationSheet = (
-  sheet: CharacterCreationSheet
-): Result<void, CommandError> => {
-  if (typeof sheet.notes !== 'string') {
-    return err(commandError('invalid_command', 'notes must be a string'))
-  }
-  const age = requireFiniteOrNull(sheet.age, 'age')
-  if (!age.ok) return age
-
-  for (const [key, value] of Object.entries(sheet.characteristics)) {
-    const characteristic = requireFiniteOrNull(value, `characteristics.${key}`)
-    if (!characteristic.ok) return characteristic
-  }
-
-  for (const [index, skill] of sheet.skills.entries()) {
-    const value = requireNonEmptyString(skill, `skills[${index}]`)
-    if (!value.ok) return value
-  }
-
-  for (const [index, item] of sheet.equipment.entries()) {
-    const name = requireNonEmptyString(item.name, `equipment[${index}].name`)
-    if (!name.ok) return name
-    const quantity = requireFiniteCoordinate(
-      item.quantity,
-      `equipment[${index}].quantity`
-    )
-    if (!quantity.ok) return quantity
-  }
-
-  const credits = requireFiniteCoordinate(sheet.credits, 'credits')
-  if (!credits.ok) return credits
-
-  return ok(undefined)
-}
-
-const validateCreationCompletion = (
-  character: CharacterState
-): Result<CharacterCreationProjection, CommandError> => {
-  if (!character.creation) {
-    return err(
-      commandError('missing_entity', 'Character creation has not been started')
-    )
-  }
-
-  const legalAction = requireLegalCharacterCreationAction(
-    character.creation,
-    ['completeCreation'],
-    'CREATION_COMPLETE is blocked by unresolved character creation decisions'
-  )
-  if (!legalAction.ok) return legalAction
-
-  return ok(character.creation)
 }
 
 const validateHomeworldCompletion = (
@@ -1792,35 +1683,6 @@ const resolveMusteringBenefitCreationEvent = ({
         kind === 'material' && benefit.value !== '-' ? benefit.value : null
     }
   })
-}
-
-const deriveCompletionEvents = (
-  characterId: CharacterCreationFinalizationCommand['characterId'],
-  character: CharacterState
-): Result<GameEvent[], CommandError> => {
-  const creation = validateCreationCompletion(character)
-  if (!creation.ok) return creation
-
-  const nextState = transitionCareerCreationState(creation.value.state, {
-    type: 'CREATION_COMPLETE'
-  })
-  const serverSheet = deriveCharacterCreationSheet(character)
-  const sheet = validateCharacterCreationSheet(serverSheet)
-  if (!sheet.ok) return sheet
-
-  return ok([
-    {
-      type: 'CharacterCreationCompleted',
-      characterId,
-      state: nextState,
-      creationComplete: deriveCareerCreationComplete(nextState)
-    },
-    {
-      type: 'CharacterCreationFinalized',
-      characterId,
-      ...serverSheet
-    }
-  ])
 }
 
 export const deriveCharacterCreationCommandEvents = (
