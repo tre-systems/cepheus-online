@@ -31,9 +31,12 @@ import type { CharacterCreationHomeworldPublisher } from './character-creation-h
 import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './character-creation-mustering-view.js'
 import type { CharacterCreationPanelController } from './character-creation-panel.js'
 import type {
+  CharacterCreationCareerRollButton,
+  CharacterCreationCareerSelectionViewModel,
   CharacterCreationCharacteristicGridViewModel,
   CharacterCreationHomeworldViewModel
 } from './character-creation-view.js'
+import { deriveCharacterCreationCareerRollButton } from './character-creation-view.js'
 import type { CharacterCreationViewModel } from './character-creation-view-model.js'
 import {
   renderCharacterCreationBasicTrainingButton as renderCharacterCreationBasicTrainingButtonView,
@@ -201,7 +204,9 @@ export const createCharacterCreationRenderController = ({
         fragment.append(death)
         return fragment
       }
-      const careerRollButton = renderCharacterCreationCareerRollButton(flow)
+      const careerRollButton = viewModel.wizard?.careerRoll
+        ? renderCharacterCreationCareerRollButton(viewModel.wizard.careerRoll)
+        : null
       if (careerRollButton) fragment.append(careerRollButton)
       fragment.append(renderCharacterCreationAnagathicsDecision(flow))
       const agingRollButton = renderCharacterCreationAgingRollButton(flow)
@@ -212,7 +217,11 @@ export const createCharacterCreationRenderController = ({
       if (reenlistmentRollButton) fragment.append(reenlistmentRollButton)
       fragment.append(renderCharacterCreationTermSkillTables(flow))
       fragment.append(renderCharacterCreationTermCascadeChoices(flow))
-      fragment.append(renderCharacterCreationCareerPicker(flow))
+      if (viewModel.wizard?.careerSelection) {
+        fragment.append(
+          renderCharacterCreationCareerPicker(viewModel.wizard.careerSelection)
+        )
+      }
       fragment.append(renderCharacterCreationTermResolution(flow))
       fragment.append(renderCharacterCreationTermHistory(flow))
       return fragment
@@ -229,7 +238,7 @@ export const createCharacterCreationRenderController = ({
       renderCharacterCreationDraftFieldsView(document, flow, {
         renderCharacteristicRollButton:
           renderCharacterCreationCharacteristicRollButton,
-        renderCareerRollButton: renderCharacterCreationCareerRollButton,
+        renderCareerRollButton: renderCharacterCreationCareerRollButtonFromFlow,
         renderBasicTrainingButton: renderCharacterCreationBasicTrainingButton,
         renderMusteringOut: renderCharacterCreationMusteringOut
       })
@@ -402,9 +411,9 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationCareerPicker = (
-    flow: CharacterCreationFlow
+    viewModel: CharacterCreationCareerSelectionViewModel
   ): HTMLElement => {
-    return renderCharacterCreationCareerPickerView(document, flow, {
+    return renderCharacterCreationCareerPickerView(document, viewModel, {
       resolveCareerQualification: (career) =>
         getCommandController().resolveCareerQualification(career),
       resolveFailedQualificationOption: (option) =>
@@ -458,12 +467,19 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationCareerRollButton = (
-    flow: CharacterCreationFlow
+    viewModel: CharacterCreationCareerRollButton
   ): HTMLElement | null => {
-    return renderCharacterCreationCareerRollButtonView(document, flow, {
+    return renderCharacterCreationCareerRollButtonView(document, viewModel, {
       rollCareerCheck: () => getCommandController().rollCareerCheck(),
       reportError
     })
+  }
+
+  const renderCharacterCreationCareerRollButtonFromFlow = (
+    flow: CharacterCreationFlow
+  ): HTMLElement | null => {
+    const viewModel = deriveCharacterCreationCareerRollButton(flow)
+    return viewModel ? renderCharacterCreationCareerRollButton(viewModel) : null
   }
 
   const renderCharacterCreationBasicTrainingButton = (

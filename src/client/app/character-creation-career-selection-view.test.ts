@@ -13,6 +13,10 @@ import {
   renderCharacterCreationCareerRollButton,
   type CharacterCreationCareerSelectionDocument
 } from './character-creation-career-selection-view'
+import {
+  deriveCharacterCreationCareerRollButton,
+  deriveCharacterCreationCareerSelectionViewModel
+} from './character-creation-view'
 import { asNode, type TestNode, testDocument } from './test-dom.test-helper'
 
 const document =
@@ -58,21 +62,47 @@ const walk = (node: TestNode): TestNode[] => [
   ...node.children.flatMap((child) => walk(child))
 ]
 
+const careerSelectionViewModel = (
+  planOverrides: Partial<
+    NonNullable<CharacterCreationFlow['draft']['careerPlan']>
+  > = {}
+) => {
+  const viewModel = deriveCharacterCreationCareerSelectionViewModel(
+    flow(planOverrides)
+  )
+  if (viewModel === null) throw new Error('Expected career selection model')
+  return viewModel
+}
+
+const careerRollViewModel = (
+  planOverrides: Partial<
+    NonNullable<CharacterCreationFlow['draft']['careerPlan']>
+  >
+) => {
+  const viewModel = deriveCharacterCreationCareerRollButton(flow(planOverrides))
+  if (viewModel === null) throw new Error('Expected career roll model')
+  return viewModel
+}
+
 describe('character creation career selection view', () => {
   it('renders career choices and delegates qualification', async () => {
     const resolved: string[] = []
     let error = ''
     const node = asNode(
-      renderCharacterCreationCareerPicker(document, flow(), {
-        resolveCareerQualification: async (career) => {
-          resolved.push(career)
-          throw new Error('No qualification')
-        },
-        resolveFailedQualificationOption: async () => {},
-        reportError: (message) => {
-          error = message
+      renderCharacterCreationCareerPicker(
+        document,
+        careerSelectionViewModel(),
+        {
+          resolveCareerQualification: async (career) => {
+            resolved.push(career)
+            throw new Error('No qualification')
+          },
+          resolveFailedQualificationOption: async () => {},
+          reportError: (message) => {
+            error = message
+          }
         }
-      })
+      )
     )
 
     assert.equal(node.className, 'creation-career-picker')
@@ -97,7 +127,7 @@ describe('character creation career selection view', () => {
     const node = asNode(
       renderCharacterCreationCareerPicker(
         document,
-        flow({
+        careerSelectionViewModel({
           career: 'Merchant',
           qualificationRoll: 2,
           qualificationPassed: false,
@@ -137,7 +167,7 @@ describe('character creation career selection view', () => {
   it('renders later career roll buttons but hides qualification rolls', async () => {
     const qualification = renderCharacterCreationCareerRollButton(
       document,
-      flow({ career: 'Merchant' }),
+      careerRollViewModel({ career: 'Merchant' }),
       {
         rollCareerCheck: async () => {},
         reportError: () => {}
@@ -148,7 +178,7 @@ describe('character creation career selection view', () => {
     const rolled: string[] = []
     const survivalElement = renderCharacterCreationCareerRollButton(
       document,
-      flow({
+      careerRollViewModel({
         career: 'Merchant',
         qualificationRoll: 8,
         qualificationPassed: true,

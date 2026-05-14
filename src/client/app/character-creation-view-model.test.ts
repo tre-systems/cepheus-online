@@ -201,4 +201,42 @@ describe('character creation view model', () => {
     assert.equal(viewModel.pending.agingChangeCount, 1)
     assert.equal(viewModel.actionPlan, actionPlan)
   })
+
+  it('includes career selection and roll state for the career step', () => {
+    const currentFlow = flow({
+      step: 'career',
+      draft: {
+        ...flow().draft,
+        careerPlan: {
+          career: 'Merchant',
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: null,
+          survivalPassed: null,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: true,
+          canAdvance: true,
+          drafted: false
+        }
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('CAREER_SELECTION'),
+      readOnly: false
+    })
+
+    assert.equal(
+      viewModel.wizard?.careerSelection?.outcomeTitle,
+      'Merchant term'
+    )
+    assert.equal(viewModel.wizard?.careerSelection?.showCareerList, false)
+    assert.equal(viewModel.wizard?.careerRoll?.key, 'survivalRoll')
+    assert.equal(viewModel.wizard?.careerRoll?.label, 'Roll survival')
+    assert.equal(viewModel.wizard?.homeworld, null)
+  })
 })

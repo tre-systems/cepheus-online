@@ -65,6 +65,11 @@ const commandController = (): CharacterCreationCommandController => ({
   rollCareerCheck: async () => {}
 })
 
+const walk = (node: TestNode): TestNode[] => [
+  node,
+  ...node.children.flatMap((child) => walk(child))
+]
+
 describe('character creation render controller', () => {
   it('resets wizard controls without depending on app shell state', () => {
     const els = elements()
@@ -447,6 +452,128 @@ describe('character creation render controller', () => {
       lawField?.children[1]?.children[1]?.textContent,
       'Sentinel Law'
     )
+  })
+
+  it('renders career selection from the controller view model', () => {
+    const els = elements()
+    const currentFlow = {
+      ...flow(),
+      step: 'career',
+      draft: createInitialCharacterDraft(asCharacterId('render-career'), {
+        name: 'Career Sentinel',
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }
+      })
+    } satisfies CharacterCreationFlow
+    const baseViewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: null,
+      readOnly: false
+    })
+    const controller = createCharacterCreationRenderController({
+      document: renderDocument(),
+      elements: els,
+      controller: {
+        currentProjection: () => null,
+        flow: () => currentFlow,
+        readOnly: () => false,
+        reconcileEditableWithProjection: () => currentFlow,
+        setFlow: (nextFlow) => nextFlow,
+        viewModel: () => ({
+          ...baseViewModel,
+          wizard: baseViewModel.wizard
+            ? {
+                ...baseViewModel.wizard,
+                careerSelection: baseViewModel.wizard.careerSelection
+                  ? {
+                      ...baseViewModel.wizard.careerSelection,
+                      outcomeTitle: 'Sentinel career title',
+                      outcomeText: 'Sentinel career outcome',
+                      careerOptions: [
+                        {
+                          key: 'Sentinel Career',
+                          label: 'Sentinel Career',
+                          selected: false,
+                          qualification: {
+                            label: 'Qualification',
+                            requirement: 'Int 4+',
+                            available: true,
+                            characteristic: 'int',
+                            target: 4,
+                            modifier: 1
+                          },
+                          survival: {
+                            label: 'Survival',
+                            requirement: 'End 5+',
+                            available: true,
+                            characteristic: 'end',
+                            target: 5,
+                            modifier: 0
+                          },
+                          commission: {
+                            label: 'Commission',
+                            requirement: '',
+                            available: false,
+                            characteristic: null,
+                            target: null,
+                            modifier: 0
+                          },
+                          advancement: {
+                            label: 'Advancement',
+                            requirement: '',
+                            available: false,
+                            characteristic: null,
+                            target: null,
+                            modifier: 0
+                          }
+                        }
+                      ]
+                    }
+                  : null
+              }
+            : null
+        })
+      },
+      panel: {
+        render: () => true,
+        scrollToTop: () => {}
+      },
+      wizard: {
+        advance: async () => {},
+        autoAdvanceSetup: () => false,
+        startNew: async () => {},
+        syncFields: () => {}
+      },
+      homeworldPublisher: {
+        publishBackgroundCascadeSelection: async () => {},
+        publishProgress: async () => {},
+        publishCascadeResolution: async () => {}
+      },
+      getCommandController: commandController,
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => ({}),
+      commandIdentity: () => ({
+        gameId: asGameId('game-1'),
+        actorId: asUserId('actor-1')
+      }),
+      reportError: () => {}
+    })
+
+    controller.renderWizard()
+
+    const nodes = walk(asNode(els.characterCreationFields))
+    const title = nodes.find(
+      (node) => node.textContent === 'Sentinel career title'
+    )
+    const option = nodes.find((node) => node.textContent === 'Sentinel Career')
+    assert.equal(title?.tagName, 'strong')
+    assert.equal(option?.className, 'creation-career-title')
   })
 
   it('disables local-only wizard actions for read-only spectator flows', () => {

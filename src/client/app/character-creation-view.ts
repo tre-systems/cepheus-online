@@ -206,6 +206,21 @@ export interface CharacterCreationFailedQualificationViewModel {
   options: CharacterCreationFailedQualificationOptionViewModel[]
 }
 
+export interface CharacterCreationHiddenFieldViewModel {
+  key: string
+  value: string
+}
+
+export interface CharacterCreationCareerSelectionViewModel {
+  open: boolean
+  hiddenFields: CharacterCreationHiddenFieldViewModel[]
+  outcomeTitle: string
+  outcomeText: string
+  showCareerList: boolean
+  careerOptions: CharacterCreationCareerOptionViewModel[]
+  failedQualification: CharacterCreationFailedQualificationViewModel
+}
+
 export const formatCharacterCreationReenlistmentOutcome = (
   plan: CharacterCreationCareerPlan | null | undefined
 ): string => {
@@ -1650,6 +1665,41 @@ export const deriveCharacterCreationFailedQualificationViewModel = (
     title: 'Qualification failed',
     message: 'Choose Drifter or roll for the Draft.',
     options
+  }
+}
+
+export const deriveCharacterCreationCareerSelectionViewModel = (
+  flow: CharacterCreationFlow
+): CharacterCreationCareerSelectionViewModel | null => {
+  if (flow.step !== 'career') return null
+
+  const plan = flow.draft.careerPlan
+  const hiddenFields = Object.entries({
+    career: plan?.career ?? '',
+    drafted: plan?.drafted ? 'true' : 'false',
+    qualificationPassed:
+      plan?.qualificationPassed === null ||
+      plan?.qualificationPassed === undefined
+        ? ''
+        : String(plan.qualificationPassed),
+    qualificationRoll: plan?.qualificationRoll ?? '',
+    survivalRoll: plan?.survivalRoll ?? '',
+    commissionRoll: plan?.commissionRoll ?? '',
+    advancementRoll: plan?.advancementRoll ?? ''
+  }).map(([key, value]) => ({
+    key,
+    value: value === null ? '' : String(value)
+  }))
+
+  return {
+    open: true,
+    hiddenFields,
+    outcomeTitle: plan?.career ? `${plan.career} term` : 'Choose a career',
+    outcomeText: formatCharacterCreationCareerOutcome(plan),
+    showCareerList: !plan?.career,
+    careerOptions: deriveCharacterCreationCareerOptionViewModels(flow.draft),
+    failedQualification:
+      deriveCharacterCreationFailedQualificationViewModel(flow)
   }
 }
 

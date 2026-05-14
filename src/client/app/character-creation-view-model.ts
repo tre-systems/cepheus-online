@@ -8,12 +8,16 @@ import type {
 import { creationStepFromStatus } from './character-creation-projection.js'
 import {
   deriveCharacterCreationButtonStates,
+  deriveCharacterCreationCareerRollButton,
+  deriveCharacterCreationCareerSelectionViewModel,
   deriveCharacterCreationCharacteristicGridViewModel,
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationValidationSummary,
   type CharacterCreationButtonStates,
+  type CharacterCreationCareerRollButton,
+  type CharacterCreationCareerSelectionViewModel,
   type CharacterCreationCharacteristicGridViewModel,
   type CharacterCreationHomeworldViewModel,
   type CharacterCreationNextStepViewModel,
@@ -52,6 +56,8 @@ export interface CharacterCreationWizardViewModel {
   buttons: CharacterCreationButtonStates
   validation: CharacterCreationValidationSummary
   nextStep: CharacterCreationNextStepViewModel
+  careerSelection: CharacterCreationCareerSelectionViewModel | null
+  careerRoll: CharacterCreationCareerRollButton | null
   characteristics: CharacterCreationCharacteristicGridViewModel | null
   homeworld: CharacterCreationHomeworldViewModel | null
 }
@@ -175,6 +181,8 @@ const wizardViewModel = ({
     buttons: deriveCharacterCreationButtonStates(flow),
     validation: deriveCharacterCreationValidationSummary(flow),
     nextStep: deriveCharacterCreationNextStepViewModel(flow),
+    careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow),
+    careerRoll: deriveCharacterCreationCareerRollButton(flow),
     characteristics: deriveCharacterCreationCharacteristicGridViewModel(flow),
     homeworld:
       flow.step === 'homeworld'
