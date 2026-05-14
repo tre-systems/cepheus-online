@@ -959,12 +959,14 @@ Done when:
 
 ### Slice 1D: Homeworld, Background Skills, And Cascade Choices
 
-Status: mostly done in shared/client helpers, command handlers, and projector
-support. The current code projects homeworld, background skills, pending
-cascade skills, cascade resolution, and semantic homeworld completion. The
-remaining work is to make background allowance and cascade choices fully
-projection-owned across every creation source and to keep tightening server
-validation and UX around those choices.
+Status: mostly done in shared/client helpers, command handlers, projector
+support, and final export display. The current code projects homeworld,
+background skills, pending cascade skills, cascade resolution, and semantic
+homeworld completion. The final plain export labels background skill sources
+from law level, trade codes, or primary education. The remaining work is to
+make background allowance and cascade choices fully projection-owned across
+every creation source and to keep tightening server validation and UX around
+those choices.
 
 Tasks:
 
@@ -972,8 +974,8 @@ Tasks:
   cascades as explicit projection state for every creation source.
 - Replace remaining client-derived homeworld/cascade gates with projection
   legal actions.
-- Improve provenance display for homeworld, background, and cascade skill
-  sources on the final sheet.
+- Keep improving provenance display for homeworld, background, and cascade
+  skill sources on the final sheet as richer projection facts land.
 - Extend browser refresh/follow checks for nested cascade choices and blocked
   progress.
 

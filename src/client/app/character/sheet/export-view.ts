@@ -10,6 +10,7 @@ import {
   deriveMaterialBenefitEffect,
   parseCareerSkill
 } from '../../../../shared/characterCreation'
+import { CEPHEUS_SRD_RULESET } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 
 const uppCharacteristicOrder: CharacteristicKey[] = [
   'str',
@@ -114,6 +115,60 @@ const equipmentValue = (
       return `${item.name} x${quantity}${item.notes ? ` (${item.notes})` : ''}`
     })
     .join('; ')
+}
+
+const skillBaseName = (skill: string): string =>
+  (parseCareerSkill(skill)?.name ?? skill.replace(/-\d+$/, '')).trim()
+
+const sourceSkillName = (skill: string): string =>
+  skill.replace(/\*$/, '').trim()
+
+const sourceSkillMatches = (
+  sourceSkill: string,
+  characterSkill: string
+): boolean => {
+  const sourceName = sourceSkillName(sourceSkill)
+  const skillName = skillBaseName(characterSkill)
+  if (sourceName === skillName) return true
+  return (
+    CEPHEUS_SRD_RULESET.cascadeSkills[sourceName]?.includes(skillName) ?? false
+  )
+}
+
+const backgroundSkillSourceValue = (
+  creation: CharacterCreationProjection | null | undefined
+): string | null => {
+  const skills = creation?.backgroundSkills ?? []
+  if (skills.length === 0) return null
+
+  const homeworld = creation?.homeworld
+  const lawSkill = homeworld?.lawLevel
+    ? CEPHEUS_SRD_RULESET.homeWorldSkillsByLawLevel[homeworld.lawLevel]
+    : null
+  const tradeSkillSources = (homeworld?.tradeCodes ?? [])
+    .map((tradeCode) => ({
+      tradeCode,
+      skill: CEPHEUS_SRD_RULESET.homeWorldSkillsByTradeCode[tradeCode]
+    }))
+    .filter((entry): entry is { tradeCode: string; skill: string } =>
+      Boolean(entry.skill)
+    )
+
+  return skills
+    .map((skill) => {
+      const sources: string[] = []
+      if (lawSkill && sourceSkillMatches(lawSkill, skill)) {
+        sources.push(`law ${homeworld?.lawLevel}`)
+      }
+      for (const { tradeCode, skill: tradeSkill } of tradeSkillSources) {
+        if (sourceSkillMatches(tradeSkill, skill)) {
+          sources.push(`trade ${tradeCode}`)
+        }
+      }
+      if (sources.length === 0) sources.push('primary education')
+      return `${skill} (${sources.join(', ')})`
+    })
+    .join(', ')
 }
 
 const careerRankTitles = (
@@ -292,6 +347,7 @@ export const derivePlainCharacterExport = (
 
   const creation = character.creation
   const homeworld = creation?.homeworld
+  const backgroundSkills = backgroundSkillSourceValue(creation)
   const lines = [
     character.name.trim() || 'Unnamed character',
     `UPP: ${deriveCharacterUpp(character.characteristics)}`,
@@ -299,6 +355,7 @@ export const derivePlainCharacterExport = (
     `Type: ${character.type}`,
     `Age: ${character.age == null ? '-' : character.age}`,
     `Homeworld: ${homeworld?.name || 'Unspecified'}${homeworld?.lawLevel ? `, ${homeworld.lawLevel}` : ''}${homeworld?.tradeCodes?.length ? `, ${homeworld.tradeCodes.join(', ')}` : ''}`,
+    ...(backgroundSkills ? [`Background Skills: ${backgroundSkills}`] : []),
     `Careers: ${careerValue(creation)}`,
     `Terms: ${creation?.terms.length ?? 0}`,
     `Skills: ${listValue(sortSkillsForExport(character.skills))}`,

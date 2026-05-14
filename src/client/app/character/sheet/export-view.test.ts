@@ -266,6 +266,27 @@ describe('character sheet export view', () => {
     )
   })
 
+  it('includes homeworld background skill sources in finalized exports', () => {
+    const creation = {
+      ...finalizedCreation(),
+      homeworld: {
+        name: 'Homeworld',
+        lawLevel: 'Low Law',
+        tradeCodes: ['Asteroid']
+      },
+      backgroundSkills: ['Slug Pistol-0', 'Zero-G-0', 'Admin-0']
+    }
+
+    const exportText = derivePlainCharacterExport(character({ creation })) ?? ''
+
+    assert.equal(
+      exportText.includes(
+        'Background Skills: Slug Pistol-0 (law Low Law), Zero-G-0 (trade Asteroid), Admin-0 (primary education)'
+      ),
+      true
+    )
+  })
+
   it('omits export text before creation is finalized', () => {
     assert.equal(
       derivePlainCharacterExport(
