@@ -179,6 +179,13 @@ Done when:
 - Pending choices, legal actions, roll requirements, remaining term skills,
   remaining mustering benefits, and completion gates survive refresh from the
   event stream.
+- Final sheet fields for age, characteristics, skills, ranks/titles, career
+  history, credits, equipment/material benefits, UPP/export, and provenance are
+  derived from creation projection and finalization rather than trusted client
+  sheet submissions.
+- Optional-branch rules that affect the aggregate, including anagathics
+  survival/costs and optional mishaps, are expressed as deterministic shared
+  rules plus semantic events before they appear in the UI.
 - Illegal creation commands reject from projected rules state before
   persistence.
 
@@ -218,6 +225,12 @@ Done when:
   refreshed, and disposed through one feature boundary.
 - Step views consume one projection-fed model for phase, legal actions,
   progress, roll facts, and completion gates.
+- The creator always has an obvious next required action on a phone viewport,
+  including background cascades, term skills, aging choices, reenlistment,
+  mustering, death, finalization, and “start another character” paths.
+- Completed-character presentation is good enough for table use: readable
+  characteristics, sorted skills, career history, benefits, credits,
+  equipment, notes/provenance, UPP, and a plain export block.
 
 ### Stream D: Viewer Filtering, Dice Reveal, And Live Following
 
@@ -256,6 +269,9 @@ Done when:
   and viewer-filtering contract.
 - Two-tab creator/spectator journeys cover multi-term creation without
   pre-reveal result leakage.
+- Spectator follow mode remains useful from first characteristic through
+  finalization: selected followed traveller, projected steps, compact outcome
+  cards, and final sheet all update without requiring close/reopen.
 
 ### Stream E: PWA, Verification, And Release Hygiene
 
@@ -361,6 +377,15 @@ Start with Streams A-D in parallel, with Stream E running opportunistically:
   spectator coverage.
 - Stream E can continue PWA/update/smoke work where it does not touch game
   truth.
+
+Current Character Creation completion focus:
+
+- Build the deterministic two-tab browser journey for a multi-term,
+  multi-career traveller with spectator follow and no early roll reveal.
+- Finish projection-owned pending decisions and final-sheet derivation for
+  mustering, multi-career continuation, anagathics, and finalization.
+- Polish the creator UX so each step shows one clear next action and the final
+  sheet is useful in real play.
 
 Hold Streams F and G until the command/projection/filtering spine is stable
 enough that tactical, Discord, and broader rules work can reuse it instead of

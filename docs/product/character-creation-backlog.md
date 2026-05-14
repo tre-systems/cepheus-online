@@ -88,13 +88,16 @@ Important remaining gaps:
 - Homeworld, primary education, background skills, cascade choices, term skill
   choices, aging losses, and mustering choices need to become more consistently
   projection-owned and easier to recover after refresh.
-- Multi-term career play, mustering out, and final sheet/export need browser
-  automation and UX polish.
+- Multi-term career play, mustering out, multi-career continuation, and
+  final sheet/export need deterministic browser automation and UX polish.
 - Optional mishaps remain unimplemented. Anagathics now has a server-owned
   use/skip decision before aging, but full survival-risk, cost/payment,
   provenance, and UX polish are still open.
 - Character creation follow mode needs stronger two-tab automation and reveal
   timing contracts so spectators never see roll-dependent outcomes early.
+- Spectator follow should show the same projected creation state as the creator
+  without controls, including step changes, characteristics, choices, compact
+  outcomes, and the final sheet without requiring close/reopen.
 
 ## SRD Procedure Audit Checklist
 
@@ -532,9 +535,14 @@ Acceptance:
 - Add browser smoke tests with deterministic dice inputs for:
   - full one-term path from characteristics through homeworld/background,
     survival, term skills, aging, reenlistment, and mustering
+  - deterministic two-term, multi-career path with a spectator following from
+    before qualification through finalization
   - failed qualification to Draft
   - one mustering-out and finalization path
   - spectator reveal timing for later term rolls
+  - spectator reload/new-join while a roll is still unrevealed, proving dice,
+    outcome text, projected roll-dependent state, and activity details remain
+    hidden until reveal
 - Use the old `CharacterCreationFlow.test.tsx` as a scenario reference, not as a
   component structure to port.
 
@@ -579,6 +587,11 @@ Architecture acceptance for the next slice:
   cards, verified by repeatable browser tests.
 - Refresh recovery does not depend on live activity messages having been
   received.
+- A completed character sheet is derived from creation state and finalization,
+  and is useful for real table play without manual cleanup.
+- The creator UI keeps one clear next required action visible on mobile,
+  including death/start-over, mustering, multi-career continuation, and final
+  export/review paths.
 
 ## Open Design Questions
 
