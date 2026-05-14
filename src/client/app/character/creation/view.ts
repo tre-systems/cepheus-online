@@ -734,9 +734,10 @@ export const deriveCharacterCreationStatStrip = (
 export const deriveCharacterCreationSkillStrip = (
   flow: Pick<CharacterCreationFlow, 'draft'>
 ): CharacterCreationSkillStripViewModel => {
+  const pendingTermCascadeSkills = new Set(flow.draft.pendingTermCascadeSkills)
   const skills = tallyCareerSkills([
     ...flow.draft.backgroundSkills,
-    ...flow.draft.skills
+    ...flow.draft.skills.filter((skill) => !pendingTermCascadeSkills.has(skill))
   ])
 
   return {

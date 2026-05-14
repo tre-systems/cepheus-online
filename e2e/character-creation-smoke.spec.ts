@@ -448,6 +448,9 @@ const characterCreationCareerButton = (page: Page, career: string) =>
       has: page.locator('.creation-career-title').filter({ hasText: career })
     })
 
+const creatorSkillStrip = (page: Page) =>
+  page.locator('#characterCreationFields .creation-skill-strip')
+
 const openOrExpectFollowedCreation = async (
   page: Page,
   characterName: string
@@ -1679,6 +1682,13 @@ test.describe('character creation smoke', () => {
       )
       await expect.poll(() => postedCommandTypes).toContain(
         'SelectCharacterCreationBackgroundSkill'
+      )
+      await expect(creatorSkillStrip(page)).toHaveText(
+        'Admin-0, Slug Rifle-0, Zero-G-0'
+      )
+      await expect(creatorSkillStrip(spectator)).toHaveText(
+        'Admin-0, Slug Rifle-0, Zero-G-0',
+        { timeout: 5_000 }
       )
     } finally {
       await spectator.close()
@@ -3873,6 +3883,9 @@ test.describe('character creation smoke', () => {
     await expect(fields).toContainText('Skills and training', {
       timeout: 5_000
     })
+    await expect(creatorSkillStrip(page)).toContainText('Admin-0')
+    await expect(creatorSkillStrip(page)).toContainText('Gun Combat-0')
+    await expect(creatorSkillStrip(page)).toContainText('Slug Rifle-0')
     await expectMobileCreatorControlsFit(page)
 
     const termSkillButtons = fields.locator(
@@ -3897,6 +3910,16 @@ test.describe('character creation smoke', () => {
     if ((await termSkillButtons.count()) > 0) {
       await termSkillButtons.first().click()
       await waitForDiceReveal(page)
+    }
+    if ((await cascadeButtons.count()) > 0) {
+      const pendingCascadeSkill = (
+        await fields.locator('.creation-cascade-choice strong').last().textContent()
+      )?.trim()
+      if (pendingCascadeSkill) {
+        await expect(creatorSkillStrip(page)).not.toContainText(
+          pendingCascadeSkill
+        )
+      }
     }
     await resolveVisibleCascadeChoices(page)
     await expect(fields.locator('.creation-term-skill-rolls span')).toHaveCount(

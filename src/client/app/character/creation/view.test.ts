@@ -820,6 +820,18 @@ describe('character creation view helpers', () => {
     })
   })
 
+  it('omits unresolved term cascade placeholders from the skill strip', () => {
+    const flow = completeFlow()
+    flow.draft.backgroundSkills = ['Zero-G-0', 'Admin-0']
+    flow.draft.skills = ['Gun Combat-1', 'Slug Rifle-1', 'Recon-0']
+    flow.draft.pendingTermCascadeSkills = ['Gun Combat-1']
+
+    assert.deepEqual(deriveCharacterCreationSkillStrip(flow), {
+      skills: ['Slug Rifle-1', 'Admin-0', 'Recon-0', 'Zero-G-0'],
+      summary: 'Slug Rifle-1, Admin-0, Recon-0, Zero-G-0'
+    })
+  })
+
   it('derives characteristic grid data once for renderers', () => {
     const flow = {
       step: 'characteristics' as const,

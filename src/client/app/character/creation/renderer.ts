@@ -10,6 +10,7 @@ import {
   deriveCharacterCreationCharacteristicRollButton,
   deriveCharacterCreationDeathViewModel,
   deriveCharacterCreationFieldViewModels,
+  deriveCharacterCreationSkillStrip,
   type CharacterCreationMusteringOutViewModel,
   type CharacterCreationNextStepViewModel,
   type CharacterCreationPendingCascadeChoiceViewModel
@@ -303,7 +304,7 @@ const renderSkillReviewField = (
   title.textContent = field.required ? `${field.label} *` : field.label
   const skills = document.createElement('div')
   skills.className = 'creation-skill-review-list'
-  const skillValues = flow.draft.skills.length > 0 ? flow.draft.skills : []
+  const skillValues = deriveCharacterCreationSkillStrip(flow).skills
   for (const skill of skillValues) {
     const chip = document.createElement('span')
     chip.textContent = skill
@@ -319,7 +320,13 @@ const renderSkillReviewField = (
   control.dataset.characterCreationField = field.key
   control.value = field.value
   panel.append(title, skills, control)
-  appendFieldErrors(document, panel, field)
+  appendFieldErrorMessages(
+    document,
+    panel,
+    skillValues.length > 0
+      ? field.errors.filter((error) => !error.startsWith('At least one skill'))
+      : field.errors
+  )
   return panel
 }
 
@@ -377,8 +384,16 @@ const appendFieldErrors = (
   element: HTMLElement,
   field: CharacterCreationFieldViewModel
 ): void => {
-  if (field.errors.length === 0) return
+  appendFieldErrorMessages(document, element, field.errors)
+}
+
+const appendFieldErrorMessages = (
+  document: CharacterCreationRendererDocument,
+  element: HTMLElement,
+  errors: readonly string[]
+): void => {
+  if (errors.length === 0) return
   const error = document.createElement('small')
-  error.textContent = field.errors.join(', ')
+  error.textContent = errors.join(', ')
   element.append(error)
 }

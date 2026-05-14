@@ -353,11 +353,40 @@ describe('character creation renderer', () => {
         node,
         (candidate) => candidate.className === 'creation-skill-review-list'
       )?.children.map((child) => child.textContent),
-      ['Pilot-1', 'Vacc Suit-0']
+      ['Pilot-1', 'Admin-0', 'Slug Pistol-0', 'Vacc Suit-0', 'Zero-G-0']
     )
     assert.equal(
       node.children[node.children.length - 1]?.textContent,
       'Training'
+    )
+  })
+
+  it('renders background skills in the skills review before basic training', () => {
+    const flow = basicTrainingFlow()
+    const fragment = renderCharacterCreationDraftFields(document, flow, {
+      renderCharacteristicRollButton: () => null,
+      renderCareerRollButton: () => null,
+      renderBasicTrainingButton: () => null,
+      musteringOut: null,
+      renderMusteringOut: () => {
+        const panel = document.createElement('section')
+        return panel
+      }
+    })
+    const node = asNode(fragment)
+
+    assert.deepEqual(
+      findNode(
+        node,
+        (candidate) => candidate.className === 'creation-skill-review-list'
+      )?.children.map((child) => child.textContent),
+      ['Admin-0', 'Slug Pistol-0', 'Zero-G-0']
+    )
+    assert.equal(
+      findNode(node, (candidate) =>
+        candidate.textContent.includes('At least one skill is required')
+      ),
+      null
     )
   })
 
