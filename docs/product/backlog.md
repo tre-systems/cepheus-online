@@ -104,14 +104,276 @@ Each wave should make later work simpler, safer, or more testable.
 Work should pause before a later wave if the earlier wave reveals an
 architecture issue that would make the next features harder to reason about.
 
+## Parallel Workstreams
+
+The slices below can run in parallel when ownership stays separated. Each
+stream should keep changes inside its write area, integrate through the shared
+command/event/projection contracts, and avoid taking dependencies on another
+stream's unmerged local work.
+
+### Stream A: Command Spine And Architecture Consolidation
+
+Purpose: make the command path easier to extend without weakening the single
+publication pipeline.
+
+Owns:
+
+- Slice 0B: Publication And Projection Hardening
+- Slice 0C: Protocol Contracts And Validation, for command wire contracts
+- Slice 0H: Architecture Consolidation, for command metadata and handler split
+
+Primary write area:
+
+- `src/server/game-room/command.ts`
+- new server command-handler modules under `src/server/game-room/`
+- `src/server/game-room/publication.ts`
+- `src/client/app/core/command-router.ts`
+- `src/shared/commands.ts`
+- command-focused protocol fixtures and tests
+
+Parallel boundaries:
+
+- Do not change character creation UI rendering in this stream.
+- Do not add new SRD rules branches here unless they are needed to preserve an
+  existing command while splitting handlers.
+- Publish any command metadata shape before other streams depend on it.
+
+Done when:
+
+- Command handling is split by game, board, dice, and character creation
+  domains while `runCommandPublication()` remains the only persistence path.
+- Route/domain, seeded-dice, and stale-sequence policy come from one metadata
+  source instead of repeated command-type lists.
+
+### Stream B: Character Creation Projection And Rules State
+
+Purpose: make the server projection the source of truth for every creation
+gate and visible next action.
+
+Owns:
+
+- Slice 1A: Semantic Commands And Events, for remaining semantic facts
+- Slice 1B: Server Projection And Legal Actions
+- Slice 1D: Homeworld, Background Skills, And Cascade Choices
+- Slice 1E: Career Entry, Draft, And Basic Training
+- Phase 2 rules slices when they add projection-owned gates
+
+Primary write area:
+
+- `src/shared/character-creation/`
+- `src/shared/projection/character-creation.ts`
+- `src/shared/events.ts`
+- character creation command validation helpers
+- projector, rules, and checkpoint-plus-tail tests
+
+Parallel boundaries:
+
+- Do not reshape the rendered wizard DOM directly; expose projection/read-model
+  fields for Stream C to consume.
+- Coordinate with Stream A before adding command metadata requirements.
+- Coordinate with Stream D before adding roll-bearing facts that need reveal
+  metadata or follower cards.
+
+Done when:
+
+- Pending choices, legal actions, roll requirements, remaining term skills,
+  remaining mustering benefits, and completion gates survive refresh from the
+  event stream.
+- Illegal creation commands reject from projected rules state before
+  persistence.
+
+### Stream C: Client Creator UX And App Shell
+
+Purpose: keep the browser client understandable while making character
+creation usable on phone-sized viewports.
+
+Owns:
+
+- Slice 0A: Client Kernel And Command Router, for `app.ts` and local wiring
+- Slice 0F: Automated UX Regression And Creation Client Architecture, for
+  feature shape and renderer architecture
+- Slice 1C: Wizard Usability
+- Slice 2E: Final Sheet And Export, for client presentation and export display
+
+Primary write area:
+
+- `src/client/app/app.ts`
+- `src/client/app/core/`
+- `src/client/app/character/creation/`
+- `src/client/app/character/sheet/`
+- client view-model, renderer, and action tests
+
+Parallel boundaries:
+
+- Consume projection/read-model fields from Stream B instead of duplicating
+  rules gates in the browser.
+- Use command dispatch and metadata from Stream A; do not add direct room API
+  shortcuts from feature modules.
+- Leave reveal redaction policy to Stream D and consume its revealed/pending
+  model.
+
+Done when:
+
+- `app.ts` remains a composition shell and character creation is mounted,
+  refreshed, and disposed through one feature boundary.
+- Step views consume one projection-fed model for phase, legal actions,
+  progress, roll facts, and completion gates.
+
+### Stream D: Viewer Filtering, Dice Reveal, And Live Following
+
+Purpose: ensure connected players see compatible, viewer-safe state and
+roll-dependent details only after the reveal boundary.
+
+Owns:
+
+- Slice 0D: Live Activity And Dice Broadcast Contract
+- Slice 0G: Viewer Filtering And Reveal Timing Contract
+- Slice 2F: Live Following
+- Browser reveal/follow scenarios from Slice 0F
+
+Primary write area:
+
+- `src/shared/viewer.ts`
+- `src/shared/live-activity.ts`
+- `src/shared/protocol.ts`, for viewer-filtered message fixtures
+- `src/client/app/dice/`
+- `src/client/app/activity/`
+- `src/client/app/character/creation/follow.ts`
+- browser/E2E reveal and spectator-follow tests
+
+Parallel boundaries:
+
+- Coordinate with Stream B for any new roll-bearing semantic event fields.
+- Do not alter command validation or publication semantics except where needed
+  to carry filtered live activity through the existing publication response.
+- Do not duplicate reveal timers inside feature views; keep timing on
+  `diceRevealCoordinator`.
+
+Done when:
+
+- HTTP state reads, HTTP command responses, WebSocket broadcasts, live
+  activities, refreshes, and new spectator joins all enforce the same reveal
+  and viewer-filtering contract.
+- Two-tab creator/spectator journeys cover multi-term creation without
+  pre-reveal result leakage.
+
+### Stream E: PWA, Verification, And Release Hygiene
+
+Purpose: keep the deployed Worker, static client, and installed PWA reliable
+without blocking core rules work.
+
+Owns:
+
+- Slice 0E: PWA And Release Hygiene
+- Phase 4 deployment smoke and diagnostics tasks that do not require Discord
+  identity yet
+
+Primary write area:
+
+- `src/client/app/pwa/`
+- `src/client/app/core/connectivity*`
+- `scripts/`
+- `.github/workflows/`
+- `docs/engineering/testing-strategy.md`
+- `docs/engineering/deployment.md`
+
+Parallel boundaries:
+
+- Do not change game protocol or command behavior in this stream.
+- Keep browser tests focused on shell, update, reconnect, and deployment smoke
+  unless coordinating with Stream D.
+
+Done when:
+
+- Installed-PWA update, offline shell, reconnect, and deployed smoke behavior
+  are documented and repeatable.
+
+### Stream F: Tactical Table And Referee Scene Tools
+
+Purpose: expand the board into a practical referee table surface after the
+core command/projection spine stays stable.
+
+Owns:
+
+- Phase 3: Tactical Table And Referee Scene Tools
+- Board and asset parts of Phase 5 when they are independent from character
+  rules
+
+Primary write area:
+
+- `src/shared/mapAssets.ts`
+- `src/client/app/assets/`
+- `src/client/app/board/`
+- board, LOS, door, and local asset tests
+- map asset docs
+
+Parallel boundaries:
+
+- Do not start broad referee prep/admin UI until Streams A-D have stabilized
+  the command, projection, and viewer-filtering contracts.
+- Keep local `Geomorphs/` and `Counters/` as ignored inputs; do not copy
+  licensed assets into git.
+
+Done when:
+
+- Referee setup can create boards, pieces, doors, and LOS sidecars through
+  event-backed flows without weakening viewer filtering.
+
+### Stream G: Security, Discord, And Broader Rules
+
+Purpose: prepare public play and post-character-creation rules without pulling
+focus from the core table loop too early.
+
+Owns:
+
+- Phase 4: Table Security, Discord, And Deployment Confidence, for identity
+  and authorization work
+- Phase 5: Cepheus Rules Breadth
+
+Primary write area:
+
+- `docs/engineering/security-baseline.md`
+- future Discord/session modules
+- future equipment, ledger, notes, combat, and skill-check rules modules
+- security, authorization, and rules tests
+
+Parallel boundaries:
+
+- Discord identity and public authorization should wait until viewer filtering
+  and rate-limit behavior are stable enough to protect real campaign data.
+- CRDT work should wait until notes or handouts prove a concrete collaborative
+  editing need.
+
+Done when:
+
+- Public-room access, Discord identity, equipment/ledger, notes, and broader
+  rules can be added as event-backed features rather than side channels.
+
+### Current Parallel Batch
+
+Start with Streams A-D in parallel, with Stream E running opportunistically:
+
+- Stream A splits command handling and introduces command metadata.
+- Stream B moves legal-action and pending-choice state into projection.
+- Stream C consumes that projection through one creator view model and keeps
+  `app.ts` thin.
+- Stream D hardens reveal timing, viewer filtering, live activity, and two-tab
+  spectator coverage.
+- Stream E can continue PWA/update/smoke work where it does not touch game
+  truth.
+
+Hold Streams F and G until the command/projection/filtering spine is stable
+enough that tactical, Discord, and broader rules work can reuse it instead of
+creating new patterns.
+
 ## Phase 0: Architecture Stabilization
 
 Purpose: make the next feature slices cheaper and safer by tightening the
 client and server seams around the current behavior.
 
 This phase is the priority. Later character creation and tactical work should
-use these seams instead of growing around them. It can run in parallel across
-Agents A, B, C, D, and E.
+use these seams instead of growing around them. Use the parallel workstream map
+above to keep ownership clear when multiple agents work at once.
 
 ### Slice 0A: Client Kernel And Command Router
 
