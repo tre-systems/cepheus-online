@@ -1,3 +1,4 @@
+import type { EventId } from '../ids'
 import type { CharacteristicKey, CharacterSheetPatch } from '../state'
 
 export type CareerCreationStatus =
@@ -16,6 +17,14 @@ export type CareerCreationStatus =
   | 'ACTIVE'
   | 'PLAYABLE'
   | 'DECEASED'
+
+export interface CharacterCreationTimelineEntry {
+  eventId: EventId
+  seq: number
+  createdAt: string
+  eventType: string
+  rollEventId?: EventId
+}
 
 export interface CareerCreationDiceFact {
   expression: '1d6' | '2d6'
@@ -291,6 +300,7 @@ export interface CareerCreationActionProjection {
   pendingDecisions?: readonly CareerCreationPendingDecision[]
   requiredTermSkillCount?: number
   creationComplete?: boolean
+  timeline?: readonly CharacterCreationTimelineEntry[]
   history?: readonly CareerCreationEvent[]
 }
 

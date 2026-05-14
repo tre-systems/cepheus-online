@@ -1,5 +1,8 @@
-import type { GameEvent } from '../events'
-import type { CareerCreationEvent } from './types'
+import type { EventEnvelope, GameEvent } from '../events'
+import type {
+  CareerCreationEvent,
+  CharacterCreationTimelineEntry
+} from './types'
 
 export interface CharacterCreationTimelineContext {
   readonly canEnterDraft?: boolean
@@ -123,5 +126,29 @@ export const deriveCharacterCreationHistoryEvent = (
       return { type: 'COMPLETE_HOMEWORLD' }
     default:
       return null
+  }
+}
+
+const isCharacterCreationTimelineEvent = (
+  event: GameEvent
+): event is Extract<GameEvent, { characterId: unknown }> =>
+  event.type.startsWith('CharacterCreation') ||
+  event.type === 'CharacterCareerTermStarted'
+
+const rollEventIdFor = (event: GameEvent) =>
+  'rollEventId' in event ? event.rollEventId : undefined
+
+export const deriveCharacterCreationTimelineEntry = (
+  envelope: EventEnvelope
+): CharacterCreationTimelineEntry | null => {
+  const event = envelope.event
+  if (!isCharacterCreationTimelineEvent(event)) return null
+
+  return {
+    eventId: envelope.id,
+    seq: envelope.seq,
+    createdAt: envelope.createdAt,
+    eventType: event.type,
+    ...(rollEventIdFor(event) ? { rollEventId: rollEventIdFor(event) } : {})
   }
 }

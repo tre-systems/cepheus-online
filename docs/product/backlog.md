@@ -1298,9 +1298,11 @@ The next batch should run like this, in this order:
    remaining legacy activity fallbacks. Roll-bearing semantic events, including
    characteristic rolls, now point at the dice event that drives reveal timing.
    Semantic creation history mapping is centralized and lifecycle mapping
-   coverage now spans the active SRD semantic event set, but the projected
-   `history` model still stores legacy `CareerCreationEvent` entries for
-   compatibility.
+   coverage now spans the active SRD semantic event set. The projection now
+   also records a redaction-safe semantic `timeline` with event ids, sequence,
+   timestamps, semantic event type, and optional roll correlation, while the
+   legacy `history` model remains for compatibility until the client no longer
+   depends on `CareerCreationEvent` entries.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.

@@ -6,6 +6,7 @@ import type {
   CareerCreationActionPlan,
   CareerCreationPendingDecision,
   CareerCreationState,
+  CharacterCreationTimelineEntry,
   CareerRank,
   CareerTerm
 } from './characterCreation'
@@ -64,6 +65,7 @@ export interface CharacterCreationProjection {
   pendingDecisions?: CareerCreationPendingDecision[]
   requiredTermSkillCount?: number
   actionPlan?: CareerCreationActionPlan
+  timeline?: CharacterCreationTimelineEntry[]
   history?: CareerCreationEvent[]
 }
 

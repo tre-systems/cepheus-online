@@ -2,14 +2,17 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import type { GameEvent } from '../events'
-import { asCharacterId } from '../ids'
+import { asCharacterId, asEventId, asGameId, asUserId } from '../ids'
 import {
   deriveCharacterCreationHistoryEvent,
+  deriveCharacterCreationTimelineEntry,
   type CareerCreationCheckFact,
   type CareerCreationEvent
 } from './index'
 
 const characterId = asCharacterId('char-1')
+const gameId = asGameId('game-1')
+const actorId = asUserId('actor-1')
 
 const state = {
   status: 'SKILLS_TRAINING',
@@ -501,6 +504,62 @@ describe('character creation timeline mapping', () => {
         skills: ['Pilot-1'],
         equipment: [],
         credits: 1200
+      }),
+      null
+    )
+  })
+
+  it('derives a redaction-safe semantic timeline entry from event envelopes', () => {
+    assert.deepEqual(
+      deriveCharacterCreationTimelineEntry({
+        version: 1,
+        id: asEventId('event-1'),
+        gameId,
+        seq: 12,
+        actorId,
+        createdAt: '2026-05-14T10:00:00.000Z',
+        event: {
+          type: 'CharacterCreationCharacteristicRolled',
+          characterId,
+          rollEventId: asEventId('dice-1'),
+          characteristic: 'str',
+          value: 8,
+          characteristicsComplete: false,
+          state: {
+            status: 'CHARACTERISTICS',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          creationComplete: false
+        }
+      }),
+      {
+        eventId: asEventId('event-1'),
+        seq: 12,
+        createdAt: '2026-05-14T10:00:00.000Z',
+        eventType: 'CharacterCreationCharacteristicRolled',
+        rollEventId: asEventId('dice-1')
+      }
+    )
+  })
+
+  it('excludes non-creation events from the semantic timeline', () => {
+    assert.equal(
+      deriveCharacterCreationTimelineEntry({
+        version: 1,
+        id: asEventId('event-2'),
+        gameId,
+        seq: 13,
+        actorId,
+        createdAt: '2026-05-14T10:00:01.000Z',
+        event: {
+          type: 'GameCreated',
+          slug: 'demo-room',
+          name: 'Demo Room',
+          ownerId: actorId
+        }
       }),
       null
     )

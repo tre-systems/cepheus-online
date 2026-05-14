@@ -412,6 +412,78 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 6)
   })
 
+  it('projects semantic character creation timeline entries without roll facts', () => {
+    const characterId = asCharacterId('timeline-character')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Timeline Traveller'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'CHARACTERISTICS',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationCharacteristicRolled',
+        characterId,
+        rollEventId: asEventId('dice-roll-1'),
+        characteristic: 'str',
+        value: 8,
+        characteristicsComplete: false,
+        state: {
+          status: 'CHARACTERISTICS',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    assert.deepEqual(
+      state?.characters[characterId]?.creation?.timeline?.map((entry) => ({
+        eventType: entry.eventType,
+        rollEventId: entry.rollEventId
+      })),
+      [
+        {
+          eventType: 'CharacterCreationStarted',
+          rollEventId: undefined
+        },
+        {
+          eventType: 'CharacterCreationCharacteristicRolled',
+          rollEventId: asEventId('dice-roll-1')
+        }
+      ]
+    )
+  })
+
   it('projects legacy characteristic completion with legacy history', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
