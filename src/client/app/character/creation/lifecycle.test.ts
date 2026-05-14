@@ -251,6 +251,81 @@ describe('character creation lifecycle controller', () => {
     ])
   })
 
+  it('waits for the newest deferred followed refresh before rendering', async () => {
+    const events: string[] = []
+    const revealWaiters = new Map<string, () => void>()
+    const controller = createCharacterCreationLifecycleController({
+      controller: {
+        openFollow: () => flow,
+        refreshFollowed: () => {
+          events.push('refreshFollowed')
+          return true
+        },
+        shouldRefreshEditable: ({ deferredRollCount = 0 } = {}) => {
+          events.push(`shouldRefreshEditable:${deferredRollCount}`)
+          return false
+        }
+      },
+      panel: {
+        open: () => {},
+        scrollToTop: () => {}
+      },
+      closeCharacterSheet: () => {},
+      renderWizard: () => events.push('renderWizard'),
+      waitForDiceReveal: async (roll) => {
+        events.push(`waitForDiceReveal:${roll.id}`)
+        await new Promise<void>((resolve) => {
+          revealWaiters.set(roll.id, resolve)
+        })
+      },
+      reportError: (message) => events.push(`error:${message}`)
+    })
+
+    controller
+      .planStateRefresh({ deferFollowedCreationRolls: [rollActivity] })
+      .renderAfterAppRender()
+    controller
+      .planStateRefresh({
+        deferFollowedCreationRolls: [{ ...rollActivity, id: 'roll-2' }]
+      })
+      .renderAfterAppRender()
+
+    assert.deepEqual(events, [
+      'refreshFollowed',
+      'shouldRefreshEditable:1',
+      'waitForDiceReveal:roll-1',
+      'refreshFollowed',
+      'shouldRefreshEditable:1',
+      'waitForDiceReveal:roll-2'
+    ])
+
+    revealWaiters.get('roll-1')?.()
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+    assert.deepEqual(events, [
+      'refreshFollowed',
+      'shouldRefreshEditable:1',
+      'waitForDiceReveal:roll-1',
+      'refreshFollowed',
+      'shouldRefreshEditable:1',
+      'waitForDiceReveal:roll-2'
+    ])
+
+    revealWaiters.get('roll-2')?.()
+    await new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+    assert.deepEqual(events, [
+      'refreshFollowed',
+      'shouldRefreshEditable:1',
+      'waitForDiceReveal:roll-1',
+      'refreshFollowed',
+      'shouldRefreshEditable:1',
+      'waitForDiceReveal:roll-2',
+      'refreshFollowed',
+      'renderWizard'
+    ])
+  })
+
   it('does not render a stale followed projection after a newer state supersedes it', async () => {
     const events: string[] = []
     let pendingRefreshes = 0
@@ -308,8 +383,7 @@ describe('character creation lifecycle controller', () => {
       'waitForDiceReveal',
       'refreshFollowed:2',
       'shouldRefreshEditable:0',
-      'renderWizard',
-      'refreshFollowed:3'
+      'renderWizard'
     ])
   })
 

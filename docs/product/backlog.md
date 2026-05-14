@@ -380,10 +380,11 @@ Start with Streams A-D in parallel, with Stream E running opportunistically:
 
 Current Character Creation completion focus:
 
-- Build the deterministic two-tab browser journey for a multi-term,
-  multi-career traveller with spectator follow and no early roll reveal.
-- Finish projection-owned pending decisions and final-sheet derivation for
-  mustering, multi-career continuation, anagathics, and finalization.
+- Keep extending deterministic two-tab browser journeys for multi-term and
+  multi-career travellers, especially through finalization, spectator refresh,
+  and no early roll reveal.
+- Finish projection-owned polish for mustering presentation, anagathics
+  provenance, and final-sheet/export details.
 - Polish the creator UX so each step shows one clear next action and the final
   sheet is useful in real play.
 
@@ -1109,14 +1110,15 @@ Done when:
 
 Status: partially done. SRD benefit count, cash/material benefit roll
 modifiers, cash limits, benefit table resolution, semantic mustering benefit
-events, and mustering completion events are covered. Remaining work is
-projection/UI polish for benefit choices, payouts, material item presentation,
-multi-career continuation, and final sheet/export quality.
+events, mustering completion events, and multi-career continuation are covered.
+Remaining work is projection/UI polish for benefit choices, payouts, material
+item presentation, provenance, and final sheet/export quality.
 
 Tasks:
 
 - Persist credits, starting credits, and material benefits.
-- Support continuing into a new career after mustering out when rules allow.
+- Keep continuing into a new career after mustering out covered as new edge
+  cases are added.
 - Keep remaining benefit count in projection so mustering cannot finish early.
 
 Done when:
@@ -1129,14 +1131,11 @@ Done when:
 
 Tasks:
 
-- Finalize only when gates pass: at least one term, legal exit, no outstanding
-  selections, and no unresolved death/mishap branch.
-- Project the final playable sheet from creation state and finalization:
-  characteristics, age, skills, ranks/titles, credits, equipment/material
-  benefits, career history, and notes.
-- Remove the need for manual cleanup after finalization. The canonical sheet is
-  derived server-side from creation events and finalization; the client does not
-  submit trusted final sheet values.
+- Done: finalize only when gates pass; the server derives the final playable
+  sheet from creation state and intent-only finalization rather than trusted
+  client sheet values.
+- Extend final playable sheet coverage for ranks/titles, provenance, material
+  benefits, career history, and notes as those display fields mature.
 - Polish the completed-character UPP display and plain export block as final
   sheet fields mature.
 - Add refresh-loaded room state coverage for any remaining final-sheet fields
@@ -1158,11 +1157,11 @@ Tasks:
   reenlistment, mustering, and finalization.
 - Keep dice reveal timing consistent with tactical dice and avoid exposing
   resolved roll-dependent text before reveal.
-- Add a deterministic two-tab E2E journey where one player creates a two-term,
-  multi-career traveller while a spectator follows from before qualification
-  through finalization. Assert the spectator sees the same projected steps,
-  final terms, and final playable sheet without any pre-reveal roll result
-  leakage.
+- Extend the deterministic two-tab E2E journey so one player creates a
+  two-term, multi-career traveller while a spectator follows from before
+  qualification through finalization. Assert the spectator sees the same
+  projected steps, final terms, and final playable sheet without any pre-reveal
+  roll result leakage.
 - Add a pre-reveal reload/new-join regression for spectators: if a roll is
   still unrevealed, refreshed or newly opened spectator views must keep dice,
   roll-dependent outcome text, projected term skill/benefit details, and

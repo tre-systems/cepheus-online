@@ -36,47 +36,60 @@ export const createCharacterCreationLifecycleController = ({
   renderWizard,
   waitForDiceReveal,
   reportError
-}: CharacterCreationLifecycleControllerDeps): CharacterCreationLifecycleController => ({
-  openFollow: (characterId, { readOnly = true } = {}) => {
-    const flow = controller.openFollow(characterId, { readOnly })
-    if (!flow) return false
+}: CharacterCreationLifecycleControllerDeps): CharacterCreationLifecycleController => {
+  let refreshGeneration = 0
 
-    if (!readOnly) {
-      closeCharacterSheet()
-    }
-    panel.open()
-    renderWizard()
-    panel.scrollToTop()
-    return true
-  },
+  return {
+    openFollow: (characterId, { readOnly = true } = {}) => {
+      const flow = controller.openFollow(characterId, { readOnly })
+      if (!flow) return false
 
-  planStateRefresh: ({ deferFollowedCreationRolls = [] } = {}) => {
-    const shouldRenderFollowedCreation = controller.refreshFollowed()
-    const shouldRenderEditableCreation = controller.shouldRefreshEditable({
-      deferredRollCount: deferFollowedCreationRolls.length
-    })
+      if (!readOnly) {
+        closeCharacterSheet()
+      }
+      panel.open()
+      renderWizard()
+      panel.scrollToTop()
+      return true
+    },
 
-    return {
-      renderAfterAppRender: () => {
-        if (shouldRenderFollowedCreation) {
-          if (deferFollowedCreationRolls.length > 0) {
-            Promise.all(
-              deferFollowedCreationRolls.map((roll) => waitForDiceReveal(roll))
-            )
-              .then(() => {
-                if (controller.refreshFollowed()) {
-                  renderWizard()
-                }
-              })
-              .catch((error) => reportError(error.message))
-          } else {
+    planStateRefresh: ({ deferFollowedCreationRolls = [] } = {}) => {
+      refreshGeneration += 1
+      const plannedGeneration = refreshGeneration
+      const shouldRenderFollowedCreation = controller.refreshFollowed()
+      const shouldRenderEditableCreation = controller.shouldRefreshEditable({
+        deferredRollCount: deferFollowedCreationRolls.length
+      })
+
+      return {
+        renderAfterAppRender: () => {
+          if (shouldRenderFollowedCreation) {
+            if (deferFollowedCreationRolls.length > 0) {
+              Promise.all(
+                deferFollowedCreationRolls.map((roll) =>
+                  waitForDiceReveal(roll)
+                )
+              )
+                .then(() => {
+                  if (plannedGeneration !== refreshGeneration) return
+                  if (controller.refreshFollowed()) {
+                    renderWizard()
+                  }
+                })
+                .catch((error) => {
+                  if (plannedGeneration === refreshGeneration) {
+                    reportError(error.message)
+                  }
+                })
+            } else {
+              renderWizard()
+            }
+          }
+          if (shouldRenderEditableCreation) {
             renderWizard()
           }
-        }
-        if (shouldRenderEditableCreation) {
-          renderWizard()
         }
       }
     }
   }
-})
+}

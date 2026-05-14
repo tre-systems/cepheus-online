@@ -88,8 +88,9 @@ Important remaining gaps:
 - Homeworld, primary education, background skills, cascade choices, term skill
   choices, aging losses, and mustering choices need to become more consistently
   projection-owned and easier to recover after refresh.
-- Multi-term career play, mustering out, multi-career continuation, and
-  final sheet/export need deterministic browser automation and UX polish.
+- Multi-term career play, mustering out, and multi-career continuation have
+  deterministic browser coverage. Remaining work is finalization-through-export
+  coverage, edge cases, and UX polish.
 - Optional mishaps remain unimplemented. Anagathics now has a server-owned
   use/skip decision before aging, but full survival-risk, cost/payment,
   provenance, and UX polish are still open.
@@ -161,12 +162,13 @@ tests before it is considered done.
   exit provenance and UI copy are not fully wired.
 - [~] Muster out using `materialBenefits` and `cashBenefits`, with benefit
   counts, cash limits, rank/Gambling modifiers, and material effects. Benefit
-  roll commands/events exist. Gap: final projected credits/materials,
-  multi-career continuation, and UI/export polish need completion.
+  roll commands/events and multi-career continuation exist. Gap: projected
+  material presentation, provenance, and UI/export polish need completion.
 - [~] Finalize only after at least one legal term or exit, no unresolved pending
   decisions, no unresolved death/mishap branch, and all mustering benefits are
-  resolved. Current legal action: `completeCreation`. Gap: final sheet
-  projection and protocol fixtures still need completion.
+  resolved. Current legal action: `completeCreation`. The command is
+  intent-only and the server derives the final sheet. Gap: completed-character
+  display, export polish, and remaining final-field coverage.
 
 ## Backlog Principles
 
@@ -462,19 +464,13 @@ Goal: turn career history into a valid playable character.
 
 Tasks:
 
-- Persist credits, starting credits, and material benefits.
-- Support continuing into a new career after mustering out when rules allow.
-- Use `ContinueCharacterCreationAfterMustering` as the production command for
+- Continue tightening credits, starting credits, and material benefit display.
+- Keep `ContinueCharacterCreationAfterMustering` as the production command for
   multi-career continuation; keep generic `CONTINUE_CAREER` fenced for replay
   compatibility only.
-- Implement finalization gates:
-  - at least one term
-  - current term complete or character has legally exited
-  - no outstanding selections
-  - not in an unresolved death or mishap branch
-- Project the finalized sheet from creation state, preserving creation history.
-  Final characteristics, age, skills, credits, equipment, and history must be
-  server-derived from creation events and finalization.
+- Done: finalization gates prevent unresolved or illegal completion, and the
+  finalized sheet is server-derived from creation events plus intent-only
+  finalization.
 - Add UPP/export display for completed characters.
 
 Acceptance:
@@ -535,8 +531,8 @@ Acceptance:
 - Add browser smoke tests with deterministic dice inputs for:
   - full one-term path from characteristics through homeworld/background,
     survival, term skills, aging, reenlistment, and mustering
-  - deterministic two-term, multi-career path with a spectator following from
-    before qualification through finalization
+  - extend deterministic two-term, multi-career spectator coverage through
+    finalization and final-sheet recovery
   - failed qualification to Draft
   - one mustering-out and finalization path
   - spectator reveal timing for later term rolls
