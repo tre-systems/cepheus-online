@@ -28,7 +28,8 @@ import {
   resolveDraftCareer,
   resolveAnagathicsUse,
   resolveReenlistment,
-  transitionCareerCreationState
+  transitionCareerCreationState,
+  deriveCareerCreationComplete
 } from '../../shared/characterCreation'
 import type { CareerCreationTermSkillTable } from '../../shared/characterCreation'
 import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
@@ -1972,7 +1973,7 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationCompleted',
           characterId: command.characterId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         },
         {
           type: 'CharacterCreationFinalized',
@@ -2122,7 +2123,7 @@ export const deriveEventsForCommand = (
           value: rolled.value.total,
           characteristicsComplete: complete,
           state: nextState,
-          creationComplete: complete && nextState.status === 'PLAYABLE'
+          creationComplete: complete && deriveCareerCreationComplete(nextState)
         }
       ]
 
@@ -2132,7 +2133,7 @@ export const deriveEventsForCommand = (
           characterId: command.characterId,
           rollEventId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         })
       }
 
@@ -2161,7 +2162,7 @@ export const deriveEventsForCommand = (
           characterId: command.characterId,
           trainingSkills: trainingSkills.value,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2185,7 +2186,7 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationHomeworldCompleted',
           characterId: command.characterId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2249,7 +2250,7 @@ export const deriveEventsForCommand = (
           rollEventId,
           ...resolved.value,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2314,7 +2315,7 @@ export const deriveEventsForCommand = (
           rollEventId,
           ...resolved.value,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2351,7 +2352,7 @@ export const deriveEventsForCommand = (
           characterId: command.characterId,
           acceptedCareer: 'Drifter',
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2417,7 +2418,7 @@ export const deriveEventsForCommand = (
           rollEventId,
           ...resolved.value,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2472,7 +2473,7 @@ export const deriveEventsForCommand = (
           rollEventId,
           ...resolved.value,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2496,7 +2497,7 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationCommissionSkipped',
           characterId: command.characterId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2552,7 +2553,7 @@ export const deriveEventsForCommand = (
           rollEventId,
           ...resolved.value,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2576,7 +2577,7 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationAdvancementSkipped',
           characterId: command.characterId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2629,7 +2630,7 @@ export const deriveEventsForCommand = (
           rollEventId,
           ...resolved,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2686,7 +2687,7 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationMishapResolved',
           characterId: command.characterId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2712,7 +2713,7 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationDeathConfirmed',
           characterId: command.characterId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2804,7 +2805,7 @@ export const deriveEventsForCommand = (
           rollEventId,
           ...resolved.value,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2852,7 +2853,7 @@ export const deriveEventsForCommand = (
           career,
           forced: outcome === 'forced',
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         } satisfies CharacterCreationCareerReenlistedEvent
       ])
     }
@@ -2896,7 +2897,7 @@ export const deriveEventsForCommand = (
           outcome,
           retirement: outcome === 'retire',
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         } satisfies CharacterCreationCareerLeftEvent
       ])
     }
@@ -2953,7 +2954,7 @@ export const deriveEventsForCommand = (
           rollEventId,
           ...resolved.value,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -2977,7 +2978,7 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationSkillsCompleted',
           characterId: command.characterId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -3094,7 +3095,7 @@ export const deriveEventsForCommand = (
           rollEventId,
           ...resolved.value,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -3118,7 +3119,7 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationAfterMusteringContinued',
           characterId: command.characterId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -3142,7 +3143,7 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationMusteringCompleted',
           characterId: command.characterId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -3171,7 +3172,7 @@ export const deriveEventsForCommand = (
           type: 'CharacterCreationCompleted',
           characterId: command.characterId,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }
@@ -3332,7 +3333,7 @@ export const deriveEventsForCommand = (
           career: acceptedCareer,
           drafted: command.drafted ?? false,
           state: nextState,
-          creationComplete: nextState.status === 'PLAYABLE'
+          creationComplete: deriveCareerCreationComplete(nextState)
         }
       ])
     }

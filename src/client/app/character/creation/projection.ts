@@ -2,6 +2,7 @@ import type {
   CareerCreationStatus,
   CareerTerm
 } from '../../../../shared/character-creation/types'
+import { characterCreationStepFromStatus } from '../../../../shared/character-creation/view-state.js'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -18,20 +19,7 @@ import {
 
 export const creationStepFromStatus = (
   status: CareerCreationStatus | string
-): CharacterCreationStep => {
-  switch (status) {
-    case 'CHARACTERISTICS':
-      return 'characteristics'
-    case 'HOMEWORLD':
-      return 'homeworld'
-    case 'BASIC_TRAINING':
-      return 'skills'
-    case 'PLAYABLE':
-      return 'review'
-    default:
-      return 'career'
-  }
-}
+): CharacterCreationStep => characterCreationStepFromStatus(status)
 
 export const completedTermFromProjection = (
   term: CareerTerm

@@ -61,7 +61,19 @@ describe('creation presence dock helpers', () => {
   it('summarizes active in-progress creation without completed characters', () => {
     const active = character('active', {
       state: { status: 'HOMEWORLD', context: creationContext },
-      terms: [{ career: 'Scout' } as never],
+      terms: [
+        {
+          career: 'Scout',
+          skills: [],
+          skillsAndTraining: [],
+          benefits: [],
+          complete: false,
+          canReenlist: false,
+          completedBasicTraining: false,
+          musteringOut: false,
+          anagathics: false
+        }
+      ],
       careers: [],
       canEnterDraft: false,
       failedToQualify: false,
@@ -89,6 +101,7 @@ describe('creation presence dock helpers', () => {
         name: 'active',
         ownerId: asUserId('owner'),
         status: 'HOMEWORLD',
+        statusLabel: 'Homeworld',
         rolledCharacteristics: 2,
         terms: 1
       }

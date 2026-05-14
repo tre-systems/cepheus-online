@@ -1443,6 +1443,21 @@ describe('room publication flow', () => {
       started.value.state.characters[characterId]?.creation?.state.status,
       'CHARACTERISTICS'
     )
+    assert.deepEqual(
+      started.value.state.characters[characterId]?.creation?.actionPlan,
+      {
+        status: 'CHARACTERISTICS',
+        pendingDecisions: [],
+        legalActions: [
+          {
+            key: 'setCharacteristics',
+            status: 'CHARACTERISTICS',
+            commandTypes: ['RollCharacterCreationCharacteristic'],
+            rollRequirement: { key: 'characteristics', dice: '2d6' }
+          }
+        ]
+      }
+    )
 
     const advanced = await publishCharacterCreationCharacteristics(
       storage,

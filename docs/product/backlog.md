@@ -5,7 +5,7 @@ into ordered implementation slices while preserving clear ownership for parallel
 agents. Shipped work belongs in `git log`; this file is for active or future
 work that still needs a named home.
 
-Last reviewed: 2026-05-13.
+Last reviewed: 2026-05-14.
 
 ## North Star
 
@@ -469,6 +469,65 @@ Done when:
 - Roll-bearing creation outcomes cannot appear before reveal in the browser,
   but refresh still reconstructs the authoritative state from projection.
 
+### Slice 0H: Architecture Consolidation
+
+Status: proposed after the 2026-05-14 architecture review. The core direction
+is still fit for purpose: server-ordered commands/events, Durable Object room
+authority, replayable projections, viewer filtering, and a dependency-light
+client address the product's real risks. The maintenance risk is now local
+complexity and repeated pattern knowledge, especially around character
+creation command handling, client routing metadata, and overlapping docs.
+
+Primary write ownership:
+
+- `docs/architecture/overview.md`
+- `docs/architecture/patterns.md`
+- `docs/engineering/coding-standards.md`
+- `docs/engineering/development-standards.md`
+- `docs/product/backlog.md`
+- `src/server/game-room/command.ts`
+- new server command-handler modules under `src/server/game-room/`
+- `src/client/app/core/command-router.ts`
+- `src/shared/character-creation/view-state.ts`
+- character creation command, projection, and client render tests
+
+Tasks:
+
+- Keep the current CQRS/event-sourced architecture. Do not switch direction
+  unless the product goal changes away from real-time, referee-filtered,
+  recoverable tabletop play.
+- Split the large server command switch by domain: game, board, dice, and
+  character creation command handlers. Keep `runCommandPublication()` as the
+  only persistence, projection, checkpoint, parity, telemetry, and response
+  path.
+- Introduce a small shared command metadata registry for stable facts such as
+  command route/domain, seeded-dice requirement, and stale-sequence policy.
+  Use it to remove duplicated command-type lists from publication and the
+  client command router.
+- Finish the character creation read-model consolidation. Step views should
+  consume one projection-fed view model for status, legal actions, pending
+  choices, progress, roll facts, and button state; local UI state should hold
+  only unsubmitted drafts and transient controls.
+- Retire remaining legacy or generic character creation compatibility once
+  replay coverage proves historical streams still project. Long-term creation
+  history should be a semantic timeline derived from semantic events, not a
+  generic transition log.
+- Consolidate architecture documentation ownership. Keep `overview` as system
+  shape, `patterns` as implementation recipes, ADRs as rationale, and this
+  backlog as current work. Remove duplicated CQRS/source-boundary wording from
+  standards docs when it only restates the owner architecture docs.
+
+Done when:
+
+- Command handling is discoverable by domain without bypassing the single
+  publication pipeline.
+- Adding a command updates one metadata table plus the relevant domain handler,
+  not several hand-maintained lists.
+- Character creation rendering is driven by a single projection-derived model
+  instead of step views rediscovering legal state.
+- The active docs have one owner for each architectural pattern and no stale
+  repeated guidance.
+
 ## Phase 1: Server-Backed Character Creation Spine
 
 Purpose: make character creation coherent, recoverable, and server-authoritative
@@ -812,6 +871,15 @@ Tasks:
   reenlistment, mustering, and finalization.
 - Keep dice reveal timing consistent with tactical dice and avoid exposing
   resolved roll-dependent text before reveal.
+- Add a deterministic two-tab E2E journey where one player creates a two-term,
+  multi-career traveller while a spectator follows from before qualification
+  through finalization. Assert the spectator sees the same projected steps,
+  final terms, and final playable sheet without any pre-reveal roll result
+  leakage.
+- Add a pre-reveal reload/new-join regression for spectators: if a roll is
+  still unrevealed, refreshed or newly opened spectator views must keep dice,
+  roll-dependent outcome text, projected term skill/benefit details, and
+  activity details redacted until the reveal boundary.
 - Show follower state after reconnect from projection/history, with transient
   live activity only for events seen in real time.
 - Keep Discord logging as a future consumer of the same semantic events rather
@@ -935,11 +1003,11 @@ The next batch should run like this, in this order:
    the server hard-deprecates the generic command path before persistence while
    preserving historical replay compatibility for old
    `CharacterCreationTransitioned` events.
-2. Continue the architecture cleanup already underway: keep `app.ts` shrinking
-   toward a boot/composition shell, move character creation rendering toward a
-   signal-driven projection-fed model, keep projector domain modules small, and
-   keep publication parity plus viewer-safe responses on the single publication
-   path.
+2. Execute the architecture consolidation slice: split command handling by
+   domain, add command metadata for route and seeded-dice policy, keep `app.ts`
+   shrinking toward a boot/composition shell, move character creation rendering
+   toward one projection-fed model, and keep publication parity plus
+   viewer-safe responses on the single publication path.
 3. Replace creation history with a semantic timeline after retiring the
    remaining legacy activity fallbacks. Roll-bearing semantic events, including
    characteristic rolls, now point at the dice event that drives reveal timing.

@@ -1,11 +1,13 @@
 import type { CharacterId } from '../../../shared/ids'
 import type { CharacterState, GameState } from '../../../shared/state'
+import { deriveCharacterCreationReadModel } from '../../../shared/character-creation/view-state.js'
 
 export interface ActiveCreationSummary {
   id: CharacterId
   name: string
   ownerId: CharacterState['ownerId']
   status: string
+  statusLabel: string
   rolledCharacteristics: number
   terms: number
 }
@@ -33,14 +35,6 @@ export interface CreationPresenceDockOptions {
   autoFollowSingleRemoteCreation?: boolean
 }
 
-const creationStatusText = (status: string | null | undefined): string =>
-  String(status || 'CREATION')
-    .toLowerCase()
-    .split(/[_\s-]+/)
-    .filter(Boolean)
-    .map((word) => word[0].toUpperCase() + word.slice(1))
-    .join(' ')
-
 export const activeCreationSummaries = (
   state: GameState | null,
   dismissedCreationPresenceIds: ReadonlySet<string>
@@ -49,27 +43,19 @@ export const activeCreationSummaries = (
 
   const summaries: ActiveCreationSummary[] = []
   for (const character of Object.values(state.characters)) {
-    const creation = character.creation
-    if (
-      !creation ||
-      creation.creationComplete ||
-      creation.state.status === 'PLAYABLE' ||
-      dismissedCreationPresenceIds.has(character.id)
-    ) {
+    const creation = deriveCharacterCreationReadModel(character)
+    if (!creation?.isActive || dismissedCreationPresenceIds.has(character.id)) {
       continue
     }
 
-    const rolledCharacteristics = Object.values(
-      character.characteristics
-    ).filter((value) => value !== null).length
-
     summaries.push({
-      id: character.id,
-      name: character.name || 'Traveller',
-      ownerId: character.ownerId,
-      status: creation.state.status,
-      rolledCharacteristics,
-      terms: creation.terms.length
+      id: creation.characterId,
+      name: creation.name,
+      ownerId: creation.ownerId,
+      status: creation.status,
+      statusLabel: creation.statusLabel,
+      rolledCharacteristics: creation.rolledCharacteristicCount,
+      terms: creation.termCount
     })
   }
 
@@ -187,7 +173,7 @@ export const createCreationPresenceDock = ({
         name.textContent = summary.name
 
         const detail = document.createElement('span')
-        detail.textContent = `${creationStatusText(summary.status)} · ${summary.rolledCharacteristics}/6 stats · ${summary.terms} terms`
+        detail.textContent = `${summary.statusLabel} · ${summary.rolledCharacteristics}/6 stats · ${summary.terms} terms`
 
         const owner = document.createElement('small')
         owner.textContent = summary.ownerId

@@ -209,9 +209,8 @@ export const createCharacterCreationRenderController = ({
       return fragment
     }
     if (flow.step === 'career') {
-      const death = renderCharacterCreationDeath(flow)
-      if (death) {
-        fragment.append(death)
+      if (viewModel.wizard?.death) {
+        fragment.append(renderCharacterCreationDeath(viewModel.wizard.death))
         return fragment
       }
       const careerRollButton = viewModel.wizard?.careerRoll
@@ -293,9 +292,11 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationDeath = (
-    flow: CharacterCreationFlow
-  ): HTMLElement | null => {
-    return renderCharacterCreationDeathView(document, flow, {
+    viewModel: NonNullable<
+      NonNullable<CharacterCreationViewModel['wizard']>['death']
+    >
+  ): HTMLElement => {
+    return renderCharacterCreationDeathView(document, viewModel, {
       readOnly: controller.readOnly,
       startNewCharacter: wizard.startNew,
       reportError

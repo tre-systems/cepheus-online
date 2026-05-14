@@ -159,6 +159,10 @@ export const transitionCareerCreationState = (
   return transitionStatus(state, event) ?? state
 }
 
+export const deriveCareerCreationComplete = (
+  state: CareerCreationState
+): boolean => state.status === 'PLAYABLE'
+
 export const canTransitionCareerCreationState = (
   state: CareerCreationState,
   event: CareerCreationEvent

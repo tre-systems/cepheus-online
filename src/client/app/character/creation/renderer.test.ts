@@ -11,7 +11,10 @@ import {
   renderCharacterCreationNextStep,
   type CharacterCreationRendererDocument
 } from './renderer'
-import { deriveCharacterCreationNextStepViewModel } from './view'
+import {
+  deriveCharacterCreationDeathViewModel,
+  deriveCharacterCreationNextStepViewModel
+} from './view'
 import { asNode, testDocument, type TestNode } from '../../core/test-dom.helper'
 
 const document = testDocument as unknown as CharacterCreationRendererDocument
@@ -220,7 +223,9 @@ describe('character creation renderer', () => {
 
   it('renders death restart controls when editable', async () => {
     const events: string[] = []
-    const element = renderCharacterCreationDeath(document, deathFlow(), {
+    const viewModel = deriveCharacterCreationDeathViewModel(deathFlow())
+    if (!viewModel) throw new Error('Expected death view model')
+    const element = renderCharacterCreationDeath(document, viewModel, {
       readOnly: () => false,
       startNewCharacter: async () => {
         events.push('restart')

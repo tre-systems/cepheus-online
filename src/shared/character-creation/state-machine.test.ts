@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import {
   CAREER_CREATION_STATUSES,
   createCareerCreationState,
+  deriveCareerCreationComplete,
   transitionCareerCreationState
 } from './state-machine'
 import { resolveSurvivalFailureOutcome } from './survival-failure'
@@ -293,6 +294,16 @@ describe('career creation state machine transition matrix', () => {
         ),
         createCareerCreationState('CHARACTERISTICS'),
         `${status} should reset to a fresh characteristics state`
+      )
+    }
+  })
+
+  it('derives completion only from the playable state', () => {
+    for (const status of CAREER_CREATION_STATUSES) {
+      assert.equal(
+        deriveCareerCreationComplete(createCareerCreationState(status)),
+        status === 'PLAYABLE',
+        `${status} should have the expected completion flag`
       )
     }
   })

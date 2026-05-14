@@ -1,8 +1,11 @@
 import type { CharacterId } from '../../../../shared/ids'
+import {
+  deriveCharacterCreationProjectionReadModel,
+  type CharacterCreationProjectionReadModel
+} from '../../../../shared/character-creation/view-state.js'
 import type { CharacterCreationProjection } from '../../../../shared/state'
 import type { CharacterCreationActionPlan } from './actions.js'
 import type { CharacterCreationFlow, CharacterCreationStep } from './flow.js'
-import { creationStepFromStatus } from './projection.js'
 import {
   deriveCharacterCreationButtonStates,
   deriveCharacterCreationCareerRollButton,
@@ -13,6 +16,7 @@ import {
   deriveCharacterCreationAnagathicsDecisionViewModel,
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationMusteringOutViewModel,
+  deriveCharacterCreationDeathViewModel,
   deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationReenlistmentRollViewModel,
   deriveCharacterCreationReviewSummary,
@@ -29,6 +33,7 @@ import {
   type CharacterCreationCareerRollButton,
   type CharacterCreationCareerSelectionViewModel,
   type CharacterCreationCharacteristicGridViewModel,
+  type CharacterCreationDeathViewModel,
   type CharacterCreationHomeworldViewModel,
   type CharacterCreationMusteringOutViewModel,
   type CharacterCreationNextStepViewModel,
@@ -83,6 +88,7 @@ export interface CharacterCreationWizardViewModel {
   termResolution: CharacterCreationTermResolutionViewModel | null
   termSkills: CharacterCreationTermSkillTrainingViewModel | null
   musteringOut: CharacterCreationMusteringOutViewModel | null
+  death: CharacterCreationDeathViewModel | null
   termHistory: CharacterCreationTermHistoryViewModel | null
   review: CharacterCreationReviewSummary | null
   characteristics: CharacterCreationCharacteristicGridViewModel | null
@@ -97,6 +103,7 @@ export interface CharacterCreationViewModel {
   readOnly: boolean
   controlsDisabled: boolean
   projection: CharacterCreationProjectionViewModel
+  projectionReadModel: CharacterCreationProjectionReadModel | null
   pending: CharacterCreationPendingViewModel
   wizard: CharacterCreationWizardViewModel | null
   actionPlan: CharacterCreationActionPlan | null
@@ -111,16 +118,38 @@ export interface DeriveCharacterCreationViewModelOptions {
 
 const projectionViewModel = (
   projection: CharacterCreationProjection | null
-): CharacterCreationProjectionViewModel => ({
-  present: projection !== null,
-  status: projection?.state.status ?? null,
-  step: projection ? creationStepFromStatus(projection.state.status) : null,
-  creationComplete: projection?.creationComplete ?? false,
-  completedTermCount:
-    projection?.terms.filter((term) => term.complete || term.musteringOut)
-      .length ?? 0,
-  historyCount: projection?.history?.length ?? 0
-})
+): {
+  summary: CharacterCreationProjectionViewModel
+  readModel: CharacterCreationProjectionReadModel | null
+} => {
+  if (!projection) {
+    return {
+      summary: {
+        present: false,
+        status: null,
+        step: null,
+        creationComplete: false,
+        completedTermCount: 0,
+        historyCount: 0
+      },
+      readModel: null
+    }
+  }
+
+  const readModel = deriveCharacterCreationProjectionReadModel(projection)
+
+  return {
+    summary: {
+      present: true,
+      status: readModel.status,
+      step: readModel.step,
+      creationComplete: readModel.creationComplete,
+      completedTermCount: readModel.completedTermCount,
+      historyCount: readModel.historyCount
+    },
+    readModel
+  }
+}
 
 const pendingSummary = ({
   backgroundCascadeSkills,
@@ -223,6 +252,7 @@ const wizardViewModel = ({
       flow.step === 'equipment'
         ? deriveCharacterCreationMusteringOutViewModel(flow)
         : null,
+    death: deriveCharacterCreationDeathViewModel(flow),
     termHistory: deriveCharacterCreationTermHistoryViewModel(flow),
     review:
       flow.step === 'review'
@@ -243,7 +273,11 @@ export const deriveCharacterCreationViewModel = ({
   actionPlan = null
 }: DeriveCharacterCreationViewModelOptions): CharacterCreationViewModel => {
   const projected = projectionViewModel(projection)
-  const wizard = wizardViewModel({ flow, projection: projected, readOnly })
+  const wizard = wizardViewModel({
+    flow,
+    projection: projected.summary,
+    readOnly
+  })
 
   return {
     mode: !flow ? 'empty' : readOnly ? 'read-only' : 'editable',
@@ -252,7 +286,8 @@ export const deriveCharacterCreationViewModel = ({
     flow,
     readOnly,
     controlsDisabled: readOnly,
-    projection: projected,
+    projection: projected.summary,
+    projectionReadModel: projected.readModel,
     pending: pendingViewModel(flow, projection),
     wizard,
     actionPlan

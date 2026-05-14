@@ -550,28 +550,36 @@ const deriveActions = (
   character: CharacterState,
   creation: CharacterCreationProjection
 ): CharacterCreationActionViewModel[] => {
+  const legalKeys = new Set(
+    creation.actionPlan?.legalActions.map((availableAction) => {
+      return availableAction.key
+    }) ??
+      deriveLegalCareerCreationActionKeys(
+        creation.state,
+        deriveCareerCreationActionContext(creation)
+      )
+  )
+
   const termSkillRollActions = deriveTermSkillRollActions(
     identity,
     character,
     creation
   )
-  if (termSkillRollActions.length > 0) return termSkillRollActions
+  if (legalKeys.has('completeSkills') && termSkillRollActions.length > 0) {
+    return termSkillRollActions
+  }
 
   const musteringBenefitRollActions = deriveMusteringBenefitRollActions(
     identity,
     character,
     creation
   )
-  if (musteringBenefitRollActions.length > 0) {
+  if (
+    legalKeys.has('resolveMusteringBenefit') &&
+    musteringBenefitRollActions.length > 0
+  ) {
     return musteringBenefitRollActions
   }
-
-  const legalKeys = new Set(
-    deriveLegalCareerCreationActionKeys(
-      creation.state,
-      deriveCareerCreationActionContext(creation)
-    )
-  )
 
   return actionKeyOrder
     .filter((key) => legalKeys.has(key))

@@ -593,6 +593,24 @@ describe('character creation actions', () => {
     assert.deepEqual(plan?.actions, [])
   })
 
+  it('uses projected legal actions when the server projection supplies them', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('SURVIVAL', {
+          actionPlan: {
+            status: 'SURVIVAL',
+            pendingDecisions: [{ key: 'survivalResolution' }],
+            legalActions: []
+          }
+        })
+      )
+    )
+
+    assert.equal(plan?.status, 'Survival')
+    assert.deepEqual(plan?.actions, [])
+  })
+
   it('uses semantic commands for projected mustering benefit rolls', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,

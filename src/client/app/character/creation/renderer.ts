@@ -8,7 +8,7 @@ import { renderCharacterCreationCascadeChoice as renderCharacterCreationCascadeC
 import {
   deriveCharacterCreationBasicTrainingButton,
   deriveCharacterCreationCharacteristicRollButton,
-  deriveCharacterCreationDeathViewModel,
+  type CharacterCreationDeathViewModel,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationSkillStrip,
   type CharacterCreationMusteringOutViewModel,
@@ -139,16 +139,13 @@ export const renderCharacterCreationNextStep = (
 
 export const renderCharacterCreationDeath = (
   document: CharacterCreationRendererDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationDeathViewModel,
   {
     readOnly,
     startNewCharacter,
     reportError
   }: CharacterCreationDeathRendererDeps
-): HTMLElement | null => {
-  const viewModel = deriveCharacterCreationDeathViewModel(flow)
-  if (!viewModel) return null
-
+): HTMLElement => {
   const panel = document.createElement('section')
   panel.className = 'creation-death-card'
   const eyebrow = document.createElement('span')
