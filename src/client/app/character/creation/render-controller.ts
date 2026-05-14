@@ -34,6 +34,7 @@ import type {
   CharacterCreationAgingChoicesViewModel,
   CharacterCreationAgingRollViewModel,
   CharacterCreationAnagathicsDecisionViewModel,
+  CharacterCreationBasicTrainingButton,
   CharacterCreationCareerRollButton,
   CharacterCreationCareerSelectionViewModel,
   CharacterCreationCharacteristicGridViewModel,
@@ -283,7 +284,12 @@ export const createCharacterCreationRenderController = ({
         renderCharacteristicRollButton:
           renderCharacterCreationCharacteristicRollButton,
         renderCareerRollButton: renderCharacterCreationCareerRollButtonFromFlow,
-        renderBasicTrainingButton: renderCharacterCreationBasicTrainingButton,
+        renderBasicTrainingButton: () =>
+          viewModel.wizard?.basicTraining
+            ? renderCharacterCreationBasicTrainingButton(
+                viewModel.wizard.basicTraining
+              )
+            : null,
         musteringOut: viewModel.wizard?.musteringOut ?? null,
         renderMusteringOut: renderCharacterCreationMusteringOut
       })
@@ -534,13 +540,13 @@ export const createCharacterCreationRenderController = ({
   }
 
   const renderCharacterCreationBasicTrainingButton = (
-    flow: CharacterCreationFlow
+    viewModel: CharacterCreationBasicTrainingButton
   ): HTMLElement | null => {
-    return renderCharacterCreationBasicTrainingButtonView(document, flow, {
+    return renderCharacterCreationBasicTrainingButtonView(document, viewModel, {
       hasFlow: () => Boolean(controller.flow()),
       syncFields: wizard.syncFields,
-      completeBasicTraining: () =>
-        getCommandController().completeBasicTraining(),
+      completeBasicTraining: (skill) =>
+        getCommandController().completeBasicTraining(skill),
       reportError
     })
   }

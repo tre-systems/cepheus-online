@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import type { Command } from '../../../shared/commands'
+import { commandMetadataByType } from '../../../shared/command-metadata'
 import {
   asBoardId,
   asCharacterId,
@@ -228,6 +229,10 @@ describe('app command router dispatch', () => {
   })
 
   it('routes every command type through the shared route registry', () => {
+    assert.equal('AdvanceCharacterCreation' in commandMetadataByType, false)
+    assert.equal(commandMetadataByType.CreateGame.autoAddExpectedSeq, false)
+    assert.equal(commandMetadataByType.MovePiece.autoAddExpectedSeq, true)
+    assert.equal(commandMetadataByType.RollDice.usesSeededDice, true)
     assert.deepEqual(appCommandRouteByType, {
       CreateGame: 'game',
       CreateCharacter: 'characterCreation',

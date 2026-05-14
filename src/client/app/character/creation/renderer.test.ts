@@ -12,6 +12,7 @@ import {
   type CharacterCreationRendererDocument
 } from './renderer'
 import {
+  deriveCharacterCreationBasicTrainingButton,
   deriveCharacterCreationDeathViewModel,
   deriveCharacterCreationNextStepViewModel
 } from './view'
@@ -295,9 +296,13 @@ describe('character creation renderer', () => {
     assert.equal(characteristic.children[0]?.textContent, 'Roll Str')
     characteristic.children[0]?.click()
 
+    const basicTraining = deriveCharacterCreationBasicTrainingButton(
+      basicTrainingFlow()
+    )
+    if (!basicTraining) throw new Error('Expected basic training view model')
     const trainingElement = renderCharacterCreationBasicTrainingButton(
       document,
-      basicTrainingFlow(),
+      basicTraining,
       {
         hasFlow: () => true,
         syncFields: () => events.push('sync'),

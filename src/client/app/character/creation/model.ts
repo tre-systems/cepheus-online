@@ -14,6 +14,7 @@ import {
   deriveCharacterCreationAgingChoicesViewModel,
   deriveCharacterCreationAgingRollViewModel,
   deriveCharacterCreationAnagathicsDecisionViewModel,
+  deriveCharacterCreationBasicTrainingButton,
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationMusteringOutViewModel,
   deriveCharacterCreationDeathViewModel,
@@ -29,6 +30,7 @@ import {
   type CharacterCreationAgingChoicesViewModel,
   type CharacterCreationAgingRollViewModel,
   type CharacterCreationAnagathicsDecisionViewModel,
+  type CharacterCreationBasicTrainingButton,
   type CharacterCreationButtonStates,
   type CharacterCreationCareerRollButton,
   type CharacterCreationCareerSelectionViewModel,
@@ -87,6 +89,7 @@ export interface CharacterCreationWizardViewModel {
   termCascadeChoices: CharacterCreationTermCascadeChoicesViewModel | null
   termResolution: CharacterCreationTermResolutionViewModel | null
   termSkills: CharacterCreationTermSkillTrainingViewModel | null
+  basicTraining: CharacterCreationBasicTrainingButton | null
   musteringOut: CharacterCreationMusteringOutViewModel | null
   death: CharacterCreationDeathViewModel | null
   termHistory: CharacterCreationTermHistoryViewModel | null
@@ -248,6 +251,7 @@ const wizardViewModel = ({
       deriveCharacterCreationTermCascadeChoicesViewModel(flow),
     termResolution: deriveCharacterCreationTermResolutionViewModel(flow),
     termSkills: deriveCharacterCreationTermSkillTrainingViewModel(flow),
+    basicTraining: deriveCharacterCreationBasicTrainingButton(flow),
     musteringOut:
       flow.step === 'equipment'
         ? deriveCharacterCreationMusteringOutViewModel(flow)

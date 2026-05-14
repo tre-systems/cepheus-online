@@ -1,5 +1,9 @@
 import type { GameId } from '../../shared/ids'
 import {
+  isDeprecatedGameCommand,
+  metadataForCommand
+} from '../../shared/command-metadata'
+import {
   deriveLiveActivities,
   type LiveActivityDescriptor
 } from '../../shared/live-activity'
@@ -94,17 +98,8 @@ export const runCommandPublication = async (
   const currentSeq =
     currentState?.eventSeq ?? (await getEventSeq(storage, gameId))
   const usesSeededDice =
-    message.command.type === 'RollDice' ||
-    message.command.type === 'ResolveCharacterCreationQualification' ||
-    message.command.type === 'ResolveCharacterCreationDraft' ||
-    message.command.type === 'ResolveCharacterCreationSurvival' ||
-    message.command.type === 'ResolveCharacterCreationCommission' ||
-    message.command.type === 'ResolveCharacterCreationAdvancement' ||
-    message.command.type === 'ResolveCharacterCreationAging' ||
-    message.command.type === 'ResolveCharacterCreationReenlistment' ||
-    message.command.type === 'RollCharacterCreationTermSkill' ||
-    message.command.type === 'RollCharacterCreationMusteringBenefit' ||
-    message.command.type === 'RollCharacterCreationCharacteristic'
+    !isDeprecatedGameCommand(message.command) &&
+    metadataForCommand(message.command).usesSeededDice
   const gameSeed =
     usesSeededDice && currentState
       ? await getOrCreateGameSeed(storage, gameId)

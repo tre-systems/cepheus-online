@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
+import { commandMetadataByType } from '../../shared/command-metadata'
 import type { Command, GameCommand } from '../../shared/commands'
 import {
   asBoardId,
@@ -415,6 +416,28 @@ const publishPlayableCharacterCreation = async (
 }
 
 describe('room publication flow', () => {
+  it('takes seeded dice command policy from shared command metadata', () => {
+    assert.deepEqual(
+      Object.entries(commandMetadataByType)
+        .filter(([, metadata]) => metadata.usesSeededDice)
+        .map(([type]) => type)
+        .sort(),
+      [
+        'ResolveCharacterCreationAdvancement',
+        'ResolveCharacterCreationAging',
+        'ResolveCharacterCreationCommission',
+        'ResolveCharacterCreationDraft',
+        'ResolveCharacterCreationQualification',
+        'ResolveCharacterCreationReenlistment',
+        'ResolveCharacterCreationSurvival',
+        'RollCharacterCreationCharacteristic',
+        'RollCharacterCreationMusteringBenefit',
+        'RollCharacterCreationTermSkill',
+        'RollDice'
+      ].sort()
+    )
+  })
+
   it('returns one state-bearing publication for accepted commands', async () => {
     const storage = createMemoryStorage()
 

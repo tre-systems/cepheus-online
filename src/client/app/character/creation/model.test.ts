@@ -339,6 +339,56 @@ describe('character creation view model', () => {
     )
   })
 
+  it('includes basic training state for the skills step', () => {
+    const currentFlow = {
+      step: 'skills' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        careerPlan: {
+          ...selectCharacterCreationCareerPlan('Scout'),
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 9,
+          survivalPassed: true,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: false,
+          canAdvance: false,
+          drafted: false
+        }
+      })
+    }
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('SKILLS_TRAINING'),
+      readOnly: false
+    })
+
+    assert.equal(
+      viewModel.wizard?.basicTraining?.label,
+      'Apply basic training'
+    )
+    assert.deepEqual(viewModel.wizard?.basicTraining?.skills, [
+      'Comms-0',
+      'Electronics-0',
+      'Gun Combat-0',
+      'Gunnery-0',
+      'Recon-0',
+      'Piloting-0'
+    ])
+  })
+
   it('includes aging and reenlistment prompt state for career terms', () => {
     const reenlistment = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow(),

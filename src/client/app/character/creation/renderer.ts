@@ -6,8 +6,8 @@ import { characterCreationCareerNames } from './flow.js'
 import { bindAsyncActionButton } from '../../core/async-button.js'
 import { renderCharacterCreationCascadeChoice as renderCharacterCreationCascadeChoiceView } from './views/homeworld.js'
 import {
-  deriveCharacterCreationBasicTrainingButton,
   deriveCharacterCreationCharacteristicRollButton,
+  type CharacterCreationBasicTrainingButton,
   type CharacterCreationDeathViewModel,
   deriveCharacterCreationFieldViewModels,
   deriveCharacterCreationSkillStrip,
@@ -62,7 +62,7 @@ export interface CharacterCreationDraftFieldsRendererDeps {
     flow: CharacterCreationFlow
   ) => HTMLElement | null
   renderCareerRollButton: (flow: CharacterCreationFlow) => HTMLElement | null
-  renderBasicTrainingButton: (flow: CharacterCreationFlow) => HTMLElement | null
+  renderBasicTrainingButton: () => HTMLElement | null
   musteringOut: CharacterCreationMusteringOutViewModel | null
   renderMusteringOut: (
     viewModel: CharacterCreationMusteringOutViewModel
@@ -202,7 +202,7 @@ export const renderCharacterCreationCharacteristicRollButton = (
 
 export const renderCharacterCreationBasicTrainingButton = (
   document: CharacterCreationRendererDocument,
-  flow: CharacterCreationFlow,
+  viewModel: CharacterCreationBasicTrainingButton,
   {
     hasFlow,
     syncFields,
@@ -210,9 +210,6 @@ export const renderCharacterCreationBasicTrainingButton = (
     reportError
   }: CharacterCreationBasicTrainingRendererDeps
 ): HTMLElement | null => {
-  const viewModel = deriveCharacterCreationBasicTrainingButton(flow)
-  if (!viewModel) return null
-
   const wrapper = document.createElement('div')
   wrapper.className = 'character-creation-roll-action'
   const bindTrainingButton = (button: HTMLButtonElement, skill?: string) => {
@@ -278,7 +275,7 @@ export const renderCharacterCreationDraftFields = (
 
   const careerRollButton = renderCareerRollButton(flow)
   const characteristicRollButton = renderCharacteristicRollButton(flow)
-  const basicTrainingButton = renderBasicTrainingButton(flow)
+  const basicTrainingButton = renderBasicTrainingButton()
   if (characteristicRollButton) fragment.append(characteristicRollButton)
   if (careerRollButton) fragment.append(careerRollButton)
   if (basicTrainingButton) fragment.append(basicTrainingButton)

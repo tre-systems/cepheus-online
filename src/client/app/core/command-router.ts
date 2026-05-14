@@ -1,4 +1,11 @@
 import type { Command, GameCommand } from '../../../shared/commands'
+import {
+  commandMetadataByType,
+  isDeprecatedGameCommand,
+  metadataForCommand,
+  type CommandRoute,
+  type NonDeprecatedGameCommandType
+} from '../../../shared/command-metadata'
 
 export type BoardCommand = Extract<
   Command,
@@ -69,64 +76,14 @@ export type CharacterCreationCommand = Extract<
   }
 >
 
-export type AppCommandRoute =
-  | 'game'
-  | 'board'
-  | 'dice'
-  | 'door'
-  | 'sheet'
-  | 'characterCreation'
+export type AppCommandRoute = CommandRoute
 
-type RoutedCommandType = Exclude<
-  GameCommand['type'],
-  'AdvanceCharacterCreation'
->
-
-export const appCommandRouteByType = {
-  CreateGame: 'game',
-  CreateCharacter: 'characterCreation',
-  UpdateCharacterSheet: 'sheet',
-  StartCharacterCreation: 'characterCreation',
-  SetCharacterCreationHomeworld: 'characterCreation',
-  SelectCharacterCreationBackgroundSkill: 'characterCreation',
-  ResolveCharacterCreationCascadeSkill: 'characterCreation',
-  FinalizeCharacterCreation: 'characterCreation',
-  StartCharacterCareerTerm: 'characterCreation',
-  CompleteCharacterCreationHomeworld: 'characterCreation',
-  ResolveCharacterCreationQualification: 'characterCreation',
-  ResolveCharacterCreationDraft: 'characterCreation',
-  EnterCharacterCreationDrifter: 'characterCreation',
-  CompleteCharacterCreationBasicTraining: 'characterCreation',
-  ResolveCharacterCreationSurvival: 'characterCreation',
-  ResolveCharacterCreationMishap: 'characterCreation',
-  ConfirmCharacterCreationDeath: 'characterCreation',
-  ResolveCharacterCreationCommission: 'characterCreation',
-  SkipCharacterCreationCommission: 'characterCreation',
-  ResolveCharacterCreationAdvancement: 'characterCreation',
-  SkipCharacterCreationAdvancement: 'characterCreation',
-  ResolveCharacterCreationAging: 'characterCreation',
-  ResolveCharacterCreationAgingLosses: 'characterCreation',
-  DecideCharacterCreationAnagathics: 'characterCreation',
-  ResolveCharacterCreationReenlistment: 'characterCreation',
-  ReenlistCharacterCreationCareer: 'characterCreation',
-  LeaveCharacterCreationCareer: 'characterCreation',
-  RollCharacterCreationCharacteristic: 'characterCreation',
-  RollCharacterCreationTermSkill: 'characterCreation',
-  CompleteCharacterCreationSkills: 'characterCreation',
-  ResolveCharacterCreationTermCascadeSkill: 'characterCreation',
-  RollCharacterCreationMusteringBenefit: 'characterCreation',
-  ContinueCharacterCreationAfterMustering: 'characterCreation',
-  CompleteCharacterCreationMustering: 'characterCreation',
-  CompleteCharacterCreation: 'characterCreation',
-  CreateBoard: 'board',
-  SelectBoard: 'board',
-  SetDoorOpen: 'door',
-  CreatePiece: 'board',
-  MovePiece: 'board',
-  SetPieceVisibility: 'board',
-  SetPieceFreedom: 'board',
-  RollDice: 'dice'
-} satisfies Record<RoutedCommandType, AppCommandRoute>
+export const appCommandRouteByType = Object.fromEntries(
+  Object.entries(commandMetadataByType).map(([type, metadata]) => [
+    type,
+    metadata.route
+  ])
+) as Record<NonDeprecatedGameCommandType, AppCommandRoute>
 
 export interface AppCommandSubmitInput {
   requestId: string
@@ -183,8 +140,12 @@ export interface AppCommandRouter<TResult = unknown>
 const defaultRequestId = (command: GameCommand, index: number): string =>
   `${command.type}-${index + 1}`
 
-const shouldAddExpectedSeq = (command: GameCommand): boolean =>
-  command.type !== 'CreateGame' && command.expectedSeq === undefined
+const shouldAddExpectedSeq = (command: GameCommand): boolean => {
+  if (command.expectedSeq !== undefined) return false
+  if (isDeprecatedGameCommand(command)) return true
+
+  return metadataForCommand(command).autoAddExpectedSeq
+}
 
 export const sequenceCommand = (
   command: GameCommand,
@@ -257,9 +218,9 @@ export const createAppCommandRouter = <TResult = unknown>({
     sequenceCommand: (command, offset = 0) =>
       sequenceCommand(command, getEventSeq(), offset),
     routeFor: (command) =>
-      command.type === 'AdvanceCharacterCreation'
+      isDeprecatedGameCommand(command)
         ? 'characterCreation'
-        : appCommandRouteByType[command.type],
+        : metadataForCommand(command).route,
     ...domainRouter<GameCommand>(),
     board: domainRouter<BoardCommand>(),
     dice: domainRouter<DiceCommand>(),
