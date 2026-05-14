@@ -985,10 +985,18 @@ describe('character creation setup command handlers', () => {
       },
       context(
         createCreation('AGING', {
-          terms: [activeScoutTerm()],
-          history: [
-            { type: 'DECIDE_ANAGATHICS', useAnagathics: false, termIndex: 0 }
-          ]
+          terms: [
+            {
+              ...activeScoutTerm(),
+              facts: {
+                anagathicsDecision: {
+                  useAnagathics: false,
+                  termIndex: 0
+                }
+              }
+            }
+          ],
+          history: []
         })
       )
     )

@@ -1,7 +1,10 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { CareerCreationEvent } from '../../../../shared/character-creation/types'
+import type {
+  CareerCreationEvent,
+  CareerTerm
+} from '../../../../shared/character-creation/types'
 import { asCharacterId, asUserId } from '../../../../shared/ids'
 import type {
   CharacterCreationProjection,
@@ -18,6 +21,104 @@ import {
 } from './projection'
 
 const characterId = asCharacterId('character-1')
+
+const factsFromHistory = (
+  history: readonly CareerCreationEvent[]
+): CareerTerm['facts'] => {
+  const facts: NonNullable<CareerTerm['facts']> = {}
+
+  for (const event of history) {
+    switch (event.type) {
+      case 'SELECT_CAREER':
+        if (event.qualification) {
+          facts.qualification = {
+            career: 'Scout',
+            passed: event.qualification.success,
+            qualification: event.qualification,
+            previousCareerCount: 0,
+            failedQualificationOptions: event.failedQualificationOptions ?? []
+          }
+        }
+        break
+      case 'SURVIVAL_PASSED':
+        if (event.survival) {
+          facts.survival = {
+            passed: true,
+            survival: event.survival,
+            canCommission: event.canCommission,
+            canAdvance: event.canAdvance
+          }
+        }
+        break
+      case 'SURVIVAL_FAILED':
+        if (event.survival) {
+          facts.survival = {
+            passed: false,
+            survival: event.survival,
+            canCommission: false,
+            canAdvance: false
+          }
+        }
+        break
+      case 'COMPLETE_COMMISSION':
+        if (event.commission) {
+          facts.commission = {
+            skipped: false,
+            passed: event.commission.success,
+            commission: event.commission
+          }
+        }
+        break
+      case 'SKIP_COMMISSION':
+        facts.commission = { skipped: true }
+        break
+      case 'COMPLETE_ADVANCEMENT':
+        if (event.advancement) {
+          facts.advancement = {
+            skipped: false,
+            passed: event.advancement.success,
+            advancement: event.advancement,
+            rank: event.rank ?? null
+          }
+        }
+        break
+      case 'SKIP_ADVANCEMENT':
+        facts.advancement = { skipped: true }
+        break
+      case 'ROLL_TERM_SKILL':
+        facts.termSkillRolls = [
+          ...(facts.termSkillRolls ?? []),
+          event.termSkill
+        ]
+        break
+      case 'COMPLETE_AGING':
+        if (event.aging) facts.aging = event.aging
+        break
+      case 'DECIDE_ANAGATHICS':
+        facts.anagathicsDecision = {
+          useAnagathics: event.useAnagathics,
+          termIndex: event.termIndex
+        }
+        break
+      case 'RESOLVE_REENLISTMENT':
+        facts.reenlistment = {
+          outcome: event.reenlistment.outcome,
+          reenlistment: event.reenlistment
+        }
+        break
+      case 'FINISH_MUSTERING':
+        if (event.musteringBenefit) {
+          facts.musteringBenefits = [
+            ...(facts.musteringBenefits ?? []),
+            event.musteringBenefit
+          ]
+        }
+        break
+    }
+  }
+
+  return facts
+}
 
 const agingProjection = (
   history: CharacterCreationProjection['history'] = []
@@ -40,7 +141,8 @@ const agingProjection = (
       completedBasicTraining: true,
       musteringOut: false,
       anagathics: false,
-      survival: 8
+      survival: 8,
+      facts: factsFromHistory(history)
     }
   ],
   careers: [{ name: 'Scout', rank: 0 }],
@@ -48,10 +150,12 @@ const agingProjection = (
   failedToQualify: false,
   characteristicChanges: [],
   creationComplete: false,
-  history
+  history: []
 })
 
-const termSkillEvent = (skill: string): CareerCreationEvent => ({
+const termSkillEvent = (
+  skill: string
+): Extract<CareerCreationEvent, { type: 'ROLL_TERM_SKILL' }> => ({
   type: 'ROLL_TERM_SKILL',
   termSkill: {
     career: 'Scout',
@@ -243,7 +347,23 @@ describe('character creation projection helpers', () => {
             completedBasicTraining: true,
             musteringOut: false,
             anagathics: false,
-            survival: 6
+            survival: 6,
+            facts: {
+              survival: {
+                passed: true,
+                survival: {
+                  expression: '2d6',
+                  rolls: [3, 3],
+                  total: 6,
+                  characteristic: 'end',
+                  modifier: 0,
+                  target: 5,
+                  success: true
+                },
+                canCommission: true,
+                canAdvance: false
+              }
+            }
           }
         ]
       })
@@ -355,7 +475,37 @@ describe('character creation projection helpers', () => {
             completedBasicTraining: true,
             musteringOut: false,
             anagathics: false,
-            survival: 6
+            survival: 6,
+            facts: {
+              survival: {
+                passed: true,
+                survival: {
+                  expression: '2d6',
+                  rolls: [3, 3],
+                  total: 6,
+                  characteristic: 'end',
+                  modifier: 0,
+                  target: 5,
+                  success: true
+                },
+                canCommission: true,
+                canAdvance: false
+              },
+              commission: {
+                skipped: false,
+                passed: false,
+                commission: {
+                  expression: '2d6',
+                  rolls: [1, 2],
+                  total: 3,
+                  characteristic: 'str',
+                  modifier: 0,
+                  target: 6,
+                  success: false
+                }
+              },
+              termSkillRolls: [termSkillEvent('Gambling-1').termSkill]
+            }
           }
         ]
       })

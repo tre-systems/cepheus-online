@@ -838,10 +838,19 @@ describe('career creation legal action planner', () => {
     )
 
     const afterDecision = projection('AGING', {
-      terms: [term({ survival: 8, anagathics: true })],
-      history: [
-        { type: 'DECIDE_ANAGATHICS', useAnagathics: true, termIndex: 0 }
-      ]
+      terms: [
+        term({
+          survival: 8,
+          anagathics: true,
+          facts: {
+            anagathicsDecision: {
+              useAnagathics: true,
+              termIndex: 0
+            }
+          }
+        })
+      ],
+      history: []
     })
 
     assert.deepEqual(deriveCareerCreationPendingDecisions(afterDecision), [])

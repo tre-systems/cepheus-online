@@ -7,10 +7,12 @@ import type {
   CharacterState
 } from '../../../../shared/state'
 import {
+  deriveCharacteristicExportLine,
   deriveCharacterUpp,
   derivePlainCharacterExport,
   formatUppCharacteristic,
-  isCharacterCreationFinal
+  isCharacterCreationFinal,
+  sortSkillsForExport
 } from './export-view'
 
 const character = (
@@ -31,7 +33,7 @@ const character = (
     edu: 11,
     soc: 6
   },
-  skills: ['Pilot-1', 'Vacc Suit-0'],
+  skills: ['Vacc Suit-0', 'Pilot-1', 'Broker-2'],
   equipment: [{ name: 'Vacc Suit', quantity: 1, notes: 'Carried' }],
   credits: 1200,
   creation: finalizedCreation(),
@@ -49,17 +51,100 @@ const finalizedCreation = (): CharacterCreationProjection => ({
   terms: [
     {
       career: 'Scout',
-      skills: [],
-      skillsAndTraining: [],
-      benefits: [],
-      complete: false,
+      skills: ['Pilot-1'],
+      skillsAndTraining: ['Vacc Suit-0'],
+      benefits: ['Low Passage'],
+      facts: {
+        qualification: {
+          career: 'Scout',
+          passed: true,
+          previousCareerCount: 0,
+          failedQualificationOptions: [],
+          qualification: {
+            expression: '2d6',
+            rolls: [4, 4],
+            total: 8,
+            characteristic: 'int',
+            modifier: 1,
+            target: 6,
+            success: true
+          }
+        },
+        survival: {
+          passed: true,
+          canCommission: false,
+          canAdvance: true,
+          survival: {
+            expression: '2d6',
+            rolls: [4, 3],
+            total: 7,
+            characteristic: 'end',
+            modifier: 0,
+            target: 7,
+            success: true
+          }
+        },
+        advancement: {
+          skipped: false,
+          passed: true,
+          advancement: {
+            expression: '2d6',
+            rolls: [6, 4],
+            total: 10,
+            characteristic: 'edu',
+            modifier: 1,
+            target: 8,
+            success: true
+          },
+          rank: {
+            career: 'Scout',
+            previousRank: 0,
+            newRank: 1,
+            title: 'Courier',
+            bonusSkill: null
+          }
+        },
+        aging: {
+          roll: { expression: '2d6', rolls: [6, 5], total: 11 },
+          modifier: 0,
+          age: 34,
+          characteristicChanges: []
+        },
+        anagathicsDecision: { useAnagathics: false, termIndex: 0 },
+        reenlistment: {
+          outcome: 'allowed',
+          reenlistment: {
+            expression: '2d6',
+            rolls: [5, 5],
+            total: 10,
+            characteristic: null,
+            modifier: 0,
+            target: 6,
+            success: true,
+            outcome: 'allowed'
+          }
+        },
+        musteringBenefits: [
+          {
+            career: 'Scout',
+            kind: 'material',
+            roll: { expression: '1d6', rolls: [3], total: 3 },
+            modifier: 1,
+            tableRoll: 4,
+            value: 'Low Passage',
+            credits: 0,
+            materialItem: 'Low Passage'
+          }
+        ]
+      },
+      complete: true,
       canReenlist: true,
       completedBasicTraining: false,
       musteringOut: false,
       anagathics: false
     }
   ],
-  careers: [{ name: 'Scout', rank: 0 }],
+  careers: [{ name: 'Scout', rank: 1 }],
   canEnterDraft: true,
   failedToQualify: false,
   characteristicChanges: [],
@@ -86,6 +171,18 @@ describe('character sheet export view', () => {
     )
   })
 
+  it('formats characteristic and skill export helpers for table use', () => {
+    assert.equal(
+      deriveCharacteristicExportLine(character().characteristics),
+      'Str 7, Dex 8, End 9 (+1), Int 10 (+1), Edu 11 (+1), Soc 6'
+    )
+    assert.deepEqual(sortSkillsForExport(['Pilot-1', 'Broker-2', 'Admin-0']), [
+      'Broker-2',
+      'Pilot-1',
+      'Admin-0'
+    ])
+  })
+
   it('detects finalized creation from either complete flag or playable state', () => {
     assert.equal(isCharacterCreationFinal(character()), true)
     assert.equal(
@@ -108,13 +205,17 @@ describe('character sheet export view', () => {
       [
         'Iona Vesh',
         'UPP: 789AB6',
+        'Characteristics: Str 7, Dex 8, End 9 (+1), Int 10 (+1), Edu 11 (+1), Soc 6',
         'Type: PLAYER',
         'Age: 34',
-        'Career: Scout',
+        'Homeworld: Unspecified',
+        'Careers: Scout rank 1 (Courier)',
         'Terms: 1',
-        'Skills: Pilot-1, Vacc Suit-0',
+        'Skills: Broker-2, Pilot-1, Vacc Suit-0',
         'Credits: Cr1200',
         'Equipment: Vacc Suit x1 (Carried)',
+        'Career History:',
+        '- Term 1: Scout - qualified passed 8; survival passed 7; advancement passed 10 to rank 1 (Courier); skills Pilot-1, Vacc Suit-0; aging 11: no effect; no anagathics; reenlistment 10: allowed; benefits Low Passage (3); term complete',
         'Notes:',
         'Detached scout.'
       ].join('\n')

@@ -7,7 +7,12 @@ import {
   startCareerTerm
 } from '../characterCreation'
 import type { GameEvent } from '../events'
-import type { CareerRank, CareerTerm } from '../characterCreation'
+import type {
+  CareerCreationBenefitFact,
+  CareerRank,
+  CareerTerm,
+  CareerTermFacts
+} from '../characterCreation'
 import { requireState } from './state'
 import type { EventHandler, EventHandlerMap } from './types'
 import type {
@@ -79,19 +84,57 @@ const appendCharacterCreationTimeline = (
     : [...(character.creation?.timeline ?? [])]
 }
 
+const cloneCareerTerm = (term: CareerTerm): CareerTerm => structuredClone(term)
+
+const withCareerTermFacts = (
+  term: CareerTerm,
+  deriveFacts: (facts: CareerTermFacts) => CareerTermFacts
+): CareerTerm => ({
+  ...cloneCareerTerm(term),
+  facts: deriveFacts(structuredClone(term.facts ?? {}))
+})
+
+const recordTermFactsByIndex = (
+  terms: readonly CareerTerm[],
+  termIndex: number,
+  deriveFacts: (facts: CareerTermFacts) => CareerTermFacts
+) =>
+  terms.map((term, index) =>
+    index === termIndex
+      ? withCareerTermFacts(term, deriveFacts)
+      : cloneCareerTerm(term)
+  )
+
+const recordActiveTermFacts = (
+  terms: readonly CareerTerm[],
+  deriveFacts: (facts: CareerTermFacts) => CareerTermFacts
+) => recordTermFactsByIndex(terms, terms.length - 1, deriveFacts)
+
 const recordMusteringBenefit = (
   terms: readonly CareerTerm[],
   career: string,
-  benefit: string
+  benefit: string,
+  fact?: CareerCreationBenefitFact
 ) =>
   terms.map((term, index) =>
     term.career === career &&
     !terms.slice(0, index).some((previous) => previous.career === career)
       ? {
-          ...term,
-          benefits: [...term.benefits, benefit]
+          ...cloneCareerTerm(term),
+          benefits: [...term.benefits, benefit],
+          ...(fact
+            ? {
+                facts: {
+                  ...(term.facts ? structuredClone(term.facts) : {}),
+                  musteringBenefits: [
+                    ...(term.facts?.musteringBenefits ?? []),
+                    structuredClone(fact)
+                  ]
+                }
+              }
+            : {})
         }
-      : structuredClone(term)
+      : cloneCareerTerm(term)
   )
 
 const recordActiveTermAdvancement = (
@@ -101,10 +144,10 @@ const recordActiveTermAdvancement = (
   terms.map((term, index) =>
     index === terms.length - 1
       ? {
-          ...structuredClone(term),
+          ...cloneCareerTerm(term),
           advancement
         }
-      : structuredClone(term)
+      : cloneCareerTerm(term)
   )
 
 const recordActiveTermAnagathics = (
@@ -115,10 +158,10 @@ const recordActiveTermAnagathics = (
   terms.map((term, index) =>
     index === termIndex
       ? {
-          ...structuredClone(term),
+          ...cloneCareerTerm(term),
           anagathics: useAnagathics
         }
-      : structuredClone(term)
+      : cloneCareerTerm(term)
   )
 
 const applyCareerRank = (
@@ -451,11 +494,14 @@ const rawCharacterEventHandlers = {
     const terms = character.creation.terms.map((term, index) =>
       index === lastTermIndex
         ? {
-            ...structuredClone(term),
+            ...withCareerTermFacts(term, (facts) => ({
+              ...facts,
+              basicTrainingSkills: [...event.trainingSkills]
+            })),
             skillsAndTraining: [...event.trainingSkills],
             completedBasicTraining: true
           }
-        : structuredClone(term)
+        : cloneCareerTerm(term)
     )
 
     character.creation = {
@@ -484,6 +530,19 @@ const rawCharacterEventHandlers = {
         character,
         acceptedCareer: event.career
       })
+      character.creation.terms = recordActiveTermFacts(
+        character.creation.terms,
+        (facts) => ({
+          ...facts,
+          qualification: {
+            career: event.career,
+            passed: event.passed,
+            qualification: structuredClone(event.qualification),
+            previousCareerCount: event.previousCareerCount,
+            failedQualificationOptions: [...event.failedQualificationOptions]
+          }
+        })
+      )
     }
 
     character.creation = {
@@ -512,6 +571,13 @@ const rawCharacterEventHandlers = {
       acceptedCareer: event.draft.acceptedCareer,
       drafted: true
     })
+    character.creation.terms = recordActiveTermFacts(
+      character.creation.terms,
+      (facts) => ({
+        ...facts,
+        draft: structuredClone(event.draft)
+      })
+    )
 
     character.creation = {
       ...character.creation,
@@ -558,10 +624,18 @@ const rawCharacterEventHandlers = {
     const terms = character.creation.terms.map((term, index) =>
       index === lastTermIndex
         ? {
-            ...structuredClone(term),
+            ...withCareerTermFacts(term, (facts) => ({
+              ...facts,
+              survival: {
+                passed: event.passed,
+                survival: structuredClone(event.survival),
+                canCommission: event.canCommission,
+                canAdvance: event.canAdvance
+              }
+            })),
             survival: event.survival.total
           }
-        : structuredClone(term)
+        : cloneCareerTerm(term)
     )
 
     character.creation = {
@@ -596,6 +670,14 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
+      terms: recordActiveTermFacts(character.creation.terms, (facts) => ({
+        ...facts,
+        commission: {
+          skipped: false,
+          passed: event.passed,
+          commission: structuredClone(event.commission)
+        }
+      })),
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event)
     }
@@ -614,6 +696,10 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
+      terms: recordActiveTermFacts(character.creation.terms, (facts) => ({
+        ...facts,
+        commission: { skipped: true }
+      })),
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event)
     }
@@ -628,9 +714,20 @@ const rawCharacterEventHandlers = {
     const character = nextState.characters[event.characterId]
     if (!character?.creation) return nextState
 
-    const terms = recordActiveTermAdvancement(
-      character.creation.terms,
-      event.advancement.total
+    const terms = recordActiveTermFacts(
+      recordActiveTermAdvancement(
+        character.creation.terms,
+        event.advancement.total
+      ),
+      (facts) => ({
+        ...facts,
+        advancement: {
+          skipped: false,
+          passed: event.passed,
+          advancement: structuredClone(event.advancement),
+          rank: event.rank ? structuredClone(event.rank) : null
+        }
+      })
     )
     const careers = event.rank
       ? applyCareerRank(
@@ -664,6 +761,10 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
+      terms: recordActiveTermFacts(character.creation.terms, (facts) => ({
+        ...facts,
+        advancement: { skipped: true }
+      })),
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event)
     }
@@ -682,11 +783,17 @@ const rawCharacterEventHandlers = {
     const terms = character.creation.terms.map((term, index) =>
       index === lastTermIndex
         ? {
-            ...structuredClone(term),
+            ...withCareerTermFacts(term, (facts) => ({
+              ...facts,
+              termSkillRolls: [
+                ...(facts.termSkillRolls ?? []),
+                structuredClone(event.termSkill)
+              ]
+            })),
             skills: [...event.termSkills],
             skillsAndTraining: [...event.skillsAndTraining]
           }
-        : structuredClone(term)
+        : cloneCareerTerm(term)
     )
     const characteristic = event.termSkill.characteristic
     const characteristics = characteristic
@@ -724,6 +831,10 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
+      terms: recordActiveTermFacts(character.creation.terms, (facts) => ({
+        ...facts,
+        aging: structuredClone(event.aging)
+      })),
       characteristicChanges: event.aging.characteristicChanges.map(
         (change) => ({ ...change })
       ),
@@ -748,6 +859,13 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
+      terms: recordActiveTermFacts(character.creation.terms, (facts) => ({
+        ...facts,
+        agingLosses: {
+          selectedLosses: structuredClone(event.selectedLosses),
+          characteristicPatch: structuredClone(event.characteristicPatch)
+        }
+      })),
       characteristicChanges: [],
       timeline: appendCharacterCreationTimeline(character, envelope)
     }
@@ -766,10 +884,20 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      terms: recordActiveTermAnagathics(
-        character.creation.terms,
+      terms: recordTermFactsByIndex(
+        recordActiveTermAnagathics(
+          character.creation.terms,
+          event.termIndex,
+          event.useAnagathics
+        ),
         event.termIndex,
-        event.useAnagathics
+        (facts) => ({
+          ...facts,
+          anagathicsDecision: {
+            useAnagathics: event.useAnagathics,
+            termIndex: event.termIndex
+          }
+        })
       ),
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event)
@@ -790,7 +918,13 @@ const rawCharacterEventHandlers = {
       if (index !== lastTermIndex) return structuredClone(term)
 
       return {
-        ...structuredClone(term),
+        ...withCareerTermFacts(term, (facts) => ({
+          ...facts,
+          reenlistment: {
+            outcome: event.outcome,
+            reenlistment: structuredClone(event.reenlistment)
+          }
+        })),
         canReenlist: event.outcome !== 'blocked',
         reEnlistment: event.reenlistment.total
       }
@@ -865,11 +999,20 @@ const rawCharacterEventHandlers = {
     const terms = character.creation.terms.map((term, index) =>
       index === lastTermIndex
         ? {
-            ...structuredClone(term),
+            ...withCareerTermFacts(term, (facts) => ({
+              ...facts,
+              termCascadeSelections: [
+                ...(facts.termCascadeSelections ?? []),
+                {
+                  cascadeSkill: event.cascadeSkill,
+                  selection: event.selection
+                }
+              ]
+            })),
             skills: [...event.termSkills],
             skillsAndTraining: [...event.skillsAndTraining]
           }
-        : structuredClone(term)
+        : cloneCareerTerm(term)
     )
 
     character.creation = {
@@ -915,7 +1058,8 @@ const rawCharacterEventHandlers = {
       terms: recordMusteringBenefit(
         character.creation.terms,
         event.musteringBenefit.career,
-        event.musteringBenefit.value
+        event.musteringBenefit.value,
+        event.musteringBenefit
       ),
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event)

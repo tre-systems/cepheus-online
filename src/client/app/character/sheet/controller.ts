@@ -343,10 +343,11 @@ export const createCharacterSheetController = ({
 
   const creationEventLabel = (type: string) =>
     type
-      .toLowerCase()
-      .split('_')
-      .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
-      .join(' ')
+      .replace(/^CharacterCreation/, '')
+      .replace(/^Character/, '')
+      .replaceAll('_', ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .trim()
 
   const creationRows = (creation: CharacterCreationProjection | null) => {
     if (!creation) return [sheetRow('Creation', 'Not started')]
@@ -357,12 +358,12 @@ export const createCharacterSheetController = ({
     ]
     const career = creation.careers.at(-1)
     if (career) rows.splice(2, 0, sheetRow('Career', career.name))
-    if (creation.history && creation.history.length > 0) {
-      rows.push(sheetRow('Steps', String(creation.history.length)))
+    if (creation.timeline && creation.timeline.length > 0) {
+      rows.push(sheetRow('Steps', String(creation.timeline.length)))
       rows.push(
         sheetRow(
           'Latest',
-          creationEventLabel(creation.history.at(-1)?.type ?? '')
+          creationEventLabel(creation.timeline.at(-1)?.eventType ?? '')
         )
       )
     }

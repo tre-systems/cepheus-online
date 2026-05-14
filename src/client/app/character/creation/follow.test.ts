@@ -156,7 +156,24 @@ describe('character creation follow helpers', () => {
             canReenlist: false,
             completedBasicTraining: true,
             musteringOut: true,
-            anagathics: false
+            anagathics: false,
+            facts: {
+              musteringBenefits: [
+                {
+                  career: 'Scout',
+                  kind: 'material',
+                  roll: {
+                    expression: '2d6',
+                    rolls: [5, 6],
+                    total: 11
+                  },
+                  modifier: 0,
+                  tableRoll: 11,
+                  value: 'Low Passage',
+                  credits: 0
+                }
+              ]
+            }
           }
         ],
         history: [

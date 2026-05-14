@@ -104,12 +104,7 @@ const hasAnagathicsDecisionForActiveTerm = (
   const termIndex = (creation.terms?.length ?? 0) - 1
   if (termIndex < 0) return false
 
-  return (
-    creation.history?.some(
-      (event) =>
-        event.type === 'DECIDE_ANAGATHICS' && event.termIndex === termIndex
-    ) ?? false
-  )
+  return creation.terms?.[termIndex]?.facts?.anagathicsDecision !== undefined
 }
 
 const shouldDecideAnagathics = (

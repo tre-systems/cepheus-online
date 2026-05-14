@@ -386,8 +386,10 @@ Current Character Creation completion focus:
 - Keep extending deterministic two-tab browser journeys for multi-term and
   multi-career travellers, especially through finalization, spectator refresh,
   and no early roll reveal.
-- Finish projection-owned polish for mustering presentation, anagathics
-  provenance, and final-sheet/export details.
+- Finish projection-owned polish for mustering presentation and anagathics
+  provenance. Final-sheet/export display now includes UPP, readable
+  characteristics, sorted skills, careers/ranks, term history, benefits,
+  credits, equipment, and notes from the projected read model.
 - Polish the creator UX so each step shows one clear next action and the final
   sheet is useful in real play.
 
@@ -720,11 +722,12 @@ coordinator can schedule reveal fallback from redacted targets. Roll-bearing
 semantic character creation events now carry optional `rollEventId`
 correlation, and character creation live activities can expose explicit reveal
 metadata while keeping the previous timestamp fallback for legacy events. The
-remaining risk is creation-specific projection history:
-`CharacterCreationCharacteristicsCompleted` still records legacy
-`SET_CHARACTERISTICS` history for read-model compatibility, and the history
-timeline should move toward semantic facts while preserving historical replay
-compatibility.
+remaining risk is narrower: roll-bearing semantic creation events now project
+onto per-term `facts`, and new legal-action/client projection code consumes
+those facts instead of legacy `creation.history`. The legacy history model
+still exists for historical replay compatibility and older activity paths, so
+future work should keep shrinking compatibility reads rather than adding new
+ones.
 
 Primary write ownership:
 
@@ -1131,10 +1134,13 @@ Tasks:
 - Done: finalize only when gates pass; the server derives the final playable
   sheet from creation state and intent-only finalization rather than trusted
   client sheet values.
-- Extend final playable sheet coverage for ranks/titles, provenance, material
-  benefits, career history, and notes as those display fields mature.
-- Polish the completed-character UPP display and plain export block as final
-  sheet fields mature.
+- Done: the completed-character plain export block includes UPP, readable
+  characteristics, sorted skills, careers/ranks, term history, mustering
+  benefits, credits, equipment, and notes from the projected read model.
+- Extend final playable sheet coverage for deeper provenance and material
+  benefit metadata as those display fields mature.
+- Polish copy/layout around the completed-character UPP and export block after
+  the remaining creator UX work settles.
 - Add refresh-loaded room state coverage for any remaining final-sheet fields
   not covered by the current checkpoint-plus-tail read model test.
 
@@ -1306,10 +1312,13 @@ The next batch should run like this, in this order:
    history, and the client can recover mustering-benefit display from projected
    term benefits when legacy history is absent. Server and client cash benefit
    limit checks now use projected term benefits. Boundary checks now keep new
-   client creator code from reading legacy history outside the compatibility
-   projection helper. The legacy `history` model remains for compatibility
-   until richer projection fields replace the client helpers that still need
-   detailed career-roll facts.
+   client creator code from reading legacy history outside compatibility
+   helpers. Per-term semantic `facts` now carry qualification, draft,
+   survival, commission, advancement, rank, term skill, aging, anagathics,
+   reenlistment, and mustering benefit details; legal actions and the client
+   projection adapter use those facts instead of reconstructing the active term
+   from legacy history. The legacy `history` model remains only for historical
+   replay compatibility and older activity consumers.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.
@@ -1317,10 +1326,10 @@ The next batch should run like this, in this order:
    grow the repeat runner when new SRD branches are added, keep later-term
    two-tab spectator follow checks healthy, add mobile viewport assertions for
    new controls, and keep reveal timing coverage for every roll-bearing action.
-6. Finish moving legal-action state into server projection: pending decisions,
-   requirements, failed-qualification options, remaining term skills, remaining
-   mustering benefits, and completion gates. Reject commands that are not legal
-   from the current projection.
+6. Finish the remaining projection/read-model consolidation: expose compact
+   follower and final-sheet view models from semantic timeline plus per-term
+   facts, keep remaining term-skill and mustering gates projection-owned, and
+   reject commands that are not legal from the current projection.
 7. Harden the SRD term loop in browser automation: repeated refreshes, mobile
    layouts, and multi-term continuation.
 8. Keep optional mishap tables behind an explicit variant; default failed

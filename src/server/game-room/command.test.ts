@@ -1761,12 +1761,16 @@ describe('deriveEventsForCommand error categories', () => {
             completedBasicTraining: true,
             musteringOut: false,
             anagathics: false,
-            survival: 8
+            survival: 8,
+            facts: {
+              anagathicsDecision: {
+                useAnagathics: false,
+                termIndex: 0
+              }
+            }
           }
         ],
-        history: [
-          { type: 'DECIDE_ANAGATHICS', useAnagathics: false, termIndex: 0 }
-        ]
+        history: []
       })
     )
 
@@ -1831,11 +1835,18 @@ describe('deriveEventsForCommand error categories', () => {
           scoutTerm,
           { ...scoutTerm },
           { ...scoutTerm, anagathics: true },
-          { ...scoutTerm, complete: false }
+          {
+            ...scoutTerm,
+            complete: false,
+            facts: {
+              anagathicsDecision: {
+                useAnagathics: false,
+                termIndex: 3
+              }
+            }
+          }
         ],
-        history: [
-          { type: 'DECIDE_ANAGATHICS', useAnagathics: false, termIndex: 3 }
-        ]
+        history: []
       }),
       { gameSeed: 18 }
     )

@@ -19,21 +19,15 @@ export type CharacterCreationProjection = {
   terms?: Array<{
     career: string
     skillsAndTraining?: string[]
-  }>
-  history?: Array<{
-    type?: string
-    musteringBenefit?: {
-      career: string
-      kind: string
-      tableRoll: number
-      value: string
-    }
-    termSkill?: {
-      career?: string
-      table?: string
-      tableRoll?: number
-      rawSkill?: string
-      skill?: string | null
+    facts?: {
+      termSkillRolls?: Array<{
+        career?: string
+        table?: string
+        tableRoll?: number
+        rawSkill?: string
+        skill?: string | null
+      }>
+      musteringBenefits?: ProjectedMusteringBenefit[]
     }
   }>
 }
@@ -76,6 +70,14 @@ export type ProjectedTermSkill = {
   table: string
   tableRoll: number
   skill: string
+}
+
+export type ProjectedMusteringBenefit = {
+  career: string
+  kind: string
+  tableRoll: number
+  value: string
+  credits?: number
 }
 
 const actorSessionKey = (roomId: string, actorId: string): string =>
@@ -130,9 +132,7 @@ export const latestProjectedTermSkill = async (
 ): Promise<ProjectedTermSkill | null> => {
   const message = await fetchRoomState(page, roomId, actorId)
   const creation = message.state?.characters[characterId]?.creation
-  const termSkill = [...(creation?.history ?? [])]
-    .reverse()
-    .find((event) => event.type === 'ROLL_TERM_SKILL')?.termSkill
+  const termSkill = projectedTermSkillFacts(creation).at(-1)
   if (
     !termSkill?.career ||
     !termSkill.table ||
@@ -149,6 +149,28 @@ export const latestProjectedTermSkill = async (
     skill
   }
 }
+
+export const projectedTermSkillFacts = (
+  creation: CharacterCreationProjection | null | undefined
+): Array<{
+  career?: string
+  table?: string
+  tableRoll?: number
+  rawSkill?: string
+  skill?: string | null
+}> =>
+  (creation?.terms ?? []).flatMap((term) => term.facts?.termSkillRolls ?? [])
+
+export const projectedTermSkillCount = (
+  creation: CharacterCreationProjection | null | undefined
+): number => projectedTermSkillFacts(creation).length
+
+export const projectedMusteringBenefits = (
+  creation: CharacterCreationProjection | null | undefined
+): ProjectedMusteringBenefit[] =>
+  (creation?.terms ?? []).flatMap(
+    (term) => term.facts?.musteringBenefits ?? []
+  )
 
 export const creationCharacterIds = async (
   page: Page,

@@ -13,6 +13,8 @@ export type DiceFaceValueContent =
 
 export type BrowserDiceRoll = LiveDiceRollRevealTarget
 
+const PENDING_ROLL_MIN_ANIMATION_MS = 1200
+
 export const hasDiceRollResult = (
   roll: Partial<BrowserDiceRoll> | null | undefined
 ): roll is BrowserDiceRoll =>
@@ -91,7 +93,8 @@ export const animateRoll = ({
   overlay.classList.add('visible')
   const timing = deriveDiceRollTiming({
     revealAt: roll.revealAt,
-    nowMs: Date.now()
+    nowMs: Date.now(),
+    minRollDurationMs: PENDING_ROLL_MIN_ANIMATION_MS
   })
   const row = document.createElement('div')
   row.className = 'dice-row'

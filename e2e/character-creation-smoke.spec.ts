@@ -18,6 +18,8 @@ import {
   normalizedText,
   openOrExpectFollowedCreation,
   postCommand,
+  projectedMusteringBenefits,
+  projectedTermSkillCount,
   rollCareerOutcomeWithSpectatorReveal,
   seedCreationToCareerSelection,
   seedCreationToHomeworld,
@@ -2833,12 +2835,10 @@ test.describe('character creation smoke', () => {
           'spectator'
         )
         return (
-          character?.creation?.history?.find(
-            (event) =>
-              event.type === 'FINISH_MUSTERING' &&
-              event.musteringBenefit?.career === 'Merchant' &&
-              event.musteringBenefit.kind === 'cash'
-          )?.musteringBenefit ?? null
+          projectedMusteringBenefits(character?.creation).find(
+            (benefit) =>
+              benefit.career === 'Merchant' && benefit.kind === 'cash'
+          ) ?? null
         )
       }
 
@@ -3106,12 +3106,11 @@ test.describe('character creation smoke', () => {
         timeout: 100
       })
 
-      const previousTermSkillCount =
-        (
-          (await fetchRoomState(page, roomId, actorId)).state?.characters[
-            characterId
-          ]?.creation?.history ?? []
-        ).filter((event) => event.type === 'ROLL_TERM_SKILL').length
+      const previousTermSkillCount = projectedTermSkillCount(
+        (await fetchRoomState(page, roomId, actorId)).state?.characters[
+          characterId
+        ]?.creation
+      )
       const termSkillTable = page
         .locator('#characterCreationFields button:not([disabled])')
         .filter({
@@ -3151,12 +3150,9 @@ test.describe('character creation smoke', () => {
       await expect
         .poll(async () => {
           const message = await fetchRoomState(page, roomId, actorId)
-          const termSkillCount =
-            message.state?.characters[
-              characterId
-            ]?.creation?.history?.filter(
-              (event) => event.type === 'ROLL_TERM_SKILL'
-            ).length ?? 0
+          const termSkillCount = projectedTermSkillCount(
+            message.state?.characters[characterId]?.creation
+          )
           termSkill = await latestProjectedTermSkill(
             page,
             roomId,
@@ -3409,26 +3405,12 @@ test.describe('character creation smoke', () => {
           musteringSpectator,
           roomId,
           'e2e-mustering-spectator'
-        )).state?.characters[characterId]?.creation as
-          | {
-              history?: Array<{
-                type?: string
-                musteringBenefit?: {
-                  career: string
-                  kind: string
-                  tableRoll: number
-                  value: string
-                }
-              }>
-            }
-          | undefined
+        )).state?.characters[characterId]?.creation
         return (
-          creation?.history?.find(
-            (event) =>
-              event.type === 'FINISH_MUSTERING' &&
-              event.musteringBenefit?.career === 'Merchant' &&
-              event.musteringBenefit.kind === 'cash'
-          )?.musteringBenefit ?? null
+          projectedMusteringBenefits(creation).find(
+            (benefit) =>
+              benefit.career === 'Merchant' && benefit.kind === 'cash'
+          ) ?? null
         )
       }
 

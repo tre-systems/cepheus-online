@@ -23,29 +23,55 @@ export const creationStepFromStatus = (
 
 export const completedTermFromProjection = (
   term: CareerTerm
-): CharacterCreationCompletedTerm => ({
-  career: term.career,
-  drafted: term.draft === 1,
-  anagathics: term.anagathics,
-  age: null,
-  rank: null,
-  qualificationRoll: null,
-  survivalRoll: term.survival ?? null,
-  survivalPassed: term.survival == null ? true : term.complete,
-  canCommission: false,
-  commissionRoll: null,
-  commissionPassed: null,
-  canAdvance: false,
-  advancementRoll: term.advancement ?? null,
-  advancementPassed: term.advancement == null ? null : term.complete,
-  termSkillRolls: term.skillsAndTraining.map((skill) => ({
-    table: 'serviceSkills',
-    roll: 0,
-    skill
-  })),
-  reenlistmentRoll: term.reEnlistment ?? null,
-  reenlistmentOutcome: term.canReenlist ? 'allowed' : 'blocked'
-})
+): CharacterCreationCompletedTerm => {
+  const facts = term.facts
+  const commission = facts?.commission
+  const advancement = facts?.advancement
+
+  return {
+    career: term.career,
+    drafted: term.draft === 1,
+    anagathics: term.anagathics,
+    age: facts?.aging?.age ?? null,
+    rank:
+      advancement && !advancement.skipped
+        ? (advancement.rank?.newRank ?? null)
+        : null,
+    qualificationRoll: facts?.qualification?.qualification.total ?? null,
+    survivalRoll: facts?.survival?.survival.total ?? term.survival ?? null,
+    survivalPassed:
+      facts?.survival?.passed ?? (term.survival == null ? true : term.complete),
+    canCommission: facts?.survival?.canCommission ?? false,
+    commissionRoll:
+      commission?.skipped === true
+        ? -1
+        : (commission?.commission.total ?? null),
+    commissionPassed:
+      commission?.skipped === true ? false : (commission?.passed ?? null),
+    canAdvance: facts?.survival?.canAdvance ?? false,
+    advancementRoll:
+      advancement?.skipped === true
+        ? -1
+        : (advancement?.advancement.total ?? term.advancement ?? null),
+    advancementPassed:
+      advancement?.skipped === true ? false : (advancement?.passed ?? null),
+    termSkillRolls:
+      facts?.termSkillRolls?.map((termSkill) => ({
+        table: termSkill.table,
+        roll: termSkill.roll.total,
+        skill: termSkill.skill ?? termSkill.rawSkill
+      })) ??
+      term.skillsAndTraining.map((skill) => ({
+        table: 'serviceSkills',
+        roll: 0,
+        skill
+      })),
+    reenlistmentRoll:
+      facts?.reenlistment?.reenlistment.total ?? term.reEnlistment ?? null,
+    reenlistmentOutcome:
+      facts?.reenlistment?.outcome ?? (term.canReenlist ? 'allowed' : 'blocked')
+  }
+}
 
 export const careerPlanFromProjection = (
   creation: CharacterCreationProjection
@@ -55,108 +81,54 @@ export const careerPlanFromProjection = (
     .find((term) => !term.complete && !term.musteringOut)
   if (!activeTerm) return null
 
-  const history = creation.history ?? []
-  let termStartIndex = -1
-  for (let index = history.length - 1; index >= 0; index -= 1) {
-    if (
-      history[index].type === 'SELECT_CAREER' ||
-      history[index].type === 'REENLIST' ||
-      history[index].type === 'FORCED_REENLIST'
-    ) {
-      termStartIndex = index
-      break
-    }
-  }
-  const currentTermHistory =
-    termStartIndex >= 0 ? history.slice(termStartIndex) : history
-  const currentTermFactHistory =
-    currentTermHistory[0]?.type === 'REENLIST' ||
-    currentTermHistory[0]?.type === 'FORCED_REENLIST'
-      ? currentTermHistory.slice(1)
-      : currentTermHistory
-  const selectCareer = [...currentTermFactHistory]
-    .reverse()
-    .find((event) => event.type === 'SELECT_CAREER')
-  const survival = [...currentTermFactHistory]
-    .reverse()
-    .find(
-      (event) =>
-        event.type === 'SURVIVAL_PASSED' || event.type === 'SURVIVAL_FAILED'
-    )
-  const commission = [...currentTermFactHistory]
-    .reverse()
-    .find(
-      (event) =>
-        event.type === 'COMPLETE_COMMISSION' || event.type === 'SKIP_COMMISSION'
-    )
-  const advancement = [...currentTermFactHistory]
-    .reverse()
-    .find(
-      (event) =>
-        event.type === 'COMPLETE_ADVANCEMENT' ||
-        event.type === 'SKIP_ADVANCEMENT'
-    )
-  const aging = [...currentTermFactHistory]
-    .reverse()
-    .find((event) => event.type === 'COMPLETE_AGING')
-  const anagathicsDecision = [...currentTermFactHistory]
-    .reverse()
-    .find((event) => event.type === 'DECIDE_ANAGATHICS')
-  const reenlistment = [...currentTermFactHistory]
-    .reverse()
-    .find(
-      (event) =>
-        event.type === 'RESOLVE_REENLISTMENT' ||
-        event.type === 'REENLIST' ||
-        event.type === 'REENLIST_BLOCKED' ||
-        event.type === 'FORCED_REENLIST'
-    )
-  const termSkillRolls = currentTermFactHistory
-    .filter((event) => event.type === 'ROLL_TERM_SKILL')
-    .map((event) => ({
-      table: event.termSkill.table,
-      roll: event.termSkill.roll.total,
-      skill: event.termSkill.skill ?? event.termSkill.rawSkill
-    }))
-  const agingFact = aging?.aging
+  const facts = activeTerm.facts
+  const commission = facts?.commission
+  const advancement = facts?.advancement
+  const agingFact = facts?.aging
 
   return {
     career: activeTerm.career,
-    qualificationRoll: selectCareer?.qualification?.total ?? null,
-    qualificationPassed: true,
-    survivalRoll: survival?.survival?.total ?? activeTerm.survival ?? null,
-    survivalPassed:
-      survival?.type === 'SURVIVAL_PASSED'
-        ? true
-        : survival?.type === 'SURVIVAL_FAILED'
-          ? false
-          : null,
+    qualificationRoll: facts?.qualification?.qualification.total ?? null,
+    qualificationPassed: facts?.qualification?.passed ?? true,
+    survivalRoll:
+      facts?.survival?.survival.total ?? activeTerm.survival ?? null,
+    survivalPassed: facts?.survival?.passed ?? null,
     commissionRoll:
-      commission?.type === 'SKIP_COMMISSION'
+      commission?.skipped === true
         ? -1
-        : (commission?.commission?.total ?? null),
+        : (commission?.commission.total ?? null),
     commissionPassed:
-      commission?.type === 'SKIP_COMMISSION'
-        ? false
-        : (commission?.commission?.success ?? null),
+      commission?.skipped === true ? false : (commission?.passed ?? null),
     advancementRoll:
-      advancement?.type === 'SKIP_ADVANCEMENT'
+      advancement?.skipped === true
         ? -1
-        : (advancement?.advancement?.total ?? activeTerm.advancement ?? null),
+        : (advancement?.advancement.total ?? activeTerm.advancement ?? null),
     advancementPassed:
-      advancement?.type === 'SKIP_ADVANCEMENT'
-        ? false
-        : (advancement?.advancement?.success ?? null),
+      advancement?.skipped === true ? false : (advancement?.passed ?? null),
     canCommission: creation.state.context?.canCommission ?? null,
     canAdvance: creation.state.context?.canAdvance ?? null,
     drafted: activeTerm.draft === 1,
-    rank: null,
-    rankTitle: null,
-    rankBonusSkill: null,
-    termSkillRolls,
+    rank:
+      advancement && !advancement.skipped
+        ? (advancement.rank?.newRank ?? null)
+        : null,
+    rankTitle:
+      advancement && !advancement.skipped
+        ? (advancement.rank?.title ?? null)
+        : null,
+    rankBonusSkill:
+      advancement && !advancement.skipped
+        ? (advancement.rank?.bonusSkill ?? null)
+        : null,
+    termSkillRolls:
+      facts?.termSkillRolls?.map((termSkill) => ({
+        table: termSkill.table,
+        roll: termSkill.roll.total,
+        skill: termSkill.skill ?? termSkill.rawSkill
+      })) ?? [],
     anagathics:
-      anagathicsDecision?.useAnagathics ??
-      (creation.state.status === 'AGING' && !aging
+      facts?.anagathicsDecision?.useAnagathics ??
+      (creation.state.status === 'AGING' && !agingFact
         ? null
         : activeTerm.anagathics),
     agingRoll: agingFact?.roll?.total ?? null,
@@ -168,17 +140,10 @@ export const careerPlanFromProjection = (
           : null,
     agingSelections: [],
     reenlistmentRoll:
-      reenlistment?.reenlistment?.total ?? activeTerm.reEnlistment ?? null,
-    reenlistmentOutcome:
-      reenlistment?.type === 'RESOLVE_REENLISTMENT'
-        ? (reenlistment.reenlistment.outcome ?? null)
-        : reenlistment?.type === 'FORCED_REENLIST'
-          ? 'forced'
-          : reenlistment?.type === 'REENLIST'
-            ? 'allowed'
-            : reenlistment?.type === 'REENLIST_BLOCKED'
-              ? 'blocked'
-              : null
+      facts?.reenlistment?.reenlistment.total ??
+      activeTerm.reEnlistment ??
+      null,
+    reenlistmentOutcome: facts?.reenlistment?.outcome ?? null
   }
 }
 
@@ -205,22 +170,15 @@ const musteringBenefitsFromProjectedTerms = (
 export const musteringBenefitsFromProjection = (
   creation: CharacterCreationProjection
 ): CharacterCreationMusteringBenefit[] => {
-  const benefits = (creation.history ?? [])
-    .filter((event) => event.type === 'FINISH_MUSTERING')
-    .flatMap((event) => {
-      const benefit = event.musteringBenefit
-      return benefit
-        ? [
-            {
-              career: benefit.career,
-              kind: benefit.kind,
-              roll: benefit.tableRoll,
-              value: benefit.value,
-              credits: benefit.credits
-            }
-          ]
-        : []
-    })
+  const benefits = creation.terms.flatMap((term) =>
+    (term.facts?.musteringBenefits ?? []).map((benefit) => ({
+      career: benefit.career,
+      kind: benefit.kind,
+      roll: benefit.tableRoll,
+      value: benefit.value,
+      credits: benefit.credits
+    }))
+  )
 
   return benefits.length > 0
     ? benefits

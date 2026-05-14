@@ -15,7 +15,8 @@ const cloneCareerTerm = (term: CareerTerm): CareerTerm => ({
   ...term,
   skills: [...term.skills],
   skillsAndTraining: [...term.skillsAndTraining],
-  benefits: [...term.benefits]
+  benefits: [...term.benefits],
+  ...(term.facts ? { facts: structuredClone(term.facts) } : {})
 })
 
 export const createCareerTerm = ({
@@ -31,6 +32,7 @@ export const createCareerTerm = ({
   skills: [],
   skillsAndTraining: [],
   benefits: [],
+  facts: {},
   complete: false,
   canReenlist: true,
   completedBasicTraining,

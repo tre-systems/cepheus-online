@@ -609,6 +609,9 @@ describe('game state projection', () => {
     assert.equal(creation?.creationComplete, false)
     assert.deepEqual(creation?.history, [{ type: 'COMPLETE_BASIC_TRAINING' }])
     assert.deepEqual(creation?.terms[0]?.skillsAndTraining, ['Vacc Suit-0'])
+    assert.deepEqual(creation?.terms[0]?.facts?.basicTrainingSkills, [
+      'Vacc Suit-0'
+    ])
     assert.equal(creation?.terms[0]?.completedBasicTraining, true)
     assert.equal(state?.eventSeq, 4)
   })
@@ -706,6 +709,20 @@ describe('game state projection', () => {
       ]
     })
     assert.equal(creation?.terms[0]?.survival, 8)
+    assert.deepEqual(creation?.terms[0]?.facts?.survival, {
+      passed: true,
+      survival: {
+        expression: '2d6',
+        rolls: [4, 4],
+        total: 8,
+        characteristic: 'end',
+        modifier: 0,
+        target: 7,
+        success: true
+      },
+      canCommission: false,
+      canAdvance: false
+    })
     assert.deepEqual(creation?.history, [
       {
         type: 'SURVIVAL_PASSED',
@@ -800,6 +817,19 @@ describe('game state projection', () => {
 
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'SKILLS_TRAINING')
+    assert.deepEqual(creation?.terms[0]?.facts?.commission, {
+      skipped: false,
+      passed: true,
+      commission: {
+        expression: '2d6',
+        rolls: [4, 4],
+        total: 8,
+        characteristic: 'int',
+        modifier: 0,
+        target: 5,
+        success: true
+      }
+    })
     assert.deepEqual(creation?.history, [
       {
         type: 'COMPLETE_COMMISSION',
@@ -959,6 +989,26 @@ describe('game state projection', () => {
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'SKILLS_TRAINING')
     assert.equal(creation?.terms[0]?.advancement, 8)
+    assert.deepEqual(creation?.terms[0]?.facts?.advancement, {
+      skipped: false,
+      passed: true,
+      advancement: {
+        expression: '2d6',
+        rolls: [4, 4],
+        total: 8,
+        characteristic: 'edu',
+        modifier: 0,
+        target: 8,
+        success: true
+      },
+      rank: {
+        career: 'Merchant',
+        previousRank: 1,
+        newRank: 2,
+        title: 'Fourth Officer',
+        bonusSkill: null
+      }
+    })
     assert.deepEqual(creation?.careers, [{ name: 'Merchant', rank: 2 }])
     assert.deepEqual(creation?.history, [
       {
@@ -1368,6 +1418,10 @@ describe('game state projection', () => {
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'AGING')
     assert.equal(creation?.terms[0]?.anagathics, true)
+    assert.deepEqual(creation?.terms[0]?.facts?.anagathicsDecision, {
+      useAnagathics: true,
+      termIndex: 0
+    })
     assert.deepEqual(creation?.history?.at(-1), {
       type: 'DECIDE_ANAGATHICS',
       useAnagathics: true,
@@ -1455,6 +1509,10 @@ describe('game state projection', () => {
     assert.equal(creation?.terms[0]?.reEnlistment, 7)
     assert.equal(creation?.terms[0]?.canReenlist, true)
     assert.equal(creation?.terms[0]?.musteringOut, false)
+    assert.deepEqual(creation?.terms[0]?.facts?.reenlistment, {
+      outcome: 'allowed',
+      reenlistment
+    })
     assert.deepEqual(creation?.history?.at(-1), {
       type: 'RESOLVE_REENLISTMENT',
       reenlistment
@@ -1654,6 +1712,9 @@ describe('game state projection', () => {
 
     const character = state?.characters[characterId]
     assert.deepEqual(character?.creation?.terms[0]?.benefits, ['Low Passage'])
+    assert.deepEqual(character?.creation?.terms[0]?.facts?.musteringBenefits, [
+      musteringBenefit
+    ])
     assert.deepEqual(character?.equipment, [
       {
         name: 'Low Passage',
@@ -2086,21 +2147,45 @@ describe('game state projection', () => {
         termSkill
       }
     ])
-    assert.deepEqual(creation?.terms, [
-      {
-        career: 'Merchant',
-        skills: ['Broker-1'],
-        skillsAndTraining: ['Broker-0', 'Broker-1'],
-        benefits: [],
-        complete: false,
-        canReenlist: true,
-        completedBasicTraining: true,
-        musteringOut: false,
-        anagathics: false,
-        survival: 8,
-        advancement: 9
-      }
-    ])
+    assert.deepEqual(
+      creation?.terms.map(({ facts: _facts, ...term }) => term),
+      [
+        {
+          career: 'Merchant',
+          skills: ['Broker-1'],
+          skillsAndTraining: ['Broker-0', 'Broker-1'],
+          benefits: [],
+          complete: false,
+          canReenlist: true,
+          completedBasicTraining: true,
+          musteringOut: false,
+          anagathics: false,
+          survival: 8,
+          advancement: 9
+        }
+      ]
+    )
+    assert.deepEqual(creation?.terms[0]?.facts, {
+      basicTrainingSkills: ['Broker-0'],
+      survival: {
+        passed: true,
+        survival,
+        canCommission: true,
+        canAdvance: true
+      },
+      commission: {
+        skipped: false,
+        passed: true,
+        commission
+      },
+      advancement: {
+        skipped: false,
+        passed: true,
+        advancement,
+        rank
+      },
+      termSkillRolls: [termSkill]
+    })
     assert.deepEqual(creation?.careers, [{ name: 'Merchant', rank: 1 }])
     assert.deepEqual(creation?.homeworld, {
       name: 'Regina',

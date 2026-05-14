@@ -8,6 +8,7 @@ import type {
   PieceId,
   UserId
 } from '../../../../shared/ids'
+import { asEventId } from '../../../../shared/ids'
 import type {
   BoardState,
   CharacterSheetPatch,
@@ -416,7 +417,7 @@ describe('character sheet controller', () => {
     assert.deepEqual(harness.calls.freedom, ['LOCKED'])
   })
 
-  it('renders recovered character creation history in details', () => {
+  it('renders recovered character creation timeline in details', () => {
     const scout = character({
       creation: {
         state: {
@@ -444,9 +445,19 @@ describe('character sheet controller', () => {
         failedToQualify: false,
         characteristicChanges: [],
         creationComplete: true,
-        history: [
-          { type: 'SET_CHARACTERISTICS' },
-          { type: 'CREATION_COMPLETE' }
+        timeline: [
+          {
+            eventId: asEventId('event-1'),
+            seq: 1,
+            createdAt: '2026-05-03T00:00:01.000Z',
+            eventType: 'CharacterCreationCharacteristicsCompleted'
+          },
+          {
+            eventId: asEventId('event-2'),
+            seq: 2,
+            createdAt: '2026-05-03T00:00:02.000Z',
+            eventType: 'CharacterCreationCompleted'
+          }
         ]
       }
     })
@@ -462,20 +473,24 @@ describe('character sheet controller', () => {
     findByText(harness.elements.sheetBody, 'Steps')
     findByText(harness.elements.sheetBody, '2')
     findByText(harness.elements.sheetBody, 'Latest')
-    findByText(harness.elements.sheetBody, 'Creation Complete')
+    findByText(harness.elements.sheetBody, 'Completed')
     findByText(harness.elements.sheetBody, 'Plain Export')
     findByText(
       harness.elements.sheetBody,
       [
         'Scout',
         'UPP: 6879A6',
+        'Characteristics: Str 6, Dex 8, End 7, Int 9 (+1), Edu 10 (+1), Soc 6',
         'Type: PLAYER',
         'Age: 34',
-        'Career: Scout',
+        'Homeworld: Unspecified',
+        'Careers: Scout rank 0',
         'Terms: 1',
         'Skills: Recon-0, Vacc Suit-0',
         'Credits: Cr1200',
         'Equipment: Laser Pistol x1 (3D6)',
+        'Career History:',
+        '- Term 1: Scout',
         'Notes:',
         'Known contacts on Regina.'
       ].join('\n')

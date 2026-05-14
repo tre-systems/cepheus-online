@@ -96,6 +96,69 @@ export interface CareerCreationBenefitFact {
   materialItem?: string | null
 }
 
+export interface CareerTermQualificationFact {
+  career: string
+  passed: boolean
+  qualification: CareerCreationCheckFact
+  previousCareerCount: number
+  failedQualificationOptions: FailedQualificationOption[]
+}
+
+export interface CareerTermSurvivalFact {
+  passed: boolean
+  survival: CareerCreationCheckFact
+  canCommission: boolean
+  canAdvance: boolean
+}
+
+export type CareerTermCommissionFact =
+  | {
+      skipped: false
+      passed: boolean
+      commission: CareerCreationCheckFact
+    }
+  | { skipped: true }
+
+export type CareerTermAdvancementFact =
+  | {
+      skipped: false
+      passed: boolean
+      advancement: CareerCreationCheckFact
+      rank: CareerCreationRankFact | null
+    }
+  | { skipped: true }
+
+export interface CareerTermAgingLossFact {
+  selectedLosses: AgingLossSelection[]
+  characteristicPatch: CharacterSheetPatch['characteristics']
+}
+
+export interface CareerTermAnagathicsDecisionFact {
+  useAnagathics: boolean
+  termIndex: number
+}
+
+export interface CareerTermReenlistmentFact {
+  outcome: CareerCreationReenlistmentFact['outcome']
+  reenlistment: CareerCreationReenlistmentFact
+}
+
+export interface CareerTermFacts {
+  qualification?: CareerTermQualificationFact
+  draft?: CareerCreationDraftFact
+  basicTrainingSkills?: string[]
+  survival?: CareerTermSurvivalFact
+  commission?: CareerTermCommissionFact
+  advancement?: CareerTermAdvancementFact
+  termSkillRolls?: CareerCreationTermSkillFact[]
+  termCascadeSelections?: Array<{ cascadeSkill: string; selection: string }>
+  aging?: CareerCreationAgingFact
+  agingLosses?: CareerTermAgingLossFact
+  anagathicsDecision?: CareerTermAnagathicsDecisionFact
+  reenlistment?: CareerTermReenlistmentFact
+  musteringBenefits?: CareerCreationBenefitFact[]
+}
+
 export type CareerCreationEvent =
   | { type: 'SET_CHARACTERISTICS' }
   | { type: 'COMPLETE_HOMEWORLD' }
@@ -510,6 +573,7 @@ export interface CareerTerm {
   skills: string[]
   skillsAndTraining: string[]
   benefits: string[]
+  facts?: CareerTermFacts
   complete: boolean
   canReenlist: boolean
   completedBasicTraining: boolean
