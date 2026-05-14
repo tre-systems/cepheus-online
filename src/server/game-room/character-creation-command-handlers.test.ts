@@ -1166,6 +1166,215 @@ describe('character creation setup command handlers', () => {
     ])
   })
 
+  it('emits term skill roll facts from server dice', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationTermSkill',
+        gameId,
+        actorId,
+        characterId,
+        table: 'serviceSkills'
+      },
+      context(
+        createCreation('SKILLS_TRAINING', {
+          state: createCareerCreationState('SKILLS_TRAINING', {
+            canCommission: true,
+            canAdvance: false
+          }),
+          terms: [
+            {
+              career: 'Merchant',
+              skills: [],
+              skillsAndTraining: ['Broker-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 7
+            }
+          ]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value[0]?.type, 'DiceRolled')
+    assert.equal(result.value[1]?.type, 'CharacterCreationTermSkillRolled')
+    if (result.value[0]?.type !== 'DiceRolled') return
+    if (result.value[1]?.type !== 'CharacterCreationTermSkillRolled') return
+    assert.equal(result.value[0].expression, '1d6')
+    assert.equal(result.value[0].reason, 'Merchant serviceSkills')
+    assert.equal(result.value[1].rollEventId, 'game-1:2')
+    assert.equal(result.value[1].termSkill.career, 'Merchant')
+    assert.equal(result.value[1].termSkill.table, 'serviceSkills')
+    assert.equal(result.value[1].skillsAndTraining.length >= 2, true)
+  })
+
+  it('emits skills completion after required term skills', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'CompleteCharacterCreationSkills',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('SKILLS_TRAINING', {
+          state: createCareerCreationState('SKILLS_TRAINING', {
+            canCommission: true,
+            canAdvance: false
+          }),
+          terms: [
+            {
+              career: 'Merchant',
+              skills: ['Pilot-1'],
+              skillsAndTraining: ['Broker-0', 'Pilot-1'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 7
+            }
+          ]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'CharacterCreationSkillsCompleted',
+        characterId,
+        state: {
+          status: 'AGING',
+          context: {
+            canCommission: true,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits mustering benefit roll facts from server dice', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'material'
+      },
+      context(
+        createCreation('MUSTERING_OUT', {
+          terms: [
+            {
+              ...activeScoutTerm(),
+              complete: true,
+              canReenlist: false,
+              musteringOut: true
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout material mustering benefit',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'CharacterCreationMusteringBenefitRolled',
+        characterId,
+        rollEventId: 'game-1:2',
+        musteringBenefit: {
+          career: 'Scout',
+          kind: 'material',
+          roll: {
+            expression: '2d6',
+            rolls: [4, 4],
+            total: 8
+          },
+          modifier: 0,
+          tableRoll: 8,
+          value: '-',
+          credits: 0,
+          materialItem: null
+        },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('emits mustering completion and continuation events', () => {
+    const creation = createCreation('MUSTERING_OUT', {
+      terms: [
+        {
+          ...activeScoutTerm(),
+          benefits: ['Low Passage'],
+          complete: true,
+          canReenlist: false,
+          musteringOut: true
+        }
+      ],
+      careers: [{ name: 'Scout', rank: 0 }]
+    })
+
+    const completion = deriveCharacterCreationCommandEvents(
+      {
+        type: 'CompleteCharacterCreationMustering',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(creation)
+    )
+    const continuation = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ContinueCharacterCreationAfterMustering',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(creation)
+    )
+
+    assert.equal(completion.ok, true)
+    if (!completion.ok) return
+    assert.equal(continuation.ok, true)
+    if (!continuation.ok) return
+    assert.equal(
+      completion.value[0]?.type,
+      'CharacterCreationMusteringCompleted'
+    )
+    assert.equal(
+      continuation.value[0]?.type,
+      'CharacterCreationAfterMusteringContinued'
+    )
+  })
+
   it('emits mishap resolution with server-derived transition', () => {
     const result = deriveCharacterCreationCommandEvents(
       {
