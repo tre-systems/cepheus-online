@@ -34,6 +34,9 @@ const rawRoomApiImportAllowed = new Set([
   'src/client/app/app.ts',
   'src/client/app/room/command-dispatch.ts'
 ])
+const legacyCreationHistoryReadAllowed = new Set([
+  'src/client/app/character/creation/projection.ts'
+])
 
 const failures = []
 
@@ -92,6 +95,20 @@ for (const path of sourceFiles) {
         /import\s+\{[^}]*\b(fetchRoomState|postRoomCommand)\b[^}]*\}\s+from\s+['"].*\/room\/api(?:\.js)?['"]/,
       message:
         'feature modules must use room/command-dispatch instead of raw room HTTP helpers'
+    })
+  }
+
+  if (
+    path.startsWith('src/client/app/character/creation/') &&
+    !isTestFile(path) &&
+    !legacyCreationHistoryReadAllowed.has(path)
+  ) {
+    checkLinePattern({
+      path,
+      lines,
+      pattern: /\bcreation\.history\b/,
+      message:
+        'character creation client modules must use projection read models instead of legacy creation history'
     })
   }
 

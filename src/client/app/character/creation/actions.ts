@@ -162,11 +162,12 @@ const currentCareerRank = (
 ): number => creation.careers.find((entry) => entry.name === career)?.rank ?? 0
 
 const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
-  (creation.history ?? []).filter(
-    (event) =>
-      event.type === 'FINISH_MUSTERING' &&
-      event.musteringBenefit?.kind === 'cash'
-  ).length
+  creation.terms.reduce(
+    (total, term) =>
+      total +
+      term.benefits.filter((benefit) => /^\d+$/.test(benefit.trim())).length,
+    0
+  )
 
 const remainingBenefitsInCareer = (
   creation: CharacterCreationProjection,
