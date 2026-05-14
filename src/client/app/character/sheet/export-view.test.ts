@@ -128,7 +128,7 @@ const finalizedCreation = (): CharacterCreationProjection => ({
           {
             career: 'Scout',
             kind: 'material',
-            roll: { expression: '1d6', rolls: [3], total: 3 },
+            roll: { expression: '2d6', rolls: [1, 2], total: 3 },
             modifier: 1,
             tableRoll: 4,
             value: 'Low Passage',
@@ -215,7 +215,7 @@ describe('character sheet export view', () => {
         'Credits: Cr1200',
         'Equipment: Vacc Suit x1 (Carried)',
         'Career History:',
-        '- Term 1: Scout - qualified passed 8; survival passed 7; advancement passed 10 to rank 1 (Courier); skills Pilot-1, Vacc Suit-0; aging 11: no effect; no anagathics; reenlistment 10: allowed; benefits Low Passage (3); term complete',
+        '- Term 1: Scout - qualified passed 8; survival passed 7; advancement passed 10 to rank 1 (Courier); skills Pilot-1, Vacc Suit-0; aging 11: no effect; no anagathics; reenlistment 10: allowed; benefits Low Passage (roll 3 +1 DM = table 4); term complete',
         'Notes:',
         'Detached scout.'
       ].join('\n')
@@ -234,6 +234,32 @@ describe('character sheet export view', () => {
 
     assert.equal(
       /used anagathics \(Cr20000\)/.test(
+        derivePlainCharacterExport(character({ creation })) ?? ''
+      ),
+      true
+    )
+  })
+
+  it('formats material characteristic gains in term history exports', () => {
+    const creation = finalizedCreation()
+    creation.terms[0].facts = {
+      ...creation.terms[0].facts,
+      musteringBenefits: [
+        {
+          career: 'Aerospace',
+          kind: 'material',
+          roll: { expression: '2d6', rolls: [4, 4], total: 8 },
+          modifier: 0,
+          tableRoll: 8,
+          value: '+1 Soc',
+          credits: 0,
+          materialItem: null
+        }
+      ]
+    }
+
+    assert.equal(
+      /benefits Soc \+1 \(roll 8\)/.test(
         derivePlainCharacterExport(character({ creation })) ?? ''
       ),
       true

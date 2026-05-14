@@ -1143,7 +1143,8 @@ Tasks:
   client sheet values.
 - Done: the completed-character plain export block includes UPP, readable
   characteristics, sorted skills, careers/ranks, term history, mustering
-  benefits, credits, equipment, and notes from the projected read model.
+  benefits with roll/DM/table-roll provenance, material characteristic gains,
+  credits, equipment, and notes from the projected read model.
 - Extend final playable sheet coverage for deeper provenance and material
   benefit metadata as those display fields mature.
 - Polish copy/layout around the completed-character UPP and export block after

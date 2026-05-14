@@ -6,7 +6,10 @@ import type {
   CharacteristicKey
 } from '../../../../shared/state'
 import type { CareerTerm } from '../../../../shared/characterCreation'
-import { parseCareerSkill } from '../../../../shared/characterCreation'
+import {
+  deriveMaterialBenefitEffect,
+  parseCareerSkill
+} from '../../../../shared/characterCreation'
 
 const uppCharacteristicOrder: CharacteristicKey[] = [
   'str',
@@ -59,6 +62,9 @@ const formatModifier = (modifier: number | null): string =>
     : modifier > 0
       ? `+${modifier}`
       : String(modifier)
+
+const formatSignedModifier = (modifier: number): string =>
+  modifier > 0 ? `+${modifier}` : String(modifier)
 
 export const deriveCharacteristicExportLine = (
   characteristics: Partial<CharacterCharacteristics> | null | undefined
@@ -156,11 +162,22 @@ const termBenefitValue = (term: CareerTerm): string | null => {
   const benefits = term.facts?.musteringBenefits
   if (benefits && benefits.length > 0) {
     return `benefits ${benefits
-      .map((benefit) =>
-        benefit.kind === 'cash'
-          ? `Cr${benefit.credits} (${benefit.roll.total})`
-          : `${benefit.value} (${benefit.roll.total})`
-      )
+      .map((benefit) => {
+        const roll =
+          benefit.modifier === 0
+            ? `roll ${benefit.roll.total}`
+            : `roll ${benefit.roll.total} ${formatSignedModifier(benefit.modifier)} DM = table ${benefit.tableRoll}`
+        if (benefit.kind === 'cash') return `Cr${benefit.credits} (${roll})`
+
+        const effect = deriveMaterialBenefitEffect(benefit.value)
+        const value =
+          effect.kind === 'none'
+            ? 'No material benefit'
+            : effect.kind === 'characteristic'
+              ? `${characteristicLabels[effect.characteristic]} ${formatSignedModifier(effect.modifier)}`
+              : effect.item
+        return `${value} (${roll})`
+      })
       .join(', ')}`
   }
   return term.benefits.length > 0
