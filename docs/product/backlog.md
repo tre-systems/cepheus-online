@@ -371,8 +371,8 @@ Done when:
 
 Start with Streams A-D in parallel, with Stream E running opportunistically:
 
-- Stream A splits command handling and maintains the shared command metadata
-  registry.
+- Stream A keeps command handling split by domain and maintains the shared
+  command metadata registry as new commands land.
 - Stream B moves legal-action and pending-choice state into projection.
 - Stream C consumes that projection through one creator view model and keeps
   `app.ts` thin.
@@ -508,9 +508,9 @@ Tasks:
   reconstructs from checkpoint plus tail.
 - Add telemetry hooks or structured test seams for projection mismatch,
   invalid command, and stale command outcomes without logging secrets.
-- Continue extracting semantic character creation command handlers from the
-  large command switch into narrow helpers without bypassing the publication
-  pipeline.
+- Keep semantic character creation command handlers in narrow domain helpers
+  without bypassing the publication pipeline; add direct handler tests when new
+  branches are added.
 
 Done when:
 
@@ -1085,16 +1085,16 @@ Done when:
 Status: partially done. Aging roll modifiers, aging effect selection, required
 aging loss resolution, reenlistment resolution, seven-term retirement, forced
 reenlistment, allowed/blocked career decisions, voluntary career exit, and
-server-backed semantic aging/reenlistment facts exist. Anagathics and some UI
-decisions/provenance still need completion.
+server-backed semantic aging/reenlistment facts exist. Anagathics decisions,
+cost deduction, and export provenance exist; optional survival/payment edge
+cases and some UI provenance still need completion.
 
 Tasks:
 
-- Use the correct aging modifier from term count and anagathics use.
-- Present legal aging characteristic loss choices only when required.
-- Persist characteristic changes with term provenance.
 - Complete optional anagathics survival/payment consequences beyond the existing
   decision, cost deduction, and projection/export provenance.
+- Keep aging modifier, legal aging-loss choice, and characteristic-change
+  provenance regression coverage healthy as new branches are added.
 - Polish reenlistment UI/provenance for mandatory retirement after seven terms,
   forced reenlistment on 12, allowed reenlistment, blocked reenlistment, and
   voluntary career exit. The server command/event split is done; this is now
@@ -1113,15 +1113,18 @@ Done when:
 Status: partially done. SRD benefit count, cash/material benefit roll
 modifiers, cash limits, benefit table resolution, semantic mustering benefit
 events, mustering completion events, and multi-career continuation are covered.
-Remaining work is projection/UI polish for benefit choices, payouts, material
-item presentation, provenance, and final sheet/export quality.
+Remaining work is UI polish for benefit choices, payouts, material item
+presentation, provenance, and final sheet/export quality.
 
 Tasks:
 
-- Persist credits, starting credits, and material benefits.
+- Polish mustering benefit choice and payout presentation, including clear
+  cash/material labels and material item metadata where the SRD table provides
+  it.
 - Keep continuing into a new career after mustering out covered as new edge
   cases are added.
-- Keep remaining benefit count in projection so mustering cannot finish early.
+- Keep regression coverage proving remaining benefit counts are projection-fed
+  and mustering cannot finish early.
 
 Done when:
 
