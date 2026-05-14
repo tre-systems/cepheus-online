@@ -8,6 +8,13 @@ export type CommandRoute =
   | 'sheet'
   | 'characterCreation'
 
+export type CommandHandlerDomain =
+  | 'game'
+  | 'board'
+  | 'dice'
+  | 'character'
+  | 'characterCreation'
+
 export type NonDeprecatedGameCommand = Exclude<
   GameCommand,
   { type: 'AdvanceCharacterCreation' }
@@ -17,11 +24,45 @@ export type NonDeprecatedGameCommandType = NonDeprecatedGameCommand['type']
 
 export interface CommandMetadata {
   route: CommandRoute
+  handlerDomain: CommandHandlerDomain
   usesSeededDice: boolean
   autoAddExpectedSeq: boolean
 }
 
-const commandMetadata = {
+type CommandMetadataDefinition = Omit<CommandMetadata, 'handlerDomain'> & {
+  handlerDomain?: CommandHandlerDomain
+}
+
+const defaultHandlerDomain = (
+  type: NonDeprecatedGameCommandType,
+  route: CommandRoute
+): CommandHandlerDomain => {
+  if (type === 'CreateCharacter') return 'character'
+  if (route === 'sheet') return 'character'
+  if (route === 'door') return 'board'
+  if (route === 'characterCreation') return 'characterCreation'
+  return route
+}
+
+const defineCommandMetadata = <
+  T extends Record<NonDeprecatedGameCommandType, CommandMetadataDefinition>
+>(
+  metadata: T
+): Record<keyof T, CommandMetadata> => {
+  const entries = Object.entries(metadata).map(([type, value]) => [
+    type,
+    {
+      ...value,
+      handlerDomain:
+        value.handlerDomain ??
+        defaultHandlerDomain(type as NonDeprecatedGameCommandType, value.route)
+    }
+  ])
+
+  return Object.fromEntries(entries) as Record<keyof T, CommandMetadata>
+}
+
+const commandMetadata = defineCommandMetadata({
   CreateGame: {
     route: 'game',
     usesSeededDice: false,
@@ -237,7 +278,7 @@ const commandMetadata = {
     usesSeededDice: true,
     autoAddExpectedSeq: true
   }
-} satisfies Record<NonDeprecatedGameCommandType, CommandMetadata>
+} satisfies Record<NonDeprecatedGameCommandType, CommandMetadataDefinition>)
 
 export const commandMetadataByType = commandMetadata
 

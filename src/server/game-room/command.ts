@@ -1,4 +1,8 @@
 import type { GameCommand } from '../../shared/commands'
+import {
+  isDeprecatedGameCommand,
+  metadataForCommand
+} from '../../shared/command-metadata'
 import type { GameEvent } from '../../shared/events'
 import { err, type Result } from '../../shared/result'
 import type { CommandError } from '../../shared/protocol'
@@ -16,6 +20,14 @@ import { deriveDiceCommandEvents } from './dice-command-handlers'
 import { deriveGameCommandEvents } from './game-command-handlers'
 
 export type { CommandContext } from './command-helpers'
+
+type BoardCommand = Parameters<typeof deriveBoardCommandEvents>[0]
+type CharacterCommand = Parameters<typeof deriveCharacterCommandEvents>[0]
+type CharacterCreationCommand = Parameters<
+  typeof deriveCharacterCreationCommandEvents
+>[0]
+type DiceCommand = Parameters<typeof deriveDiceCommandEvents>[0]
+type GameOnlyCommand = Parameters<typeof deriveGameCommandEvents>[0]
 
 export const deriveEventsForCommand = (
   command: GameCommand,
@@ -41,118 +53,30 @@ export const deriveEventsForCommand = (
     }
   }
 
-  switch (command.type) {
-    case 'CreateGame': {
-      return deriveGameCommandEvents(command, context)
-    }
+  if (isDeprecatedGameCommand(command)) {
+    return deriveCharacterCreationCommandEvents(command, context)
+  }
 
-    case 'CreateCharacter': {
-      return deriveCharacterCommandEvents(command, context)
-    }
+  const handlerDomain = metadataForCommand(command).handlerDomain
 
-    case 'UpdateCharacterSheet': {
-      return deriveCharacterCommandEvents(command, context)
-    }
-
-    case 'FinalizeCharacterCreation': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'StartCharacterCreation': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'AdvanceCharacterCreation': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'RollCharacterCreationCharacteristic': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'CompleteCharacterCreationBasicTraining': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'CompleteCharacterCreationHomeworld': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'ResolveCharacterCreationQualification':
-    case 'ResolveCharacterCreationDraft':
-    case 'EnterCharacterCreationDrifter': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'ResolveCharacterCreationSurvival': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'ResolveCharacterCreationCommission':
-    case 'SkipCharacterCreationCommission':
-    case 'ResolveCharacterCreationAdvancement':
-    case 'SkipCharacterCreationAdvancement': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'ResolveCharacterCreationAging':
-    case 'ResolveCharacterCreationAgingLosses':
-    case 'ResolveCharacterCreationMishap':
-    case 'ConfirmCharacterCreationDeath':
-    case 'DecideCharacterCreationAnagathics':
-    case 'ResolveCharacterCreationReenlistment':
-    case 'ReenlistCharacterCreationCareer':
-    case 'LeaveCharacterCreationCareer': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'RollCharacterCreationTermSkill':
-    case 'CompleteCharacterCreationSkills':
-    case 'ResolveCharacterCreationTermCascadeSkill':
-    case 'RollCharacterCreationMusteringBenefit':
-    case 'ContinueCharacterCreationAfterMustering':
-    case 'CompleteCharacterCreationMustering': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'CompleteCharacterCreation': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'SetCharacterCreationHomeworld':
-    case 'SelectCharacterCreationBackgroundSkill':
-    case 'ResolveCharacterCreationCascadeSkill': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'StartCharacterCareerTerm': {
-      return deriveCharacterCreationCommandEvents(command, context)
-    }
-
-    case 'CreateBoard': {
-      return deriveBoardCommandEvents(command, context)
-    }
-
-    case 'SelectBoard':
-    case 'SetDoorOpen':
-    case 'CreatePiece':
-    case 'MovePiece':
-    case 'SetPieceVisibility':
-    case 'SetPieceFreedom': {
-      return deriveBoardCommandEvents(command, context)
-    }
-
-    case 'RollDice': {
-      return deriveDiceCommandEvents(command, context)
-    }
-
+  switch (handlerDomain) {
+    case 'game':
+      return deriveGameCommandEvents(command as GameOnlyCommand, context)
+    case 'character':
+      return deriveCharacterCommandEvents(command as CharacterCommand, context)
+    case 'characterCreation':
+      return deriveCharacterCreationCommandEvents(
+        command as CharacterCreationCommand,
+        context
+      )
+    case 'board':
+      return deriveBoardCommandEvents(command as BoardCommand, context)
+    case 'dice':
+      return deriveDiceCommandEvents(command as DiceCommand, context)
     default: {
-      const exhaustive: never = command
+      const exhaustive: never = handlerDomain
       return err(
-        commandError(
-          'invalid_command',
-          `Unhandled command ${(exhaustive as { type: string }).type}`
-        )
+        commandError('invalid_command', `Unhandled command domain ${exhaustive}`)
       )
     }
   }
