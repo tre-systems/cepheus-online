@@ -212,6 +212,23 @@ describe('character creation follow helpers', () => {
     assert.equal(syncedFlow?.draft.name, 'Scout')
   })
 
+  it('does not preserve stale local review flow over active projection', () => {
+    const reviewFlow = {
+      ...fallbackFlow,
+      step: 'review' as const
+    }
+    const syncedFlow = syncCharacterCreationFlowFromRoomState({
+      currentFlow: reviewFlow,
+      roomState: stateWithCreation(creation('ACTIVE')),
+      characterId,
+      fallbackFlow: reviewFlow
+    })
+
+    assert.equal(syncedFlow === reviewFlow, false)
+    assert.equal(syncedFlow?.step, 'review')
+    assert.equal(syncedFlow?.draft.name, 'Scout')
+  })
+
   it('refreshes followed read-only flows and closes missing projections', () => {
     const refreshed = refreshFollowedCharacterCreationFlowFromState({
       state: stateWithCreation(creation('BASIC_TRAINING')),

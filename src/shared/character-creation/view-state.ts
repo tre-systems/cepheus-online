@@ -85,6 +85,7 @@ export const characterCreationStepFromStatus = (
       return 'homeworld'
     case 'BASIC_TRAINING':
       return 'skills'
+    case 'ACTIVE':
     case 'PLAYABLE':
       return 'review'
     default:

@@ -25,7 +25,10 @@ import {
 
 export const creationStepFromStatus = (
   status: CareerCreationStatus | string
-): CharacterCreationStep => characterCreationStepFromStatus(status)
+): CharacterCreationStep =>
+  status === 'MUSTERING_OUT'
+    ? 'equipment'
+    : characterCreationStepFromStatus(status)
 
 export const completedTermFromProjection = (
   term: CareerTerm

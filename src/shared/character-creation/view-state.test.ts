@@ -120,6 +120,16 @@ describe('character creation shared view state', () => {
     )
   })
 
+  it('maps active creation state to the review step', () => {
+    const readModel = deriveCharacterCreationProjectionReadModel(
+      projection({
+        state: createCareerCreationState('ACTIVE', creationContext)
+      })
+    )
+
+    assert.equal(readModel.step, 'review')
+  })
+
   it('derives cascade choices through the projection read model', () => {
     const readModel = deriveCharacterCreationProjectionReadModel(
       projection({

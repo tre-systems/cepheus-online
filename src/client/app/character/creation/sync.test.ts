@@ -131,14 +131,14 @@ describe('character creation sync helpers', () => {
     )
   })
 
-  it('keeps local review setup after the server accepts leaving a career', () => {
+  it('syncs local review setup from the projected lifecycle status', () => {
     assert.equal(
       shouldSyncEditableCharacterCreationFlowWithProjection({
         flow: flow('skills'),
         creation: creation('MUSTERING_OUT'),
         readOnly: false
       }),
-      false
+      true
     )
     assert.equal(
       shouldSyncEditableCharacterCreationFlowWithProjection({
@@ -152,6 +152,14 @@ describe('character creation sync helpers', () => {
       shouldSyncEditableCharacterCreationFlowWithProjection({
         flow: flow('skills'),
         creation: creation('SURVIVAL'),
+        readOnly: false
+      }),
+      true
+    )
+    assert.equal(
+      shouldSyncEditableCharacterCreationFlowWithProjection({
+        flow: flow('equipment'),
+        creation: creation('ACTIVE'),
         readOnly: false
       }),
       true
