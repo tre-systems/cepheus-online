@@ -276,6 +276,52 @@ const redactCreationProgress = (
   delete character.creation.actionPlan
 }
 
+const removeProjectedCareerTerm = (
+  character: CharacterState,
+  termIndex: number
+): void => {
+  const creation = character.creation
+  if (!creation) return
+
+  const removedCareer = creation.terms[termIndex]?.career
+  creation.terms = creation.terms.filter((_, index) => index !== termIndex)
+  if (!removedCareer) return
+
+  const remainingCareerTerms = creation.terms.some(
+    (term) => term.career === removedCareer
+  )
+  if (!remainingCareerTerms) {
+    creation.careers = creation.careers.filter(
+      (career) => career.name !== removedCareer
+    )
+  }
+}
+
+const redactQualificationOutcome = (
+  character: CharacterState,
+  termIndex: number,
+  previousCareerCount: number | undefined
+): void => {
+  const creation = character.creation
+  if (!creation) return
+
+  removeProjectedCareerTerm(character, termIndex)
+  if (typeof previousCareerCount === 'number') {
+    creation.careers = creation.careers.slice(0, previousCareerCount)
+  }
+  creation.failedToQualify = false
+  delete creation.failedQualification
+  redactCreationProgress(character, 'CAREER_SELECTION')
+}
+
+const redactDraftOutcome = (
+  character: CharacterState,
+  termIndex: number
+): void => {
+  removeProjectedCareerTerm(character, termIndex)
+  redactCreationProgress(character, 'CAREER_SELECTION')
+}
+
 const rollDependentCreationHistoryTypes = new Set<string>([
   'SELECT_CAREER',
   'SURVIVAL_PASSED',
@@ -396,7 +442,9 @@ const redactUnrevealedCreationFacts = (
   }
 
   if (hasUnrevealedRollFact(creation.failedQualification, unrevealedRollIds)) {
+    creation.failedToQualify = false
     delete creation.failedQualification
+    redactCreationProgress(character, 'CAREER_SELECTION')
   }
 
   for (const [termIndex, term] of creation.terms.entries()) {
@@ -404,9 +452,15 @@ const redactUnrevealedCreationFacts = (
     if (!facts) continue
 
     if (hasUnrevealedRollFact(facts.qualification, unrevealedRollIds)) {
+      redactQualificationOutcome(
+        character,
+        termIndex,
+        facts.qualification?.previousCareerCount
+      )
       delete facts.qualification
     }
     if (hasUnrevealedRollFact(facts.draft, unrevealedRollIds)) {
+      redactDraftOutcome(character, termIndex)
       delete facts.draft
     }
     if (hasUnrevealedRollFact(facts.survival, unrevealedRollIds)) {

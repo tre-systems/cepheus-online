@@ -691,6 +691,273 @@ describe('viewer filtering', () => {
     assert.equal('advancement' in (term ?? {}), false)
   })
 
+  it('redacts pre-reveal qualification success from top-level creation state', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Agent',
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 9,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'BASIC_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Agent',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false,
+            facts: {
+              qualification: {
+                rollEventId: asEventId('roll-1'),
+                career: 'Agent',
+                passed: true,
+                previousCareerCount: 0,
+                failedQualificationOptions: ['Draft', 'Drifter'],
+                qualification: {
+                  expression: '2d6',
+                  rolls: [5, 4],
+                  total: 9,
+                  characteristic: 'soc',
+                  modifier: 1,
+                  target: 6,
+                  success: true
+                }
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Agent', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false,
+        actionPlan: {
+          status: 'BASIC_TRAINING',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const creation = filtered.characters[asCharacterId('char-1')]?.creation
+    assert.equal(creation?.state.status, 'CAREER_SELECTION')
+    assert.equal(creation?.actionPlan, undefined)
+    assert.deepEqual(creation?.terms, [])
+    assert.deepEqual(creation?.careers, [])
+    assert.equal(creation?.failedToQualify, false)
+
+    const refereeView = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('referee'),
+        role: 'PLAYER'
+      },
+      { nowMs }
+    )
+    assert.equal(
+      refereeView.characters[asCharacterId('char-1')]?.creation?.state.status,
+      'BASIC_TRAINING'
+    )
+    assert.equal(
+      refereeView.characters[asCharacterId('char-1')]?.creation?.terms[0]
+        ?.career,
+      'Agent'
+    )
+  })
+
+  it('redacts pre-reveal failed qualification fallback state', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Rogue',
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 5
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [],
+        careers: [],
+        canEnterDraft: true,
+        failedToQualify: true,
+        failedQualification: {
+          rollEventId: asEventId('roll-1'),
+          career: 'Rogue',
+          passed: false,
+          previousCareerCount: 0,
+          failedQualificationOptions: ['Draft', 'Drifter'],
+          qualification: {
+            expression: '2d6',
+            rolls: [1, 2],
+            total: 3,
+            characteristic: 'dex',
+            modifier: -1,
+            target: 5,
+            success: false
+          }
+        },
+        characteristicChanges: [],
+        creationComplete: false,
+        actionPlan: {
+          status: 'CAREER_SELECTION',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const creation = filtered.characters[asCharacterId('char-1')]?.creation
+    assert.equal(creation?.state.status, 'CAREER_SELECTION')
+    assert.equal(creation?.actionPlan, undefined)
+    assert.equal(creation?.failedToQualify, false)
+    assert.equal(creation?.failedQualification, undefined)
+  })
+
+  it('redacts pre-reveal draft career assignment from top-level creation state', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Draftee',
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'BASIC_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Navy',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false,
+            draft: 1,
+            facts: {
+              draft: {
+                rollEventId: asEventId('roll-1'),
+                roll: { expression: '1d6', rolls: [4], total: 4 },
+                tableRoll: 4,
+                acceptedCareer: 'Navy'
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Navy', rank: 0 }],
+        canEnterDraft: false,
+        failedToQualify: false,
+        failedQualification: null,
+        characteristicChanges: [],
+        creationComplete: false,
+        actionPlan: {
+          status: 'BASIC_TRAINING',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const creation = filtered.characters[asCharacterId('char-1')]?.creation
+    assert.equal(creation?.state.status, 'CAREER_SELECTION')
+    assert.equal(creation?.actionPlan, undefined)
+    assert.deepEqual(creation?.terms, [])
+    assert.deepEqual(creation?.careers, [])
+  })
+
   it('redacts pre-reveal aging progress from top-level creation state', () => {
     const state = buildState()
     addDiceRoll(state, futureRevealAt)
