@@ -305,6 +305,58 @@ test.describe('tactical board smoke', () => {
     })
   })
 
+  test('creates a tactical piece with a generated NPC sheet from the room dialog', async ({
+    page
+  }) => {
+    const roomId = uniqueRoomId('piece-sheet')
+    const refereeId = 'sheet-referee'
+    await openRoom(page, {
+      roomId,
+      userId: refereeId,
+      viewer: 'referee'
+    })
+    const refereeSession = await actorSessionFromPage(page, roomId, refereeId)
+
+    await postCommand(page, roomId, refereeId, refereeSession, {
+      type: 'CreateGame',
+      slug: roomId,
+      name: 'Piece Sheet Smoke'
+    })
+    await postSequencedCommand(page, roomId, refereeId, refereeSession, {
+      type: 'CreateBoard',
+      boardId: 'cargo-bay',
+      name: 'Cargo Bay',
+      imageAssetId: null,
+      url: null,
+      width: 1000,
+      height: 1000,
+      scale: 50,
+      losSidecar: null
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.locator('#menuButton').click()
+    await expect(page.locator('#roomDialog')).toBeVisible()
+    await page.locator('#pieceNameInput').fill('Security Guard')
+    await page.locator('#pieceSheetInput').check()
+    await page.locator('#createPieceButton').click()
+    await expect(page.locator('#roomDialog')).toBeHidden()
+
+    const state = await fetchTacticalState(page, roomId, refereeId)
+    const characters = Object.values(state.state?.characters ?? {})
+    const pieces = Object.values(state.state?.pieces ?? {})
+    expect(characters).toHaveLength(1)
+    expect(pieces).toHaveLength(1)
+    expect(characters[0]).toMatchObject({
+      name: 'Security Guard',
+      type: 'NPC'
+    })
+    expect(pieces[0]).toMatchObject({
+      name: 'Security Guard',
+      characterId: characters[0]?.id
+    })
+  })
+
   test('creates a board, moves pieces, toggles doors, and filters hidden pieces', async ({
     page,
     context
