@@ -8,7 +8,11 @@ import {
   deriveCareerTermTrainingSkillsFromFacts,
   hasProjectedCareerTermFacts
 } from '../../../../shared/character-creation/term-skills.js'
-import { characterCreationStepFromStatus } from '../../../../shared/character-creation/view-state.js'
+import {
+  characterCreationStepFromStatus,
+  deriveCharacterCreationCompletedTermReadModel,
+  type CharacterCreationCompletedTermReadModel
+} from '../../../../shared/character-creation/view-state.js'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -32,17 +36,10 @@ export const creationStepFromStatus = (
 
 export const completedTermFromProjection = (
   term: CareerTerm
-): CharacterCreationCompletedTerm => {
-  if (hasProjectedCareerTermFacts(term)) {
-    return completedTermFromSemanticFacts(term)
-  }
-  return legacyCompletedTermFromAggregate(term)
-}
-
-const termSkillRollsFromFacts = (
-  term: CareerTerm
-): CharacterCreationCompletedTerm['termSkillRolls'] =>
-  deriveCareerTermSkillRollSummaries(term)
+): CharacterCreationCompletedTerm =>
+  completedTermFromReadModel(
+    deriveCharacterCreationCompletedTermReadModel(term)
+  )
 
 const creationSkillsFromTerm = (term: CareerTerm): string[] => {
   if (hasProjectedCareerTermFacts(term)) {
@@ -51,80 +48,43 @@ const creationSkillsFromTerm = (term: CareerTerm): string[] => {
   return term.skillsAndTraining
 }
 
-const legacyTermSkillRollsFromAggregate = (
+const termSkillRollsFromFacts = (
   term: CareerTerm
 ): CharacterCreationCompletedTerm['termSkillRolls'] =>
-  term.skillsAndTraining.map((skill) => ({
-    table: 'serviceSkills',
-    roll: 0,
-    skill
-  }))
+  deriveCareerTermSkillRollSummaries(term)
 
-const completedTermFromSemanticFacts = (
-  term: CareerTerm
+const completedTermFromReadModel = (
+  term: CharacterCreationCompletedTermReadModel
 ): CharacterCreationCompletedTerm => {
-  const facts = term.facts
-  const commission = facts?.commission
-  const advancement = facts?.advancement
-
   return {
     career: term.career,
-    drafted: facts?.draft !== undefined,
-    anagathics: facts?.anagathicsDecision?.useAnagathics ?? false,
-    anagathicsCost: facts?.anagathicsDecision?.cost ?? null,
-    age: facts?.aging?.age ?? null,
-    rank:
-      advancement && !advancement.skipped
-        ? (advancement.rank?.newRank ?? null)
-        : null,
-    qualificationRoll: facts?.qualification?.qualification.total ?? null,
-    survivalRoll: facts?.survival?.survival.total ?? null,
-    survivalPassed: facts?.survival?.passed ?? true,
-    canCommission: facts?.survival?.canCommission ?? false,
-    commissionRoll:
-      commission?.skipped === true
-        ? -1
-        : (commission?.commission.total ?? null),
-    commissionPassed:
-      commission?.skipped === true ? false : (commission?.passed ?? null),
-    canAdvance: facts?.survival?.canAdvance ?? false,
-    advancementRoll:
-      advancement?.skipped === true
-        ? -1
-        : (advancement?.advancement.total ?? null),
-    advancementPassed:
-      advancement?.skipped === true ? false : (advancement?.passed ?? null),
-    termSkillRolls: termSkillRollsFromFacts(term),
-    ...(facts?.mishap?.outcome.benefitEffect
-      ? { benefitForfeiture: facts.mishap.outcome.benefitEffect }
-      : {}),
-    reenlistmentRoll: facts?.reenlistment?.reenlistment.total ?? null,
-    reenlistmentOutcome: facts?.reenlistment?.outcome ?? null
+    drafted: term.drafted,
+    anagathics: term.anagathics,
+    anagathicsCost: term.anagathicsCost,
+    age: term.age,
+    rank: term.rank,
+    rankTitle: term.rankTitle,
+    rankBonusSkill: term.rankBonusSkill,
+    qualificationRoll: term.qualificationRoll,
+    survivalRoll: term.survivalRoll,
+    survivalPassed: term.survivalPassed,
+    canCommission: term.canCommission,
+    commissionRoll: term.commissionRoll,
+    commissionPassed: term.commissionPassed,
+    canAdvance: term.canAdvance,
+    advancementRoll: term.advancementRoll,
+    advancementPassed: term.advancementPassed,
+    termSkillRolls: term.termSkillRolls.map((roll) => ({ ...roll })),
+    agingRoll: term.agingRoll,
+    agingMessage: term.agingMessage,
+    benefitForfeiture: term.benefitForfeiture,
+    reenlistmentRoll: term.reenlistmentRoll,
+    reenlistmentOutcome:
+      term.reenlistmentOutcome === 'unresolved'
+        ? null
+        : term.reenlistmentOutcome
   }
 }
-
-const legacyCompletedTermFromAggregate = (
-  term: CareerTerm
-): CharacterCreationCompletedTerm => ({
-  career: term.career,
-  drafted: term.draft === 1,
-  anagathics: term.anagathics,
-  anagathicsCost: term.anagathicsCost ?? null,
-  age: null,
-  rank: null,
-  qualificationRoll: null,
-  survivalRoll: term.survival ?? null,
-  survivalPassed: term.survival == null ? true : term.complete,
-  canCommission: false,
-  commissionRoll: null,
-  commissionPassed: null,
-  canAdvance: false,
-  advancementRoll: term.advancement ?? null,
-  advancementPassed: null,
-  termSkillRolls: legacyTermSkillRollsFromAggregate(term),
-  reenlistmentRoll: term.reEnlistment ?? null,
-  reenlistmentOutcome: term.canReenlist ? 'allowed' : 'blocked'
-})
 
 const activeTermFromProjection = (
   creation: CharacterCreationProjection

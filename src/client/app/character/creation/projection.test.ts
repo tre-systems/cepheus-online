@@ -640,6 +640,8 @@ describe('character creation projection helpers', () => {
         anagathicsCost: null,
         age: null,
         rank: 1,
+        rankTitle: 'Courier',
+        rankBonusSkill: null,
         qualificationRoll: null,
         survivalRoll: 8,
         survivalPassed: true,
@@ -656,6 +658,9 @@ describe('character creation projection helpers', () => {
             skill: 'Pilot-1'
           }
         ],
+        agingRoll: null,
+        agingMessage: null,
+        benefitForfeiture: null,
         reenlistmentRoll: 9,
         reenlistmentOutcome: 'allowed'
       }

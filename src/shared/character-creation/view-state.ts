@@ -222,7 +222,7 @@ const completedTermFromLegacyAggregate = (
   legacyProjection: true
 })
 
-const completedTermReadModel = (
+export const deriveCharacterCreationCompletedTermReadModel = (
   term: CareerTerm
 ): CharacterCreationCompletedTermReadModel =>
   hasProjectedCareerTermFacts(term)
@@ -259,7 +259,7 @@ export const deriveCharacterCreationProjectionReadModel = (
     terms,
     completedTerms: terms
       .filter((term) => term.complete || term.musteringOut)
-      .map(completedTermReadModel),
+      .map(deriveCharacterCreationCompletedTermReadModel),
     careers: creation.careers.map((career) => ({ ...career })),
     backgroundSkills: [...(creation.backgroundSkills ?? [])],
     pendingCascadeSkills: [...(creation.pendingCascadeSkills ?? [])],

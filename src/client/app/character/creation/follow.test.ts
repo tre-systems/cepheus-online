@@ -392,7 +392,8 @@ describe('character creation follow helpers', () => {
     assert.deepEqual(careerHistory?.items, [
       {
         label: 'Term 1',
-        value: 'Scout, survived, advanced, training Gambling-1 (3)'
+        value:
+          'Scout, survived, advanced, rank Courier, rank skill Pilot-1, training Gambling-1 (3)'
       }
     ])
     assert.deepEqual(career?.items, [
