@@ -354,8 +354,9 @@ const wizardViewModel = ({
   const projectedStatus = projectedCreation?.state.status ?? null
   const backgroundCascadeChoices =
     projectedStatus === 'HOMEWORLD' ? actionSection.cascadeSkillChoices : []
-  const termCascadeChoices =
-    projectedStatus === 'SKILLS_TRAINING'
+  const termCascadeChoices = !actionSection.hasProjectedCreation
+    ? undefined
+    : projectedStatus === 'SKILLS_TRAINING'
       ? actionSection.cascadeSkillChoices
       : []
   const homeworldChoiceOptions =

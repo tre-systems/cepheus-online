@@ -478,14 +478,7 @@ describe('character creation view model', () => {
     assert.equal(viewModel.controlsDisabled, true)
     assert.equal(viewModel.wizard?.controlsDisabled, true)
     assert.equal(viewModel.wizard?.projectedStep, 'career')
-    assert.equal(
-      viewModel.wizard?.termCascadeChoices?.title,
-      'Choose a specialty'
-    )
-    assert.equal(
-      viewModel.wizard?.termCascadeChoices?.choices[0]?.cascadeSkill,
-      'Aircraft-1'
-    )
+    assert.equal(viewModel.wizard?.termCascadeChoices, null)
     assert.equal(viewModel.pending.hasPendingResolution, true)
     assert.deepEqual(viewModel.pending.termCascadeSkills, ['Aircraft-1'])
     assert.equal(viewModel.pending.agingChangeCount, 1)
@@ -539,6 +532,33 @@ describe('character creation view model', () => {
         ]
       }
     ])
+  })
+
+  it('fails closed when projected term cascade choices are missing', () => {
+    const currentFlow = flow({
+      step: 'career',
+      draft: {
+        ...flow().draft,
+        pendingCascadeSkills: [],
+        pendingTermCascadeSkills: ['Vehicle-1']
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('SKILLS_TRAINING', {
+        pendingCascadeSkills: ['Vehicle-1'],
+        actionPlan: {
+          status: 'SKILLS_TRAINING',
+          pendingDecisions: [{ key: 'cascadeSkillResolution' }],
+          legalActions: [],
+          cascadeSkillChoices: []
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.termCascadeChoices, null)
   })
 
   it('uses projected homeworld options for read-only homeworld choices', () => {

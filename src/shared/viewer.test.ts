@@ -528,15 +528,11 @@ describe('viewer filtering', () => {
     assert.equal(term?.facts?.musteringBenefits, undefined)
     assert.deepEqual(term?.skills, [])
     assert.deepEqual(term?.skillsAndTraining, ['Vacc Suit-0'])
-    assert.deepEqual(
-      filtered.characters[asCharacterId('char-1')]?.skills,
-      ['Vacc Suit-0']
-    )
+    assert.deepEqual(filtered.characters[asCharacterId('char-1')]?.skills, [
+      'Vacc Suit-0'
+    ])
     assert.deepEqual(term?.benefits, [])
-    assert.equal(
-      filtered.characters[asCharacterId('char-1')]?.credits,
-      100
-    )
+    assert.equal(filtered.characters[asCharacterId('char-1')]?.credits, 100)
     assert.equal(filtered.characters[asCharacterId('char-1')]?.age, 18)
     assert.deepEqual(
       filtered.characters[asCharacterId('char-1')]?.equipment,
@@ -590,14 +586,191 @@ describe('viewer filtering', () => {
     ])
     assert.equal(state.characters[asCharacterId('char-1')]?.credits, 7100)
     assert.equal(state.characters[asCharacterId('char-1')]?.age, 24)
-    assert.equal(
-      state.characters[asCharacterId('char-1')]?.equipment.length,
-      1
-    )
+    assert.equal(state.characters[asCharacterId('char-1')]?.equipment.length, 1)
     assert.equal(
       state.characters[asCharacterId('char-1')]?.creation?.history?.length,
       3
     )
+  })
+
+  it('redacts pre-reveal advancement progress from top-level creation state', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: true
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            advancement: 9,
+            facts: {
+              advancement: {
+                rollEventId: asEventId('roll-1'),
+                skipped: false,
+                passed: true,
+                advancement: {
+                  expression: '2d6',
+                  rolls: [5, 4],
+                  total: 9,
+                  characteristic: null,
+                  modifier: 0,
+                  target: 8,
+                  success: true
+                },
+                rank: {
+                  career: 'Scout',
+                  previousRank: 0,
+                  newRank: 1,
+                  title: 'Courier',
+                  bonusSkill: null
+                }
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 1 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false,
+        actionPlan: {
+          status: 'SKILLS_TRAINING',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const creation = filtered.characters[asCharacterId('char-1')]?.creation
+    const term = creation?.terms[0]
+    assert.equal(creation?.state.status, 'ADVANCEMENT')
+    assert.equal(creation?.actionPlan, undefined)
+    assert.deepEqual(creation?.careers, [{ name: 'Scout', rank: 0 }])
+    assert.equal(term?.facts?.advancement, undefined)
+    assert.equal('advancement' in (term ?? {}), false)
+  })
+
+  it('redacts pre-reveal aging progress from top-level creation state', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 22,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            facts: {
+              aging: {
+                rollEventId: asEventId('roll-1'),
+                roll: { expression: '2d6', rolls: [6, 6], total: 12 },
+                modifier: -1,
+                age: 22,
+                characteristicChanges: []
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false,
+        actionPlan: {
+          status: 'REENLISTMENT',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const creation = filtered.characters[asCharacterId('char-1')]?.creation
+    const term = creation?.terms[0]
+    assert.equal(filtered.characters[asCharacterId('char-1')]?.age, 18)
+    assert.equal(creation?.state.status, 'AGING')
+    assert.equal(creation?.actionPlan, undefined)
+    assert.equal(term?.facts?.aging, undefined)
   })
 
   it('keeps roll-dependent creation history visible after reveal', () => {

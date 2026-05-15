@@ -1661,10 +1661,17 @@ export const deriveCharacterCreationTermCascadeChoicesViewModel = (
 ): CharacterCreationTermCascadeChoicesViewModel | null => {
   if (flow.step !== 'career') return null
 
-  const choices = deriveCharacterCreationCascadeSkillChoiceViewModels(
-    flow.draft.pendingTermCascadeSkills,
-    options.termCascadeChoices
-  )
+  const choices =
+    options.termCascadeChoices === undefined
+      ? deriveCharacterCreationCascadeSkillChoiceViewModels(
+          flow.draft.pendingTermCascadeSkills
+        )
+      : flow.draft.pendingTermCascadeSkills.flatMap((cascadeSkill) => {
+          const projected = options.termCascadeChoices?.find(
+            (choice) => choice.cascadeSkill === cascadeSkill
+          )
+          return projected ? [projectedCascadeChoiceViewModel(projected)] : []
+        })
   if (choices.length === 0) return null
 
   return {

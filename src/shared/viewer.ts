@@ -14,6 +14,7 @@ import type {
 import type {
   CareerCreationBenefitFact,
   CareerCreationEvent,
+  CareerCreationStatus,
   CareerCreationTermSkillFact,
   CareerTerm
 } from './characterCreation'
@@ -115,7 +116,9 @@ const redactTermSkillSheetEffect = (
 ): void => {
   const skill = visibleSkillFromTermSkillFact(fact)
   if (skill) {
-    character.skills = character.skills.filter((candidate) => candidate !== skill)
+    character.skills = character.skills.filter(
+      (candidate) => candidate !== skill
+    )
   }
 
   if (!fact.characteristic) return
@@ -260,6 +263,19 @@ const redactAdvancementSheetEffect = (
   )
 }
 
+const redactCreationProgress = (
+  character: CharacterState,
+  status: CareerCreationStatus
+): void => {
+  if (!character.creation) return
+
+  character.creation.state = {
+    ...character.creation.state,
+    status
+  }
+  delete character.creation.actionPlan
+}
+
 const rollDependentCreationHistoryTypes = new Set<string>([
   'SELECT_CAREER',
   'SURVIVAL_PASSED',
@@ -402,6 +418,7 @@ const redactUnrevealedCreationFacts = (
       delete facts.commission
     }
     if (hasUnrevealedRollFact(facts.advancement, unrevealedRollIds)) {
+      redactCreationProgress(character, 'ADVANCEMENT')
       if (facts.advancement && !facts.advancement.skipped) {
         redactAdvancementSheetEffect(character, facts.advancement.rank)
       }
@@ -409,6 +426,7 @@ const redactUnrevealedCreationFacts = (
       delete (term as unknown as { advancement?: number }).advancement
     }
     if (hasUnrevealedRollFact(facts.aging, unrevealedRollIds)) {
+      redactCreationProgress(character, 'AGING')
       redactAgingSheetEffect(character, facts.aging?.age)
       delete facts.aging
     }

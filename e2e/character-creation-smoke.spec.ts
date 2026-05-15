@@ -22,6 +22,7 @@ import {
   latestProjectedTermSkill,
   normalizedCareerContinuationSlice,
   normalizedCharacteristicCreationSlice,
+  normalizedLaterTermRollSlice,
   normalizedText,
   openOrExpectFollowedCreation,
   postCommand,
@@ -1480,23 +1481,44 @@ test.describe('character creation smoke', () => {
         career: 'Merchant',
         drafted: false
       })
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'CompleteCharacterCreationBasicTraining',
+        characterId: context.characterId,
+        skill: 'Broker-0'
+      })
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'ResolveCharacterCreationSurvival',
+        characterId: context.characterId
+      })
 
-      return normalizedCareerContinuationSlice(
-        await fetchRoomState(page, roomId, actorId),
-        context.characterId
-      )
+      const state = await fetchRoomState(page, roomId, actorId)
+      return {
+        continuation: normalizedCareerContinuationSlice(
+          state,
+          context.characterId
+        ),
+        laterTermRoll: normalizedLaterTermRollSlice(state, context.characterId)
+      }
     }
 
     const firstRoom = await driveContinuation('first')
     const secondRoom = await driveContinuation('second')
 
     expect(firstRoom).toEqual(secondRoom)
-    expect(firstRoom.status).toBe('BASIC_TRAINING')
-    expect(firstRoom.terms.map((term) => term.career)).toEqual([
+    expect(firstRoom.continuation.status).toBe('COMMISSION')
+    expect(firstRoom.continuation.terms.map((term) => term.career)).toEqual([
       'Scout',
       'Merchant'
     ])
-    expect(firstRoom.terms[0]?.musteringBenefits).toHaveLength(1)
+    expect(firstRoom.continuation.terms[0]?.musteringBenefits).toHaveLength(1)
+    expect(firstRoom.laterTermRoll.termCareers).toEqual(['Scout', 'Merchant'])
+    expect(firstRoom.laterTermRoll.latestDiceRoll?.rolls).toHaveLength(2)
+    expect(firstRoom.laterTermRoll.latestDiceRoll?.total).toBe(
+      firstRoom.laterTermRoll.latestDiceRoll?.rolls?.reduce(
+        (sum, roll) => sum + roll,
+        0
+      )
+    )
   })
 
   test('lets another player follow a live characteristic roll without early reveal', async ({

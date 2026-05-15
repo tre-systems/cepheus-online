@@ -143,6 +143,15 @@ export type NormalizedCareerContinuationSlice = {
   }>
 }
 
+export type NormalizedLaterTermRollSlice = {
+  status: string | null
+  termCareers: string[]
+  latestDiceRoll: {
+    rolls: number[] | null
+    total: number | null
+  } | null
+}
+
 const actorSessionKey = (roomId: string, actorId: string): string =>
   `cepheus.actorSession.${roomId}.${actorId}`
 
@@ -410,6 +419,24 @@ export const normalizedCareerContinuationSlice = (
         })
       )
     }))
+  }
+}
+
+export const normalizedLaterTermRollSlice = (
+  message: RoomStateMessage,
+  characterId: string
+): NormalizedLaterTermRollSlice => {
+  const creation = message.state?.characters[characterId]?.creation
+  const latestRoll = message.state?.diceLog?.at(-1)
+  return {
+    status: creation?.state?.status ?? null,
+    termCareers: (creation?.terms ?? []).map((term) => term.career),
+    latestDiceRoll: latestRoll
+      ? {
+          rolls: latestRoll.rolls ?? null,
+          total: latestRoll.total ?? null
+        }
+      : null
   }
 }
 
