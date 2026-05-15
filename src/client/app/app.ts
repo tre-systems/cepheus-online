@@ -258,6 +258,9 @@ const {
 const fetchState = async (): Promise<void> => {
   const message = await fetchRoomState({ roomId, viewerRole, actorId })
   handleServerMessage(message)
+  if (message.type === 'roomState') {
+    characterCreationFeature.renderPresence(message.state)
+  }
 }
 
 const roomBootstrapScene = createRoomBootstrapScene({

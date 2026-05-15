@@ -29,10 +29,13 @@ export interface CreationPresenceDockOptions {
   getActorId: () => string
   openCharacterCreationFollow: (
     characterId: CharacterId,
-    options: { readOnly: boolean }
-  ) => void
+    options: { readOnly: boolean },
+    state: GameState | null
+  ) => boolean | undefined
   localStorage: Storage
   autoFollowSingleRemoteCreation?: boolean
+  isCharacterCreatorActive?: () => boolean
+  isCharacterCreatorReadOnly?: () => boolean
 }
 
 export const activeCreationSummaries = (
@@ -72,7 +75,9 @@ export const createCreationPresenceDock = ({
   getActorId,
   openCharacterCreationFollow,
   localStorage,
-  autoFollowSingleRemoteCreation = true
+  autoFollowSingleRemoteCreation = true,
+  isCharacterCreatorActive = () => true,
+  isCharacterCreatorReadOnly = () => false
 }: CreationPresenceDockOptions): CreationPresenceDockController => {
   const dismissedCreationPresenceIds = new Set<string>()
 
@@ -111,8 +116,11 @@ export const createCreationPresenceDock = ({
       }
     },
     render(state) {
+      const characterCreatorOpen = !elements.characterCreator.hidden
       if (
-        !elements.characterCreator.hidden ||
+        (characterCreatorOpen &&
+          isCharacterCreatorActive() &&
+          !isCharacterCreatorReadOnly()) ||
         elements.sheet.classList.contains('open')
       ) {
         hide()
@@ -134,9 +142,17 @@ export const createCreationPresenceDock = ({
         summaries.length === 1 &&
         summaries[0]?.ownerId !== currentActorId
       ) {
-        hide()
-        openCharacterCreationFollow(summaries[0].id, { readOnly: true })
-        return
+        const opened = openCharacterCreationFollow(
+          summaries[0].id,
+          {
+            readOnly: true
+          },
+          state
+        )
+        if (opened !== false) {
+          hide()
+          return
+        }
       }
 
       const heading = document.createElement('div')
@@ -186,9 +202,13 @@ export const createCreationPresenceDock = ({
 
         item.append(name, detail, owner)
         item.addEventListener('click', () => {
-          openCharacterCreationFollow(summary.id, {
-            readOnly: summary.ownerId !== getActorId()
-          })
+          openCharacterCreationFollow(
+            summary.id,
+            {
+              readOnly: summary.ownerId !== getActorId()
+            },
+            state
+          )
         })
         return item
       })

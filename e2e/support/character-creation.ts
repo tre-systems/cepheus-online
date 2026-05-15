@@ -264,9 +264,9 @@ export const waitForDiceReveal = async (page: Page): Promise<void> => {
   await expect(page.locator('#diceOverlay.visible')).toBeVisible({
     timeout: 5_000
   })
-  const total = page.locator('#diceStage .roll-total')
-  if (((await total.textContent()) ?? '').trim() === 'Rolling...') {
-    await expect(total).not.toHaveText('Rolling...', { timeout: 5_000 })
+  const visibleTotal = page.locator('#diceOverlay.visible #diceStage .roll-total')
+  if (((await visibleTotal.textContent()) ?? '').trim() === 'Rolling...') {
+    await expect(visibleTotal).not.toHaveText('Rolling...', { timeout: 5_000 })
   }
   await expect(overlay).not.toHaveClass(/visible/, { timeout: 5_000 })
 }
@@ -281,22 +281,31 @@ export const openOrExpectFollowedCreation = async (
   characterName: string
 ): Promise<void> => {
   const panel = page.locator('#characterCreator')
+  const title = page.locator('#characterCreatorTitle')
   const card = page
     .locator('#creationPresenceDock .creation-presence-card')
     .filter({ hasText: characterName })
 
   const deadline = Date.now() + 20_000
   while (Date.now() < deadline) {
-    if (await panel.isVisible().catch(() => false)) return
+    if (
+      (await panel.isVisible().catch(() => false)) &&
+      ((await title.textContent().catch(() => null)) ?? '').trim() ===
+        characterName
+    ) {
+      return
+    }
     if (await card.isVisible().catch(() => false)) {
       await card.click()
       await expect(panel).toBeVisible({ timeout: 5_000 })
+      await expect(title).toHaveText(characterName, { timeout: 5_000 })
       return
     }
     await page.waitForTimeout(100)
   }
 
   await expect(panel).toBeVisible({ timeout: 5_000 })
+  await expect(title).toHaveText(characterName, { timeout: 5_000 })
 }
 
 export const spectatorCreationProjectionSnapshot = async (

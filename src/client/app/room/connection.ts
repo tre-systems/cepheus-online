@@ -52,7 +52,11 @@ export const createRoomConnectionController = ({
     buildUrl,
     getUrlInput,
     isOffline: () => connectivityController.snapshot().status === 'offline',
-    onStatus,
+    onStatus: (status) => {
+      onStatus(status)
+      if (status !== 'Live') return
+      fetchState().catch((error) => onError(errorMessage(error)))
+    },
     onError,
     onMessage: (message) => onMessage(message as ServerMessage)
   })

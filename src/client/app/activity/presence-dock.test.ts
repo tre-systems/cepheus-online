@@ -216,6 +216,48 @@ describe('creation presence dock helpers', () => {
     assert.equal(dock.hidden, true)
   })
 
+  it('renders a card when single remote auto-follow cannot open', () => {
+    const previousDocument = globalThis.document
+    globalThis.document = testDocument as unknown as Document
+    const active = character(
+      'active',
+      {
+        state: { status: 'CHARACTERISTICS', context: creationContext },
+        terms: [],
+        careers: [],
+        canEnterDraft: false,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false
+      },
+      'remote-player'
+    )
+    const dock = new TestNode('section') as unknown as HTMLElement
+    const characterCreator = new TestNode('aside') as unknown as HTMLElement
+    const sheet = new TestNode('aside') as unknown as HTMLElement
+    characterCreator.hidden = true
+
+    const controller = createCreationPresenceDock({
+      elements: {
+        dock,
+        characterCreator,
+        sheet
+      },
+      getRoomId: () => 'game',
+      getActorId: () => 'local-user',
+      openCharacterCreationFollow: () => false,
+      localStorage: new MapStorage()
+    })
+
+    try {
+      controller.render(gameState({ active }))
+
+      assert.equal(dock.hidden, false)
+    } finally {
+      globalThis.document = previousDocument
+    }
+  })
+
   it('keeps local or ambiguous creations in the clickable dock', () => {
     const previousDocument = globalThis.document
     globalThis.document = testDocument as unknown as Document
@@ -246,7 +288,9 @@ describe('creation presence dock helpers', () => {
       },
       getRoomId: () => 'game',
       getActorId: () => 'local-user',
-      openCharacterCreationFollow: (characterId) => opened.push(characterId),
+      openCharacterCreationFollow: (characterId) => {
+        opened.push(characterId)
+      },
       localStorage: new MapStorage()
     })
 
@@ -254,6 +298,128 @@ describe('creation presence dock helpers', () => {
       controller.render(gameState({ local }))
 
       assert.deepEqual(opened, [])
+      assert.equal(dock.hidden, false)
+    } finally {
+      globalThis.document = previousDocument
+    }
+  })
+
+  it('keeps the dock available while a read-only creation follow panel is open', () => {
+    const previousDocument = globalThis.document
+    globalThis.document = testDocument as unknown as Document
+    const local = character(
+      'local',
+      {
+        state: { status: 'CHARACTERISTICS', context: creationContext },
+        terms: [],
+        careers: [],
+        canEnterDraft: false,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false
+      },
+      'local-user'
+    )
+    const dock = new TestNode('section') as unknown as HTMLElement
+    const characterCreator = new TestNode('aside') as unknown as HTMLElement
+    const sheet = new TestNode('aside') as unknown as HTMLElement
+    characterCreator.hidden = false
+
+    const controller = createCreationPresenceDock({
+      elements: {
+        dock,
+        characterCreator,
+        sheet
+      },
+      getRoomId: () => 'game',
+      getActorId: () => 'local-user',
+      openCharacterCreationFollow: () => {},
+      localStorage: new MapStorage(),
+      isCharacterCreatorReadOnly: () => true
+    })
+
+    try {
+      controller.render(gameState({ local }))
+
+      assert.equal(dock.hidden, false)
+    } finally {
+      globalThis.document = previousDocument
+    }
+  })
+
+  it('hides the dock while an editable creation panel is open', () => {
+    const active = character(
+      'active',
+      {
+        state: { status: 'CHARACTERISTICS', context: creationContext },
+        terms: [],
+        careers: [],
+        canEnterDraft: false,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false
+      },
+      'local-user'
+    )
+    const dock = new TestNode('section') as unknown as HTMLElement
+    const characterCreator = new TestNode('aside') as unknown as HTMLElement
+    const sheet = new TestNode('aside') as unknown as HTMLElement
+    characterCreator.hidden = false
+
+    const controller = createCreationPresenceDock({
+      elements: {
+        dock,
+        characterCreator,
+        sheet
+      },
+      getRoomId: () => 'game',
+      getActorId: () => 'local-user',
+      openCharacterCreationFollow: () => {},
+      localStorage: new MapStorage()
+    })
+
+    controller.render(gameState({ active }))
+
+    assert.equal(dock.hidden, true)
+  })
+
+  it('keeps the dock available while the empty creator start panel is open', () => {
+    const previousDocument = globalThis.document
+    globalThis.document = testDocument as unknown as Document
+    const local = character(
+      'local',
+      {
+        state: { status: 'CHARACTERISTICS', context: creationContext },
+        terms: [],
+        careers: [],
+        canEnterDraft: false,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false
+      },
+      'local-user'
+    )
+    const dock = new TestNode('section') as unknown as HTMLElement
+    const characterCreator = new TestNode('aside') as unknown as HTMLElement
+    const sheet = new TestNode('aside') as unknown as HTMLElement
+    characterCreator.hidden = false
+
+    const controller = createCreationPresenceDock({
+      elements: {
+        dock,
+        characterCreator,
+        sheet
+      },
+      getRoomId: () => 'game',
+      getActorId: () => 'local-user',
+      openCharacterCreationFollow: () => {},
+      localStorage: new MapStorage(),
+      isCharacterCreatorActive: () => false
+    })
+
+    try {
+      controller.render(gameState({ local }))
+
       assert.equal(dock.hidden, false)
     } finally {
       globalThis.document = previousDocument

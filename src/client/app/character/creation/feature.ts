@@ -64,6 +64,12 @@ export interface CharacterCreationFeature {
   dispose: () => void
 }
 
+type CharacterCreationCommandRevealRoll = Parameters<
+  typeof createCharacterCreationCommandController
+>[0]['waitForDiceRevealOrDelay'] extends (roll: infer Roll) => unknown
+  ? Roll
+  : never
+
 export interface CreateCharacterCreationFeatureOptions {
   document: Document
   elements: RequiredAppElements
@@ -98,9 +104,9 @@ export interface CreateCharacterCreationFeatureOptions {
   waitForDiceReveal: Parameters<
     typeof createCharacterCreationLifecycleController
   >[0]['waitForDiceReveal']
-  waitForDiceRevealOrDelay: Parameters<
-    typeof createCharacterCreationCommandController
-  >[0]['waitForDiceRevealOrDelay']
+  waitForDiceRevealOrDelay: (
+    roll: ClientDiceRollActivity | CharacterCreationCommandRevealRoll
+  ) => Promise<void>
   resolveDiceReveal: Parameters<
     typeof createDiceOverlayWiring
   >[0]['resolveDiceReveal']
@@ -137,7 +143,6 @@ export const createCharacterCreationFeature = ({
   postBoardCommand,
   postCharacterCreationCommand,
   postCharacterCreationCommands,
-  waitForDiceReveal,
   waitForDiceRevealOrDelay,
   resolveDiceReveal,
   reportError
@@ -187,7 +192,7 @@ export const createCharacterCreationFeature = ({
     panel,
     closeCharacterSheet,
     renderWizard: () => renderWizard(),
-    waitForDiceReveal,
+    waitForDiceReveal: waitForDiceRevealOrDelay,
     reportError
   })
 
@@ -249,6 +254,25 @@ export const createCharacterCreationFeature = ({
     clearTimeout: window.clearTimeout.bind(window)
   })
 
+  const openCharacterCreationFollow = (
+    characterId: Parameters<typeof lifecycleController.openFollow>[0],
+    options: Parameters<typeof lifecycleController.openFollow>[1],
+    fallbackState: ReturnType<typeof getState>
+  ): boolean => {
+    if (lifecycleController.openFollow(characterId, options)) return true
+    const fallbackFlow = controller.syncFlowFromRoomState(
+      fallbackState,
+      characterId
+    )
+    if (!fallbackFlow) return false
+    controller.setSelectedCharacterId(characterId)
+    controller.setReadOnly(options?.readOnly ?? true)
+    panel.open()
+    renderWizard()
+    panel.scrollToTop()
+    return true
+  }
+
   const presenceDock = createCreationPresenceDock({
     elements: {
       dock: elements.creationPresenceDock,
@@ -257,8 +281,10 @@ export const createCharacterCreationFeature = ({
     },
     getRoomId,
     getActorId,
-    openCharacterCreationFollow: lifecycleController.openFollow,
-    localStorage: window.localStorage
+    openCharacterCreationFollow,
+    localStorage: window.localStorage,
+    isCharacterCreatorActive: () => Boolean(controller.flow()),
+    isCharacterCreatorReadOnly: () => controller.readOnly()
   })
 
   presenceDock.hydrate()

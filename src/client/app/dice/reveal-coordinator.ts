@@ -41,13 +41,15 @@ interface DiceRevealCoordinatorOptions {
   revealFallbackBufferMs?: number
 }
 
+const DEFAULT_REVEAL_FALLBACK_BUFFER_MS = 1_420
+
 const rollHasVisibleResult = (roll: DiceRevealRoll): boolean =>
   Array.isArray(roll.rolls) && typeof roll.total === 'number'
 
 export const createDiceRevealCoordinator = ({
   nowMs = Date.now,
   setTimer = (callback, delayMs) => globalThis.setTimeout(callback, delayMs),
-  revealFallbackBufferMs = 220
+  revealFallbackBufferMs = DEFAULT_REVEAL_FALLBACK_BUFFER_MS
 }: DiceRevealCoordinatorOptions = {}): DiceRevealCoordinator => {
   const revealedDiceIds = new Set<string>()
   const revealWaiters = new Map<string, Array<() => void>>()

@@ -135,6 +135,24 @@ describe('room connection controller', () => {
     assert.deepEqual(statuses, ['Connecting', 'Live'])
   })
 
+  it('refreshes room state when the socket opens', async () => {
+    resetSockets()
+    let fetchCount = 0
+    const controller = createRoomConnectionController(
+      createOptions({
+        fetchState: async () => {
+          fetchCount += 1
+        }
+      })
+    )
+
+    controller.connect()
+    FakeRoomSocket.instances[0]?.dispatch('open')
+    await Promise.resolve()
+
+    assert.equal(fetchCount, 1)
+  })
+
   it('reports offline state without reconnecting or fetching', () => {
     resetSockets()
     const target = new FakeEventTarget()

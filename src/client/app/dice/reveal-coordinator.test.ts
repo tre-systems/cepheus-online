@@ -155,6 +155,24 @@ describe('dice reveal coordinator', () => {
     assert.equal(resolved, true)
   })
 
+  it('keeps elapsed redacted reveals behind the pending dice animation boundary', async () => {
+    let delayMs: number | null = null
+    const coordinator = createDiceRevealCoordinator({
+      nowMs: () => Date.parse('2026-05-08T10:00:03.000Z'),
+      setTimer: (_callback, delay) => {
+        delayMs = delay
+        return 1
+      }
+    })
+
+    void coordinator.waitForRevealOrDelay(
+      redactedActivity('roll-1', '2026-05-08T10:00:02.000Z')
+    )
+
+    await flushMicrotasks()
+    assert.equal(delayMs, 1420)
+  })
+
   it('falls back to explicit reveal waiting when revealAt is invalid', async () => {
     let timerScheduled = false
     const coordinator = createDiceRevealCoordinator({

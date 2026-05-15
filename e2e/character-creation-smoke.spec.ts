@@ -2510,7 +2510,7 @@ test.describe('character creation smoke', () => {
     ).toBeVisible()
   })
 
-  test('lets a spectator follow survival death without early reveal and recover after refresh', async ({
+  test('keeps survival death hidden from followers until dice reveal and starts the next traveller', async ({
     browser,
     page
   }) => {
@@ -2574,7 +2574,7 @@ test.describe('character creation smoke', () => {
       await openRoom(spectator, {
         roomId,
         userId: 'e2e-spectator',
-        viewer: 'spectator'
+        viewer: 'player'
       })
       await openOrExpectFollowedCreation(spectator, characterName)
 
@@ -2585,12 +2585,8 @@ test.describe('character creation smoke', () => {
       const spectatorDeathCard = spectatorFields.locator(
         '.creation-death-card'
       )
-      const spectatorSurvivalRoll = spectator.locator(
-        '[data-character-creation-field="survivalRoll"]'
-      )
 
       await expect(ownerRollSurvival).toBeVisible({ timeout: 5_000 })
-      await expect(spectatorSurvivalRoll).toHaveValue('')
       await expect(spectatorDeathCard).toHaveCount(0)
       await expect(spectatorFields).not.toContainText(
         /Survival \d+|Killed in service|dead/i,
@@ -2612,39 +2608,52 @@ test.describe('character creation smoke', () => {
         timeout: 5_000
       })
       await expectDiceRollPending(spectator)
-      await expect(spectatorSurvivalRoll).toHaveValue('', { timeout: 100 })
       await expect(spectatorDeathCard).toHaveCount(0, { timeout: 100 })
       await expect(spectatorFields).not.toContainText(
         /Survival \d+|Killed in service|dead/i,
         { timeout: 100 }
       )
 
-      await waitForDiceReveal(spectator)
-      await expect(spectatorDeathCard).toBeVisible({ timeout: 5_000 })
-      await expect(spectatorDeathCard).toContainText('Hunter')
-      await expect(spectatorDeathCard).toContainText('Killed in service')
-      await expect(spectatorDeathCard).toContainText('Survival roll')
-      await expect(spectatorFields).not.toContainText('Muster out')
+      await waitForDiceReveal(page)
+      const ownerDeathCard = page
+        .locator('#characterCreationFields')
+        .locator('.creation-death-card')
+      await expect(ownerDeathCard).toBeVisible({ timeout: 5_000 })
+      await expect(ownerDeathCard).toContainText('Hunter')
+      await expect(ownerDeathCard).toContainText('Killed in service')
+      await expect(ownerDeathCard).toContainText('Survival roll')
 
-      const projectedDeathText =
-        (await spectatorDeathCard.textContent())?.replace(/\s+/g, ' ').trim() ??
-        ''
+      const restartAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes('CreateCharacter')
+      )
+      await page.getByRole('button', { name: 'Start a new character' }).click()
+      await expect((await restartAccepted).ok()).toBe(true)
 
-      await spectator.reload({ waitUntil: 'domcontentloaded' })
-      await expect(spectator.locator('#boardCanvas')).toBeVisible()
-      await openOrExpectFollowedCreation(spectator, characterName)
-      await expect(spectatorDeathCard).toBeVisible({ timeout: 5_000 })
-      await expect(spectatorDeathCard).toContainText('Hunter')
-      await expect(spectatorDeathCard).toContainText('Killed in service')
-      await expect(spectatorDeathCard).toContainText('Survival roll')
-      await expect(spectatorFields).not.toContainText('Muster out')
+      let restartedCreationIds: string[] = []
       await expect
-        .poll(async () =>
-          ((await spectatorDeathCard.textContent()) ?? '')
-            .replace(/\s+/g, ' ')
-            .trim()
-        )
-        .toBe(projectedDeathText)
+        .poll(async () => {
+          restartedCreationIds = await creationCharacterIds(
+            page,
+            roomId,
+            actorId
+          )
+          return restartedCreationIds.length
+        })
+        .toBe(2)
+      expect(restartedCreationIds).toContain(characterId)
+      const replacementCharacterName =
+        (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+
+      await expect(page.locator('#characterCreatorTitle')).toHaveText(
+        replacementCharacterName
+      )
+      await expect(page.locator('#characterCreationFields')).toContainText(
+        'Characteristics',
+        { timeout: 5_000 }
+      )
     } finally {
       await spectator.close()
     }
