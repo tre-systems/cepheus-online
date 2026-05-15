@@ -154,13 +154,15 @@ const recordActiveTermAdvancement = (
 const recordActiveTermAnagathics = (
   terms: readonly CareerTerm[],
   termIndex: number,
-  useAnagathics: boolean
+  useAnagathics: boolean,
+  cost?: number
 ) =>
   terms.map((term, index) =>
     index === termIndex
       ? {
           ...cloneCareerTerm(term),
-          anagathics: useAnagathics
+          anagathics: useAnagathics,
+          ...(cost !== undefined ? { anagathicsCost: cost } : {})
         }
       : cloneCareerTerm(term)
   )
@@ -908,19 +910,27 @@ const rawCharacterEventHandlers = {
         recordActiveTermAnagathics(
           character.creation.terms,
           event.termIndex,
-          event.useAnagathics
+          event.useAnagathics,
+          event.cost
         ),
         event.termIndex,
         (facts) => ({
           ...facts,
           anagathicsDecision: {
             useAnagathics: event.useAnagathics,
-            termIndex: event.termIndex
+            termIndex: event.termIndex,
+            ...(event.cost !== undefined ? { cost: event.cost } : {}),
+            ...(event.costRoll
+              ? { costRoll: structuredClone(event.costRoll) }
+              : {})
           }
         })
       ),
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event)
+    }
+    if (event.cost !== undefined) {
+      character.credits -= event.cost
     }
     nextState.eventSeq = envelope.seq
 

@@ -180,7 +180,7 @@ const commandMetadataDefinitions = {
   },
   DecideCharacterCreationAnagathics: {
     route: 'characterCreation',
-    usesSeededDice: false,
+    usesSeededDice: true,
     autoAddExpectedSeq: true
   },
   ResolveCharacterCreationReenlistment: {

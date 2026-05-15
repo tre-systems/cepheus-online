@@ -149,6 +149,12 @@ export interface CareerTermAgingLossFact {
 export interface CareerTermAnagathicsDecisionFact {
   useAnagathics: boolean
   termIndex: number
+  cost?: number
+  costRoll?: {
+    expression: '1d6'
+    rolls: number[]
+    total: number
+  }
 }
 
 export interface CareerTermReenlistmentFact {

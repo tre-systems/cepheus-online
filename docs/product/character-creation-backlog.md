@@ -163,7 +163,9 @@ tests before it is considered done.
   resolution polish, and provenance need browser-hardening.
 - [~] Resolve aging from the `aging` table, including characteristic loss
   choices and anagathics modifiers. Semantic aging facts and a server-owned
-  anagathics use/skip event exist. Gap: anagathics cost/survival effects and
+  anagathics use/skip event exist. Anagathics use now rolls and stores the
+  server-derived treatment cost, deducts it from credits, and projects the cost
+  provenance onto the active term. Gap: anagathics survival-risk effects and
   characteristic-choice UI/projection polish are incomplete.
 - [~] Roll reenlistment from `careerBasics`, handling mandatory retirement
   after seven terms, forced reenlistment on 12, success, failure, and voluntary

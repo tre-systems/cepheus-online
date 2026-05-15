@@ -90,7 +90,9 @@ export const deriveCharacterCreationHistoryEvent = (
       return {
         type: 'DECIDE_ANAGATHICS',
         useAnagathics: event.useAnagathics,
-        termIndex: event.termIndex
+        termIndex: event.termIndex,
+        ...(event.cost !== undefined ? { cost: event.cost } : {}),
+        ...(event.costRoll ? { costRoll: structuredClone(event.costRoll) } : {})
       }
     case 'CharacterCreationReenlistmentResolved':
       return {

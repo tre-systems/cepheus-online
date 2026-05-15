@@ -326,13 +326,45 @@ export const deriveLifecycleCommandEvents = (
         term: activeTerm,
         survived: command.useAnagathics
       })
+      const costRoll = command.useAnagathics
+        ? rollDiceExpression(
+            '1d6',
+            deriveEventRng(context.gameSeed, context.nextSeq)
+          )
+        : null
+      if (costRoll && !costRoll.ok) {
+        return err(commandError('invalid_command', costRoll.error))
+      }
+      const costRollValue = costRoll?.ok ? costRoll.value : null
+      const cost = costRollValue ? costRollValue.total * 2500 : undefined
 
       return ok([
+        ...(costRollValue
+          ? [
+              {
+                type: 'DiceRolled' as const,
+                expression: '1d6' as const,
+                reason: `${activeTerm.career} anagathics cost`,
+                rolls: [...costRollValue.rolls],
+                total: costRollValue.total
+              }
+            ]
+          : []),
         {
           type: 'CharacterCreationAnagathicsDecided',
           characterId: command.characterId,
           useAnagathics: resolved.term.anagathics,
           termIndex,
+          ...(cost !== undefined
+            ? {
+                cost,
+                costRoll: {
+                  expression: '1d6' as const,
+                  rolls: [...(costRollValue?.rolls ?? [])],
+                  total: costRollValue?.total ?? 0
+                }
+              }
+            : {}),
           state: structuredClone(creation.value.state),
           creationComplete: false
         }

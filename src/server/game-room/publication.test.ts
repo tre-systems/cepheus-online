@@ -423,6 +423,7 @@ describe('room publication flow', () => {
         .map(([type]) => type)
         .sort(),
       [
+        'DecideCharacterCreationAnagathics',
         'ResolveCharacterCreationAdvancement',
         'ResolveCharacterCreationAging',
         'ResolveCharacterCreationCommission',

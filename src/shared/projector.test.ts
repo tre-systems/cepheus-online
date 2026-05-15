@@ -1408,6 +1408,12 @@ describe('game state projection', () => {
         characterId,
         useAnagathics: true,
         termIndex: 0,
+        cost: 10000,
+        costRoll: {
+          expression: '1d6',
+          rolls: [4],
+          total: 4
+        },
         state: {
           status: 'AGING',
           context: {
@@ -1422,14 +1428,28 @@ describe('game state projection', () => {
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'AGING')
     assert.equal(creation?.terms[0]?.anagathics, true)
+    assert.equal(creation?.terms[0]?.anagathicsCost, 10000)
+    assert.equal(state?.characters[characterId]?.credits, -10000)
     assert.deepEqual(creation?.terms[0]?.facts?.anagathicsDecision, {
       useAnagathics: true,
-      termIndex: 0
+      termIndex: 0,
+      cost: 10000,
+      costRoll: {
+        expression: '1d6',
+        rolls: [4],
+        total: 4
+      }
     })
     assert.deepEqual(creation?.history?.at(-1), {
       type: 'DECIDE_ANAGATHICS',
       useAnagathics: true,
-      termIndex: 0
+      termIndex: 0,
+      cost: 10000,
+      costRoll: {
+        expression: '1d6',
+        rolls: [4],
+        total: 4
+      }
     })
     assert.equal(state?.eventSeq, 4)
   })

@@ -198,6 +198,12 @@ export type GameEvent =
       characterId: CharacterId
       useAnagathics: boolean
       termIndex: number
+      cost?: number
+      costRoll?: {
+        expression: '1d6'
+        rolls: number[]
+        total: number
+      }
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

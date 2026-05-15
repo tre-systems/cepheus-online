@@ -721,9 +721,12 @@ export const deriveLiveActivity = (
         type: 'characterCreation',
         characterId: event.characterId,
         transition: 'DECIDE_ANAGATHICS',
-        details: event.useAnagathics
-          ? 'Anagathics used this term'
-          : 'Anagathics skipped this term',
+        details:
+          event.useAnagathics && event.cost !== undefined
+            ? `Anagathics used this term; cost Cr${event.cost}`
+            : event.useAnagathics
+              ? 'Anagathics used this term'
+              : 'Anagathics skipped this term',
         status: event.state.status,
         creationComplete: event.creationComplete
       }

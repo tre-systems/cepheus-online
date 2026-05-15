@@ -2113,10 +2113,23 @@ describe('deriveEventsForCommand error categories', () => {
     if (!result.ok) return
     assert.deepEqual(result.value, [
       {
+        type: 'DiceRolled',
+        expression: '1d6',
+        reason: 'Scout anagathics cost',
+        rolls: [4],
+        total: 4
+      },
+      {
         type: 'CharacterCreationAnagathicsDecided',
         characterId,
         useAnagathics: true,
         termIndex: 0,
+        cost: 10000,
+        costRoll: {
+          expression: '1d6',
+          rolls: [4],
+          total: 4
+        },
         state: {
           status: 'AGING',
           context: {
