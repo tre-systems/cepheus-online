@@ -33,9 +33,26 @@ export interface LosOverlaySegmentViewModel {
 }
 
 export const deriveDoorToggleViewModels = (
-  board: Pick<BoardState, 'doors'> | null | undefined
-): DoorToggleViewModel[] =>
-  Object.values(board?.doors ?? {}).map((door) => ({
+  board: Pick<BoardState, 'doors' | 'losSidecar'> | null | undefined
+): DoorToggleViewModel[] => {
+  if (!board) return []
+
+  const sidecarDoorIds = new Set<string>()
+  const sidecarDoors =
+    board.losSidecar?.occluders
+      .filter((occluder) => occluder.type === 'door')
+      .map((occluder) => {
+        sidecarDoorIds.add(occluder.id)
+        return {
+          id: occluder.id,
+          open: board.doors[occluder.id]?.open ?? occluder.open
+        }
+      }) ?? []
+  const legacyDoors = Object.values(board.doors).filter(
+    (door) => !sidecarDoorIds.has(door.id)
+  )
+
+  return [...sidecarDoors, ...legacyDoors].map((door) => ({
     id: door.id,
     open: door.open,
     label: door.id,
@@ -43,6 +60,7 @@ export const deriveDoorToggleViewModels = (
     toggleLabel: door.open ? `Close ${door.id}` : `Open ${door.id}`,
     nextOpen: !door.open
   }))
+}
 
 export const derivePieceRectTargets = (
   pieces: readonly PieceState[]

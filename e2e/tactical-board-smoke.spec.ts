@@ -20,6 +20,10 @@ type TacticalRoomStateMessage = {
         height: number
         scale: number
         doors: Record<string, { id: string; open: boolean }>
+        losSidecar?: {
+          assetRef: string
+          occluders: { type: string; id: string }[]
+        } | null
       }
     >
     pieces: Record<
@@ -157,6 +161,17 @@ test.describe('tactical board smoke', () => {
     )
     await expect(page.locator('#pieceWidthInput')).toHaveValue('600')
     await expect(page.locator('#pieceHeightInput')).toHaveValue('600')
+
+    await page.locator('#createBoardButton').click()
+    await expect(page.locator('#roomDialog')).toBeHidden()
+
+    const state = await fetchTacticalState(page, roomId, refereeId)
+    const boardId = state.state?.selectedBoardId
+    expect(boardId).not.toBeNull()
+    expect(state.state?.boards[boardId ?? '']?.losSidecar).toMatchObject({
+      assetRef: 'Geomorphs/standard/deck-01.jpg',
+      occluders: [{ type: 'door', id: 'iris-1' }]
+    })
   })
 
   test('creates a board, moves pieces, toggles doors, and filters hidden pieces', async ({
@@ -186,8 +201,7 @@ test.describe('tactical board smoke', () => {
       url: null,
       width: 1000,
       height: 1000,
-      scale: 50
-      ,
+      scale: 50,
       losSidecar: {
         assetRef: 'Geomorphs/standard/deck-01.jpg',
         width: 1000,

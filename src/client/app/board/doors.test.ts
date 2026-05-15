@@ -22,6 +22,27 @@ const board = (doors: BoardState['doors']): BoardState => ({
   doors
 })
 
+const boardWithSidecarDoors = (): BoardState => ({
+  ...board({}),
+  losSidecar: {
+    assetRef: 'Geomorphs/standard/deck-01.jpg',
+    width: 1200,
+    height: 800,
+    gridScale: 50,
+    occluders: [
+      {
+        type: 'door',
+        id: 'iris',
+        x1: 400,
+        y1: 300,
+        x2: 480,
+        y2: 300,
+        open: false
+      }
+    ]
+  }
+})
+
 const gameState = (): GameState => ({
   id: gameId,
   slug: 'demo-room',
@@ -91,6 +112,35 @@ describe('board door actions', () => {
 
     assert.equal(actions.render(null), null)
     assert.equal(actions.render(board({})), null)
+  })
+
+  it('renders sidecar-only door toggles and dispatches door commands', () => {
+    const dispatched: string[] = []
+    const actions = createBoardDoorActions({
+      document,
+      identity: () => ({ gameId, actorId }),
+      getState: gameState,
+      dispatch: async (command) => {
+        dispatched.push(
+          [
+            command.type,
+            command.boardId,
+            command.doorId,
+            command.open,
+            command.expectedSeq
+          ].join(':')
+        )
+      },
+      reportError: () => {}
+    }).render(boardWithSidecarDoors())
+
+    const node = asNode(actions as HTMLElement)
+    assert.equal(node.children[0]?.textContent, 'Open iris')
+    assert.equal(node.children[0]?.title, 'iris: Closed')
+
+    node.children[0]?.click()
+
+    assert.deepEqual(dispatched, ['SetDoorOpen:scout-deck:iris:true:42'])
   })
 
   it('skips dispatch without state and reports dispatch errors', async () => {

@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test'
 import { expect } from '../../../test/expect'
 
-import type { MapOccluder } from '../../../shared/mapAssets'
+import type { MapLosSidecar, MapOccluder } from '../../../shared/mapAssets'
 import { asBoardId, asPieceId } from '../../../shared/ids'
 import type { BoardState, PieceState } from '../../../shared/state'
 import {
@@ -23,6 +23,34 @@ const board = (): BoardState => ({
     'door-open': { id: 'door-open', open: true },
     'door-closed': { id: 'door-closed', open: false }
   }
+})
+
+const losSidecar = (): MapLosSidecar => ({
+  assetRef: 'Geomorphs/standard/deck-01.jpg',
+  width: 200,
+  height: 100,
+  gridScale: 50,
+  occluders: [
+    { type: 'wall', id: 'bulkhead', x1: 0, y1: 10, x2: 100, y2: 10 },
+    {
+      type: 'door',
+      id: 'iris',
+      x1: 50,
+      y1: 0,
+      x2: 50,
+      y2: 100,
+      open: false
+    },
+    {
+      type: 'door',
+      id: 'hatch',
+      x1: 100,
+      y1: 0,
+      x2: 100,
+      y2: 100,
+      open: true
+    }
+  ]
 })
 
 const piece = (
@@ -70,6 +98,26 @@ describe('door LOS view helpers', () => {
     expect(viewModels[1]?.stateLabel).toBe('Closed')
     expect(viewModels[1]?.toggleLabel).toBe('Open door-closed')
     expect(viewModels[1]?.nextOpen).toBe(true)
+  })
+
+  it('derives door toggles from LOS sidecars and applies projected door overrides', () => {
+    const currentBoard = {
+      ...board(),
+      doors: {
+        iris: { id: 'iris', open: true },
+        legacy: { id: 'legacy', open: false }
+      },
+      losSidecar: losSidecar()
+    }
+
+    const viewModels = deriveDoorToggleViewModels(currentBoard)
+
+    expect(viewModels.map((door) => door.id).join(',')).toBe(
+      'iris,hatch,legacy'
+    )
+    expect(viewModels[0]?.toggleLabel).toBe('Close iris')
+    expect(viewModels[1]?.toggleLabel).toBe('Close hatch')
+    expect(viewModels[2]?.toggleLabel).toBe('Open legacy')
   })
 
   it('returns no visible piece ids when the source piece is missing', () => {
