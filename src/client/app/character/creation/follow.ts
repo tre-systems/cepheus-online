@@ -61,14 +61,28 @@ export const refreshFollowedCharacterCreationFlowFromState = ({
   }
 
   const character = state?.characters[selectedCharacterId] ?? null
-  const flow = character?.creation
-    ? syncCharacterCreationFlowFromRoomState({
-        currentFlow,
-        roomState: state,
-        characterId: selectedCharacterId,
-        fallbackFlow: currentFlow
-      })
-    : null
+  if (!character?.creation) {
+    return {
+      flow: null,
+      readOnly: false,
+      shouldClose: true,
+      shouldRender: false
+    }
+  }
+  if (character.creation.state.status === 'CHARACTERISTICS') {
+    return {
+      flow: currentFlow?.step === 'characteristics' ? currentFlow : null,
+      readOnly,
+      shouldClose: false,
+      shouldRender: panelOpen
+    }
+  }
+  const flow = syncCharacterCreationFlowFromRoomState({
+    currentFlow,
+    roomState: state,
+    characterId: selectedCharacterId,
+    fallbackFlow: currentFlow
+  })
   if (!flow) {
     return {
       flow: null,

@@ -5,6 +5,7 @@ import { asCharacterId } from '../../../../shared/ids'
 import type { ClientDiceRollActivity } from '../../../game-commands'
 import { createInitialCharacterDraft, type CharacterCreationFlow } from './flow'
 import { createCharacterCreationLifecycleController } from './lifecycle'
+import type { CharacterCreationViewModel } from './model'
 
 const characterId = asCharacterId('char-1')
 
@@ -20,12 +21,19 @@ const rollActivity: ClientDiceRollActivity = {
   revealAt: '2026-01-01T00:00:01.000Z'
 }
 
+const viewModelWithWizard = () =>
+  ({
+    wizard: {}
+  }) as CharacterCreationViewModel
+
 const createHarness = ({
   openedFlow = flow,
+  hasWizard = openedFlow !== null,
   refreshFollowed = false,
   refreshEditable = false
 }: {
   openedFlow?: CharacterCreationFlow | null
+  hasWizard?: boolean
   refreshFollowed?: boolean
   refreshEditable?: boolean
 } = {}) => {
@@ -43,7 +51,11 @@ const createHarness = ({
       shouldRefreshEditable: ({ deferredRollCount = 0 } = {}) => {
         events.push(`shouldRefreshEditable:${deferredRollCount}`)
         return refreshEditable
-      }
+      },
+      viewModel: () =>
+        ({
+          wizard: hasWizard ? {} : null
+        }) as CharacterCreationViewModel
     },
     panel: {
       open: () => events.push('panel.open'),
@@ -97,10 +109,21 @@ describe('character creation lifecycle controller', () => {
   })
 
   it('does not open the panel when no projected flow exists', () => {
-    const harness = createHarness({ openedFlow: null })
+    const harness = createHarness({ openedFlow: null, hasWizard: false })
 
     assert.equal(harness.controller.openFollow(characterId), false)
     assert.deepEqual(harness.events, [])
+  })
+
+  it('opens a followed read-model creation without a reconstructed flow', () => {
+    const harness = createHarness({ openedFlow: null, hasWizard: true })
+
+    assert.equal(harness.controller.openFollow(characterId), true)
+    assert.deepEqual(harness.events, [
+      'panel.open',
+      'renderWizard',
+      'panel.scrollToTop'
+    ])
   })
 
   it('plans followed and editable rendering after the app render', () => {
@@ -163,7 +186,8 @@ describe('character creation lifecycle controller', () => {
         shouldRefreshEditable: ({ deferredRollCount = 0 } = {}) => {
           events.push(`shouldRefreshEditable:${deferredRollCount}`)
           return deferredRollCount === 0
-        }
+        },
+        viewModel: viewModelWithWizard
       },
       panel: {
         open: () => {},
@@ -195,7 +219,8 @@ describe('character creation lifecycle controller', () => {
         shouldRefreshEditable: ({ deferredRollCount = 0 } = {}) => {
           events.push(`shouldRefreshEditable:${deferredRollCount}`)
           return false
-        }
+        },
+        viewModel: viewModelWithWizard
       },
       panel: {
         open: () => {},
@@ -264,7 +289,8 @@ describe('character creation lifecycle controller', () => {
         shouldRefreshEditable: ({ deferredRollCount = 0 } = {}) => {
           events.push(`shouldRefreshEditable:${deferredRollCount}`)
           return false
-        }
+        },
+        viewModel: viewModelWithWizard
       },
       panel: {
         open: () => {},
@@ -343,7 +369,8 @@ describe('character creation lifecycle controller', () => {
         shouldRefreshEditable: ({ deferredRollCount = 0 } = {}) => {
           events.push(`shouldRefreshEditable:${deferredRollCount}`)
           return false
-        }
+        },
+        viewModel: viewModelWithWizard
       },
       panel: {
         open: () => {},
@@ -401,7 +428,8 @@ describe('character creation lifecycle controller', () => {
           events.push(`refreshFollowed:${refreshCount}`)
           return refreshCount === 1
         },
-        shouldRefreshEditable: () => false
+        shouldRefreshEditable: () => false,
+        viewModel: viewModelWithWizard
       },
       panel: {
         open: () => {},
@@ -437,7 +465,8 @@ describe('character creation lifecycle controller', () => {
       controller: {
         openFollow: () => flow,
         refreshFollowed: () => true,
-        shouldRefreshEditable: () => false
+        shouldRefreshEditable: () => false,
+        viewModel: viewModelWithWizard
       },
       panel: {
         open: () => {},

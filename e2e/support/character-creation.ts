@@ -521,8 +521,12 @@ export const openOrExpectFollowedCreation = async (
     if (await card.isVisible().catch(() => false)) {
       await card.click()
       await expect(panel).toBeVisible({ timeout: 5_000 })
-      await expect(title).toHaveText(characterName, { timeout: 5_000 })
-      return
+      if (
+        ((await title.textContent().catch(() => null)) ?? '').trim() ===
+        characterName
+      ) {
+        return
+      }
     }
     if (roomId && !reloadedAfterProjection) {
       const message = await fetchRoomState(page, roomId, actorId, viewer).catch(

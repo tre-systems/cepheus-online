@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { asCharacterId, asGameId, asUserId } from '../../../../shared/ids'
+import type { CharacterState } from '../../../../shared/state'
 import type { CharacterCreationCommandController } from './command-controller'
 import { createInitialCharacterDraft, type CharacterCreationFlow } from './flow'
 import {
@@ -32,6 +33,46 @@ const flow = (): CharacterCreationFlow => ({
     credits: 1200,
     notes: 'Detached scout.'
   })
+})
+
+const characterWithCharacteristicCreation = (): CharacterState => ({
+  id: asCharacterId('render-controller-1'),
+  ownerId: asUserId('actor-1'),
+  type: 'PLAYER',
+  name: 'Iona Vesh',
+  active: true,
+  notes: '',
+  age: null,
+  characteristics: {
+    str: 7,
+    dex: null,
+    end: null,
+    int: null,
+    edu: null,
+    soc: null
+  },
+  skills: [],
+  equipment: [],
+  credits: 0,
+  creation: {
+    state: {
+      status: 'CHARACTERISTICS',
+      context: {
+        canCommission: false,
+        canAdvance: false
+      }
+    },
+    terms: [],
+    careers: [],
+    canEnterDraft: true,
+    failedToQualify: false,
+    characteristicChanges: [],
+    creationComplete: false,
+    homeworld: undefined,
+    backgroundSkills: [],
+    pendingCascadeSkills: [],
+    timeline: []
+  }
 })
 
 const elements = (): CharacterCreationRenderControllerElements => ({
@@ -191,6 +232,68 @@ describe('character creation render controller', () => {
     assert.equal(
       asNode(els.characterCreationFields).children[1]?.className,
       'character-creation-review'
+    )
+  })
+
+  it('renders read-only characteristics without requiring a legacy flow', () => {
+    const els = elements()
+    const character = characterWithCharacteristicCreation()
+    const baseViewModel = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: character.creation,
+      character,
+      readOnly: true
+    })
+    const controller = createCharacterCreationRenderController({
+      document: renderDocument(),
+      elements: els,
+      controller: {
+        currentProjection: () => character.creation,
+        flow: () => null,
+        readOnly: () => true,
+        reconcileEditableWithProjection: () => null,
+        setFlow: (nextFlow) => nextFlow,
+        viewModel: () => baseViewModel
+      },
+      panel: {
+        render: () => true,
+        scrollToTop: () => {}
+      },
+      wizard: {
+        advance: async () => {},
+        autoAdvanceSetup: () => false,
+        startNew: async () => {},
+        syncFields: () => {}
+      },
+      homeworldPublisher: {
+        publishBackgroundCascadeSelection: async () => {},
+        publishProgress: async () => {},
+        publishCascadeResolution: async () => {}
+      },
+      getCommandController: commandController,
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => ({}),
+      commandIdentity: () => ({
+        gameId: asGameId('game-1'),
+        actorId: asUserId('actor-1')
+      }),
+      reportError: () => {}
+    })
+
+    controller.renderWizard()
+
+    assert.equal(els.characterCreationWizard.hidden, false)
+    assert.equal(
+      asNode(els.characterCreationFields).children[0]?.className,
+      'creation-next-step'
+    )
+    assert.equal(
+      asNode(els.characterCreationFields).children[1]?.children[0]?.className,
+      'creation-stat-grid dice-stat-grid'
+    )
+    assert.equal(
+      asNode(els.characterCreationFields).querySelectorAll('button').length,
+      5
     )
   })
 

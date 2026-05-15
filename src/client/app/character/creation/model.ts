@@ -21,6 +21,7 @@ import type {
 } from './flow.js'
 import {
   characteristicDefinitions,
+  characterCreationStepLabels,
   deriveCharacterCreationButtonStates,
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCareerSelectionViewModel,
@@ -400,6 +401,86 @@ const completedTermsForFlow = ({
     : flow.draft.completedTerms
 }
 
+const readModelCharacteristicStepViewModel = (
+  readModel: CharacterCreationReadModel,
+  readOnly: boolean
+): CharacterCreationWizardViewModel | null => {
+  const characteristics = projectedCharacteristicGridViewModel(readModel)
+  if (!characteristics) return null
+  const step: CharacterCreationStep = 'characteristics'
+  const rolledCount = readModel.rolledCharacteristicCount
+  const remainingCount = Math.max(0, 6 - rolledCount)
+  const validation: CharacterCreationValidationSummary = {
+    ok: remainingCount === 0,
+    step,
+    errors:
+      remainingCount === 0
+        ? []
+        : [`${remainingCount} characteristic rolls pending`],
+    errorCount: remainingCount === 0 ? 0 : remainingCount,
+    message:
+      remainingCount === 0
+        ? 'Characteristics are complete.'
+        : `${remainingCount} characteristic rolls pending`
+  }
+
+  return {
+    step,
+    projectedStep: step,
+    projectedStepCurrent: true,
+    controlsDisabled: readOnly,
+    progress: [],
+    buttons: {
+      primary: {
+        label: characterCreationStepLabels.homeworld,
+        disabled: true,
+        reason: remainingCount === 0 ? null : validation.message
+      },
+      secondary: null
+    },
+    validation,
+    nextStep: {
+      step,
+      phase: characterCreationStepLabels[step],
+      prompt:
+        remainingCount === 0
+          ? 'Characteristics are complete.'
+          : 'Roll characteristics in any order.',
+      blockingChoice: null,
+      primaryAction: {
+        label: characterCreationStepLabels.homeworld,
+        disabled: true,
+        reason: remainingCount === 0 ? null : validation.message
+      },
+      secondaryAction: null,
+      validation,
+      stats: [],
+      skills: {
+        skills: [],
+        summary: ''
+      }
+    },
+    careerSelection: null,
+    careerRoll: null,
+    reenlistmentRoll: null,
+    agingRoll: null,
+    agingChoices: null,
+    anagathicsDecision: null,
+    mishapResolution: null,
+    injuryResolution: null,
+    termCascadeChoices: null,
+    termResolution: null,
+    termSkills: null,
+    basicTraining: null,
+    musteringOut: null,
+    death: null,
+    termHistory: null,
+    review: null,
+    characteristics,
+    homeworld: null
+  }
+}
+
 const wizardViewModel = ({
   flow,
   projectedCreation,
@@ -415,7 +496,12 @@ const wizardViewModel = ({
   characterReadModel: CharacterCreationReadModel | null
   readOnly: boolean
 }): CharacterCreationWizardViewModel | null => {
-  if (!flow) return null
+  if (!flow) {
+    if (readOnly && characterReadModel?.status === 'CHARACTERISTICS') {
+      return readModelCharacteristicStepViewModel(characterReadModel, readOnly)
+    }
+    return null
+  }
 
   const completedTermReadModel = projectionReadModel ?? characterReadModel
   const actionSection =
@@ -586,9 +672,17 @@ export const deriveCharacterCreationViewModel = ({
   })
 
   return {
-    mode: !flow ? 'empty' : readOnly ? 'read-only' : 'editable',
-    title: flow?.draft.name.trim() || 'Create traveller',
-    characterId: flow?.draft.characterId ?? null,
+    mode:
+      !flow && !characterReadModel
+        ? 'empty'
+        : readOnly
+          ? 'read-only'
+          : 'editable',
+    title:
+      flow?.draft.name.trim() ||
+      characterReadModel?.name.trim() ||
+      'Create traveller',
+    characterId: flow?.draft.characterId ?? character?.id ?? null,
     flow,
     readOnly,
     controlsDisabled: readOnly,

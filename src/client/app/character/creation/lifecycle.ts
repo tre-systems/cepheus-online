@@ -6,7 +6,7 @@ import type { CharacterCreationPanelController } from './panel.js'
 export interface CharacterCreationLifecycleControllerDeps {
   controller: Pick<
     CharacterCreationController,
-    'openFollow' | 'refreshFollowed' | 'shouldRefreshEditable'
+    'openFollow' | 'refreshFollowed' | 'shouldRefreshEditable' | 'viewModel'
   >
   panel: Pick<CharacterCreationPanelController, 'open' | 'scrollToTop'>
   closeCharacterSheet: () => void
@@ -42,7 +42,7 @@ export const createCharacterCreationLifecycleController = ({
   return {
     openFollow: (characterId, { readOnly = true } = {}) => {
       const flow = controller.openFollow(characterId, { readOnly })
-      if (!flow) return false
+      if (!flow && !controller.viewModel().wizard) return false
 
       if (!readOnly) {
         closeCharacterSheet()

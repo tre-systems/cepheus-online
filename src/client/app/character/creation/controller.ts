@@ -10,6 +10,7 @@ import {
   signal
 } from '../../../reactive.js'
 import type { CharacterCreationFlow } from './flow.js'
+import { createInitialCharacterDraft } from './flow.js'
 import {
   projectedCharacterCreation,
   refreshFollowedCharacterCreationFlowFromState,
@@ -75,24 +76,28 @@ export const createCharacterCreationController = ({
   const currentProjection = (): CharacterCreationProjection | null => {
     projectionRevision.value
     const currentFlow = flow.value
-    if (!currentFlow) return null
-    return projectedCharacterCreation(getState(), currentFlow.draft.characterId)
+    const characterId =
+      currentFlow?.draft.characterId ?? selectedCharacterId.value
+    if (!characterId) return null
+    return projectedCharacterCreation(getState(), characterId)
   }
 
   const bumpProjectionRevision = (): void => {
     projectionRevision.update((revision) => revision + 1)
   }
 
-  const viewModel = scope.computed(() =>
-    deriveCharacterCreationViewModel({
+  const viewModel = scope.computed(() => {
+    const characterId =
+      flow.value?.draft.characterId ?? selectedCharacterId.value
+    return deriveCharacterCreationViewModel({
       flow: flow.value,
       projection: currentProjection(),
-      character: flow.value
-        ? (getState()?.characters[flow.value.draft.characterId] ?? null)
+      character: characterId
+        ? (getState()?.characters[characterId] ?? null)
         : null,
       readOnly: readOnly.value
     })
-  )
+  })
 
   const setFlow = (
     nextFlow: CharacterCreationFlow | null
@@ -129,10 +134,20 @@ export const createCharacterCreationController = ({
 
     openFollow: (characterId, { readOnly: nextReadOnly = true } = {}) => {
       const character = getState()?.characters[characterId] ?? null
-      const nextFlow = character
-        ? legacyFlowFromProjectedCharacter(character)
-        : null
-      if (!nextFlow) return null
+      if (!character?.creation) return null
+      const flowlessReadModelFollow =
+        nextReadOnly && character.creation.state.status === 'CHARACTERISTICS'
+      const nextFlow = flowlessReadModelFollow
+        ? {
+            step: 'characteristics',
+            draft: createInitialCharacterDraft(characterId, {
+              characterType: character.type,
+              name: character.name,
+              characteristics: character.characteristics
+            })
+          } satisfies CharacterCreationFlow
+        : legacyFlowFromProjectedCharacter(character)
+      if (!flowlessReadModelFollow && !nextFlow) return null
 
       batch(() => {
         bumpProjectionRevision()

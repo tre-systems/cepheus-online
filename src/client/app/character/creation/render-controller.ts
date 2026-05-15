@@ -148,13 +148,12 @@ export const createCharacterCreationRenderController = ({
     }
 
     const viewModel = controller.viewModel()
-    if (!panel.render(viewModel) || !viewModel.flow) return
+    if (!panel.render(viewModel)) return
     if (!viewModel.wizard) return
-    const flow = viewModel.flow
     elements.characterCreationSteps.replaceChildren()
     elements.characterCreationFields.replaceChildren(
       renderCharacterCreationNextStep(viewModel.wizard.nextStep),
-      flow.step === 'review' && viewModel.wizard.review
+      viewModel.wizard.step === 'review' && viewModel.wizard.review
         ? renderCharacterCreationReview(viewModel.wizard.review)
         : renderCharacterCreationFields(viewModel)
     )
@@ -196,9 +195,7 @@ export const createCharacterCreationRenderController = ({
     viewModel: CharacterCreationViewModel
   ): DocumentFragment => {
     const fragment = document.createDocumentFragment()
-    const flow = viewModel.flow
-    if (!flow) return fragment
-    if (flow.step === 'characteristics') {
+    if (viewModel.wizard?.step === 'characteristics') {
       if (viewModel.wizard?.characteristics) {
         fragment.append(
           renderCharacterCreationCharacteristicGrid(
@@ -208,6 +205,8 @@ export const createCharacterCreationRenderController = ({
       }
       return fragment
     }
+    const flow = viewModel.flow
+    if (!flow) return fragment
     if (flow.step === 'career') {
       if (viewModel.wizard?.death) {
         fragment.append(renderCharacterCreationDeath(viewModel.wizard.death))

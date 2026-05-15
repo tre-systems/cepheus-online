@@ -153,6 +153,28 @@ describe('character creation controller', () => {
     assert.equal(panelClosed, true)
   })
 
+  it('opens read-only characteristics from the shared read model without legacy flow', () => {
+    const projected = creation('CHARACTERISTICS')
+    const controller = createCharacterCreationController({
+      getState: () => stateWithCreation(projected),
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+
+    assert.equal(controller.openFollow(characterId)?.step, 'characteristics')
+    assert.equal(controller.flow()?.step, 'characteristics')
+    assert.equal(controller.readOnly(), true)
+    assert.equal(controller.selectedCharacterId(), characterId)
+    assert.equal(controller.currentProjection(), projected)
+    assert.equal(controller.viewModel().mode, 'read-only')
+    assert.equal(controller.viewModel().characterId, characterId)
+    assert.equal(controller.viewModel().wizard?.step, 'characteristics')
+    assert.equal(
+      controller.viewModel().wizard?.characteristics?.stats[0]?.value,
+      '7'
+    )
+  })
+
   it('updates multi-signal follow state atomically', () => {
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(creation('BASIC_TRAINING')),

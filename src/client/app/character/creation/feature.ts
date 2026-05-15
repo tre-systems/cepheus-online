@@ -260,6 +260,15 @@ export const createCharacterCreationFeature = ({
     fallbackState: ReturnType<typeof getState>
   ): boolean => {
     if (lifecycleController.openFollow(characterId, options)) return true
+    const fallbackCharacter = fallbackState?.characters[characterId] ?? null
+    if (fallbackCharacter?.creation?.state.status === 'CHARACTERISTICS') {
+      controller.setSelectedCharacterId(characterId)
+      controller.setReadOnly(options?.readOnly ?? true)
+      panel.open()
+      renderWizard()
+      panel.scrollToTop()
+      return true
+    }
     const fallbackFlow = controller.syncFlowFromRoomState(
       fallbackState,
       characterId
