@@ -22,6 +22,7 @@ import {
   requireLegalCharacterCreationAction
 } from '../character-creation-command-helpers'
 import { commandError, type CommandContext } from '../command-helpers'
+import { deriveProjectedCareerRank } from './utils'
 
 type CharacterCreationSurvivalCommand = Extract<
   GameCommand,
@@ -113,11 +114,6 @@ const validateSurvivalResolution = (
   return ok(character.creation)
 }
 
-const currentCareerRank = (
-  creation: CharacterCreationProjection,
-  career: string
-): number => creation.careers.find((entry) => entry.name === career)?.rank ?? 0
-
 const resolveSurvivalCreationEvent = ({
   character,
   creation,
@@ -161,7 +157,7 @@ const resolveSurvivalCreationEvent = ({
   const promotionOptions = outcome.success
     ? deriveSurvivalPromotionOptions(
         basics,
-        currentCareerRank(creation, career)
+        deriveProjectedCareerRank(creation, career)
       )
     : { canCommission: false, canAdvance: false }
 

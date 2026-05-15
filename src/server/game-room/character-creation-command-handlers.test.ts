@@ -833,6 +833,65 @@ describe('character creation setup command handlers', () => {
     ])
   })
 
+  it('uses projected rank facts for survival promotion options', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationSurvival',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('SURVIVAL', {
+          terms: [
+            {
+              ...activeScoutTerm(),
+              career: 'Merchant',
+              complete: true,
+              facts: {
+                advancement: {
+                  skipped: false,
+                  passed: true,
+                  advancement: {
+                    expression: '2d6',
+                    rolls: [6, 6],
+                    total: 12,
+                    characteristic: 'edu',
+                    modifier: 0,
+                    target: 8,
+                    success: true
+                  },
+                  rank: {
+                    career: 'Merchant',
+                    previousRank: 0,
+                    newRank: 1,
+                    title: 'Deck Cadet',
+                    bonusSkill: null
+                  }
+                }
+              }
+            },
+            {
+              ...activeScoutTerm(),
+              career: 'Merchant'
+            }
+          ],
+          careers: [{ name: 'Merchant', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const resolved = result.value.find(
+      (event) => event.type === 'CharacterCreationSurvivalResolved'
+    )
+    assert.equal(resolved?.type, 'CharacterCreationSurvivalResolved')
+    if (resolved?.type !== 'CharacterCreationSurvivalResolved') return
+    assert.equal(resolved.canCommission, false)
+    assert.equal(resolved.canAdvance, true)
+  })
+
   it('blocks survival resolution outside survival', () => {
     const result = deriveCharacterCreationCommandEvents(
       {
@@ -1049,6 +1108,75 @@ describe('character creation setup command handlers', () => {
         creationComplete: false
       }
     ])
+  })
+
+  it('uses projected rank facts for advancement rank progression', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationAdvancement',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('ADVANCEMENT', {
+          state: createCareerCreationState('ADVANCEMENT', {
+            canCommission: false,
+            canAdvance: true
+          }),
+          terms: [
+            {
+              ...activeScoutTerm(),
+              career: 'Merchant',
+              complete: true,
+              facts: {
+                advancement: {
+                  skipped: false,
+                  passed: true,
+                  advancement: {
+                    expression: '2d6',
+                    rolls: [6, 6],
+                    total: 12,
+                    characteristic: 'edu',
+                    modifier: 0,
+                    target: 8,
+                    success: true
+                  },
+                  rank: {
+                    career: 'Merchant',
+                    previousRank: 0,
+                    newRank: 1,
+                    title: 'Deck Cadet',
+                    bonusSkill: null
+                  }
+                }
+              }
+            },
+            {
+              ...activeScoutTerm(),
+              career: 'Merchant',
+              survival: 7
+            }
+          ],
+          careers: [{ name: 'Merchant', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const resolved = result.value.find(
+      (event) => event.type === 'CharacterCreationAdvancementResolved'
+    )
+    assert.equal(resolved?.type, 'CharacterCreationAdvancementResolved')
+    if (resolved?.type !== 'CharacterCreationAdvancementResolved') return
+    assert.deepEqual(resolved.rank, {
+      career: 'Merchant',
+      previousRank: 1,
+      newRank: 2,
+      title: 'Fourth Officer',
+      bonusSkill: null
+    })
   })
 
   it('blocks advancement resolution outside advancement', () => {

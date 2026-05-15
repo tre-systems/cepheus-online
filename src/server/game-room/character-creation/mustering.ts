@@ -33,6 +33,7 @@ import {
   type CommandContext,
   requireNonEmptyString
 } from '../command-helpers'
+import { deriveProjectedCareerRank } from './utils'
 
 type CharacterCreationMusteringCommand = Extract<
   GameCommand,
@@ -48,30 +49,6 @@ type CharacterCreationMusteringBenefitRolledEvent = Extract<
   GameEvent,
   { type: 'CharacterCreationMusteringBenefitRolled' }
 >
-
-const currentCareerRank = (
-  creation: CharacterCreationProjection,
-  career: string
-): number => {
-  let projectedRank: number | null = null
-  for (const term of creation.terms) {
-    if (term.career !== career) continue
-    const advancement = term.facts?.advancement
-    if (
-      advancement &&
-      !advancement.skipped &&
-      advancement.rank?.career === career
-    ) {
-      projectedRank = advancement.rank.newRank
-    }
-  }
-
-  return (
-    projectedRank ??
-    creation.careers.find((entry) => entry.name === career)?.rank ??
-    0
-  )
-}
 
 const termsInCareer = (
   creation: CharacterCreationProjection,
@@ -145,7 +122,7 @@ const validateMusteringBenefitRoll = (
 
   const remainingInCareer = deriveRemainingCareerBenefits({
     termsInCareer: termsInCareer(character.creation, career),
-    currentRank: currentCareerRank(character.creation, career),
+    currentRank: deriveProjectedCareerRank(character.creation, career),
     benefitsReceived: benefitsReceivedInCareer(character.creation, career)
   })
   if (remainingInCareer <= 0) {
@@ -240,7 +217,7 @@ const resolveMusteringBenefitCreationEvent = ({
     )
   }
 
-  const rank = currentCareerRank(creation, career)
+  const rank = deriveProjectedCareerRank(creation, career)
   const modifier =
     kind === 'cash'
       ? deriveCashBenefitRollModifier({

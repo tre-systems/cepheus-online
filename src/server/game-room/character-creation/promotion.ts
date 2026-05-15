@@ -22,6 +22,7 @@ import {
   requireLegalCharacterCreationAction
 } from '../character-creation-command-helpers'
 import { commandError, type CommandContext } from '../command-helpers'
+import { deriveProjectedCareerRank } from './utils'
 
 type CharacterCreationPromotionCommand = Extract<
   GameCommand,
@@ -144,11 +145,6 @@ const validateAdvancementSkip = (
   return ok(character.creation)
 }
 
-const currentCareerRank = (
-  creation: CharacterCreationProjection,
-  career: string
-): number => creation.careers.find((entry) => entry.name === career)?.rank ?? 0
-
 const resolveCommissionCreationEvent = ({
   character,
   creation,
@@ -246,7 +242,7 @@ const resolveAdvancementCreationEvent = ({
     )
   }
 
-  const previousRank = currentCareerRank(creation, career)
+  const previousRank = deriveProjectedCareerRank(creation, career)
   const newRank = outcome.success ? Math.min(previousRank + 1, 6) : previousRank
   const reward = parseCareerRankReward({
     ranksAndSkills: CEPHEUS_SRD_RULESET.ranksAndSkills,
