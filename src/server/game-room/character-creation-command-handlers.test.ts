@@ -268,6 +268,28 @@ describe('character creation setup command handlers', () => {
     assert.equal(result.error.message, 'EDU has already been rolled')
   })
 
+  it('rejects characteristic rolls blocked by projected pending decisions', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationCharacteristic',
+        gameId,
+        actorId,
+        characterId,
+        characteristic: 'str'
+      },
+      context(
+        createCreation('CHARACTERISTICS', {
+          pendingDecisions: [{ key: 'characteristicAssignment' }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message.includes('blocked'), true)
+  })
+
   it('sets a normalized homeworld and derives background skill allowance', () => {
     const result = deriveCharacterCreationCommandEvents(
       {
@@ -291,6 +313,29 @@ describe('character creation setup command handlers', () => {
     if (event?.type !== 'CharacterCreationHomeworldSet') return
     assert.deepEqual(event.homeworld, homeworld)
     assert.equal(event.backgroundSkillAllowance, 3)
+  })
+
+  it('rejects homeworld reset while background choices are pending', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'SetCharacterCreationHomeworld',
+        gameId,
+        actorId,
+        characterId,
+        homeworld
+      },
+      context(
+        createCreation('HOMEWORLD', {
+          homeworld,
+          pendingCascadeSkills: ['Gun Combat-0']
+        })
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message.includes('pending'), true)
   })
 
   it('selects and resolves background skills through semantic events', () => {
@@ -342,6 +387,54 @@ describe('character creation setup command handlers', () => {
     if (resolvedEvent?.type !== 'CharacterCreationCascadeSkillResolved') return
     assert.deepEqual(resolvedEvent.backgroundSkills, ['Slug Pistol-0'])
     assert.deepEqual(resolvedEvent.pendingCascadeSkills, [])
+  })
+
+  it('rejects background skill selection blocked by unrelated projected decisions', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'SelectCharacterCreationBackgroundSkill',
+        gameId,
+        actorId,
+        characterId,
+        skill: 'Admin'
+      },
+      context(
+        createCreation('HOMEWORLD', {
+          homeworld,
+          pendingDecisions: [{ key: 'agingResolution' }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message.includes('blocked'), true)
+  })
+
+  it('rejects background cascade resolution blocked by unrelated projected decisions', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationCascadeSkill',
+        gameId,
+        actorId,
+        characterId,
+        cascadeSkill: 'Gun Combat-0',
+        selection: 'Slug Pistol'
+      },
+      context(
+        createCreation('HOMEWORLD', {
+          homeworld,
+          pendingCascadeSkills: ['Gun Combat-0'],
+          pendingDecisions: [{ key: 'agingResolution' }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message.includes('blocked'), true)
   })
 
   it('completes homeworld setup when background choices are resolved', () => {

@@ -1,6 +1,7 @@
 import {
   careerSkillWithLevel,
   deriveBackgroundSkillPlan,
+  deriveCareerCreationActionContext,
   deriveCareerCreationComplete,
   deriveTotalBackgroundSkillAllowance,
   hasBackgroundHomeworld,
@@ -123,6 +124,38 @@ const hasCompleteBackgroundChoices = (character: CharacterState): boolean => {
   )
 }
 
+const requireNoHomeworldResetBlockers = (
+  creation: CharacterCreationProjection
+): Result<void, CommandError> => {
+  const actionContext = deriveCareerCreationActionContext(creation)
+  if ((actionContext.pendingDecisions?.length ?? 0) > 0) {
+    return err(
+      commandError(
+        'invalid_command',
+        'Homeworld cannot be changed while background choices are pending'
+      )
+    )
+  }
+
+  return ok(undefined)
+}
+
+const requireOnlyHomeworldPendingDecisions = (
+  creation: CharacterCreationProjection,
+  blockedMessage: string
+): Result<void, CommandError> => {
+  const allowed = new Set(['homeworldSkillSelection', 'cascadeSkillResolution'])
+  const actionContext = deriveCareerCreationActionContext(creation)
+  const blockingDecision = actionContext.pendingDecisions?.find(
+    (decision) => !allowed.has(decision.key)
+  )
+  if (blockingDecision) {
+    return err(commandError('invalid_command', blockedMessage))
+  }
+
+  return ok(undefined)
+}
+
 export const requireHomeworldCreation = (
   character: CharacterState
 ): Result<CharacterCreationProjection, CommandError> => {
@@ -212,6 +245,11 @@ export const deriveHomeworldCommandEvents = (
           `Homeworld cannot be set from ${character.creation.state.status}`
         )
       }
+      const noResetBlockers = requireNoHomeworldResetBlockers(
+        character.creation
+      )
+      if (!noResetBlockers.ok) return noResetBlockers
+
       const homeworld = normalizeHomeworld(command.homeworld)
       if (!homeworld.ok) return homeworld
       const backgroundPlan = deriveBackgroundSkillPlan({
@@ -242,6 +280,12 @@ export const deriveHomeworldCommandEvents = (
       const { character } = loaded.value
       const creation = requireHomeworldCreation(character)
       if (!creation.ok) return creation
+      const noUnrelatedDecision = requireOnlyHomeworldPendingDecisions(
+        creation.value,
+        'Background skills are blocked by unresolved character creation decisions'
+      )
+      if (!noUnrelatedDecision.ok) return noUnrelatedDecision
+
       if (
         backgroundSelectionCount(creation.value) >=
         requiredBackgroundSelectionCount(character)
@@ -286,6 +330,12 @@ export const deriveHomeworldCommandEvents = (
       const { character } = loaded.value
       const creation = requireHomeworldCreation(character)
       if (!creation.ok) return creation
+      const noUnrelatedDecision = requireOnlyHomeworldPendingDecisions(
+        creation.value,
+        'Background cascade skills are blocked by unresolved character creation decisions'
+      )
+      if (!noUnrelatedDecision.ok) return noUnrelatedDecision
+
       const cascadeSkill = normalizeBackgroundSkill(command.cascadeSkill)
       if (!cascadeSkill.ok) return cascadeSkill
       const selection = requireNonEmptyString(command.selection, 'selection')

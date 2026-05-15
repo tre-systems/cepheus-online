@@ -10,7 +10,10 @@ import type { EventId } from '../../../shared/ids'
 import { deriveEventRng } from '../../../shared/prng'
 import type { CommandError } from '../../../shared/protocol'
 import { err, ok, type Result } from '../../../shared/result'
-import { loadCharacterCreationCommandContext } from '../character-creation-command-helpers'
+import {
+  loadCharacterCreationCommandContext,
+  requireLegalCharacterCreationAction
+} from '../character-creation-command-helpers'
 import {
   canMutateCharacter,
   commandError,
@@ -99,6 +102,13 @@ export const deriveCreationSetupCommandEvents = (
           )
         )
       }
+      const legalAction = requireLegalCharacterCreationAction(
+        character.creation,
+        ['setCharacteristics'],
+        'CHARACTERISTIC_ROLL is blocked by unresolved character creation decisions'
+      )
+      if (!legalAction.ok) return legalAction
+
       if (character.characteristics[command.characteristic] !== null) {
         return err(
           commandError(
