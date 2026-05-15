@@ -1496,6 +1496,20 @@ h1 {
   text-transform: uppercase;
 }
 
+.sheet-ledger-list {
+  display: grid;
+  gap: 5px;
+}
+
+.sheet-ledger-entry {
+  margin: 0;
+  border-bottom: 1px solid rgba(244, 255, 248, 0.14);
+  padding-bottom: 5px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .sheet-items-editor {
   display: grid;
   gap: 8px;

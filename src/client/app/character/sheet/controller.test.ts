@@ -8,7 +8,7 @@ import type {
   PieceId,
   UserId
 } from '../../../../shared/ids'
-import { asEventId } from '../../../../shared/ids'
+import { asEventId, asUserId } from '../../../../shared/ids'
 import type {
   BoardState,
   CharacterSheetPatch,
@@ -576,7 +576,19 @@ describe('character sheet controller', () => {
   })
 
   it('edits items with event-backed row controls instead of textarea text', () => {
-    const scout = character()
+    const scout = character({
+      credits: 950,
+      ledger: [
+        {
+          id: 'ledger-1',
+          actorId: asUserId('referee'),
+          createdAt: '2026-05-03T12:10:00.000Z',
+          amount: -250,
+          balance: 950,
+          reason: 'Bought ammunition'
+        }
+      ]
+    })
     const harness = createHarness({
       selectedPiece: piece(),
       state: gameState({ [characterId]: scout })
@@ -585,6 +597,11 @@ describe('character sheet controller', () => {
     harness.controller.selectTab('items')
 
     assert.equal(harness.elements.itemsTab.classList.contains('active'), true)
+    findByText(harness.elements.sheetBody, 'Credit Ledger')
+    findByText(
+      harness.elements.sheetBody,
+      'Cr-250 -> Cr950: Bought ammunition (2026-05-03, referee)'
+    )
     findByText(harness.elements.sheetBody, 'Laser Pistol')
     const inputs = findAll(
       harness.elements.sheetBody,

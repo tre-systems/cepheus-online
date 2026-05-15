@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { asCharacterId } from '../../../../shared/ids'
+import { asCharacterId, asUserId } from '../../../../shared/ids'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -225,6 +225,7 @@ describe('character sheet export view', () => {
       skills: 'Broker-2, Pilot-1, Vacc Suit-0',
       credits: 'Cr1200',
       equipment: 'Vacc Suit x1 (Carried)',
+      ledger: [],
       careerHistory: [
         'Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (Scout material benefit; roll 3; DM +1; table 4); term complete'
       ],
@@ -250,6 +251,33 @@ describe('character sheet export view', () => {
         'Notes:',
         'Detached scout.'
       ].join('\n')
+    )
+  })
+
+  it('includes credit ledger provenance in finalized exports', () => {
+    const exportText =
+      derivePlainCharacterExport(
+        character({
+          credits: 950,
+          ledger: [
+            {
+              id: 'ledger-1',
+              actorId: asUserId('referee'),
+              createdAt: '2026-05-03T12:10:00.000Z',
+              amount: -250,
+              balance: 950,
+              reason: 'Bought ammunition'
+            }
+          ]
+        })
+      ) ?? ''
+
+    assert.equal(exportText.includes('Credit Ledger:'), true)
+    assert.equal(
+      exportText.includes(
+        '- Cr-250 -> Cr950: Bought ammunition (2026-05-03, referee)'
+      ),
+      true
     )
   })
 

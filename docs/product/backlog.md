@@ -1335,8 +1335,8 @@ Tasks:
   pure shared rules helpers.
 - Done: replace simple equipment text mutations with item-level equipment
   add/update/remove commands/events and ledger-backed credit adjustments.
-- Extend the equipment/ledger export path so completed sheets show credit
-  history and equipment provenance cleanly.
+- Done: extend the equipment/ledger export path so completed sheets and plain
+  export show credit history cleanly.
 - Add character action-sheet controls that use skills, equipment, cover, stance,
   fatigue, and status.
 - Add notes and handouts as server-ordered blocks, with CRDTs only if a concrete

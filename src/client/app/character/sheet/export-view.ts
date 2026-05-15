@@ -11,6 +11,7 @@ import type {
   CharacterCharacteristics,
   CharacterCreationProjection,
   CharacterEquipmentItem,
+  CharacterLedgerEntry,
   CharacteristicKey,
   CharacterState
 } from '../../../../shared/state'
@@ -119,6 +120,28 @@ const equipmentValue = (
     })
     .join('; ')
 }
+
+const formatCreditValue = (credits: number): string => `Cr${credits}`
+
+const formatLedgerAmount = (amount: number): string => {
+  const normalized = Math.trunc(amount)
+  if (normalized < 0) return `Cr-${Math.abs(normalized)}`
+  return `${normalized > 0 ? '+' : ''}Cr${normalized}`
+}
+
+export const formatLedgerEntryForExport = (
+  entry: CharacterLedgerEntry
+): string => {
+  const reason = entry.reason.trim() || 'Credit adjustment'
+  const createdOn = entry.createdAt.split('T')[0] || null
+  const context = [createdOn, entry.actorId].filter(Boolean).join(', ')
+  const contextText = context ? ` (${context})` : ''
+  return `${formatLedgerAmount(entry.amount)} -> ${formatCreditValue(entry.balance)}: ${reason}${contextText}`
+}
+
+export const ledgerValue = (
+  ledger: readonly CharacterLedgerEntry[] | null | undefined
+): string[] => (ledger ?? []).map(formatLedgerEntryForExport)
 
 const skillBaseName = (skill: string): string =>
   (parseCareerSkill(skill)?.name ?? skill.replace(/-\d+$/, '')).trim()
@@ -499,6 +522,7 @@ export interface CharacterExportViewModel {
   skills: string
   credits: string
   equipment: string
+  ledger: string[]
   careerHistory: string[]
   notes: string | null
 }
@@ -521,8 +545,9 @@ export const deriveCharacterExportViewModel = (
     careers: careerValue(creation),
     terms: creation?.terms.length ?? 0,
     skills: listValue(sortSkillsForExport(character.skills)),
-    credits: `Cr${character.credits}`,
+    credits: formatCreditValue(character.credits),
     equipment: equipmentValue(character.equipment),
+    ledger: ledgerValue(character.ledger),
     careerHistory: (creation?.terms ?? []).map(termHistoryLine),
     notes: character.notes.trim() || null
   }
@@ -552,6 +577,7 @@ export const derivePlainCharacterExport = (
   ]
 
   appendIndentedSection(lines, 'Career History', view.careerHistory)
+  appendIndentedSection(lines, 'Credit Ledger', view.ledger)
 
   if (view.notes) lines.push('Notes:', view.notes)
 

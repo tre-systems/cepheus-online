@@ -55,8 +55,7 @@ dice, refresh, and recover from the event stream.
   add/update/remove commands and events; the sheet UI now uses those commands
   instead of replacing the whole equipment list.
 - Add ledger append/export. Ledger-backed credit adjustments are in place for
-  spend/gain events; export presentation can be expanded in a later polish
-  slice.
+  spend/gain events; completed sheets and plain export now show credit history.
 - Add notes as server-ordered blocks.
 
 Success criteria: player-facing character sheet matches the useful parts of the

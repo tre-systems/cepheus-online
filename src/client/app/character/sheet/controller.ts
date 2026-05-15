@@ -23,6 +23,7 @@ import {
   deriveCharacterExportViewModel,
   deriveCharacterUpp,
   derivePlainCharacterExport,
+  formatLedgerEntryForExport,
   sortSkillsForExport
 } from './export-view.js'
 
@@ -369,6 +370,24 @@ export const createCharacterSheetController = ({
     body.append(sheetSectionTitle('Plain Export'), block)
   }
 
+  const appendCreditLedger = (
+    body: HTMLElement,
+    character: CharacterState | null
+  ) => {
+    const ledger = character?.ledger ?? []
+    if (ledger.length === 0) return
+
+    const list = documentApi.createElement('div')
+    list.className = 'sheet-ledger-list'
+    for (const entry of ledger) {
+      const row = documentApi.createElement('p')
+      row.className = 'sheet-ledger-entry'
+      row.textContent = formatLedgerEntryForExport(entry)
+      list.append(row)
+    }
+    body.append(sheetSectionTitle('Credit Ledger'), list)
+  }
+
   const appendFinalCharacterSummary = (
     body: HTMLElement,
     character: CharacterState | null
@@ -387,6 +406,17 @@ export const createCharacterSheetController = ({
       sheetRow('Credits', exportView.credits),
       sheetRow('Equipment', exportView.equipment)
     )
+    if (exportView.ledger.length > 0) {
+      const ledger = documentApi.createElement('div')
+      ledger.className = 'sheet-ledger-list'
+      for (const entry of exportView.ledger) {
+        const row = documentApi.createElement('p')
+        row.className = 'sheet-ledger-entry'
+        row.textContent = entry
+        ledger.append(row)
+      }
+      body.append(sheetSectionTitle('Credit Ledger'), ledger)
+    }
     if (exportView.careerHistory.length > 0) {
       const history = documentApi.createElement('div')
       history.className = 'sheet-career-history'
@@ -499,7 +529,7 @@ export const createCharacterSheetController = ({
     )
     appendFinalCharacterSummary(body, character)
     const editor = editableDetailsForm(piece, character)
-    if (editor) body.append(sheetSectionTitle('Edit'), editor)
+    if (editor) body.append(sheetSectionTitle('Referee Correction'), editor)
     appendPlainCharacterExport(body, character)
     appendDoorActions(body)
   }
@@ -536,7 +566,12 @@ export const createCharacterSheetController = ({
       actions.append(button)
     }
     const editor = skillEditor(piece, character, skills)
-    if (editor) body.append(actions, sheetSectionTitle('Edit Skills'), editor)
+    if (editor)
+      body.append(
+        actions,
+        sheetSectionTitle('Referee Skill Correction'),
+        editor
+      )
     else body.append(actions)
   }
 
@@ -685,8 +720,10 @@ export const createCharacterSheetController = ({
       : []
     if (equipment.length === 0) {
       body.append(emptySheetText(characterSheetEmptyLabels.noEquipmentListed))
+      appendCreditLedger(body, character)
       const editor = itemsEditor(character)
-      if (editor) body.append(sheetSectionTitle('Edit Items'), editor)
+      if (editor)
+        body.append(sheetSectionTitle('Referee Resource Correction'), editor)
       return
     }
 
@@ -712,8 +749,10 @@ export const createCharacterSheetController = ({
       list.append(row)
     }
     const editor = itemsEditor(character)
-    if (editor) body.append(list, sheetSectionTitle('Edit Items'), editor)
-    else body.append(list)
+    body.append(list)
+    appendCreditLedger(body, character)
+    if (editor)
+      body.append(sheetSectionTitle('Referee Resource Correction'), editor)
   }
 
   const renderCharacterOnlyDetailsTab = (
@@ -731,7 +770,7 @@ export const createCharacterSheetController = ({
       skillChips(displayedCharacterSkills(character))
     )
     const editor = editableDetailsForm(null, character)
-    if (editor) body.append(sheetSectionTitle('Edit'), editor)
+    if (editor) body.append(sheetSectionTitle('Referee Correction'), editor)
     appendPlainCharacterExport(body, character)
     appendDoorActions(body)
   }
