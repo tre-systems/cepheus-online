@@ -7,8 +7,8 @@ import type {
   CharacterState
 } from '../../../../shared/state'
 import {
-  deriveCharacteristicExportLine,
   deriveCharacterExportViewModel,
+  deriveCharacteristicExportLine,
   deriveCharacterUpp,
   derivePlainCharacterExport,
   formatUppCharacteristic,
@@ -216,7 +216,7 @@ describe('character sheet export view', () => {
       credits: 'Cr1200',
       equipment: 'Vacc Suit x1 (Carried)',
       careerHistory: [
-        'Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); skills Pilot-1, Vacc Suit-0; aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (roll 3 +1 DM = table 4); term complete'
+        'Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (roll 3 +1 DM = table 4); term complete'
       ],
       notes: 'Detached scout.'
     })
@@ -236,7 +236,7 @@ describe('character sheet export view', () => {
         'Credits: Cr1200',
         'Equipment: Vacc Suit x1 (Carried)',
         'Career History:',
-        '- Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); skills Pilot-1, Vacc Suit-0; aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (roll 3 +1 DM = table 4); term complete',
+        '- Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (roll 3 +1 DM = table 4); term complete',
         'Notes:',
         'Detached scout.'
       ].join('\n')
@@ -449,6 +449,74 @@ describe('character sheet export view', () => {
     assert.equal(exportText.includes('survival 2'), false)
     assert.equal(exportText.includes('advancement 2'), false)
     assert.equal(exportText.includes('reenlistment 2'), false)
+  })
+
+  it('exports facts-only terms without legacy aggregates', () => {
+    const creation = finalizedCreation()
+    const term = creation.terms[0]
+    term.skills = []
+    term.skillsAndTraining = []
+    term.benefits = []
+    term.facts = {
+      ...term.facts,
+      basicTrainingSkills: ['Comms-0'],
+      termSkillRolls: [
+        {
+          career: 'Scout',
+          table: 'serviceSkills',
+          roll: { expression: '1d6', rolls: [3], total: 3 },
+          tableRoll: 3,
+          rawSkill: 'Piloting',
+          skill: 'Piloting-1',
+          characteristic: null,
+          pendingCascadeSkill: null
+        }
+      ],
+      musteringBenefits: [
+        {
+          career: 'Scout',
+          kind: 'material',
+          roll: { expression: '2d6', rolls: [2, 2], total: 4 },
+          modifier: 0,
+          tableRoll: 4,
+          value: 'Blade',
+          credits: 0,
+          materialItem: 'Blade'
+        }
+      ]
+    }
+
+    const history = deriveCharacterExportViewModel(character({ creation }))
+      ?.careerHistory[0]
+
+    assert.equal(history?.includes('skills Piloting-1, Comms-0'), true)
+    assert.equal(history?.includes('basic training Comms-0'), true)
+    assert.equal(
+      history?.includes('term skills service skills roll 3: Piloting-1'),
+      true
+    )
+    assert.equal(history?.includes('benefits Blade (roll 4)'), true)
+  })
+
+  it('does not fall back to conflicting legacy skills when semantic facts have none', () => {
+    const creation = finalizedCreation()
+    const term = creation.terms[0]
+    term.skills = ['Legacy Skill-6']
+    term.skillsAndTraining = ['Legacy Training-5']
+    term.benefits = ['Legacy Benefit']
+    term.facts = {
+      survival: term.facts?.survival,
+      termSkillRolls: [],
+      musteringBenefits: []
+    }
+
+    const history = deriveCharacterExportViewModel(character({ creation }))
+      ?.careerHistory[0]
+
+    assert.equal(
+      history,
+      'Term 1: Scout - survival passed 7 vs 7 (End DM 0); term complete'
+    )
   })
 
   it('includes resolved cascade choices and aging loss provenance', () => {

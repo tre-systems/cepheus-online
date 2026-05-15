@@ -56,6 +56,7 @@ const commandController = (): CharacterCreationCommandController => ({
   rollTermSkill: async () => {},
   rollMusteringBenefit: async () => {},
   rollReenlistment: async () => {},
+  completeTerm: async () => {},
   decideAnagathics: async () => {},
   rollAging: async () => {},
   resolveAgingLoss: async () => {},
@@ -255,7 +256,7 @@ describe('character creation render controller', () => {
     assert.equal(nextStep?.children[1]?.textContent, 'Sentinel prompt')
   })
 
-  it('posts reenlistment when continuing a completed term without changing wizard step', async () => {
+  it('routes completed term choices through the command controller', async () => {
     const els = elements()
     const currentFlow = {
       step: 'career' as const,
@@ -296,8 +297,7 @@ describe('character creation render controller', () => {
         }
       })
     } satisfies CharacterCreationFlow
-    const posted: string[] = []
-    const nextFlows: CharacterCreationFlow[] = []
+    const completedTerms: boolean[] = []
     const controller = createCharacterCreationRenderController({
       document: renderDocument(),
       elements: els,
@@ -306,12 +306,7 @@ describe('character creation render controller', () => {
         flow: () => currentFlow,
         readOnly: () => false,
         reconcileEditableWithProjection: () => currentFlow,
-        setFlow: (flow) => {
-          if (flow) {
-            nextFlows.push(flow)
-          }
-          return flow
-        },
+        setFlow: (flow) => flow,
         viewModel: () =>
           deriveCharacterCreationViewModel({
             flow: currentFlow,
@@ -334,12 +329,14 @@ describe('character creation render controller', () => {
         publishProgress: async () => {},
         publishCascadeResolution: async () => {}
       },
-      getCommandController: commandController,
+      getCommandController: () => ({
+        ...commandController(),
+        completeTerm: async (continueCareer) => {
+          completedTerms.push(continueCareer)
+        }
+      }),
       ensurePublished: async () => {},
-      postCharacterCreationCommand: async (command) => {
-        posted.push(command.type)
-        return {}
-      },
+      postCharacterCreationCommand: async () => ({}),
       commandIdentity: () => ({
         gameId: asGameId('game-1'),
         actorId: asUserId('actor-1')
@@ -354,9 +351,7 @@ describe('character creation render controller', () => {
     serve?.click()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    assert.deepEqual(posted, ['ReenlistCharacterCreationCareer'])
-    assert.equal(nextFlows[0]?.draft.completedTerms.length, 1)
-    assert.equal(nextFlows[0]?.draft.careerPlan?.career, 'Rogue')
+    assert.deepEqual(completedTerms, [true])
   })
 
   it('renders the characteristic grid from the controller view model', () => {

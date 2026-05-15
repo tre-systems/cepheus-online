@@ -349,7 +349,7 @@ export const flowFromProjectedCharacter = (
   ])
 
   const step =
-    creation.state.status === 'MUSTERING_OUT' && musteringBenefits.length > 0
+    creation.state.status === 'MUSTERING_OUT'
       ? 'equipment'
       : creationStepFromStatus(creation.state.status)
 

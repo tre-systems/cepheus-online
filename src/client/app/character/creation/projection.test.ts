@@ -676,7 +676,7 @@ describe('character creation projection helpers', () => {
     assert.equal(deriveNextCharacterCreationAgingRoll(flow), null)
   })
 
-  it('keeps plain mustering out on skills but opens equipment once benefits exist', () => {
+  it('opens the equipment step for mustering out before and after benefits exist', () => {
     const plainMusteringFlow = flowFromProjectedCharacter(
       character({
         ...agingProjection(),
@@ -719,7 +719,7 @@ describe('character creation projection helpers', () => {
       })
     )
 
-    assert.equal(plainMusteringFlow?.step, 'career')
+    assert.equal(plainMusteringFlow?.step, 'equipment')
     assert.equal(benefitMusteringFlow?.step, 'equipment')
   })
 

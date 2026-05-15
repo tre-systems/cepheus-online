@@ -127,6 +127,21 @@ const factOnlyCompletedTerm = () => ({
   }
 })
 
+const survivalFact = (passed: boolean) => ({
+  passed,
+  canCommission: false,
+  canAdvance: passed,
+  survival: {
+    expression: '2d6' as const,
+    rolls: passed ? [4, 4] : [3, 2],
+    total: passed ? 8 : 5,
+    characteristic: 'end' as const,
+    modifier: 0,
+    target: 7,
+    success: passed
+  }
+})
+
 const activeScoutTerm = () => ({
   career: 'Scout',
   skills: ['Vacc Suit-1'],
@@ -1729,6 +1744,66 @@ describe('character creation setup command handlers', () => {
     assert.deepEqual(finalized.equipment, [])
     assert.equal(finalized.credits, 0)
     assert.equal(finalized.notes.includes('Rules source'), true)
+  })
+
+  it('finalizes term notes from facts-only survival results', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'FinalizeCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('ACTIVE', {
+          terms: [
+            {
+              ...completedTerm(),
+              survival: undefined,
+              facts: { survival: survivalFact(false) }
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const finalized = result.value[1]
+    assert.equal(finalized?.type, 'CharacterCreationFinalized')
+    if (finalized?.type !== 'CharacterCreationFinalized') return
+    assert.equal(finalized.notes.includes('Term 1: Scout, mishap.'), true)
+  })
+
+  it('finalizes term notes from survival facts over conflicting aggregates', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'FinalizeCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('ACTIVE', {
+          terms: [
+            {
+              ...completedTerm(),
+              survival: 5,
+              facts: { survival: survivalFact(false) }
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const finalized = result.value[1]
+    assert.equal(finalized?.type, 'CharacterCreationFinalized')
+    if (finalized?.type !== 'CharacterCreationFinalized') return
+    assert.equal(finalized.notes.includes('Term 1: Scout, mishap.'), true)
   })
 
   it('finalizes skills from projected term facts before legacy aggregates', () => {

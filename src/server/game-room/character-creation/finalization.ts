@@ -23,8 +23,8 @@ import { uniqueSkills } from './utils'
 const deriveTermSurvivalSummary = (
   term: CharacterCreationProjection['terms'][number]
 ): 'survived' | 'mishap' => {
-  if (term.facts?.survival) {
-    return term.facts.survival.passed ? 'survived' : 'mishap'
+  if (hasSemanticTermFacts(term)) {
+    return term.facts?.survival?.passed === false ? 'mishap' : 'survived'
   }
 
   return term.survival !== undefined && !term.complete && !term.musteringOut

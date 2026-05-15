@@ -269,6 +269,73 @@ describe('character creation command controller', () => {
     assert.deepEqual(commands, [])
   })
 
+  it('syncs completed term choices from the accepted projection', async () => {
+    const flow = careerFlow()
+    const commands: CharacterCreationCommand[] = []
+    const synced: Array<{
+      state: GameState | null
+      characterId: string
+      fallbackFlow: CharacterCreationFlow
+    }> = []
+    let rendered = 0
+    let scrolled = 0
+
+    const responseState: GameState = {
+      ...stateWithDice(diceRoll()),
+      characters: {
+        [flow.draft.characterId]: projectedDraftCharacter(flow, {
+          ...projectedDraftCreation(),
+          state: {
+            status: 'MUSTERING_OUT',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          history: []
+        })
+      }
+    }
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: () => {},
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async (command) => {
+        commands.push(command)
+        return { state: responseState }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {},
+      syncFlowFromRoomState: (state, characterId, fallbackFlow) => {
+        synced.push({ state, characterId, fallbackFlow })
+        return fallbackFlow
+      },
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        rendered += 1
+      },
+      scrollToTop: () => {
+        scrolled += 1
+      }
+    })
+
+    await controller.completeTerm(false)
+
+    assert.equal(commands[0]?.type, 'LeaveCharacterCreationCareer')
+    assert.equal(synced[0]?.state, responseState)
+    assert.equal(synced[0]?.characterId, flow.draft.characterId)
+    assert.equal(synced[0]?.fallbackFlow, flow)
+    assert.equal(rendered, 1)
+    assert.equal(scrolled, 1)
+  })
+
   it('completes skills after resolving the final term cascade skill', async () => {
     const flow = careerFlow()
     const commands: CharacterCreationCommand[] = []

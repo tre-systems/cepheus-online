@@ -56,6 +56,7 @@ export interface CharacterCreationCommandController {
   rollTermSkill: (table: CharacterCreationTermSkillTable) => Promise<void>
   rollMusteringBenefit: (kind: BenefitKind, career?: string) => Promise<void>
   rollReenlistment: () => Promise<void>
+  completeTerm: (continueCareer: boolean) => Promise<void>
   decideAnagathics: (useAnagathics: boolean) => Promise<void>
   rollAging: () => Promise<void>
   resolveAgingLoss: (
@@ -552,6 +553,32 @@ export const createCharacterCreationCommandController = (
         renderWizard()
         scrollToTop()
       }
+    },
+
+    completeTerm: async (continueCareer) => {
+      const flow = guardEditableFlow()
+      if (!flow) return
+      setError('')
+      syncFields()
+
+      await ensurePublished()
+      const response = await postCharacterCreationCommand(
+        {
+          type: continueCareer
+            ? 'ReenlistCharacterCreationCareer'
+            : 'LeaveCharacterCreationCareer',
+          ...commandIdentity(),
+          characterId: flow.draft.characterId
+        },
+        requestId(
+          continueCareer ? 'continue-character-career' : 'leave-character-career'
+        )
+      )
+      syncAndRender(
+        { syncFlowFromRoomState, renderWizard, scrollToTop },
+        response,
+        flow
+      )
     },
 
     decideAnagathics: async (useAnagathics) => {

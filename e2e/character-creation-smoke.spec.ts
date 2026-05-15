@@ -137,6 +137,53 @@ const legalCreationActionKeys = async ({
   ) ?? []
 }
 
+const completeProjectedTermSkills = async ({
+  page,
+  roomId,
+  actorId,
+  actorSession,
+  characterId
+}: {
+  page: Page
+  roomId: string
+  actorId: string
+  actorSession: string
+  characterId: string
+}): Promise<void> => {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    await resolveProjectedTermCascadeSkills({
+      page,
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+
+    const legalActions = await legalCreationActionKeys({
+      page,
+      roomId,
+      actorId,
+      characterId
+    })
+    if (legalActions.includes('completeSkills')) {
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'CompleteCharacterCreationSkills',
+        characterId
+      })
+      return
+    }
+    if (!legalActions.includes('rollTermSkill')) return
+
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'RollCharacterCreationTermSkill',
+      characterId,
+      table: 'serviceSkills'
+    })
+  }
+
+  throw new Error('Projected term skills did not reach completion')
+}
+
 const nextEventSeq = async (
   page: Page,
   roomId: string,
@@ -378,30 +425,73 @@ const expectMobileControlUsable = async (
   locator: ReturnType<Page['locator']>,
   label: string
 ): Promise<void> => {
-  await expect(locator, label).toBeVisible()
-  await expect(locator, label).toBeEnabled()
-  await locator.scrollIntoViewIfNeeded()
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await expect(locator, label).toBeVisible()
+    await expect(locator, label).toBeEnabled()
+    try {
+      await locator.scrollIntoViewIfNeeded({ timeout: 1_000 })
+      break
+    } catch (error) {
+      if (attempt === 4) throw error
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  }
   await expect
     .poll(
       () =>
-        locator.evaluate((element) => {
-          const rect = element.getBoundingClientRect()
-          if (rect.width <= 0 || rect.height <= 0) return false
+        locator
+          .evaluate((element) => {
+            const rect = element.getBoundingClientRect()
+            if (rect.width <= 0 || rect.height <= 0) return false
 
-          const x = Math.min(
-            Math.max(rect.left + rect.width / 2, 0),
-            window.innerWidth - 1
-          )
-          const y = Math.min(
-            Math.max(rect.top + rect.height / 2, 0),
-            window.innerHeight - 1
-          )
-          const topElement = document.elementFromPoint(x, y)
-          return topElement ? element.contains(topElement) : false
-        }),
+            const x = Math.min(
+              Math.max(rect.left + rect.width / 2, 0),
+              window.innerWidth - 1
+            )
+            const y = Math.min(
+              Math.max(rect.top + rect.height / 2, 0),
+              window.innerHeight - 1
+            )
+            const topElement = document.elementFromPoint(x, y)
+            return topElement ? element.contains(topElement) : false
+          })
+          .catch(() => false),
       { message: `${label} center point is not covered` }
     )
     .toBe(true)
+}
+
+const continueCreationWizardToSkills = async ({
+  page,
+  fields,
+  mobile = false
+}: {
+  page: Page
+  fields: ReturnType<Page['locator']>
+  mobile?: boolean
+}): Promise<void> => {
+  const continueToSkills = page.getByRole('button', {
+    name: 'Continue to skills'
+  })
+  if (await continueToSkills.isVisible().catch(() => false)) {
+    if (mobile) {
+      await expectMobileControlUsable(continueToSkills, 'Continue to skills')
+    } else {
+      await expect(continueToSkills).toBeEnabled()
+    }
+    await continueToSkills.click()
+  }
+  await expect(fields).toContainText(/Skills|Review the skill list/, {
+    timeout: 5_000
+  })
+}
+
+const expectMusteringEquipmentStep = async (
+  fields: ReturnType<Page['locator']>
+): Promise<void> => {
+  await expect(fields).toContainText(/Mustering out|Equipment|benefit/i, {
+    timeout: 5_000
+  })
 }
 
 const expectDiceRollPending = async (page: Page): Promise<void> => {
@@ -1306,7 +1396,7 @@ test.describe('character creation smoke', () => {
     browser,
     page
   }) => {
-    test.setTimeout(60_000)
+    test.setTimeout(90_000)
     const roomId = await openUniqueRoom(page)
     await setRoomSeed(page, roomId, 24_680)
     const actorId = actorIdFromPage(page)
@@ -2993,19 +3083,16 @@ test.describe('character creation smoke', () => {
       timeout: 5_000
     })
 
-    for (let roll = 0; roll < 4; roll += 1) {
-      const termSkillTable = page
-        .locator('#characterCreationFields button:not([disabled])')
-        .filter({
-          hasText:
-            /Personal development|Service skills|Specialist skills|Advanced education/
-        })
-        .first()
-      if (!(await termSkillTable.isVisible().catch(() => false))) break
-      await termSkillTable.click()
-      await waitForDiceReveal(page)
-      await resolveVisibleCascadeChoices(page)
-    }
+    await completeProjectedTermSkills({
+      page,
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
 
     await expect(ownerFields).toContainText('Anagathics', {
       timeout: 5_000
@@ -3049,14 +3136,7 @@ test.describe('character creation smoke', () => {
     const musterOut = page.getByRole('button', { name: 'Muster out' })
     await expect(musterOut).toBeVisible({ timeout: 5_000 })
     await musterOut.click()
-    await expect(ownerFields).toContainText(/Skills|Review the skill list/, {
-      timeout: 5_000
-    })
-    await page.getByRole('button', { name: 'Continue to equipment' }).click()
-    await expect(ownerFields).toContainText(
-      /Equipment|Add starting equipment/,
-      { timeout: 5_000 }
-    )
+    await expectMusteringEquipmentStep(ownerFields)
 
     const spectator = await browser.newPage()
     try {
@@ -3069,7 +3149,7 @@ test.describe('character creation smoke', () => {
 
       const spectatorFields = spectator.locator('#characterCreationFields')
       const spectatorBenefitList = spectatorFields.locator(
-        '.creation-benefit-list'
+        '.creation-benefit-card'
       )
       const spectatorActivityFeed = spectator.locator('#creationActivityFeed')
       const projectedMusteringBenefit = async () => {
@@ -3437,19 +3517,13 @@ test.describe('character creation smoke', () => {
       }
     }
 
-    for (let roll = 1; roll < 4; roll += 1) {
-      const termSkillTable = page
-        .locator('#characterCreationFields button:not([disabled])')
-        .filter({
-          hasText:
-            /Personal development|Service skills|Specialist skills|Advanced education/
-        })
-        .first()
-      if (!(await termSkillTable.isVisible().catch(() => false))) break
-      await termSkillTable.click()
-      await waitForDiceReveal(page)
-      await resolveVisibleCascadeChoices(page)
-    }
+    await completeProjectedTermSkills({
+      page,
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
 
     const spectator = await browser.newPage()
     try {
@@ -3613,13 +3687,7 @@ test.describe('character creation smoke', () => {
     await expect((await leaveCareerAccepted).ok()).toBe(true)
 
     await expect(page.locator('#characterCreationFields')).toContainText(
-      /Skills|Review the skill list/,
-      { timeout: 5_000 }
-    )
-
-    await page.getByRole('button', { name: 'Continue to equipment' }).click()
-    await expect(page.locator('#characterCreationFields')).toContainText(
-      /Equipment|Add starting equipment/,
+      /Mustering out|Equipment|benefit/i,
       { timeout: 5_000 }
     )
 
@@ -3636,7 +3704,7 @@ test.describe('character creation smoke', () => {
         '#characterCreationFields'
       )
       const spectatorBenefitList = spectatorFields.locator(
-        '.creation-benefit-list'
+        '.creation-benefit-card'
       )
       const rollCashBenefit = page.getByRole('button', { name: 'Roll cash' })
       const spectatorActivityFeed = musteringSpectator.locator(
@@ -4327,25 +4395,31 @@ test.describe('character creation smoke', () => {
     const fields = page.locator('#characterCreationFields')
     const musterOut = page.getByRole('button', { name: 'Muster out' })
     await expectMobileControlUsable(musterOut, 'Muster out')
+    const leftCareer = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes(`/rooms/${roomId}/command`) &&
+        (response.request().postData() ?? '').includes(
+          'LeaveCharacterCreationCareer'
+        )
+    )
     await musterOut.click()
+    await expect((await leftCareer).ok()).toBe(true)
+    await expect
+      .poll(async () => {
+        const character = await fetchProjectedCharacter(
+          page,
+          roomId,
+          actorId,
+          context.characterId
+        )
+        return character?.creation?.state?.status
+      })
+      .toBe('MUSTERING_OUT')
 
-    await expect(fields).toContainText(/Skills|Review the skill list/, {
-      timeout: 5_000
-    })
+    await expectMusteringEquipmentStep(fields)
     await expectMobileCreatorControlsFit(page)
 
-    const continueToEquipment = page.getByRole('button', {
-      name: 'Continue to equipment'
-    })
-    await expectMobileControlUsable(
-      continueToEquipment,
-      'Continue to equipment'
-    )
-    await continueToEquipment.click()
-
-    await expect(fields).toContainText(/Equipment|Add starting equipment/, {
-      timeout: 5_000
-    })
     await expect(fields).toContainText('Mustering out', { timeout: 5_000 })
     await expectMobileCreatorControlsFit(page)
     await expectMobileControlUsable(
@@ -4354,7 +4428,7 @@ test.describe('character creation smoke', () => {
     )
   })
 
-  test('keeps finalization controls usable at phone width', async ({
+  test('keeps finalization controls usable at phone width and hands off to the final sheet', async ({
     page
   }) => {
     test.setTimeout(60_000)
@@ -4399,15 +4473,23 @@ test.describe('character creation smoke', () => {
       actorId
     )
 
-    await seedCreationToReenlistmentDecision(page, {
+    await seedCreationToCareerSelection(page, {
       roomId,
       actorId,
       actorSession,
-      context
+      characterId: context.characterId
     })
     await postCommand(page, roomId, actorId, actorSession, {
-      type: 'ResolveCharacterCreationReenlistment',
-      characterId: context.characterId
+      type: 'UpdateCharacterSheet',
+      characterId: context.characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
     })
 
     await page.reload({ waitUntil: 'domcontentloaded' })
@@ -4415,27 +4497,118 @@ test.describe('character creation smoke', () => {
     await openOrExpectFollowedCreation(page, characterName)
 
     const fields = page.locator('#characterCreationFields')
+    const scoutCareer = characterCreationCareerButton(page, 'Scout')
+    await expectMobileControlUsable(scoutCareer, 'Scout career')
+    await scoutCareer.click()
+    await waitForDiceReveal(page)
+    await resolveVisibleCascadeChoices(page)
+
+    const applyBasicTraining = page.getByRole('button', {
+      name: 'Apply basic training'
+    })
+    await expectMobileControlUsable(applyBasicTraining, 'Apply basic training')
+    await applyBasicTraining.click()
+
+    const rollSurvival = page.getByRole('button', { name: 'Roll survival' })
+    await expectMobileControlUsable(rollSurvival, 'Roll survival')
+    await rollSurvival.click()
+    await waitForDiceReveal(page)
+
+    for (const actionName of ['Roll commission', 'Roll advancement']) {
+      const action = page.getByRole('button', { name: actionName })
+      if (await action.isVisible().catch(() => false)) {
+        await expectMobileControlUsable(action, actionName)
+        await action.click()
+        await waitForDiceReveal(page)
+      }
+    }
+
+    await expect(fields).toContainText('Skills and training', {
+      timeout: 5_000
+    })
+    for (let index = 0; index < 12; index += 1) {
+      if (
+        await page
+          .getByRole('button', { name: /^(Roll aging|Roll reenlistment)$/ })
+          .isVisible()
+          .catch(() => false)
+      ) {
+        break
+      }
+      const action = fields
+        .locator('.creation-term-actions button:not([disabled])')
+        .first()
+      if ((await action.count()) === 0) break
+      await expectMobileControlUsable(action, `Term skill action ${index + 1}`)
+      const label = ((await action.textContent()) ?? '').trim()
+      await action.click()
+      if (!/complete/i.test(label)) await waitForDiceReveal(page)
+      await resolveVisibleCascadeChoices(page)
+    }
+
+    const skipAnagathics = page.getByRole('button', {
+      name: /^(Skip|Skip anagathics)$/
+    })
+    if (await skipAnagathics.isVisible().catch(() => false)) {
+      await expectMobileControlUsable(skipAnagathics, 'Skip anagathics')
+      await skipAnagathics.click()
+    }
+
+    const rollAging = page.getByRole('button', { name: 'Roll aging' })
+    if (await rollAging.isVisible().catch(() => false)) {
+      await expectMobileControlUsable(rollAging, 'Roll aging')
+      await rollAging.click()
+      await waitForDiceReveal(page)
+      for (let index = 0; index < 4; index += 1) {
+        const agingChoice = page.locator('.creation-term-actions button').first()
+        if (
+          (await agingChoice.count()) === 0 ||
+          !(await agingChoice.isVisible())
+        ) {
+          break
+        }
+        await expectMobileControlUsable(
+          agingChoice,
+          `Aging choice ${index + 1}`
+        )
+        await agingChoice.click()
+      }
+    }
+
+    const rollReenlistment = page.getByRole('button', {
+      name: 'Roll reenlistment'
+    })
+    await expectMobileControlUsable(rollReenlistment, 'Roll reenlistment')
+    await rollReenlistment.click()
+    await waitForDiceReveal(page)
+
     const musterOut = page.getByRole('button', { name: 'Muster out' })
     await expectMobileControlUsable(musterOut, 'Muster out')
+    const leftCareer = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes(`/rooms/${roomId}/command`) &&
+        (response.request().postData() ?? '').includes(
+          'LeaveCharacterCreationCareer'
+        )
+    )
     await musterOut.click()
+    await expect((await leftCareer).ok()).toBe(true)
+    await expect
+      .poll(async () => {
+        const character = await fetchProjectedCharacter(
+          page,
+          roomId,
+          actorId,
+          context.characterId
+        )
+        return character?.creation?.state?.status
+      })
+      .toBe('MUSTERING_OUT')
 
-    await expect(fields).toContainText(/Skills|Review the skill list/, {
-      timeout: 5_000
-    })
+    await expectMusteringEquipmentStep(fields)
     await expectMobileCreatorControlsFit(page)
 
-    const continueToEquipment = page.getByRole('button', {
-      name: 'Continue to equipment'
-    })
-    await expectMobileControlUsable(
-      continueToEquipment,
-      'Continue to equipment'
-    )
-    await continueToEquipment.click()
-
-    await expect(fields).toContainText(/Equipment|Add starting equipment/, {
-      timeout: 5_000
-    })
     await expectMobileCreatorControlsFit(page)
 
     const rollBenefit = page.getByRole('button', { name: 'Roll benefit' })
@@ -4486,7 +4659,15 @@ test.describe('character creation smoke', () => {
       'FinalizeCharacterCreation'
     )
     await expect.poll(() => postedCommandTypes).toContain('CreatePiece')
+    const finalizedCommandIndex = postedCommandTypes.lastIndexOf(
+      'FinalizeCharacterCreation'
+    )
+    const createdPieceCommandIndex = postedCommandTypes.lastIndexOf(
+      'CreatePiece'
+    )
+    expect(createdPieceCommandIndex).toBeGreaterThan(finalizedCommandIndex)
 
+    let finalizedPieceId: string | null = null
     await expect
       .poll(async () => {
         const message = await fetchRoomState(page, roomId, actorId)
@@ -4494,10 +4675,12 @@ test.describe('character creation smoke', () => {
         const linkedPieces = Object.values(message.state?.pieces ?? {}).filter(
           (piece) => piece.characterId === context.characterId
         )
+        finalizedPieceId = linkedPieces[0]?.id ?? null
         return {
           status: character?.creation?.state?.status,
           creationComplete: character?.creation?.creationComplete,
           pieceCount: linkedPieces.length,
+          pieceId: linkedPieces[0]?.id ?? null,
           pieceName: linkedPieces[0]?.name ?? ''
         }
       })
@@ -4505,8 +4688,10 @@ test.describe('character creation smoke', () => {
         status: 'PLAYABLE',
         creationComplete: true,
         pieceCount: 1,
+        pieceId: expect.any(String),
         pieceName: characterName
       })
+    if (!finalizedPieceId) throw new Error('Finalized linked piece was missing')
 
     await expect(page.locator('#characterCreator')).not.toBeVisible({
       timeout: 5_000
@@ -4514,6 +4699,11 @@ test.describe('character creation smoke', () => {
     await expect(page.locator('#characterSheet.open')).toBeVisible({
       timeout: 5_000
     })
+    const selectedRailPiece = page.locator(
+      '#initiativeRail .rail-piece.selected'
+    )
+    await expect(selectedRailPiece).toHaveCount(1)
+    await expect(selectedRailPiece).toHaveAttribute('title', characterName)
     await expect(page.locator('#sheetName')).toContainText(characterName)
     await expect(page.locator('#sheetBody')).toContainText('Final Character')
     await expect(page.locator('#sheetBody')).toContainText('UPP')

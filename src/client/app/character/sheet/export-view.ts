@@ -1,10 +1,4 @@
-import type {
-  CharacterCharacteristics,
-  CharacterCreationProjection,
-  CharacterEquipmentItem,
-  CharacterState,
-  CharacteristicKey
-} from '../../../../shared/state'
+import { CEPHEUS_SRD_RULESET } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   CareerCreationCheckFact,
   CareerTerm
@@ -13,7 +7,13 @@ import {
   deriveMaterialBenefitEffect,
   parseCareerSkill
 } from '../../../../shared/characterCreation'
-import { CEPHEUS_SRD_RULESET } from '../../../../shared/character-creation/cepheus-srd-ruleset'
+import type {
+  CharacterCharacteristics,
+  CharacterCreationProjection,
+  CharacterEquipmentItem,
+  CharacteristicKey,
+  CharacterState
+} from '../../../../shared/state'
 
 const uppCharacteristicOrder: CharacteristicKey[] = [
   'str',
@@ -235,7 +235,7 @@ const skillsFromTermFacts = (term: CareerTerm): string[] => [
 const termSkillValue = (term: CareerTerm): string | null => {
   const factSkills = skillsFromTermFacts(term)
   const skills = sortSkillsForExport(
-    hasSemanticTermFacts(term) && factSkills.length > 0
+    hasSemanticTermFacts(term)
       ? factSkills
       : [...term.skills, ...term.skillsAndTraining]
   )

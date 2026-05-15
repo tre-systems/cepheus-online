@@ -1,7 +1,6 @@
 import type { GameId, UserId } from '../../../../shared/ids.js'
 import {
   applyCharacterCreationBackgroundSkillSelection,
-  completeCharacterCreationCareerTerm,
   removeCharacterCreationBackgroundSkillSelection,
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
@@ -127,9 +126,6 @@ export const createCharacterCreationRenderController = ({
   wizard,
   homeworldPublisher,
   getCommandController,
-  ensurePublished,
-  postCharacterCreationCommand,
-  commandIdentity,
   reportError
 }: CharacterCreationRenderControllerDeps): CharacterCreationRenderController => {
   const renderWizardControls = () => {
@@ -484,26 +480,7 @@ export const createCharacterCreationRenderController = ({
   ): HTMLElement => {
     return renderCharacterCreationTermResolutionView(document, viewModel, {
       completeTerm: async (continueCareer) => {
-        const flow = controller.flow()
-        if (!flow) return
-        const result = completeCharacterCreationCareerTerm({
-          flow,
-          continueCareer
-        })
-        if (result.flow === flow) return
-
-        await ensurePublished()
-        await postCharacterCreationCommand({
-          type: continueCareer
-            ? 'ReenlistCharacterCreationCareer'
-            : 'LeaveCharacterCreationCareer',
-          ...commandIdentity(),
-          characterId: flow.draft.characterId
-        })
-        controller.setFlow(result.flow)
-        reportError('')
-        renderWizard()
-        panel.scrollToTop()
+        await getCommandController().completeTerm(continueCareer)
       }
     })
   }

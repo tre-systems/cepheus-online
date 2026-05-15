@@ -195,7 +195,7 @@ describe('character creation follow helpers', () => {
     ])
   })
 
-  it('keeps local post-career review setup ahead of an older projection step', () => {
+  it('syncs mustering equipment setup from the projection', () => {
     const equipmentFlow = {
       ...fallbackFlow,
       step: 'equipment' as const
@@ -207,7 +207,9 @@ describe('character creation follow helpers', () => {
       fallbackFlow: equipmentFlow
     })
 
-    assert.equal(syncedFlow, equipmentFlow)
+    assert.equal(syncedFlow === equipmentFlow, false)
+    assert.equal(syncedFlow?.step, 'equipment')
+    assert.equal(syncedFlow?.draft.name, 'Scout')
   })
 
   it('refreshes followed read-only flows and closes missing projections', () => {
@@ -237,7 +239,7 @@ describe('character creation follow helpers', () => {
     assert.equal(missing.shouldClose, true)
   })
 
-  it('keeps followed post-career equipment setup ahead of an older projection step', () => {
+  it('refreshes followed mustering equipment setup from the projection', () => {
     const equipmentFlow = {
       ...fallbackFlow,
       step: 'equipment' as const
@@ -250,7 +252,9 @@ describe('character creation follow helpers', () => {
       panelOpen: true
     })
 
-    assert.equal(refreshed.flow, equipmentFlow)
+    assert.equal(refreshed.flow === equipmentFlow, false)
+    assert.equal(refreshed.flow?.step, 'equipment')
+    assert.equal(refreshed.flow?.draft.name, 'Scout')
     assert.equal(refreshed.shouldRender, true)
   })
 
