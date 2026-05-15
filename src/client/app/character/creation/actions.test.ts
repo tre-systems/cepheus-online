@@ -6,6 +6,7 @@ import type {
   CharacterCreationProjection,
   CharacterState
 } from '../../../../shared/state'
+import { projectCareerCreationActionPlan } from '../../../../shared/character-creation/legal-actions.js'
 import { deriveCharacterCreationActionPlan } from './actions'
 
 const identity = {
@@ -34,28 +35,39 @@ const creation = (
 })
 
 const character = (
-  characterCreation: CharacterCreationProjection | null
-): CharacterState => ({
-  id: 'mae' as CharacterId,
-  ownerId: identity.actorId,
-  type: 'PLAYER',
-  name: 'Mae',
-  active: true,
-  notes: '',
-  age: 30,
-  characteristics: {
+  characterCreation: CharacterCreationProjection | null,
+  options: { projectActions?: boolean } = {}
+): CharacterState => {
+  const characteristics = {
     str: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7,
     dex: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7,
     end: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7,
     int: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7,
     edu: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7,
     soc: characterCreation?.state.status === 'CHARACTERISTICS' ? null : 7
-  },
-  skills: ['Gun Combat-0'],
-  equipment: [],
-  credits: 0,
-  creation: characterCreation
-})
+  }
+  const creationProjection =
+    characterCreation &&
+    options.projectActions !== false &&
+    !characterCreation.actionPlan
+      ? projectCareerCreationActionPlan(characterCreation, { characteristics })
+      : characterCreation
+
+  return {
+    id: 'mae' as CharacterId,
+    ownerId: identity.actorId,
+    type: 'PLAYER',
+    name: 'Mae',
+    active: true,
+    notes: '',
+    age: 30,
+    characteristics,
+    skills: ['Gun Combat-0'],
+    equipment: [],
+    credits: 0,
+    creation: creationProjection
+  }
+}
 
 const term = (
   overrides: Partial<
@@ -432,6 +444,11 @@ describe('character creation actions', () => {
       })
     )
     scout.characteristics.edu = 8
+    if (scout.creation) {
+      scout.creation = projectCareerCreationActionPlan(scout.creation, {
+        characteristics: scout.characteristics
+      })
+    }
 
     const plan = deriveCharacterCreationActionPlan(identity, scout)
 
@@ -604,6 +621,33 @@ describe('character creation actions', () => {
             legalActions: []
           }
         })
+      )
+    )
+
+    assert.equal(plan?.status, 'Survival')
+    assert.deepEqual(plan?.actions, [])
+  })
+
+  it('fails closed when projected legal actions are missing', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(creation('SURVIVAL'), { projectActions: false })
+    )
+
+    assert.equal(plan?.status, 'Survival')
+    assert.deepEqual(plan?.actions, [])
+  })
+
+  it('fails closed when projected action plan has no legal action list', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('SURVIVAL', {
+          actionPlan: {
+            status: 'SURVIVAL',
+            pendingDecisions: [{ key: 'survivalResolution' }]
+          }
+        } as unknown as Partial<CharacterCreationProjection>)
       )
     )
 

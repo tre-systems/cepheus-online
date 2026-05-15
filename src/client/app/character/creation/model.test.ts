@@ -507,7 +507,20 @@ describe('character creation view model', () => {
 
     const viewModel = deriveCharacterCreationViewModel({
       flow: currentFlow,
-      projection: projection('CAREER_SELECTION'),
+      projection: projection('SURVIVAL', {
+        actionPlan: {
+          status: 'SURVIVAL',
+          pendingDecisions: [{ key: 'survivalResolution' }],
+          legalActions: [
+            {
+              key: 'rollSurvival',
+              status: 'SURVIVAL',
+              commandTypes: ['ResolveCharacterCreationSurvival'],
+              rollRequirement: { key: 'survival', dice: '2d6' }
+            }
+          ]
+        }
+      }),
       readOnly: false
     })
 
@@ -714,7 +727,26 @@ describe('character creation view model', () => {
   it('includes term skill training state for resolved career terms', () => {
     const viewModel = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow({ termSkillRolls: [] }),
-      projection: projection('SKILLS_TRAINING'),
+      projection: projection('SKILLS_TRAINING', {
+        actionPlan: {
+          status: 'SKILLS_TRAINING',
+          pendingDecisions: [{ key: 'skillTrainingSelection' }],
+          legalActions: [
+            {
+              key: 'rollTermSkill',
+              status: 'SKILLS_TRAINING',
+              commandTypes: ['RollCharacterCreationTermSkill'],
+              rollRequirement: { key: 'termSkill', dice: '1d6' },
+              termSkillTableOptions: [
+                { table: 'personalDevelopment', label: 'Personal development' },
+                { table: 'serviceSkills', label: 'Service skills' },
+                { table: 'specialistSkills', label: 'Specialist skills' },
+                { table: 'advancedEducation', label: 'Advanced education' }
+              ]
+            }
+          ]
+        }
+      }),
       readOnly: false
     })
 
@@ -822,7 +854,20 @@ describe('character creation view model', () => {
   it('includes aging and reenlistment prompt state for career terms', () => {
     const reenlistment = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow(),
-      projection: projection('REENLISTMENT'),
+      projection: projection('REENLISTMENT', {
+        actionPlan: {
+          status: 'REENLISTMENT',
+          pendingDecisions: [{ key: 'reenlistmentResolution' }],
+          legalActions: [
+            {
+              key: 'rollReenlistment',
+              status: 'REENLISTMENT',
+              commandTypes: ['ResolveCharacterCreationReenlistment'],
+              rollRequirement: { key: 'reenlistment', dice: '2d6' }
+            }
+          ]
+        }
+      }),
       readOnly: false
     })
 
@@ -840,7 +885,20 @@ describe('character creation view model', () => {
       flow: resolvedCareerFlow({
         completedTerms: [completedTerm(), completedTerm(), completedTerm()]
       }),
-      projection: projection('AGING'),
+      projection: projection('AGING', {
+        actionPlan: {
+          status: 'AGING',
+          pendingDecisions: [{ key: 'agingResolution' }],
+          legalActions: [
+            {
+              key: 'resolveAging',
+              status: 'AGING',
+              commandTypes: ['ResolveCharacterCreationAging'],
+              rollRequirement: { key: 'aging', dice: '2d6' }
+            }
+          ]
+        }
+      }),
       readOnly: false
     })
 
@@ -865,6 +923,42 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.reenlistmentRoll, null)
   })
 
+  it('fails closed when projected creation legal actions are missing', () => {
+    const reenlistment = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow(),
+      projection: projection('REENLISTMENT'),
+      readOnly: false
+    })
+
+    const skillsFlow = flow({
+      step: 'skills',
+      draft: {
+        ...flow().draft,
+        careerPlan: selectCharacterCreationCareerPlan('Merchant')
+      }
+    })
+    const basicTraining = deriveCharacterCreationViewModel({
+      flow: skillsFlow,
+      projection: projection('BASIC_TRAINING'),
+      readOnly: false
+    })
+
+    const mustering = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'equipment',
+        draft: createInitialCharacterDraft(characterId, {
+          completedTerms: [completedTerm()]
+        })
+      }),
+      projection: projection('MUSTERING_OUT'),
+      readOnly: false
+    })
+
+    assert.equal(reenlistment.wizard?.reenlistmentRoll, null)
+    assert.equal(basicTraining.wizard?.basicTraining, null)
+    assert.deepEqual(mustering.wizard?.musteringOut?.actions, [])
+  })
+
   it('includes anagathics decision state for eligible career terms', () => {
     const base = resolvedCareerFlow()
     const viewModel = deriveCharacterCreationViewModel({
@@ -880,7 +974,19 @@ describe('character creation view model', () => {
             : null
         }
       },
-      projection: projection('AGING'),
+      projection: projection('AGING', {
+        actionPlan: {
+          status: 'AGING',
+          pendingDecisions: [],
+          legalActions: [
+            {
+              key: 'decideAnagathics',
+              status: 'AGING',
+              commandTypes: ['DecideCharacterCreationAnagathics']
+            }
+          ]
+        }
+      }),
       readOnly: false
     })
 
@@ -935,7 +1041,24 @@ describe('character creation view model', () => {
           ]
         })
       }),
-      projection: projection('MUSTERING_OUT'),
+      projection: projection('MUSTERING_OUT', {
+        actionPlan: {
+          status: 'MUSTERING_OUT',
+          pendingDecisions: [{ key: 'musteringBenefitSelection' }],
+          legalActions: [
+            {
+              key: 'resolveMusteringBenefit',
+              status: 'MUSTERING_OUT',
+              commandTypes: ['RollCharacterCreationMusteringBenefit'],
+              rollRequirement: { key: 'musteringBenefit', dice: '1d6' },
+              musteringBenefitOptions: [
+                { career: 'Merchant', kind: 'cash' },
+                { career: 'Merchant', kind: 'material' }
+              ]
+            }
+          ]
+        }
+      }),
       readOnly: false
     })
 

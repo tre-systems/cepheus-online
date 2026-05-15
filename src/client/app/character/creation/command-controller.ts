@@ -492,7 +492,9 @@ export const createCharacterCreationCommandController = (
           characterId: flow.draft.characterId
         },
         requestId(
-          continueCareer ? 'continue-character-career' : 'leave-character-career'
+          continueCareer
+            ? 'continue-character-career'
+            : 'leave-character-career'
         )
       )
       syncAndRender(
@@ -546,10 +548,7 @@ export const createCharacterCreationCommandController = (
         requestId('aging-roll')
       )
       if (
-        await syncDiceFlow(
-          response,
-          'Aging roll did not return a dice result'
-        )
+        await syncDiceFlow(response, 'Aging roll did not return a dice result')
       ) {
         renderWizard()
         scrollToTop()
@@ -645,10 +644,7 @@ export const createCharacterCreationCommandController = (
         requestId('career-roll')
       )
       if (
-        await syncDiceFlow(
-          response,
-          'Career roll did not return a dice result'
-        )
+        await syncDiceFlow(response, 'Career roll did not return a dice result')
       ) {
         renderWizard()
         scrollToTop()

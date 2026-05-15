@@ -191,8 +191,7 @@ const stateHasRedactedDiceResults = (nextState: GameState | null): boolean =>
     nextState?.diceLog.some((roll) => {
       const projectedRoll = roll as unknown as Record<string, unknown>
       return (
-        !Array.isArray(projectedRoll.rolls) ||
-        projectedRoll.total === undefined
+        !Array.isArray(projectedRoll.rolls) || projectedRoll.total === undefined
       )
     })
   )

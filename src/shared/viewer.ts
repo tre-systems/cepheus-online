@@ -4,7 +4,12 @@ import {
   type CharacterCreationActivityDescriptor,
   type LiveActivityDescriptor
 } from './live-activity'
-import type { CharacterState, GameState, PlayerState, PieceState } from './state'
+import type {
+  CharacterState,
+  GameState,
+  PlayerState,
+  PieceState
+} from './state'
 import type {
   CareerCreationTermSkillFact,
   CareerTerm

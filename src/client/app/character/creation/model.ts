@@ -301,9 +301,10 @@ const wizardViewModel = ({
     projectedCreation?.state.status === 'HOMEWORLD'
       ? projectedCreation.actionPlan?.homeworldChoiceOptions
       : undefined
-  const projectedLegalActions = projectedCreation?.actionPlan
-    ? new Set(
-        projectedCreation.actionPlan.legalActions.map((action) => action.key)
+  const projectedActionPlan = projectedCreation?.actionPlan ?? null
+  const projectedLegalActions = projectedCreation
+    ? new Set<CareerCreationActionKey>(
+        projectedActionPlan?.legalActions?.map((action) => action.key) ?? []
       )
     : null
   const isProjectedLegalActionAvailable = (
@@ -312,31 +313,31 @@ const wizardViewModel = ({
     projectedLegalActions ? projectedLegalActions.has(key) : undefined
   const careerChoiceOptions =
     projectedCreation?.state.status === 'CAREER_SELECTION'
-      ? projectedCreation.actionPlan?.careerChoiceOptions
+      ? (projectedActionPlan?.careerChoiceOptions ?? { careers: [] })
       : undefined
   const failedQualificationOptions =
     projectedCreation?.state.status === 'CAREER_SELECTION'
-      ? projectedCreation.actionPlan?.legalActions.find(
+      ? (projectedActionPlan?.legalActions.find(
           (action) => action.key === 'selectCareer'
-        )?.failedQualificationOptions
+        )?.failedQualificationOptions ?? [])
       : undefined
   const basicTrainingOptions =
     projectedCreation?.state.status === 'BASIC_TRAINING'
-      ? projectedCreation.actionPlan?.legalActions.find(
+      ? (projectedActionPlan?.legalActions.find(
           (action) => action.key === 'completeBasicTraining'
-        )?.basicTrainingOptions
+        )?.basicTrainingOptions ?? { kind: 'none', skills: [] })
       : undefined
   const termSkillTableOptions =
     projectedCreation?.state.status === 'SKILLS_TRAINING'
-      ? projectedCreation.actionPlan?.legalActions.find(
+      ? (projectedActionPlan?.legalActions.find(
           (action) => action.key === 'rollTermSkill'
-        )?.termSkillTableOptions
+        )?.termSkillTableOptions ?? [])
       : undefined
   const musteringBenefitOptions =
     projectedCreation?.state.status === 'MUSTERING_OUT'
-      ? projectedCreation.actionPlan?.legalActions.find(
+      ? (projectedActionPlan?.legalActions.find(
           (action) => action.key === 'resolveMusteringBenefit'
-        )?.musteringBenefitOptions
+        )?.musteringBenefitOptions ?? [])
       : undefined
 
   return {

@@ -370,10 +370,11 @@ describe('viewer filtering', () => {
     )
     assert.equal('survival' in (term ?? {}), false)
     assert.equal('reEnlistment' in (term ?? {}), false)
-    assert.deepEqual(state.characters[asCharacterId('char-1')]?.creation?.terms[0]?.facts?.survival?.survival.rolls, [
-      3,
-      4
-    ])
+    assert.deepEqual(
+      state.characters[asCharacterId('char-1')]?.creation?.terms[0]?.facts
+        ?.survival?.survival.rolls,
+      [3, 4]
+    )
   })
 
   it('redacts pre-reveal dice and roll-dependent activity details from players and spectators', () => {

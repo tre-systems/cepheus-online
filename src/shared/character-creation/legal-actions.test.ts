@@ -1036,7 +1036,10 @@ describe('career creation legal action planner', () => {
       ]
     })
 
-    assert.equal(deriveCareerCreationReenlistmentOutcome(creation), 'unresolved')
+    assert.equal(
+      deriveCareerCreationReenlistmentOutcome(creation),
+      'unresolved'
+    )
     assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
       { key: 'reenlistmentResolution' }
     ])

@@ -1,7 +1,3 @@
-import {
-  deriveCareerCreationActionContext,
-  deriveLegalCareerCreationActions
-} from '../../../../shared/character-creation/legal-actions.js'
 import type {
   BenefitKind,
   CareerCreationActionKey,
@@ -441,13 +437,9 @@ const deriveActions = (
   character: CharacterState,
   creation: CharacterCreationProjection
 ): CharacterCreationActionViewModel[] => {
-  const legalActions =
-    creation.actionPlan?.legalActions ??
-    deriveLegalCareerCreationActions(
-      creation.state,
-      deriveCareerCreationActionContext(creation),
-      { creation, characteristics: character.characteristics }
-    )
+  const legalActions = Array.isArray(creation.actionPlan?.legalActions)
+    ? creation.actionPlan.legalActions
+    : []
   const legalActionsByKey = new Map(
     legalActions.map((availableAction) => [
       availableAction.key,
