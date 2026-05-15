@@ -517,7 +517,26 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(deriveCareerCreationActionPlan(creation), {
       status: 'SKILLS_TRAINING',
       pendingDecisions: [{ key: 'cascadeSkillResolution' }],
-      legalActions: []
+      legalActions: [],
+      cascadeSkillChoices: [
+        {
+          cascadeSkill: 'Gun Combat-0',
+          label: 'Gun Combat',
+          level: 0,
+          options: [
+            { value: 'Archery-0', label: 'Archery', cascade: false },
+            {
+              value: 'Energy Pistol-0',
+              label: 'Energy Pistol',
+              cascade: false
+            },
+            { value: 'Energy Rifle-0', label: 'Energy Rifle', cascade: false },
+            { value: 'Shotgun-0', label: 'Shotgun', cascade: false },
+            { value: 'Slug Pistol-0', label: 'Slug Pistol', cascade: false },
+            { value: 'Slug Rifle-0', label: 'Slug Rifle', cascade: false }
+          ]
+        }
+      ]
     })
   })
 
@@ -678,6 +697,35 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('projects legal term skill table choices from the action plan', () => {
+    const creation = projection('SKILLS_TRAINING', {
+      requiredTermSkillCount: 2,
+      terms: [term({ career: 'Scout', skills: ['Pilot-1'] })]
+    })
+
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(creation, {
+        characteristics: { edu: 7 }
+      }).legalActions[0]?.termSkillTableOptions,
+      [
+        { table: 'personalDevelopment', label: 'Personal development' },
+        { table: 'serviceSkills', label: 'Service skills' },
+        { table: 'specialistSkills', label: 'Specialist skills' }
+      ]
+    )
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(creation, {
+        characteristics: { edu: 8 }
+      }).legalActions[0]?.termSkillTableOptions,
+      [
+        { table: 'personalDevelopment', label: 'Personal development' },
+        { table: 'serviceSkills', label: 'Service skills' },
+        { table: 'specialistSkills', label: 'Specialist skills' },
+        { table: 'advancedEducation', label: 'Advanced education' }
+      ]
+    )
+  })
+
   it('derives pending decisions from unresolved aging losses', () => {
     const creation = projection('AGING', {
       characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
@@ -725,6 +773,45 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(creation),
       ['rollReenlistment']
+    )
+  })
+
+  it('projects legal mustering benefit choices from remaining benefits', () => {
+    const creation = projection('MUSTERING_OUT', {
+      terms: [term({ career: 'Scout', complete: true, musteringOut: true })],
+      careers: [{ name: 'Scout', rank: 0 }]
+    })
+
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(creation).legalActions[0]
+        ?.musteringBenefitOptions,
+      [
+        { career: 'Scout', kind: 'cash' },
+        { career: 'Scout', kind: 'material' }
+      ]
+    )
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(
+        projection('MUSTERING_OUT', {
+          terms: [
+            term({
+              career: 'Scout',
+              complete: true,
+              musteringOut: true,
+              benefits: ['1000', '2000', '3000']
+            }),
+            ...Array.from({ length: 6 }, () =>
+              term({
+                career: 'Scout',
+                complete: true,
+                musteringOut: true
+              })
+            )
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      ).legalActions[0]?.musteringBenefitOptions,
+      [{ career: 'Scout', kind: 'material' }]
     )
   })
 

@@ -276,16 +276,29 @@ const pendingViewModel = (
 
 const wizardViewModel = ({
   flow,
+  projectedCreation,
   projection,
   characterReadModel,
   readOnly
 }: {
   flow: CharacterCreationFlow | null
+  projectedCreation: CharacterCreationProjection | null
   projection: CharacterCreationProjectionViewModel
   characterReadModel: CharacterCreationReadModel | null
   readOnly: boolean
 }): CharacterCreationWizardViewModel | null => {
   if (!flow) return null
+
+  const projectedCascadeChoices =
+    projectedCreation?.actionPlan?.cascadeSkillChoices ?? []
+  const backgroundCascadeChoices =
+    projectedCreation?.state.status === 'HOMEWORLD'
+      ? projectedCascadeChoices
+      : []
+  const termCascadeChoices =
+    projectedCreation?.state.status === 'SKILLS_TRAINING'
+      ? projectedCascadeChoices
+      : []
 
   return {
     step: flow.step,
@@ -295,7 +308,9 @@ const wizardViewModel = ({
     progress: deriveCharacterCreationStepProgressItems(flow),
     buttons: deriveCharacterCreationButtonStates(flow),
     validation: deriveCharacterCreationValidationSummary(flow),
-    nextStep: deriveCharacterCreationNextStepViewModel(flow),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, {
+      backgroundCascadeChoices
+    }),
     careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow),
     careerRoll: deriveCharacterCreationCareerRollButton(flow),
     reenlistmentRoll: deriveCharacterCreationReenlistmentRollViewModel(flow),
@@ -303,8 +318,12 @@ const wizardViewModel = ({
     agingChoices: deriveCharacterCreationAgingChoicesViewModel(flow),
     anagathicsDecision:
       deriveCharacterCreationAnagathicsDecisionViewModel(flow),
-    termCascadeChoices:
-      deriveCharacterCreationTermCascadeChoicesViewModel(flow),
+    termCascadeChoices: deriveCharacterCreationTermCascadeChoicesViewModel(
+      flow,
+      {
+        termCascadeChoices
+      }
+    ),
     termResolution: deriveCharacterCreationTermResolutionViewModel(flow),
     termSkills: deriveCharacterCreationTermSkillTrainingViewModel(flow),
     basicTraining: deriveCharacterCreationBasicTrainingButton(flow),
@@ -323,7 +342,9 @@ const wizardViewModel = ({
       deriveCharacterCreationCharacteristicGridViewModel(flow),
     homeworld:
       flow.step === 'homeworld'
-        ? deriveCharacterCreationHomeworldViewModel(flow)
+        ? deriveCharacterCreationHomeworldViewModel(flow, {
+            backgroundCascadeChoices
+          })
         : null
   }
 }
@@ -341,6 +362,7 @@ export const deriveCharacterCreationViewModel = ({
     : null
   const wizard = wizardViewModel({
     flow,
+    projectedCreation: projection,
     projection: projected.summary,
     characterReadModel,
     readOnly

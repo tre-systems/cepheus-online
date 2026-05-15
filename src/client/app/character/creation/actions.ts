@@ -1,14 +1,11 @@
 import {
-  canRollCashBenefit,
-  deriveRemainingCareerBenefits
-} from '../../../../shared/character-creation/benefits.js'
-import {
   deriveCareerCreationActionContext,
-  deriveLegalCareerCreationActionKeys
+  deriveLegalCareerCreationActions
 } from '../../../../shared/character-creation/legal-actions.js'
 import type {
   BenefitKind,
-  CareerCreationActionKey
+  CareerCreationActionKey,
+  LegalCareerCreationAction
 } from '../../../../shared/character-creation/types.js'
 import type { CareerCreationTermSkillTable } from '../../../../shared/characterCreation.js'
 import type { GameCommand } from '../../../../shared/commands'
@@ -70,13 +67,6 @@ const action = (
   variant
 })
 
-const termSkillTableLabels: Record<CareerCreationTermSkillTable, string> = {
-  personalDevelopment: 'Personal development',
-  serviceSkills: 'Service skills',
-  specialistSkills: 'Specialist skills',
-  advancedEducation: 'Advanced education'
-}
-
 const termSkillActionKeys: Record<CareerCreationTermSkillTable, string> = {
   personalDevelopment: 'roll-personal-development',
   serviceSkills: 'roll-service-skills',
@@ -98,100 +88,20 @@ const characteristicKeys: readonly CharacteristicKey[] = [
   'soc'
 ]
 
-const requiredTermSkillCount = (
-  creation: CharacterCreationProjection & { requiredTermSkillCount?: number }
-): number => {
-  if (creation.requiredTermSkillCount !== undefined) {
-    return creation.requiredTermSkillCount
-  }
-
-  const term = creation.terms.at(-1)
-  if (!term || term.survival === undefined) return 0
-
-  return !creation.state.context.canCommission &&
-    !creation.state.context.canAdvance
-    ? 2
-    : 1
-}
-
 const deriveTermSkillRollActions = (
   identity: ClientIdentity,
   character: CharacterState,
-  creation: CharacterCreationProjection
+  legalAction: LegalCareerCreationAction | null | undefined
 ): CharacterCreationActionViewModel[] => {
-  if (creation.state.status !== 'SKILLS_TRAINING') return []
-  if ((creation.pendingCascadeSkills ?? []).length > 0) return []
-
-  const term = creation.terms.at(-1)
-  if (!term?.career) return []
-  if (term.skills.length >= requiredTermSkillCount(creation)) return []
-
-  return (Object.keys(termSkillTableLabels) as CareerCreationTermSkillTable[])
-    .filter(
-      (table) =>
-        table !== 'advancedEducation' ||
-        (character.characteristics.edu ?? 0) >= 8
-    )
-    .map((table) =>
-      action(termSkillActionKeys[table], termSkillTableLabels[table], {
-        type: 'RollCharacterCreationTermSkill',
-        gameId: identity.gameId,
-        actorId: identity.actorId,
-        characterId: character.id,
-        table
-      })
-    )
-}
-
-const termsInCareer = (
-  creation: CharacterCreationProjection,
-  career: string
-): number => creation.terms.filter((term) => term.career === career).length
-
-const benefitsReceivedInCareer = (
-  creation: CharacterCreationProjection,
-  career: string
-): number =>
-  creation.terms
-    .filter((term) => term.career === career)
-    .reduce((total, term) => total + term.benefits.length, 0)
-
-const currentCareerRank = (
-  creation: CharacterCreationProjection,
-  career: string
-): number => creation.careers.find((entry) => entry.name === career)?.rank ?? 0
-
-const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
-  creation.terms.reduce(
-    (total, term) =>
-      total +
-      term.benefits.filter((benefit) => /^\d+$/.test(benefit.trim())).length,
-    0
+  return (legalAction?.termSkillTableOptions ?? []).map((option) =>
+    action(termSkillActionKeys[option.table], option.label, {
+      type: 'RollCharacterCreationTermSkill',
+      gameId: identity.gameId,
+      actorId: identity.actorId,
+      characterId: character.id,
+      table: option.table
+    })
   )
-
-const remainingBenefitsInCareer = (
-  creation: CharacterCreationProjection,
-  career: string
-): number =>
-  deriveRemainingCareerBenefits({
-    termsInCareer: termsInCareer(creation, career),
-    currentRank: currentCareerRank(creation, career),
-    benefitsReceived: benefitsReceivedInCareer(creation, career)
-  })
-
-const musteringBenefitCareers = (
-  creation: CharacterCreationProjection
-): string[] => {
-  const careers: string[] = []
-  const seen = new Set<string>()
-  for (const term of creation.terms) {
-    if (seen.has(term.career)) continue
-    seen.add(term.career)
-    if (remainingBenefitsInCareer(creation, term.career) > 0) {
-      careers.push(term.career)
-    }
-  }
-  return careers
 }
 
 const musteringBenefitActionKey = (career: string, kind: BenefitKind): string =>
@@ -200,39 +110,22 @@ const musteringBenefitActionKey = (career: string, kind: BenefitKind): string =>
 const deriveMusteringBenefitRollActions = (
   identity: ClientIdentity,
   character: CharacterState,
-  creation: CharacterCreationProjection
-): CharacterCreationActionViewModel[] => {
-  if (creation.state.status !== 'MUSTERING_OUT') return []
-
-  const context = deriveCareerCreationActionContext(creation)
-  const blockingDecision = context.pendingDecisions?.find(
-    (decision) => decision.key !== 'musteringBenefitSelection'
-  )
-  if (blockingDecision || context.remainingMusteringBenefits === 0) return []
-
-  const kinds: BenefitKind[] = canRollCashBenefit({
-    cashBenefitsReceived: cashBenefitsReceived(creation)
-  })
-    ? ['cash', 'material']
-    : ['material']
-
-  return musteringBenefitCareers(creation).flatMap((career) =>
-    kinds.map((kind) =>
-      action(
-        musteringBenefitActionKey(career, kind),
-        `Roll ${career} ${benefitKindLabels[kind]} benefit`,
-        {
-          type: 'RollCharacterCreationMusteringBenefit',
-          gameId: identity.gameId,
-          actorId: identity.actorId,
-          characterId: character.id,
-          career,
-          kind
-        }
-      )
+  legalAction: LegalCareerCreationAction | null | undefined
+): CharacterCreationActionViewModel[] =>
+  (legalAction?.musteringBenefitOptions ?? []).map((option) =>
+    action(
+      musteringBenefitActionKey(option.career, option.kind),
+      `Roll ${option.career} ${benefitKindLabels[option.kind]} benefit`,
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: character.id,
+        career: option.career,
+        kind: option.kind
+      }
     )
   )
-}
 
 const actionsForLegalKey = (
   key: CareerCreationActionKey,
@@ -545,39 +438,46 @@ const deriveActions = (
   character: CharacterState,
   creation: CharacterCreationProjection
 ): CharacterCreationActionViewModel[] => {
-  const legalKeys = new Set(
-    creation.actionPlan?.legalActions.map((availableAction) => {
-      return availableAction.key
-    }) ??
-      deriveLegalCareerCreationActionKeys(
-        creation.state,
-        deriveCareerCreationActionContext(creation)
-      )
+  const legalActions =
+    creation.actionPlan?.legalActions ??
+    deriveLegalCareerCreationActions(
+      creation.state,
+      deriveCareerCreationActionContext(creation),
+      { creation, characteristics: character.characteristics }
+    )
+  const legalActionsByKey = new Map(
+    legalActions.map((availableAction) => [
+      availableAction.key,
+      availableAction
+    ])
   )
 
   const termSkillRollActions = deriveTermSkillRollActions(
     identity,
     character,
-    creation
+    legalActionsByKey.get('completeSkills')
   )
-  if (legalKeys.has('completeSkills') && termSkillRollActions.length > 0) {
+  if (
+    legalActionsByKey.has('completeSkills') &&
+    termSkillRollActions.length > 0
+  ) {
     return termSkillRollActions
   }
 
   const musteringBenefitRollActions = deriveMusteringBenefitRollActions(
     identity,
     character,
-    creation
+    legalActionsByKey.get('resolveMusteringBenefit')
   )
   if (
-    legalKeys.has('resolveMusteringBenefit') &&
+    legalActionsByKey.has('resolveMusteringBenefit') &&
     musteringBenefitRollActions.length > 0
   ) {
     return musteringBenefitRollActions
   }
 
   return actionKeyOrder
-    .filter((key) => legalKeys.has(key))
+    .filter((key) => legalActionsByKey.has(key))
     .flatMap((key) => actionsForLegalKey(key, identity, character, creation))
 }
 

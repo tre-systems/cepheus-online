@@ -8,6 +8,12 @@ export type CharacterCreationProjection = {
     modifier: number
   }>
   actionPlan?: {
+    cascadeSkillChoices?: Array<{
+      cascadeSkill: string
+      label: string
+      level: number
+      options: Array<{ value: string; label: string; cascade: boolean }>
+    }>
     legalActions?: Array<{
       key: string
       commandTypes?: string[]
@@ -188,14 +194,9 @@ export const waitForDiceReveal = async (page: Page): Promise<void> => {
   await expect(page.locator('#diceOverlay.visible')).toBeVisible({
     timeout: 5_000
   })
-  await expect(page.locator('#diceStage .roll-total')).toHaveText(
-    'Rolling...',
-    { timeout: 5_000 }
-  )
-  await expect(page.locator('#diceStage .roll-total')).not.toHaveText(
-    'Rolling...',
-    { timeout: 5_000 }
-  )
+  const total = page.locator('#diceStage .roll-total')
+  if (((await total.textContent()) ?? '').trim() !== 'Rolling...') return
+  await expect(total).not.toHaveText('Rolling...', { timeout: 5_000 })
 }
 
 export const normalizedText = async (

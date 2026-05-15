@@ -704,7 +704,12 @@ describe('game state projection', () => {
             'RollCharacterCreationTermSkill',
             'CompleteCharacterCreationSkills'
           ],
-          rollRequirement: { key: 'termSkill', dice: '1d6' }
+          rollRequirement: { key: 'termSkill', dice: '1d6' },
+          termSkillTableOptions: [
+            { table: 'personalDevelopment', label: 'Personal development' },
+            { table: 'serviceSkills', label: 'Service skills' },
+            { table: 'specialistSkills', label: 'Specialist skills' }
+          ]
         }
       ]
     })
@@ -1998,6 +2003,83 @@ describe('game state projection', () => {
     assert.equal(creation?.state.status, 'CAREER_SELECTION')
     assert.deepEqual(creation?.history, [{ type: 'COMPLETE_HOMEWORLD' }])
     assert.equal(state?.eventSeq, 7)
+  })
+
+  it('projects cascade choice options while a homeworld cascade is pending', () => {
+    const characterId = asCharacterId('homeworld-cascade-char')
+
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'HOMEWORLD',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          homeworld: null,
+          backgroundSkills: [],
+          pendingCascadeSkills: [],
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationHomeworldSet',
+        characterId,
+        homeworld: {
+          name: 'Regina',
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid']
+        },
+        backgroundSkills: ['Zero-G-0'],
+        pendingCascadeSkills: ['Gun Combat-0']
+      })
+    ])
+
+    assert.deepEqual(
+      state?.characters[characterId]?.creation?.actionPlan?.cascadeSkillChoices,
+      [
+        {
+          cascadeSkill: 'Gun Combat-0',
+          label: 'Gun Combat',
+          level: 0,
+          options: [
+            { value: 'Archery-0', label: 'Archery', cascade: false },
+            {
+              value: 'Energy Pistol-0',
+              label: 'Energy Pistol',
+              cascade: false
+            },
+            { value: 'Energy Rifle-0', label: 'Energy Rifle', cascade: false },
+            { value: 'Shotgun-0', label: 'Shotgun', cascade: false },
+            { value: 'Slug Pistol-0', label: 'Slug Pistol', cascade: false },
+            { value: 'Slug Rifle-0', label: 'Slug Rifle', cascade: false }
+          ]
+        }
+      ]
+    )
   })
 
   it('replays semantic character creation milestone events in order', () => {

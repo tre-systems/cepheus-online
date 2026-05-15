@@ -1,5 +1,9 @@
 import type { EventId } from '../ids'
-import type { CharacteristicKey, CharacterSheetPatch } from '../state'
+import type {
+  CharacteristicKey,
+  CharacterCharacteristics,
+  CharacterSheetPatch
+} from '../state'
 
 export type CareerCreationStatus =
   | 'CHARACTERISTICS'
@@ -297,12 +301,37 @@ export interface FailedQualificationActionOption {
   rollRequirement?: CareerCreationRollRequirement
 }
 
+export interface TermSkillTableActionOption {
+  table: CareerCreationTermSkillTable
+  label: string
+}
+
+export interface MusteringBenefitActionOption {
+  career: string
+  kind: BenefitKind
+}
+
+export interface CascadeSkillChoiceOption {
+  value: string
+  label: string
+  cascade: boolean
+}
+
+export interface CascadeSkillChoice {
+  cascadeSkill: string
+  label: string
+  level: number
+  options: readonly CascadeSkillChoiceOption[]
+}
+
 export interface LegalCareerCreationAction {
   key: CareerCreationActionKey
   status: CareerCreationStatus
   commandTypes: readonly CareerCreationServerCommandType[]
   rollRequirement?: CareerCreationRollRequirement
   failedQualificationOptions?: readonly FailedQualificationActionOption[]
+  termSkillTableOptions?: readonly TermSkillTableActionOption[]
+  musteringBenefitOptions?: readonly MusteringBenefitActionOption[]
 }
 
 export type CareerCreationReenlistmentOutcome =
@@ -348,6 +377,11 @@ export interface CareerCreationActionPlan {
   status: CareerCreationStatus
   pendingDecisions: readonly CareerCreationPendingDecision[]
   legalActions: readonly LegalCareerCreationAction[]
+  cascadeSkillChoices?: readonly CascadeSkillChoice[]
+}
+
+export interface CareerCreationActionPlanOptions {
+  characteristics?: Partial<CharacterCharacteristics>
 }
 
 export interface CareerCreationActionProjection {

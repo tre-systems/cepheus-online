@@ -5,7 +5,7 @@ into ordered implementation slices while preserving clear ownership for parallel
 agents. Shipped work belongs in `git log`; this file is for active or future
 work that still needs a named home.
 
-Last reviewed: 2026-05-14.
+Last reviewed: 2026-05-15.
 
 ## North Star
 
@@ -383,9 +383,14 @@ Start with Streams A-D in parallel, with Stream E running opportunistically:
 
 Current Character Creation completion focus:
 
+- Projection-owned legal action data now covers term skill table choices,
+  mustering benefit choices, and pending cascade skill choice options. The
+  client still keeps fallback helpers for legacy local flows, but the active
+  server projection is now the preferred source for rendered choices.
 - Keep extending deterministic two-tab browser journeys for multi-term and
-  multi-career travellers, especially through finalization, spectator refresh,
-  and no early roll reveal.
+  multi-career travellers, especially through finalization and no early roll
+  reveal. A focused deterministic browser test now covers a rolled term cascade
+  choice, spectator refresh recovery, and live cascade resolution.
 - Finish projection-owned polish for mustering presentation. Final-sheet/export
   display now includes UPP, readable
   characteristics, sorted skills, careers/ranks, term history, benefits,
@@ -1035,9 +1040,11 @@ commission, advancement, skills, aging, reenlistment, mustering, and
 finalization. SRD data alignment tests cover career tables, draft, rank rewards,
 skill tables, and benefits. Semantic survival, commission, advancement, term
 skill, aging, reenlistment, and mustering rolls now use server-derived dice
-facts. The next priority is hardening pending decisions, provenance, browser
-automation, and multi-term/mustering UX rather than adding more client-only
-flow logic.
+facts. Projected legal actions now carry term-skill table options and mustering
+benefit choices, so the browser no longer has to rediscover those visible
+choice lists from local rules helpers. The next priority is hardening the
+remaining pending decisions, provenance, browser automation, and
+multi-term/mustering UX rather than adding more client-only flow logic.
 
 Tasks:
 
@@ -1046,8 +1053,9 @@ Tasks:
   and replay tests.
 - Enforce outstanding selection gates for cascade, commission, promotion, and
   term skills before the server accepts the next command.
-- Move term skill table choice and cascade follow-up decisions into projection
-  so refresh restores the same next action.
+- Keep moving cascade follow-up decisions into projection so refresh restores
+  the same next action. Term skill table choices and mustering benefit choices
+  are now exposed through projected legal-action options.
 - Harden the real-browser term loop through survival, commission,
   advancement, term skills, aging, reenlistment, and either death or mustering.
 - Add compact term-history cards from semantic term events.

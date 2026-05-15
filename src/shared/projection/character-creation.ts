@@ -207,7 +207,9 @@ const refreshCharacterCreationActionPlans = (
 
   for (const character of Object.values(state.characters)) {
     if (!character.creation) continue
-    character.creation = projectCareerCreationActionPlan(character.creation)
+    character.creation = projectCareerCreationActionPlan(character.creation, {
+      characteristics: character.characteristics
+    })
   }
 
   return state

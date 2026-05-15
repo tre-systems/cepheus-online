@@ -370,6 +370,55 @@ describe('character creation view model', () => {
     assert.equal(viewModel.actionPlan, actionPlan)
   })
 
+  it('uses projected cascade choice options for read-only term choices', () => {
+    const currentFlow = flow({
+      step: 'career',
+      draft: {
+        ...flow().draft,
+        pendingCascadeSkills: [],
+        pendingTermCascadeSkills: ['Vehicle-1']
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('SKILLS_TRAINING', {
+        pendingCascadeSkills: ['Vehicle-1'],
+        actionPlan: {
+          status: 'SKILLS_TRAINING',
+          pendingDecisions: [{ key: 'cascadeSkillResolution' }],
+          legalActions: [],
+          cascadeSkillChoices: [
+            {
+              cascadeSkill: 'Vehicle-1',
+              label: 'Vehicle',
+              level: 1,
+              options: [
+                {
+                  value: 'Grav Vehicle-1',
+                  label: 'Grav Vehicle',
+                  cascade: false
+                }
+              ]
+            }
+          ]
+        }
+      }),
+      readOnly: true
+    })
+
+    assert.deepEqual(viewModel.wizard?.termCascadeChoices?.choices, [
+      {
+        cascadeSkill: 'Vehicle-1',
+        label: 'Vehicle',
+        level: 1,
+        options: [
+          { value: 'Grav Vehicle-1', label: 'Grav Vehicle', cascade: false }
+        ]
+      }
+    ])
+  })
+
   it('includes career selection and roll state for the career step', () => {
     const currentFlow = flow({
       step: 'career',

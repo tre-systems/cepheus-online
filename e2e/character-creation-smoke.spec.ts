@@ -5,7 +5,12 @@ import {
   type Response,
   type TestInfo
 } from '@playwright/test'
-import { openRoom, openUniqueRoom, setRoomSeed } from './support/app'
+import {
+  openRoom,
+  openUniqueRoom,
+  setRoomSeed,
+  setSeedForNextRoll
+} from './support/app'
 import {
   activeCreationCharacterId,
   actorIdFromPage,
@@ -131,6 +136,15 @@ const legalCreationActionKeys = async ({
   return character?.creation?.actionPlan?.legalActions?.map(
     (action) => action.key
   ) ?? []
+}
+
+const nextEventSeq = async (
+  page: Page,
+  roomId: string,
+  actorId: string
+): Promise<number> => {
+  const message = await fetchRoomState(page, roomId, actorId)
+  return (message.state?.eventSeq ?? 0) + 1
 }
 
 const selectedAgingLosses = (
@@ -1597,6 +1611,226 @@ test.describe('character creation smoke', () => {
         'Admin-0, Slug Rifle-0, Zero-G-0',
         { timeout: 5_000 }
       )
+    } finally {
+      await spectator.close()
+    }
+  })
+
+  test('keeps rolled term cascade choices visible to spectators through refresh', async ({
+    browser,
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const postedCommandTypes: string[] = []
+
+    page.on('request', (request) => {
+      if (
+        request.method() !== 'POST' ||
+        !request.url().includes(`/rooms/${roomId}/command`)
+      ) {
+        return
+      }
+      const body = request.postData()
+      if (!body) return
+      const message = JSON.parse(body) as {
+        command?: { type?: string }
+      }
+      if (message.command?.type) postedCommandTypes.push(message.command.type)
+    })
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+    await setSeedForNextRoll(
+      page,
+      roomId,
+      await nextEventSeq(page, roomId, actorId),
+      [6, 6]
+    )
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationQualification',
+      characterId,
+      career: 'Aerospace'
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationBasicTraining',
+      characterId
+    })
+    await setSeedForNextRoll(
+      page,
+      roomId,
+      await nextEventSeq(page, roomId, actorId),
+      [6, 6]
+    )
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationSurvival',
+      characterId
+    })
+
+    for (;;) {
+      const legalKeys = await legalCreationActionKeys({
+        page,
+        roomId,
+        actorId,
+        characterId
+      })
+      if (legalKeys.includes('skipCommission')) {
+        await postCommand(page, roomId, actorId, actorSession, {
+          type: 'SkipCharacterCreationCommission',
+          characterId
+        })
+        continue
+      }
+      if (legalKeys.includes('skipAdvancement')) {
+        await postCommand(page, roomId, actorId, actorSession, {
+          type: 'SkipCharacterCreationAdvancement',
+          characterId
+        })
+        continue
+      }
+      break
+    }
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await page
+      .locator('#creationPresenceDock .creation-presence-card')
+      .filter({ hasText: characterName })
+      .click()
+    await expect(page.locator('#characterCreationFields')).toContainText(
+      'Skills and training',
+      { timeout: 5_000 }
+    )
+
+    const spectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: 'e2e-term-cascade-spectator',
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(spectator, characterName)
+      const spectatorFields = spectator.locator('#characterCreationFields')
+      await expect(spectatorFields).not.toContainText('Choose a specialty', {
+        timeout: 100
+      })
+
+      await setSeedForNextRoll(
+        page,
+        roomId,
+        await nextEventSeq(page, roomId, actorId),
+        [2]
+      )
+      const serviceSkills = page.getByRole('button', {
+        name: 'Service skills'
+      })
+      const rollAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'RollCharacterCreationTermSkill'
+          )
+      )
+      await expect(serviceSkills).toBeVisible({ timeout: 5_000 })
+      await serviceSkills.click()
+      await expect((await rollAccepted).ok()).toBe(true)
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expect(spectatorFields).not.toContainText('Choose a specialty', {
+        timeout: 100
+      })
+
+      await waitForDiceReveal(page)
+      await expect(spectatorFields).toContainText('Choose a specialty', {
+        timeout: 5_000
+      })
+      await expect(spectatorFields).toContainText('Gun Combat', {
+        timeout: 5_000
+      })
+      await expect(spectatorFields).toContainText('Slug Rifle', {
+        timeout: 5_000
+      })
+
+      const liveProjection = JSON.stringify(
+        (
+          await fetchProjectedCharacter(
+            spectator,
+            roomId,
+            'e2e-term-cascade-spectator',
+            characterId,
+            'spectator'
+          )
+        )?.creation?.actionPlan?.cascadeSkillChoices ?? []
+      )
+      await spectator.reload({ waitUntil: 'domcontentloaded' })
+      await expect(spectator.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(spectator, characterName)
+      await expect(spectatorFields).toContainText('Choose a specialty', {
+        timeout: 5_000
+      })
+      await expect
+        .poll(async () =>
+          JSON.stringify(
+            (
+              await fetchProjectedCharacter(
+                spectator,
+                roomId,
+                'e2e-term-cascade-spectator',
+                characterId,
+                'spectator'
+              )
+            )?.creation?.actionPlan?.cascadeSkillChoices ?? []
+          )
+        )
+        .toBe(liveProjection)
+
+      const resolveAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'ResolveCharacterCreationTermCascadeSkill'
+          )
+      )
+      await page
+        .locator('.creation-cascade-choice')
+        .getByRole('button', { name: 'Slug Rifle' })
+        .click()
+      await expect((await resolveAccepted).ok()).toBe(true)
+      await expect.poll(() => postedCommandTypes).toContain(
+        'ResolveCharacterCreationTermCascadeSkill'
+      )
+      await expect(spectatorFields).not.toContainText('Choose a specialty', {
+        timeout: 5_000
+      })
+      await expect(spectatorFields).toContainText('Slug Rifle-1', {
+        timeout: 5_000
+      })
     } finally {
       await spectator.close()
     }

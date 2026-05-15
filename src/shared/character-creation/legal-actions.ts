@@ -1,12 +1,21 @@
-import { deriveRemainingCareerBenefits } from './benefits'
+import { canRollCashBenefit, deriveRemainingCareerBenefits } from './benefits'
 import { CEPHEUS_SRD_RULESET } from './cepheus-srd-ruleset'
 import { deriveBasicTrainingPlan } from './career-rules'
+import {
+  careerSkillWithLevel,
+  formatCareerSkill,
+  isCascadeCareerSkill,
+  parseCareerSkill
+} from './skills'
 import { canCompleteCreation, canOfferNewCareer } from './term-lifecycle'
 import type {
+  CascadeSkillChoice,
   CareerCreationActionContext,
   CareerCreationActionKey,
   CareerCreationActionPlan,
+  CareerCreationActionPlanOptions,
   CareerCreationActionProjection,
+  CareerCreationTermSkillTable,
   CareerCreationPendingDecision,
   CareerCreationPendingDecisionKey,
   CareerCreationReenlistmentOutcome,
@@ -153,6 +162,13 @@ const basicTrainingCommandTypes = [
   'CompleteCharacterCreationBasicTraining'
 ] as unknown as LegalCareerCreationAction['commandTypes']
 
+const termSkillTableLabels: Record<CareerCreationTermSkillTable, string> = {
+  personalDevelopment: 'Personal development',
+  serviceSkills: 'Service skills',
+  specialistSkills: 'Specialist skills',
+  advancedEducation: 'Advanced education'
+}
+
 export const deriveRemainingCareerCreationBenefits = (
   creation: CareerCreationActionProjection
 ): number => {
@@ -298,6 +314,114 @@ export const deriveCareerCreationActionContext = (
       ? {}
       : { canEnterDraft: creation.canEnterDraft })
   }
+}
+
+const deriveTermSkillTableOptions = (
+  creation: CareerCreationActionProjection | undefined,
+  context: CareerCreationActionContext,
+  { characteristics }: CareerCreationActionPlanOptions
+): NonNullable<LegalCareerCreationAction['termSkillTableOptions']> => {
+  if (!creation || creation.state.status !== 'SKILLS_TRAINING') return []
+  if (
+    (context.pendingDecisions ?? []).some(
+      (decision) => decision.key !== 'skillTrainingSelection'
+    )
+  ) {
+    return []
+  }
+
+  const term = lastTerm(creation)
+  if (!term?.career) return []
+  const required =
+    context.requiredTermSkillCount ??
+    defaultActionContext.requiredTermSkillCount
+  if (term.skills.length >= required) return []
+
+  return (Object.keys(termSkillTableLabels) as CareerCreationTermSkillTable[])
+    .filter(
+      (table) =>
+        table !== 'advancedEducation' || (characteristics?.edu ?? 0) >= 8
+    )
+    .map((table) => ({ table, label: termSkillTableLabels[table] }))
+}
+
+const deriveCashBenefitsReceived = (
+  creation: CareerCreationActionProjection
+): number =>
+  (creation.terms ?? []).reduce(
+    (total, term) =>
+      total +
+      term.benefits.filter((benefit) => /^\d+$/.test(benefit.trim())).length,
+    0
+  )
+
+const deriveMusteringBenefitOptions = (
+  creation: CareerCreationActionProjection | undefined,
+  context: CareerCreationActionContext
+): NonNullable<LegalCareerCreationAction['musteringBenefitOptions']> => {
+  if (!creation || creation.state.status !== 'MUSTERING_OUT') return []
+  if (
+    (context.pendingDecisions ?? []).some(
+      (decision) => decision.key !== 'musteringBenefitSelection'
+    )
+  ) {
+    return []
+  }
+  if ((context.remainingMusteringBenefits ?? 0) <= 0) return []
+
+  const kinds = canRollCashBenefit({
+    cashBenefitsReceived: deriveCashBenefitsReceived(creation)
+  })
+    ? (['cash', 'material'] as const)
+    : (['material'] as const)
+
+  const options: Array<
+    NonNullable<LegalCareerCreationAction['musteringBenefitOptions']>[number]
+  > = []
+  const seen = new Set<string>()
+  for (const term of creation.terms ?? []) {
+    if (seen.has(term.career)) continue
+    seen.add(term.career)
+    if (
+      deriveRemainingCareerBenefits({
+        termsInCareer: termsInCareer(creation, term.career),
+        currentRank: rankInCareer(creation, term.career),
+        benefitsReceived: benefitsReceivedInCareer(creation, term.career)
+      }) <= 0
+    ) {
+      continue
+    }
+    for (const kind of kinds) options.push({ career: term.career, kind })
+  }
+
+  return options
+}
+
+export const deriveCareerCreationCascadeSkillChoices = (
+  pendingCascadeSkills: readonly string[]
+): CascadeSkillChoice[] => {
+  const choices: CascadeSkillChoice[] = []
+
+  for (const cascadeSkill of pendingCascadeSkills) {
+    const parsed = parseCareerSkill(cascadeSkill)
+    if (!parsed) continue
+
+    const options = CEPHEUS_SRD_RULESET.cascadeSkills[parsed.name] ?? []
+    choices.push({
+      cascadeSkill,
+      label: parsed.name,
+      level: parsed.level,
+      options: options.map((option) => ({
+        value: isCascadeCareerSkill(option)
+          ? careerSkillWithLevel(option, parsed.level)
+          : formatCareerSkill({ name: option, level: parsed.level }),
+        label: option,
+        cascade: isCascadeCareerSkill(option)
+      }))
+    })
+  }
+
+  return choices
 }
 
 export const deriveLegalCareerCreationActionKeys = (
@@ -529,7 +653,10 @@ const actionDefinitions = {
 
 export const deriveLegalCareerCreationActions = (
   state: CareerCreationState,
-  context: CareerCreationActionContext = {}
+  context: CareerCreationActionContext = {},
+  actionOptions: CareerCreationActionPlanOptions & {
+    creation?: CareerCreationActionProjection
+  } = {}
 ): LegalCareerCreationAction[] => {
   const options = {
     ...defaultActionContext,
@@ -544,6 +671,31 @@ export const deriveLegalCareerCreationActions = (
         commandTypes: actionDefinitions.selectCareer.commandTypes,
         failedQualificationOptions: deriveFailedQualificationActionOptions(
           options.canEnterDraft
+        )
+      }
+    }
+
+    if (key === 'completeSkills') {
+      return {
+        key,
+        status: state.status,
+        ...actionDefinitions[key],
+        termSkillTableOptions: deriveTermSkillTableOptions(
+          actionOptions.creation,
+          context,
+          actionOptions
+        )
+      }
+    }
+
+    if (key === 'resolveMusteringBenefit') {
+      return {
+        key,
+        status: state.status,
+        ...actionDefinitions[key],
+        musteringBenefitOptions: deriveMusteringBenefitOptions(
+          actionOptions.creation,
+          context
         )
       }
     }
@@ -565,22 +717,31 @@ export const deriveLegalCareerCreationActionKeysForProjection = (
   )
 
 export const deriveCareerCreationActionPlan = (
-  creation: CareerCreationActionProjection
+  creation: CareerCreationActionProjection,
+  options: CareerCreationActionPlanOptions = {}
 ): CareerCreationActionPlan => {
   const context = deriveCareerCreationActionContext(creation)
+  const cascadeSkillChoices = deriveCareerCreationCascadeSkillChoices(
+    creation.pendingCascadeSkills ?? []
+  )
 
   return {
     status: creation.state.status,
     pendingDecisions: context.pendingDecisions ?? [],
-    legalActions: deriveLegalCareerCreationActions(creation.state, context)
+    legalActions: deriveLegalCareerCreationActions(creation.state, context, {
+      ...options,
+      creation
+    }),
+    ...(cascadeSkillChoices.length > 0 ? { cascadeSkillChoices } : {})
   }
 }
 
 export const projectCareerCreationActionPlan = <
   TCreation extends CareerCreationActionProjection
 >(
-  creation: TCreation
+  creation: TCreation,
+  options: CareerCreationActionPlanOptions = {}
 ): TCreation & { actionPlan: CareerCreationActionPlan } => ({
   ...creation,
-  actionPlan: deriveCareerCreationActionPlan(creation)
+  actionPlan: deriveCareerCreationActionPlan(creation, options)
 })

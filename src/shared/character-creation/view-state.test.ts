@@ -121,6 +121,30 @@ describe('character creation shared view state', () => {
     )
   })
 
+  it('derives cascade choices through the projection read model', () => {
+    const readModel = deriveCharacterCreationProjectionReadModel(
+      projection({
+        pendingCascadeSkills: ['Gun Combat-0']
+      })
+    )
+
+    assert.deepEqual(readModel.actionPlan.cascadeSkillChoices, [
+      {
+        cascadeSkill: 'Gun Combat-0',
+        label: 'Gun Combat',
+        level: 0,
+        options: [
+          { value: 'Archery-0', label: 'Archery', cascade: false },
+          { value: 'Energy Pistol-0', label: 'Energy Pistol', cascade: false },
+          { value: 'Energy Rifle-0', label: 'Energy Rifle', cascade: false },
+          { value: 'Shotgun-0', label: 'Shotgun', cascade: false },
+          { value: 'Slug Pistol-0', label: 'Slug Pistol', cascade: false },
+          { value: 'Slug Rifle-0', label: 'Slug Rifle', cascade: false }
+        ]
+      }
+    ])
+  })
+
   it('derives sheet preview and progress counters from a character', () => {
     const readModel = deriveCharacterCreationReadModel(
       character(

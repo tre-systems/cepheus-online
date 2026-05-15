@@ -21,6 +21,7 @@ import {
 } from '../../../../shared/character-creation/skills.js'
 import type {
   BenefitKind,
+  CascadeSkillChoice,
   FailedQualificationOption
 } from '../../../../shared/character-creation/types.js'
 import type {
@@ -1096,10 +1097,27 @@ const cascadeChoiceOptions = (
   }))
 }
 
+const projectedCascadeChoiceViewModel = (
+  choice: CascadeSkillChoice
+): CharacterCreationCascadeSkillChoiceViewModel => ({
+  cascadeSkill: choice.cascadeSkill,
+  label: choice.label,
+  level: choice.level,
+  options: choice.options.map((option) => ({ ...option }))
+})
+
 export const deriveCharacterCreationCascadeSkillChoiceViewModels = (
-  pendingCascadeSkills: readonly string[]
-): CharacterCreationCascadeSkillChoiceViewModel[] =>
-  pendingCascadeSkills.map((cascadeSkill) => {
+  pendingCascadeSkills: readonly string[],
+  projectedChoices: readonly CascadeSkillChoice[] = []
+): CharacterCreationCascadeSkillChoiceViewModel[] => {
+  const projectedBySkill = new Map(
+    projectedChoices.map((choice) => [choice.cascadeSkill, choice])
+  )
+
+  return pendingCascadeSkills.map((cascadeSkill) => {
+    const projected = projectedBySkill.get(cascadeSkill)
+    if (projected) return projectedCascadeChoiceViewModel(projected)
+
     const parsed = parseCareerSkill(cascadeSkill)
     return {
       cascadeSkill,
@@ -1108,12 +1126,16 @@ export const deriveCharacterCreationCascadeSkillChoiceViewModels = (
       options: cascadeChoiceOptions(cascadeSkill)
     }
   })
+}
 
 const pendingCascadeChoiceViewModel = (
-  pendingCascadeSkills: readonly string[]
+  pendingCascadeSkills: readonly string[],
+  projectedChoices: readonly CascadeSkillChoice[] = []
 ): CharacterCreationPendingCascadeChoiceViewModel | null => {
-  const choice =
-    deriveCharacterCreationCascadeSkillChoiceViewModels(pendingCascadeSkills)[0]
+  const choice = deriveCharacterCreationCascadeSkillChoiceViewModels(
+    pendingCascadeSkills,
+    projectedChoices
+  )[0]
   if (!choice) return null
 
   return {
@@ -1128,7 +1150,8 @@ const pendingCascadeChoiceViewModel = (
 }
 
 const deriveCharacterCreationBackgroundSkillSummary = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  projectedChoices: readonly CascadeSkillChoice[] = []
 ): CharacterCreationBackgroundSkillSummary => {
   const fields = homeworldDraftFields(flow.draft)
   const homeworld = selectedHomeworld(flow.draft)
@@ -1154,7 +1177,10 @@ const deriveCharacterCreationBackgroundSkillSummary = (
     }
   })
   const cascadeSkillChoices =
-    deriveCharacterCreationCascadeSkillChoiceViewModels(pendingCascadeSkills)
+    deriveCharacterCreationCascadeSkillChoiceViewModels(
+      pendingCascadeSkills,
+      projectedChoices
+    )
   const errors =
     pendingCascadeSkills.length === 0
       ? []
@@ -1186,11 +1212,15 @@ const plural = (count: number, singular: string, pluralText: string): string =>
   `${count} ${count === 1 ? singular : pluralText}`
 
 const homeworldSummaryViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  projectedChoices: readonly CascadeSkillChoice[] = []
 ): CharacterCreationHomeworldSummaryViewModel => {
   const homeworld = selectedHomeworld(flow.draft)
   const tradeCodes = selectedTradeCodes(homeworld.tradeCodes)
-  const backgroundSkills = deriveCharacterCreationBackgroundSkillSummary(flow)
+  const backgroundSkills = deriveCharacterCreationBackgroundSkillSummary(
+    flow,
+    projectedChoices
+  )
   const selectedCount =
     backgroundSkills.selectedSkills.length +
     backgroundSkills.pendingCascadeSkills.length
@@ -1294,13 +1324,17 @@ const characterCreationPrompt = (
 }
 
 export const deriveCharacterCreationNextStepViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  options: { backgroundCascadeChoices?: readonly CascadeSkillChoice[] } = {}
 ): CharacterCreationNextStepViewModel => {
   const validation = deriveCharacterCreationValidationSummary(flow)
   const buttons = deriveCharacterCreationButtonStates(flow)
   const blockingChoice =
     flow.step === 'homeworld'
-      ? pendingCascadeChoiceViewModel(flow.draft.pendingCascadeSkills)
+      ? pendingCascadeChoiceViewModel(
+          flow.draft.pendingCascadeSkills,
+          options.backgroundCascadeChoices
+        )
       : null
 
   return {
@@ -1429,12 +1463,14 @@ export const deriveCharacterCreationAgingChoicesViewModel = (
 }
 
 export const deriveCharacterCreationTermCascadeChoicesViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  options: { termCascadeChoices?: readonly CascadeSkillChoice[] } = {}
 ): CharacterCreationTermCascadeChoicesViewModel | null => {
   if (flow.step !== 'career') return null
 
   const choices = deriveCharacterCreationCascadeSkillChoiceViewModels(
-    flow.draft.pendingTermCascadeSkills
+    flow.draft.pendingTermCascadeSkills,
+    options.termCascadeChoices
   )
   if (choices.length === 0) return null
 
@@ -1800,7 +1836,8 @@ const optionViewModels = (
 }
 
 export const deriveCharacterCreationHomeworldViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  options: { backgroundCascadeChoices?: readonly CascadeSkillChoice[] } = {}
 ): CharacterCreationHomeworldViewModel => {
   const homeworld = selectedHomeworld(flow.draft)
   const tradeCodes = selectedTradeCodes(homeworld.tradeCodes)
@@ -1816,10 +1853,14 @@ export const deriveCharacterCreationHomeworldViewModel = (
       Object.keys(CEPHEUS_SRD_RULESET.homeWorldSkillsByTradeCode),
       tradeCodes
     ),
-    summary: homeworldSummaryViewModel(flow),
-    backgroundSkills: deriveCharacterCreationBackgroundSkillSummary(flow),
+    summary: homeworldSummaryViewModel(flow, options.backgroundCascadeChoices),
+    backgroundSkills: deriveCharacterCreationBackgroundSkillSummary(
+      flow,
+      options.backgroundCascadeChoices
+    ),
     pendingCascadeChoice: pendingCascadeChoiceViewModel(
-      flow.draft.pendingCascadeSkills
+      flow.draft.pendingCascadeSkills,
+      options.backgroundCascadeChoices
     )
   }
 }

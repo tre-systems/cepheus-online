@@ -852,6 +852,89 @@ describe('character creation actions', () => {
     )
   })
 
+  it('renders term skill roll buttons from projected legal action options', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('SKILLS_TRAINING', {
+          terms: [term({ career: 'Scout', skills: [], survival: 7 })],
+          actionPlan: {
+            status: 'SKILLS_TRAINING',
+            pendingDecisions: [{ key: 'skillTrainingSelection' }],
+            legalActions: [
+              {
+                key: 'completeSkills',
+                status: 'SKILLS_TRAINING',
+                commandTypes: [
+                  'RollCharacterCreationTermSkill',
+                  'CompleteCharacterCreationSkills'
+                ],
+                termSkillTableOptions: [
+                  { table: 'serviceSkills', label: 'Service skills' }
+                ]
+              }
+            ]
+          }
+        })
+      )
+    )
+
+    assert.deepEqual(plan?.actions, [
+      {
+        key: 'roll-service-skills',
+        label: 'Service skills',
+        command: {
+          type: 'RollCharacterCreationTermSkill',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: 'mae' as CharacterId,
+          table: 'serviceSkills'
+        },
+        variant: 'primary'
+      }
+    ])
+  })
+
+  it('renders mustering benefit buttons from projected legal action options', () => {
+    const plan = deriveCharacterCreationActionPlan(
+      identity,
+      character(
+        creation('MUSTERING_OUT', {
+          terms: [term({ complete: true, musteringOut: true })],
+          careers: [{ name: 'Scout', rank: 0 }],
+          actionPlan: {
+            status: 'MUSTERING_OUT',
+            pendingDecisions: [{ key: 'musteringBenefitSelection' }],
+            legalActions: [
+              {
+                key: 'resolveMusteringBenefit',
+                status: 'MUSTERING_OUT',
+                commandTypes: ['RollCharacterCreationMusteringBenefit'],
+                musteringBenefitOptions: [{ career: 'Scout', kind: 'material' }]
+              }
+            ]
+          }
+        })
+      )
+    )
+
+    assert.deepEqual(plan?.actions, [
+      {
+        key: 'roll-mustering-material-scout',
+        label: 'Roll Scout material benefit',
+        command: {
+          type: 'RollCharacterCreationMusteringBenefit',
+          gameId: identity.gameId,
+          actorId: identity.actorId,
+          characterId: 'mae' as CharacterId,
+          career: 'Scout',
+          kind: 'material'
+        },
+        variant: 'primary'
+      }
+    ])
+  })
+
   it('uses the semantic reenlist command for forced reenlistment projections', () => {
     const plan = deriveCharacterCreationActionPlan(
       identity,
