@@ -7,7 +7,7 @@ import {
   deriveMaterialBenefitEffect,
   parseCareerSkill
 } from '../../../../shared/characterCreation'
-import { deriveCharacterCreationCompletedTermReadModel } from '../../../../shared/character-creation/view-state'
+import { deriveCharacterCreationProjectionReadModel } from '../../../../shared/character-creation/view-state'
 import type {
   CharacterCharacteristics,
   CharacterCreationProjection,
@@ -209,25 +209,38 @@ const deriveCareerExportRanks = (
 ): CareerExportRank[] => {
   if (!creation) return []
 
+  const readModel = deriveCharacterCreationProjectionReadModel(creation)
   const ranks = new Map<string, CareerExportRank>()
-  for (const career of creation.careers) {
-    ranks.set(career.name, {
-      name: career.name,
-      rank: career.rank,
-      title: null
+
+  const aggregateRanks = new Map(
+    creation.careers.map((career) => [career.name, career])
+  )
+
+  for (const completedTerm of readModel.completedTerms) {
+    const aggregate = completedTerm.legacyProjection
+      ? aggregateRanks.get(completedTerm.career)
+      : null
+    const existing = ranks.get(completedTerm.career)
+    ranks.set(completedTerm.career, {
+      name: completedTerm.career,
+      rank:
+        completedTerm.rank === null
+          ? (aggregate?.rank ?? existing?.rank ?? 0)
+          : completedTerm.rank,
+      title:
+        completedTerm.rank !== null
+          ? completedTerm.rankTitle || null
+          : (existing?.title ?? null)
     })
   }
 
-  for (const term of creation.terms) {
-    if (!term.complete && !term.musteringOut) continue
-    const completedTerm = deriveCharacterCreationCompletedTermReadModel(term)
-    if (completedTerm.rank !== null) {
-      ranks.set(completedTerm.career, {
-        name: completedTerm.career,
-        rank: completedTerm.rank,
-        title: completedTerm.rankTitle || null
-      })
-    }
+  for (const [name, career] of aggregateRanks) {
+    if (ranks.has(name)) continue
+    ranks.set(name, {
+      name,
+      rank: career.rank,
+      title: null
+    })
   }
 
   return [...ranks.values()]

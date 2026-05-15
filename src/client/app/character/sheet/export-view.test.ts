@@ -568,6 +568,21 @@ describe('character sheet export view', () => {
     assert.equal(exportText.includes('reenlistment 2'), false)
   })
 
+  it('derives final career rank display from completed-term read-model facts before stale aggregates', () => {
+    const creation = finalizedCreation()
+    const term = creation.terms[0]
+    creation.careers = [{ name: 'Scout', rank: 6 }]
+    term.facts = {
+      survival: term.facts?.survival,
+      advancement: { skipped: true },
+      termSkillRolls: []
+    }
+
+    const view = deriveCharacterExportViewModel(character({ creation }))
+
+    assert.equal(view?.careers, 'Scout rank 0')
+  })
+
   it('exports facts-only terms without legacy aggregates', () => {
     const creation = finalizedCreation()
     const term = creation.terms[0]
