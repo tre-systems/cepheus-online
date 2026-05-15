@@ -426,37 +426,74 @@ const appendIndentedSection = (
   lines.push(`${title}:`, ...values.map((value) => `- ${value}`))
 }
 
-export const derivePlainCharacterExport = (
+export interface CharacterExportViewModel {
+  title: string
+  upp: string
+  characteristics: string
+  type: string
+  age: string
+  homeworld: string
+  backgroundSkills: string | null
+  careers: string
+  terms: number
+  skills: string
+  credits: string
+  equipment: string
+  careerHistory: string[]
+  notes: string | null
+}
+
+export const deriveCharacterExportViewModel = (
   character: CharacterState | null | undefined
-): string | null => {
+): CharacterExportViewModel | null => {
   if (!character || !isCharacterCreationFinal(character)) return null
 
   const creation = character.creation
   const homeworld = creation?.homeworld
-  const backgroundSkills = backgroundSkillSourceValue(creation)
+  return {
+    title: character.name.trim() || 'Unnamed character',
+    upp: deriveCharacterUpp(character.characteristics),
+    characteristics: deriveCharacteristicExportLine(character.characteristics),
+    type: character.type,
+    age: character.age == null ? '-' : String(character.age),
+    homeworld: `${homeworld?.name || 'Unspecified'}${homeworld?.lawLevel ? `, ${homeworld.lawLevel}` : ''}${homeworld?.tradeCodes?.length ? `, ${homeworld.tradeCodes.join(', ')}` : ''}`,
+    backgroundSkills: backgroundSkillSourceValue(creation),
+    careers: careerValue(creation),
+    terms: creation?.terms.length ?? 0,
+    skills: listValue(sortSkillsForExport(character.skills)),
+    credits: `Cr${character.credits}`,
+    equipment: equipmentValue(character.equipment),
+    careerHistory: (creation?.terms ?? []).map(termHistoryLine),
+    notes: character.notes.trim() || null
+  }
+}
+
+export const derivePlainCharacterExport = (
+  character: CharacterState | null | undefined
+): string | null => {
+  const view = deriveCharacterExportViewModel(character)
+  if (!view) return null
+
   const lines = [
-    character.name.trim() || 'Unnamed character',
-    `UPP: ${deriveCharacterUpp(character.characteristics)}`,
-    `Characteristics: ${deriveCharacteristicExportLine(character.characteristics)}`,
-    `Type: ${character.type}`,
-    `Age: ${character.age == null ? '-' : character.age}`,
-    `Homeworld: ${homeworld?.name || 'Unspecified'}${homeworld?.lawLevel ? `, ${homeworld.lawLevel}` : ''}${homeworld?.tradeCodes?.length ? `, ${homeworld.tradeCodes.join(', ')}` : ''}`,
-    ...(backgroundSkills ? [`Background Skills: ${backgroundSkills}`] : []),
-    `Careers: ${careerValue(creation)}`,
-    `Terms: ${creation?.terms.length ?? 0}`,
-    `Skills: ${listValue(sortSkillsForExport(character.skills))}`,
-    `Credits: Cr${character.credits}`,
-    `Equipment: ${equipmentValue(character.equipment)}`
+    view.title,
+    `UPP: ${view.upp}`,
+    `Characteristics: ${view.characteristics}`,
+    `Type: ${view.type}`,
+    `Age: ${view.age}`,
+    `Homeworld: ${view.homeworld}`,
+    ...(view.backgroundSkills
+      ? [`Background Skills: ${view.backgroundSkills}`]
+      : []),
+    `Careers: ${view.careers}`,
+    `Terms: ${view.terms}`,
+    `Skills: ${view.skills}`,
+    `Credits: ${view.credits}`,
+    `Equipment: ${view.equipment}`
   ]
 
-  appendIndentedSection(
-    lines,
-    'Career History',
-    (creation?.terms ?? []).map(termHistoryLine)
-  )
+  appendIndentedSection(lines, 'Career History', view.careerHistory)
 
-  const notes = character.notes.trim()
-  if (notes) lines.push('Notes:', notes)
+  if (view.notes) lines.push('Notes:', view.notes)
 
   return lines.join('\n')
 }

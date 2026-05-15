@@ -1169,6 +1169,8 @@ Tasks:
 - Done: completed character sheets include a structured final-character summary
   for UPP, homeworld, careers, terms, credits, and equipment before the plain
   export block.
+- Done: final sheet and plain export presentation now share a structured export
+  view model so later review/export polish has one client read model to extend.
 - Extend final playable sheet coverage for deeper provenance and material
   benefit metadata as those display fields mature.
 - Polish copy/layout around the completed-character summary and export block

@@ -8,6 +8,7 @@ import type {
 } from '../../../../shared/state'
 import {
   deriveCharacteristicExportLine,
+  deriveCharacterExportViewModel,
   deriveCharacterUpp,
   derivePlainCharacterExport,
   formatUppCharacteristic,
@@ -200,6 +201,26 @@ describe('character sheet export view', () => {
   })
 
   it('derives a plain text export block for finalized characters', () => {
+    assert.deepEqual(deriveCharacterExportViewModel(character()), {
+      title: 'Iona Vesh',
+      upp: '789AB6',
+      characteristics:
+        'Str 7, Dex 8, End 9 (+1), Int 10 (+1), Edu 11 (+1), Soc 6',
+      type: 'PLAYER',
+      age: '34',
+      homeworld: 'Unspecified',
+      backgroundSkills: null,
+      careers: 'Scout rank 1 (Courier)',
+      terms: 1,
+      skills: 'Broker-2, Pilot-1, Vacc Suit-0',
+      credits: 'Cr1200',
+      equipment: 'Vacc Suit x1 (Carried)',
+      careerHistory: [
+        'Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); skills Pilot-1, Vacc Suit-0; aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (roll 3 +1 DM = table 4); term complete'
+      ],
+      notes: 'Detached scout.'
+    })
+
     assert.equal(
       derivePlainCharacterExport(character()),
       [
