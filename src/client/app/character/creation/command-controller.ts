@@ -87,7 +87,7 @@ export interface CharacterCreationCommandControllerDeps {
   syncFlowFromRoomState: (
     roomState: GameState | null,
     characterId: CharacterCreationFlow['draft']['characterId'],
-    fallbackFlow: CharacterCreationFlow
+    fallbackFlow: CharacterCreationFlow | null
   ) => CharacterCreationFlow | null
   autoAdvanceSetup: () => boolean
   renderWizard: () => void
@@ -212,7 +212,15 @@ export const createCharacterCreationCommandController = (
     await waitForDiceRevealOrDelay(roll)
     const flow = getFlow()
     if (!flow) return false
-    syncFlowFromRoomState(response.state, flow.draft.characterId, flow)
+    const syncedFlow = syncFlowFromRoomState(
+      response.state,
+      flow.draft.characterId,
+      null
+    )
+    if (!syncedFlow) {
+      setError('Waiting for character projection; refresh and try again')
+      return false
+    }
     return true
   }
 

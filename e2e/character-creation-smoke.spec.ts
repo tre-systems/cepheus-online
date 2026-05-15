@@ -19,6 +19,7 @@ import {
   fetchProjectedCharacter,
   fetchRoomState,
   latestProjectedTermSkill,
+  normalizedCharacteristicCreationSlice,
   normalizedText,
   openOrExpectFollowedCreation,
   postCommand,
@@ -1381,6 +1382,51 @@ test.describe('character creation smoke', () => {
     expect(
       roomState.state?.characters[characterId]?.characteristics?.edu
     ).toBe(12)
+  })
+
+  test('normalizes same-seed characteristic creation across rooms', async ({
+    page
+  }) => {
+    const seed = 42_424
+    const rollCharacteristics = async () => {
+      const roomId = await openUniqueRoom(page)
+      await setRoomSeed(page, roomId, seed)
+      const actorId = actorIdFromPage(page)
+      const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+      await page.locator('#createCharacterRailButton').click()
+      const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+      for (const characteristic of [
+        'str',
+        'dex',
+        'end',
+        'int',
+        'edu',
+        'soc'
+      ] as const) {
+        await postCommand(page, roomId, actorId, actorSession, {
+          type: 'RollCharacterCreationCharacteristic',
+          characterId,
+          characteristic
+        })
+      }
+
+      return normalizedCharacteristicCreationSlice(
+        await fetchRoomState(page, roomId, actorId),
+        characterId
+      )
+    }
+
+    const firstRoom = await rollCharacteristics()
+    const secondRoom = await rollCharacteristics()
+
+    expect(firstRoom).toEqual(secondRoom)
+    expect(firstRoom.status).toBe('HOMEWORLD')
+    expect(firstRoom.diceRolls).toHaveLength(6)
+    expect(Object.values(firstRoom.characteristics)).toEqual(
+      firstRoom.diceRolls.map((roll) => roll.total)
+    )
   })
 
   test('lets another player follow a live characteristic roll without early reveal', async ({

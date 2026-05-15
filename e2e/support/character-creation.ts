@@ -101,10 +101,22 @@ export type ProjectedMusteringBenefit = {
   credits?: number
 }
 
+const characteristicKeys = ['str', 'dex', 'end', 'int', 'edu', 'soc'] as const
+
+export type NormalizedCharacteristicCreationSlice = {
+  characteristics: Record<
+    (typeof characteristicKeys)[number],
+    number | null
+  >
+  diceRolls: Array<{
+    rolls: number[] | null
+    total: number | null
+  }>
+  status: string | null
+}
+
 const actorSessionKey = (roomId: string, actorId: string): string =>
   `cepheus.actorSession.${roomId}.${actorId}`
-
-const characteristicKeys = ['str', 'dex', 'end', 'int', 'edu', 'soc'] as const
 
 export const actorIdFromPage = (page: Page): string =>
   new URL(page.url()).searchParams.get('user') ?? 'local-user'
@@ -264,6 +276,26 @@ export const projectedMusteringBenefits = (
   (creation?.terms ?? []).flatMap(
     (term) => term.facts?.musteringBenefits ?? []
   )
+
+export const normalizedCharacteristicCreationSlice = (
+  message: RoomStateMessage,
+  characterId: string
+): NormalizedCharacteristicCreationSlice => {
+  const character = message.state?.characters[characterId]
+  return {
+    characteristics: Object.fromEntries(
+      characteristicKeys.map((key) => [
+        key,
+        character?.characteristics?.[key] ?? null
+      ])
+    ) as NormalizedCharacteristicCreationSlice['characteristics'],
+    diceRolls: (message.state?.diceLog ?? []).slice(-6).map((roll) => ({
+      rolls: roll.rolls ?? null,
+      total: roll.total ?? null
+    })),
+    status: character?.creation?.state?.status ?? null
+  }
+}
 
 export const creationCharacterIds = async (
   page: Page,

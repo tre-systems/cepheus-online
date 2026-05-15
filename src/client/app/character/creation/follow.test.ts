@@ -6,13 +6,14 @@ import type {
   CharacterCreationProjection,
   GameState
 } from '../../../../shared/state'
-import { createInitialCharacterDraft, type CharacterCreationFlow } from './flow'
+import { type CharacterCreationFlow, createInitialCharacterDraft } from './flow'
 import {
   projectedCharacterCreation,
   refreshFollowedCharacterCreationFlowFromState,
   shouldRefreshEditableCharacterCreationFlow,
   syncCharacterCreationFlowFromRoomState
 } from './follow'
+import { deriveCharacterCreationReviewSummary } from './view'
 
 const gameId = asGameId('demo-room')
 const actorId = asUserId('local-user')
@@ -273,6 +274,138 @@ describe('character creation follow helpers', () => {
     assert.equal(refreshed.flow?.step, 'equipment')
     assert.equal(refreshed.flow?.draft.name, 'Scout')
     assert.equal(refreshed.shouldRender, true)
+  })
+
+  it('derives followed final summaries from projected facts before stale aggregates', () => {
+    const projected = creation('PLAYABLE')
+    projected.creationComplete = true
+    projected.terms = [
+      {
+        career: 'Scout',
+        skills: ['Legacy Skill-6'],
+        skillsAndTraining: ['Legacy Training-5'],
+        benefits: ['Legacy Benefit'],
+        survival: 2,
+        advancement: 2,
+        reEnlistment: 2,
+        complete: true,
+        canReenlist: false,
+        completedBasicTraining: true,
+        musteringOut: true,
+        anagathics: false,
+        facts: {
+          survival: {
+            passed: true,
+            canCommission: false,
+            canAdvance: true,
+            survival: {
+              expression: '2d6',
+              rolls: [5, 5],
+              total: 10,
+              characteristic: 'end',
+              modifier: 1,
+              target: 7,
+              success: true
+            }
+          },
+          advancement: {
+            skipped: false,
+            passed: true,
+            advancement: {
+              expression: '2d6',
+              rolls: [6, 5],
+              total: 11,
+              characteristic: 'edu',
+              modifier: 1,
+              target: 8,
+              success: true
+            },
+            rank: {
+              career: 'Scout',
+              previousRank: 0,
+              newRank: 1,
+              title: 'Courier',
+              bonusSkill: 'Pilot-1'
+            }
+          },
+          termSkillRolls: [
+            {
+              career: 'Scout',
+              table: 'serviceSkills',
+              roll: { expression: '1d6', rolls: [3], total: 3 },
+              tableRoll: 3,
+              rawSkill: 'Gambling',
+              skill: 'Gambling-1',
+              characteristic: null,
+              pendingCascadeSkill: null
+            }
+          ],
+          reenlistment: {
+            outcome: 'allowed',
+            reenlistment: {
+              expression: '2d6',
+              rolls: [5, 4],
+              total: 9,
+              characteristic: null,
+              modifier: 0,
+              target: 6,
+              success: true,
+              outcome: 'allowed'
+            }
+          },
+          musteringBenefits: [
+            {
+              career: 'Scout',
+              kind: 'material',
+              roll: { expression: '2d6', rolls: [2, 2], total: 4 },
+              modifier: 0,
+              tableRoll: 4,
+              value: 'Blade',
+              credits: 0,
+              materialItem: 'Blade'
+            }
+          ]
+        }
+      }
+    ]
+    projected.careers = [{ name: 'Scout', rank: 1 }]
+
+    const refreshed = refreshFollowedCharacterCreationFlowFromState({
+      state: stateWithCreation(projected),
+      currentFlow: fallbackFlow,
+      selectedCharacterId: characterId,
+      readOnly: true,
+      panelOpen: true
+    })
+    if (!refreshed.flow) throw new Error('Expected followed final flow')
+
+    const summary = deriveCharacterCreationReviewSummary(refreshed.flow)
+    const career = summary.sections.find((section) => section.key === 'career')
+    const careerHistory = summary.sections.find(
+      (section) => section.key === 'career-history'
+    )
+    const skills = summary.sections.find((section) => section.key === 'skills')
+    const mustering = summary.sections.find(
+      (section) => section.key === 'mustering-out'
+    )
+
+    assert.deepEqual(careerHistory?.items, [
+      {
+        label: 'Term 1',
+        value: 'Scout, survived, advanced, training Gambling-1 (3)'
+      }
+    ])
+    assert.deepEqual(career?.items, [
+      { label: 'Career', value: 'Scout' },
+      { label: 'Qualification', value: 'Not set' },
+      { label: 'Survival', value: '10 (passed)' },
+      { label: 'Commission', value: 'Not available' },
+      { label: 'Advancement', value: '11 (passed)' }
+    ])
+    assert.deepEqual(skills?.items, [{ label: 'Skills', value: 'Gambling-1' }])
+    assert.deepEqual(mustering?.items, [
+      { label: 'Benefit 1', value: 'Scout material: Blade (Roll 4)' }
+    ])
   })
 
   it('refreshes editable flows only when no dice reveal deferral is pending', () => {

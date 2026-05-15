@@ -329,7 +329,7 @@ describe('character creation command controller', () => {
     const synced: Array<{
       state: GameState | null
       characterId: string
-      fallbackFlow: CharacterCreationFlow
+      fallbackFlow: CharacterCreationFlow | null
     }> = []
     let rendered = 0
     let scrolled = 0
@@ -368,7 +368,7 @@ describe('character creation command controller', () => {
       requestId: (scope) => scope,
       waitForDiceRevealOrDelay: async () => {},
       syncFlowFromRoomState: (state, characterId, fallbackFlow) => {
-        synced.push({ state, characterId, fallbackFlow })
+        if (fallbackFlow) synced.push({ state, characterId, fallbackFlow })
         return fallbackFlow
       },
       autoAdvanceSetup: () => false,
@@ -509,7 +509,7 @@ describe('character creation command controller', () => {
     const waitedFor: string[] = []
     const events: string[] = []
     const syncedStates: Array<GameState | null> = []
-    const syncedFallbacks: CharacterCreationFlow[] = []
+    const syncedFallbacks: Array<CharacterCreationFlow | null> = []
     let renderCount = 0
     let scrollCount = 0
     const roll = diceRoll(10)
@@ -539,8 +539,8 @@ describe('character creation command controller', () => {
         events.push('sync')
         syncedStates.push(state)
         syncedFallbacks.push(fallbackFlow)
-        flow = fallbackFlow
-        return fallbackFlow
+        if (fallbackFlow) flow = fallbackFlow
+        return fallbackFlow ?? flow
       },
       autoAdvanceSetup: () => false,
       renderWizard: () => {
@@ -564,8 +564,7 @@ describe('character creation command controller', () => {
     )
     assert.deepEqual(waitedFor, ['roll-1'])
     assert.equal(syncedStates[0]?.diceLog.at(-1), roll)
-    assert.deepEqual(syncedFallbacks[0], characteristicFlow())
-    assert.equal(syncedFallbacks[0]?.draft.characteristics.str, null)
+    assert.equal(syncedFallbacks[0], null)
     assert.deepEqual(events, ['wait', 'sync', 'render', 'scroll'])
     assert.equal(renderCount, 1)
     assert.equal(scrollCount, 1)
@@ -608,7 +607,7 @@ describe('character creation command controller', () => {
     const requestIds: string[] = []
     const waitedFor: string[] = []
     const syncedStates: Array<GameState | null> = []
-    const syncedFallbacks: CharacterCreationFlow[] = []
+    const syncedFallbacks: Array<CharacterCreationFlow | null> = []
     const roll = diceRoll(7)
     const responseState = stateWithDice(roll)
     let published = 0
@@ -646,8 +645,8 @@ describe('character creation command controller', () => {
       syncFlowFromRoomState: (state, _characterId, fallbackFlow) => {
         syncedStates.push(state)
         syncedFallbacks.push(fallbackFlow)
-        flow = fallbackFlow
-        return fallbackFlow
+        if (fallbackFlow) flow = fallbackFlow
+        return fallbackFlow ?? flow
       },
       autoAdvanceSetup: () => false,
       renderWizard: () => {
@@ -707,8 +706,8 @@ describe('character creation command controller', () => {
       requestId: (scope) => scope,
       waitForDiceRevealOrDelay: async () => {},
       syncFlowFromRoomState: (_state, _characterId, fallbackFlow) => {
-        flow = fallbackFlow
-        return fallbackFlow
+        if (fallbackFlow) flow = fallbackFlow
+        return fallbackFlow ?? flow
       },
       autoAdvanceSetup: () => false,
       renderWizard: () => {},
@@ -858,7 +857,7 @@ describe('character creation command controller', () => {
   it('syncs current room state and rerenders when qualification is rejected', async () => {
     const flow = careerFlow()
     const roomState = stateWithDice(diceRoll(6))
-    const syncedFallbacks: CharacterCreationFlow[] = []
+    const syncedFallbacks: Array<CharacterCreationFlow | null> = []
     let rendered = false
     let scrolled = false
     const controller = createCharacterCreationCommandController({
@@ -909,7 +908,7 @@ describe('character creation command controller', () => {
     const originalCharacterId = flow.draft.characterId
     const commands: CharacterCreationCommand[] = []
     const requestIds: string[] = []
-    const syncedFallbacks: CharacterCreationFlow[] = []
+    const syncedFallbacks: Array<CharacterCreationFlow | null> = []
     let flushed = 0
     let published = 0
     let rendered = 0
@@ -945,8 +944,8 @@ describe('character creation command controller', () => {
         assert.equal(state, null)
         assert.equal(characterId, originalCharacterId)
         syncedFallbacks.push(fallbackFlow)
-        flow = fallbackFlow
-        return fallbackFlow
+        if (fallbackFlow) flow = fallbackFlow
+        return fallbackFlow ?? flow
       },
       autoAdvanceSetup: () => false,
       renderWizard: () => {
@@ -992,7 +991,7 @@ describe('character creation command controller', () => {
     const commands: CharacterCreationCommand[] = []
     const requestIds: string[] = []
     const waitedFor: string[] = []
-    const syncedFallbacks: CharacterCreationFlow[] = []
+    const syncedFallbacks: Array<CharacterCreationFlow | null> = []
     let flushed = 0
     let published = 0
     let rendered = 0
@@ -1027,8 +1026,8 @@ describe('character creation command controller', () => {
         assert.equal(state, roomState)
         assert.equal(characterId, originalCharacterId)
         syncedFallbacks.push(fallbackFlow)
-        flow = fallbackFlow
-        return fallbackFlow
+        if (fallbackFlow) flow = fallbackFlow
+        return fallbackFlow ?? flow
       },
       autoAdvanceSetup: () => false,
       renderWizard: () => {
@@ -1108,7 +1107,7 @@ describe('character creation command controller', () => {
     }
     const commands: CharacterCreationCommand[] = []
     const requestIds: string[] = []
-    const syncedFallbacks: CharacterCreationFlow[] = []
+    const syncedFallbacks: Array<CharacterCreationFlow | null> = []
     let published = 0
     let renderCount = 0
     let scrollCount = 0
@@ -1136,8 +1135,8 @@ describe('character creation command controller', () => {
       waitForDiceRevealOrDelay: async () => {},
       syncFlowFromRoomState: (_state, _characterId, fallbackFlow) => {
         syncedFallbacks.push(fallbackFlow)
-        flow = fallbackFlow
-        return fallbackFlow
+        if (fallbackFlow) flow = fallbackFlow
+        return fallbackFlow ?? flow
       },
       autoAdvanceSetup: () => false,
       renderWizard: () => {
@@ -1219,7 +1218,7 @@ describe('character creation command controller', () => {
     const originalFlow = flow
     const commands: CharacterCreationCommand[] = []
     const requestIds: string[] = []
-    const syncedFallbacks: CharacterCreationFlow[] = []
+    const syncedFallbacks: Array<CharacterCreationFlow | null> = []
     let published = 0
     let renderCount = 0
     let scrollCount = 0
@@ -1247,8 +1246,8 @@ describe('character creation command controller', () => {
       waitForDiceRevealOrDelay: async () => {},
       syncFlowFromRoomState: (_state, _characterId, fallbackFlow) => {
         syncedFallbacks.push(fallbackFlow)
-        flow = fallbackFlow
-        return fallbackFlow
+        if (fallbackFlow) flow = fallbackFlow
+        return fallbackFlow ?? flow
       },
       autoAdvanceSetup: () => false,
       renderWizard: () => {
@@ -1354,7 +1353,7 @@ describe('character creation command controller', () => {
     const commands: CharacterCreationCommand[] = []
     const requestIds: string[] = []
     const waitedFor: string[] = []
-    const syncedFallbacks: CharacterCreationFlow[] = []
+    const syncedFallbacks: Array<CharacterCreationFlow | null> = []
     const roll = diceRoll(7)
     let published = 0
     let renderCount = 0
@@ -1385,8 +1384,8 @@ describe('character creation command controller', () => {
       },
       syncFlowFromRoomState: (_state, _characterId, fallbackFlow) => {
         syncedFallbacks.push(fallbackFlow)
-        flow = fallbackFlow
-        return fallbackFlow
+        if (fallbackFlow) flow = fallbackFlow
+        return fallbackFlow ?? flow
       },
       autoAdvanceSetup: () => false,
       renderWizard: () => {
@@ -1415,7 +1414,7 @@ describe('character creation command controller', () => {
     )
     assert.deepEqual(requestIds, ['mustering-roll'])
     assert.deepEqual(waitedFor, ['roll-1'])
-    assert.deepEqual(syncedFallbacks[0]?.draft.musteringBenefits, [])
+    assert.equal(syncedFallbacks[0], null)
     assert.equal(renderCount, 1)
     assert.equal(scrollCount, 1)
   })
