@@ -12,10 +12,12 @@ import type {
   PieceState
 } from './state'
 import type {
+  CareerCreationBenefitFact,
   CareerCreationEvent,
   CareerCreationTermSkillFact,
   CareerTerm
 } from './characterCreation'
+import { deriveMaterialBenefitEffect } from './characterCreation'
 
 export type ViewerRole = PlayerState['role']
 
@@ -142,6 +144,33 @@ const visibleCreationHistory = (
   )
 }
 
+const redactMusteringBenefitSheetEffect = (
+  character: CharacterState,
+  fact: CareerCreationBenefitFact
+): void => {
+  if (fact.kind === 'cash') {
+    character.credits -= fact.credits
+    return
+  }
+
+  const effect = deriveMaterialBenefitEffect(fact.value)
+  if (effect.kind === 'characteristic') {
+    character.characteristics[effect.characteristic] =
+      (character.characteristics[effect.characteristic] ?? 0) - effect.modifier
+    return
+  }
+
+  if (effect.kind === 'equipment') {
+    character.equipment = character.equipment.filter(
+      (item) =>
+        !(
+          item.name === effect.item &&
+          item.notes === `Mustering benefit: ${fact.career}`
+        )
+    )
+  }
+}
+
 const redactUnrevealedCreationFacts = (
   character: CharacterState,
   unrevealedRollIds: ReadonlySet<string>
@@ -250,11 +279,13 @@ const redactUnrevealedCreationFacts = (
     }
 
     if (facts.musteringBenefits) {
-      const hiddenBenefitValues = new Set(
-        facts.musteringBenefits
-          .filter((fact) => hasUnrevealedRollFact(fact, unrevealedRollIds))
-          .map((fact) => fact.value)
+      const hiddenFacts = facts.musteringBenefits.filter((fact) =>
+        hasUnrevealedRollFact(fact, unrevealedRollIds)
       )
+      const hiddenBenefitValues = new Set(hiddenFacts.map((fact) => fact.value))
+      for (const fact of hiddenFacts) {
+        redactMusteringBenefitSheetEffect(character, fact)
+      }
       facts.musteringBenefits = facts.musteringBenefits.filter(
         (fact) => !hasUnrevealedRollFact(fact, unrevealedRollIds)
       )

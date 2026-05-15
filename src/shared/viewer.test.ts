@@ -244,8 +244,14 @@ describe('viewer filtering', () => {
         soc: 7
       },
       skills: [],
-      equipment: [],
-      credits: 0,
+      equipment: [
+        {
+          name: 'Low Passage',
+          quantity: 1,
+          notes: 'Mustering benefit: Scout'
+        }
+      ],
+      credits: 10100,
       creation: {
         state: {
           status: 'SKILLS_TRAINING',
@@ -259,7 +265,7 @@ describe('viewer filtering', () => {
             career: 'Scout',
             skills: ['Pilot-1'],
             skillsAndTraining: ['Vacc Suit-0', 'Pilot-1'],
-            benefits: ['Low Passage'],
+            benefits: ['Low Passage', '10000'],
             complete: true,
             canReenlist: true,
             completedBasicTraining: true,
@@ -373,6 +379,16 @@ describe('viewer filtering', () => {
                   tableRoll: 11,
                   value: 'Low Passage',
                   credits: 0
+                },
+                {
+                  rollEventId: asEventId('roll-1'),
+                  career: 'Scout',
+                  kind: 'cash',
+                  roll: { expression: '2d6', rolls: [4, 6], total: 10 },
+                  modifier: 0,
+                  tableRoll: 10,
+                  value: '10000',
+                  credits: 10000
                 }
               ]
             }
@@ -462,6 +478,14 @@ describe('viewer filtering', () => {
     assert.deepEqual(term?.skills, [])
     assert.deepEqual(term?.skillsAndTraining, ['Vacc Suit-0'])
     assert.deepEqual(term?.benefits, [])
+    assert.equal(
+      filtered.characters[asCharacterId('char-1')]?.credits,
+      100
+    )
+    assert.deepEqual(
+      filtered.characters[asCharacterId('char-1')]?.equipment,
+      []
+    )
     assert.deepEqual(
       filtered.characters[asCharacterId('char-1')]?.creation
         ?.pendingCascadeSkills,
@@ -481,6 +505,11 @@ describe('viewer filtering', () => {
     assert.equal(
       state.characters[asCharacterId('char-1')]?.characteristics.str,
       7
+    )
+    assert.equal(state.characters[asCharacterId('char-1')]?.credits, 10100)
+    assert.equal(
+      state.characters[asCharacterId('char-1')]?.equipment.length,
+      1
     )
     assert.equal(
       state.characters[asCharacterId('char-1')]?.creation?.history?.length,
