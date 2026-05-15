@@ -95,7 +95,9 @@ Important remaining gaps:
   The client projection adapter marks old aggregate mustering benefits as a
   legacy fallback instead of inventing roll provenance. Remaining work is to
   reduce legacy client fallback paths and keep polishing provenance and
-  presentation.
+  presentation. A focused client unit slice now verifies the supported
+  characteristics step renders owner and spectator grids from projection-backed
+  sheet read models, not legacy creation history entries.
 - Projected client actions now fail closed when the accepted projection sequence
   is stale, so the browser must refresh from server state instead of submitting
   a locally valid-looking action after the room has moved on.

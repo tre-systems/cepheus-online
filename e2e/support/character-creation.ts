@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import { setSeedForNextRoll } from './app'
 
 export type CharacterCreationProjection = {
   creationComplete?: boolean
@@ -142,6 +143,23 @@ export const fetchProjectedCharacter = async (
 ): Promise<ProjectedCharacter | null> => {
   const message = await fetchRoomState(page, roomId, actorId, viewer)
   return message.state?.characters[characterId] ?? null
+}
+
+export const seedNextProjectedRoll = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  expectedRolls: readonly number[],
+  sides = 6
+): Promise<void> => {
+  const message = await fetchRoomState(page, roomId, actorId)
+  await setSeedForNextRoll(
+    page,
+    roomId,
+    (message.state?.eventSeq ?? 0) + 1,
+    expectedRolls,
+    sides
+  )
 }
 
 export const latestProjectedTermSkill = async (

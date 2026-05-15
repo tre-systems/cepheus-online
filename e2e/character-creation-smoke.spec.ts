@@ -27,6 +27,7 @@ import {
   rollCareerOutcomeWithSpectatorReveal,
   seedCreationToCareerSelection,
   seedCreationToHomeworld,
+  seedNextProjectedRoll,
   waitForDiceReveal,
   type ProjectedTermSkill,
   type RoomStateMessage
@@ -1352,6 +1353,34 @@ test.describe('character creation smoke', () => {
       page.getByRole('complementary', { name: 'Character creator' })
     ).toBeVisible()
     await expect(strValue).toHaveText(rolledStr, { timeout: 5_000 })
+  })
+
+  test('applies a deterministic characteristic roll to the projection', async ({
+    page
+  }) => {
+    const roomId = await openUniqueRoom(page)
+    const actorId = actorIdFromPage(page)
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+    await seedNextProjectedRoll(page, roomId, actorId, [6, 6])
+
+    await page.getByRole('button', { name: 'Roll Edu' }).click()
+    await waitForDiceReveal(page)
+
+    const eduValue = page
+      .locator('#characterCreationFields .creation-stat-cell')
+      .filter({ hasText: 'Edu' })
+      .locator('strong')
+    await expect(eduValue).toHaveText('12', { timeout: 5_000 })
+
+    const roomState = await fetchRoomState(page, roomId, actorId)
+    const latestRoll = roomState.state?.diceLog?.at(-1)
+    expect(latestRoll?.rolls).toEqual([6, 6])
+    expect(latestRoll?.total).toBe(12)
+    expect(
+      roomState.state?.characters[characterId]?.characteristics?.edu
+    ).toBe(12)
   })
 
   test('lets another player follow a live characteristic roll without early reveal', async ({

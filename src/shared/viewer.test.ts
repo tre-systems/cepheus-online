@@ -234,7 +234,7 @@ describe('viewer filtering', () => {
       name: 'Scout',
       active: true,
       notes: '',
-      age: 22,
+      age: 24,
       characteristics: {
         str: 7,
         dex: 7,
@@ -251,7 +251,7 @@ describe('viewer filtering', () => {
           notes: 'Mustering benefit: Scout'
         }
       ],
-      credits: 10100,
+      credits: 7100,
       creation: {
         state: {
           status: 'SKILLS_TRAINING',
@@ -269,8 +269,8 @@ describe('viewer filtering', () => {
             complete: true,
             canReenlist: true,
             completedBasicTraining: true,
-            musteringOut: false,
-            anagathics: false,
+            musteringOut: true,
+            anagathics: true,
             survival: 7,
             advancement: 9,
             reEnlistment: 10,
@@ -315,6 +315,27 @@ describe('viewer filtering', () => {
                   pendingCascadeSkill: null
                 }
               ],
+              advancement: {
+                rollEventId: asEventId('roll-1'),
+                skipped: false,
+                passed: true,
+                advancement: {
+                  expression: '2d6',
+                  rolls: [5, 4],
+                  total: 9,
+                  characteristic: null,
+                  modifier: 0,
+                  target: 8,
+                  success: true
+                },
+                rank: {
+                  career: 'Scout',
+                  previousRank: 0,
+                  newRank: 1,
+                  title: 'Courier',
+                  bonusSkill: null
+                }
+              },
               reenlistment: {
                 rollEventId: asEventId('roll-1'),
                 outcome: 'allowed',
@@ -360,10 +381,17 @@ describe('viewer filtering', () => {
                   description: 'Dishonorable discharge.',
                   discharge: 'dishonorable',
                   benefitEffect: 'lose_all',
-                  debtCredits: 0,
-                  extraServiceYears: 0,
+                  debtCredits: 500,
+                  extraServiceYears: 2,
                   injury: null
                 }
+              },
+              aging: {
+                rollEventId: asEventId('roll-1'),
+                roll: { expression: '2d6', rolls: [3, 3], total: 6 },
+                modifier: -1,
+                age: 22,
+                characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
               },
               injury: {
                 rollEventId: asEventId('roll-1'),
@@ -405,10 +433,10 @@ describe('viewer filtering', () => {
             }
           }
         ],
-        careers: [{ name: 'Scout', rank: 0 }],
+        careers: [{ name: 'Scout', rank: 1 }],
         canEnterDraft: true,
         failedToQualify: false,
-        characteristicChanges: [],
+        characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }],
         characteristicRolls: {
           str: {
             rollEventId: asEventId('roll-1'),
@@ -416,6 +444,12 @@ describe('viewer filtering', () => {
           }
         },
         pendingCascadeSkills: ['Pilot-1'],
+        pendingDecisions: [
+          { key: 'agingResolution' },
+          { key: 'anagathicsDecision' },
+          { key: 'injuryResolution' },
+          { key: 'mishapResolution' }
+        ],
         creationComplete: false,
         timeline: [
           {
@@ -487,6 +521,8 @@ describe('viewer filtering', () => {
     assert.equal(term?.facts?.termSkillRolls, undefined)
     assert.equal(term?.facts?.reenlistment, undefined)
     assert.equal(term?.facts?.anagathicsDecision, undefined)
+    assert.equal(term?.facts?.aging, undefined)
+    assert.equal(term?.facts?.advancement, undefined)
     assert.equal(term?.facts?.mishap, undefined)
     assert.equal(term?.facts?.injury, undefined)
     assert.equal(term?.facts?.musteringBenefits, undefined)
@@ -497,6 +533,7 @@ describe('viewer filtering', () => {
       filtered.characters[asCharacterId('char-1')]?.credits,
       100
     )
+    assert.equal(filtered.characters[asCharacterId('char-1')]?.age, 18)
     assert.deepEqual(
       filtered.characters[asCharacterId('char-1')]?.equipment,
       []
@@ -507,11 +544,29 @@ describe('viewer filtering', () => {
       undefined
     )
     assert.deepEqual(
+      filtered.characters[asCharacterId('char-1')]?.creation
+        ?.characteristicChanges,
+      []
+    )
+    assert.deepEqual(
+      filtered.characters[asCharacterId('char-1')]?.creation?.pendingDecisions,
+      undefined
+    )
+    assert.deepEqual(
+      filtered.characters[asCharacterId('char-1')]?.creation?.careers,
+      [{ name: 'Scout', rank: 0 }]
+    )
+    assert.deepEqual(
       filtered.characters[asCharacterId('char-1')]?.creation?.history,
       [{ type: 'COMPLETE_HOMEWORLD' }]
     )
     assert.equal('survival' in (term ?? {}), false)
+    assert.equal('advancement' in (term ?? {}), false)
     assert.equal('reEnlistment' in (term ?? {}), false)
+    assert.equal(term?.anagathics, false)
+    assert.equal(term?.anagathicsCost, undefined)
+    assert.equal(term?.complete, false)
+    assert.equal(term?.musteringOut, false)
     assert.deepEqual(
       state.characters[asCharacterId('char-1')]?.creation?.terms[0]?.facts
         ?.survival?.survival.rolls,
@@ -525,7 +580,8 @@ describe('viewer filtering', () => {
       state.characters[asCharacterId('char-1')]?.characteristics.edu,
       8
     )
-    assert.equal(state.characters[asCharacterId('char-1')]?.credits, 10100)
+    assert.equal(state.characters[asCharacterId('char-1')]?.credits, 7100)
+    assert.equal(state.characters[asCharacterId('char-1')]?.age, 24)
     assert.equal(
       state.characters[asCharacterId('char-1')]?.equipment.length,
       1

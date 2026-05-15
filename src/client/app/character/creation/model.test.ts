@@ -112,6 +112,16 @@ const character = (
   ...overrides
 })
 
+const characteristicStats = (viewModel: CharacterCreationViewModel) =>
+  viewModel.wizard?.characteristics?.stats.map(
+    ({ key, value, missing, modifier }) => ({
+      key,
+      value,
+      missing,
+      modifier
+    })
+  )
+
 const resolvedCareerFlow = ({
   completedTerms = [],
   termSkillRolls = [
@@ -304,24 +314,114 @@ describe('character creation view model', () => {
     })
 
     assert.equal(viewModel.characterReadModel?.rolledCharacteristicCount, 1)
+    assert.deepEqual(characteristicStats(viewModel), [
+      { key: 'str', value: '9', missing: false, modifier: '+1' },
+      { key: 'dex', value: '', missing: true, modifier: '' },
+      { key: 'end', value: '', missing: true, modifier: '' },
+      { key: 'int', value: '', missing: true, modifier: '' },
+      { key: 'edu', value: '', missing: true, modifier: '' },
+      { key: 'soc', value: '', missing: true, modifier: '' }
+    ])
+  })
+
+  it('keeps owner and spectator characteristic grids driven by read-model sheet state', () => {
+    const currentFlow = flow({
+      step: 'characteristics',
+      draft: createInitialCharacterDraft(characterId, {
+        characteristics: {
+          str: null,
+          dex: null,
+          end: null,
+          int: null,
+          edu: null,
+          soc: null
+        }
+      })
+    })
+    const ownerProjection = projection('CHARACTERISTICS', {
+      history: [{ type: 'SET_CHARACTERISTICS' }]
+    })
+    const spectatorProjection = projection('CHARACTERISTICS', { history: [] })
+    const sheetCharacteristics: CharacterState['characteristics'] = {
+      str: 9,
+      dex: 8,
+      end: null,
+      int: null,
+      edu: null,
+      soc: null
+    }
+    const ownerViewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: ownerProjection,
+      character: character(ownerProjection, {
+        characteristics: sheetCharacteristics
+      }),
+      readOnly: false
+    })
+    const spectatorViewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: spectatorProjection,
+      character: character(spectatorProjection, {
+        characteristics: sheetCharacteristics
+      }),
+      readOnly: true
+    })
+
     assert.deepEqual(
-      viewModel.wizard?.characteristics?.stats.map(
-        ({ key, value, missing, modifier }) => ({
-          key,
-          value,
-          missing,
-          modifier
-        })
-      ),
-      [
-        { key: 'str', value: '9', missing: false, modifier: '+1' },
-        { key: 'dex', value: '', missing: true, modifier: '' },
-        { key: 'end', value: '', missing: true, modifier: '' },
-        { key: 'int', value: '', missing: true, modifier: '' },
-        { key: 'edu', value: '', missing: true, modifier: '' },
-        { key: 'soc', value: '', missing: true, modifier: '' }
-      ]
+      characteristicStats(ownerViewModel),
+      characteristicStats(spectatorViewModel)
     )
+    assert.deepEqual(characteristicStats(spectatorViewModel), [
+      { key: 'str', value: '9', missing: false, modifier: '+1' },
+      { key: 'dex', value: '8', missing: false, modifier: '' },
+      { key: 'end', value: '', missing: true, modifier: '' },
+      { key: 'int', value: '', missing: true, modifier: '' },
+      { key: 'edu', value: '', missing: true, modifier: '' },
+      { key: 'soc', value: '', missing: true, modifier: '' }
+    ])
+    assert.equal(
+      ownerViewModel.characterReadModel?.rolledCharacteristicCount,
+      2
+    )
+    assert.equal(
+      spectatorViewModel.characterReadModel?.rolledCharacteristicCount,
+      2
+    )
+  })
+
+  it('does not treat legacy characteristic history as sheet state', () => {
+    const currentProjection = projection('CHARACTERISTICS', {
+      history: [{ type: 'SET_CHARACTERISTICS' }]
+    })
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'characteristics',
+        draft: createInitialCharacterDraft(characterId, {
+          characteristics: {
+            str: null,
+            dex: null,
+            end: null,
+            int: null,
+            edu: null,
+            soc: null
+          }
+        })
+      }),
+      projection: currentProjection,
+      character: character(currentProjection),
+      readOnly: true
+    })
+
+    assert.equal(viewModel.projection.timelineCount, 0)
+    assert.equal(viewModel.characterReadModel?.rolledCharacteristicCount, 0)
+    assert.deepEqual(characteristicStats(viewModel), [
+      { key: 'str', value: '', missing: true, modifier: '' },
+      { key: 'dex', value: '', missing: true, modifier: '' },
+      { key: 'end', value: '', missing: true, modifier: '' },
+      { key: 'int', value: '', missing: true, modifier: '' },
+      { key: 'edu', value: '', missing: true, modifier: '' },
+      { key: 'soc', value: '', missing: true, modifier: '' }
+    ])
   })
 
   it('captures read-only and pending aging state without changing flow identity', () => {

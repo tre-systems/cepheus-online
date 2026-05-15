@@ -122,6 +122,139 @@ const redactTermSkillSheetEffect = (
     current - fact.characteristic.modifier
 }
 
+const redactCharacteristicPatchEffect = (
+  character: CharacterState,
+  patch:
+    | Partial<Record<CharacteristicKey, number | null | undefined>>
+    | null
+    | undefined,
+  losses: readonly { characteristic: CharacteristicKey; modifier: number }[]
+): void => {
+  for (const loss of losses) {
+    const current = character.characteristics[loss.characteristic]
+    if (current === null) continue
+
+    character.characteristics[loss.characteristic] = current - loss.modifier
+  }
+
+  for (const [key, value] of Object.entries(patch ?? {}) as Array<
+    [CharacteristicKey, number | null | undefined]
+  >) {
+    if (value === null || value === undefined) continue
+    const current = character.characteristics[key]
+    if (current !== value) continue
+    const loss = losses.find((candidate) => candidate.characteristic === key)
+    if (loss || current === null) continue
+
+    character.characteristics[key] = null
+  }
+}
+
+const redactAgingSheetEffect = (
+  character: CharacterState,
+  age: number | null | undefined
+): void => {
+  if (typeof age === 'number' && character.age !== null) {
+    character.age = Math.max(18, character.age - 4)
+  }
+
+  if (character.creation) {
+    character.creation.characteristicChanges = []
+    character.creation.pendingDecisions = (
+      character.creation.pendingDecisions ?? []
+    ).filter((decision) => decision.key !== 'agingResolution')
+    if (character.creation.pendingDecisions.length === 0) {
+      delete character.creation.pendingDecisions
+    }
+  }
+}
+
+const redactAnagathicsSheetEffect = (
+  character: CharacterState,
+  term: CareerTerm,
+  cost: number | undefined
+): void => {
+  term.anagathics = false
+  if (cost !== undefined) {
+    character.credits += cost
+  }
+  delete (term as unknown as { anagathicsCost?: number }).anagathicsCost
+
+  if (character.creation) {
+    character.creation.pendingDecisions = (
+      character.creation.pendingDecisions ?? []
+    ).filter((decision) => decision.key !== 'anagathicsDecision')
+    if (character.creation.pendingDecisions.length === 0) {
+      delete character.creation.pendingDecisions
+    }
+  }
+}
+
+const redactMishapSheetEffect = (
+  character: CharacterState,
+  term: CareerTerm,
+  fact: NonNullable<CareerTerm['facts']>['mishap']
+): void => {
+  if (!fact) return
+
+  if (fact.outcome.debtCredits > 0) {
+    character.credits += fact.outcome.debtCredits
+  }
+  if (fact.outcome.extraServiceYears > 0 && character.age !== null) {
+    character.age = Math.max(18, character.age - fact.outcome.extraServiceYears)
+  }
+
+  term.complete = false
+  term.musteringOut = false
+  term.canReenlist = true
+
+  if (character.creation) {
+    character.creation.pendingDecisions = (
+      character.creation.pendingDecisions ?? []
+    ).filter((decision) => decision.key !== 'mishapResolution')
+    if (character.creation.pendingDecisions.length === 0) {
+      delete character.creation.pendingDecisions
+    }
+  }
+}
+
+const redactInjurySheetEffect = (
+  character: CharacterState,
+  fact: NonNullable<CareerTerm['facts']>['injury']
+): void => {
+  if (!fact) return
+
+  redactCharacteristicPatchEffect(
+    character,
+    fact.characteristicPatch,
+    fact.selectedLosses
+  )
+
+  if (character.creation) {
+    character.creation.pendingDecisions = (
+      character.creation.pendingDecisions ?? []
+    ).filter((decision) => decision.key !== 'injuryResolution')
+    if (character.creation.pendingDecisions.length === 0) {
+      delete character.creation.pendingDecisions
+    }
+  }
+}
+
+const redactAdvancementSheetEffect = (
+  character: CharacterState,
+  rank: NonNullable<
+    Extract<NonNullable<CareerTerm['facts']>['advancement'], { skipped: false }>
+  >['rank']
+): void => {
+  if (!rank || !character.creation) return
+
+  character.creation.careers = character.creation.careers.map((career) =>
+    career.name === rank.career
+      ? { ...career, rank: rank.previousRank }
+      : career
+  )
+}
+
 const rollDependentCreationHistoryTypes = new Set<string>([
   'SELECT_CAREER',
   'SURVIVAL_PASSED',
@@ -239,20 +372,30 @@ const redactUnrevealedCreationFacts = (
       delete facts.commission
     }
     if (hasUnrevealedRollFact(facts.advancement, unrevealedRollIds)) {
+      if (facts.advancement && !facts.advancement.skipped) {
+        redactAdvancementSheetEffect(character, facts.advancement.rank)
+      }
       delete facts.advancement
       delete (term as unknown as { advancement?: number }).advancement
     }
     if (hasUnrevealedRollFact(facts.aging, unrevealedRollIds)) {
+      redactAgingSheetEffect(character, facts.aging?.age)
       delete facts.aging
     }
     if (hasUnrevealedRollFact(facts.anagathicsDecision, unrevealedRollIds)) {
+      redactAnagathicsSheetEffect(
+        character,
+        term,
+        facts.anagathicsDecision?.cost
+      )
       delete facts.anagathicsDecision
-      delete (term as unknown as { anagathicsCost?: number }).anagathicsCost
     }
     if (hasUnrevealedRollFact(facts.mishap, unrevealedRollIds)) {
+      redactMishapSheetEffect(character, term, facts.mishap)
       delete facts.mishap
     }
     if (hasUnrevealedRollFact(facts.injury, unrevealedRollIds)) {
+      redactInjurySheetEffect(character, facts.injury)
       delete facts.injury
     }
     if (hasUnrevealedRollFact(facts.reenlistment, unrevealedRollIds)) {
