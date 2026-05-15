@@ -16,7 +16,7 @@ import {
   shouldRefreshEditableCharacterCreationFlow,
   syncCharacterCreationFlowFromRoomState
 } from './follow.js'
-import { flowFromProjectedCharacter } from './projection.js'
+import { legacyFlowFromProjectedCharacter } from './projection.js'
 import { shouldSyncEditableCharacterCreationFlowWithProjection } from './sync.js'
 import {
   deriveCharacterCreationViewModel,
@@ -129,7 +129,7 @@ export const createCharacterCreationController = ({
 
     openFollow: (characterId, { readOnly: nextReadOnly = true } = {}) => {
       const character = getState()?.characters[characterId] ?? null
-      const nextFlow = character ? flowFromProjectedCharacter(character) : null
+      const nextFlow = character ? legacyFlowFromProjectedCharacter(character) : null
       if (!nextFlow) return null
 
       batch(() => {

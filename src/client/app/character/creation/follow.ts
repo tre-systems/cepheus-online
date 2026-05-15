@@ -4,7 +4,7 @@ import type {
   GameState
 } from '../../../../shared/state'
 import type { CharacterCreationFlow } from './flow.js'
-import { flowFromProjectedCharacter } from './projection.js'
+import { legacyFlowFromProjectedCharacter } from './projection.js'
 
 export const projectedCharacterCreation = (
   state: GameState | null,
@@ -25,7 +25,7 @@ export const syncCharacterCreationFlowFromRoomState = ({
 }): CharacterCreationFlow | null => {
   const projectedCharacter = roomState?.characters?.[characterId] ?? null
   const projectedFlow = projectedCharacter
-    ? flowFromProjectedCharacter(projectedCharacter)
+    ? legacyFlowFromProjectedCharacter(projectedCharacter)
     : null
 
   return projectedFlow ?? fallbackFlow ?? currentFlow

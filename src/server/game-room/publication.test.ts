@@ -3055,7 +3055,11 @@ describe('room publication flow', () => {
     )
     assert.deepEqual(refreshedCharacter?.equipment, finalizedEvent.equipment)
     assert.equal(refreshedCharacter?.credits, finalizedEvent.credits)
-    assert.equal(refreshedCharacter?.notes, finalizedEvent.notes)
+    assert.equal(
+      refreshedCharacter?.notes.includes('Term 1: Scout, survived.'),
+      false,
+      'non-owner refreshes should not reveal finalized term outcomes while their source survival dice are still hidden'
+    )
   })
 
   it('recovers semantic commission, advancement, and term skills from checkpoint plus tail', async () => {

@@ -99,6 +99,10 @@ export type ProjectedMusteringBenefit = {
   tableRoll: number
   value: string
   credits?: number
+  roll?: {
+    rolls?: number[]
+    total?: number
+  }
 }
 
 const characteristicKeys = ['str', 'dex', 'end', 'int', 'edu', 'soc'] as const
@@ -113,6 +117,30 @@ export type NormalizedCharacteristicCreationSlice = {
     total: number | null
   }>
   status: string | null
+}
+
+export type NormalizedCareerContinuationSlice = {
+  status: string | null
+  terms: Array<{
+    career: string
+    termSkillRolls: Array<{
+      career?: string
+      table?: string
+      tableRoll?: number
+      rawSkill?: string
+      skill?: string | null
+      pendingCascadeSkill?: string | null
+      roll?: {
+        rolls?: number[]
+        total?: number
+      }
+    }>
+    termCascadeSelections: Array<{
+      cascadeSkill: string
+      selection: string
+    }>
+    musteringBenefits: ProjectedMusteringBenefit[]
+  }>
 }
 
 const actorSessionKey = (roomId: string, actorId: string): string =>
@@ -294,6 +322,49 @@ export const normalizedCharacteristicCreationSlice = (
       total: roll.total ?? null
     })),
     status: character?.creation?.state?.status ?? null
+  }
+}
+
+export const normalizedCareerContinuationSlice = (
+  message: RoomStateMessage,
+  characterId: string
+): NormalizedCareerContinuationSlice => {
+  const creation = message.state?.characters[characterId]?.creation
+  return {
+    status: creation?.state?.status ?? null,
+    terms: (creation?.terms ?? []).map((term) => ({
+      career: term.career,
+      termSkillRolls: (term.facts?.termSkillRolls ?? []).map(
+        ({
+          career,
+          table,
+          tableRoll,
+          rawSkill,
+          skill,
+          pendingCascadeSkill,
+          roll
+        }) => ({
+          career,
+          table,
+          tableRoll,
+          rawSkill,
+          skill,
+          pendingCascadeSkill,
+          roll
+        })
+      ),
+      termCascadeSelections: term.facts?.termCascadeSelections ?? [],
+      musteringBenefits: (term.facts?.musteringBenefits ?? []).map(
+        ({ career, kind, tableRoll, value, credits, roll }) => ({
+          career,
+          kind,
+          tableRoll,
+          value,
+          credits,
+          roll
+        })
+      )
+    }))
   }
 }
 

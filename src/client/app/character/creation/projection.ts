@@ -350,7 +350,10 @@ export const musteringBenefitsFromProjection = (
   return legacyMusteringBenefitsFromProjectedTerms(creation)
 }
 
-export const flowFromProjectedCharacter = (
+// Compatibility adapter for the current wizard renderer. New UI/rules logic
+// should consume CharacterCreationReadModel and projected legal actions instead
+// of reconstructing mutable draft flow from the server projection.
+export const legacyFlowFromProjectedCharacter = (
   character: CharacterState
 ): CharacterCreationFlow | null => {
   const creation = character.creation

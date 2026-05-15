@@ -19,6 +19,7 @@ import {
   fetchProjectedCharacter,
   fetchRoomState,
   latestProjectedTermSkill,
+  normalizedCareerContinuationSlice,
   normalizedCharacteristicCreationSlice,
   normalizedText,
   openOrExpectFollowedCreation,
@@ -1427,6 +1428,73 @@ test.describe('character creation smoke', () => {
     expect(Object.values(firstRoom.characteristics)).toEqual(
       firstRoom.diceRolls.map((roll) => roll.total)
     )
+  })
+
+  test('normalizes same-seed career continuation across rooms', async ({
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const seed = 5
+
+    const driveContinuation = async (label: string) => {
+      const roomId = await openUniqueRoom(page)
+      await setRoomSeed(page, roomId, seed)
+      const actorId = actorIdFromPage(page)
+      const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+      await page.locator('#createCharacterRailButton').click()
+      const characterId = await activeCreationCharacterId(page, roomId, actorId)
+      const context: RepeatTravellerContext & { characterId: string } = {
+        ...createRepeatContext(label, seed, []),
+        characterId
+      }
+      await seedCreationToReenlistmentDecision(page, {
+        roomId,
+        actorId,
+        actorSession,
+        context
+      })
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'ResolveCharacterCreationReenlistment',
+        characterId: context.characterId
+      })
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'LeaveCharacterCreationCareer',
+        characterId: context.characterId
+      })
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'RollCharacterCreationMusteringBenefit',
+        characterId: context.characterId,
+        career: 'Scout',
+        kind: 'material'
+      })
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'ContinueCharacterCreationAfterMustering',
+        characterId: context.characterId
+      })
+      await postCommand(page, roomId, actorId, actorSession, {
+        type: 'StartCharacterCareerTerm',
+        characterId: context.characterId,
+        career: 'Merchant',
+        drafted: false
+      })
+
+      return normalizedCareerContinuationSlice(
+        await fetchRoomState(page, roomId, actorId),
+        context.characterId
+      )
+    }
+
+    const firstRoom = await driveContinuation('first')
+    const secondRoom = await driveContinuation('second')
+
+    expect(firstRoom).toEqual(secondRoom)
+    expect(firstRoom.status).toBe('BASIC_TRAINING')
+    expect(firstRoom.terms.map((term) => term.career)).toEqual([
+      'Scout',
+      'Merchant'
+    ])
+    expect(firstRoom.terms[0]?.musteringBenefits).toHaveLength(1)
   })
 
   test('lets another player follow a live characteristic roll without early reveal', async ({

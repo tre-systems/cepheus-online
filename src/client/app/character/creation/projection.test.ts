@@ -17,7 +17,7 @@ import {
 } from './flow'
 import {
   completedTermFromProjection,
-  flowFromProjectedCharacter,
+  legacyFlowFromProjectedCharacter,
   musteringBenefitsFromProjection
 } from './projection'
 
@@ -226,7 +226,7 @@ const character = (creation: CharacterCreationProjection): CharacterState => ({
 
 describe('character creation projection helpers', () => {
   it('hydrates a failed qualification choice from projection-owned facts', () => {
-    const flow = flowFromProjectedCharacter(
+    const flow = legacyFlowFromProjectedCharacter(
       character({
         state: {
           status: 'CAREER_SELECTION',
@@ -289,7 +289,7 @@ describe('character creation projection helpers', () => {
   })
 
   it('keeps projected aging blocked until anagathics is explicitly decided', () => {
-    const flow = flowFromProjectedCharacter(
+    const flow = legacyFlowFromProjectedCharacter(
       character(agingProjection(resolvedTermSkillHistory))
     )
     if (!flow) throw new Error('Expected projected flow')
@@ -302,7 +302,7 @@ describe('character creation projection helpers', () => {
   })
 
   it('allows projected aging after the active term has an anagathics decision', () => {
-    const flow = flowFromProjectedCharacter(
+    const flow = legacyFlowFromProjectedCharacter(
       character(
         agingProjection([
           ...resolvedTermSkillHistory,
@@ -325,7 +325,7 @@ describe('character creation projection helpers', () => {
   })
 
   it('hydrates editable skills from projected term training', () => {
-    const flow = flowFromProjectedCharacter(
+    const flow = legacyFlowFromProjectedCharacter(
       character(agingProjection(resolvedTermSkillHistory))
     )
     if (!flow) throw new Error('Expected projected flow')
@@ -342,7 +342,7 @@ describe('character creation projection helpers', () => {
       basicTrainingSkills: ['Vacc Suit-0']
     }
 
-    const flow = flowFromProjectedCharacter(character(creation))
+    const flow = legacyFlowFromProjectedCharacter(character(creation))
     if (!flow) throw new Error('Expected projected flow')
 
     assert.deepEqual(flow.draft.skills, ['Vacc Suit-0', 'Gambling-1'])
@@ -370,7 +370,7 @@ describe('character creation projection helpers', () => {
       }
     }
 
-    const flow = flowFromProjectedCharacter(character(creation))
+    const flow = legacyFlowFromProjectedCharacter(character(creation))
     if (!flow) throw new Error('Expected projected flow')
 
     assert.deepEqual(flow.draft.skills, [])
@@ -402,7 +402,7 @@ describe('character creation projection helpers', () => {
       ]
     }
 
-    const flow = flowFromProjectedCharacter(character(creation))
+    const flow = legacyFlowFromProjectedCharacter(character(creation))
     if (!flow) throw new Error('Expected projected flow')
 
     assert.deepEqual(flow.draft.skills, ['Slug Rifle-1'])
@@ -538,7 +538,7 @@ describe('character creation projection helpers', () => {
       context: { canCommission: false, canAdvance: true }
     }
 
-    const flow = flowFromProjectedCharacter(character(creation))
+    const flow = legacyFlowFromProjectedCharacter(character(creation))
     if (!flow) throw new Error('Expected projected flow')
 
     assert.deepEqual(flow.draft.careerPlan, {
@@ -663,7 +663,7 @@ describe('character creation projection helpers', () => {
   })
 
   it('starts a fresh active plan after reenlisting for another term', () => {
-    const flow = flowFromProjectedCharacter(
+    const flow = legacyFlowFromProjectedCharacter(
       character({
         ...agingProjection([
           ...resolvedTermSkillHistory,
@@ -773,7 +773,7 @@ describe('character creation projection helpers', () => {
   })
 
   it('requires anagathics decision before aging a reenlisted active term', () => {
-    const flow = flowFromProjectedCharacter(
+    const flow = legacyFlowFromProjectedCharacter(
       character({
         ...agingProjection([
           ...resolvedTermSkillHistory,
@@ -914,7 +914,7 @@ describe('character creation projection helpers', () => {
   })
 
   it('opens the equipment step for mustering out before and after benefits exist', () => {
-    const plainMusteringFlow = flowFromProjectedCharacter(
+    const plainMusteringFlow = legacyFlowFromProjectedCharacter(
       character({
         ...agingProjection(),
         state: {
@@ -926,7 +926,7 @@ describe('character creation projection helpers', () => {
         }
       })
     )
-    const benefitMusteringFlow = flowFromProjectedCharacter(
+    const benefitMusteringFlow = legacyFlowFromProjectedCharacter(
       character({
         ...agingProjection([
           {
@@ -1006,7 +1006,7 @@ describe('character creation projection helpers', () => {
       }
     ])
     assert.equal(
-      flowFromProjectedCharacter(character(creation))?.step,
+      legacyFlowFromProjectedCharacter(character(creation))?.step,
       'equipment'
     )
   })
@@ -1041,7 +1041,7 @@ describe('character creation projection helpers', () => {
 
     assert.deepEqual(musteringBenefitsFromProjection(creation), [])
     assert.deepEqual(
-      flowFromProjectedCharacter(character(creation))?.draft.musteringBenefits,
+      legacyFlowFromProjectedCharacter(character(creation))?.draft.musteringBenefits,
       []
     )
   })

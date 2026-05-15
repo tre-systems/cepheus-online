@@ -325,12 +325,36 @@ const redactMusteringBenefitSheetEffect = (
   }
 }
 
+const redactFinalizedTermOutcomeNotes = (
+  character: CharacterState,
+  hiddenTermNumbers: ReadonlySet<number>
+): void => {
+  if (
+    hiddenTermNumbers.size === 0 ||
+    !character.creation?.creationComplete ||
+    !character.notes
+  ) {
+    return
+  }
+
+  character.notes = character.notes
+    .split('\n')
+    .filter((line) => {
+      const termMatch = /^Term (\d+): .+, (survived|mishap)\.$/.exec(
+        line.trim()
+      )
+      return !termMatch || !hiddenTermNumbers.has(Number(termMatch[1]))
+    })
+    .join('\n')
+}
+
 const redactUnrevealedCreationFacts = (
   character: CharacterState,
   unrevealedRollIds: ReadonlySet<string>
 ): void => {
   const creation = character.creation
   if (!creation || unrevealedRollIds.size === 0) return
+  const hiddenFinalizedTermNoteNumbers = new Set<number>()
 
   if (creation.history) {
     const history = visibleCreationHistory(creation, unrevealedRollIds)
@@ -359,7 +383,7 @@ const redactUnrevealedCreationFacts = (
     delete creation.failedQualification
   }
 
-  for (const term of creation.terms) {
+  for (const [termIndex, term] of creation.terms.entries()) {
     const facts = term.facts
     if (!facts) continue
 
@@ -370,6 +394,7 @@ const redactUnrevealedCreationFacts = (
       delete facts.draft
     }
     if (hasUnrevealedRollFact(facts.survival, unrevealedRollIds)) {
+      hiddenFinalizedTermNoteNumbers.add(termIndex + 1)
       delete facts.survival
       delete (term as unknown as { survival?: number }).survival
     }
@@ -464,6 +489,8 @@ const redactUnrevealedCreationFacts = (
       }
     }
   }
+
+  redactFinalizedTermOutcomeNotes(character, hiddenFinalizedTermNoteNumbers)
 }
 
 export const resolveViewerForState = (
