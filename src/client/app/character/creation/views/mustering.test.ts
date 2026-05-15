@@ -106,6 +106,23 @@ describe('character creation mustering view', () => {
     assert.deepEqual(rolled, ['Merchant:cash'])
   })
 
+  it('labels legacy aggregate benefits without fake table rolls', () => {
+    const viewModel = musteringViewModel({
+      musteringBenefits: [
+        {
+          career: 'Scout',
+          kind: 'material',
+          roll: 0,
+          legacyProjection: true,
+          value: 'Low Passage',
+          credits: 0
+        }
+      ]
+    })
+
+    assert.equal(viewModel.benefits[0]?.rollLabel, 'Legacy benefit')
+  })
+
   it('disables cash after three cash benefits and reports roll errors', async () => {
     const rolled: string[] = []
     let error = ''

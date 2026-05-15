@@ -151,7 +151,7 @@ export const careerPlanFromProjection = (
 const isCashMusteringBenefitValue = (value: string): boolean =>
   /^\d+$/.test(value.trim())
 
-const musteringBenefitsFromProjectedTerms = (
+const legacyMusteringBenefitsFromProjectedTerms = (
   creation: CharacterCreationProjection
 ): CharacterCreationMusteringBenefit[] =>
   creation.terms.flatMap((term) =>
@@ -162,6 +162,7 @@ const musteringBenefitsFromProjectedTerms = (
         career: term.career,
         kind: isCash ? 'cash' : 'material',
         roll: 0,
+        legacyProjection: true,
         value,
         credits: isCash ? Number(value) : 0
       }
@@ -189,7 +190,7 @@ export const musteringBenefitsFromProjection = (
 
   return benefits.length > 0
     ? benefits
-    : musteringBenefitsFromProjectedTerms(creation)
+    : legacyMusteringBenefitsFromProjectedTerms(creation)
 }
 
 export const flowFromProjectedCharacter = (

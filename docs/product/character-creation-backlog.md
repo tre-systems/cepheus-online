@@ -92,8 +92,10 @@ Important remaining gaps:
   are present, including mustering career ownership. Mustering benefit counts,
   cash caps, anagathics eligibility, reenlistment outcomes, and server term-skill
   gates prefer per-term facts with explicit legacy aggregate fallbacks.
-  Remaining work is to reduce legacy client fallback paths and keep polishing
-  provenance and presentation.
+  The client projection adapter marks old aggregate mustering benefits as a
+  legacy fallback instead of inventing roll provenance. Remaining work is to
+  reduce legacy client fallback paths and keep polishing provenance and
+  presentation.
 - Multi-term career play, mustering out, and multi-career continuation have
   deterministic browser coverage, including spectator follow through mustering
   and finalization. Remaining work is edge-case coverage and UX polish.

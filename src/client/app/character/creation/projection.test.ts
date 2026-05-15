@@ -580,7 +580,7 @@ describe('character creation projection helpers', () => {
     assert.equal(benefitMusteringFlow?.step, 'equipment')
   })
 
-  it('recovers mustering benefits from projected terms without legacy history', () => {
+  it('marks legacy aggregate mustering benefits without inventing roll facts', () => {
     const creation: CharacterCreationProjection = {
       ...agingProjection(),
       state: {
@@ -612,6 +612,7 @@ describe('character creation projection helpers', () => {
         career: 'Scout',
         kind: 'material',
         roll: 0,
+        legacyProjection: true,
         value: 'Low Passage',
         credits: 0
       },
@@ -619,6 +620,7 @@ describe('character creation projection helpers', () => {
         career: 'Scout',
         kind: 'cash',
         roll: 0,
+        legacyProjection: true,
         value: '20000',
         credits: 20000
       }

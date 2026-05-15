@@ -586,6 +586,7 @@ const musteringBenefitValueLabel = (
 const musteringBenefitRollLabel = (
   benefit: CharacterCreationMusteringBenefit
 ): string => {
+  if (benefit.legacyProjection) return 'Legacy benefit'
   const diceRoll = benefit.diceRoll ?? null
   const modifier = benefit.modifier ?? null
   const tableRoll = benefit.tableRoll ?? benefit.roll

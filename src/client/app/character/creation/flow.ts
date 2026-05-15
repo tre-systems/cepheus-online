@@ -155,6 +155,7 @@ export interface CharacterCreationMusteringBenefit {
   diceRoll?: number | null
   modifier?: number | null
   tableRoll?: number | null
+  legacyProjection?: boolean
   value: string
   credits: number
   materialItem?: string | null
@@ -477,6 +478,7 @@ const cloneMusteringBenefits = (
     ...(benefit.diceRoll != null ? { diceRoll: benefit.diceRoll } : {}),
     ...(benefit.modifier != null ? { modifier: benefit.modifier } : {}),
     ...(benefit.tableRoll != null ? { tableRoll: benefit.tableRoll } : {}),
+    ...(benefit.legacyProjection ? { legacyProjection: true } : {}),
     value: benefit.value,
     credits: benefit.credits,
     ...(benefit.materialItem != null

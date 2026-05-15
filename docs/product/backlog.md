@@ -1345,14 +1345,16 @@ The next batch should run like this, in this order:
    benefits when legacy history is absent. Server and client cash benefit limit
    checks now use projected term benefits. Boundary checks now keep new client
    creator code from reading legacy history outside compatibility helpers.
+   Client compatibility fallbacks for old aggregate mustering benefits are
+   marked as legacy and no longer present fake roll provenance.
    Per-term semantic `facts` now carry qualification, draft,
    survival, commission, advancement, rank, term skill, aging, anagathics,
    reenlistment, and mustering benefit details; legal actions, term-skill and
    mustering validators, and the client projection adapter use those facts
-   instead of reconstructing the active term from legacy history. The remaining legacy
-   aggregate fallbacks are explicit compatibility paths for old projections;
-   the legacy `history` model remains only for historical replay compatibility
-   and older activity consumers.
+   instead of reconstructing the active term from legacy history. The remaining
+   legacy aggregate fallbacks are explicit compatibility paths for old
+   projections; the legacy `history` model remains only for historical replay
+   compatibility and older activity consumers.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.
