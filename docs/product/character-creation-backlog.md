@@ -284,10 +284,12 @@ Tasks:
   - `CreationHistoryEntry`
 - Move legal-action derivation into shared pure functions. The client may
   filter actions for layout, but it must not invent or unlock them.
-- Remove the remaining broad `AdvanceCharacterCreation` transition bridge now
-  that semantic commands exist for the main SRD path. Keep adding semantic
-  commands where behavior still matters, especially optional mishaps,
-  anagathics, multi-career continuation, and final export/provenance.
+- Keep the broad `AdvanceCharacterCreation` transition bridge fenced now that
+  semantic commands exist for the main SRD path. Protocol validation rejects
+  generic rules-bearing creation facts in favor of semantic commands, and the
+  server deprecated-command path rejects before persistence. Keep adding
+  semantic commands where behavior still matters, especially future optional
+  rule branches and deeper export/provenance.
 - Default death confirmation now has a semantic path, optional mishap
   placeholder payloads are fenced until the optional mishap variant is
   implemented, and the server-persisted characteristic completion event is now

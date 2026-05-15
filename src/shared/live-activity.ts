@@ -673,6 +673,7 @@ export const deriveLiveActivity = (
         type: 'characterCreation',
         characterId: event.characterId,
         transition: 'SKIP_COMMISSION',
+        details: 'Commission skipped',
         status: event.state.status,
         creationComplete: event.creationComplete
       }
@@ -706,6 +707,7 @@ export const deriveLiveActivity = (
         type: 'characterCreation',
         characterId: event.characterId,
         transition: 'SKIP_ADVANCEMENT',
+        details: 'Advancement skipped',
         status: event.state.status,
         creationComplete: event.creationComplete
       }

@@ -174,27 +174,50 @@ const backgroundSkillSourceValue = (
     .join(', ')
 }
 
-const careerRankTitles = (
+interface CareerExportRank {
+  name: string
+  rank: number
+  title: string | null
+}
+
+const deriveCareerExportRanks = (
   creation: CharacterCreationProjection | null | undefined
-): Map<string, string> => {
-  const titles = new Map<string, string>()
+): CareerExportRank[] => {
+  if (!creation) return []
+
+  const ranks = new Map<string, CareerExportRank>()
+  for (const career of creation.careers) {
+    ranks.set(career.name, {
+      name: career.name,
+      rank: career.rank,
+      title: null
+    })
+  }
+
   for (const term of creation?.terms ?? []) {
     const advancement = term.facts?.advancement
     const rank = advancement && !advancement.skipped ? advancement.rank : null
-    if (rank?.title) titles.set(rank.career, rank.title)
+    if (rank) {
+      ranks.set(rank.career, {
+        name: rank.career,
+        rank: rank.newRank,
+        title: rank.title || null
+      })
+    }
   }
-  return titles
+
+  return [...ranks.values()]
 }
 
 const careerValue = (
   creation: CharacterCreationProjection | null | undefined
 ): string => {
-  if (!creation || creation.careers.length === 0) return 'None'
+  const careers = deriveCareerExportRanks(creation)
+  if (careers.length === 0) return 'None'
 
-  const titles = careerRankTitles(creation)
-  return creation.careers
+  return careers
     .map((career) => {
-      const title = titles.get(career.name)
+      const title = career.title
       return `${career.name} rank ${career.rank}${title ? ` (${title})` : ''}`
     })
     .join('; ')

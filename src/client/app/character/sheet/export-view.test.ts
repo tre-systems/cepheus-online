@@ -477,12 +477,18 @@ describe('character sheet export view', () => {
   it('prefers semantic term facts over conflicting legacy aggregates', () => {
     const creation = finalizedCreation()
     const term = creation.terms[0]
+    creation.careers = [{ name: 'Scout', rank: 0 }]
     term.skills = ['Legacy Skill-6']
     term.skillsAndTraining = ['Legacy Training-5']
     term.benefits = ['Legacy Benefit']
     term.survival = 2
     term.advancement = 2
     term.reEnlistment = 2
+    const advancement = term.facts?.advancement
+    if (advancement && !advancement.skipped && advancement.rank) {
+      advancement.rank.newRank = 2
+      advancement.rank.title = 'Senior Scout'
+    }
     term.facts = {
       ...term.facts,
       basicTrainingSkills: ['Comms-0'],
@@ -514,6 +520,11 @@ describe('character sheet export view', () => {
 
     const exportText = derivePlainCharacterExport(character({ creation })) ?? ''
 
+    assert.equal(
+      exportText.includes('Careers: Scout rank 2 (Senior Scout)'),
+      true
+    )
+    assert.equal(exportText.includes('Careers: Scout rank 0'), false)
     assert.equal(exportText.includes('skills Piloting-1, Comms-0'), true)
     assert.equal(exportText.includes('benefits Blade (roll 4)'), true)
     assert.equal(exportText.includes('Legacy Skill'), false)

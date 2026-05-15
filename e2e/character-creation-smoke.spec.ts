@@ -3869,6 +3869,20 @@ test.describe('character creation smoke', () => {
         { timeout: 5_000 }
       )
 
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(page, characterName)
+      await expect(ownerFields).toContainText('Merchant Cash', {
+        timeout: 5_000
+      })
+      await expect(ownerFields).toContainText(`Cr${projectedBenefit.value}`, {
+        timeout: 5_000
+      })
+      await expect(ownerFields).toContainText(
+        `Roll ${projectedBenefit.roll.total}`,
+        { timeout: 5_000 }
+      )
+
       await postCommand(page, roomId, actorId, actorSession, {
         type: 'CompleteCharacterCreationMustering',
         characterId
@@ -3887,6 +3901,14 @@ test.describe('character creation smoke', () => {
           return character?.creation?.state?.status
         })
         .toBe('ACTIVE')
+
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(page, characterName)
+      await expect(ownerFields).toContainText(
+        /Create character|Final Character/,
+        { timeout: 5_000 }
+      )
 
       await postCommand(page, roomId, actorId, actorSession, {
         type: 'FinalizeCharacterCreation',

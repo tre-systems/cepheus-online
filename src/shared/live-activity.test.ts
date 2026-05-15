@@ -506,6 +506,47 @@ describe('live activity derivation', () => {
     })
   })
 
+  it('derives skipped commission and advancement activity from semantic events', () => {
+    const activities = deriveLiveActivities([
+      envelope(8, {
+        type: 'CharacterCreationCommissionSkipped',
+        characterId,
+        state: {
+          status: 'ADVANCEMENT',
+          context: {
+            canCommission: false,
+            canAdvance: true
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(9, {
+        type: 'CharacterCreationAdvancementSkipped',
+        characterId,
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    assert.deepEqual(
+      activities.map((activity) =>
+        activity.type === 'characterCreation'
+          ? [activity.transition, activity.details, activity.status]
+          : null
+      ),
+      [
+        ['SKIP_COMMISSION', 'Commission skipped', 'ADVANCEMENT'],
+        ['SKIP_ADVANCEMENT', 'Advancement skipped', 'SKILLS_TRAINING']
+      ]
+    )
+  })
+
   it('derives compact activity details for SRD character creation milestones', () => {
     const activities = deriveLiveActivities([
       envelope(1, {
