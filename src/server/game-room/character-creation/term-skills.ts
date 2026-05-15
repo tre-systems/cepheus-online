@@ -1,5 +1,6 @@
 import {
   careerSkillWithLevel,
+  deriveCareerCreationActionContext,
   deriveCareerCreationComplete,
   isCascadeCareerSkill,
   normalizeCareerSkill,
@@ -20,7 +21,11 @@ import type {
   CharacterCreationProjection,
   CharacterState
 } from '../../../shared/state'
-import { loadCharacterCreationCommandContext } from '../character-creation-command-helpers'
+import {
+  requireLegalCharacterCreationAction,
+  requireCharacterCreationStatus,
+  loadCharacterCreationCommandContext
+} from '../character-creation-command-helpers'
 import {
   commandError,
   type CommandContext,
@@ -79,6 +84,10 @@ const termCharacteristicGain = (
 export const requiredTermSkillCount = (
   creation: CharacterCreationProjection
 ): number => {
+  if (creation.requiredTermSkillCount !== undefined) {
+    return creation.requiredTermSkillCount
+  }
+
   const term = creation.terms.at(-1)
   if (
     !term ||
@@ -104,6 +113,27 @@ export const activeTermSkillCount = (
     : term.skills.length
 }
 
+const requireNoUnrelatedTermCascadeDecisions = (
+  creation: CharacterCreationProjection
+): Result<void, CommandError> => {
+  const actionContext = deriveCareerCreationActionContext(creation)
+  const blockingDecision = actionContext.pendingDecisions?.find(
+    (decision) =>
+      decision.key !== 'cascadeSkillResolution' &&
+      decision.key !== 'skillTrainingSelection'
+  )
+  if (blockingDecision) {
+    return err(
+      commandError(
+        'invalid_command',
+        'TERM_CASCADE_SKILL is blocked by unresolved character creation decisions'
+      )
+    )
+  }
+
+  return ok(undefined)
+}
+
 export const validateTermSkillRoll = (
   character: CharacterState,
   table: string
@@ -113,14 +143,13 @@ export const validateTermSkillRoll = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'SKILLS_TRAINING') {
-    return err(
-      commandError(
-        'invalid_command',
-        `TERM_SKILL is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'SKILLS_TRAINING',
+    'TERM_SKILL'
+  )
+  if (!status.ok) return status
+
   if (!isCareerCreationTermSkillTable(table)) {
     return err(commandError('invalid_command', 'term skill table is not valid'))
   }
@@ -151,6 +180,12 @@ export const validateTermSkillRoll = (
       commandError('invalid_command', 'Required term skill rolls are complete')
     )
   }
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['rollTermSkill'],
+    'TERM_SKILL is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -163,14 +198,13 @@ export const validateSkillsCompletion = (
       commandError('missing_entity', 'Character creation has not been started')
     )
   }
-  if (character.creation.state.status !== 'SKILLS_TRAINING') {
-    return err(
-      commandError(
-        'invalid_command',
-        `COMPLETE_SKILLS is not valid from ${character.creation.state.status}`
-      )
-    )
-  }
+  const status = requireCharacterCreationStatus(
+    character.creation,
+    'SKILLS_TRAINING',
+    'COMPLETE_SKILLS'
+  )
+  if (!status.ok) return status
+
   if ((character.creation.pendingCascadeSkills ?? []).length > 0) {
     return err(
       commandError(
@@ -190,6 +224,12 @@ export const validateSkillsCompletion = (
       )
     )
   }
+  const legalAction = requireLegalCharacterCreationAction(
+    character.creation,
+    ['completeSkills'],
+    'COMPLETE_SKILLS is blocked by unresolved character creation decisions'
+  )
+  if (!legalAction.ok) return legalAction
 
   return ok(character.creation)
 }
@@ -377,6 +417,11 @@ export const deriveSkillCommandEvents = (
           )
         )
       }
+      const noBlockingDecision = requireNoUnrelatedTermCascadeDecisions(
+        character.creation
+      )
+      if (!noBlockingDecision.ok) return noBlockingDecision
+
       const cascadeSkill = normalizeBackgroundSkill(command.cascadeSkill)
       if (!cascadeSkill.ok) return cascadeSkill
       const selection = requireNonEmptyString(command.selection, 'selection')

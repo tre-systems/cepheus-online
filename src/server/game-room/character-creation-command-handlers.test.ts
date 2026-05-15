@@ -1333,7 +1333,10 @@ describe('character creation setup command handlers', () => {
           skills: [],
           skillsAndTraining: ['Broker-0'],
           benefits: [],
-          facts: { termSkillRolls: [termSkillRoll] },
+          facts: {
+            survival: survivalFact(true),
+            termSkillRolls: [termSkillRoll]
+          },
           complete: false,
           canReenlist: true,
           completedBasicTraining: true,
@@ -1369,6 +1372,148 @@ describe('character creation setup command handlers', () => {
     assert.equal(extraRoll.error.code, 'invalid_command')
     assert.equal(extraRoll.error.message.includes('complete'), true)
     assert.equal(completion.ok, true)
+  })
+
+  it('rejects term skill rolls blocked by unrelated projected decisions', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationTermSkill',
+        gameId,
+        actorId,
+        characterId,
+        table: 'serviceSkills'
+      },
+      context(
+        createCreation('SKILLS_TRAINING', {
+          state: createCareerCreationState('SKILLS_TRAINING', {
+            canCommission: true,
+            canAdvance: false
+          }),
+          pendingDecisions: [{ key: 'agingResolution' }],
+          terms: [
+            {
+              career: 'Merchant',
+              skills: [],
+              skillsAndTraining: ['Broker-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 7
+            }
+          ]
+        })
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message.includes('blocked'), true)
+  })
+
+  it('uses projected required term skill count for roll and completion gates', () => {
+    const termSkillRoll = {
+      career: 'Merchant',
+      table: 'serviceSkills' as const,
+      roll: { expression: '1d6' as const, rolls: [2], total: 2 },
+      tableRoll: 2,
+      rawSkill: 'Broker',
+      skill: 'Broker-1',
+      characteristic: null,
+      pendingCascadeSkill: null
+    }
+    const creation = createCreation('SKILLS_TRAINING', {
+      state: createCareerCreationState('SKILLS_TRAINING', {
+        canCommission: true,
+        canAdvance: false
+      }),
+      requiredTermSkillCount: 2,
+      terms: [
+        {
+          career: 'Merchant',
+          skills: ['Broker-1'],
+          skillsAndTraining: ['Broker-0', 'Broker-1'],
+          benefits: [],
+          facts: {
+            survival: survivalFact(true),
+            termSkillRolls: [termSkillRoll]
+          },
+          complete: false,
+          canReenlist: true,
+          completedBasicTraining: true,
+          musteringOut: false,
+          anagathics: false,
+          survival: 7
+        }
+      ]
+    })
+
+    const extraRoll = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationTermSkill',
+        gameId,
+        actorId,
+        characterId,
+        table: 'serviceSkills'
+      },
+      context(creation)
+    )
+    const completion = deriveCharacterCreationCommandEvents(
+      {
+        type: 'CompleteCharacterCreationSkills',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(creation)
+    )
+
+    assert.equal(extraRoll.ok, true)
+    assert.equal(completion.ok, false)
+    if (completion.ok) return
+    assert.equal(completion.error.code, 'invalid_command')
+    assert.equal(completion.error.message.includes('blocked'), true)
+  })
+
+  it('rejects term cascade resolution blocked by unrelated projected decisions', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'ResolveCharacterCreationTermCascadeSkill',
+        gameId,
+        actorId,
+        characterId,
+        cascadeSkill: 'Gun Combat-0',
+        selection: 'Slug Pistol'
+      },
+      context(
+        createCreation('SKILLS_TRAINING', {
+          pendingCascadeSkills: ['Gun Combat-0'],
+          pendingDecisions: [{ key: 'agingResolution' }],
+          terms: [
+            {
+              career: 'Merchant',
+              skills: ['Gun Combat-0'],
+              skillsAndTraining: ['Broker-0', 'Gun Combat-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 7
+            }
+          ]
+        })
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message.includes('blocked'), true)
   })
 
   it('emits skills completion after required term skills', () => {
