@@ -98,7 +98,7 @@ const deriveTermCreationSkills = (
   term: CharacterCreationProjection['terms'][number]
 ): string[] => {
   const factSkills = deriveTermSkillsFromFacts(term)
-  if (hasSemanticTermFacts(term) && factSkills.length > 0) {
+  if (hasSemanticTermFacts(term)) {
     return factSkills
   }
 

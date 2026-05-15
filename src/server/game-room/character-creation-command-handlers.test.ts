@@ -2207,6 +2207,37 @@ describe('character creation setup command handlers', () => {
     assert.deepEqual(finalized.skills, ['Vacc Suit-0', 'Pilot-1'])
   })
 
+  it('ignores stale legacy term skills when finalizing semantic terms without skill facts', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'FinalizeCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('ACTIVE', {
+          terms: [
+            {
+              ...completedTerm(),
+              skills: ['Admin-6'],
+              skillsAndTraining: ['Admin-6'],
+              facts: { survival: survivalFact(true) }
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const finalized = result.value[1]
+    assert.equal(finalized?.type, 'CharacterCreationFinalized')
+    if (finalized?.type !== 'CharacterCreationFinalized') return
+    assert.deepEqual(finalized.skills, [])
+  })
+
   it('finalizes resolved term cascade skills from projected facts', () => {
     const result = deriveCharacterCreationCommandEvents(
       {
