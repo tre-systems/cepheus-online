@@ -8,26 +8,17 @@ import type {
 } from '../../../../shared/state'
 import type { CharacterCreationCommand } from '../../core/command-router.js'
 import {
-  applyCharacterCreationAgingRoll,
   applyCharacterCreationAnagathicsDecision,
   applyCharacterCreationBasicTraining,
-  applyCharacterCreationCareerRoll,
-  applyCharacterCreationCharacteristicRoll,
-  applyCharacterCreationMusteringBenefit,
-  applyCharacterCreationReenlistmentRoll,
-  applyCharacterCreationTermSkillRoll,
   applyParsedCharacterCreationDraftPatch,
   deriveCharacterCreationAgingChangeOptions,
-  deriveNextCharacterCreationAgingRoll,
   deriveNextCharacterCreationCharacteristicRoll,
-  resolveCharacterCreationDraftCareer,
   nextCharacterCreationMusteringBenefitCareer,
   updateCharacterCreationFields,
   type CharacterCreationAgingSelection,
   type CharacterCreationFlow,
   type CharacterCreationTermSkillTable
 } from './flow.js'
-import { flowFromProjectedCharacter } from './projection.js'
 import {
   deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCharacteristicRollButton,
@@ -99,9 +90,6 @@ const latestDiceRoll = (
 ): DiceRollState | null =>
   response.state?.diceLog?.[response.state.diceLog.length - 1] ?? null
 
-const hasDiceRollResult = (roll: DiceRollState | null): roll is DiceRollState =>
-  Array.isArray(roll?.rolls) && typeof roll?.total === 'number'
-
 const syncAndRender = (
   {
     syncFlowFromRoomState,
@@ -165,12 +153,6 @@ export const createCharacterCreationCommandController = (
 
   const syncDiceFlow = async (
     response: CharacterCreationCommandResponse,
-    fallback: (
-      flow: CharacterCreationFlow,
-      roll: DiceRollState
-    ) => {
-      flow: CharacterCreationFlow
-    },
     missingRollMessage: string
   ): Promise<boolean> => {
     const roll = latestDiceRoll(response)
@@ -182,16 +164,7 @@ export const createCharacterCreationCommandController = (
     await waitForDiceRevealOrDelay(roll)
     const flow = getFlow()
     if (!flow) return false
-    if (!hasDiceRollResult(roll)) {
-      syncFlowFromRoomState(response.state, flow.draft.characterId, flow)
-      return true
-    }
-    const fallbackFlow = fallback(flow, roll).flow
-    syncFlowFromRoomState(
-      response.state,
-      fallbackFlow.draft.characterId,
-      fallbackFlow
-    )
+    syncFlowFromRoomState(response.state, flow.draft.characterId, flow)
     return true
   }
 
@@ -266,12 +239,6 @@ export const createCharacterCreationCommandController = (
       if (
         !(await syncDiceFlow(
           response,
-          (nextFlow, roll) =>
-            applyCharacterCreationCharacteristicRoll(
-              nextFlow,
-              roll.total,
-              targetKey
-            ),
           'Characteristic roll did not return a dice result'
         ))
       ) {
@@ -329,22 +296,11 @@ export const createCharacterCreationCommandController = (
       }
 
       await waitForDiceRevealOrDelay(roll)
-      const projectedCharacter =
-        response.state?.characters?.[flowWithCareer.draft.characterId] ?? null
-      const projectedFlow = projectedCharacter
-        ? flowFromProjectedCharacter(projectedCharacter)
-        : null
-      const localResolvedFlow = applyCharacterCreationCareerRoll(
-        flowWithCareer,
-        roll.total
-      ).flow
-      const fallbackFlow =
-        projectedFlow?.draft.careerPlan ||
-        projectedCharacter?.creation?.state.status !== 'CAREER_SELECTION'
-          ? (projectedFlow ?? localResolvedFlow)
-          : localResolvedFlow
-
-      setFlow(fallbackFlow)
+      syncFlowFromRoomState(
+        response.state,
+        flowWithCareer.draft.characterId,
+        flowWithCareer
+      )
       renderWizard()
       scrollToTop()
     },
@@ -405,31 +361,10 @@ export const createCharacterCreationCommandController = (
         return
       }
       await waitForDiceRevealOrDelay(roll)
-      const career = resolveCharacterCreationDraftCareer(roll.total)
-      if (!career) {
-        setError('Draft roll did not resolve a career')
-        return
-      }
-      const fallbackFlow = applyParsedCharacterCreationDraftPatch(flow, {
-        careerPlan: {
-          career,
-          qualificationRoll: roll.total,
-          qualificationPassed: true,
-          survivalRoll: null,
-          survivalPassed: null,
-          commissionRoll: null,
-          commissionPassed: null,
-          advancementRoll: null,
-          advancementPassed: null,
-          canCommission: null,
-          canAdvance: null,
-          drafted: true
-        }
-      }).flow
       syncAndRender(
         { syncFlowFromRoomState, renderWizard, scrollToTop },
         response,
-        fallbackFlow
+        flow
       )
     },
 
@@ -474,12 +409,6 @@ export const createCharacterCreationCommandController = (
       if (
         await syncDiceFlow(
           response,
-          (nextFlow, roll) =>
-            applyCharacterCreationTermSkillRoll({
-              flow: nextFlow,
-              table,
-              roll: roll.total
-            }),
           'Term skill roll did not return a dice result'
         )
       ) {
@@ -513,12 +442,6 @@ export const createCharacterCreationCommandController = (
       if (
         await syncDiceFlow(
           response,
-          (nextFlow, roll) =>
-            applyCharacterCreationMusteringBenefit({
-              flow: nextFlow,
-              kind,
-              roll: roll.total
-            }),
           'Mustering roll did not return a dice result'
         )
       ) {
@@ -545,8 +468,6 @@ export const createCharacterCreationCommandController = (
       if (
         await syncDiceFlow(
           response,
-          (nextFlow, roll) =>
-            applyCharacterCreationReenlistmentRoll(nextFlow, roll.total),
           'Reenlistment roll did not return a dice result'
         )
       ) {
@@ -615,7 +536,6 @@ export const createCharacterCreationCommandController = (
       setError('')
       syncFields()
 
-      const action = deriveNextCharacterCreationAgingRoll(flow)
       await ensurePublished()
       const response = await postCharacterCreationCommand(
         {
@@ -628,11 +548,6 @@ export const createCharacterCreationCommandController = (
       if (
         await syncDiceFlow(
           response,
-          (nextFlow, roll) =>
-            applyCharacterCreationAgingRoll(
-              nextFlow,
-              roll.total + (action?.modifier ?? 0)
-            ),
           'Aging roll did not return a dice result'
         )
       ) {
@@ -732,8 +647,6 @@ export const createCharacterCreationCommandController = (
       if (
         await syncDiceFlow(
           response,
-          (nextFlow, roll) =>
-            applyCharacterCreationCareerRoll(nextFlow, roll.total),
           'Career roll did not return a dice result'
         )
       ) {

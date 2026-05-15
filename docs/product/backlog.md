@@ -387,12 +387,15 @@ Current Character Creation completion focus:
   mustering benefit choices, basic training choices, pending cascade skill
   choice options, homeworld choices, career choices, aging, anagathics,
   reenlistment, survival, commission, and advancement prompts. Legal gates now
-  prefer semantic term facts and use legacy aggregate term fields only for
-  compatibility.
-- Finalization and export now derive skills and display history from projected
-  term facts before legacy aggregates. Mustering cash modifiers also read
-  semantic term skill facts, so rules outcomes can be recovered from replayed
-  projection data.
+  split term-skill rolling from skill completion, prefer semantic term facts,
+  and use legacy aggregate term fields only for compatibility.
+- Mustering and finalization now consume accepted server projections instead of
+  local flow mutations: completed-term choices sync from the response
+  projection, mustering renders from `MUSTERING_OUT` projection state, and final
+  playable sheets derive notes, skills, and display history from semantic term
+  facts before legacy aggregates. Mustering cash modifiers also read semantic
+  term skill facts, so rules outcomes can be recovered from replayed projection
+  data.
 - Deterministic browser coverage now exercises the full character creation
   smoke suite, including two-tab following, no early roll reveal, death and
   replacement traveller creation, Draft/Drifter fallbacks, multi-career
@@ -921,23 +924,35 @@ Done when:
 
 ### Slice 1B: Server Projection And Legal Actions
 
+Status: mostly done for the default creation loop. The projection now exposes
+legal actions, pending decisions, roll requirements, term-skill table options,
+mustering benefit options, and finalization gates for the active SRD path.
+Term-skill rolling has its own projected legal action, while skill completion
+is a separate non-roll action. Mustering and finalization controls now sync from
+accepted projection state rather than local client flow, and semantic term
+facts are authoritative for term-skill gates, export, and finalization notes.
+The remaining work is compatibility cleanup, optional-branch coverage, and
+tightening validation as new branches land.
+
 Tasks:
 
-- Make projected creation state expose the legal-action plan needed by the
-  client: status, pending decisions, roll requirements, failed-qualification
-  options, remaining term skills, remaining mustering benefits, and completion
-  gates.
-- Persist pending choices such as cascade skills, basic training skill picks,
-  term skill table choices, aging losses, anagathics decisions, reenlistment,
-  and mustering-out benefit picks as projected state.
-- Derive all visible next actions from shared rules plus server projection.
-  Local client state may hold form drafts only.
-- Add server validation that rejects semantic commands whose prerequisite action
-  is not currently legal.
-- Add checkpoint-plus-tail recovery tests for the semantic creation event
-  families.
-- Add client view-model tests proving the UI cannot expose an action before the
-  server projection makes it legal.
+- Keep projected creation state as the only source for the client's legal
+  action plan: status, pending decisions, roll requirements,
+  failed-qualification options, remaining term skills, remaining mustering
+  benefits, and completion gates. This is done for the default term loop,
+  mustering, and finalization paths.
+- Keep pending choices such as cascade skills, basic training skill picks, term
+  skill table choices, aging losses, anagathics decisions, reenlistment, and
+  mustering-out benefit picks in projected state.
+- Keep visible next actions derived from shared rules plus server projection.
+  Local client state should hold only form drafts and transient controls.
+- Keep adding server validation that rejects semantic commands whose
+  prerequisite action is not currently legal, especially for optional branches
+  and compatibility edge cases.
+- Keep checkpoint-plus-tail recovery tests current for semantic creation event
+  families as new branches land.
+- Keep client view-model tests proving the UI cannot expose an action before
+  the server projection makes it legal.
 
 Done when:
 
@@ -1045,21 +1060,23 @@ finalization. SRD data alignment tests cover career tables, draft, rank rewards,
 skill tables, and benefits. Semantic survival, commission, advancement, term
 skill, aging, reenlistment, and mustering rolls now use server-derived dice
 facts. Projected legal actions now carry term-skill table options and mustering
-benefit choices, so the browser no longer has to rediscover those visible
-choice lists from local rules helpers. The next priority is hardening the
-remaining pending decisions, provenance, browser automation, and
-multi-term/mustering UX rather than adding more client-only flow logic.
+benefit choices, and term-skill rolls are separated from skill completion, so
+the browser no longer has to rediscover those visible choice lists or roll gates
+from local rules helpers. The next priority is hardening optional branches,
+provenance, browser automation, and multi-term/mustering UX rather than adding
+more client-only flow logic.
 
 Tasks:
 
 - Keep semantic survival pass/fail events as the pattern for the rest of the
   term loop: command intent, server-derived roll facts, projection-owned gates,
   and replay tests.
-- Enforce outstanding selection gates for cascade, commission, promotion, and
-  term skills before the server accepts the next command.
+- Keep enforcing outstanding selection gates for cascade, commission,
+  promotion, and term skills before the server accepts the next command.
 - Keep moving cascade follow-up decisions into projection so refresh restores
-  the same next action. Term skill table choices and mustering benefit choices
-  are now exposed through projected legal-action options.
+  the same next action. Term skill table choices, term-skill roll gates, and
+  mustering benefit choices are now exposed through projected legal-action
+  options.
 - Harden the real-browser term loop through survival, commission,
   advancement, term skills, aging, reenlistment, and either death or mustering.
 - Add compact term-history cards from semantic term events.
@@ -1128,12 +1145,16 @@ Done when:
 
 ### Slice 2D: Mustering Out
 
-Status: partially done. SRD benefit count, cash/material benefit roll
+Status: mostly done for the default creation loop. SRD benefit count,
+cash/material benefit roll
 modifiers, cash limits, benefit table resolution, semantic mustering benefit
 events, mustering completion events, multi-career continuation, compact
 cash/material payout cards, normalized material benefit labels, and material
-characteristic gains are covered. Remaining work is deeper material item
-metadata, benefit-choice copy, provenance, and final sheet/export quality.
+characteristic gains are covered. The mustering UI now renders from the
+`MUSTERING_OUT` projection state and completed-term choices sync from the
+accepted command projection instead of local flow mutation. Remaining work is
+deeper material item metadata, benefit-choice copy, provenance, and final
+sheet/export quality.
 
 Tasks:
 
@@ -1143,8 +1164,8 @@ Tasks:
   place.
 - Keep continuing into a new career after mustering out covered as new edge
   cases are added.
-- Keep regression coverage proving remaining benefit counts are projection-fed
-  and mustering cannot finish early.
+- Keep regression coverage proving remaining benefit counts are projection-fed,
+  mustering cannot finish early, and refresh restores the same mustering step.
 
 Done when:
 
@@ -1169,6 +1190,11 @@ Tasks:
   export block.
 - Done: final sheet and plain export presentation now share a structured export
   view model so later review/export polish has one client read model to extend.
+- Done: semantic term facts are authoritative for finalization/export when they
+  are present, including facts-only terms and conflicting legacy aggregate
+  fields. Finalization notes derive survival summaries from projected term
+  facts, and browser finalization now hands off to the final sheet from the
+  accepted projection at phone width.
 - Extend final playable sheet coverage for deeper provenance and material
   benefit metadata as those display fields mature.
 - Polish copy/layout around the completed-character summary and export block
@@ -1369,9 +1395,10 @@ The next batch should run like this, in this order:
    two-tab spectator follow checks healthy, add mobile viewport assertions for
    new controls, and keep reveal timing coverage for every roll-bearing action.
 6. Finish the remaining projection/read-model consolidation: expose compact
-   follower and final-sheet view models from semantic timeline plus per-term
-   facts, reduce compatibility fallbacks for older aggregate term fields, and
-   reject commands that are not legal from the current projection.
+   follower view models from semantic timeline plus per-term facts, keep
+   extending the structured final-sheet/export model as provenance matures,
+   reduce compatibility fallbacks for older aggregate term fields, and reject
+   commands that are not legal from the current projection.
 7. Harden the SRD term loop in browser automation: repeated refreshes, mobile
    layouts, and multi-term continuation.
 8. Keep optional mishap tables behind an explicit variant; default failed

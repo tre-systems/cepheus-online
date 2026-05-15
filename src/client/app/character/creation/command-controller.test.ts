@@ -449,10 +449,12 @@ describe('character creation command controller', () => {
     )
   })
 
-  it('rolls a characteristic, waits for reveal, and syncs fallback flow', async () => {
+  it('rolls a characteristic, waits for reveal, and syncs accepted projection', async () => {
     let flow: CharacterCreationFlow | null = characteristicFlow()
     const commands: CharacterCreationCommand[] = []
     const waitedFor: string[] = []
+    const events: string[] = []
+    const syncedStates: Array<GameState | null> = []
     const syncedFallbacks: CharacterCreationFlow[] = []
     let renderCount = 0
     let scrollCount = 0
@@ -476,18 +478,23 @@ describe('character creation command controller', () => {
       commandIdentity: () => ({ gameId, actorId }),
       requestId: (scope) => scope,
       waitForDiceRevealOrDelay: async (nextRoll) => {
+        events.push('wait')
         waitedFor.push(nextRoll.id)
       },
-      syncFlowFromRoomState: (_state, _characterId, fallbackFlow) => {
+      syncFlowFromRoomState: (state, _characterId, fallbackFlow) => {
+        events.push('sync')
+        syncedStates.push(state)
         syncedFallbacks.push(fallbackFlow)
         flow = fallbackFlow
         return fallbackFlow
       },
       autoAdvanceSetup: () => false,
       renderWizard: () => {
+        events.push('render')
         renderCount += 1
       },
       scrollToTop: () => {
+        events.push('scroll')
         scrollCount += 1
       }
     })
@@ -502,7 +509,10 @@ describe('character creation command controller', () => {
       'str'
     )
     assert.deepEqual(waitedFor, ['roll-1'])
-    assert.equal(syncedFallbacks[0]?.draft.characteristics.str, 10)
+    assert.equal(syncedStates[0]?.diceLog.at(-1), roll)
+    assert.deepEqual(syncedFallbacks[0], characteristicFlow())
+    assert.equal(syncedFallbacks[0]?.draft.characteristics.str, null)
+    assert.deepEqual(events, ['wait', 'sync', 'render', 'scroll'])
     assert.equal(renderCount, 1)
     assert.equal(scrollCount, 1)
   })
@@ -538,20 +548,25 @@ describe('character creation command controller', () => {
     ])
   })
 
-  it('resolves career qualification, waits for reveal, and applies the fallback flow', async () => {
+  it('resolves career qualification, waits for reveal, and syncs accepted projection', async () => {
     let flow: CharacterCreationFlow | null = careerFlow()
     const commands: CharacterCreationCommand[] = []
     const requestIds: string[] = []
     const waitedFor: string[] = []
+    const syncedStates: Array<GameState | null> = []
+    const syncedFallbacks: CharacterCreationFlow[] = []
     const roll = diceRoll(7)
+    const responseState = stateWithDice(roll)
     let published = 0
     let flushed = 0
     let renderCount = 0
     let scrollCount = 0
+    let setFlowCount = 0
 
     const controller = createCharacterCreationCommandController({
       getFlow: () => flow,
       setFlow: (nextFlow) => {
+        setFlowCount += 1
         flow = nextFlow
       },
       setError: () => {},
@@ -567,14 +582,19 @@ describe('character creation command controller', () => {
       postCharacterCreationCommand: async (command, requestId) => {
         commands.push(command)
         requestIds.push(requestId)
-        return { state: stateWithDice(roll) }
+        return { state: responseState }
       },
       commandIdentity: () => ({ gameId, actorId }),
       requestId: (scope) => scope,
       waitForDiceRevealOrDelay: async (nextRoll) => {
         waitedFor.push(nextRoll.id)
       },
-      syncFlowFromRoomState: () => null,
+      syncFlowFromRoomState: (state, _characterId, fallbackFlow) => {
+        syncedStates.push(state)
+        syncedFallbacks.push(fallbackFlow)
+        flow = fallbackFlow
+        return fallbackFlow
+      },
       autoAdvanceSetup: () => false,
       renderWizard: () => {
         renderCount += 1
@@ -597,14 +617,22 @@ describe('character creation command controller', () => {
     )
     assert.deepEqual(requestIds, ['resolve-character-qualification'])
     assert.deepEqual(waitedFor, ['roll-1'])
+    assert.equal(syncedStates[0], responseState)
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.career, 'Merchant')
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.qualificationRoll, null)
+    assert.equal(
+      syncedFallbacks[0]?.draft.careerPlan?.qualificationPassed,
+      null
+    )
     assert.equal(flow?.draft.careerPlan?.career, 'Merchant')
-    assert.equal(flow?.draft.careerPlan?.qualificationRoll, 7)
-    assert.equal(flow?.draft.careerPlan?.qualificationPassed, true)
+    assert.equal(flow?.draft.careerPlan?.qualificationRoll, null)
+    assert.equal(flow?.draft.careerPlan?.qualificationPassed, null)
+    assert.equal(setFlowCount, 0)
     assert.equal(renderCount, 1)
     assert.equal(scrollCount, 1)
   })
 
-  it('keeps failed qualification fallback actions after dice reveal', async () => {
+  it('does not synthesize failed qualification actions from accepted dice totals', async () => {
     let flow: CharacterCreationFlow | null = careerFlow()
     const roll = diceRoll(2)
     const controller = createCharacterCreationCommandController({
@@ -624,7 +652,10 @@ describe('character creation command controller', () => {
       commandIdentity: () => ({ gameId, actorId }),
       requestId: (scope) => scope,
       waitForDiceRevealOrDelay: async () => {},
-      syncFlowFromRoomState: () => null,
+      syncFlowFromRoomState: (_state, _characterId, fallbackFlow) => {
+        flow = fallbackFlow
+        return fallbackFlow
+      },
       autoAdvanceSetup: () => false,
       renderWizard: () => {},
       scrollToTop: () => {}
@@ -633,8 +664,8 @@ describe('character creation command controller', () => {
     await controller.resolveCareerQualification('Rogue')
 
     assert.equal(flow?.draft.careerPlan?.career, 'Rogue')
-    assert.equal(flow?.draft.careerPlan?.qualificationRoll, 2)
-    assert.equal(flow?.draft.careerPlan?.qualificationPassed, false)
+    assert.equal(flow?.draft.careerPlan?.qualificationRoll, null)
+    assert.equal(flow?.draft.careerPlan?.qualificationPassed, null)
   })
 
   it('reports accepted qualification commands without dice results', async () => {
@@ -806,7 +837,7 @@ describe('character creation command controller', () => {
     assert.equal(scrolled, 1)
   })
 
-  it('rolls Draft after failed qualification, waits for reveal, and syncs projected fallback flow', async () => {
+  it('rolls Draft after failed qualification and syncs from the projected response', async () => {
     let flow: CharacterCreationFlow | null = failedQualificationFlow()
     const originalCharacterId = flow.draft.characterId
     const roll = diceRoll(4)
@@ -880,14 +911,15 @@ describe('character creation command controller', () => {
       roomState.characters[originalCharacterId]?.creation?.terms[0]?.career,
       'Navy'
     )
-    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.career, 'Navy')
-    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.qualificationRoll, 4)
+    assert.deepEqual(syncedFallbacks[0], failedQualificationFlow())
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.career, 'Rogue')
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.qualificationRoll, 2)
     assert.equal(
       syncedFallbacks[0]?.draft.careerPlan?.qualificationPassed,
-      true
+      false
     )
-    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.drafted, true)
-    assert.equal(flow?.draft.careerPlan?.career, 'Navy')
+    assert.equal(syncedFallbacks[0]?.draft.careerPlan?.drafted, false)
+    assert.equal(flow?.draft.careerPlan?.career, 'Rogue')
     assert.equal(rendered, 1)
     assert.equal(scrolled, 1)
   })
@@ -1173,7 +1205,7 @@ describe('character creation command controller', () => {
     assert.equal(renderCount, 1)
   })
 
-  it('rolls a semantic mustering benefit, waits for reveal, and syncs fallback flow', async () => {
+  it('rolls a semantic mustering benefit, waits for reveal, and syncs accepted projection', async () => {
     let flow: CharacterCreationFlow | null = musteringFlow()
     const commands: CharacterCreationCommand[] = []
     const requestIds: string[] = []
@@ -1239,15 +1271,7 @@ describe('character creation command controller', () => {
     )
     assert.deepEqual(requestIds, ['mustering-roll'])
     assert.deepEqual(waitedFor, ['roll-1'])
-    assert.deepEqual(syncedFallbacks[0]?.draft.musteringBenefits, [
-      {
-        career: 'Scout',
-        kind: 'material',
-        roll: 7,
-        value: '-',
-        credits: 0
-      }
-    ])
+    assert.deepEqual(syncedFallbacks[0]?.draft.musteringBenefits, [])
     assert.equal(renderCount, 1)
     assert.equal(scrollCount, 1)
   })
