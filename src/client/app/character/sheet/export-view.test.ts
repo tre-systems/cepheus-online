@@ -271,6 +271,72 @@ describe('character sheet export view', () => {
     )
   })
 
+  it('includes mishap injury provenance in term history exports', () => {
+    const creation = finalizedCreation()
+    creation.terms[0].facts = {
+      ...creation.terms[0].facts,
+      survival: {
+        passed: false,
+        canCommission: false,
+        canAdvance: false,
+        survival: {
+          expression: '2d6',
+          rolls: [1, 2],
+          total: 3,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: false
+        }
+      },
+      mishap: {
+        roll: { expression: '1d6', rolls: [1], total: 1 },
+        outcome: {
+          career: 'Scout',
+          roll: 1,
+          id: 'injured_in_action',
+          description:
+            'Injured in action. Treat as injury table result 2, or roll twice and take the lower result.',
+          discharge: 'honorable',
+          benefitEffect: 'forfeit_current_term',
+          debtCredits: 0,
+          extraServiceYears: 0,
+          injury: {
+            type: 'fixed',
+            injuryRoll: 2,
+            alternative: 'roll_twice_take_lower'
+          }
+        }
+      },
+      injury: {
+        severityRoll: { expression: '1d6', rolls: [4], total: 4 },
+        outcome: {
+          career: 'Scout',
+          roll: 2,
+          id: 'severely_injured',
+          description:
+            'Severely injured. Reduce one physical characteristic by 1D6.',
+          crisisRisk: true
+        },
+        selectedLosses: [{ characteristic: 'str', modifier: -4 }],
+        characteristicPatch: { str: 3 }
+      }
+    }
+
+    const exportText = derivePlainCharacterExport(character({ creation })) ?? ''
+
+    assert.equal(
+      exportText.includes('mishap 1: Injured in action.'),
+      true
+    )
+    assert.equal(
+      exportText.includes(
+        'injury table 2, severity 4: Severely injured. Reduce one physical characteristic by 1D6.; losses Str -4'
+      ),
+      true
+    )
+  })
+
   it('formats material characteristic gains in term history exports', () => {
     const creation = finalizedCreation()
     creation.terms[0].facts = {

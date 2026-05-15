@@ -335,6 +335,13 @@ const agingLossValue = (
 ): string =>
   `${characteristicLabels[loss.characteristic]} ${formatSignedModifier(loss.modifier)} (${loss.type.toLowerCase()})`
 
+const injuryLossValue = (
+  loss: NonNullable<
+    NonNullable<CareerTerm['facts']>['injury']
+  >['selectedLosses'][number]
+): string =>
+  `${characteristicLabels[loss.characteristic]} ${formatSignedModifier(loss.modifier)}`
+
 const termHistoryLine = (term: CareerTerm, index: number): string => {
   const facts = term.facts
   const parts: string[] = []
@@ -356,6 +363,24 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
     )
   } else if (!hasSemanticTermFacts(term) && term.survival != null) {
     parts.push(`survival ${term.survival}`)
+  }
+  if (facts?.mishap) {
+    parts.push(`mishap ${facts.mishap.roll.total}: ${facts.mishap.outcome.description}`)
+  }
+  if (facts?.injury) {
+    const injuryRoll = facts.injury.injuryRoll
+      ? `injury roll ${facts.injury.injuryRoll.total}`
+      : `injury table ${facts.injury.outcome.roll}`
+    const severityRoll = facts.injury.severityRoll
+      ? `, severity ${facts.injury.severityRoll.total}`
+      : ''
+    const losses =
+      facts.injury.selectedLosses.length > 0
+        ? `; losses ${facts.injury.selectedLosses.map(injuryLossValue).join(', ')}`
+        : '; no permanent loss'
+    parts.push(
+      `${injuryRoll}${severityRoll}: ${facts.injury.outcome.description}${losses}`
+    )
   }
   if (facts?.commission) {
     parts.push(
