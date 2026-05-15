@@ -313,6 +313,12 @@ const wizardViewModel = ({
           (action) => action.key === 'selectCareer'
         )?.failedQualificationOptions
       : undefined
+  const basicTrainingOptions =
+    projectedCreation?.state.status === 'BASIC_TRAINING'
+      ? projectedCreation.actionPlan?.legalActions.find(
+          (action) => action.key === 'completeBasicTraining'
+        )?.basicTrainingOptions
+      : undefined
 
   return {
     step: flow.step,
@@ -343,7 +349,9 @@ const wizardViewModel = ({
     ),
     termResolution: deriveCharacterCreationTermResolutionViewModel(flow),
     termSkills: deriveCharacterCreationTermSkillTrainingViewModel(flow),
-    basicTraining: deriveCharacterCreationBasicTrainingButton(flow),
+    basicTraining: deriveCharacterCreationBasicTrainingButton(flow, {
+      basicTrainingOptions
+    }),
     musteringOut:
       flow.step === 'equipment'
         ? deriveCharacterCreationMusteringOutViewModel(flow)

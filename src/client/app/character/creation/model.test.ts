@@ -743,6 +743,46 @@ describe('character creation view model', () => {
     ])
   })
 
+  it('uses projected basic training options for the skills step', () => {
+    const currentFlow = flow({
+      step: 'skills',
+      draft: {
+        ...flow().draft,
+        careerPlan: selectCharacterCreationCareerPlan('Merchant')
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('BASIC_TRAINING', {
+        actionPlan: {
+          status: 'BASIC_TRAINING',
+          pendingDecisions: [],
+          legalActions: [
+            {
+              key: 'completeBasicTraining',
+              status: 'BASIC_TRAINING',
+              commandTypes: ['CompleteCharacterCreationBasicTraining'],
+              basicTrainingOptions: {
+                kind: 'choose-one',
+                skills: ['Projected Skill-0']
+              }
+            }
+          ]
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(
+      viewModel.wizard?.basicTraining?.label,
+      'Choose basic training'
+    )
+    assert.deepEqual(viewModel.wizard?.basicTraining?.skills, [
+      'Projected Skill-0'
+    ])
+  })
+
   it('includes aging and reenlistment prompt state for career terms', () => {
     const reenlistment = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow(),

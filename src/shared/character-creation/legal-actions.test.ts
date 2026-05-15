@@ -407,6 +407,26 @@ describe('career creation legal action planner', () => {
     }
   })
 
+  it('projects basic training options from the active career term', () => {
+    const action = deriveCareerCreationActionPlan(
+      projection('BASIC_TRAINING', {
+        terms: [term({ career: 'Merchant' })]
+      })
+    ).legalActions[0]
+
+    assert.deepEqual(action?.basicTrainingOptions, {
+      kind: 'all',
+      skills: [
+        'Comms-0',
+        'Engineering-0',
+        'Gun Combat-0',
+        'Melee Combat-0',
+        'Broker-0',
+        'Vehicle-0'
+      ]
+    })
+  })
+
   it('gates status actions while required decisions are pending', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeys(

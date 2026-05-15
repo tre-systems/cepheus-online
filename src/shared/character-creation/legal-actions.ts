@@ -14,11 +14,13 @@ import {
   careerSkillWithLevel,
   formatCareerSkill,
   isCascadeCareerSkill,
+  normalizeCareerSkill,
   parseCareerSkill
 } from './skills'
 import { canCompleteCreation, canOfferNewCareer } from './term-lifecycle'
 import type {
   CascadeSkillChoice,
+  BasicTrainingActionOption,
   CareerChoiceCheckOption,
   CareerChoiceOptions,
   CareerCreationActionContext,
@@ -172,7 +174,7 @@ const canResolveBasicTrainingSelection = (
 
 const basicTrainingCommandTypes = [
   'CompleteCharacterCreationBasicTraining'
-] as unknown as LegalCareerCreationAction['commandTypes']
+] as const
 
 const termSkillTableLabels: Record<CareerCreationTermSkillTable, string> = {
   personalDevelopment: 'Personal development',
@@ -360,6 +362,32 @@ const deriveTermSkillTableOptions = (
         table !== 'advancedEducation' || (characteristics?.edu ?? 0) >= 8
     )
     .map((table) => ({ table, label: termSkillTableLabels[table] }))
+}
+
+const deriveBasicTrainingOptions = (
+  creation: CareerCreationActionProjection | undefined
+): BasicTrainingActionOption | undefined => {
+  if (!creation || creation.state.status !== 'BASIC_TRAINING') return undefined
+  const term = lastTerm(creation)
+  if (!term?.career) return undefined
+
+  const previousTerms = creation.terms?.slice(0, -1) ?? []
+  const plan = deriveBasicTrainingPlan({
+    career: term.career,
+    serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
+    completedTermCount: previousTerms.length,
+    previousCareerNames: previousTerms.map(
+      (previousTerm) => previousTerm.career
+    )
+  })
+  if (plan.kind === 'none') return { kind: 'none', skills: [] }
+
+  return {
+    kind: plan.kind,
+    skills: plan.skills
+      .map((skill) => normalizeCareerSkill(skill, 0))
+      .filter((skill): skill is string => skill !== null)
+  }
 }
 
 const deriveCashBenefitsReceived = (
@@ -789,6 +817,18 @@ export const deriveLegalCareerCreationActions = (
           context,
           actionOptions
         )
+      }
+    }
+
+    if (key === 'completeBasicTraining') {
+      const basicTrainingOptions = deriveBasicTrainingOptions(
+        actionOptions.creation
+      )
+      return {
+        key,
+        status: state.status,
+        ...actionDefinitions[key],
+        ...(basicTrainingOptions ? { basicTrainingOptions } : {})
       }
     }
 

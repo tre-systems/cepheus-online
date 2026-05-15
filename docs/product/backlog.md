@@ -384,12 +384,12 @@ Start with Streams A-D in parallel, with Stream E running opportunistically:
 Current Character Creation completion focus:
 
 - Projection-owned legal action data now covers term skill table choices,
-  mustering benefit choices, and pending cascade skill choice options. The
-  projection also carries homeworld law-level, trade-code, and background-skill
-  choice lists, plus career-selection choices and their SRD qualification,
-  survival, commission, and advancement check summaries. The client still keeps
-  fallback helpers for legacy local flows, but the active server projection is
-  now the preferred source for rendered choices.
+  mustering benefit choices, basic training choices, and pending cascade skill
+  choice options. The projection also carries homeworld law-level, trade-code,
+  and background-skill choice lists, plus career-selection choices and their SRD
+  qualification, survival, commission, and advancement check summaries. The
+  client still keeps fallback helpers for legacy local flows, but the active
+  server projection is now the preferred source for rendered choices.
 - Keep extending deterministic two-tab browser journeys for multi-term and
   multi-career travellers, especially through finalization and no early roll
   reveal. A focused deterministic browser test now covers a rolled term cascade

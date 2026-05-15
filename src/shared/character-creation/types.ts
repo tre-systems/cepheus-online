@@ -256,6 +256,7 @@ export type CareerCreationServerCommandType =
   | 'ResolveCharacterCreationQualification'
   | 'ResolveCharacterCreationDraft'
   | 'EnterCharacterCreationDrifter'
+  | 'CompleteCharacterCreationBasicTraining'
   | 'ResolveCharacterCreationSurvival'
   | 'ResolveCharacterCreationCommission'
   | 'SkipCharacterCreationCommission'
@@ -310,6 +311,11 @@ export interface TermSkillTableActionOption {
 export interface MusteringBenefitActionOption {
   career: string
   kind: BenefitKind
+}
+
+export interface BasicTrainingActionOption {
+  kind: BasicTrainingPlan['kind']
+  skills: readonly string[]
 }
 
 export interface CascadeSkillChoiceOption {
@@ -369,6 +375,7 @@ export interface LegalCareerCreationAction {
   failedQualificationOptions?: readonly FailedQualificationActionOption[]
   termSkillTableOptions?: readonly TermSkillTableActionOption[]
   musteringBenefitOptions?: readonly MusteringBenefitActionOption[]
+  basicTrainingOptions?: BasicTrainingActionOption
 }
 
 export type CareerCreationReenlistmentOutcome =

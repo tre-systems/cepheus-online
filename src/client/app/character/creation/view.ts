@@ -21,6 +21,7 @@ import {
 } from '../../../../shared/character-creation/skills.js'
 import type {
   BenefitKind,
+  BasicTrainingActionOption,
   CascadeSkillChoice,
   CareerChoiceOptions,
   FailedQualificationActionOption,
@@ -740,8 +741,31 @@ export const deriveCharacterCreationCharacteristicRollButton = (
 }
 
 export const deriveCharacterCreationBasicTrainingButton = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  {
+    basicTrainingOptions
+  }: { basicTrainingOptions?: BasicTrainingActionOption } = {}
 ): CharacterCreationBasicTrainingButton | null => {
+  if (basicTrainingOptions && flow.step === 'skills') {
+    if (basicTrainingOptions.kind === 'none') return null
+    const careerName = flow.draft.careerPlan?.career.trim()
+    if (!careerName || basicTrainingOptions.skills.length === 0) return null
+
+    return {
+      label:
+        basicTrainingOptions.kind === 'choose-one'
+          ? 'Choose basic training'
+          : 'Apply basic training',
+      reason:
+        basicTrainingOptions.kind === 'choose-one'
+          ? `Choose one ${careerName} service skill at level 0`
+          : `First ${careerName} term grants service skills at level 0`,
+      skills: [...basicTrainingOptions.skills],
+      kind: basicTrainingOptions.kind,
+      disabled: false
+    }
+  }
+
   const action = deriveCharacterCreationBasicTrainingAction(flow)
   if (!action) return null
 
