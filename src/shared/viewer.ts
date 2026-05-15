@@ -523,6 +523,12 @@ const redactUnrevealedCreationFacts = (
         redactTermSkillSheetEffect(character, fact)
       }
       const visibleFacts = visibleTermSkillFacts(term, unrevealedRollIds)
+      if (
+        hiddenFacts.length > 0 &&
+        visibleFacts.length < (creation.requiredTermSkillCount ?? 1)
+      ) {
+        redactCreationProgress(character, 'SKILLS_TRAINING')
+      }
       if (visibleFacts.length === 0) {
         delete facts.termSkillRolls
       } else {
@@ -556,6 +562,9 @@ const redactUnrevealedCreationFacts = (
       const hiddenFacts = facts.musteringBenefits.filter((fact) =>
         hasUnrevealedRollFact(fact, unrevealedRollIds)
       )
+      if (hiddenFacts.length > 0) {
+        redactCreationProgress(character, 'MUSTERING_OUT')
+      }
       const hiddenBenefitValues = new Set(hiddenFacts.map((fact) => fact.value))
       for (const fact of hiddenFacts) {
         redactMusteringBenefitSheetEffect(character, fact)

@@ -205,6 +205,14 @@ export const createCharacterCreationRenderController = ({
       }
       return fragment
     }
+    if (viewModel.wizard?.step === 'homeworld') {
+      if (viewModel.wizard?.homeworld) {
+        fragment.append(
+          renderCharacterCreationHomeworld(viewModel.wizard.homeworld)
+        )
+      }
+      return fragment
+    }
     const flow = viewModel.flow
     if (!flow) return fragment
     if (flow.step === 'career') {
@@ -279,14 +287,6 @@ export const createCharacterCreationRenderController = ({
       if (viewModel.wizard?.termHistory) {
         fragment.append(
           renderCharacterCreationTermHistory(viewModel.wizard.termHistory)
-        )
-      }
-      return fragment
-    }
-    if (flow.step === 'homeworld') {
-      if (viewModel.wizard?.homeworld) {
-        fragment.append(
-          renderCharacterCreationHomeworld(viewModel.wizard.homeworld)
         )
       }
       return fragment

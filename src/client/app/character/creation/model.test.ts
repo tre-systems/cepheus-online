@@ -644,6 +644,77 @@ describe('character creation view model', () => {
     )
   })
 
+  it('derives read-only homeworld from the shared read model without a legacy flow', () => {
+    const currentProjection = projection('HOMEWORLD', {
+      homeworld: {
+        name: null,
+        lawLevel: 'Low Law',
+        tradeCodes: ['Desert']
+      },
+      backgroundSkills: ['Survival-0'],
+      pendingCascadeSkills: [],
+      actionPlan: {
+        status: 'HOMEWORLD',
+        pendingDecisions: [{ key: 'homeworldSkillSelection' }],
+        legalActions: [],
+        homeworldChoiceOptions: {
+          lawLevels: ['Low Law'],
+          tradeCodes: ['Desert'],
+          backgroundSkills: [
+            {
+              value: 'Survival-0',
+              label: 'Survival',
+              preselected: true,
+              cascade: false
+            }
+          ]
+        }
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: currentProjection,
+      character: character(currentProjection, {
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }
+      }),
+      readOnly: true
+    })
+
+    assert.equal(viewModel.mode, 'read-only')
+    assert.equal(viewModel.flow, null)
+    assert.equal(viewModel.wizard?.step, 'homeworld')
+    assert.equal(viewModel.wizard?.homeworld?.summary.lawLevel, 'Low Law')
+    assert.deepEqual(viewModel.wizard?.homeworld?.summary.tradeCodes, [
+      'Desert'
+    ])
+    assert.deepEqual(viewModel.wizard?.homeworld?.lawLevelOptions, [
+      { value: 'Low Law', label: 'Low Law', selected: true }
+    ])
+    assert.deepEqual(viewModel.wizard?.homeworld?.tradeCodeOptions, [
+      { value: 'Desert', label: 'Desert', selected: true }
+    ])
+    assert.deepEqual(
+      viewModel.wizard?.homeworld?.backgroundSkills.skillOptions,
+      [
+        {
+          value: 'Survival-0',
+          label: 'Survival',
+          selected: true,
+          preselected: true,
+          cascade: false
+        }
+      ]
+    )
+  })
+
   it('includes career selection and roll state for the career step', () => {
     const currentFlow = flow({
       step: 'career',

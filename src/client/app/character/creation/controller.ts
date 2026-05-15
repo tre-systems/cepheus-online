@@ -10,10 +10,10 @@ import {
   signal
 } from '../../../reactive.js'
 import type { CharacterCreationFlow } from './flow.js'
-import { createInitialCharacterDraft } from './flow.js'
 import {
   projectedCharacterCreation,
   refreshFollowedCharacterCreationFlowFromState,
+  readModelFollowFlowFromCharacter,
   shouldRefreshEditableCharacterCreationFlow,
   syncCharacterCreationFlowFromRoomState
 } from './follow.js'
@@ -135,19 +135,16 @@ export const createCharacterCreationController = ({
     openFollow: (characterId, { readOnly: nextReadOnly = true } = {}) => {
       const character = getState()?.characters[characterId] ?? null
       if (!character?.creation) return null
-      const flowlessReadModelFollow =
-        nextReadOnly && character.creation.state.status === 'CHARACTERISTICS'
+      const flowlessReadModelFollow = nextReadOnly
+        ? character.creation.state.status === 'CHARACTERISTICS' ||
+          character.creation.state.status === 'HOMEWORLD'
+        : false
       const nextFlow = flowlessReadModelFollow
-        ? {
-            step: 'characteristics',
-            draft: createInitialCharacterDraft(characterId, {
-              characterType: character.type,
-              name: character.name,
-              characteristics: character.characteristics
-            })
-          } satisfies CharacterCreationFlow
+        ? readModelFollowFlowFromCharacter(character)
         : legacyFlowFromProjectedCharacter(character)
-      if (!flowlessReadModelFollow && !nextFlow) return null
+      if (!flowlessReadModelFollow && !nextFlow) {
+        return null
+      }
 
       batch(() => {
         bumpProjectionRevision()
@@ -210,7 +207,7 @@ export const createCharacterCreationController = ({
         bumpProjectionRevision()
         flow.value = refresh.flow
         readOnly.value = refresh.readOnly
-        if (!refresh.flow) {
+        if (refresh.shouldClose) {
           selectedCharacterId.value = null
         }
       })

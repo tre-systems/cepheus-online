@@ -175,6 +175,29 @@ describe('character creation controller', () => {
     )
   })
 
+  it('opens read-only homeworld from the shared read model without legacy flow', () => {
+    const projected = creation('HOMEWORLD')
+    const controller = createCharacterCreationController({
+      getState: () => stateWithCreation(projected),
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+
+    assert.equal(controller.openFollow(characterId)?.step, 'homeworld')
+    assert.equal(controller.flow()?.step, 'homeworld')
+    assert.equal(controller.readOnly(), true)
+    assert.equal(controller.selectedCharacterId(), characterId)
+    assert.equal(controller.currentProjection(), projected)
+    assert.equal(controller.viewModel().mode, 'read-only')
+    assert.equal(controller.viewModel().characterId, characterId)
+    assert.equal(controller.viewModel().wizard?.step, 'homeworld')
+
+    assert.equal(controller.refreshFollowed(), true)
+    assert.equal(controller.flow()?.step, 'homeworld')
+    assert.equal(controller.selectedCharacterId(), characterId)
+    assert.equal(controller.viewModel().wizard?.step, 'homeworld')
+  })
+
   it('updates multi-signal follow state atomically', () => {
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(creation('BASIC_TRAINING')),

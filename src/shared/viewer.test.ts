@@ -593,6 +593,190 @@ describe('viewer filtering', () => {
     )
   })
 
+  it('redacts pre-reveal final term skill roll progress from top-level creation state', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: ['Vacc Suit-0', 'Pilot-1'],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'AGING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Pilot-1'],
+            skillsAndTraining: ['Vacc Suit-0', 'Pilot-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            facts: {
+              basicTrainingSkills: ['Vacc Suit-0'],
+              termSkillRolls: [
+                {
+                  rollEventId: asEventId('roll-1'),
+                  career: 'Scout',
+                  table: 'serviceSkills',
+                  roll: { expression: '1d6', rolls: [3], total: 3 },
+                  tableRoll: 3,
+                  rawSkill: 'Pilot',
+                  skill: 'Pilot-1',
+                  characteristic: null,
+                  pendingCascadeSkill: null
+                }
+              ]
+            }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        requiredTermSkillCount: 1,
+        creationComplete: false,
+        actionPlan: {
+          status: 'AGING',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const character = filtered.characters[asCharacterId('char-1')]
+    const creation = character?.creation
+    const term = creation?.terms[0]
+
+    assert.equal(creation?.state.status, 'SKILLS_TRAINING')
+    assert.equal(creation?.actionPlan, undefined)
+    assert.equal(term?.facts?.termSkillRolls, undefined)
+    assert.deepEqual(term?.skills, [])
+    assert.deepEqual(term?.skillsAndTraining, ['Vacc Suit-0'])
+    assert.deepEqual(character?.skills, ['Vacc Suit-0'])
+  })
+
+  it('redacts pre-reveal mustering benefit progress from top-level creation state', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 22,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 1000,
+      creation: {
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: ['1000'],
+            complete: true,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false,
+            facts: {
+              musteringBenefits: [
+                {
+                  rollEventId: asEventId('roll-1'),
+                  career: 'Scout',
+                  kind: 'cash',
+                  roll: { expression: '2d6', rolls: [1, 1], total: 2 },
+                  modifier: 0,
+                  tableRoll: 2,
+                  value: '1000',
+                  credits: 1000
+                }
+              ]
+            }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false,
+        actionPlan: {
+          status: 'MUSTERING_OUT',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const character = filtered.characters[asCharacterId('char-1')]
+    const creation = character?.creation
+    const term = creation?.terms[0]
+
+    assert.equal(creation?.state.status, 'MUSTERING_OUT')
+    assert.equal(creation?.actionPlan, undefined)
+    assert.equal(term?.facts?.musteringBenefits, undefined)
+    assert.deepEqual(term?.benefits, [])
+    assert.equal(character?.credits, 0)
+  })
+
   it('redacts pre-reveal advancement progress from top-level creation state', () => {
     const state = buildState()
     addDiceRoll(state, futureRevealAt)

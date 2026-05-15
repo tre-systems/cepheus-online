@@ -75,6 +75,115 @@ const characterWithCharacteristicCreation = (): CharacterState => ({
   }
 })
 
+const characterWithHomeworldCreation = (): CharacterState => ({
+  id: asCharacterId('render-controller-1'),
+  ownerId: asUserId('actor-1'),
+  type: 'PLAYER',
+  name: 'Iona Vesh',
+  active: true,
+  notes: '',
+  age: 18,
+  characteristics: {
+    str: 7,
+    dex: 8,
+    end: 7,
+    int: 9,
+    edu: 8,
+    soc: 6
+  },
+  skills: [],
+  equipment: [],
+  credits: 0,
+  creation: {
+    state: {
+      status: 'HOMEWORLD',
+      context: {
+        canCommission: false,
+        canAdvance: false
+      }
+    },
+    terms: [],
+    careers: [],
+    canEnterDraft: true,
+    failedToQualify: false,
+    characteristicChanges: [],
+    creationComplete: false,
+    homeworld: {
+      name: null,
+      lawLevel: 'Low Law',
+      tradeCodes: ['Desert']
+    },
+    backgroundSkills: ['Survival-0'],
+    pendingCascadeSkills: [],
+    actionPlan: {
+      status: 'HOMEWORLD',
+      pendingDecisions: [{ key: 'homeworldSkillSelection' }],
+      legalActions: [],
+      homeworldChoiceOptions: {
+        lawLevels: ['Low Law'],
+        tradeCodes: ['Desert'],
+        backgroundSkills: [
+          {
+            value: 'Survival-0',
+            label: 'Survival',
+            preselected: true,
+            cascade: false
+          }
+        ]
+      }
+    },
+    timeline: []
+  }
+})
+
+const renderReadOnlyCharacter = (character: CharacterState) => {
+  const els = elements()
+  const baseViewModel = deriveCharacterCreationViewModel({
+    flow: null,
+    projection: character.creation,
+    character,
+    readOnly: true
+  })
+  const controller = createCharacterCreationRenderController({
+    document: renderDocument(),
+    elements: els,
+    controller: {
+      currentProjection: () => character.creation,
+      flow: () => null,
+      readOnly: () => true,
+      reconcileEditableWithProjection: () => null,
+      setFlow: (nextFlow) => nextFlow,
+      viewModel: () => baseViewModel
+    },
+    panel: {
+      render: () => true,
+      scrollToTop: () => {}
+    },
+    wizard: {
+      advance: async () => {},
+      autoAdvanceSetup: () => false,
+      startNew: async () => {},
+      syncFields: () => {}
+    },
+    homeworldPublisher: {
+      publishBackgroundCascadeSelection: async () => {},
+      publishProgress: async () => {},
+      publishCascadeResolution: async () => {}
+    },
+    getCommandController: commandController,
+    ensurePublished: async () => {},
+    postCharacterCreationCommand: async () => ({}),
+    commandIdentity: () => ({
+      gameId: asGameId('game-1'),
+      actorId: asUserId('actor-1')
+    }),
+    reportError: () => {}
+  })
+
+  controller.renderWizard()
+  return els
+}
+
 const elements = (): CharacterCreationRenderControllerElements => ({
   backCharacterWizard: new TestNode('button') as unknown as HTMLButtonElement,
   nextCharacterWizard: new TestNode('button') as unknown as HTMLButtonElement,
@@ -294,6 +403,28 @@ describe('character creation render controller', () => {
     assert.equal(
       asNode(els.characterCreationFields).querySelectorAll('button').length,
       5
+    )
+  })
+
+  it('renders read-only homeworld without requiring a legacy flow', () => {
+    const els = renderReadOnlyCharacter(characterWithHomeworldCreation())
+    const fields = asNode(els.characterCreationFields)
+    const nodes = walk(fields)
+
+    assert.equal(els.characterCreationWizard.hidden, false)
+    assert.equal(fields.children[0]?.className, 'creation-next-step')
+    assert.equal(fields.children[1]?.children[0]?.className, 'creation-homeworld')
+    assert.equal(
+      nodes.some((node) => node.textContent === 'Background skills'),
+      true
+    )
+    assert.equal(
+      fields.querySelectorAll('select').every((node) => node.disabled),
+      true
+    )
+    assert.equal(
+      fields.querySelectorAll('button').every((node) => node.disabled),
+      true
     )
   })
 

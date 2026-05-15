@@ -14,10 +14,11 @@ import type {
   CharacterState
 } from '../../../../shared/state'
 import type { CharacterCreationActionPlan } from './actions.js'
-import type {
-  CharacterCreationCompletedTerm,
-  CharacterCreationFlow,
-  CharacterCreationStep
+import {
+  createInitialCharacterDraft,
+  type CharacterCreationCompletedTerm,
+  type CharacterCreationFlow,
+  type CharacterCreationStep
 } from './flow.js'
 import {
   characteristicDefinitions,
@@ -481,6 +482,70 @@ const readModelCharacteristicStepViewModel = (
   }
 }
 
+const readModelHomeworldStepViewModel = ({
+  readModel,
+  projectedCreation,
+  readOnly
+}: {
+  readModel: CharacterCreationReadModel
+  projectedCreation: CharacterCreationProjection
+  readOnly: boolean
+}): CharacterCreationWizardViewModel | null => {
+  if (readModel.status !== 'HOMEWORLD') return null
+
+  const actionSection =
+    deriveCharacterCreationProjectedActionSection(projectedCreation)
+  const backgroundCascadeChoices = actionSection.cascadeSkillChoices
+  const flow: CharacterCreationFlow = {
+    step: 'homeworld',
+    draft: createInitialCharacterDraft(readModel.characterId, {
+      name: readModel.name,
+      age: readModel.sheet.age,
+      characteristics: readModel.sheet.characteristics,
+      homeworld: projectedCreation.homeworld ?? undefined,
+      backgroundSkills: readModel.backgroundSkills,
+      pendingCascadeSkills: readModel.pendingCascadeSkills,
+      skills: readModel.sheet.skills,
+      equipment: readModel.sheet.equipment,
+      credits: readModel.sheet.credits
+    })
+  }
+
+  return {
+    step: 'homeworld',
+    projectedStep: 'homeworld',
+    projectedStepCurrent: true,
+    controlsDisabled: readOnly,
+    progress: [],
+    buttons: deriveCharacterCreationButtonStates(flow),
+    validation: deriveCharacterCreationValidationSummary(flow),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, {
+      backgroundCascadeChoices
+    }),
+    careerSelection: null,
+    careerRoll: null,
+    reenlistmentRoll: null,
+    agingRoll: null,
+    agingChoices: null,
+    anagathicsDecision: null,
+    mishapResolution: null,
+    injuryResolution: null,
+    termCascadeChoices: null,
+    termResolution: null,
+    termSkills: null,
+    basicTraining: null,
+    musteringOut: null,
+    death: null,
+    termHistory: null,
+    review: null,
+    characteristics: null,
+    homeworld: deriveCharacterCreationHomeworldViewModel(flow, {
+      backgroundCascadeChoices,
+      homeworldChoiceOptions: actionSection.homeworldChoiceOptions
+    })
+  }
+}
+
 const wizardViewModel = ({
   flow,
   projectedCreation,
@@ -499,6 +564,17 @@ const wizardViewModel = ({
   if (!flow) {
     if (readOnly && characterReadModel?.status === 'CHARACTERISTICS') {
       return readModelCharacteristicStepViewModel(characterReadModel, readOnly)
+    }
+    if (
+      readOnly &&
+      characterReadModel?.status === 'HOMEWORLD' &&
+      projectedCreation
+    ) {
+      return readModelHomeworldStepViewModel({
+        readModel: characterReadModel,
+        projectedCreation,
+        readOnly
+      })
     }
     return null
   }
