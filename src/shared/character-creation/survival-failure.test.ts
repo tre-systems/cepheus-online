@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import {
   deriveSurvivalFailurePendingDecision,
   resolveInjuryOutcome,
+  resolveInjuryLosses,
   resolveSurvivalFailureOutcome,
   resolveSurvivalMishapOutcome
 } from './survival-failure'
@@ -155,6 +156,118 @@ describe('survival failure outcomes', () => {
     assert.equal(
       resolveInjuryOutcome({ career: 'Marine', roll: { total: 6 } }).crisisRisk,
       false
+    )
+  })
+
+  it('resolves permanent injury losses without client-authored modifiers', () => {
+    const characteristics = {
+      str: 7,
+      dex: 8,
+      end: 6,
+      int: 9,
+      edu: 8,
+      soc: 5
+    }
+
+    assert.deepEqual(
+      resolveInjuryLosses({
+        characteristics,
+        injury: resolveInjuryOutcome({ career: 'Marine', roll: { total: 4 } }),
+        primaryCharacteristic: 'end'
+      }),
+      {
+        ok: true,
+        value: {
+          selectedLosses: [{ characteristic: 'end', modifier: -2 }],
+          characteristicPatch: { end: 4 }
+        }
+      }
+    )
+
+    assert.deepEqual(
+      resolveInjuryLosses({
+        characteristics,
+        injury: resolveInjuryOutcome({ career: 'Marine', roll: { total: 3 } }),
+        primaryCharacteristic: 'end'
+      }),
+      {
+        ok: false,
+        error: {
+          code: 'injury_invalid_primary_target',
+          message: 'end cannot receive this injury'
+        }
+      }
+    )
+  })
+
+  it('resolves severe and nearly killed injury choices from server severity rolls', () => {
+    const characteristics = {
+      str: 7,
+      dex: 8,
+      end: 6,
+      int: 9,
+      edu: 8,
+      soc: 5
+    }
+
+    assert.deepEqual(
+      resolveInjuryLosses({
+        characteristics,
+        injury: resolveInjuryOutcome({ career: 'Scout', roll: { total: 2 } }),
+        primaryCharacteristic: 'str',
+        severityRoll: 5
+      }),
+      {
+        ok: true,
+        value: {
+          selectedLosses: [{ characteristic: 'str', modifier: -5 }],
+          characteristicPatch: { str: 2 }
+        }
+      }
+    )
+
+    assert.deepEqual(
+      resolveInjuryLosses({
+        characteristics,
+        injury: resolveInjuryOutcome({ career: 'Scout', roll: { total: 1 } }),
+        primaryCharacteristic: 'str',
+        secondaryChoice: { mode: 'both_other_physical' },
+        severityRoll: 6
+      }),
+      {
+        ok: true,
+        value: {
+          selectedLosses: [
+            { characteristic: 'str', modifier: -6 },
+            { characteristic: 'dex', modifier: -2 },
+            { characteristic: 'end', modifier: -2 }
+          ],
+          characteristicPatch: { str: 1, dex: 6, end: 4 }
+        }
+      }
+    )
+
+    assert.deepEqual(
+      resolveInjuryLosses({
+        characteristics,
+        injury: resolveInjuryOutcome({ career: 'Scout', roll: { total: 1 } }),
+        primaryCharacteristic: 'str',
+        secondaryChoice: {
+          mode: 'one_other_physical',
+          characteristic: 'dex'
+        },
+        severityRoll: 6
+      }),
+      {
+        ok: true,
+        value: {
+          selectedLosses: [
+            { characteristic: 'str', modifier: -6 },
+            { characteristic: 'dex', modifier: -4 }
+          ],
+          characteristicPatch: { str: 1, dex: 4 }
+        }
+      }
     )
   })
 })

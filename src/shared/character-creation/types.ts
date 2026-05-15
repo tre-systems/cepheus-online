@@ -676,6 +676,16 @@ export interface InjuryOutcome {
   crisisRisk: boolean
 }
 
+export interface InjuryLossSelection {
+  characteristic: CharacteristicKey
+  modifier: number
+}
+
+export interface InjuryLossResolution {
+  selectedLosses: InjuryLossSelection[]
+  characteristicPatch: CharacterSheetPatch['characteristics']
+}
+
 export interface BenefitTables {
   materialBenefits: Record<string, Record<string, string>>
   cashBenefits: Record<string, Record<string, string | number>>

@@ -1,5 +1,8 @@
+import type { CharacterCharacteristics, CharacteristicKey } from '../state'
+import { clamp } from '../util'
 import type {
   CareerCreationPendingDecision,
+  InjuryLossResolution,
   InjuryOutcome,
   SurvivalFailureOutcome,
   SurvivalFailureRollFact,
@@ -177,4 +180,214 @@ export const resolveInjuryOutcome = ({
     career,
     roll: tableRoll
   }
+}
+
+export const physicalInjuryLossTargets = [
+  'str',
+  'dex',
+  'end'
+] satisfies CharacteristicKey[]
+
+export type InjurySecondaryChoice =
+  | { mode: 'both_other_physical' }
+  | { mode: 'one_other_physical'; characteristic: CharacteristicKey }
+
+export type InjuryLossResolutionErrorCode =
+  | 'injury_primary_target_required'
+  | 'injury_invalid_primary_target'
+  | 'injury_severity_roll_required'
+  | 'injury_secondary_choice_required'
+  | 'injury_invalid_secondary_target'
+
+export interface InjuryLossResolutionError {
+  code: InjuryLossResolutionErrorCode
+  message: string
+}
+
+export type InjuryLossResolutionResult =
+  | { ok: true; value: InjuryLossResolution }
+  | { ok: false; error: InjuryLossResolutionError }
+
+const err = (
+  code: InjuryLossResolutionErrorCode,
+  message: string
+): InjuryLossResolutionResult => ({ ok: false, error: { code, message } })
+
+const ok = (value: InjuryLossResolution): InjuryLossResolutionResult => ({
+  ok: true,
+  value
+})
+
+const injurySeverity = (roll: number | null | undefined): number | null =>
+  typeof roll === 'number' ? clampD6(roll) : null
+
+const remainingPhysicalTargets = (
+  primary: CharacteristicKey
+): CharacteristicKey[] =>
+  physicalInjuryLossTargets.filter((target) => target !== primary)
+
+const requirePrimaryTarget = (
+  primary: CharacteristicKey | null | undefined,
+  allowedTargets: readonly CharacteristicKey[]
+): InjuryLossResolutionResult | null => {
+  if (!primary) {
+    return err(
+      'injury_primary_target_required',
+      'Choose the injured characteristic'
+    )
+  }
+  if (!allowedTargets.includes(primary)) {
+    return err(
+      'injury_invalid_primary_target',
+      `${primary} cannot receive this injury`
+    )
+  }
+
+  return null
+}
+
+const patchCharacteristics = ({
+  characteristics,
+  selectedLosses
+}: {
+  characteristics: CharacterCharacteristics
+  selectedLosses: InjuryLossResolution['selectedLosses']
+}): InjuryLossResolution => {
+  const characteristicPatch: InjuryLossResolution['characteristicPatch'] = {}
+
+  for (const loss of selectedLosses) {
+    const current =
+      characteristicPatch[loss.characteristic] ??
+      characteristics[loss.characteristic] ??
+      0
+    characteristicPatch[loss.characteristic] = clamp(
+      current + loss.modifier,
+      0,
+      Number.MAX_SAFE_INTEGER
+    )
+  }
+
+  return {
+    selectedLosses: selectedLosses.map((loss) => ({ ...loss })),
+    characteristicPatch
+  }
+}
+
+export const resolveInjuryLosses = ({
+  characteristics,
+  injury,
+  primaryCharacteristic,
+  secondaryChoice,
+  severityRoll
+}: {
+  characteristics: CharacterCharacteristics
+  injury: InjuryOutcome
+  primaryCharacteristic?: CharacteristicKey | null
+  secondaryChoice?: InjurySecondaryChoice | null
+  severityRoll?: number | null
+}): InjuryLossResolutionResult => {
+  if (injury.id === 'lightly_injured') {
+    return ok(
+      patchCharacteristics({
+        characteristics,
+        selectedLosses: []
+      })
+    )
+  }
+
+  if (injury.id === 'missing_eye_or_limb') {
+    const primaryError = requirePrimaryTarget(primaryCharacteristic, [
+      'str',
+      'dex'
+    ])
+    if (primaryError) return primaryError
+    const primary = primaryCharacteristic as CharacteristicKey
+
+    return ok(
+      patchCharacteristics({
+        characteristics,
+        selectedLosses: [{ characteristic: primary, modifier: -2 }]
+      })
+    )
+  }
+
+  const primaryError = requirePrimaryTarget(
+    primaryCharacteristic,
+    physicalInjuryLossTargets
+  )
+  if (primaryError) return primaryError
+  const primary = primaryCharacteristic as CharacteristicKey
+
+  if (injury.id === 'injured' || injury.id === 'scarred') {
+    return ok(
+      patchCharacteristics({
+        characteristics,
+        selectedLosses: [
+          {
+            characteristic: primary,
+            modifier: injury.id === 'injured' ? -1 : -2
+          }
+        ]
+      })
+    )
+  }
+
+  const severity = injurySeverity(severityRoll)
+  if (severity === null) {
+    return err(
+      'injury_severity_roll_required',
+      'An injury severity roll is required'
+    )
+  }
+
+  if (injury.id === 'severely_injured') {
+    return ok(
+      patchCharacteristics({
+        characteristics,
+        selectedLosses: [
+          { characteristic: primary, modifier: -severity }
+        ]
+      })
+    )
+  }
+
+  if (!secondaryChoice) {
+    return err(
+      'injury_secondary_choice_required',
+      'Choose how to apply the remaining injury losses'
+    )
+  }
+
+  const remainingTargets = remainingPhysicalTargets(primary)
+  if (secondaryChoice.mode === 'one_other_physical') {
+    if (!remainingTargets.includes(secondaryChoice.characteristic)) {
+      return err(
+        'injury_invalid_secondary_target',
+        `${secondaryChoice.characteristic} cannot receive this injury`
+      )
+    }
+
+    return ok(
+      patchCharacteristics({
+        characteristics,
+        selectedLosses: [
+          { characteristic: primary, modifier: -severity },
+          { characteristic: secondaryChoice.characteristic, modifier: -4 }
+        ]
+      })
+    )
+  }
+
+  return ok(
+    patchCharacteristics({
+      characteristics,
+      selectedLosses: [
+        { characteristic: primary, modifier: -severity },
+        ...remainingTargets.map((characteristic) => ({
+          characteristic,
+          modifier: -2
+        }))
+      ]
+    })
+  )
 }
