@@ -340,7 +340,7 @@ const pendingViewModel = (
 }
 
 const projectedTermHistoryViewModel = (
-  readModel: CharacterCreationReadModel
+  readModel: CharacterCreationProjectionReadModel
 ): CharacterCreationTermHistoryViewModel | null => {
   const completedTerms = completedTermsFromReadModel(readModel)
   if (completedTerms.length === 0) return null
@@ -354,7 +354,7 @@ const projectedTermHistoryViewModel = (
 }
 
 const completedTermsFromReadModel = (
-  readModel: CharacterCreationReadModel
+  readModel: Pick<CharacterCreationProjectionReadModel, 'completedTerms'>
 ): CharacterCreationCompletedTerm[] =>
   readModel.completedTerms.map((term) => ({
     career: term.career,
@@ -385,21 +385,39 @@ const completedTermsFromReadModel = (
         : term.reenlistmentOutcome
   }))
 
+const completedTermsForFlow = ({
+  projectionReadModel,
+  characterReadModel,
+  flow
+}: {
+  projectionReadModel: CharacterCreationProjectionReadModel | null
+  characterReadModel: CharacterCreationReadModel | null
+  flow: CharacterCreationFlow
+}): CharacterCreationCompletedTerm[] => {
+  const readModel = projectionReadModel ?? characterReadModel
+  return readModel
+    ? completedTermsFromReadModel(readModel)
+    : flow.draft.completedTerms
+}
+
 const wizardViewModel = ({
   flow,
   projectedCreation,
   projection,
+  projectionReadModel,
   characterReadModel,
   readOnly
 }: {
   flow: CharacterCreationFlow | null
   projectedCreation: CharacterCreationProjection | null
   projection: CharacterCreationProjectionViewModel
+  projectionReadModel: CharacterCreationProjectionReadModel | null
   characterReadModel: CharacterCreationReadModel | null
   readOnly: boolean
 }): CharacterCreationWizardViewModel | null => {
   if (!flow) return null
 
+  const completedTermReadModel = projectionReadModel ?? characterReadModel
   const actionSection =
     deriveCharacterCreationProjectedActionSection(projectedCreation)
   const projectedStatus = projectedCreation?.state.status ?? null
@@ -521,15 +539,17 @@ const wizardViewModel = ({
           ? true
           : actionSection.isLegalActionAvailable('confirmDeath')
     }),
-    termHistory: characterReadModel
-      ? projectedTermHistoryViewModel(characterReadModel)
+    termHistory: completedTermReadModel
+      ? projectedTermHistoryViewModel(completedTermReadModel)
       : deriveCharacterCreationTermHistoryViewModel(flow),
     review:
       flow.step === 'review'
         ? deriveCharacterCreationReviewSummary(flow, {
-            completedTerms: characterReadModel
-              ? completedTermsFromReadModel(characterReadModel)
-              : undefined
+            completedTerms: completedTermsForFlow({
+              projectionReadModel,
+              characterReadModel,
+              flow
+            })
           })
         : null,
     characteristics:
@@ -560,6 +580,7 @@ export const deriveCharacterCreationViewModel = ({
     flow,
     projectedCreation: projection,
     projection: projected.summary,
+    projectionReadModel: projected.readModel,
     characterReadModel,
     readOnly
   })

@@ -1690,7 +1690,14 @@ describe('character creation view model', () => {
           completedTerms: [completedTerm()]
         })
       }),
-      projection: projection('CAREER_SELECTION'),
+      projection: projection('CAREER_SELECTION', {
+        terms: [
+          projectedCompletedTerm({
+            career: 'Merchant',
+            skillsAndTraining: ['Broker-1']
+          })
+        ]
+      }),
       readOnly: false
     })
 
@@ -1710,7 +1717,14 @@ describe('character creation view model', () => {
           completedTerms: [completedTerm()]
         })
       }),
-      projection: projection('ACTIVE'),
+      projection: projection('ACTIVE', {
+        terms: [
+          projectedCompletedTerm({
+            career: 'Merchant',
+            skillsAndTraining: ['Broker-1']
+          })
+        ]
+      }),
       readOnly: false
     })
 
@@ -1734,16 +1748,6 @@ describe('character creation view model', () => {
           })
         ]
       }),
-      character: character(
-        projection('CAREER_SELECTION', {
-          terms: [
-            projectedCompletedTerm({
-              career: 'Scout',
-              skillsAndTraining: ['Pilot-1']
-            })
-          ]
-        })
-      ),
       readOnly: false
     })
 
@@ -1773,16 +1777,6 @@ describe('character creation view model', () => {
           })
         ]
       }),
-      character: character(
-        projection('ACTIVE', {
-          terms: [
-            projectedCompletedTerm({
-              career: 'Scout',
-              skillsAndTraining: ['Pilot-1']
-            })
-          ]
-        })
-      ),
       readOnly: false
     })
 

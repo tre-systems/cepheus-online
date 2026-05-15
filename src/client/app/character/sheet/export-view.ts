@@ -7,6 +7,7 @@ import {
   deriveMaterialBenefitEffect,
   parseCareerSkill
 } from '../../../../shared/characterCreation'
+import { deriveCharacterCreationCompletedTermReadModel } from '../../../../shared/character-creation/view-state'
 import type {
   CharacterCharacteristics,
   CharacterCreationProjection,
@@ -217,14 +218,14 @@ const deriveCareerExportRanks = (
     })
   }
 
-  for (const term of creation?.terms ?? []) {
-    const advancement = term.facts?.advancement
-    const rank = advancement && !advancement.skipped ? advancement.rank : null
-    if (rank) {
-      ranks.set(rank.career, {
-        name: rank.career,
-        rank: rank.newRank,
-        title: rank.title || null
+  for (const term of creation.terms) {
+    if (!term.complete && !term.musteringOut) continue
+    const completedTerm = deriveCharacterCreationCompletedTermReadModel(term)
+    if (completedTerm.rank !== null) {
+      ranks.set(completedTerm.career, {
+        name: completedTerm.career,
+        rank: completedTerm.rank,
+        title: completedTerm.rankTitle || null
       })
     }
   }
