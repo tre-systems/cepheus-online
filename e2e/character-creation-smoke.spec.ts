@@ -210,10 +210,10 @@ const selectedAgingLosses = (
       change.type === 'PHYSICAL'
         ? physical[Math.min(physicalIndex++, physical.length - 1)]
         : mental[Math.min(mentalIndex++, mental.length - 1)]
-  }))
+    }))
 }
 
-const completeSecondScoutTermAndFinalize = async ({
+const completeCurrentScoutTermToAging = async ({
   page,
   roomId,
   actorId,
@@ -254,7 +254,7 @@ const completeSecondScoutTermAndFinalize = async ({
     characterId
   })
 
-  let legalActions = await legalCreationActionKeys({
+  const legalActions = await legalCreationActionKeys({
     page,
     roomId,
     actorId,
@@ -267,38 +267,26 @@ const completeSecondScoutTermAndFinalize = async ({
       useAnagathics: false
     })
   }
-  legalActions = await legalCreationActionKeys({
-    page,
-    roomId,
-    actorId,
-    characterId
-  })
-  if (legalActions.includes('resolveAging')) {
-    await postCommand(page, roomId, actorId, actorSession, {
-      type: 'ResolveCharacterCreationAging',
-      characterId
-    })
-    const agingCharacter = await fetchProjectedCharacter(
-      page,
-      roomId,
-      actorId,
-      characterId
-    )
-    const changes = agingCharacter?.creation?.characteristicChanges ?? []
-    if (changes.length > 0) {
-      await postCommand(page, roomId, actorId, actorSession, {
-        type: 'ResolveCharacterCreationAgingLosses',
-        characterId,
-        selectedLosses: selectedAgingLosses(changes)
-      })
-    }
-  }
+}
 
+const completeCurrentScoutTermFromReenlistmentAndFinalize = async ({
+  page,
+  roomId,
+  actorId,
+  actorSession,
+  characterId
+}: {
+  page: Page
+  roomId: string
+  actorId: string
+  actorSession: string
+  characterId: string
+}): Promise<void> => {
   await postCommand(page, roomId, actorId, actorSession, {
     type: 'ResolveCharacterCreationReenlistment',
     characterId
   })
-  legalActions = await legalCreationActionKeys({
+  const legalActions = await legalCreationActionKeys({
     page,
     roomId,
     actorId,
@@ -315,13 +303,13 @@ const completeSecondScoutTermAndFinalize = async ({
   })
 
   for (let index = 0; index < 4; index += 1) {
-    legalActions = await legalCreationActionKeys({
+    const nextLegalActions = await legalCreationActionKeys({
       page,
       roomId,
       actorId,
       characterId
     })
-    if (!legalActions.includes('resolveMusteringBenefit')) break
+    if (!nextLegalActions.includes('resolveMusteringBenefit')) break
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'RollCharacterCreationMusteringBenefit',
       characterId,
@@ -329,27 +317,27 @@ const completeSecondScoutTermAndFinalize = async ({
       kind: 'material'
     })
   }
-  legalActions = await legalCreationActionKeys({
+  const musteringActions = await legalCreationActionKeys({
     page,
     roomId,
     actorId,
     characterId
   })
-  if (legalActions.includes('finishMustering')) {
+  if (musteringActions.includes('finishMustering')) {
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'CompleteCharacterCreationMustering',
       characterId
     })
   }
-  legalActions = await legalCreationActionKeys({
+  const completionActions = await legalCreationActionKeys({
     page,
     roomId,
     actorId,
     characterId
   })
-  if (!legalActions.includes('completeCreation')) {
+  if (!completionActions.includes('completeCreation')) {
     throw new Error(
-      `Expected creation completion to be legal; legal actions were ${legalActions.join(', ')}`
+      `Expected creation completion to be legal; legal actions were ${completionActions.join(', ')}`
     )
   }
   await postCommand(page, roomId, actorId, actorSession, {
@@ -4050,7 +4038,108 @@ test.describe('character creation smoke', () => {
       })
       await openOrExpectFollowedCreation(finalizationSpectator, characterName)
 
-      await completeSecondScoutTermAndFinalize({
+      await completeCurrentScoutTermToAging({
+        page,
+        roomId,
+        actorId,
+        actorSession,
+        characterId
+      })
+
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(page, characterName)
+
+      const agingLossSpectatorId = 'e2e-aging-loss-spectator'
+      const agingLossSpectator = await browser.newPage()
+      try {
+        await openRoom(agingLossSpectator, {
+          roomId,
+          userId: agingLossSpectatorId,
+          viewer: 'spectator'
+        })
+        await openOrExpectFollowedCreation(agingLossSpectator, characterName)
+
+        const ownerFields = page.locator('#characterCreationFields')
+        const spectatorFields = agingLossSpectator.locator(
+          '#characterCreationFields'
+        )
+        await expect(ownerFields).toContainText('Roll aging', {
+          timeout: 15_000
+        })
+        await expect(spectatorFields).toContainText('Roll aging', {
+          timeout: 15_000
+        })
+
+        await setSeedForNextRoll(
+          page,
+          roomId,
+          await nextEventSeq(page, roomId, actorId),
+          [1, 1]
+        )
+        const rollAging = page.getByRole('button', { name: 'Roll aging' })
+        await expect(rollAging).toBeVisible({ timeout: 5_000 })
+        await rollAging.click()
+
+        await expect(
+          agingLossSpectator.locator('#diceOverlay.visible')
+        ).toBeVisible({ timeout: 5_000 })
+        await expectDiceRollPending(agingLossSpectator)
+        await expect(spectatorFields).not.toContainText(/Aging \d+:/, {
+          timeout: 100
+        })
+
+        await waitForDiceReveal(page)
+        await expect(
+          agingLossSpectator.locator('#diceStage .roll-total')
+        ).not.toHaveText('Rolling...', { timeout: 5_000 })
+        await expect(spectatorFields).toContainText(/Aging \d+:/, {
+          timeout: 5_000
+        })
+        await expect
+          .poll(async () => {
+            const character = await fetchProjectedCharacter(
+              page,
+              roomId,
+              actorId,
+              characterId
+            )
+            return character?.creation?.characteristicChanges?.length ?? 0
+          })
+          .toBeGreaterThan(0)
+        await expect(
+          page.getByRole('button', { name: 'Roll reenlistment' })
+        ).toHaveCount(0)
+        await expect(spectatorFields).not.toContainText(/Reenlistment \d+:/, {
+          timeout: 100
+        })
+
+        await expectSpectatorRefreshPreservesCreationProjection({
+          spectator: agingLossSpectator,
+          roomId,
+          spectatorId: agingLossSpectatorId,
+          characterId,
+          characterName
+        })
+
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await expect(page.locator('#boardCanvas')).toBeVisible()
+        await openOrExpectFollowedCreation(page, characterName)
+        await expect(
+          page.getByRole('button', { name: 'Roll reenlistment' })
+        ).toHaveCount(0)
+
+        const agingChoice = page.locator('.creation-term-actions button').first()
+        await expect(agingChoice).toBeVisible({ timeout: 5_000 })
+        await agingChoice.click()
+        await expect(
+          page.getByRole('button', { name: 'Roll reenlistment' })
+        ).toBeVisible({ timeout: 15_000 })
+      } finally {
+        await agingLossSpectator.close()
+      }
+
+      await completeCurrentScoutTermFromReenlistmentAndFinalize({
         page,
         roomId,
         actorId,
