@@ -95,14 +95,23 @@ type ProjectedCareerTerm = NonNullable<
   CareerCreationActionProjection['terms']
 >[number]
 
+const hasSemanticTermFacts = (term: ProjectedCareerTerm): boolean =>
+  Object.keys(term.facts ?? {}).length > 0
+
 const hasResolvedSurvivalForRules = (term: ProjectedCareerTerm): boolean =>
-  term.facts?.survival !== undefined || term.survival !== undefined
+  hasSemanticTermFacts(term)
+    ? term.facts?.survival !== undefined
+    : term.survival !== undefined
 
 const basicTrainingSkillCountForRules = (term: ProjectedCareerTerm): number =>
-  term.facts?.basicTrainingSkills?.length ?? term.skillsAndTraining.length
+  hasSemanticTermFacts(term)
+    ? (term.facts?.basicTrainingSkills?.length ?? 0)
+    : term.skillsAndTraining.length
 
 const termSkillRollCountForRules = (term: ProjectedCareerTerm): number =>
-  term.facts?.termSkillRolls?.length ?? term.skills.length
+  hasSemanticTermFacts(term)
+    ? (term.facts?.termSkillRolls?.length ?? 0)
+    : term.skills.length
 
 const backgroundSelectionCount = (
   creation: CareerCreationActionProjection
@@ -311,6 +320,9 @@ export const deriveCareerCreationReenlistmentOutcome = (
   if ((creation.terms?.length ?? 0) >= 7) return 'retire'
   const projectedOutcome = term.facts?.reenlistment?.outcome
   if (projectedOutcome) return projectedOutcome
+  if (hasSemanticTermFacts(term)) {
+    return term.musteringOut || !term.canReenlist ? 'blocked' : 'unresolved'
+  }
   if (term.reEnlistment === 12) return 'forced'
   if (term.reEnlistment !== undefined && term.canReenlist) return 'allowed'
   if (term.musteringOut || !term.canReenlist) return 'blocked'

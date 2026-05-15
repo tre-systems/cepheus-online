@@ -757,6 +757,26 @@ describe('career creation legal action planner', () => {
             term({
               career: 'Merchant',
               completedBasicTraining: false,
+              skillsAndTraining: ['Legacy Training-0'],
+              facts: { termSkillRolls: [] }
+            })
+          ]
+        })
+      ),
+      [{ key: 'basicTrainingSkillSelection' }]
+    )
+    assert.deepEqual(
+      deriveCareerCreationPendingDecisions(
+        projection('BASIC_TRAINING', {
+          terms: [
+            term({
+              career: 'Scout',
+              completedBasicTraining: true,
+              skillsAndTraining: ['Vacc Suit-0']
+            }),
+            term({
+              career: 'Merchant',
+              completedBasicTraining: false,
               skillsAndTraining: []
             })
           ]
@@ -831,6 +851,20 @@ describe('career creation legal action planner', () => {
         })
       ),
       []
+    )
+    assert.deepEqual(
+      deriveCareerCreationPendingDecisions(
+        projection('SKILLS_TRAINING', {
+          requiredTermSkillCount: 1,
+          terms: [
+            term({
+              skills: ['Legacy Skill-1'],
+              facts: { basicTrainingSkills: [] }
+            })
+          ]
+        })
+      ),
+      [{ key: 'skillTrainingSelection' }]
     )
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(
@@ -968,6 +1002,27 @@ describe('career creation legal action planner', () => {
       canCompleteCreation: false,
       reenlistmentOutcome: 'unresolved'
     })
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(creation),
+      ['rollReenlistment']
+    )
+  })
+
+  it('ignores legacy reenlistment rolls when semantic term facts exist', () => {
+    const creation = projection('REENLISTMENT', {
+      terms: [
+        term({
+          reEnlistment: 12,
+          canReenlist: true,
+          facts: { termSkillRolls: [] }
+        })
+      ]
+    })
+
+    assert.equal(deriveCareerCreationReenlistmentOutcome(creation), 'unresolved')
+    assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
+      { key: 'reenlistmentResolution' }
+    ])
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(creation),
       ['rollReenlistment']
