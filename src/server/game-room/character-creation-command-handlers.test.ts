@@ -1411,6 +1411,59 @@ describe('character creation setup command handlers', () => {
     ])
   })
 
+  it('uses projected term skill facts for cash benefit gambling modifiers', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'cash'
+      },
+      context(
+        createCreation('MUSTERING_OUT', {
+          terms: [
+            {
+              ...activeScoutTerm(),
+              skills: [],
+              skillsAndTraining: [],
+              facts: {
+                termSkillRolls: [
+                  {
+                    career: 'Scout',
+                    table: 'serviceSkills',
+                    roll: { expression: '1d6', rolls: [5], total: 5 },
+                    tableRoll: 5,
+                    rawSkill: 'Gambling',
+                    skill: 'Gambling-1',
+                    characteristic: null,
+                    pendingCascadeSkill: null
+                  }
+                ]
+              },
+              complete: true,
+              canReenlist: false,
+              musteringOut: true
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const benefit = result.value.find(
+      (event) => event.type === 'CharacterCreationMusteringBenefitRolled'
+    )
+    assert.equal(benefit?.type, 'CharacterCreationMusteringBenefitRolled')
+    if (benefit?.type !== 'CharacterCreationMusteringBenefitRolled') return
+    assert.equal(benefit.musteringBenefit.modifier, 1)
+    assert.equal(benefit.musteringBenefit.tableRoll, 9)
+    assert.equal(benefit.musteringBenefit.credits, 50000)
+  })
+
   it('emits mustering completion and continuation events', () => {
     const creation = createCreation('MUSTERING_OUT', {
       terms: [

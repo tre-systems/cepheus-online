@@ -78,9 +78,18 @@ const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
 
 const hasGamblingSkill = (character: CharacterState): boolean => {
   const creation = character.creation
+  const termSkills = (term: CharacterCreationProjection['terms'][number]) => {
+    const factSkills = [
+      ...(term.facts?.basicTrainingSkills ?? []),
+      ...(term.facts?.termSkillRolls ?? []).flatMap((termSkill) =>
+        termSkill.skill ? [termSkill.skill] : []
+      )
+    ]
+    return factSkills.length > 0 ? factSkills : term.skillsAndTraining
+  }
   const creationSkills = [
     ...(creation?.backgroundSkills ?? []),
-    ...(creation?.terms.flatMap((term) => term.skillsAndTraining) ?? [])
+    ...(creation?.terms.flatMap(termSkills) ?? [])
   ]
 
   return [...character.skills, ...creationSkills].some((skill) =>
