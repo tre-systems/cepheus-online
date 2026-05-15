@@ -1394,12 +1394,14 @@ The next batch should run like this, in this order:
    facts without hiding replay compatibility behind unnamed field reads.
    Per-term semantic `facts` now carry qualification, draft,
    survival, commission, advancement, rank, term skill, aging, anagathics,
-   reenlistment, and mustering benefit details; legal actions, term-skill and
-   mustering validators, and the client projection adapter use those facts
-   instead of reconstructing the active term from legacy history. The remaining
-   legacy aggregate fallbacks are explicit compatibility paths for old
-   projections; the legacy `history` model remains only for historical replay
-   compatibility and older activity consumers.
+   reenlistment, and mustering benefit details; failed qualification also has a
+   projection-owned fact outside terms so the Draft/Drifter fallback can replay
+   without legacy history. Legal actions, term-skill and mustering validators,
+   and the client projection adapter use those facts instead of reconstructing
+   the active term from legacy history. The remaining legacy aggregate
+   fallbacks are explicit compatibility paths for old projections; the legacy
+   `history` model remains only for historical replay compatibility and older
+   activity consumers.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.

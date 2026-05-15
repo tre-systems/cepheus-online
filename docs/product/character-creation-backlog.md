@@ -150,7 +150,9 @@ tests before it is considered done.
   choices for homeworld and term skill flows. Gap: cascade provenance and modal
   polish still need tightening across every creation source.
 - [x] Qualify for a career using `careerBasics`, applying prior-career limits
-  and qualification penalties, with dedicated persisted roll facts.
+  and qualification penalties, with dedicated persisted roll facts. Failed
+  qualification now projects the attempted career, roll, and Draft/Drifter
+  options without starting a term or reading legacy history.
 - [x] Resolve the Draft by rolling the `theDraft` table when eligible, then
   mark draft use on the term.
 - [x] Apply basic training from `serviceSkills`: all service skills at level 0
