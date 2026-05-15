@@ -71,6 +71,14 @@ adapters can use the validated metadata to build previews, upload reviewed
 assets, or attach a reviewed LOS sidecar while keeping published assets out of
 git.
 
+The current referee room dialog can load pasted metadata JSON and apply
+validated geomorph or counter defaults to board and piece creation fields. This
+is a setup aid: selected local references are stored as image asset ids, while
+actual browser rendering still needs a URL-like reference such as a selected
+`data:` file, a future R2 URL, or a reviewed uploaded asset id that the client
+can resolve. Production asset upload remains the bridge from local product files
+to durable game-ready image references.
+
 The same boundary owns dependency-free LOS sidecar checks. Importers should call
 `validateMapLosSidecar` after referee review and before creating board data.
 Validation keeps sidecars tied to a non-empty asset reference, positive board

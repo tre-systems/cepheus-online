@@ -8,6 +8,7 @@ import { createRoomAssetCreationController } from './controller'
 
 class FakeTarget {
   listeners: Record<string, EventListener[]> = {}
+  disabled = false
 
   addEventListener(type: string, listener: EventListener): void {
     this.listeners[type] = [...(this.listeners[type] ?? []), listener]
@@ -35,6 +36,24 @@ class FakeInput extends FakeTarget {
   focus(): void {
     this.focused = true
   }
+}
+
+class FakeSelect extends FakeInput {
+  children: unknown[] = []
+  ownerDocument = {
+    createElement: () => ({
+      value: '',
+      textContent: ''
+    })
+  }
+
+  replaceChildren(...children: unknown[]): void {
+    this.children = children
+  }
+}
+
+class FakeStatus {
+  textContent = ''
 }
 
 class FakeDialog {
@@ -101,6 +120,13 @@ const createHarness = (initialState: GameState | null = gameState()) => {
     pieceHeightInput: new FakeInput(),
     pieceScaleInput: new FakeInput(),
     pieceSheetInput: new FakeInput(),
+    localAssetMetadataInput: new FakeInput(),
+    loadLocalAssets: new FakeTarget(),
+    boardAssetSelect: new FakeSelect(),
+    useBoardAsset: new FakeTarget(),
+    counterAssetSelect: new FakeSelect(),
+    useCounterAsset: new FakeTarget(),
+    localAssetStatus: new FakeStatus(),
     boardNameInput: new FakeInput(),
     boardImageInput: new FakeInput(),
     boardImageFileInput: new FakeInput(),
@@ -155,9 +181,11 @@ const createHarness = (initialState: GameState | null = gameState()) => {
     reportError: (message) => {
       errors.push(message)
     },
+    getCanPickLocalAssets: () => true,
     dependencies: {
       readImageDimensions: async () => ({ width: 200, height: 100 }),
-      readImageDataUrl: async () => 'data:image/png;base64,test',
+      readImageDataUrl: async (input) =>
+        input.files?.[0] ? 'data:image/png;base64,test' : null,
       readCroppedImageDataUrl: async () => 'data:image/png;base64,crop'
     }
   })
@@ -242,6 +270,94 @@ describe('room asset creation controller', () => {
     assert.equal(command.name, 'Derelict')
     assert.equal(harness.elements.roomDialog.closed, true)
     assert.equal(harness.renderCount(), 1)
+  })
+
+  it('applies validated local geomorph metadata to board fields', async () => {
+    const harness = createHarness()
+    harness.elements.localAssetMetadataInput.value = JSON.stringify({
+      assets: [
+        {
+          root: 'Geomorphs',
+          relativePath: 'standard/deck-01.jpg',
+          kind: 'geomorph',
+          width: 1000,
+          height: 1000,
+          gridScale: 50
+        }
+      ]
+    })
+
+    harness.elements.loadLocalAssets.dispatch('click')
+    harness.elements.boardAssetSelect.value = 'Geomorphs/standard/deck-01.jpg'
+    harness.elements.useBoardAsset.dispatch('click')
+
+    assert.equal(harness.elements.boardNameInput.value, 'deck 01')
+    assert.equal(
+      harness.elements.boardImageInput.value,
+      'Geomorphs/standard/deck-01.jpg'
+    )
+    assert.equal(harness.elements.boardWidthInput.value, '1000')
+    assert.equal(harness.elements.boardHeightInput.value, '1000')
+    assert.equal(harness.elements.boardScaleInput.value, '50')
+    assert.equal(
+      harness.elements.localAssetStatus.textContent,
+      '1 board asset(s), 0 counter asset(s)'
+    )
+  })
+
+  it('creates local geomorph boards as asset ids, not browser urls', async () => {
+    const harness = createHarness()
+    harness.elements.boardNameInput.value = 'Deck 1'
+    harness.elements.boardImageInput.value = 'Geomorphs/standard/deck-01.jpg'
+
+    harness.elements.createBoard.dispatch('click')
+    await flushAsyncListeners()
+
+    const command = harness.boardCommands[0]
+    assert.equal(command?.type, 'CreateBoard')
+    if (command?.type !== 'CreateBoard') {
+      throw new Error('Expected a CreateBoard command')
+    }
+    assert.equal(command.imageAssetId, 'Geomorphs/standard/deck-01.jpg')
+    assert.equal(command.url, null)
+  })
+
+  it('applies validated local counter metadata to piece fields', () => {
+    const harness = createHarness()
+    harness.elements.localAssetMetadataInput.value = JSON.stringify([
+      {
+        root: 'Counters',
+        relativePath: 'crew/free-trader.svg',
+        kind: 'counter',
+        width: 600,
+        height: 600,
+        gridScale: 50
+      }
+    ])
+
+    harness.elements.loadLocalAssets.dispatch('click')
+    harness.elements.counterAssetSelect.value = 'Counters/crew/free-trader.svg'
+    harness.elements.useCounterAsset.dispatch('click')
+
+    assert.equal(harness.elements.pieceNameInput.value, 'free trader')
+    assert.equal(
+      harness.elements.pieceImageInput.value,
+      'Counters/crew/free-trader.svg'
+    )
+    assert.equal(harness.elements.pieceWidthInput.value, '600')
+    assert.equal(harness.elements.pieceHeightInput.value, '600')
+    assert.equal(harness.elements.pieceScaleInput.value, String(50 / 600))
+  })
+
+  it('reports invalid local asset metadata without changing picker options', () => {
+    const harness = createHarness()
+    harness.elements.localAssetMetadataInput.value = '"invalid"'
+
+    harness.elements.loadLocalAssets.dispatch('click')
+
+    assert.deepEqual(harness.errors.filter(Boolean), [
+      'Local asset metadata must be a JSON object, array, or assets object'
+    ])
   })
 
   it('applies board and piece dimensions from selected images', async () => {

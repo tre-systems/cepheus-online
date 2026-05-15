@@ -15,13 +15,20 @@ import {
   uniqueBoardId
 } from '../bootstrap-flow.js'
 import {
+  browserImageUrl,
   readImageDimensions as readImageDimensionsFromFile,
   readSelectedCroppedImageFileAsDataUrl,
   readSelectedImageFileAsDataUrl,
   type ImageDimensions,
   type ImageFileInput
 } from '../../assets/images.js'
+import {
+  deriveMapAssetPickerViewModel,
+  type MapAssetPickerItemViewModel,
+  type MapAssetPickerViewModel
+} from '../../assets/map-picker-view.js'
 import { planCreatePieceCommands } from '../../piece/command-plan.js'
+import { parseLocalAssetMetadataCandidates } from './local-metadata.js'
 
 export interface RoomAssetCreationElements {
   createPiece: HTMLButtonElement
@@ -38,6 +45,13 @@ export interface RoomAssetCreationElements {
   pieceHeightInput: HTMLInputElement
   pieceScaleInput: HTMLInputElement
   pieceSheetInput: HTMLInputElement
+  localAssetMetadataInput: HTMLTextAreaElement
+  loadLocalAssets: HTMLButtonElement
+  boardAssetSelect: HTMLSelectElement
+  useBoardAsset: HTMLButtonElement
+  counterAssetSelect: HTMLSelectElement
+  useCounterAsset: HTMLButtonElement
+  localAssetStatus: HTMLElement
   boardNameInput: HTMLInputElement
   boardImageInput: HTMLInputElement
   boardImageFileInput: HTMLInputElement
@@ -77,6 +91,7 @@ export interface RoomAssetCreationOptions {
   selectPiece: (pieceId: PieceId) => void
   requestRender: () => void
   reportError: (message: string) => void
+  getCanPickLocalAssets?: () => boolean
   dependencies?: RoomAssetCreationDependencies
 }
 
@@ -94,6 +109,51 @@ const parseNonNegativeIntegerInput = (
   input: HTMLInputElement,
   fallback: number
 ): number => parseNonNegativeIntegerValue(input.value, fallback)
+
+const createSelectOption = (
+  select: HTMLSelectElement,
+  value: string,
+  label: string
+): HTMLOptionElement => {
+  const option = select.ownerDocument.createElement('option')
+  option.value = value
+  option.textContent = label
+  return option
+}
+
+const renderAssetOptions = (
+  select: HTMLSelectElement,
+  items: readonly MapAssetPickerItemViewModel[],
+  emptyLabel: string
+): void => {
+  const options =
+    items.length === 0
+      ? [createSelectOption(select, '', emptyLabel)]
+      : [
+          createSelectOption(select, '', 'Select asset'),
+          ...items.map((item) => {
+            return createSelectOption(
+              select,
+              item.assetRef,
+              `${item.label} (${item.dimensions.label})`
+            )
+          })
+        ]
+  select.replaceChildren(...options)
+  select.disabled = items.length === 0
+}
+
+const selectedAssetItem = (
+  viewModel: MapAssetPickerViewModel | null,
+  assetRef: string
+): MapAssetPickerItemViewModel | null => {
+  if (!assetRef) return null
+  return (
+    viewModel?.sections
+      .flatMap((section) => section.items)
+      .find((item) => item.assetRef === assetRef) ?? null
+  )
+}
 
 const applyPieceDimensions = (
   dimensions: ImageDimensions,
@@ -136,6 +196,7 @@ export const createRoomAssetCreationController = ({
   selectPiece,
   requestRender,
   reportError,
+  getCanPickLocalAssets = () => true,
   dependencies = {}
 }: RoomAssetCreationOptions): RoomAssetCreationController => {
   const readImageDimensions =
@@ -146,6 +207,7 @@ export const createRoomAssetCreationController = ({
     dependencies.readCroppedImageDataUrl ??
     readSelectedCroppedImageFileAsDataUrl
   const listeners: Array<() => void> = []
+  let assetPickerViewModel: MapAssetPickerViewModel | null = null
 
   const addListener = (
     target: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>,
@@ -169,6 +231,109 @@ export const createRoomAssetCreationController = ({
       width: parsePositiveIntegerInput(elements.pieceCropWidthInput, 150),
       height: parsePositiveIntegerInput(elements.pieceCropHeightInput, 150)
     })
+  }
+
+  const renderLocalAssetPicker = (
+    viewModel: MapAssetPickerViewModel | null
+  ): void => {
+    const canPick = getCanPickLocalAssets()
+    const boardItems =
+      viewModel?.sections.flatMap((section) =>
+        section.items.filter((item) => item.boardDefaults)
+      ) ?? []
+    const counterItems =
+      viewModel?.sections.flatMap((section) =>
+        section.items.filter((item) => item.pieceDefaults)
+      ) ?? []
+
+    renderAssetOptions(
+      elements.boardAssetSelect,
+      canPick ? boardItems : [],
+      canPick ? 'No board assets' : 'Referee only'
+    )
+    renderAssetOptions(
+      elements.counterAssetSelect,
+      canPick ? counterItems : [],
+      canPick ? 'No counter assets' : 'Referee only'
+    )
+
+    elements.loadLocalAssets.disabled = !canPick
+    elements.localAssetMetadataInput.disabled = !canPick
+    elements.useBoardAsset.disabled = !canPick || boardItems.length === 0
+    elements.useCounterAsset.disabled = !canPick || counterItems.length === 0
+
+    if (!canPick) {
+      elements.localAssetStatus.textContent = 'Referee only'
+      return
+    }
+    if (!viewModel) {
+      elements.localAssetStatus.textContent = ''
+      return
+    }
+
+    const validation = viewModel.validationSummary
+    if (validation.hasErrors) {
+      elements.localAssetStatus.textContent = [
+        validation.title,
+        ...validation.messages
+      ]
+        .filter(Boolean)
+        .join(' ')
+      return
+    }
+
+    if (viewModel.emptyState) {
+      elements.localAssetStatus.textContent = viewModel.emptyState.message
+      return
+    }
+
+    elements.localAssetStatus.textContent = `${boardItems.length} board asset(s), ${counterItems.length} counter asset(s)`
+  }
+
+  const loadLocalAssetMetadata = (): void => {
+    reportError('')
+    assetPickerViewModel = deriveMapAssetPickerViewModel(
+      parseLocalAssetMetadataCandidates(elements.localAssetMetadataInput.value)
+    )
+    renderLocalAssetPicker(assetPickerViewModel)
+  }
+
+  const applySelectedBoardAsset = (): void => {
+    const item = selectedAssetItem(
+      assetPickerViewModel,
+      elements.boardAssetSelect.value
+    )
+    const defaults = item?.boardDefaults
+    if (!defaults) {
+      reportError('Select a board asset')
+      return
+    }
+
+    elements.boardNameInput.value = defaults.name
+    elements.boardImageInput.value = defaults.imageAssetId
+    elements.boardWidthInput.value = String(defaults.width)
+    elements.boardHeightInput.value = String(defaults.height)
+    elements.boardScaleInput.value = String(defaults.scale)
+    reportError('')
+  }
+
+  const applySelectedCounterAsset = (): void => {
+    const item = selectedAssetItem(
+      assetPickerViewModel,
+      elements.counterAssetSelect.value
+    )
+    const defaults = item?.pieceDefaults
+    if (!defaults) {
+      reportError('Select a counter asset')
+      return
+    }
+
+    elements.pieceNameInput.value = defaults.name
+    elements.pieceImageInput.value = defaults.imageAssetId
+    elements.pieceWidthInput.value = String(defaults.width)
+    elements.pieceHeightInput.value = String(defaults.height)
+    elements.pieceScaleInput.value = String(defaults.scale)
+    reportError('')
   }
 
   const applyBoardFileDimensions = async (): Promise<void> => {
@@ -198,17 +363,19 @@ export const createRoomAssetCreationController = ({
     const name =
       elements.boardNameInput.value.trim() ||
       `Board ${Object.keys(state?.boards || {}).length + 1}`
-    const imageUrl =
+    const imageRef =
       (await readImageDataUrl(elements.boardImageFileInput)) ||
       elements.boardImageInput.value.trim() ||
       null
+    const imageUrl = browserImageUrl(imageRef) ? imageRef : null
+    const imageAssetId = imageRef && !imageUrl ? imageRef : null
 
     await postBoardCommand({
       type: 'CreateBoard',
       ...getCommandIdentity(),
       boardId: uniqueBoardId(state, name),
       name,
-      imageAssetId: null,
+      imageAssetId,
       url: imageUrl,
       width: parsePositiveIntegerInput(elements.boardWidthInput, 1200),
       height: parsePositiveIntegerInput(elements.boardHeightInput, 800),
@@ -275,6 +442,19 @@ export const createRoomAssetCreationController = ({
   addListener(elements.createPiece, 'click', () => {
     createCustomPiece().catch((error) => reportError(error.message))
   })
+  addListener(elements.loadLocalAssets, 'click', () => {
+    try {
+      loadLocalAssetMetadata()
+    } catch (error) {
+      reportError(error instanceof Error ? error.message : String(error))
+    }
+  })
+  addListener(elements.useBoardAsset, 'click', () => {
+    applySelectedBoardAsset()
+  })
+  addListener(elements.useCounterAsset, 'click', () => {
+    applySelectedCounterAsset()
+  })
   addListener(elements.pieceImageFileInput, 'change', () => {
     applyPieceFileDimensions().catch((error) => reportError(error.message))
   })
@@ -284,6 +464,8 @@ export const createRoomAssetCreationController = ({
   addListener(elements.boardImageFileInput, 'change', () => {
     applyBoardFileDimensions().catch((error) => reportError(error.message))
   })
+
+  renderLocalAssetPicker(null)
 
   return {
     dispose: () => {

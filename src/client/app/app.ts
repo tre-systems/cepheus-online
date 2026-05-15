@@ -492,7 +492,9 @@ createRoomAssetCreationWiring({
   dispatchCommandsSequential: commandRouter.dispatchSequential,
   selectPiece,
   requestRender: render,
-  reportError: setError
+  reportError: setError,
+  getCanPickLocalAssets: () =>
+    !state || isActorRefereeOrOwner(state, asUserId(actorId))
 })
 
 createCharacterSheetControlsWiring({

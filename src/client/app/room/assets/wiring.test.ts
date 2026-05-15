@@ -34,6 +34,13 @@ const createElements = (): RequiredAppElements =>
     pieceHeightInput: fakeElement<HTMLInputElement>(),
     pieceScaleInput: fakeElement<HTMLInputElement>(),
     pieceSheetInput: fakeElement<HTMLInputElement>(),
+    localAssetMetadataInput: fakeElement<HTMLTextAreaElement>(),
+    loadLocalAssets: fakeElement<HTMLButtonElement>(),
+    boardAssetSelect: fakeElement<HTMLSelectElement>(),
+    useBoardAsset: fakeElement<HTMLButtonElement>(),
+    counterAssetSelect: fakeElement<HTMLSelectElement>(),
+    useCounterAsset: fakeElement<HTMLButtonElement>(),
+    localAssetStatus: fakeElement<HTMLElement>(),
     boardNameInput: fakeElement<HTMLInputElement>(),
     boardImageInput: fakeElement<HTMLInputElement>(),
     boardImageFileInput: fakeElement<HTMLInputElement>(),
@@ -84,6 +91,7 @@ describe('room asset creation wiring', () => {
       reportError: (message) => {
         errors.push(message)
       },
+      getCanPickLocalAssets: () => true,
       createController: (options) => {
         capturedOptions.push(options)
         return {
@@ -104,6 +112,15 @@ describe('room asset creation wiring', () => {
       elements.pieceImageFileInput
     )
     assert.equal(
+      options.elements.localAssetMetadataInput,
+      elements.localAssetMetadataInput
+    )
+    assert.equal(options.elements.boardAssetSelect, elements.boardAssetSelect)
+    assert.equal(
+      options.elements.counterAssetSelect,
+      elements.counterAssetSelect
+    )
+    assert.equal(
       options.elements.boardImageFileInput,
       elements.boardImageFileInput
     )
@@ -117,6 +134,7 @@ describe('room asset creation wiring', () => {
       roomId: gameId,
       actorId
     })
+    assert.equal(options.getCanPickLocalAssets?.(), true)
     assert.equal(options.createRequestId('board'), 'request:board')
 
     await options.postBoardCommand(command)

@@ -159,8 +159,8 @@
             <input id="pieceNameInput" name="pieceName" autocomplete="off" spellcheck="false" placeholder="Marine">
           </label>
           <label class="piece-image-field">
-            <span>Image URL</span>
-            <input id="pieceImageInput" name="pieceImage" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
+            <span>Image URL / asset id</span>
+            <input id="pieceImageInput" name="pieceImage" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
           </label>
           <label class="piece-image-file-field">
             <span>Image file</span>
@@ -206,6 +206,29 @@
             <input id="pieceSheetInput" name="pieceSheet" type="checkbox">
             <span>Link empty sheet</span>
           </label>
+          <div class="local-asset-title">
+            <span>Local assets</span>
+          </div>
+          <label class="local-asset-metadata-field">
+            <span>Metadata JSON</span>
+            <textarea id="localAssetMetadataInput" name="localAssetMetadata" spellcheck="false" placeholder='{"assets":[...]}'></textarea>
+          </label>
+          <div class="local-asset-actions">
+            <button id="loadLocalAssetsButton" type="button">Load metadata</button>
+            <p id="localAssetStatus" class="local-asset-status" role="status"></p>
+          </div>
+          <label>
+            <span>Board asset</span>
+            <select id="boardAssetSelect" name="boardAsset"></select>
+          </label>
+          <label>
+            <span>Counter asset</span>
+            <select id="counterAssetSelect" name="counterAsset"></select>
+          </label>
+          <div class="local-asset-use-actions">
+            <button id="useBoardAssetButton" type="button">Use board</button>
+            <button id="useCounterAssetButton" type="button">Use counter</button>
+          </div>
           <div class="board-create-title">
             <span>New board</span>
           </div>
@@ -214,7 +237,7 @@
             <input id="boardNameInput" name="boardName" autocomplete="off" spellcheck="false" placeholder="Geomorph deck">
           </label>
           <label>
-            <span>Image URL</span>
+            <span>Image URL / asset id</span>
             <input id="boardImageInput" name="boardImage" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Optional">
           </label>
           <label>

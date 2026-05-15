@@ -39,6 +39,13 @@ export interface AppElements {
   pieceHeightInput: HTMLInputElement | null
   pieceScaleInput: HTMLInputElement | null
   pieceSheetInput: HTMLInputElement | null
+  localAssetMetadataInput: HTMLTextAreaElement | null
+  loadLocalAssets: HTMLButtonElement | null
+  boardAssetSelect: HTMLSelectElement | null
+  useBoardAsset: HTMLButtonElement | null
+  counterAssetSelect: HTMLSelectElement | null
+  useCounterAsset: HTMLButtonElement | null
+  localAssetStatus: HTMLElement | null
   boardNameInput: HTMLInputElement | null
   boardImageInput: HTMLInputElement | null
   boardImageFileInput: HTMLInputElement | null
@@ -120,6 +127,13 @@ export const getAppElements = (document: AppElementsDocument): AppElements => ({
   pieceHeightInput: getElement(document, 'pieceHeightInput'),
   pieceScaleInput: getElement(document, 'pieceScaleInput'),
   pieceSheetInput: getElement(document, 'pieceSheetInput'),
+  localAssetMetadataInput: getElement(document, 'localAssetMetadataInput'),
+  loadLocalAssets: getElement(document, 'loadLocalAssetsButton'),
+  boardAssetSelect: getElement(document, 'boardAssetSelect'),
+  useBoardAsset: getElement(document, 'useBoardAssetButton'),
+  counterAssetSelect: getElement(document, 'counterAssetSelect'),
+  useCounterAsset: getElement(document, 'useCounterAssetButton'),
+  localAssetStatus: getElement(document, 'localAssetStatus'),
   boardNameInput: getElement(document, 'boardNameInput'),
   boardImageInput: getElement(document, 'boardImageInput'),
   boardImageFileInput: getElement(document, 'boardImageFileInput'),

@@ -31,6 +31,7 @@ export interface RoomAssetCreationWiringOptions {
   selectPiece: (pieceId: PieceId) => void
   requestRender: () => void
   reportError: (message: string) => void
+  getCanPickLocalAssets?: () => boolean
   createController?: (
     options: RoomAssetCreationOptions
   ) => RoomAssetCreationController
@@ -50,6 +51,7 @@ export const createRoomAssetCreationWiring = ({
   selectPiece,
   requestRender,
   reportError,
+  getCanPickLocalAssets,
   createController = createRoomAssetCreationController
 }: RoomAssetCreationWiringOptions): RoomAssetCreationController => {
   return createController({
@@ -68,6 +70,13 @@ export const createRoomAssetCreationWiring = ({
       pieceHeightInput: elements.pieceHeightInput,
       pieceScaleInput: elements.pieceScaleInput,
       pieceSheetInput: elements.pieceSheetInput,
+      localAssetMetadataInput: elements.localAssetMetadataInput,
+      loadLocalAssets: elements.loadLocalAssets,
+      boardAssetSelect: elements.boardAssetSelect,
+      useBoardAsset: elements.useBoardAsset,
+      counterAssetSelect: elements.counterAssetSelect,
+      useCounterAsset: elements.useCounterAsset,
+      localAssetStatus: elements.localAssetStatus,
       boardNameInput: elements.boardNameInput,
       boardImageInput: elements.boardImageInput,
       boardImageFileInput: elements.boardImageFileInput,
@@ -88,6 +97,7 @@ export const createRoomAssetCreationWiring = ({
     dispatchCommandsSequential,
     selectPiece,
     requestRender,
-    reportError
+    reportError,
+    getCanPickLocalAssets
   })
 }

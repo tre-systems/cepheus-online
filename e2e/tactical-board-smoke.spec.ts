@@ -75,6 +75,71 @@ const postSequencedCommand = async (
 }
 
 test.describe('tactical board smoke', () => {
+  test('loads local map metadata into referee board and counter fields', async ({
+    page
+  }) => {
+    const roomId = uniqueRoomId('asset-picker')
+    const refereeId = 'asset-referee'
+    await openRoom(page, {
+      roomId,
+      userId: refereeId,
+      viewer: 'referee'
+    })
+
+    await page.locator('#menuButton').click()
+    await expect(page.locator('#roomDialog')).toBeVisible()
+
+    await page.locator('#localAssetMetadataInput').fill(
+      JSON.stringify({
+        assets: [
+          {
+            root: 'Geomorphs',
+            relativePath: 'standard/deck-01.jpg',
+            kind: 'geomorph',
+            width: 1000,
+            height: 1000,
+            gridScale: 50
+          },
+          {
+            root: 'Counters',
+            relativePath: 'crew/free-trader.svg',
+            kind: 'counter',
+            width: 600,
+            height: 600,
+            gridScale: 50
+          }
+        ]
+      })
+    )
+    await page.locator('#loadLocalAssetsButton').click()
+    await expect(page.locator('#localAssetStatus')).toHaveText(
+      '1 board asset(s), 1 counter asset(s)'
+    )
+
+    await page
+      .locator('#boardAssetSelect')
+      .selectOption('Geomorphs/standard/deck-01.jpg')
+    await page.locator('#useBoardAssetButton').click()
+    await expect(page.locator('#boardNameInput')).toHaveValue('deck 01')
+    await expect(page.locator('#boardImageInput')).toHaveValue(
+      'Geomorphs/standard/deck-01.jpg'
+    )
+    await expect(page.locator('#boardWidthInput')).toHaveValue('1000')
+    await expect(page.locator('#boardHeightInput')).toHaveValue('1000')
+    await expect(page.locator('#boardScaleInput')).toHaveValue('50')
+
+    await page
+      .locator('#counterAssetSelect')
+      .selectOption('Counters/crew/free-trader.svg')
+    await page.locator('#useCounterAssetButton').click()
+    await expect(page.locator('#pieceNameInput')).toHaveValue('free trader')
+    await expect(page.locator('#pieceImageInput')).toHaveValue(
+      'Counters/crew/free-trader.svg'
+    )
+    await expect(page.locator('#pieceWidthInput')).toHaveValue('600')
+    await expect(page.locator('#pieceHeightInput')).toHaveValue('600')
+  })
+
   test('creates a board, moves pieces, toggles doors, and filters hidden pieces', async ({
     page,
     context

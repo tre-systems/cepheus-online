@@ -1271,7 +1271,8 @@ Tasks:
 - Build validated metadata sidecars for local assets instead of copying image
   contents into git.
 - Add a referee asset picker that can create boards from geomorph defaults and
-  pieces from counter defaults.
+  pieces from counter defaults. Initial metadata paste/load and form-prefill
+  support is in place; next steps are asset upload/preview and composition.
 - Expand LOS sidecar validation for walls, doors, bounds, duplicate ids, and
   zero-length segments.
 - Add a reviewed workflow for deriving walls and doors from standardized

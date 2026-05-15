@@ -1659,7 +1659,8 @@ h1 {
 .dice-expression,
 .character-create-title,
 .piece-create-title,
-.board-create-title {
+.board-create-title,
+.local-asset-title {
   display: grid;
   gap: 5px;
   min-width: 0;
@@ -1669,7 +1670,8 @@ h1 {
 .dice-expression span,
 .character-create-title span,
 .piece-create-title span,
-.board-create-title span {
+.board-create-title span,
+.local-asset-title span {
   color: var(--muted);
   font-size: 11px;
   font-weight: 760;
@@ -1678,7 +1680,8 @@ h1 {
 
 .piece-create-title,
 .character-create-title,
-.board-create-title {
+.board-create-title,
+.local-asset-title {
   grid-column: 1 / -1;
   padding-top: 4px;
   border-top: 1px solid rgba(72, 255, 173, 0.18);
@@ -2736,6 +2739,32 @@ h1 {
 .room-form textarea {
   min-height: 70px;
   resize: vertical;
+}
+
+.local-asset-metadata-field,
+.local-asset-actions,
+.local-asset-use-actions {
+  grid-column: 1 / -1;
+}
+
+.local-asset-actions,
+.local-asset-use-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 170px) minmax(0, 1fr);
+  align-items: center;
+}
+
+.local-asset-status {
+  min-height: 20px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.local-asset-use-actions button {
+  min-width: 0;
 }
 
 .piece-sheet-field {
