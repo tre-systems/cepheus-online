@@ -18,7 +18,6 @@ import {
   applyCharacterCreationTermSkillRoll,
   applyParsedCharacterCreationDraftPatch,
   deriveCharacterCreationAgingChangeOptions,
-  deriveCharacterCreationTermSkillTableActions,
   deriveNextCharacterCreationAgingRoll,
   deriveNextCharacterCreationCharacteristicRoll,
   resolveCharacterCreationDraftCareer,
@@ -460,11 +459,6 @@ export const createCharacterCreationCommandController = (
       if (!flow) return
       setError('')
       syncFields()
-
-      const action = deriveCharacterCreationTermSkillTableActions(flow).find(
-        (candidate) => candidate.table === table
-      )
-      if (!action || action.disabled) return
 
       await ensurePublished()
       const response = await postCharacterCreationCommand(

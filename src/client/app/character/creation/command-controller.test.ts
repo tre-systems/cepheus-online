@@ -921,6 +921,56 @@ describe('character creation command controller', () => {
     assert.equal(scrollCount, 1)
   })
 
+  it('posts projected term skill rolls without locally vetoing the table', async () => {
+    const commands: CharacterCreationCommand[] = []
+    const requestIds: string[] = []
+    const errors: string[] = []
+    let published = 0
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: careerFlow,
+      setFlow: () => {},
+      setError: (message) => {
+        errors.push(message)
+      },
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command, requestId) => {
+        commands.push(command)
+        requestIds.push(requestId)
+        return { state: null }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {},
+      syncFlowFromRoomState: () => null,
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {},
+      scrollToTop: () => {}
+    })
+
+    await controller.rollTermSkill('serviceSkills')
+
+    assert.equal(published, 1)
+    assert.equal(commands[0]?.type, 'RollCharacterCreationTermSkill')
+    assert.equal(
+      commands[0]?.type === 'RollCharacterCreationTermSkill'
+        ? commands[0].table
+        : null,
+      'serviceSkills'
+    )
+    assert.deepEqual(requestIds, ['term-skill-roll'])
+    assert.deepEqual(errors, [
+      '',
+      'Term skill roll did not return a dice result'
+    ])
+  })
+
   it('submits aging loss choices through the semantic command without local mutation', async () => {
     let flow: CharacterCreationFlow | null = agingLossFlow()
     const originalFlow = flow
