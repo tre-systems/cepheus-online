@@ -1745,7 +1745,7 @@ export const deriveCharacterCreationMusteringOutViewModel = (
     musteringBenefitOptions?.map((option) => ({
       career: option.career,
       kind: option.kind,
-      label: `Roll ${option.career} ${musteringBenefitKindLabel(option.kind).toLowerCase()}`
+      label: option.kind === 'cash' ? 'Roll cash' : 'Roll benefit'
     })) ??
     ([
       {
