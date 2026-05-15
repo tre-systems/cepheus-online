@@ -965,6 +965,82 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.reenlistmentRoll, null)
   })
 
+  it('fails closed when projected legal actions belong to an older same-step status', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow(),
+      projection: projection('AGING', {
+        actionPlan: {
+          status: 'REENLISTMENT',
+          pendingDecisions: [{ key: 'reenlistmentResolution' }],
+          legalActions: [
+            {
+              key: 'rollReenlistment',
+              status: 'REENLISTMENT',
+              commandTypes: ['ResolveCharacterCreationReenlistment'],
+              rollRequirement: { key: 'reenlistment', dice: '2d6' }
+            }
+          ]
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.reenlistmentRoll, null)
+    assert.equal(viewModel.wizard?.termResolution, null)
+  })
+
+  it('ignores projected legal actions whose status does not match the projection', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow({
+        completedTerms: [completedTerm(), completedTerm(), completedTerm()]
+      }),
+      projection: projection('REENLISTMENT', {
+        actionPlan: {
+          status: 'REENLISTMENT',
+          pendingDecisions: [{ key: 'reenlistmentResolution' }],
+          legalActions: [
+            {
+              key: 'resolveAging',
+              status: 'AGING',
+              commandTypes: ['ResolveCharacterCreationAging'],
+              rollRequirement: { key: 'aging', dice: '2d6' }
+            }
+          ]
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.agingRoll, null)
+    assert.equal(viewModel.wizard?.termResolution, null)
+  })
+
+  it('ignores stale projected legal action option payloads', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow({ termSkillRolls: [] }),
+      projection: projection('SKILLS_TRAINING', {
+        actionPlan: {
+          status: 'SKILLS_TRAINING',
+          pendingDecisions: [{ key: 'skillTrainingSelection' }],
+          legalActions: [
+            {
+              key: 'rollTermSkill',
+              status: 'AGING',
+              commandTypes: ['RollCharacterCreationTermSkill'],
+              rollRequirement: { key: 'termSkill', dice: '1d6' },
+              termSkillTableOptions: [
+                { table: 'serviceSkills', label: 'Stale service skills' }
+              ]
+            }
+          ]
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.deepEqual(viewModel.wizard?.termSkills?.actions, [])
+  })
+
   it('fails closed when projected creation legal actions are missing', () => {
     const reenlistment = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow(),

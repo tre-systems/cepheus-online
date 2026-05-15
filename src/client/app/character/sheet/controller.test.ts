@@ -419,6 +419,7 @@ describe('character sheet controller', () => {
 
   it('renders recovered character creation timeline in details', () => {
     const scout = character({
+      skills: ['Vacc Suit-0', 'Broker-2', 'Recon-0', 'Recon-0'],
       creation: {
         state: {
           status: 'PLAYABLE',
@@ -433,11 +434,25 @@ describe('character sheet controller', () => {
             skills: [],
             skillsAndTraining: [],
             benefits: [],
-            complete: false,
+            complete: true,
             canReenlist: true,
             completedBasicTraining: false,
             musteringOut: false,
-            anagathics: false
+            anagathics: false,
+            facts: {
+              musteringBenefits: [
+                {
+                  career: 'Scout',
+                  kind: 'material',
+                  roll: { expression: '2d6', rolls: [4, 4], total: 8 },
+                  modifier: 0,
+                  tableRoll: 8,
+                  value: 'High Passage',
+                  credits: 0,
+                  materialItem: 'High Passage'
+                }
+              ]
+            }
           }
         ],
         careers: [{ name: 'Scout', rank: 0 }],
@@ -477,12 +492,24 @@ describe('character sheet controller', () => {
     findByText(harness.elements.sheetBody, 'Final Character')
     findByText(harness.elements.sheetBody, 'Homeworld')
     findByText(harness.elements.sheetBody, 'Unspecified')
+    findByText(harness.elements.sheetBody, 'Characteristics')
+    findByText(
+      harness.elements.sheetBody,
+      'Str 6, Dex 8, End 7, Int 9 (+1), Edu 10 (+1), Soc 6'
+    )
     findByText(harness.elements.sheetBody, 'Careers')
     findByText(harness.elements.sheetBody, 'Scout rank 0')
+    findByText(harness.elements.sheetBody, 'Skills')
+    findByText(harness.elements.sheetBody, 'Broker-2, Recon-0, Vacc Suit-0')
     findByText(harness.elements.sheetBody, 'Credits')
     findByText(harness.elements.sheetBody, 'Cr1200')
     findByText(harness.elements.sheetBody, 'Equipment')
     findByText(harness.elements.sheetBody, 'Laser Pistol x1 (3D6)')
+    findByText(harness.elements.sheetBody, 'Career History')
+    findByText(
+      harness.elements.sheetBody,
+      'Term 1: Scout - benefits High Passage (roll 8); term complete'
+    )
     findByText(harness.elements.sheetBody, 'Plain Export')
     findByText(
       harness.elements.sheetBody,
@@ -495,11 +522,11 @@ describe('character sheet controller', () => {
         'Homeworld: Unspecified',
         'Careers: Scout rank 0',
         'Terms: 1',
-        'Skills: Recon-0, Vacc Suit-0',
+        'Skills: Broker-2, Recon-0, Vacc Suit-0',
         'Credits: Cr1200',
         'Equipment: Laser Pistol x1 (3D6)',
         'Career History:',
-        '- Term 1: Scout',
+        '- Term 1: Scout - benefits High Passage (roll 8); term complete',
         'Notes:',
         'Known contacts on Regina.'
       ].join('\n')

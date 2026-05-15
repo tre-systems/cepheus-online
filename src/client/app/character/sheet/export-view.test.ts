@@ -182,6 +182,16 @@ describe('character sheet export view', () => {
       'Pilot-1',
       'Admin-0'
     ])
+    assert.deepEqual(
+      sortSkillsForExport([
+        ' Vacc Suit-0 ',
+        'Broker-2',
+        'Pilot-1',
+        'Broker-2',
+        ''
+      ]),
+      ['Broker-2', 'Pilot-1', 'Vacc Suit-0']
+    )
   })
 
   it('detects finalized creation from either complete flag or playable state', () => {

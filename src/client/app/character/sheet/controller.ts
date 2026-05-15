@@ -22,7 +22,8 @@ import {
 import {
   deriveCharacterExportViewModel,
   deriveCharacterUpp,
-  derivePlainCharacterExport
+  derivePlainCharacterExport,
+  sortSkillsForExport
 } from './export-view.js'
 
 type CharacterSheetTab = 'details' | 'action' | 'items' | 'notes'
@@ -276,6 +277,10 @@ export const createCharacterSheetController = ({
     return chips
   }
 
+  const displayedCharacterSkills = (
+    character: CharacterState | null
+  ): string[] => sortSkillsForExport(deriveCharacterSkills(character))
+
   const visibilityActions = (piece: PieceState) => {
     const actions = documentApi.createElement('div')
     actions.className = 'sheet-actions'
@@ -352,12 +357,24 @@ export const createCharacterSheetController = ({
     body.append(
       sheetSectionTitle('Final Character'),
       sheetRow('UPP', exportView.upp),
+      sheetRow('Characteristics', exportView.characteristics),
       sheetRow('Homeworld', exportView.homeworld),
       sheetRow('Careers', exportView.careers),
       sheetRow('Terms', String(exportView.terms)),
+      sheetRow('Skills', exportView.skills),
       sheetRow('Credits', exportView.credits),
       sheetRow('Equipment', exportView.equipment)
     )
+    if (exportView.careerHistory.length > 0) {
+      const history = documentApi.createElement('div')
+      history.className = 'sheet-career-history'
+      for (const term of exportView.careerHistory) {
+        const entry = documentApi.createElement('p')
+        entry.textContent = term
+        history.append(entry)
+      }
+      body.append(sheetSectionTitle('Career History'), history)
+    }
   }
 
   const creationEventLabel = (type: string) =>
@@ -456,7 +473,7 @@ export const createCharacterSheetController = ({
       sheetRow('Move', piece.freedom),
       freedomActions(piece),
       sheetSectionTitle('Skills'),
-      skillChips(deriveCharacterSkills(character))
+      skillChips(displayedCharacterSkills(character))
     )
     appendFinalCharacterSummary(body, character)
     const editor = editableDetailsForm(piece, character)
@@ -471,7 +488,7 @@ export const createCharacterSheetController = ({
     character: CharacterState | null
   ) => {
     appendCreationActions(body, character)
-    const skills = deriveCharacterSkills(character)
+    const skills = displayedCharacterSkills(character)
     if (skills.length === 0) {
       body.append(emptySheetText(characterSheetEmptyLabels.noTrainedSkills))
       return
@@ -647,7 +664,7 @@ export const createCharacterSheetController = ({
       statStrip(character),
       ...creationRows(character.creation),
       sheetSectionTitle('Skills'),
-      skillChips(deriveCharacterSkills(character))
+      skillChips(displayedCharacterSkills(character))
     )
     const editor = editableDetailsForm(null, character)
     if (editor) body.append(sheetSectionTitle('Edit'), editor)
@@ -660,7 +677,7 @@ export const createCharacterSheetController = ({
     character: CharacterState
   ) => {
     appendCreationActions(body, character)
-    const skills = deriveCharacterSkills(character)
+    const skills = displayedCharacterSkills(character)
     if (skills.length > 0) {
       body.append(sheetSectionTitle('Skills'), skillChips(skills))
     }

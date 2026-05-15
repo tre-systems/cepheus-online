@@ -287,8 +287,23 @@ const wizardViewModel = ({
 }): CharacterCreationWizardViewModel | null => {
   if (!flow) return null
 
+  const projectedActionPlan =
+    projectedCreation &&
+    projectedCreation.actionPlan?.status === projectedCreation.state.status
+      ? projectedCreation.actionPlan
+      : null
+  const projectedLegalActionList =
+    projectedCreation && projectedActionPlan
+      ? projectedActionPlan.legalActions.filter(
+          (action) => action.status === projectedCreation.state.status
+        )
+      : []
+  const projectedLegalAction = (
+    key: CareerCreationActionKey
+  ): (typeof projectedLegalActionList)[number] | undefined =>
+    projectedLegalActionList.find((action) => action.key === key)
   const projectedCascadeChoices =
-    projectedCreation?.actionPlan?.cascadeSkillChoices ?? []
+    projectedActionPlan?.cascadeSkillChoices ?? []
   const backgroundCascadeChoices =
     projectedCreation?.state.status === 'HOMEWORLD'
       ? projectedCascadeChoices
@@ -299,13 +314,12 @@ const wizardViewModel = ({
       : []
   const homeworldChoiceOptions =
     projectedCreation?.state.status === 'HOMEWORLD'
-      ? projectedCreation.actionPlan?.homeworldChoiceOptions
+      ? projectedActionPlan?.homeworldChoiceOptions
       : undefined
-  const projectedActionPlan = projectedCreation?.actionPlan ?? null
   const hasProjectedCreation = projectedCreation !== null
   const projectedLegalActions = projectedCreation
     ? new Set<CareerCreationActionKey>(
-        projectedActionPlan?.legalActions?.map((action) => action.key) ?? []
+        projectedLegalActionList.map((action) => action.key)
       )
     : null
   const isProjectedLegalActionAvailable = (
@@ -320,30 +334,26 @@ const wizardViewModel = ({
   const failedQualificationOptions = !hasProjectedCreation
     ? undefined
     : projectedCreation.state.status === 'CAREER_SELECTION'
-      ? (projectedActionPlan?.legalActions?.find(
-          (action) => action.key === 'selectCareer'
-        )?.failedQualificationOptions ?? [])
+      ? (projectedLegalAction('selectCareer')?.failedQualificationOptions ?? [])
       : []
   const basicTrainingOptions = !hasProjectedCreation
     ? undefined
     : projectedCreation.state.status === 'BASIC_TRAINING'
-      ? (projectedActionPlan?.legalActions?.find(
-          (action) => action.key === 'completeBasicTraining'
-        )?.basicTrainingOptions ?? { kind: 'none', skills: [] })
+      ? (projectedLegalAction('completeBasicTraining')?.basicTrainingOptions ?? {
+          kind: 'none',
+          skills: []
+        })
       : { kind: 'none' as const, skills: [] }
   const termSkillTableOptions = !hasProjectedCreation
     ? undefined
     : projectedCreation.state.status === 'SKILLS_TRAINING'
-      ? (projectedActionPlan?.legalActions?.find(
-          (action) => action.key === 'rollTermSkill'
-        )?.termSkillTableOptions ?? [])
+      ? (projectedLegalAction('rollTermSkill')?.termSkillTableOptions ?? [])
       : []
   const musteringBenefitOptions = !hasProjectedCreation
     ? undefined
     : projectedCreation.state.status === 'MUSTERING_OUT'
-      ? (projectedActionPlan?.legalActions?.find(
-          (action) => action.key === 'resolveMusteringBenefit'
-        )?.musteringBenefitOptions ?? [])
+      ? (projectedLegalAction('resolveMusteringBenefit')
+          ?.musteringBenefitOptions ?? [])
       : []
 
   return {
