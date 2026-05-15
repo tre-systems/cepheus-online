@@ -398,6 +398,11 @@ Current Character Creation completion focus:
   facts before legacy aggregates. Mustering cash modifiers also read semantic
   term skill facts, so rules outcomes can be recovered from replayed projection
   data.
+- The shared character-creation read model now exposes structured completed
+  terms from semantic facts first, with explicit legacy aggregate fallback for
+  old projections. Creator review and the compatibility flow adapter consume
+  that shared completed-term view instead of owning duplicate term projection
+  logic.
 - Projected character-creation client actions now fail closed on stale accepted
   projections instead of trusting a locally rendered action after the server has
   advanced.
@@ -1406,10 +1411,12 @@ The next batch should run like this, in this order:
    projection-owned fact outside terms so the Draft/Drifter fallback can replay
    without legacy history. Legal actions, term-skill and mustering validators,
    and the client projection adapter use those facts instead of reconstructing
-   the active term from legacy history. The remaining legacy aggregate
-   fallbacks are explicit compatibility paths for old projections; the legacy
-   `history` model remains only for historical replay compatibility and older
-   activity consumers.
+   the active term from legacy history. The shared character creation read
+   model also exposes structured completed terms from those facts, and the
+   client review/compatibility adapter now uses that shared completed-term
+   projection. The remaining legacy aggregate fallbacks are explicit
+   compatibility paths for old projections; the legacy `history` model remains
+   only for historical replay compatibility and older activity consumers.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.
