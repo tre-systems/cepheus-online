@@ -3034,7 +3034,15 @@ describe('room publication flow', () => {
     assert.equal(refreshedCharacter?.age, finalizedEvent.age)
     assert.deepEqual(
       refreshedCharacter?.characteristics,
-      finalizedEvent.characteristics
+      {
+        str: null,
+        dex: null,
+        end: null,
+        int: null,
+        edu: null,
+        soc: null
+      },
+      'non-owner refreshes should not reveal finalized characteristics while their source dice are still hidden'
     )
     assert.deepEqual(refreshedCharacter?.skills, finalizedEvent.skills)
     assert.deepEqual(refreshedCharacter?.equipment, finalizedEvent.equipment)

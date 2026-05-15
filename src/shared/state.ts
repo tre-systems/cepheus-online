@@ -1,4 +1,11 @@
-import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
+import type {
+  BoardId,
+  CharacterId,
+  EventId,
+  GameId,
+  PieceId,
+  UserId
+} from './ids'
 import type {
   CareerCreationEvent,
   AgingChange,
@@ -18,6 +25,16 @@ export type PieceVisibility = 'HIDDEN' | 'PREVIEW' | 'VISIBLE'
 export type PieceFreedom = 'LOCKED' | 'UNLOCKED' | 'SHARE'
 
 export type CharacteristicKey = 'str' | 'dex' | 'end' | 'int' | 'edu' | 'soc'
+
+export type CharacterCreationCharacteristicRolls = Partial<
+  Record<
+    CharacteristicKey,
+    {
+      rollEventId?: EventId
+      value: number
+    }
+  >
+>
 
 export type CharacterCharacteristics = Record<CharacteristicKey, number | null>
 
@@ -59,6 +76,7 @@ export interface CharacterCreationProjection {
   failedToQualify: boolean
   failedQualification?: CareerTermQualificationFact | null
   characteristicChanges: AgingChange[]
+  characteristicRolls?: CharacterCreationCharacteristicRolls
   creationComplete: boolean
   homeworld?: CharacterCreationHomeworld | null
   backgroundSkills?: string[]

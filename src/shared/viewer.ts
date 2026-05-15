@@ -6,6 +6,7 @@ import {
 } from './live-activity'
 import type {
   CharacterState,
+  CharacteristicKey,
   GameState,
   PlayerState,
   PieceState
@@ -111,6 +112,20 @@ const redactUnrevealedCreationFacts = (
 ): void => {
   const creation = character.creation
   if (!creation || unrevealedRollIds.size === 0) return
+
+  if (creation.characteristicRolls) {
+    for (const [characteristic, fact] of Object.entries(
+      creation.characteristicRolls
+    ) as Array<[CharacteristicKey, { rollEventId?: string; value: number }]>) {
+      if (hasUnrevealedRollFact(fact, unrevealedRollIds)) {
+        character.characteristics[characteristic] = null
+        delete creation.characteristicRolls[characteristic]
+      }
+    }
+    if (Object.keys(creation.characteristicRolls).length === 0) {
+      delete creation.characteristicRolls
+    }
+  }
 
   if (hasUnrevealedRollFact(creation.failedQualification, unrevealedRollIds)) {
     delete creation.failedQualification

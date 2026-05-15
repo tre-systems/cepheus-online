@@ -382,6 +382,12 @@ describe('viewer filtering', () => {
         canEnterDraft: true,
         failedToQualify: false,
         characteristicChanges: [],
+        characteristicRolls: {
+          str: {
+            rollEventId: asEventId('roll-1'),
+            value: 7
+          }
+        },
         pendingCascadeSkills: ['Pilot-1'],
         creationComplete: false,
         timeline: [
@@ -407,6 +413,15 @@ describe('viewer filtering', () => {
 
     const term =
       filtered.characters[asCharacterId('char-1')]?.creation?.terms[0]
+    assert.equal(
+      filtered.characters[asCharacterId('char-1')]?.characteristics.str,
+      null
+    )
+    assert.equal(
+      filtered.characters[asCharacterId('char-1')]?.creation
+        ?.characteristicRolls,
+      undefined
+    )
     assert.equal(term?.facts?.survival, undefined)
     assert.equal(term?.facts?.termSkillRolls, undefined)
     assert.equal(term?.facts?.reenlistment, undefined)
@@ -428,6 +443,10 @@ describe('viewer filtering', () => {
       state.characters[asCharacterId('char-1')]?.creation?.terms[0]?.facts
         ?.survival?.survival.rolls,
       [3, 4]
+    )
+    assert.equal(
+      state.characters[asCharacterId('char-1')]?.characteristics.str,
+      7
     )
   })
 

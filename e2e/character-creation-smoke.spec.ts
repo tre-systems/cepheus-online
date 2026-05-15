@@ -1338,9 +1338,10 @@ test.describe('character creation smoke', () => {
 
     const characterName =
       (await page.locator('#characterCreatorTitle').textContent()) ?? ''
-    await activeCreationCharacterId(page, roomId, actorId)
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
 
     const spectator = await browser.newPage()
+    const lateSpectator = await browser.newPage()
     try {
       await openRoom(spectator, {
         roomId,
@@ -1365,6 +1366,55 @@ test.describe('character creation smoke', () => {
         timeout: 5_000
       })
       await expect(spectatorStrValue).toHaveCount(0)
+      const waitForPlayerState = async (
+        spectatorPage: Page,
+        userId: string
+      ): Promise<RoomStateMessage> => {
+        let state: Promise<RoomStateMessage> | null = null
+        await spectatorPage.waitForResponse((candidate) => {
+          const url = new URL(candidate.url())
+          const matches =
+            candidate.request().method() === 'GET' &&
+            url.pathname === `/rooms/${roomId}/state` &&
+            url.searchParams.get('viewer') === 'player' &&
+            url.searchParams.get('user') === userId
+          if (matches) state = candidate.json() as Promise<RoomStateMessage>
+          return matches
+        })
+        if (!state) throw new Error(`Missing player state for ${userId}`)
+        return state
+      }
+      const expectRedactedCharacteristicState = (
+        message: RoomStateMessage
+      ) => {
+        const latestRoll = message.state?.diceLog?.at(-1)
+        expect(latestRoll?.rolls).toBeUndefined()
+        expect(latestRoll?.total).toBeUndefined()
+        expect(
+          message.state?.characters[characterId]?.characteristics?.str ?? null
+        ).toBeNull()
+        const creationActivity = message.liveActivities?.find(
+          (activity) => activity.type === 'characterCreation'
+        )
+        expect(creationActivity?.details).toBeUndefined()
+      }
+      const reloadedState = waitForPlayerState(spectator, 'e2e-spectator')
+      const joinedState = waitForPlayerState(
+        lateSpectator,
+        'e2e-late-characteristic'
+      )
+      await Promise.all([
+        spectator.reload({ waitUntil: 'domcontentloaded' }),
+        openRoom(lateSpectator, {
+          roomId,
+          userId: 'e2e-late-characteristic',
+          viewer: 'player'
+        })
+      ])
+      expectRedactedCharacteristicState(await reloadedState)
+      expectRedactedCharacteristicState(await joinedState)
+      await openOrExpectFollowedCreation(spectator, characterName)
+      await openOrExpectFollowedCreation(lateSpectator, characterName)
       await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
         'Rolling...',
         { timeout: 5_000 }
@@ -1378,6 +1428,7 @@ test.describe('character creation smoke', () => {
       await openOrExpectFollowedCreation(spectator, characterName)
       await expect(spectatorStrValue).toHaveText(rolledStr, { timeout: 5_000 })
     } finally {
+      await lateSpectator.close()
       await spectator.close()
     }
   })

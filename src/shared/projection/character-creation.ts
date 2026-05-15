@@ -422,6 +422,13 @@ const rawCharacterEventHandlers = {
     }
     character.creation = {
       ...character.creation,
+      characteristicRolls: {
+        ...(character.creation.characteristicRolls ?? {}),
+        [event.characteristic]: {
+          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
+          value: event.value
+        }
+      },
       timeline: appendCharacterCreationTimeline(character, envelope)
     }
 
