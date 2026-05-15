@@ -48,13 +48,37 @@ const derivedCreationNotes = (character: CharacterState): string => {
   return notes.join('\n')
 }
 
+const hasSemanticTermFacts = (
+  term: CharacterCreationProjection['terms'][number]
+): boolean => Object.keys(term.facts ?? {}).length > 0
+
+const deriveTermSkillsFromFacts = (
+  term: CharacterCreationProjection['terms'][number]
+): string[] => [
+  ...(term.facts?.basicTrainingSkills ?? []),
+  ...(term.facts?.termSkillRolls ?? []).flatMap((termSkill) =>
+    termSkill.skill ? [termSkill.skill] : []
+  )
+]
+
+const deriveTermCreationSkills = (
+  term: CharacterCreationProjection['terms'][number]
+): string[] => {
+  const factSkills = deriveTermSkillsFromFacts(term)
+  if (hasSemanticTermFacts(term) && factSkills.length > 0) {
+    return factSkills
+  }
+
+  return term.skillsAndTraining
+}
+
 const deriveCharacterCreationSheet = (
   character: CharacterState
 ): CharacterCreationSheet => {
   const creation = character.creation
   const creationSkills = uniqueSkills([
     ...(creation?.backgroundSkills ?? []),
-    ...(creation?.terms.flatMap((term) => term.skillsAndTraining) ?? []),
+    ...(creation?.terms.flatMap(deriveTermCreationSkills) ?? []),
     ...character.skills
   ])
 

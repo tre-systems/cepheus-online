@@ -106,6 +106,27 @@ const completedTerm = () => ({
   anagathics: false
 })
 
+const factOnlyCompletedTerm = () => ({
+  ...completedTerm(),
+  skills: [],
+  skillsAndTraining: [],
+  facts: {
+    basicTrainingSkills: ['Vacc Suit-0'],
+    termSkillRolls: [
+      {
+        career: 'Scout',
+        table: 'serviceSkills' as const,
+        roll: { expression: '1d6' as const, rolls: [2], total: 2 },
+        tableRoll: 2,
+        rawSkill: 'Pilot',
+        skill: 'Pilot-1',
+        characteristic: null,
+        pendingCascadeSkill: null
+      }
+    ]
+  }
+})
+
 const activeScoutTerm = () => ({
   career: 'Scout',
   skills: ['Vacc Suit-1'],
@@ -1595,5 +1616,29 @@ describe('character creation setup command handlers', () => {
     assert.deepEqual(finalized.equipment, [])
     assert.equal(finalized.credits, 0)
     assert.equal(finalized.notes.includes('Rules source'), true)
+  })
+
+  it('finalizes skills from projected term facts before legacy aggregates', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'FinalizeCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('ACTIVE', {
+          terms: [factOnlyCompletedTerm()],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const finalized = result.value[1]
+    assert.equal(finalized?.type, 'CharacterCreationFinalized')
+    if (finalized?.type !== 'CharacterCreationFinalized') return
+    assert.deepEqual(finalized.skills, ['Vacc Suit-0', 'Pilot-1'])
   })
 })
