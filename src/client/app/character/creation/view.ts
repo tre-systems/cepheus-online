@@ -1586,7 +1586,10 @@ export const deriveCharacterCreationAnagathicsDecisionViewModel = (
 }
 
 export const deriveCharacterCreationTermResolutionViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  {
+    availableActionKeys
+  }: { availableActionKeys?: ReadonlySet<CareerCreationActionKey> } = {}
 ): CharacterCreationTermResolutionViewModel | null => {
   if (flow.step !== 'career') return null
 
@@ -1594,7 +1597,23 @@ export const deriveCharacterCreationTermResolutionViewModel = (
   if (!plan?.career) return null
 
   const title = 'Career term'
-  if (!isCharacterCreationCareerTermResolved(flow.draft)) {
+  const actionAvailable = (key: CareerCreationActionKey): boolean =>
+    availableActionKeys ? availableActionKeys.has(key) : true
+  const anyActionAvailable = (
+    keys: readonly CareerCreationActionKey[]
+  ): boolean =>
+    availableActionKeys ? keys.some((key) => availableActionKeys.has(key)) : true
+  if (
+    !isCharacterCreationCareerTermResolved(flow.draft) &&
+    anyActionAvailable([
+      'selectCareer',
+      'rollSurvival',
+      'rollCommission',
+      'skipCommission',
+      'rollAdvancement',
+      'skipAdvancement'
+    ])
+  ) {
     return {
       title,
       message: 'Roll each required check. The next roll appears above.',
@@ -1602,7 +1621,10 @@ export const deriveCharacterCreationTermResolutionViewModel = (
     }
   }
 
-  if (deriveCharacterCreationTermSkillTableActions(flow).length > 0) {
+  if (
+    deriveCharacterCreationTermSkillTableActions(flow).length > 0 &&
+    actionAvailable('completeSkills')
+  ) {
     return {
       title,
       message: 'Roll this term’s skills before deciding what happens next.',
@@ -1619,7 +1641,10 @@ export const deriveCharacterCreationTermResolutionViewModel = (
     }
   }
 
-  if (deriveCharacterCreationAnagathicsDecision(flow)) {
+  if (
+    deriveCharacterCreationAnagathicsDecision(flow) &&
+    actionAvailable('decideAnagathics')
+  ) {
     return {
       title,
       message:
@@ -1628,7 +1653,10 @@ export const deriveCharacterCreationTermResolutionViewModel = (
     }
   }
 
-  if (deriveNextCharacterCreationAgingRoll(flow)) {
+  if (
+    deriveNextCharacterCreationAgingRoll(flow) &&
+    actionAvailable('resolveAging')
+  ) {
     return {
       title,
       message: 'Roll aging before deciding what happens next.',
@@ -1644,7 +1672,11 @@ export const deriveCharacterCreationTermResolutionViewModel = (
     }
   }
 
-  if (plan.survivalPassed === true && !plan.reenlistmentOutcome) {
+  if (
+    plan.survivalPassed === true &&
+    !plan.reenlistmentOutcome &&
+    actionAvailable('rollReenlistment')
+  ) {
     return {
       title,
       message: 'Roll reenlistment before deciding what happens next.',
@@ -1666,16 +1698,26 @@ export const deriveCharacterCreationTermResolutionViewModel = (
     plan.reenlistmentOutcome === 'allowed' ||
     plan.reenlistmentOutcome === 'forced'
   ) {
-    actions.push({
-      label:
-        plan.reenlistmentOutcome === 'forced'
-          ? 'Serve required term'
-          : 'Serve another term',
-      continueCareer: true
-    })
+    const continueAllowed =
+      plan.reenlistmentOutcome === 'forced'
+        ? anyActionAvailable(['forcedReenlist', 'continueCareer'])
+        : anyActionAvailable(['reenlist', 'continueCareer'])
+    if (continueAllowed) {
+      actions.push({
+        label:
+          plan.reenlistmentOutcome === 'forced'
+            ? 'Serve required term'
+            : 'Serve another term',
+        continueCareer: true
+      })
+    }
   }
 
-  actions.push({ label: 'Muster out', continueCareer: false })
+  if (anyActionAvailable(['leaveCareer', 'finishMustering'])) {
+    actions.push({ label: 'Muster out', continueCareer: false })
+  }
+
+  if (availableActionKeys && actions.length === 0) return null
 
   return {
     title,

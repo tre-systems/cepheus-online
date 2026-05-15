@@ -125,6 +125,29 @@ describe('character creation term resolution view', () => {
     assert.equal(dead.children.length, 2)
   })
 
+  it('hides local blockers when projected legal actions do not allow them', () => {
+    assert.equal(
+      deriveCharacterCreationTermResolutionViewModel(
+        baseFlow(survivedPlan({ termSkillRolls: [] })),
+        { availableActionKeys: new Set() }
+      ),
+      null
+    )
+    assert.equal(
+      deriveCharacterCreationTermResolutionViewModel(
+        baseFlow(
+          survivedPlan({
+            termSkillRolls: [],
+            reenlistmentRoll: 7,
+            reenlistmentOutcome: 'allowed'
+          })
+        ),
+        { availableActionKeys: new Set(['reenlist']) }
+      )?.actions[0]?.label,
+      'Serve another term'
+    )
+  })
+
   it('renders reenlistment and completion actions', async () => {
     const completed: boolean[] = []
     const node = asNode(

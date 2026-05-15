@@ -379,7 +379,9 @@ const wizardViewModel = ({
         termCascadeChoices
       }
     ),
-    termResolution: deriveCharacterCreationTermResolutionViewModel(flow),
+    termResolution: deriveCharacterCreationTermResolutionViewModel(flow, {
+      availableActionKeys: projectedLegalActions ?? undefined
+    }),
     termSkills: deriveCharacterCreationTermSkillTrainingViewModel(flow, {
       termSkillTableOptions
     }),
