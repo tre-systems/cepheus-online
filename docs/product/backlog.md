@@ -1347,9 +1347,9 @@ The next batch should run like this, in this order:
    client creator code from reading legacy history outside compatibility
    helpers. Per-term semantic `facts` now carry qualification, draft,
    survival, commission, advancement, rank, term skill, aging, anagathics,
-   reenlistment, and mustering benefit details; legal actions, mustering
-   validators, and the client projection adapter use those facts instead of
-   reconstructing the active term from legacy history. The remaining legacy
+   reenlistment, and mustering benefit details; legal actions, term-skill and
+   mustering validators, and the client projection adapter use those facts
+   instead of reconstructing the active term from legacy history. The remaining legacy
    aggregate fallbacks are explicit compatibility paths for old projections;
    the legacy `history` model remains only for historical replay compatibility
    and older activity consumers.

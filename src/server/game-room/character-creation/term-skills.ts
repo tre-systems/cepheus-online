@@ -80,7 +80,12 @@ export const requiredTermSkillCount = (
   creation: CharacterCreationProjection
 ): number => {
   const term = creation.terms.at(-1)
-  if (!term || term.survival === undefined) return 0
+  if (
+    !term ||
+    (term.facts?.survival === undefined && term.survival === undefined)
+  ) {
+    return 0
+  }
 
   return !creation.state.context.canCommission &&
     !creation.state.context.canAdvance

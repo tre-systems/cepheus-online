@@ -1222,6 +1222,59 @@ describe('character creation setup command handlers', () => {
     assert.equal(result.value[1].skillsAndTraining.length >= 2, true)
   })
 
+  it('allows term skill rolls from projected survival facts without legacy survival fields', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationTermSkill',
+        gameId,
+        actorId,
+        characterId,
+        table: 'serviceSkills'
+      },
+      context(
+        createCreation('SKILLS_TRAINING', {
+          state: createCareerCreationState('SKILLS_TRAINING', {
+            canCommission: true,
+            canAdvance: false
+          }),
+          terms: [
+            {
+              career: 'Merchant',
+              skills: [],
+              skillsAndTraining: ['Broker-0'],
+              benefits: [],
+              facts: {
+                survival: {
+                  passed: true,
+                  canCommission: true,
+                  canAdvance: false,
+                  survival: {
+                    expression: '2d6',
+                    rolls: [4, 3],
+                    total: 7,
+                    characteristic: 'int',
+                    modifier: 0,
+                    target: 5,
+                    success: true
+                  }
+                }
+              },
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false
+            }
+          ]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value[1]?.type, 'CharacterCreationTermSkillRolled')
+  })
+
   it('emits skills completion after required term skills', () => {
     const result = deriveCharacterCreationCommandEvents(
       {

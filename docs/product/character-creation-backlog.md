@@ -90,9 +90,10 @@ Important remaining gaps:
   choices are now projected into the shared action plan or read model. The
   creator panel consumes projected term-skill and mustering options when they
   are present, including mustering career ownership. Mustering benefit counts,
-  cash caps, anagathics eligibility, and reenlistment outcomes prefer per-term
-  facts with explicit legacy aggregate fallbacks. Remaining work is to reduce
-  legacy client fallback paths and keep polishing provenance and presentation.
+  cash caps, anagathics eligibility, reenlistment outcomes, and server term-skill
+  gates prefer per-term facts with explicit legacy aggregate fallbacks.
+  Remaining work is to reduce legacy client fallback paths and keep polishing
+  provenance and presentation.
 - Multi-term career play, mustering out, and multi-career continuation have
   deterministic browser coverage, including spectator follow through mustering
   and finalization. Remaining work is edge-case coverage and UX polish.
