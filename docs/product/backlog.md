@@ -384,26 +384,24 @@ Start with Streams A-D in parallel, with Stream E running opportunistically:
 Current Character Creation completion focus:
 
 - Projection-owned legal action data now covers term skill table choices,
-  mustering benefit choices, basic training choices, and pending cascade skill
-  choice options. The projection also carries homeworld law-level, trade-code,
-  and background-skill choice lists, plus career-selection choices and their SRD
-  qualification, survival, commission, and advancement check summaries. The
-  client still keeps fallback helpers for legacy local flows, but the active
-  server projection is now the preferred source for rendered choices. Aging,
-  anagathics, reenlistment, survival, commission, and advancement prompts are
-  also hidden when the projected legal action plan says they are not currently
-  legal.
-- Keep extending deterministic two-tab browser journeys for multi-term and
-  multi-career travellers, especially through finalization and no early roll
-  reveal. A focused deterministic browser test now covers a rolled term cascade
-  choice, spectator refresh recovery, and live cascade resolution.
-- Finish projection-owned polish for mustering presentation. Final-sheet/export
-  display now includes UPP, readable
-  characteristics, sorted skills, careers/ranks, term history, benefits,
-  anagathics cost provenance, credits, equipment, and notes from the projected
-  read model.
-- Polish the creator UX so each step shows one clear next action and the final
-  sheet is useful in real play.
+  mustering benefit choices, basic training choices, pending cascade skill
+  choice options, homeworld choices, career choices, aging, anagathics,
+  reenlistment, survival, commission, and advancement prompts. Legal gates now
+  prefer semantic term facts and use legacy aggregate term fields only for
+  compatibility.
+- Finalization and export now derive skills and display history from projected
+  term facts before legacy aggregates. Mustering cash modifiers also read
+  semantic term skill facts, so rules outcomes can be recovered from replayed
+  projection data.
+- Deterministic browser coverage now exercises the full character creation
+  smoke suite, including two-tab following, no early roll reveal, death and
+  replacement traveller creation, Draft/Drifter fallbacks, multi-career
+  creation, mustering, browser-driven finalization, linked token creation, and
+  phone-width control checks.
+- Remaining character-creation work should focus on shrinking legacy
+  compatibility adapters, polishing the creator and final sheet for real table
+  use, and adding any missing optional SRD branches behind semantic commands
+  and projected facts before they appear in the UI.
 
 Hold Streams F and G until the command/projection/filtering spine is stable
 enough that tactical, Discord, and broader rules work can reuse it instead of
