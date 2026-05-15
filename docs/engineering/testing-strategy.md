@@ -24,6 +24,14 @@ test plan should continue to grow in layers as implementation expands.
   deterministic character creation flows in disposable rooms, including
   owner/spectator follow, failed-qualification Draft/Drifter paths, refresh
   recovery, mobile controls, and failure artifacts.
+- `npm run test:e2e:character-creation:reveal`: targeted reveal-boundary
+  browser checks for owner/spectator creation rolls.
+- `npm run test:e2e:character-creation:death`: targeted death and replacement
+  traveller browser checks.
+- `npm run test:e2e:character-creation:multi-career`: targeted multi-career
+  browser coverage.
+- `npm run test:e2e:character-creation:finalization`: targeted mustering and
+  final-sheet browser coverage.
 - Current tests cover shared protocol/dice/projection behavior, event envelope
   versioning, chunk-boundary storage, import boundaries, stale `expectedSeq`
   rejection, Durable Object HTTP flow, Worker static fallback including PWA
@@ -105,6 +113,9 @@ The browser-test slice follows the Delta-V pattern, adapted for this Worker
 app:
 
 - an executable character creation smoke that drives the real app shell
+- named character-creation scripts for reveal, death, multi-career, and
+  finalization checks so local failures can be isolated before running the full
+  smoke
 - repeat runs that create several disposable travellers and leave screenshots
   or DOM snapshots on failure
 - two-tab owner/spectator tests for live character creation follow mode

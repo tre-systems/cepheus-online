@@ -98,7 +98,8 @@ Important remaining gaps:
   presentation.
 - Multi-term career play, mustering out, and multi-career continuation have
   deterministic browser coverage, including spectator follow through mustering
-  and finalization. Remaining work is edge-case coverage and UX polish.
+  and finalization. Named E2E scripts now isolate reveal, death, multi-career,
+  and finalization checks. Remaining work is edge-case coverage and UX polish.
 - Optional mishaps remain unimplemented. Anagathics now has a server-owned
   use/skip decision before aging, but full survival-risk, cost/payment,
   provenance, and UX polish are still open.
