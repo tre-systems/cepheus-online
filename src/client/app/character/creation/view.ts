@@ -23,6 +23,7 @@ import type {
   BenefitKind,
   CascadeSkillChoice,
   CareerChoiceOptions,
+  FailedQualificationActionOption,
   FailedQualificationOption,
   HomeworldChoiceOptions
 } from '../../../../shared/character-creation/types.js'
@@ -2115,20 +2116,34 @@ const projectedCareerOptionViewModels = (
   }))
 
 export const deriveCharacterCreationFailedQualificationViewModel = (
-  flow: Pick<CharacterCreationFlow, 'step' | 'draft'>
+  flow: Pick<CharacterCreationFlow, 'step' | 'draft'>,
+  {
+    failedQualificationOptions
+  }: {
+    failedQualificationOptions?: readonly FailedQualificationActionOption[]
+  } = {}
 ): CharacterCreationFailedQualificationViewModel => {
   const plan = flow.draft.careerPlan
   const open =
     flow.step === 'career' &&
     plan?.qualificationPassed === false &&
     plan.drafted !== true
-  const canEnterDraft = !flow.draft.completedTerms.some((term) => term.drafted)
+  const actionOptions =
+    failedQualificationOptions ??
+    deriveFailedQualificationOptions({
+      canEnterDraft: !flow.draft.completedTerms.some((term) => term.drafted)
+    }).map((option) => ({
+      option,
+      ...(option === 'Draft'
+        ? { rollRequirement: { key: 'draft' as const, dice: '1d6' as const } }
+        : {})
+    }))
   const options = open
-    ? deriveFailedQualificationOptions({ canEnterDraft }).map((option) => ({
+    ? actionOptions.map(({ option, rollRequirement }) => ({
         option,
         label: option,
         actionLabel: option === 'Draft' ? 'Roll draft' : 'Become a Drifter',
-        rollRequirement: option === 'Draft' ? '1d6' : null
+        rollRequirement: rollRequirement?.dice ?? null
       }))
     : []
 
@@ -2142,7 +2157,13 @@ export const deriveCharacterCreationFailedQualificationViewModel = (
 
 export const deriveCharacterCreationCareerSelectionViewModel = (
   flow: CharacterCreationFlow,
-  { careerChoiceOptions }: { careerChoiceOptions?: CareerChoiceOptions } = {}
+  {
+    careerChoiceOptions,
+    failedQualificationOptions
+  }: {
+    careerChoiceOptions?: CareerChoiceOptions
+    failedQualificationOptions?: readonly FailedQualificationActionOption[]
+  } = {}
 ): CharacterCreationCareerSelectionViewModel | null => {
   if (flow.step !== 'career') return null
 
@@ -2173,8 +2194,10 @@ export const deriveCharacterCreationCareerSelectionViewModel = (
     careerOptions: careerChoiceOptions
       ? projectedCareerOptionViewModels(careerChoiceOptions)
       : deriveCharacterCreationCareerOptionViewModels(flow.draft),
-    failedQualification:
-      deriveCharacterCreationFailedQualificationViewModel(flow)
+    failedQualification: deriveCharacterCreationFailedQualificationViewModel(
+      flow,
+      { failedQualificationOptions }
+    )
   }
 }
 

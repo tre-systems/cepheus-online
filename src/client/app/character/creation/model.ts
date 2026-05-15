@@ -307,6 +307,12 @@ const wizardViewModel = ({
     projectedCreation?.state.status === 'CAREER_SELECTION'
       ? projectedCreation.actionPlan?.careerChoiceOptions
       : undefined
+  const failedQualificationOptions =
+    projectedCreation?.state.status === 'CAREER_SELECTION'
+      ? projectedCreation.actionPlan?.legalActions.find(
+          (action) => action.key === 'selectCareer'
+        )?.failedQualificationOptions
+      : undefined
 
   return {
     step: flow.step,
@@ -320,7 +326,8 @@ const wizardViewModel = ({
       backgroundCascadeChoices
     }),
     careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow, {
-      careerChoiceOptions
+      careerChoiceOptions,
+      failedQualificationOptions
     }),
     careerRoll: deriveCharacterCreationCareerRollButton(flow),
     reenlistmentRoll: deriveCharacterCreationReenlistmentRollViewModel(flow),

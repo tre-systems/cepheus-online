@@ -617,6 +617,64 @@ describe('character creation view model', () => {
     ])
   })
 
+  it('uses projected failed qualification options for the fallback menu', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'career',
+        draft: {
+          ...flow().draft,
+          careerPlan: {
+            career: 'Merchant',
+            qualificationRoll: 4,
+            qualificationPassed: false,
+            survivalRoll: null,
+            survivalPassed: null,
+            commissionRoll: null,
+            commissionPassed: null,
+            advancementRoll: null,
+            advancementPassed: null,
+            canCommission: false,
+            canAdvance: false,
+            drafted: false
+          }
+        }
+      }),
+      projection: projection('CAREER_SELECTION', {
+        failedToQualify: true,
+        canEnterDraft: false,
+        actionPlan: {
+          status: 'CAREER_SELECTION',
+          pendingDecisions: [],
+          legalActions: [
+            {
+              key: 'selectCareer',
+              status: 'CAREER_SELECTION',
+              commandTypes: [
+                'ResolveCharacterCreationQualification',
+                'ResolveCharacterCreationDraft',
+                'EnterCharacterCreationDrifter'
+              ],
+              failedQualificationOptions: [{ option: 'Drifter' }]
+            }
+          ]
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.deepEqual(
+      viewModel.wizard?.careerSelection?.failedQualification.options,
+      [
+        {
+          option: 'Drifter',
+          label: 'Drifter',
+          actionLabel: 'Become a Drifter',
+          rollRequirement: null
+        }
+      ]
+    )
+  })
+
   it('includes term skill training state for resolved career terms', () => {
     const viewModel = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow({ termSkillRolls: [] }),
