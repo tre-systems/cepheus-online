@@ -421,10 +421,156 @@ describe('character creation projection helpers', () => {
         ...agingProjection().terms[0],
         complete: true,
         anagathics: true,
-        anagathicsCost: 20000
+        anagathicsCost: 20000,
+        facts: {
+          anagathicsDecision: {
+            useAnagathics: true,
+            termIndex: 0,
+            cost: 20000
+          }
+        }
       }).anagathicsCost,
       20000
     )
+  })
+
+  it('hydrates an active career plan from facts before stale aggregate fields', () => {
+    const creation = agingProjection([])
+    const term = creation.terms[0]
+    term.draft = 1
+    term.survival = 2
+    term.advancement = 2
+    term.reEnlistment = 2
+    term.canReenlist = false
+    term.anagathics = true
+    term.skills = ['Legacy Term-6']
+    term.skillsAndTraining = ['Legacy Training-6']
+    term.facts = {
+      qualification: {
+        career: 'Scout',
+        passed: true,
+        previousCareerCount: 0,
+        failedQualificationOptions: [],
+        qualification: {
+          expression: '2d6',
+          rolls: [3, 4],
+          total: 7,
+          characteristic: 'int',
+          modifier: 1,
+          target: 6,
+          success: true
+        }
+      },
+      survival: {
+        passed: true,
+        canCommission: true,
+        canAdvance: false,
+        survival: {
+          expression: '2d6',
+          rolls: [5, 5],
+          total: 10,
+          characteristic: 'end',
+          modifier: 1,
+          target: 7,
+          success: true
+        }
+      },
+      commission: {
+        skipped: false,
+        passed: true,
+        commission: {
+          expression: '2d6',
+          rolls: [6, 4],
+          total: 10,
+          characteristic: 'soc',
+          modifier: 0,
+          target: 9,
+          success: true
+        }
+      },
+      advancement: {
+        skipped: false,
+        passed: true,
+        advancement: {
+          expression: '2d6',
+          rolls: [6, 5],
+          total: 11,
+          characteristic: 'edu',
+          modifier: 1,
+          target: 8,
+          success: true
+        },
+        rank: {
+          career: 'Scout',
+          previousRank: 0,
+          newRank: 1,
+          title: 'Courier',
+          bonusSkill: 'Pilot-1'
+        }
+      },
+      termSkillRolls: [termSkillEvent('Gambling-1').termSkill],
+      anagathicsDecision: {
+        useAnagathics: false,
+        termIndex: 0
+      },
+      aging: {
+        roll: { expression: '2d6', rolls: [4, 4], total: 8 },
+        age: 22,
+        modifier: -1,
+        characteristicChanges: []
+      },
+      reenlistment: {
+        outcome: 'allowed',
+        reenlistment: {
+          expression: '2d6',
+          rolls: [5, 4],
+          total: 9,
+          characteristic: null,
+          modifier: 0,
+          target: 6,
+          success: true,
+          outcome: 'allowed'
+        }
+      }
+    }
+    creation.state = {
+      status: 'REENLISTMENT',
+      context: { canCommission: false, canAdvance: true }
+    }
+
+    const flow = flowFromProjectedCharacter(character(creation))
+    if (!flow) throw new Error('Expected projected flow')
+
+    assert.deepEqual(flow.draft.careerPlan, {
+      career: 'Scout',
+      qualificationRoll: 7,
+      qualificationPassed: true,
+      survivalRoll: 10,
+      survivalPassed: true,
+      commissionRoll: 10,
+      commissionPassed: true,
+      advancementRoll: 11,
+      advancementPassed: true,
+      canCommission: true,
+      canAdvance: false,
+      drafted: false,
+      rank: 1,
+      rankTitle: 'Courier',
+      rankBonusSkill: 'Pilot-1',
+      termSkillRolls: [
+        {
+          table: 'serviceSkills',
+          roll: 1,
+          skill: 'Gambling-1'
+        }
+      ],
+      anagathics: false,
+      agingRoll: 8,
+      agingMessage: 'No aging effects.',
+      agingSelections: [],
+      reenlistmentRoll: 9,
+      reenlistmentOutcome: 'allowed'
+    })
   })
 
   it('hydrates completed terms from semantic facts before legacy aggregates', () => {

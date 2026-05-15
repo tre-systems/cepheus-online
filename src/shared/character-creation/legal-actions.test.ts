@@ -821,13 +821,14 @@ describe('career creation legal action planner', () => {
             term({
               career: 'Scout',
               completedBasicTraining: true,
-              skillsAndTraining: ['Vacc Suit-0']
+              skillsAndTraining: ['Vacc Suit-0'],
+              facts: undefined
             }),
             term({
               career: 'Merchant',
               completedBasicTraining: false,
               skillsAndTraining: ['Legacy Training-0'],
-              facts: { termSkillRolls: [] }
+              facts: {}
             })
           ]
         })
@@ -841,12 +842,14 @@ describe('career creation legal action planner', () => {
             term({
               career: 'Scout',
               completedBasicTraining: true,
-              skillsAndTraining: ['Vacc Suit-0']
+              skillsAndTraining: ['Vacc Suit-0'],
+              facts: undefined
             }),
             term({
               career: 'Merchant',
               completedBasicTraining: false,
-              skillsAndTraining: []
+              skillsAndTraining: [],
+              facts: undefined
             })
           ]
         })
@@ -860,12 +863,14 @@ describe('career creation legal action planner', () => {
             term({
               career: 'Scout',
               completedBasicTraining: true,
-              skillsAndTraining: ['Vacc Suit-0']
+              skillsAndTraining: ['Vacc Suit-0'],
+              facts: undefined
             }),
             term({
               career: 'Merchant',
               completedBasicTraining: false,
-              skillsAndTraining: []
+              skillsAndTraining: [],
+              facts: undefined
             })
           ]
         })
@@ -892,7 +897,8 @@ describe('career creation legal action planner', () => {
           terms: [
             term({
               completedBasicTraining: false,
-              skillsAndTraining: ['Pilot-0']
+              skillsAndTraining: ['Pilot-0'],
+              facts: undefined
             })
           ]
         })
@@ -902,7 +908,7 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveCareerCreationPendingDecisions(
         projection('SKILLS_TRAINING', {
-          terms: [term({ skills: [] })]
+          terms: [term({ skills: [], facts: undefined })]
         })
       ),
       [{ key: 'skillTrainingSelection' }]
@@ -938,7 +944,7 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(
         projection('SKILLS_TRAINING', {
-          terms: [term({ skills: ['Pilot-1'] })]
+          terms: [term({ skills: ['Pilot-1'], facts: undefined })]
         })
       ),
       ['completeSkills']
@@ -948,7 +954,7 @@ describe('career creation legal action planner', () => {
   it('keeps non-commission careers in skills training until both term skill rolls are resolved', () => {
     const creation = projection('SKILLS_TRAINING', {
       requiredTermSkillCount: 2,
-      terms: [term({ career: 'Scout', skills: ['Pilot-1'] })]
+      terms: [term({ career: 'Scout', skills: ['Pilot-1'], facts: undefined })]
     })
 
     assert.deepEqual(deriveCareerCreationPendingDecisions(creation), [
@@ -965,7 +971,8 @@ describe('career creation legal action planner', () => {
           terms: [
             term({
               career: 'Scout',
-              skills: ['Pilot-1', 'Mechanics-1']
+              skills: ['Pilot-1', 'Mechanics-1'],
+              facts: undefined
             })
           ]
         })
@@ -1013,12 +1020,27 @@ describe('career creation legal action planner', () => {
       ),
       ['rollTermSkill']
     )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('SKILLS_TRAINING', {
+          requiredTermSkillCount: 2,
+          terms: [
+            term({
+              career: 'Scout',
+              skills: ['Legacy Pilot-1', 'Legacy Mechanics-1'],
+              facts: {}
+            })
+          ]
+        })
+      ),
+      ['rollTermSkill']
+    )
   })
 
   it('projects legal term skill table choices from the action plan', () => {
     const creation = projection('SKILLS_TRAINING', {
       requiredTermSkillCount: 2,
-      terms: [term({ career: 'Scout', skills: ['Pilot-1'] })]
+      terms: [term({ career: 'Scout', skills: ['Pilot-1'], facts: undefined })]
     })
 
     assert.deepEqual(
@@ -1437,7 +1459,7 @@ describe('career creation legal action planner', () => {
 
   it('requires anagathics decisions before resolving projected aging', () => {
     const beforeDecision = projection('AGING', {
-      terms: [term({ survival: 8 })]
+      terms: [term({ survival: 8, facts: undefined })]
     })
 
     assert.deepEqual(deriveCareerCreationPendingDecisions(beforeDecision), [
@@ -1477,6 +1499,19 @@ describe('career creation legal action planner', () => {
       [{ key: 'anagathicsDecision' }]
     )
 
+    const unresolvedFactsOwnedTerm = projection('AGING', {
+      terms: [term({ survival: 8, facts: {} })]
+    })
+
+    assert.deepEqual(
+      deriveCareerCreationPendingDecisions(unresolvedFactsOwnedTerm),
+      []
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(unresolvedFactsOwnedTerm),
+      ['resolveAging']
+    )
+
     const afterDecision = projection('AGING', {
       terms: [
         term({
@@ -1502,7 +1537,7 @@ describe('career creation legal action planner', () => {
 
   it('blocks aging actions when anagathics is not the only pending decision', () => {
     const creation = projection('AGING', {
-      terms: [term({ survival: 8 })],
+      terms: [term({ survival: 8, facts: undefined })],
       pendingCascadeSkills: ['Jack of all Trades']
     })
 

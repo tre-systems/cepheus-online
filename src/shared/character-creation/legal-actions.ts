@@ -98,18 +98,21 @@ type ProjectedCareerTerm = NonNullable<
 const hasSemanticTermFacts = (term: ProjectedCareerTerm): boolean =>
   Object.keys(term.facts ?? {}).length > 0
 
+const hasProjectedTermFacts = (term: ProjectedCareerTerm): boolean =>
+  term.facts !== undefined
+
 const hasResolvedSurvivalForRules = (term: ProjectedCareerTerm): boolean =>
-  hasSemanticTermFacts(term)
+  hasProjectedTermFacts(term)
     ? term.facts?.survival !== undefined
     : term.survival !== undefined
 
 const basicTrainingSkillCountForRules = (term: ProjectedCareerTerm): number =>
-  hasSemanticTermFacts(term)
+  hasProjectedTermFacts(term)
     ? (term.facts?.basicTrainingSkills?.length ?? 0)
     : term.skillsAndTraining.length
 
 const termSkillRollCountForRules = (term: ProjectedCareerTerm): number =>
-  hasSemanticTermFacts(term)
+  hasProjectedTermFacts(term)
     ? (term.facts?.termSkillRolls?.length ?? 0)
     : term.skills.length
 

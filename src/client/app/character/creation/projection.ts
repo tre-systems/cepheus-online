@@ -34,12 +34,12 @@ export const creationStepFromStatus = (
 export const completedTermFromProjection = (
   term: CareerTerm
 ): CharacterCreationCompletedTerm => {
-  if (hasSemanticTermFacts(term)) return completedTermFromSemanticFacts(term)
+  if (hasProjectedTermFacts(term)) return completedTermFromSemanticFacts(term)
   return legacyCompletedTermFromAggregate(term)
 }
 
-const hasSemanticTermFacts = (term: CareerTerm): boolean =>
-  Object.keys(term.facts ?? {}).length > 0
+const hasProjectedTermFacts = (term: CareerTerm): boolean =>
+  term.facts !== undefined
 
 const resolvedTermCascadeSkill = (
   term: CareerTerm,
@@ -99,7 +99,7 @@ const skillListFromTermFacts = (term: CareerTerm): string[] => [
 
 const creationSkillsFromTerm = (term: CareerTerm): string[] => {
   const factSkills = skillListFromTermFacts(term)
-  return hasSemanticTermFacts(term) ? factSkills : term.skillsAndTraining
+  return hasProjectedTermFacts(term) ? factSkills : term.skillsAndTraining
 }
 
 const legacyTermSkillRollsFromAggregate = (
@@ -120,9 +120,9 @@ const completedTermFromSemanticFacts = (
 
   return {
     career: term.career,
-    drafted: term.draft === 1,
-    anagathics: term.anagathics,
-    anagathicsCost: term.anagathicsCost ?? null,
+    drafted: facts?.draft !== undefined,
+    anagathics: facts?.anagathicsDecision?.useAnagathics ?? false,
+    anagathicsCost: facts?.anagathicsDecision?.cost ?? null,
     age: facts?.aging?.age ?? null,
     rank:
       advancement && !advancement.skipped
@@ -203,22 +203,57 @@ const legacyCareerPlanFromAggregate = (
 
 const semanticCareerPlanFromFacts = (
   activeTerm: CareerTerm
-): Pick<
-  CharacterCreationCareerPlan,
-  | 'survivalRoll'
-  | 'advancementRoll'
-  | 'reenlistmentRoll'
-  | 'reenlistmentOutcome'
-> => {
+): CharacterCreationCareerPlan => {
   const facts = activeTerm.facts
+  const qualification = facts?.qualification
+  const survival = facts?.survival
+  const commission = facts?.commission
   const advancement = facts?.advancement
+  const aging = facts?.aging
 
   return {
-    survivalRoll: facts?.survival?.survival.total ?? null,
+    career: activeTerm.career,
+    qualificationRoll: qualification?.qualification.total ?? null,
+    qualificationPassed: qualification?.passed ?? true,
+    survivalRoll: survival?.survival.total ?? null,
+    survivalPassed: survival?.passed ?? null,
+    commissionRoll:
+      commission?.skipped === true
+        ? -1
+        : (commission?.commission.total ?? null),
+    commissionPassed:
+      commission?.skipped === true ? false : (commission?.passed ?? null),
     advancementRoll:
       advancement?.skipped === true
         ? -1
         : (advancement?.advancement.total ?? null),
+    advancementPassed:
+      advancement?.skipped === true ? false : (advancement?.passed ?? null),
+    canCommission: survival?.canCommission ?? null,
+    canAdvance: survival?.canAdvance ?? null,
+    drafted: facts?.draft !== undefined,
+    rank:
+      advancement && !advancement.skipped
+        ? (advancement.rank?.newRank ?? null)
+        : null,
+    rankTitle:
+      advancement && !advancement.skipped
+        ? (advancement.rank?.title ?? null)
+        : null,
+    rankBonusSkill:
+      advancement && !advancement.skipped
+        ? (advancement.rank?.bonusSkill ?? null)
+        : null,
+    termSkillRolls: termSkillRollsFromFacts(activeTerm),
+    anagathics: facts?.anagathicsDecision?.useAnagathics ?? null,
+    agingRoll: aging?.roll?.total ?? null,
+    agingMessage:
+      (aging?.characteristicChanges?.length ?? 0) > 0
+        ? `${aging?.characteristicChanges?.length ?? 0} characteristic changes`
+        : aging
+          ? 'No aging effects.'
+          : null,
+    agingSelections: [],
     reenlistmentRoll: facts?.reenlistment?.reenlistment.total ?? null,
     reenlistmentOutcome: facts?.reenlistment?.outcome ?? null
   }
@@ -262,64 +297,62 @@ export const careerPlanFromProjection = (
   }
 
   const facts = activeTerm.facts
-  const commission = facts?.commission
-  const advancement = facts?.advancement
-  const agingFact = facts?.aging
-  const semanticOrLegacyFields = hasSemanticTermFacts(activeTerm)
-    ? semanticCareerPlanFromFacts(activeTerm)
-    : legacyCareerPlanFromAggregate(activeTerm)
+  if (hasProjectedTermFacts(activeTerm)) {
+    return semanticCareerPlanFromFacts(activeTerm)
+  }
+
+  const legacyFields = legacyCareerPlanFromAggregate(activeTerm)
 
   return {
     career: activeTerm.career,
     qualificationRoll: facts?.qualification?.qualification.total ?? null,
     qualificationPassed: facts?.qualification?.passed ?? true,
-    survivalRoll: semanticOrLegacyFields.survivalRoll,
+    survivalRoll: legacyFields.survivalRoll,
     survivalPassed: facts?.survival?.passed ?? null,
     commissionRoll:
-      commission?.skipped === true
+      facts?.commission?.skipped === true
         ? -1
-        : (commission?.commission.total ?? null),
+        : (facts?.commission?.commission.total ?? null),
     commissionPassed:
-      commission?.skipped === true ? false : (commission?.passed ?? null),
-    advancementRoll: semanticOrLegacyFields.advancementRoll,
+      facts?.commission?.skipped === true
+        ? false
+        : (facts?.commission?.passed ?? null),
+    advancementRoll: legacyFields.advancementRoll,
     advancementPassed:
-      advancement?.skipped === true ? false : (advancement?.passed ?? null),
+      facts?.advancement?.skipped === true
+        ? false
+        : (facts?.advancement?.passed ?? null),
     canCommission: creation.state.context?.canCommission ?? null,
     canAdvance: creation.state.context?.canAdvance ?? null,
     drafted: activeTerm.draft === 1,
     rank:
-      advancement && !advancement.skipped
-        ? (advancement.rank?.newRank ?? null)
+      facts?.advancement && !facts.advancement.skipped
+        ? (facts.advancement.rank?.newRank ?? null)
         : null,
     rankTitle:
-      advancement && !advancement.skipped
-        ? (advancement.rank?.title ?? null)
+      facts?.advancement && !facts.advancement.skipped
+        ? (facts.advancement.rank?.title ?? null)
         : null,
     rankBonusSkill:
-      advancement && !advancement.skipped
-        ? (advancement.rank?.bonusSkill ?? null)
+      facts?.advancement && !facts.advancement.skipped
+        ? (facts.advancement.rank?.bonusSkill ?? null)
         : null,
-    termSkillRolls:
-      facts?.termSkillRolls?.map((termSkill) => ({
-        table: termSkill.table,
-        roll: termSkill.roll.total,
-        skill: termSkillFactSkill(activeTerm, termSkill) ?? termSkill.rawSkill
-      })) ?? [],
+    termSkillRolls: termSkillRollsFromFacts(activeTerm),
     anagathics:
       facts?.anagathicsDecision?.useAnagathics ??
-      (creation.state.status === 'AGING' && !agingFact
+      (creation.state.status === 'AGING' && !facts?.aging
         ? null
         : activeTerm.anagathics),
-    agingRoll: agingFact?.roll?.total ?? null,
+    agingRoll: facts?.aging?.roll?.total ?? null,
     agingMessage:
-      (agingFact?.characteristicChanges?.length ?? 0) > 0
-        ? `${agingFact?.characteristicChanges?.length ?? 0} characteristic changes`
-        : agingFact
+      (facts?.aging?.characteristicChanges?.length ?? 0) > 0
+        ? `${facts?.aging?.characteristicChanges?.length ?? 0} characteristic changes`
+        : facts?.aging
           ? 'No aging effects.'
           : null,
     agingSelections: [],
-    reenlistmentRoll: semanticOrLegacyFields.reenlistmentRoll,
-    reenlistmentOutcome: semanticOrLegacyFields.reenlistmentOutcome
+    reenlistmentRoll: legacyFields.reenlistmentRoll,
+    reenlistmentOutcome: legacyFields.reenlistmentOutcome
   }
 }
 
