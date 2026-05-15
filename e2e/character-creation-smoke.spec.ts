@@ -4288,6 +4288,12 @@ test.describe('character creation smoke', () => {
       name: 'Roll reenlistment'
     })
     await expectMobileControlUsable(rollReenlistment, 'Roll reenlistment')
+    await setSeedForNextRoll(
+      page,
+      roomId,
+      await nextEventSeq(page, roomId, actorId),
+      [4, 4]
+    )
     await rollReenlistment.click()
     await waitForDiceReveal(page)
 
@@ -4314,6 +4320,33 @@ test.describe('character creation smoke', () => {
       page.getByRole('button', { name: 'Muster out' }),
       'Muster out after reenlistment'
     )
+
+    const serveAnotherTerm = page.getByRole('button', {
+      name: 'Serve another term'
+    })
+    await expectMobileControlUsable(
+      serveAnotherTerm,
+      'Serve another term after reenlistment'
+    )
+    const reenlisted = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes(`/rooms/${roomId}/command`) &&
+        (response.request().postData() ?? '').includes(
+          'ReenlistCharacterCreationCareer'
+        )
+    )
+    await serveAnotherTerm.click()
+    await expect((await reenlisted).ok()).toBe(true)
+    await expect(fields).toContainText('Roll survival', { timeout: 5_000 })
+    await expect(fields).not.toContainText('Roll reenlistment')
+    await expectMobileCreatorControlsFit(page)
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await expect(fields).toContainText('Roll survival', { timeout: 15_000 })
+    await expectMobileCreatorControlsFit(page)
   })
 
   test('keeps mustering out controls usable at phone width', async ({

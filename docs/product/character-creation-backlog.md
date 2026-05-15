@@ -96,10 +96,14 @@ Important remaining gaps:
   legacy fallback instead of inventing roll provenance. Remaining work is to
   reduce legacy client fallback paths and keep polishing provenance and
   presentation.
+- Projected client actions now fail closed when the accepted projection sequence
+  is stale, so the browser must refresh from server state instead of submitting
+  a locally valid-looking action after the room has moved on.
 - Multi-term career play, mustering out, and multi-career continuation have
   deterministic browser coverage, including spectator follow through mustering
-  and finalization. Named E2E scripts now isolate reveal, death, multi-career,
-  and finalization checks. Remaining work is edge-case coverage and UX polish.
+  and finalization plus final sheet reload recovery. Named E2E scripts now
+  isolate reveal, death, multi-career, and finalization checks. Remaining work
+  is edge-case coverage and UX polish.
 - Optional mishaps remain unimplemented. Anagathics now has a server-owned
   use/skip decision before aging, but full survival-risk, cost/payment,
   provenance, and UX polish are still open.
@@ -175,8 +179,10 @@ tests before it is considered done.
 - [~] Finalize only after at least one legal term or exit, no unresolved pending
   decisions, no unresolved death/mishap branch, and all mustering benefits are
   resolved. Current legal action: `completeCreation`. The command is
-  intent-only and the server derives the final sheet. Gap: completed-character
-  display polish and remaining final-field edge coverage.
+  intent-only and the server derives the final sheet. Completed summaries now
+  include characteristics, sorted/deduped skills, career history, credits, and
+  equipment. Gap: completed-character display polish, deeper provenance, and
+  future final-field edge coverage.
 
 ## Backlog Principles
 
@@ -482,7 +488,11 @@ Tasks:
 - Done: finalization gates prevent unresolved or illegal completion, and the
   finalized sheet is server-derived from creation events plus intent-only
   finalization.
-- Done: add structured UPP/export display for completed characters.
+- Done: add structured UPP/export display for completed characters, including
+  characteristics, sorted/deduped skills, career history, credits, and
+  equipment.
+- Done: finalization E2E coverage reloads the completed sheet and verifies the
+  projected final summary survives room-state recovery.
 
 Acceptance:
 
@@ -539,6 +549,8 @@ Acceptance:
 - Add command/event/projector tests for every server-backed creation step.
 - Add client view model tests for status-to-action rendering.
 - Add stale command tests for creation actions that include expected sequence.
+  Projected client actions now fail closed on stale accepted projection
+  sequences; keep adding cases as new projected actions are introduced.
 - Add browser smoke tests with deterministic dice inputs for:
   - full one-term path from characteristics through homeworld/background,
     survival, term skills, aging, reenlistment, and mustering

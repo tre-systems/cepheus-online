@@ -190,6 +190,8 @@ Done when:
   rules plus semantic events before they appear in the UI.
 - Illegal creation commands reject from projected rules state before
   persistence.
+- Stale projected client actions fail closed when their accepted projection
+  sequence no longer matches the server state.
 
 ### Stream C: Client Creator UX And App Shell
 
@@ -396,11 +398,14 @@ Current Character Creation completion focus:
   facts before legacy aggregates. Mustering cash modifiers also read semantic
   term skill facts, so rules outcomes can be recovered from replayed projection
   data.
+- Projected character-creation client actions now fail closed on stale accepted
+  projections instead of trusting a locally rendered action after the server has
+  advanced.
 - Deterministic browser coverage now exercises the full character creation
   smoke suite, including two-tab following, no early roll reveal, death and
   replacement traveller creation, Draft/Drifter fallbacks, multi-career
-  creation, mustering, browser-driven finalization, linked token creation, and
-  phone-width control checks.
+  creation, mustering, browser-driven finalization, final sheet reload recovery,
+  linked token creation, and phone-width control checks.
 - Remaining character-creation work should focus on shrinking legacy
   compatibility adapters, polishing the creator and final sheet for real table
   use, and adding any missing optional SRD branches behind semantic commands
@@ -1186,8 +1191,8 @@ Tasks:
   resolved cascade choices, aging loss selections, credits, equipment, and
   notes from the projected read model.
 - Done: completed character sheets include a structured final-character summary
-  for UPP, homeworld, careers, terms, credits, and equipment before the plain
-  export block.
+  for UPP, homeworld, characteristics, sorted/deduped skills, career history,
+  terms, credits, and equipment before the plain export block.
 - Done: final sheet and plain export presentation now share a structured export
   view model so later review/export polish has one client read model to extend.
 - Done: semantic term facts are authoritative for finalization/export when they
@@ -1195,12 +1200,14 @@ Tasks:
   fields. Finalization notes derive survival summaries from projected term
   facts, and browser finalization now hands off to the final sheet from the
   accepted projection at phone width.
+- Done: E2E finalization coverage reloads the completed sheet and asserts the
+  structured summary survives from projected room state.
 - Extend final playable sheet coverage for deeper provenance and material
   benefit metadata as those display fields mature.
 - Polish copy/layout around the completed-character summary and export block
   after the remaining creator UX work settles.
-- Add refresh-loaded room state coverage for any remaining final-sheet fields
-  not covered by the current checkpoint-plus-tail read model test.
+- Add refresh-loaded room state coverage only for future final-sheet fields not
+  covered by the current finalization reload path.
 
 Done when:
 
