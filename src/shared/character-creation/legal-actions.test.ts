@@ -1144,6 +1144,51 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('counts projected rank facts before legacy career rank for remaining benefits', () => {
+    const creation = projection('MUSTERING_OUT', {
+      terms: [
+        term({
+          career: 'Scout',
+          complete: true,
+          musteringOut: true,
+          facts: {
+            advancement: {
+              skipped: false,
+              passed: true,
+              advancement: {
+                expression: '2d6',
+                rolls: [6, 6],
+                total: 12,
+                characteristic: 'int',
+                modifier: 0,
+                target: 8,
+                success: true
+              },
+              rank: {
+                career: 'Scout',
+                previousRank: 4,
+                newRank: 5,
+                title: 'Senior Scout',
+                bonusSkill: null
+              }
+            }
+          }
+        })
+      ],
+      careers: [{ name: 'Scout', rank: 0 }]
+    })
+
+    assert.equal(deriveRemainingCareerCreationBenefits(creation), 4)
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(creation).legalActions[0]
+        ?.musteringBenefitOptions,
+      [
+        { career: 'Scout', kind: 'cash' },
+        { career: 'Scout', kind: 'material' }
+      ]
+    )
+  })
+
   it('derives remaining projected mustering benefits by career', () => {
     const creation = projection('MUSTERING_OUT', {
       terms: [
