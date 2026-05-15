@@ -1554,6 +1554,83 @@ describe('protocol validation', () => {
     assert.equal(command.url, '/assets/boards/downport.png')
   })
 
+  it('accepts optional board LOS sidecars', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-board-sidecar',
+      command: {
+        type: 'CreateBoard',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        boardId: 'main-board',
+        name: 'Downport',
+        imageAssetId: 'Geomorphs/standard/deck-01.jpg',
+        url: null,
+        losSidecar: {
+          assetRef: 'Geomorphs/standard/deck-01.jpg',
+          width: 1200,
+          height: 800,
+          gridScale: 50,
+          occluders: [
+            {
+              type: 'door',
+              id: 'iris-1',
+              x1: 400,
+              y1: 300,
+              x2: 480,
+              y2: 300,
+              open: false
+            }
+          ]
+        },
+        width: 1200,
+        height: 800,
+        scale: 50
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    const { command } = result.value
+    assert.equal(command.type, 'CreateBoard')
+    if (command.type !== 'CreateBoard') return
+    assert.equal(command.losSidecar?.occluders[0]?.id, 'iris-1')
+  })
+
+  it('rejects malformed board LOS sidecars', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-board-sidecar-invalid',
+      command: {
+        type: 'CreateBoard',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        boardId: 'main-board',
+        name: 'Downport',
+        losSidecar: {
+          assetRef: '',
+          width: 1200,
+          height: 800,
+          gridScale: 50,
+          occluders: []
+        },
+        width: 1200,
+        height: 800,
+        scale: 50
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'losSidecar: Asset reference is required.'
+    )
+  })
+
   it('accepts board selection commands', () => {
     const result = decodeClientMessage({
       type: 'command',

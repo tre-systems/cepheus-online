@@ -26,7 +26,10 @@ import {
   type BrowserImageCacheEntry,
   loadBrowserImage
 } from '../assets/images.js'
-import type { LosOverlaySegmentViewModel } from './los-view.js'
+import {
+  deriveLosOverlaySegments,
+  type LosOverlaySegmentViewModel
+} from './los-view.js'
 import type { BoardCommand } from '../core/command-router.js'
 
 const DRAG_START_SLOP_PX = 6
@@ -391,6 +394,13 @@ export const createBoardController = ({
       ctx.drawImage(boardImage, 0, 0, board.width, board.height)
     }
     drawGrid(board)
+    if (board.losSidecar) {
+      drawLosOverlaySegments(
+        ctx,
+        deriveLosOverlaySegments(board.losSidecar.occluders, board.doors),
+        transform
+      )
+    }
     for (const piece of currentPieces()) {
       renderPiece(piece, transform)
     }

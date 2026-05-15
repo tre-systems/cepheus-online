@@ -108,6 +108,25 @@ test.describe('tactical board smoke', () => {
             height: 600,
             gridScale: 50
           }
+        ],
+        losSidecars: [
+          {
+            assetRef: 'Geomorphs/standard/deck-01.jpg',
+            width: 1000,
+            height: 1000,
+            gridScale: 50,
+            occluders: [
+              {
+                type: 'door',
+                id: 'iris-1',
+                x1: 400,
+                y1: 300,
+                x2: 480,
+                y2: 300,
+                open: false
+              }
+            ]
+          }
         ]
       })
     )
@@ -168,6 +187,24 @@ test.describe('tactical board smoke', () => {
       width: 1000,
       height: 1000,
       scale: 50
+      ,
+      losSidecar: {
+        assetRef: 'Geomorphs/standard/deck-01.jpg',
+        width: 1000,
+        height: 1000,
+        gridScale: 50,
+        occluders: [
+          {
+            type: 'door',
+            id: 'iris-1',
+            x1: 400,
+            y1: 300,
+            x2: 480,
+            y2: 300,
+            open: false
+          }
+        ]
+      }
     })
     await postSequencedCommand(page, roomId, refereeId, refereeSession, {
       type: 'SetDoorOpen',

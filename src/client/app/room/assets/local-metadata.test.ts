@@ -1,7 +1,10 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { parseLocalAssetMetadataCandidates } from './local-metadata'
+import {
+  parseLocalAssetLosSidecarCandidates,
+  parseLocalAssetMetadataCandidates
+} from './local-metadata'
 
 describe('local asset metadata parsing', () => {
   it('accepts a single metadata object', () => {
@@ -25,6 +28,16 @@ describe('local asset metadata parsing', () => {
       parseLocalAssetMetadataCandidates('{"assets":[{"root":"Counters"}]}'),
       [{ root: 'Counters' }]
     )
+  })
+
+  it('extracts optional LOS sidecars from wrapper objects', () => {
+    assert.deepEqual(
+      parseLocalAssetLosSidecarCandidates(
+        '{"assets":[],"losSidecars":[{"assetRef":"Geomorphs/deck.jpg"}]}'
+      ),
+      [{ assetRef: 'Geomorphs/deck.jpg' }]
+    )
+    assert.deepEqual(parseLocalAssetLosSidecarCandidates('[{"root":"x"}]'), [])
   })
 
   it('treats empty input as an empty candidate list', () => {

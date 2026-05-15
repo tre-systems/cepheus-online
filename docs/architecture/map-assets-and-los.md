@@ -89,6 +89,16 @@ line of sight while open doors do not. When projected board door state is
 available, it is keyed by sidecar door id and overrides the sidecar's reviewed
 default open value.
 
+The board command path now accepts an optional reviewed LOS sidecar on
+`CreateBoard`. The server validates that the sidecar dimensions and grid scale
+match the board being created, persists the sidecar on `BoardCreated`, and
+projects it onto `BoardState`. When a board has a sidecar, `SetDoorOpen` only
+accepts door ids that exist as door occluders in that sidecar. The browser
+referee dialog can load metadata shaped as `{ assets: [...], losSidecars: [...] }`
+and attaches a matching sidecar by `assetRef` when creating the board. The
+Canvas renderer draws the reviewed wall and door overlay from projected board
+state.
+
 ## Board Camera
 
 Board pan and zoom are client-only inspection controls. They change the local

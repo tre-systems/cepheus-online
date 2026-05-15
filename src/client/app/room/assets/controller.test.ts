@@ -307,8 +307,41 @@ describe('room asset creation controller', () => {
 
   it('creates local geomorph boards as asset ids, not browser urls', async () => {
     const harness = createHarness()
-    harness.elements.boardNameInput.value = 'Deck 1'
-    harness.elements.boardImageInput.value = 'Geomorphs/standard/deck-01.jpg'
+    harness.elements.localAssetMetadataInput.value = JSON.stringify({
+      assets: [
+        {
+          root: 'Geomorphs',
+          relativePath: 'standard/deck-01.jpg',
+          kind: 'geomorph',
+          width: 1000,
+          height: 1000,
+          gridScale: 50
+        }
+      ],
+      losSidecars: [
+        {
+          assetRef: 'Geomorphs/standard/deck-01.jpg',
+          width: 1000,
+          height: 1000,
+          gridScale: 50,
+          occluders: [
+            {
+              type: 'door',
+              id: 'iris-1',
+              x1: 400,
+              y1: 300,
+              x2: 480,
+              y2: 300,
+              open: false
+            }
+          ]
+        }
+      ]
+    })
+
+    harness.elements.loadLocalAssets.dispatch('click')
+    harness.elements.boardAssetSelect.value = 'Geomorphs/standard/deck-01.jpg'
+    harness.elements.useBoardAsset.dispatch('click')
 
     harness.elements.createBoard.dispatch('click')
     await flushAsyncListeners()
@@ -320,6 +353,7 @@ describe('room asset creation controller', () => {
     }
     assert.equal(command.imageAssetId, 'Geomorphs/standard/deck-01.jpg')
     assert.equal(command.url, null)
+    assert.equal(command.losSidecar?.occluders[0]?.id, 'iris-1')
   })
 
   it('applies validated local counter metadata to piece fields', () => {

@@ -71,6 +71,7 @@ describe('map asset picker view helpers', () => {
     assert.equal(item.label, 'Secret Bay')
     assert.equal(item.dimensions.label, '700 x 900 px, 35 px grid')
     assert.equal(item.tileKind, 'custom')
+    assert.equal(item.losSidecar, null)
     assert.deepEqual(item.boardDefaults, {
       name: 'Secret Bay',
       imageAssetId: 'Geomorphs/custom/<Secret_Bay>.webp',
@@ -79,6 +80,55 @@ describe('map asset picker view helpers', () => {
       scale: 35
     })
     assert.equal(item.pieceDefaults, null)
+  })
+
+  it('attaches validated LOS sidecars to matching asset refs', () => {
+    const sidecar = {
+      assetRef: 'Geomorphs/standard/deck-01.jpg',
+      width: 1000,
+      height: 1000,
+      gridScale: 50,
+      occluders: [
+        {
+          type: 'door',
+          id: 'iris-1',
+          x1: 400,
+          y1: 300,
+          x2: 480,
+          y2: 300,
+          open: false
+        }
+      ]
+    }
+
+    const viewModel = deriveMapAssetPickerViewModel(
+      [standardGeomorph],
+      [sidecar]
+    )
+
+    const item = viewModel.sections[0]?.items[0]
+    assert.deepEqual(item?.losSidecar, sidecar)
+  })
+
+  it('summarizes malformed LOS sidecar candidates', () => {
+    const viewModel = deriveMapAssetPickerViewModel(
+      [standardGeomorph],
+      [
+        {
+          assetRef: '',
+          width: 1000,
+          height: 1000,
+          gridScale: 50,
+          occluders: []
+        }
+      ]
+    )
+
+    assert.equal(viewModel.validationSummary.hasErrors, true)
+    assert.equal(
+      viewModel.validationSummary.messages[0],
+      'LOS sidecar 0: Asset reference is required.'
+    )
   })
 
   it('derives recommended create-board defaults only for geomorphs', () => {

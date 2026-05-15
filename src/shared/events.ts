@@ -6,6 +6,7 @@ import type {
   PieceId,
   UserId
 } from './ids'
+import type { MapLosSidecar } from './mapAssets'
 import type {
   CareerCreationCheckFact,
   CareerCreationAgingFact,
@@ -391,6 +392,7 @@ export type GameEvent =
       name: string
       imageAssetId: string | null
       url: string | null
+      losSidecar?: MapLosSidecar | null
       width: number
       height: number
       scale: number

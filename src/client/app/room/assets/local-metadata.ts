@@ -18,3 +18,15 @@ export const parseLocalAssetMetadataCandidates = (
     'Local asset metadata must be a JSON object, array, or assets object'
   )
 }
+
+export const parseLocalAssetLosSidecarCandidates = (
+  text: string
+): readonly unknown[] => {
+  const trimmed = text.trim()
+  if (!trimmed) return []
+
+  const parsed = JSON.parse(trimmed) as unknown
+  if (!isObject(parsed)) return []
+  const sidecars = parsed.losSidecars
+  return Array.isArray(sidecars) ? sidecars : []
+}

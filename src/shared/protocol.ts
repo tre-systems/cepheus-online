@@ -16,6 +16,8 @@ import type {
 import type { GameCommand } from './commands'
 import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
 import type { LiveActivityDescriptor } from './live-activity'
+import { validateMapLosSidecar } from './mapAssets.js'
+import type { MapLosSidecar } from './mapAssets'
 import { err, ok, type Result } from './result'
 import type {
   CharacterCreationHomeworld,
@@ -172,6 +174,17 @@ const parseOptionalString = (
   if (!value) return ok(null)
 
   return ok(value)
+}
+
+const parseOptionalMapLosSidecar = (
+  raw: unknown,
+  label: string
+): Result<MapLosSidecar | null, CommandError> => {
+  if (raw === undefined || raw === null) return ok(null)
+  const result = validateMapLosSidecar(raw)
+  if (result.ok) return ok(result.value)
+
+  return err(invalidCommand(`${label}: ${result.error.join(' ')}`))
 }
 
 const parseNumber = (
@@ -1740,6 +1753,11 @@ export const decodeCommand = (
       if (!imageAssetId.ok) return imageAssetId
       const url = parseOptionalString(raw.url, 'url')
       if (!url.ok) return url
+      const losSidecar = parseOptionalMapLosSidecar(
+        raw.losSidecar,
+        'losSidecar'
+      )
+      if (!losSidecar.ok) return losSidecar
       const width = parseNumber(raw.width, 'width')
       if (!width.ok) return width
       const height = parseNumber(raw.height, 'height')
@@ -1754,6 +1772,7 @@ export const decodeCommand = (
         name: name.value,
         imageAssetId: imageAssetId.value,
         url: url.value,
+        losSidecar: losSidecar.value,
         width: width.value,
         height: height.value,
         scale: scale.value

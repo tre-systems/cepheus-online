@@ -1,4 +1,5 @@
 import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
+import type { MapLosSidecar } from './mapAssets'
 import type {
   BenefitKind,
   AgingLossSelection,
@@ -164,6 +165,7 @@ export type Command =
       name: string
       imageAssetId?: string | null
       url?: string | null
+      losSidecar?: MapLosSidecar | null
       width: number
       height: number
       scale: number

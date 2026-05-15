@@ -1272,13 +1272,17 @@ Tasks:
   contents into git.
 - Add a referee asset picker that can create boards from geomorph defaults and
   pieces from counter defaults. Initial metadata paste/load and form-prefill
-  support is in place; next steps are asset upload/preview and composition.
-- Expand LOS sidecar validation for walls, doors, bounds, duplicate ids, and
-  zero-length segments.
+  support is in place; local metadata can also attach reviewed LOS sidecars to
+  new boards. Next steps are asset upload/preview and composition.
+- Expand the current LOS sidecar path from validation and persisted board state
+  into referee correction tools. Walls, doors, bounds, duplicate ids, and
+  zero-length segment validation are in place; the missing work is extraction,
+  manual review, and editing before persistence.
 - Add a reviewed workflow for deriving walls and doors from standardized
   geomorphs, with manual correction before use.
 - Make door open/close commands visible and replayable through the normal event
-  stream.
+  stream. Door ids are now validated against persisted sidecar door occluders
+  when a board has a sidecar.
 - Add focused tactical browser smoke for board creation, piece creation,
   sequenced movement, door toggles, refresh recovery, and hidden-piece viewer
   filtering. Initial coverage is now in `npm run test:e2e:tactical`.

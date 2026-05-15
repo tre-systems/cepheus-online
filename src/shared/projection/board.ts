@@ -20,6 +20,7 @@ export const boardEventHandlers = {
       name: event.name,
       imageAssetId: event.imageAssetId,
       url: event.url,
+      losSidecar: event.losSidecar ? structuredClone(event.losSidecar) : null,
       width: event.width,
       height: event.height,
       scale: event.scale,

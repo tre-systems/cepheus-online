@@ -13,6 +13,7 @@ import {
   asUserId
 } from '../../shared/ids'
 import { LIVE_DICE_RESULT_REVEAL_DELAY_MS } from '../../shared/live-activity'
+import type { MapLosSidecar } from '../../shared/mapAssets'
 import { filterGameStateForViewer } from '../../shared/viewer'
 import { getProjectedGameState } from './projection'
 import { CommandPublicationError, runCommandPublication } from './publication'
@@ -86,6 +87,32 @@ const createBoardCommand = (boardId = asBoardId('board-1')): Command => ({
   width: 1000,
   height: 800,
   scale: 50
+})
+
+const losSidecar = (assetRef = 'board-image-1'): MapLosSidecar => ({
+  assetRef,
+  width: 1000,
+  height: 800,
+  gridScale: 50,
+  occluders: [
+    {
+      type: 'wall',
+      id: 'bulkhead-1',
+      x1: 0,
+      y1: 300,
+      x2: 1000,
+      y2: 300
+    },
+    {
+      type: 'door',
+      id: 'iris-1',
+      x1: 400,
+      y1: 300,
+      x2: 480,
+      y2: 300,
+      open: false
+    }
+  ]
 })
 
 const characteristicKeys = ['str', 'dex', 'end', 'int', 'edu', 'soc'] as const
@@ -4390,6 +4417,91 @@ describe('room publication flow', () => {
       doorId: 'iris-1',
       open: true
     })
+  })
+
+  it('persists reviewed LOS sidecars and validates door state changes against them', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+    const sidecar = losSidecar('Geomorphs/standard/deck-01.jpg')
+
+    const board = await publish(storage, {
+      type: 'CreateBoard',
+      gameId,
+      actorId,
+      boardId: asBoardId('board-1'),
+      name: 'Sidecar Board',
+      imageAssetId: sidecar.assetRef,
+      url: null,
+      losSidecar: sidecar,
+      width: sidecar.width,
+      height: sidecar.height,
+      scale: sidecar.gridScale
+    })
+
+    assert.equal(board.ok, true)
+    if (!board.ok) return
+    assert.deepEqual(
+      board.value.state.boards[asBoardId('board-1')]?.losSidecar,
+      sidecar
+    )
+
+    const changed = await publish(storage, {
+      type: 'SetDoorOpen',
+      gameId,
+      actorId,
+      boardId: asBoardId('board-1'),
+      doorId: 'iris-1',
+      open: true,
+      expectedSeq: board.value.eventSeq
+    })
+    assert.equal(changed.ok, true)
+
+    const unknownDoor = await publish(storage, {
+      type: 'SetDoorOpen',
+      gameId,
+      actorId,
+      boardId: asBoardId('board-1'),
+      doorId: 'iris-2',
+      open: true
+    })
+    assert.equal(unknownDoor.ok, false)
+    if (unknownDoor.ok) return
+    assert.equal(unknownDoor.error.code, 'missing_entity')
+    assert.equal(unknownDoor.error.message, 'Door does not exist')
+
+    const wall = await publish(storage, {
+      type: 'SetDoorOpen',
+      gameId,
+      actorId,
+      boardId: asBoardId('board-1'),
+      doorId: 'bulkhead-1',
+      open: true
+    })
+    assert.equal(wall.ok, false)
+    if (wall.ok) return
+    assert.equal(wall.error.code, 'missing_entity')
+  })
+
+  it('rejects board LOS sidecars whose dimensions do not match the board', async () => {
+    const storage = createMemoryStorage()
+    await publish(storage, createGameCommand())
+
+    const command = createBoardCommand(asBoardId('board-1'))
+    assert.equal(command.type, 'CreateBoard')
+    if (command.type !== 'CreateBoard') return
+    const board = await publish(storage, {
+      ...command,
+      losSidecar: losSidecar(),
+      height: 900
+    })
+
+    assert.equal(board.ok, false)
+    if (board.ok) return
+    assert.equal(board.error.code, 'invalid_command')
+    assert.equal(
+      board.error.message,
+      'LOS sidecar dimensions must match board dimensions and scale'
+    )
   })
 
   it('recovers board selection and door updates from game checkpoint plus tail', async () => {

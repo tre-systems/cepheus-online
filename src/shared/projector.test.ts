@@ -14,10 +14,29 @@ import {
   asPieceId,
   asUserId
 } from './ids'
+import type { MapLosSidecar } from './mapAssets'
 import { projectGameState } from './projector'
 
 const gameId = asGameId('game-1')
 const actorId = asUserId('user-1')
+
+const losSidecar = (): MapLosSidecar => ({
+  assetRef: 'Geomorphs/standard/deck-01.jpg',
+  width: 1000,
+  height: 800,
+  gridScale: 50,
+  occluders: [
+    {
+      type: 'door',
+      id: 'iris-1',
+      x1: 400,
+      y1: 300,
+      x2: 480,
+      y2: 300,
+      open: false
+    }
+  ]
+})
 
 const envelope = (
   seq: number,
@@ -131,6 +150,33 @@ describe('game state projection', () => {
       }
     })
     assert.equal(state?.eventSeq, 4)
+  })
+
+  it('projects reviewed LOS sidecars onto board state', () => {
+    const boardId = asBoardId('board-sidecar')
+    const sidecar = losSidecar()
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'BoardCreated',
+        boardId,
+        name: 'Downport',
+        imageAssetId: sidecar.assetRef,
+        url: null,
+        losSidecar: sidecar,
+        width: sidecar.width,
+        height: sidecar.height,
+        scale: sidecar.gridScale
+      })
+    ])
+
+    assert.deepEqual(state?.boards[boardId]?.losSidecar, sidecar)
+    assert.equal(state?.boards[boardId]?.losSidecar === sidecar, false)
   })
 
   it('keeps failed qualification details in the projection without starting a term', () => {

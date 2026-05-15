@@ -2,8 +2,10 @@ import type {
   GeomorphTileKind,
   LocalMapAssetMetadata,
   LocalMapAssetRoot,
+  MapLosSidecar,
   MapAssetKind
 } from '../../../shared/mapAssets'
+import { validateMapLosSidecar } from '../../../shared/mapAssets.js'
 import {
   deriveMapAssetLabel,
   validateMapAssetCandidates
@@ -48,6 +50,7 @@ export interface MapAssetPickerItemViewModel {
   label: string
   dimensions: MapAssetDimensionsViewModel
   tileKind: GeomorphTileKind | null
+  losSidecar: MapLosSidecar | null
   boardDefaults: GeomorphBoardCommandDefaults | null
   pieceDefaults: CounterPieceCommandDefaults | null
 }
@@ -136,8 +139,33 @@ export const deriveCounterPieceCommandDefaults = (
   }
 }
 
+const validateMapLosSidecarCandidates = (
+  candidates: readonly unknown[]
+): {
+  sidecars: MapLosSidecar[]
+  errors: string[]
+} => {
+  const sidecars: MapLosSidecar[] = []
+  const errors: string[] = []
+
+  for (const [index, candidate] of candidates.entries()) {
+    const result = validateMapLosSidecar(candidate)
+    if (result.ok) {
+      sidecars.push(result.value)
+      continue
+    }
+
+    for (const error of result.error) {
+      errors.push(`LOS sidecar ${index}: ${error}`)
+    }
+  }
+
+  return { sidecars, errors }
+}
+
 export const deriveMapAssetPickerItemViewModel = (
-  asset: LocalMapAssetMetadata
+  asset: LocalMapAssetMetadata,
+  sidecarByAssetRef: ReadonlyMap<string, MapLosSidecar> = new Map()
 ): MapAssetPickerItemViewModel => ({
   asset,
   assetRef: buildLocalMapAssetRef(asset),
@@ -147,6 +175,7 @@ export const deriveMapAssetPickerItemViewModel = (
   label: deriveMapAssetLabel(asset),
   dimensions: deriveMapAssetDimensionsViewModel(asset),
   tileKind: asset.tileKind,
+  losSidecar: sidecarByAssetRef.get(buildLocalMapAssetRef(asset)) ?? null,
   boardDefaults: deriveGeomorphBoardCommandDefaults(asset),
   pieceDefaults: deriveCounterPieceCommandDefaults(asset)
 })
@@ -169,9 +198,15 @@ const buildSection = (
 }
 
 export const deriveMapAssetPickerSections = (
-  assets: readonly LocalMapAssetMetadata[]
+  assets: readonly LocalMapAssetMetadata[],
+  sidecars: readonly MapLosSidecar[] = []
 ): MapAssetPickerSectionViewModel[] => {
-  const items = assets.map(deriveMapAssetPickerItemViewModel)
+  const sidecarByAssetRef = new Map(
+    sidecars.map((sidecar) => [sidecar.assetRef, sidecar])
+  )
+  const items = assets.map((asset) =>
+    deriveMapAssetPickerItemViewModel(asset, sidecarByAssetRef)
+  )
   const sections: MapAssetPickerSectionViewModel[] = []
 
   for (const tileKind of GEOMORPH_SECTION_ORDER) {
@@ -229,14 +264,20 @@ export const deriveMapAssetValidationSummary = (
 }
 
 export const deriveMapAssetPickerViewModel = (
-  candidates: readonly unknown[]
+  candidates: readonly unknown[],
+  losSidecarCandidates: readonly unknown[] = []
 ): MapAssetPickerViewModel => {
   const { assets, errors } = validateMapAssetCandidates(candidates)
-  const sections = deriveMapAssetPickerSections(assets)
+  const { sidecars, errors: sidecarErrors } =
+    validateMapLosSidecarCandidates(losSidecarCandidates)
+  const sections = deriveMapAssetPickerSections(assets, sidecars)
 
   return {
     sections,
     emptyState: deriveMapAssetPickerEmptyState(sections),
-    validationSummary: deriveMapAssetValidationSummary(errors)
+    validationSummary: deriveMapAssetValidationSummary([
+      ...errors,
+      ...sidecarErrors
+    ])
   }
 }

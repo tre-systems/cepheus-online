@@ -1,6 +1,7 @@
 import type { GameCommand } from '../../shared/commands'
 import type { CommandTypeForHandlerDomain } from '../../shared/command-metadata'
 import type { GameEvent } from '../../shared/events'
+import type { MapLosSidecar } from '../../shared/mapAssets'
 import type { CommandError } from '../../shared/protocol'
 import { err, ok, type Result } from '../../shared/result'
 import {
@@ -19,6 +20,32 @@ type BoardCommand = Extract<
   GameCommand,
   { type: CommandTypeForHandlerDomain<'board'> }
 >
+
+const cloneLosSidecar = (sidecar: MapLosSidecar): MapLosSidecar =>
+  structuredClone(sidecar)
+
+const validateSidecarBoardDimensions = (
+  sidecar: MapLosSidecar | null | undefined,
+  width: number,
+  height: number,
+  scale: number
+): Result<MapLosSidecar | null, CommandError> => {
+  if (!sidecar) return ok(null)
+  if (
+    sidecar.width !== width ||
+    sidecar.height !== height ||
+    sidecar.gridScale !== scale
+  ) {
+    return err(
+      commandError(
+        'invalid_command',
+        'LOS sidecar dimensions must match board dimensions and scale'
+      )
+    )
+  }
+
+  return ok(cloneLosSidecar(sidecar))
+}
 
 export const deriveBoardCommandEvents = (
   command: BoardCommand,
@@ -40,6 +67,13 @@ export const deriveBoardCommandEvents = (
       if (!height.ok) return height
       const scale = requireFinitePositive(command.scale, 'scale')
       if (!scale.ok) return scale
+      const losSidecar = validateSidecarBoardDimensions(
+        command.losSidecar,
+        width.value,
+        height.value,
+        scale.value
+      )
+      if (!losSidecar.ok) return losSidecar
 
       return ok([
         {
@@ -48,6 +82,7 @@ export const deriveBoardCommandEvents = (
           name: command.name,
           imageAssetId: command.imageAssetId ?? null,
           url: command.url ?? null,
+          losSidecar: losSidecar.value,
           width: command.width,
           height: command.height,
           scale: command.scale
@@ -84,6 +119,15 @@ export const deriveBoardCommandEvents = (
       }
       const doorId = requireNonEmptyString(command.doorId, 'doorId')
       if (!doorId.ok) return doorId
+      const losSidecar = state.value.boards[command.boardId]?.losSidecar
+      if (
+        losSidecar &&
+        !losSidecar.occluders.some(
+          (occluder) => occluder.type === 'door' && occluder.id === doorId.value
+        )
+      ) {
+        return err(commandError('missing_entity', 'Door does not exist'))
+      }
 
       return ok([
         {

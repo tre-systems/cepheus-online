@@ -28,7 +28,10 @@ import {
   type MapAssetPickerViewModel
 } from '../../assets/map-picker-view.js'
 import { planCreatePieceCommands } from '../../piece/command-plan.js'
-import { parseLocalAssetMetadataCandidates } from './local-metadata.js'
+import {
+  parseLocalAssetLosSidecarCandidates,
+  parseLocalAssetMetadataCandidates
+} from './local-metadata.js'
 
 export interface RoomAssetCreationElements {
   createPiece: HTMLButtonElement
@@ -293,7 +296,10 @@ export const createRoomAssetCreationController = ({
   const loadLocalAssetMetadata = (): void => {
     reportError('')
     assetPickerViewModel = deriveMapAssetPickerViewModel(
-      parseLocalAssetMetadataCandidates(elements.localAssetMetadataInput.value)
+      parseLocalAssetMetadataCandidates(elements.localAssetMetadataInput.value),
+      parseLocalAssetLosSidecarCandidates(
+        elements.localAssetMetadataInput.value
+      )
     )
     renderLocalAssetPicker(assetPickerViewModel)
   }
@@ -316,6 +322,12 @@ export const createRoomAssetCreationController = ({
     elements.boardScaleInput.value = String(defaults.scale)
     reportError('')
   }
+
+  const selectedBoardLosSidecar = (imageAssetId: string | null) =>
+    imageAssetId
+      ? (selectedAssetItem(assetPickerViewModel, imageAssetId)?.losSidecar ??
+        null)
+      : null
 
   const applySelectedCounterAsset = (): void => {
     const item = selectedAssetItem(
@@ -377,6 +389,7 @@ export const createRoomAssetCreationController = ({
       name,
       imageAssetId,
       url: imageUrl,
+      losSidecar: selectedBoardLosSidecar(imageAssetId),
       width: parsePositiveIntegerInput(elements.boardWidthInput, 1200),
       height: parsePositiveIntegerInput(elements.boardHeightInput, 800),
       scale: parsePositiveIntegerInput(elements.boardScaleInput, 50)
