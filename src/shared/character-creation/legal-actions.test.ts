@@ -1449,7 +1449,10 @@ describe('career creation legal action planner', () => {
             term({
               career: 'Scout',
               benefits: ['Low Passage'],
-              complete: true
+              complete: true,
+              facts: {
+                musteringBenefits: [musteringBenefit()]
+              }
             })
           ],
           careers: [{ name: 'Scout', rank: 0 }]
@@ -1470,7 +1473,10 @@ describe('career creation legal action planner', () => {
             term({
               career: 'Scout',
               benefits: ['Low Passage'],
-              complete: true
+              complete: true,
+              facts: {
+                musteringBenefits: [musteringBenefit()]
+              }
             })
           ],
           careers: [{ name: 'Scout', rank: 0 }]

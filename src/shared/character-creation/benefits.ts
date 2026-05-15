@@ -5,6 +5,7 @@ import type {
   CareerBenefit,
   CareerTerm
 } from './types'
+import { hasProjectedCareerTermFacts } from './term-skills'
 
 export const CEPHEUS_SRD_MAX_CASH_BENEFITS = 3
 
@@ -31,20 +32,17 @@ export const deriveRemainingCareerBenefits = ({
     deriveCareerBenefitCount({ termsInCareer, currentRank }) - benefitsReceived
   )
 
-const hasSemanticTermFacts = (term: Pick<CareerTerm, 'facts'>): boolean =>
-  Object.keys(term.facts ?? {}).length > 0
-
 export const deriveCareerTermMusteringBenefitCount = (
   term: Pick<CareerTerm, 'benefits' | 'facts'>
 ): number =>
-  hasSemanticTermFacts(term)
+  hasProjectedCareerTermFacts(term)
     ? deriveProjectedCareerTermMusteringBenefitCount(term)
     : deriveLegacyCareerTermMusteringBenefitCount(term)
 
 export const deriveCareerTermCashBenefitCount = (
   term: Pick<CareerTerm, 'benefits' | 'facts'>
 ): number =>
-  hasSemanticTermFacts(term)
+  hasProjectedCareerTermFacts(term)
     ? deriveProjectedCareerTermCashBenefitCount(term)
     : deriveLegacyCareerTermCashBenefitCount(term)
 

@@ -1,11 +1,10 @@
 import {
   canRollCashBenefit,
+  deriveCareerTermCashBenefitCount,
   deriveCareerCreationComplete,
   deriveCashBenefitRollModifier,
   deriveMaterialBenefitRollModifier,
   deriveMaterialBenefitEffect,
-  deriveLegacyCareerTermCashBenefitCount,
-  deriveProjectedCareerTermCashBenefitCount,
   deriveCareerTermTrainingSkillsFromFacts,
   deriveRemainingCareerBenefitsForCareer,
   hasProjectedCareerTermFacts,
@@ -54,11 +53,7 @@ type CharacterCreationMusteringBenefitRolledEvent = Extract<
 
 const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
   creation.terms.reduce(
-    (total, term) =>
-      total +
-      (hasProjectedCareerTermFacts(term)
-        ? deriveProjectedCareerTermCashBenefitCount(term)
-        : deriveLegacyCareerTermCashBenefitCount(term)),
+    (total, term) => total + deriveCareerTermCashBenefitCount(term),
     0
   )
 

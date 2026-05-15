@@ -1,7 +1,6 @@
 import {
   canRollCashBenefit,
-  deriveLegacyCareerTermCashBenefitCount,
-  deriveProjectedCareerTermCashBenefitCount,
+  deriveCareerTermCashBenefitCount,
   deriveRemainingCareerBenefitsForCareer
 } from './benefits'
 import { derivePrimaryEducationSkillOptions } from './background-skills'
@@ -451,11 +450,7 @@ const deriveCashBenefitsReceived = (
   creation: CareerCreationActionProjection
 ): number =>
   (creation.terms ?? []).reduce(
-    (total, term) =>
-      total +
-      (hasProjectedTermFacts(term)
-        ? deriveProjectedCareerTermCashBenefitCount(term)
-        : deriveLegacyCareerTermCashBenefitCount(term)),
+    (total, term) => total + deriveCareerTermCashBenefitCount(term),
     0
   )
 

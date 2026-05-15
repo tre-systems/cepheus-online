@@ -319,6 +319,10 @@ describe('SRD career term rules alignment', () => {
     }
     const legacyTerm = {
       benefits: ['1000', 'Low Passage', '2000'],
+      facts: undefined
+    }
+    const projectedTermWithoutMusteringFacts = {
+      benefits: ['1000', 'Low Passage', '2000'],
       facts: {}
     }
     const semanticTermWithoutMusteringFacts = {
@@ -351,6 +355,14 @@ describe('SRD career term rules alignment', () => {
     assert.equal(deriveCareerTermCashBenefitCount(termWithFacts), 2)
     assert.equal(deriveCareerTermMusteringBenefitCount(legacyTerm), 3)
     assert.equal(deriveCareerTermCashBenefitCount(legacyTerm), 2)
+    assert.equal(
+      deriveCareerTermMusteringBenefitCount(projectedTermWithoutMusteringFacts),
+      0
+    )
+    assert.equal(
+      deriveCareerTermCashBenefitCount(projectedTermWithoutMusteringFacts),
+      0
+    )
     assert.equal(
       deriveCareerTermMusteringBenefitCount(semanticTermWithoutMusteringFacts),
       0
