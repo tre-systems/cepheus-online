@@ -10,6 +10,7 @@ import type { EventId } from '../../../shared/ids'
 import { deriveEventRng } from '../../../shared/prng'
 import type { CommandError } from '../../../shared/protocol'
 import { err, ok, type Result } from '../../../shared/result'
+import type { CharacterState, GameState } from '../../../shared/state'
 import {
   loadCharacterCreationCommandContext,
   requireLegalCharacterCreationAction
@@ -32,6 +33,43 @@ type CharacterCreationFinalizationCommand = Extract<
   GameCommand,
   { type: 'FinalizeCharacterCreation' | 'CompleteCharacterCreation' }
 >
+
+const collectRollEventIds = (
+  value: unknown,
+  ids: Set<string> = new Set()
+): Set<string> => {
+  if (!value || typeof value !== 'object') return ids
+
+  if (
+    'rollEventId' in value &&
+    typeof (value as { rollEventId?: unknown }).rollEventId === 'string'
+  ) {
+    ids.add((value as { rollEventId: string }).rollEventId)
+  }
+
+  for (const child of Object.values(value)) {
+    collectRollEventIds(child, ids)
+  }
+
+  return ids
+}
+
+const hasUnrevealedCreationDice = (
+  state: GameState,
+  character: CharacterState,
+  createdAt: string | undefined
+): boolean => {
+  const creation = character.creation
+  if (!creation) return false
+  const creationRollIds = collectRollEventIds(creation)
+  if (creationRollIds.size === 0) return false
+  const nowMs = createdAt ? Date.parse(createdAt) : Date.now()
+
+  return state.diceLog.some(
+    (roll) =>
+      creationRollIds.has(roll.id) && Date.parse(roll.revealAt) > nowMs
+  )
+}
 
 export const deriveCreationSetupCommandEvents = (
   command: CharacterCreationSetupCommand,
@@ -196,6 +234,14 @@ export const deriveCreationFinalizationCommandEvents = (
       if (!canMutateCharacter(state.value, character, command.actorId)) {
         return notAllowed(
           'Only the character owner or referee can finalize character creation'
+        )
+      }
+      if (hasUnrevealedCreationDice(state.value, character, context.createdAt)) {
+        return err(
+          commandError(
+            'invalid_command',
+            'Character creation cannot be finalized while creation dice are unrevealed'
+          )
         )
       }
 

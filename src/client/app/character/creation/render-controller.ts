@@ -50,7 +50,6 @@ import type {
   CharacterCreationTermResolutionViewModel,
   CharacterCreationTermSkillTrainingViewModel
 } from './view.js'
-import { deriveCharacterCreationCareerRollButton } from './view.js'
 import type { CharacterCreationViewModel } from './model.js'
 import {
   renderCharacterCreationBasicTrainingButton as renderCharacterCreationBasicTrainingButtonView,
@@ -297,7 +296,12 @@ export const createCharacterCreationRenderController = ({
       renderCharacterCreationDraftFieldsView(document, flow, {
         renderCharacteristicRollButton:
           renderCharacterCreationCharacteristicRollButton,
-        renderCareerRollButton: renderCharacterCreationCareerRollButtonFromFlow,
+        renderCareerRollButton: () =>
+          viewModel.wizard?.careerRoll
+            ? renderCharacterCreationCareerRollButton(
+                viewModel.wizard.careerRoll
+              )
+            : null,
         renderBasicTrainingButton: () =>
           viewModel.wizard?.basicTraining
             ? renderCharacterCreationBasicTrainingButton(
@@ -547,13 +551,6 @@ export const createCharacterCreationRenderController = ({
       rollCareerCheck: () => getCommandController().rollCareerCheck(),
       reportError
     })
-  }
-
-  const renderCharacterCreationCareerRollButtonFromFlow = (
-    flow: CharacterCreationFlow
-  ): HTMLElement | null => {
-    const viewModel = deriveCharacterCreationCareerRollButton(flow)
-    return viewModel ? renderCharacterCreationCareerRollButton(viewModel) : null
   }
 
   const renderCharacterCreationBasicTrainingButton = (

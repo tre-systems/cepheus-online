@@ -16,6 +16,7 @@ import {
   actorSessionFromPage,
   creationCharacterIds,
   expectSpectatorRefreshPreservesCreationProjection,
+  expectLatestRollRedacted,
   fetchProjectedCharacter,
   fetchRoomState,
   latestProjectedTermSkill,
@@ -30,6 +31,7 @@ import {
   seedCreationToCareerSelection,
   seedCreationToHomeworld,
   seedNextProjectedRoll,
+  waitForRoomStateResponse,
   waitForDiceReveal,
   type ProjectedTermSkill,
   type RoomStateMessage
@@ -2277,6 +2279,217 @@ test.describe('character creation smoke', () => {
       )
     } finally {
       await spectator.close()
+    }
+  })
+
+  test('lets spectators reload and late-join a qualification roll without early reveal', async ({
+    browser,
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const spectatorId = 'e2e-qualification-reload-spectator'
+    const lateSpectatorId = 'e2e-qualification-late-spectator'
+
+    await page.locator('#createCharacterRailButton').click()
+    await expect(
+      page.getByRole('complementary', { name: 'Character creator' })
+    ).toBeVisible()
+    await expect(page.locator('#characterCreatorTitle')).toBeVisible()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    const ownerCard = page
+      .getByRole('button')
+      .filter({ hasText: characterName })
+      .filter({ hasText: 'Career Selection' })
+    await expect(ownerCard).toBeVisible({ timeout: 5_000 })
+    await ownerCard.click()
+    await expect(page.locator('#characterCreator')).toBeVisible({
+      timeout: 5_000
+    })
+    await expect(page.locator('#characterCreatorTitle')).toHaveText(
+      characterName
+    )
+
+    const spectator = await browser.newPage()
+    const lateSpectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: spectatorId,
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(spectator, characterName)
+
+      const spectatorFields = spectator.locator('#characterCreationFields')
+      await expect(
+        spectator.locator('[data-character-creation-field="career"]')
+      ).toHaveValue('')
+      await expect(
+        spectator.locator('[data-character-creation-field="qualificationRoll"]')
+      ).toHaveValue('')
+      await expect(
+        spectator.locator(
+          '[data-character-creation-field="qualificationPassed"]'
+        )
+      ).toHaveValue('')
+
+      await setSeedForNextRoll(
+        page,
+        roomId,
+        await nextEventSeq(page, roomId, actorId),
+        [6, 6]
+      )
+      const qualificationAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'ResolveCharacterCreationQualification'
+          )
+      )
+      const ownerCareerButton = characterCreationCareerButton(page, 'Scout')
+      await expect(ownerCareerButton).toBeVisible({ timeout: 5_000 })
+      await ownerCareerButton.click()
+      await expect((await qualificationAccepted).ok()).toBe(true)
+
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expectDiceRollPending(spectator)
+      await expect(
+        spectator.locator('[data-character-creation-field="career"]')
+      ).toHaveValue('', { timeout: 100 })
+      await expect(
+        spectator.locator('[data-character-creation-field="qualificationRoll"]')
+      ).toHaveValue('', { timeout: 100 })
+      await expect(
+        spectator.locator(
+          '[data-character-creation-field="qualificationPassed"]'
+        )
+      ).toHaveValue('', { timeout: 100 })
+      await expect(spectatorFields).not.toContainText(
+        /accepted|rejected|Qualification \d+/i,
+        { timeout: 100 }
+      )
+
+      const reloadedState = waitForRoomStateResponse(spectator, {
+        roomId,
+        userId: spectatorId,
+        viewer: 'spectator'
+      })
+      const joinedState = waitForRoomStateResponse(lateSpectator, {
+        roomId,
+        userId: lateSpectatorId,
+        viewer: 'spectator'
+      })
+      await Promise.all([
+        spectator.reload({ waitUntil: 'domcontentloaded' }),
+        openRoom(lateSpectator, {
+          roomId,
+          userId: lateSpectatorId,
+          viewer: 'spectator'
+        })
+      ])
+      expectLatestRollRedacted(await reloadedState)
+      expectLatestRollRedacted(await joinedState)
+
+      await expect(spectator.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(spectator, characterName)
+      await openOrExpectFollowedCreation(lateSpectator, characterName)
+      const lateSpectatorFields = lateSpectator.locator(
+        '#characterCreationFields'
+      )
+      await expect(lateSpectatorFields).not.toContainText(
+        /accepted|rejected|Qualification \d+/i,
+        { timeout: 100 }
+      )
+      await expect(
+        lateSpectatorFields.locator('.creation-draft-fallback')
+      ).toHaveCount(0, { timeout: 100 })
+
+      await waitForDiceReveal(page)
+      await waitForDiceReveal(spectator)
+      await expect(spectatorFields).toContainText(/Apply basic training/, {
+        timeout: 15_000
+      })
+      await expect(lateSpectatorFields).toContainText(/Apply basic training/, {
+        timeout: 15_000
+      })
+      await expect
+        .poll(async () => {
+          const state = await fetchRoomState(
+            spectator,
+            roomId,
+            spectatorId,
+            'spectator'
+          )
+          return state.state?.diceLog?.at(-1)?.total
+        })
+        .toBe(12)
+      await expect
+        .poll(async () => {
+          const state = await fetchRoomState(
+            lateSpectator,
+            roomId,
+            lateSpectatorId,
+            'spectator'
+          )
+          return state.state?.diceLog?.at(-1)?.total
+        })
+        .toBe(12)
+      await expect
+        .poll(async () => {
+          const character = await fetchProjectedCharacter(
+            spectator,
+            roomId,
+            spectatorId,
+            characterId,
+            'spectator'
+          )
+          return character?.creation?.terms?.at(0)?.career
+        })
+        .toBe('Scout')
+      await expect
+        .poll(async () => {
+          const character = await fetchProjectedCharacter(
+            lateSpectator,
+            roomId,
+            lateSpectatorId,
+            characterId,
+            'spectator'
+          )
+          return character?.creation?.terms?.at(0)?.career
+        })
+        .toBe('Scout')
+    } finally {
+      await spectator.close()
+      await lateSpectator.close()
     }
   })
 

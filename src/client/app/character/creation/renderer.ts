@@ -61,7 +61,7 @@ export interface CharacterCreationDraftFieldsRendererDeps {
   renderCharacteristicRollButton: (
     flow: CharacterCreationFlow
   ) => HTMLElement | null
-  renderCareerRollButton: (flow: CharacterCreationFlow) => HTMLElement | null
+  renderCareerRollButton: () => HTMLElement | null
   renderBasicTrainingButton: () => HTMLElement | null
   musteringOut: CharacterCreationMusteringOutViewModel | null
   renderMusteringOut: (
@@ -273,7 +273,7 @@ export const renderCharacterCreationDraftFields = (
     fragment.append(renderDraftField(document, field))
   }
 
-  const careerRollButton = renderCareerRollButton(flow)
+  const careerRollButton = renderCareerRollButton()
   const characteristicRollButton = renderCharacteristicRollButton(flow)
   const basicTrainingButton = renderBasicTrainingButton()
   if (characteristicRollButton) fragment.append(characteristicRollButton)

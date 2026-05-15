@@ -174,6 +174,51 @@ export const fetchRoomState = async (
   return (await response.json()) as RoomStateMessage
 }
 
+export const waitForRoomStateResponse = async (
+  page: Page,
+  {
+    roomId,
+    userId,
+    viewer
+  }: {
+    roomId: string
+    userId: string
+    viewer: 'referee' | 'player' | 'spectator'
+  }
+): Promise<RoomStateMessage> => {
+  let state: Promise<RoomStateMessage> | null = null
+  await page.waitForResponse((candidate) => {
+    const url = new URL(candidate.url())
+    const matches =
+      candidate.request().method() === 'GET' &&
+      url.pathname === `/rooms/${roomId}/state` &&
+      url.searchParams.get('viewer') === viewer &&
+      url.searchParams.get('user') === userId
+    if (matches) {
+      state = candidate.json() as Promise<RoomStateMessage>
+    }
+    return matches
+  })
+  if (!state) throw new Error(`Missing ${viewer} state for ${userId}`)
+  return state
+}
+
+export const expectLatestRollRedacted = (
+  message: RoomStateMessage
+): void => {
+  const latestRoll = message.state?.diceLog?.at(-1)
+  const creationActivity = message.liveActivities?.find(
+    (activity) => activity.type === 'characterCreation'
+  )
+
+  expect(message.type).toBe('roomState')
+  expect(latestRoll).toBeTruthy()
+  expect(typeof latestRoll?.revealAt).toBe('string')
+  expect(latestRoll?.rolls).toBeUndefined()
+  expect(latestRoll?.total).toBeUndefined()
+  expect(creationActivity?.details).toBeUndefined()
+}
+
 export const fetchProjectedCharacter = async (
   page: Page,
   roomId: string,

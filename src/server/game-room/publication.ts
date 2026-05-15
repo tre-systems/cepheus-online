@@ -108,7 +108,8 @@ export const runCommandPublication = async (
     state: currentState,
     currentSeq,
     nextSeq: currentSeq + 1,
-    gameSeed
+    gameSeed,
+    createdAt
   })
 
   if (!events.ok) {

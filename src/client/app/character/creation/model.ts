@@ -5,7 +5,10 @@ import {
   type CharacterCreationReadModel,
   type CharacterCreationProjectionReadModel
 } from '../../../../shared/character-creation/view-state.js'
-import type { CareerCreationActionKey } from '../../../../shared/character-creation/types.js'
+import type {
+  CareerCreationActionKey,
+  LegalCareerCreationAction
+} from '../../../../shared/character-creation/types.js'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -132,6 +135,29 @@ export interface CharacterCreationViewModel {
   actionPlan: CharacterCreationActionPlan | null
 }
 
+export interface CharacterCreationProjectedActionSection {
+  hasProjectedCreation: boolean
+  legalActions: readonly LegalCareerCreationAction[]
+  legalActionKeys: ReadonlySet<CareerCreationActionKey> | null
+  legalAction: (
+    key: CareerCreationActionKey
+  ) => LegalCareerCreationAction | undefined
+  isLegalActionAvailable: (key: CareerCreationActionKey) => boolean | undefined
+  cascadeSkillChoices: NonNullable<
+    CharacterCreationProjection['actionPlan']
+  >['cascadeSkillChoices']
+  homeworldChoiceOptions:
+    | NonNullable<
+        CharacterCreationProjection['actionPlan']
+      >['homeworldChoiceOptions']
+    | undefined
+  careerChoiceOptions:
+    | NonNullable<
+        CharacterCreationProjection['actionPlan']
+      >['careerChoiceOptions']
+    | undefined
+}
+
 export interface DeriveCharacterCreationViewModelOptions {
   flow: CharacterCreationFlow | null
   projection: CharacterCreationProjection | null
@@ -182,6 +208,36 @@ const projectionViewModel = (
       timelineCount: readModel.timelineCount
     },
     readModel
+  }
+}
+
+export const deriveCharacterCreationProjectedActionSection = (
+  projection: CharacterCreationProjection | null
+): CharacterCreationProjectedActionSection => {
+  const projectedActionPlan =
+    projection && projection.actionPlan?.status === projection.state.status
+      ? projection.actionPlan
+      : null
+  const legalActions =
+    projection && projectedActionPlan
+      ? projectedActionPlan.legalActions.filter(
+          (action) => action.status === projection.state.status
+        )
+      : []
+  const legalActionKeys = projection
+    ? new Set<CareerCreationActionKey>(legalActions.map((action) => action.key))
+    : null
+
+  return {
+    hasProjectedCreation: projection !== null,
+    legalActions,
+    legalActionKeys,
+    legalAction: (key) => legalActions.find((action) => action.key === key),
+    isLegalActionAvailable: (key) =>
+      legalActionKeys ? legalActionKeys.has(key) : undefined,
+    cascadeSkillChoices: projectedActionPlan?.cascadeSkillChoices ?? [],
+    homeworldChoiceOptions: projectedActionPlan?.homeworldChoiceOptions,
+    careerChoiceOptions: projectedActionPlan?.careerChoiceOptions
   }
 }
 
@@ -293,72 +349,49 @@ const wizardViewModel = ({
 }): CharacterCreationWizardViewModel | null => {
   if (!flow) return null
 
-  const projectedActionPlan =
-    projectedCreation &&
-    projectedCreation.actionPlan?.status === projectedCreation.state.status
-      ? projectedCreation.actionPlan
-      : null
-  const projectedLegalActionList =
-    projectedCreation && projectedActionPlan
-      ? projectedActionPlan.legalActions.filter(
-          (action) => action.status === projectedCreation.state.status
-        )
-      : []
-  const projectedLegalAction = (
-    key: CareerCreationActionKey
-  ): (typeof projectedLegalActionList)[number] | undefined =>
-    projectedLegalActionList.find((action) => action.key === key)
-  const projectedCascadeChoices = projectedActionPlan?.cascadeSkillChoices ?? []
+  const actionSection =
+    deriveCharacterCreationProjectedActionSection(projectedCreation)
+  const projectedStatus = projectedCreation?.state.status ?? null
   const backgroundCascadeChoices =
-    projectedCreation?.state.status === 'HOMEWORLD'
-      ? projectedCascadeChoices
-      : []
+    projectedStatus === 'HOMEWORLD' ? actionSection.cascadeSkillChoices : []
   const termCascadeChoices =
-    projectedCreation?.state.status === 'SKILLS_TRAINING'
-      ? projectedCascadeChoices
+    projectedStatus === 'SKILLS_TRAINING'
+      ? actionSection.cascadeSkillChoices
       : []
   const homeworldChoiceOptions =
-    projectedCreation?.state.status === 'HOMEWORLD'
-      ? projectedActionPlan?.homeworldChoiceOptions
+    projectedStatus === 'HOMEWORLD'
+      ? actionSection.homeworldChoiceOptions
       : undefined
-  const hasProjectedCreation = projectedCreation !== null
-  const projectedLegalActions = projectedCreation
-    ? new Set<CareerCreationActionKey>(
-        projectedLegalActionList.map((action) => action.key)
-      )
-    : null
-  const isProjectedLegalActionAvailable = (
-    key: CareerCreationActionKey
-  ): boolean | undefined =>
-    projectedLegalActions ? projectedLegalActions.has(key) : undefined
-  const careerChoiceOptions = !hasProjectedCreation
+  const careerChoiceOptions = !actionSection.hasProjectedCreation
     ? undefined
-    : projectedCreation.state.status === 'CAREER_SELECTION'
-      ? (projectedActionPlan?.careerChoiceOptions ?? { careers: [] })
+    : projectedStatus === 'CAREER_SELECTION'
+      ? (actionSection.careerChoiceOptions ?? { careers: [] })
       : { careers: [] }
-  const failedQualificationOptions = !hasProjectedCreation
+  const failedQualificationOptions = !actionSection.hasProjectedCreation
     ? undefined
-    : projectedCreation.state.status === 'CAREER_SELECTION'
-      ? (projectedLegalAction('selectCareer')?.failedQualificationOptions ?? [])
+    : projectedStatus === 'CAREER_SELECTION'
+      ? (actionSection.legalAction('selectCareer')
+          ?.failedQualificationOptions ?? [])
       : []
-  const basicTrainingOptions = !hasProjectedCreation
+  const basicTrainingOptions = !actionSection.hasProjectedCreation
     ? undefined
-    : projectedCreation.state.status === 'BASIC_TRAINING'
-      ? (projectedLegalAction('completeBasicTraining')
+    : projectedStatus === 'BASIC_TRAINING'
+      ? (actionSection.legalAction('completeBasicTraining')
           ?.basicTrainingOptions ?? {
           kind: 'none',
           skills: []
         })
       : { kind: 'none' as const, skills: [] }
-  const termSkillTableOptions = !hasProjectedCreation
+  const termSkillTableOptions = !actionSection.hasProjectedCreation
     ? undefined
-    : projectedCreation.state.status === 'SKILLS_TRAINING'
-      ? (projectedLegalAction('rollTermSkill')?.termSkillTableOptions ?? [])
+    : projectedStatus === 'SKILLS_TRAINING'
+      ? (actionSection.legalAction('rollTermSkill')?.termSkillTableOptions ??
+        [])
       : []
-  const musteringBenefitOptions = !hasProjectedCreation
+  const musteringBenefitOptions = !actionSection.hasProjectedCreation
     ? undefined
-    : projectedCreation.state.status === 'MUSTERING_OUT'
-      ? (projectedLegalAction('resolveMusteringBenefit')
+    : projectedStatus === 'MUSTERING_OUT'
+      ? (actionSection.legalAction('resolveMusteringBenefit')
           ?.musteringBenefitOptions ?? [])
       : []
 
@@ -378,26 +411,26 @@ const wizardViewModel = ({
       failedQualificationOptions
     }),
     careerRoll: deriveCharacterCreationCareerRollButton(flow, {
-      availableActionKeys: projectedLegalActions ?? undefined
+      availableActionKeys: actionSection.legalActionKeys ?? undefined
     }),
     reenlistmentRoll: deriveCharacterCreationReenlistmentRollViewModel(flow, {
-      available: isProjectedLegalActionAvailable('rollReenlistment')
+      available: actionSection.isLegalActionAvailable('rollReenlistment')
     }),
     agingRoll: deriveCharacterCreationAgingRollViewModel(flow, {
-      available: isProjectedLegalActionAvailable('resolveAging')
+      available: actionSection.isLegalActionAvailable('resolveAging')
     }),
     agingChoices: deriveCharacterCreationAgingChoicesViewModel(flow),
     anagathicsDecision: deriveCharacterCreationAnagathicsDecisionViewModel(
       flow,
       {
-        available: isProjectedLegalActionAvailable('decideAnagathics')
+        available: actionSection.isLegalActionAvailable('decideAnagathics')
       }
     ),
     mishapResolution: deriveCharacterCreationMishapResolutionViewModel(flow, {
-      available: isProjectedLegalActionAvailable('resolveMishap')
+      available: actionSection.isLegalActionAvailable('resolveMishap')
     }),
     injuryResolution: deriveCharacterCreationInjuryResolutionViewModel(flow, {
-      available: isProjectedLegalActionAvailable('resolveInjury'),
+      available: actionSection.isLegalActionAvailable('resolveInjury'),
       projection: projectedCreation
     }),
     termCascadeChoices: deriveCharacterCreationTermCascadeChoicesViewModel(
@@ -407,26 +440,25 @@ const wizardViewModel = ({
       }
     ),
     termResolution: deriveCharacterCreationTermResolutionViewModel(flow, {
-      availableActionKeys: projectedLegalActions ?? undefined
+      availableActionKeys: actionSection.legalActionKeys ?? undefined
     }),
     termSkills:
-      hasProjectedCreation &&
-      projectedCreation.state.status !== 'SKILLS_TRAINING'
+      actionSection.hasProjectedCreation &&
+      projectedStatus !== 'SKILLS_TRAINING'
         ? null
         : deriveCharacterCreationTermSkillTrainingViewModel(flow, {
             termSkillTableOptions
           }),
     basicTraining:
-      hasProjectedCreation &&
-      projectedCreation.state.status !== 'BASIC_TRAINING'
+      actionSection.hasProjectedCreation && projectedStatus !== 'BASIC_TRAINING'
         ? null
         : deriveCharacterCreationBasicTrainingButton(flow, {
             basicTrainingOptions
           }),
     musteringOut:
       flow.step === 'equipment' &&
-      (!hasProjectedCreation ||
-        projectedCreation.state.status === 'MUSTERING_OUT')
+      (!actionSection.hasProjectedCreation ||
+        projectedStatus === 'MUSTERING_OUT')
         ? deriveCharacterCreationMusteringOutViewModel(flow, {
             musteringBenefitOptions
           })
@@ -435,7 +467,7 @@ const wizardViewModel = ({
       available:
         projectedCreation?.state.status === 'DECEASED'
           ? true
-          : isProjectedLegalActionAvailable('confirmDeath')
+          : actionSection.isLegalActionAvailable('confirmDeath')
     }),
     termHistory: deriveCharacterCreationTermHistoryViewModel(flow),
     review:

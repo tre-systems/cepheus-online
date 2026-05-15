@@ -14,6 +14,7 @@ import {
   type CharacterCreationFlow
 } from './flow'
 import {
+  deriveCharacterCreationProjectedActionSection,
   deriveCharacterCreationViewModel,
   type CharacterCreationViewModel
 } from './model'
@@ -167,6 +168,28 @@ const resolvedCareerFlow = ({
     }
   )
 })
+
+const survivalRollFlow = (): CharacterCreationFlow => {
+  const currentFlow = resolvedCareerFlow()
+  const careerPlan = currentFlow.draft.careerPlan
+  if (!careerPlan) throw new Error('expected career plan')
+
+  return {
+    ...currentFlow,
+    draft: {
+      ...currentFlow.draft,
+      careerPlan: {
+        ...careerPlan,
+        survivalRoll: null,
+        survivalPassed: null,
+        commissionRoll: null,
+        commissionPassed: null,
+        advancementRoll: null,
+        advancementPassed: null
+      }
+    }
+  }
+}
 
 describe('character creation view model', () => {
   it('derives an empty model without requiring DOM or flow state', () => {
@@ -1259,6 +1282,60 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.reenlistmentRoll, null)
   })
 
+  it('derives owner and spectator career controls from projected legal actions', () => {
+    const currentFlow = survivalRollFlow()
+    const staleProjection = projection('SURVIVAL', {
+      actionPlan: {
+        status: 'SURVIVAL',
+        pendingDecisions: [],
+        legalActions: []
+      }
+    })
+    const liveProjection = projection('SURVIVAL', {
+      history: [],
+      actionPlan: {
+        status: 'SURVIVAL',
+        pendingDecisions: [],
+        legalActions: [
+          {
+            key: 'rollSurvival',
+            status: 'SURVIVAL',
+            commandTypes: ['ResolveCharacterCreationSurvival'],
+            rollRequirement: { key: 'survival', dice: '2d6' }
+          }
+        ]
+      }
+    })
+
+    const ownerStale = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: staleProjection,
+      readOnly: false
+    })
+    const spectatorStale = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: staleProjection,
+      readOnly: true
+    })
+    const ownerLive = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: liveProjection,
+      readOnly: false
+    })
+    const spectatorLive = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: liveProjection,
+      readOnly: true
+    })
+
+    assert.equal(ownerStale.wizard?.careerRoll, null)
+    assert.equal(spectatorStale.wizard?.careerRoll, null)
+    assert.equal(ownerLive.wizard?.careerRoll?.label, 'Roll survival')
+    assert.equal(spectatorLive.wizard?.careerRoll?.label, 'Roll survival')
+    assert.equal(ownerLive.wizard?.controlsDisabled, false)
+    assert.equal(spectatorLive.wizard?.controlsDisabled, true)
+  })
+
   it('fails closed when projected legal actions belong to an older same-step status', () => {
     const viewModel = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow(),
@@ -1281,6 +1358,38 @@ describe('character creation view model', () => {
 
     assert.equal(viewModel.wizard?.reenlistmentRoll, null)
     assert.equal(viewModel.wizard?.termResolution, null)
+  })
+
+  it('filters projected action sections to current projection status', () => {
+    const section = deriveCharacterCreationProjectedActionSection(
+      projection('SURVIVAL', {
+        actionPlan: {
+          status: 'SURVIVAL',
+          pendingDecisions: [],
+          legalActions: [
+            {
+              key: 'rollSurvival',
+              status: 'SURVIVAL',
+              commandTypes: ['ResolveCharacterCreationSurvival'],
+              rollRequirement: { key: 'survival', dice: '2d6' }
+            },
+            {
+              key: 'rollCommission',
+              status: 'COMMISSION',
+              commandTypes: ['ResolveCharacterCreationCommission'],
+              rollRequirement: { key: 'commission', dice: '2d6' }
+            }
+          ]
+        }
+      })
+    )
+
+    assert.deepEqual(
+      section.legalActions.map((action) => action.key),
+      ['rollSurvival']
+    )
+    assert.equal(section.isLegalActionAvailable('rollSurvival'), true)
+    assert.equal(section.isLegalActionAvailable('rollCommission'), false)
   })
 
   it('ignores projected legal actions whose status does not match the projection', () => {

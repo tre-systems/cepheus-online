@@ -9,6 +9,7 @@ export interface CommandContext {
   currentSeq: number
   nextSeq: number
   gameSeed: number
+  createdAt?: string
 }
 
 export const commandError = (

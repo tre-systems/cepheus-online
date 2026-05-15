@@ -53,6 +53,22 @@ const publish = (
     command: command as Command
   })
 
+const revealCreationDice = (
+  storage: ReturnType<typeof createMemoryStorage>,
+  command: GameCommand | AgingLossCommand,
+  requestId = `req-${command.type}`
+) =>
+  runCommandPublication(
+    storage,
+    gameId,
+    {
+      type: 'command',
+      requestId,
+      command: command as Command
+    },
+    '9999-01-01T00:00:00.000Z'
+  )
+
 const createGameCommand = (): Command => ({
   type: 'CreateGame',
   gameId,
@@ -2875,7 +2891,7 @@ describe('room publication flow', () => {
       ).ok,
       true
     )
-    const finalized = await publish(storage, {
+    const finalized = await revealCreationDice(storage, {
       type: 'FinalizeCharacterCreation',
       gameId,
       actorId,
@@ -2953,7 +2969,7 @@ describe('room publication flow', () => {
     const intervalCheckpoint = await readCheckpoint(storage, gameId)
     assert.equal(intervalCheckpoint?.seq, intervalCheckpointSeq)
 
-    const finalized = await publish(storage, {
+    const finalized = await revealCreationDice(storage, {
       type: 'FinalizeCharacterCreation',
       gameId,
       actorId,

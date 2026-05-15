@@ -5,7 +5,12 @@ import {
   createCareerCreationState,
   type CareerCreationStatus
 } from '../../shared/characterCreation'
-import { asCharacterId, asGameId, asUserId } from '../../shared/ids'
+import {
+  asCharacterId,
+  asEventId,
+  asGameId,
+  asUserId
+} from '../../shared/ids'
 import type {
   CharacterCreationProjection,
   CharacterState,
@@ -2493,6 +2498,58 @@ describe('character creation setup command handlers', () => {
     assert.deepEqual(finalized.equipment, [])
     assert.equal(finalized.credits, 0)
     assert.equal(finalized.notes.includes('Rules source'), true)
+  })
+
+  it('rejects finalization while creation dice are unrevealed', () => {
+    const rollEventId = asEventId('survival-roll-1')
+    const creation = createCreation('ACTIVE', {
+      terms: [
+        {
+          ...completedTerm(),
+          facts: {
+            survival: {
+              ...survivalFact(true),
+              rollEventId
+            }
+          }
+        }
+      ],
+      careers: [{ name: 'Scout', rank: 0 }]
+    })
+    const state = createState(creation)
+    state.diceLog.push({
+      id: rollEventId,
+      actorId,
+      createdAt: '2026-05-15T00:00:00.000Z',
+      revealAt: '2999-01-01T00:00:00.000Z',
+      expression: '2d6',
+      reason: 'Survival',
+      rolls: [4, 4],
+      total: 8
+    })
+
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'FinalizeCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      },
+      {
+        state,
+        currentSeq: 1,
+        nextSeq: 2,
+        gameSeed: 1234
+      }
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Character creation cannot be finalized while creation dice are unrevealed'
+    )
   })
 
   it('finalizes term notes from facts-only survival results', () => {
