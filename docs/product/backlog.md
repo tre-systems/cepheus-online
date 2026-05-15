@@ -1340,12 +1340,12 @@ The next batch should run like this, in this order:
    also records a redaction-safe semantic `timeline` with event ids, sequence,
    timestamps, semantic event type, and optional roll correlation, while the
    shared creation read model exposes that timeline for client migration.
-   Finalization notes now derive from projected terms rather than legacy
-   history, and the client can recover mustering-benefit display from projected
-   term benefits when legacy history is absent. Server and client cash benefit
-   limit checks now use projected term benefits. Boundary checks now keep new
-   client creator code from reading legacy history outside compatibility
-   helpers. Per-term semantic `facts` now carry qualification, draft,
+   Finalization notes now derive survival summaries from projected term facts,
+   and the client can recover mustering-benefit display from projected term
+   benefits when legacy history is absent. Server and client cash benefit limit
+   checks now use projected term benefits. Boundary checks now keep new client
+   creator code from reading legacy history outside compatibility helpers.
+   Per-term semantic `facts` now carry qualification, draft,
    survival, commission, advancement, rank, term skill, aging, anagathics,
    reenlistment, and mustering benefit details; legal actions, term-skill and
    mustering validators, and the client projection adapter use those facts

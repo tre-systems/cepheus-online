@@ -20,6 +20,18 @@ import {
 } from '../command-helpers'
 import { uniqueSkills } from './utils'
 
+const deriveTermSurvivalSummary = (
+  term: CharacterCreationProjection['terms'][number]
+): 'survived' | 'mishap' => {
+  if (term.facts?.survival) {
+    return term.facts.survival.passed ? 'survived' : 'mishap'
+  }
+
+  return term.survival !== undefined && !term.complete && !term.musteringOut
+    ? 'mishap'
+    : 'survived'
+}
+
 const derivedCreationNotes = (character: CharacterState): string => {
   const creation = character.creation
   if (!creation) return character.notes
@@ -28,10 +40,7 @@ const derivedCreationNotes = (character: CharacterState): string => {
   if (creation.terms.length > 0) {
     notes.push('Rules source: Cepheus Engine SRD.')
     for (const [index, term] of creation.terms.entries()) {
-      const survival =
-        term.survival !== undefined && !term.complete && !term.musteringOut
-          ? 'mishap'
-          : 'survived'
+      const survival = deriveTermSurvivalSummary(term)
       notes.push(`Term ${index + 1}: ${term.career}, ${survival}.`)
     }
   }

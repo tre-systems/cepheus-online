@@ -269,6 +269,46 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(result.value[1].notes.includes('Rules source'), true)
   })
 
+  it('derives finalization term notes from projected survival facts', () => {
+    const result = runCommand(
+      finalizeCommand(),
+      createCreation('ACTIVE', {
+        terms: [
+          {
+            ...completedTerm(),
+            survival: undefined,
+            facts: {
+              survival: {
+                passed: true,
+                canCommission: false,
+                canAdvance: true,
+                survival: {
+                  expression: '2d6',
+                  rolls: [4, 4],
+                  total: 8,
+                  characteristic: 'end',
+                  modifier: 0,
+                  target: 7,
+                  success: true
+                }
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value[1]?.type, 'CharacterCreationFinalized')
+    if (result.value[1]?.type !== 'CharacterCreationFinalized') return
+    assert.equal(
+      result.value[1].notes.includes('Term 1: Scout, survived.'),
+      true
+    )
+  })
+
   it('keeps legacy completion from creating playable characters without a final sheet', () => {
     const result = runCommand(
       {
