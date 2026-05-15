@@ -19,7 +19,6 @@ import type {
   CharacterCreationFlow,
   CharacterCreationStep
 } from './flow.js'
-import { completedTermFromProjection } from './projection.js'
 import {
   characteristicDefinitions,
   deriveCharacterCreationButtonStates,
@@ -357,9 +356,34 @@ const projectedTermHistoryViewModel = (
 const completedTermsFromReadModel = (
   readModel: CharacterCreationReadModel
 ): CharacterCreationCompletedTerm[] =>
-  readModel.terms
-    .filter((term) => term.complete || term.musteringOut)
-    .map(completedTermFromProjection)
+  readModel.completedTerms.map((term) => ({
+    career: term.career,
+    drafted: term.drafted,
+    anagathics: term.anagathics,
+    anagathicsCost: term.anagathicsCost,
+    age: term.age,
+    rank: term.rank,
+    rankTitle: term.rankTitle,
+    rankBonusSkill: term.rankBonusSkill,
+    qualificationRoll: term.qualificationRoll,
+    survivalRoll: term.survivalRoll,
+    survivalPassed: term.survivalPassed,
+    canCommission: term.canCommission,
+    commissionRoll: term.commissionRoll,
+    commissionPassed: term.commissionPassed,
+    canAdvance: term.canAdvance,
+    advancementRoll: term.advancementRoll,
+    advancementPassed: term.advancementPassed,
+    termSkillRolls: term.termSkillRolls.map((roll) => ({ ...roll })),
+    agingRoll: term.agingRoll,
+    agingMessage: term.agingMessage,
+    benefitForfeiture: term.benefitForfeiture,
+    reenlistmentRoll: term.reenlistmentRoll,
+    reenlistmentOutcome:
+      term.reenlistmentOutcome === 'unresolved'
+        ? null
+        : term.reenlistmentOutcome
+  }))
 
 const wizardViewModel = ({
   flow,
