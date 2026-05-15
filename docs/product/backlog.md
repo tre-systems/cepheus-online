@@ -1166,10 +1166,13 @@ Tasks:
   benefits with roll/DM/table-roll provenance, material characteristic gains,
   resolved cascade choices, aging loss selections, credits, equipment, and
   notes from the projected read model.
+- Done: completed character sheets include a structured final-character summary
+  for UPP, homeworld, careers, terms, credits, and equipment before the plain
+  export block.
 - Extend final playable sheet coverage for deeper provenance and material
   benefit metadata as those display fields mature.
-- Polish copy/layout around the completed-character UPP and export block after
-  the remaining creator UX work settles.
+- Polish copy/layout around the completed-character summary and export block
+  after the remaining creator UX work settles.
 - Add refresh-loaded room state coverage for any remaining final-sheet fields
   not covered by the current checkpoint-plus-tail read model test.
 
@@ -1177,7 +1180,7 @@ Done when:
 
 - A character can be created from first roll through final playable sheet.
 - The final sheet is valid without manual cleanup.
-- Completed characters have a useful UPP/export display.
+- Completed characters have a useful structured summary and UPP/export display.
 
 ### Slice 2F: Live Following
 

@@ -474,6 +474,15 @@ describe('character sheet controller', () => {
     findByText(harness.elements.sheetBody, '2')
     findByText(harness.elements.sheetBody, 'Latest')
     findByText(harness.elements.sheetBody, 'Completed')
+    findByText(harness.elements.sheetBody, 'Final Character')
+    findByText(harness.elements.sheetBody, 'Homeworld')
+    findByText(harness.elements.sheetBody, 'Unspecified')
+    findByText(harness.elements.sheetBody, 'Careers')
+    findByText(harness.elements.sheetBody, 'Scout rank 0')
+    findByText(harness.elements.sheetBody, 'Credits')
+    findByText(harness.elements.sheetBody, 'Cr1200')
+    findByText(harness.elements.sheetBody, 'Equipment')
+    findByText(harness.elements.sheetBody, 'Laser Pistol x1 (3D6)')
     findByText(harness.elements.sheetBody, 'Plain Export')
     findByText(
       harness.elements.sheetBody,

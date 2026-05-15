@@ -360,8 +360,9 @@ Tasks:
 - Replace remaining client-derived homeworld/cascade progression checks with
   shared legal actions from projection.
 - Polish provenance for homeworld, background, and primary education skill
-  sources on the final sheet. Resolved term cascade choices and aging loss
-  selections are now included in the plain export.
+  sources on the final sheet. Completed sheets now show a structured final
+  summary before the plain export, and resolved term cascade choices plus aging
+  loss selections are included in the plain export.
 - Extend browser refresh/follow checks for nested cascade choices and blocked
   progress.
 
@@ -480,7 +481,7 @@ Tasks:
 - Done: finalization gates prevent unresolved or illegal completion, and the
   finalized sheet is server-derived from creation events plus intent-only
   finalization.
-- Add UPP/export display for completed characters.
+- Done: add structured UPP/export display for completed characters.
 
 Acceptance:
 

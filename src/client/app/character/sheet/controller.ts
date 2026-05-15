@@ -21,6 +21,7 @@ import {
 } from './view.js'
 import {
   deriveCharacterUpp,
+  isCharacterCreationFinal,
   derivePlainCharacterExport
 } from './export-view.js'
 
@@ -341,6 +342,56 @@ export const createCharacterSheetController = ({
     body.append(sheetSectionTitle('Plain Export'), block)
   }
 
+  const finalHomeworldValue = (
+    creation: CharacterCreationProjection | null
+  ): string => {
+    const homeworld = creation?.homeworld
+    if (!homeworld) return 'Unspecified'
+    return [
+      homeworld.name || 'Homeworld',
+      homeworld.lawLevel,
+      ...(homeworld.tradeCodes ?? [])
+    ]
+      .filter(Boolean)
+      .join(', ')
+  }
+
+  const finalCareersValue = (
+    creation: CharacterCreationProjection | null
+  ): string =>
+    creation?.careers.length
+      ? creation.careers
+          .map((career) => `${career.name} rank ${career.rank}`)
+          .join('; ')
+      : 'None'
+
+  const finalEquipmentValue = (character: CharacterState): string =>
+    character.equipment.length > 0
+      ? character.equipment
+          .map((item) => {
+            const quantity = Math.max(1, item.quantity)
+            return `${item.name} x${quantity}${item.notes ? ` (${item.notes})` : ''}`
+          })
+          .join('; ')
+      : 'None'
+
+  const appendFinalCharacterSummary = (
+    body: HTMLElement,
+    character: CharacterState | null
+  ) => {
+    if (!character || !isCharacterCreationFinal(character)) return
+
+    body.append(
+      sheetSectionTitle('Final Character'),
+      sheetRow('UPP', deriveCharacterUpp(character.characteristics)),
+      sheetRow('Homeworld', finalHomeworldValue(character.creation)),
+      sheetRow('Careers', finalCareersValue(character.creation)),
+      sheetRow('Terms', String(character.creation?.terms.length ?? 0)),
+      sheetRow('Credits', `Cr${character.credits}`),
+      sheetRow('Equipment', finalEquipmentValue(character))
+    )
+  }
+
   const creationEventLabel = (type: string) =>
     type
       .replace(/^CharacterCreation/, '')
@@ -439,6 +490,7 @@ export const createCharacterSheetController = ({
       sheetSectionTitle('Skills'),
       skillChips(deriveCharacterSkills(character))
     )
+    appendFinalCharacterSummary(body, character)
     const editor = editableDetailsForm(piece, character)
     if (editor) body.append(sheetSectionTitle('Edit'), editor)
     appendPlainCharacterExport(body, character)
