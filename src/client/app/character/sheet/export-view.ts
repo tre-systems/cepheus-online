@@ -272,6 +272,15 @@ const termSkillRollValue = (term: CareerTerm): string | null => {
     .join(', ')}`
 }
 
+const termCascadeSelectionValue = (term: CareerTerm): string | null => {
+  const selections = term.facts?.termCascadeSelections ?? []
+  if (selections.length === 0) return null
+
+  return `cascade choices ${selections
+    .map((selection) => `${selection.cascadeSkill} -> ${selection.selection}`)
+    .join(', ')}`
+}
+
 const termBenefitValue = (term: CareerTerm): string | null => {
   const benefits = term.facts?.musteringBenefits
   if (benefits && benefits.length > 0) {
@@ -298,6 +307,20 @@ const termBenefitValue = (term: CareerTerm): string | null => {
     ? `benefits ${listValue(term.benefits)}`
     : null
 }
+
+const agingChangeValue = (
+  change: NonNullable<
+    NonNullable<CareerTerm['facts']>['aging']
+  >['characteristicChanges'][number]
+): string =>
+  `${change.type.toLowerCase()} ${formatSignedModifier(change.modifier)}`
+
+const agingLossValue = (
+  loss: NonNullable<
+    NonNullable<CareerTerm['facts']>['agingLosses']
+  >['selectedLosses'][number]
+): string =>
+  `${characteristicLabels[loss.characteristic]} ${formatSignedModifier(loss.modifier)} (${loss.type.toLowerCase()})`
 
 const termHistoryLine = (term: CareerTerm, index: number): string => {
   const facts = term.facts
@@ -355,13 +378,18 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
   if (basicTraining) parts.push(basicTraining)
   const termSkillRolls = termSkillRollValue(term)
   if (termSkillRolls) parts.push(termSkillRolls)
+  const cascadeSelections = termCascadeSelectionValue(term)
+  if (cascadeSelections) parts.push(cascadeSelections)
   if (facts?.aging) {
+    const agingChanges =
+      facts.aging.characteristicChanges.length > 0
+        ? facts.aging.characteristicChanges.map(agingChangeValue).join(', ')
+        : 'no effect'
+    parts.push(`aging ${facts.aging.roll.total}: ${agingChanges}`)
+  }
+  if (facts?.agingLosses && facts.agingLosses.selectedLosses.length > 0) {
     parts.push(
-      `aging ${facts.aging.roll.total}: ${
-        facts.aging.characteristicChanges.length > 0
-          ? `${facts.aging.characteristicChanges.length} changes`
-          : 'no effect'
-      }`
+      `aging losses ${facts.agingLosses.selectedLosses.map(agingLossValue).join(', ')}`
     )
   }
   if (facts?.anagathicsDecision) {

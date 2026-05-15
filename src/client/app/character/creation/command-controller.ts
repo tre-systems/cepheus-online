@@ -494,7 +494,8 @@ export const createCharacterCreationCommandController = (
       syncFields()
 
       const career =
-        careerOverride ?? nextCharacterCreationMusteringBenefitCareer(flow.draft)
+        careerOverride ??
+        nextCharacterCreationMusteringBenefitCareer(flow.draft)
       if (!career) return
 
       await ensurePublished()

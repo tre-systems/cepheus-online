@@ -355,8 +355,9 @@ Tasks:
   source.
 - Replace remaining client-derived homeworld/cascade progression checks with
   shared legal actions from projection.
-- Polish provenance for homeworld, background, primary education, and cascade
-  skill sources on the final sheet.
+- Polish provenance for homeworld, background, and primary education skill
+  sources on the final sheet. Resolved term cascade choices and aging loss
+  selections are now included in the plain export.
 - Extend browser refresh/follow checks for nested cascade choices and blocked
   progress.
 

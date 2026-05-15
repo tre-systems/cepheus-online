@@ -1164,7 +1164,8 @@ Tasks:
 - Done: the completed-character plain export block includes UPP, readable
   characteristics, sorted skills, careers/ranks, term history, mustering
   benefits with roll/DM/table-roll provenance, material characteristic gains,
-  credits, equipment, and notes from the projected read model.
+  resolved cascade choices, aging loss selections, credits, equipment, and
+  notes from the projected read model.
 - Extend final playable sheet coverage for deeper provenance and material
   benefit metadata as those display fields mature.
 - Polish copy/layout around the completed-character UPP and export block after

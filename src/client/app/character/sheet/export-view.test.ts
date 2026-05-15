@@ -380,6 +380,37 @@ describe('character sheet export view', () => {
     )
   })
 
+  it('includes resolved cascade choices and aging loss provenance', () => {
+    const creation = finalizedCreation()
+    creation.terms[0].facts = {
+      ...creation.terms[0].facts,
+      termCascadeSelections: [
+        { cascadeSkill: 'Gun Combat*', selection: 'Slug Rifle' }
+      ],
+      aging: {
+        roll: { expression: '2d6', rolls: [1, 2], total: 3 },
+        modifier: -1,
+        age: 46,
+        characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+      },
+      agingLosses: {
+        selectedLosses: [
+          { type: 'PHYSICAL', modifier: -1, characteristic: 'str' }
+        ],
+        characteristicPatch: { str: 6 }
+      }
+    }
+
+    const exportText = derivePlainCharacterExport(character({ creation })) ?? ''
+
+    assert.equal(
+      exportText.includes('cascade choices Gun Combat* -> Slug Rifle'),
+      true
+    )
+    assert.equal(exportText.includes('aging 3: physical -1'), true)
+    assert.equal(exportText.includes('aging losses Str -1 (physical)'), true)
+  })
+
   it('omits export text before creation is finalized', () => {
     assert.equal(
       derivePlainCharacterExport(

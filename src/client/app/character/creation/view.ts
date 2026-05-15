@@ -1602,7 +1602,9 @@ export const deriveCharacterCreationTermResolutionViewModel = (
   const anyActionAvailable = (
     keys: readonly CareerCreationActionKey[]
   ): boolean =>
-    availableActionKeys ? keys.some((key) => availableActionKeys.has(key)) : true
+    availableActionKeys
+      ? keys.some((key) => availableActionKeys.has(key))
+      : true
   if (
     !isCharacterCreationCareerTermResolved(flow.draft) &&
     anyActionAvailable([

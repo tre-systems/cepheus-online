@@ -1555,14 +1555,12 @@ describe('character creation view helpers', () => {
     assert.equal(viewModel?.remaining, 1)
     assert.equal(viewModel?.actions.length, 4)
 
-    const projectedViewModel = deriveCharacterCreationTermSkillTrainingViewModel(
-      pending,
-      {
+    const projectedViewModel =
+      deriveCharacterCreationTermSkillTrainingViewModel(pending, {
         termSkillTableOptions: [
           { table: 'serviceSkills', label: 'Service skills' }
         ]
-      }
-    )
+      })
     assert.deepEqual(projectedViewModel?.actions, [
       {
         table: 'serviceSkills',
