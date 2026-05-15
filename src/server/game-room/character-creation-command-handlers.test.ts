@@ -1816,6 +1816,64 @@ describe('character creation setup command handlers', () => {
     assert.equal(benefit.musteringBenefit.kind, 'cash')
   })
 
+  it('uses projected rank facts for material mustering modifiers', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'material'
+      },
+      context(
+        createCreation('MUSTERING_OUT', {
+          terms: [
+            {
+              ...activeScoutTerm(),
+              facts: {
+                advancement: {
+                  skipped: false,
+                  passed: true,
+                  advancement: {
+                    expression: '2d6',
+                    rolls: [6, 6],
+                    total: 12,
+                    characteristic: 'int',
+                    modifier: 0,
+                    target: 8,
+                    success: true
+                  },
+                  rank: {
+                    career: 'Scout',
+                    previousRank: 4,
+                    newRank: 5,
+                    title: 'Senior Scout',
+                    bonusSkill: null
+                  }
+                }
+              },
+              complete: true,
+              canReenlist: false,
+              musteringOut: true
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const benefit = result.value.find(
+      (event) => event.type === 'CharacterCreationMusteringBenefitRolled'
+    )
+    assert.equal(benefit?.type, 'CharacterCreationMusteringBenefitRolled')
+    if (benefit?.type !== 'CharacterCreationMusteringBenefitRolled') return
+    assert.equal(benefit.musteringBenefit.modifier, 1)
+    assert.equal(benefit.musteringBenefit.tableRoll, 9)
+  })
+
   it('emits mustering completion and continuation events', () => {
     const creation = createCreation('MUSTERING_OUT', {
       terms: [

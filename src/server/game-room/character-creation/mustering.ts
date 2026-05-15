@@ -52,7 +52,26 @@ type CharacterCreationMusteringBenefitRolledEvent = Extract<
 const currentCareerRank = (
   creation: CharacterCreationProjection,
   career: string
-): number => creation.careers.find((entry) => entry.name === career)?.rank ?? 0
+): number => {
+  let projectedRank: number | null = null
+  for (const term of creation.terms) {
+    if (term.career !== career) continue
+    const advancement = term.facts?.advancement
+    if (
+      advancement &&
+      !advancement.skipped &&
+      advancement.rank?.career === career
+    ) {
+      projectedRank = advancement.rank.newRank
+    }
+  }
+
+  return (
+    projectedRank ??
+    creation.careers.find((entry) => entry.name === career)?.rank ??
+    0
+  )
+}
 
 const termsInCareer = (
   creation: CharacterCreationProjection,
