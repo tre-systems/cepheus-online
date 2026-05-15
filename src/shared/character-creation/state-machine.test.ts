@@ -95,6 +95,7 @@ const eventFixtures = {
   DECIDE_ANAGATHICS: [
     { type: 'DECIDE_ANAGATHICS', useAnagathics: false, termIndex: 0 }
   ],
+  ANAGATHICS_FAILED: [{ type: 'ANAGATHICS_FAILED' }],
   REENLIST: [{ type: 'REENLIST' }],
   LEAVE_CAREER: [{ type: 'LEAVE_CAREER' }],
   REENLIST_BLOCKED: [{ type: 'REENLIST_BLOCKED' }],
@@ -204,6 +205,11 @@ describe('career creation state machine transition matrix', () => {
       from: 'SKILLS_TRAINING',
       event: eventFixtures.COMPLETE_SKILLS[0],
       to: 'AGING'
+    },
+    {
+      from: 'AGING',
+      event: eventFixtures.ANAGATHICS_FAILED[0],
+      to: 'MISHAP'
     },
     {
       from: 'AGING',

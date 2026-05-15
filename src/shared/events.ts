@@ -196,14 +196,18 @@ export type GameEvent =
   | {
       type: 'CharacterCreationAnagathicsDecided'
       characterId: CharacterId
+      rollEventId?: EventId
       useAnagathics: boolean
       termIndex: number
+      passed?: boolean
+      survival?: CareerCreationCheckFact
       cost?: number
       costRoll?: {
         expression: '1d6'
         rolls: number[]
         total: number
       }
+      pendingDecisions?: CharacterCreationProjection['pendingDecisions']
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

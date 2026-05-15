@@ -11,7 +11,7 @@ import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
-import type { EventId } from '../../../shared/ids'
+import { asEventId, type EventId } from '../../../shared/ids'
 import { deriveEventRng } from '../../../shared/prng'
 import type { CommandError } from '../../../shared/protocol'
 import { err, ok, type Result } from '../../../shared/result'
@@ -322,14 +322,66 @@ export const deriveLifecycleCommandEvents = (
         return err(commandError('missing_entity', 'Career term does not exist'))
       }
 
+      const basics = CEPHEUS_SRD_RULESET.careerBasics[activeTerm.career]
+      if (command.useAnagathics && !basics) {
+        return err(
+          commandError(
+            'invalid_command',
+            `Career ${activeTerm.career} is not supported`
+          )
+        )
+      }
+
+      const survivalRoll = command.useAnagathics
+        ? rollDiceExpression(
+            '2d6',
+            deriveEventRng(context.gameSeed, context.nextSeq)
+          )
+        : null
+      if (survivalRoll && !survivalRoll.ok) {
+        return err(commandError('invalid_command', survivalRoll.error))
+      }
+      const survivalRollValue =
+        survivalRoll?.ok ? survivalRoll.value : null
+      const survivalOutcome =
+        command.useAnagathics && basics && survivalRollValue
+          ? evaluateCareerCheck({
+              check: basics.Survival,
+              characteristics: character.characteristics,
+              roll: survivalRollValue.total
+            })
+          : null
+      if (command.useAnagathics && !survivalOutcome) {
+        return err(
+          commandError(
+            'invalid_command',
+            `Career ${activeTerm.career} has no survival check`
+          )
+        )
+      }
+      const survivalFact =
+        survivalOutcome && survivalRollValue
+          ? {
+              expression: '2d6' as const,
+              rolls: [...survivalRollValue.rolls],
+              total: survivalRollValue.total,
+              characteristic: survivalOutcome.check.characteristic,
+              modifier: survivalOutcome.modifier,
+              target: survivalOutcome.check.target,
+              success: survivalOutcome.success
+            }
+          : undefined
+
+      const survivedAnagathics =
+        !command.useAnagathics || survivalOutcome?.success === true
       const resolved = resolveAnagathicsUse({
         term: activeTerm,
-        survived: command.useAnagathics
+        survived: command.useAnagathics && survivedAnagathics
       })
-      const costRoll = command.useAnagathics
+      const costRoll = command.useAnagathics && survivedAnagathics
         ? rollDiceExpression(
             '1d6',
-            deriveEventRng(context.gameSeed, context.nextSeq)
+            deriveEventRng(context.gameSeed, context.nextSeq + 1)
           )
         : null
       if (costRoll && !costRoll.ok) {
@@ -337,8 +389,36 @@ export const deriveLifecycleCommandEvents = (
       }
       const costRollValue = costRoll?.ok ? costRoll.value : null
       const cost = costRollValue ? costRollValue.total * 2500 : undefined
+      const nextState =
+        command.useAnagathics && survivalOutcome?.success === false
+          ? transitionCareerCreationState(creation.value.state, {
+              type: 'ANAGATHICS_FAILED',
+              survival: survivalFact
+            })
+          : structuredClone(creation.value.state)
+      const pendingDecisions =
+        command.useAnagathics && survivalOutcome?.success === false
+          ? ([{ key: 'mishapResolution' }] as const)
+          : undefined
+      const activityRollEventId =
+        costRollValue !== null
+          ? asEventId(`${command.gameId}:${context.nextSeq + 1}`)
+          : survivalRollValue !== null
+            ? rollEventId
+            : undefined
 
       return ok([
+        ...(survivalRollValue
+          ? [
+              {
+                type: 'DiceRolled' as const,
+                expression: '2d6' as const,
+                reason: `${activeTerm.career} anagathics survival`,
+                rolls: [...survivalRollValue.rolls],
+                total: survivalRollValue.total
+              }
+            ]
+          : []),
         ...(costRollValue
           ? [
               {
@@ -353,8 +433,15 @@ export const deriveLifecycleCommandEvents = (
         {
           type: 'CharacterCreationAnagathicsDecided',
           characterId: command.characterId,
-          useAnagathics: resolved.term.anagathics,
+          ...(activityRollEventId ? { rollEventId: activityRollEventId } : {}),
+          useAnagathics: command.useAnagathics,
           termIndex,
+          ...(command.useAnagathics
+            ? {
+                passed: resolved.survived,
+                ...(survivalFact ? { survival: survivalFact } : {})
+              }
+            : {}),
           ...(cost !== undefined
             ? {
                 cost,
@@ -365,7 +452,8 @@ export const deriveLifecycleCommandEvents = (
                 }
               }
             : {}),
-          state: structuredClone(creation.value.state),
+          ...(pendingDecisions ? { pendingDecisions: [...pendingDecisions] } : {}),
+          state: nextState,
           creationComplete: false
         }
       ])

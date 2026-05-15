@@ -91,6 +91,10 @@ export const deriveCharacterCreationHistoryEvent = (
         type: 'DECIDE_ANAGATHICS',
         useAnagathics: event.useAnagathics,
         termIndex: event.termIndex,
+        ...(event.passed !== undefined ? { passed: event.passed } : {}),
+        ...(event.survival
+          ? { survival: structuredClone(event.survival) }
+          : {}),
         ...(event.cost !== undefined ? { cost: event.cost } : {}),
         ...(event.costRoll ? { costRoll: structuredClone(event.costRoll) } : {})
       }

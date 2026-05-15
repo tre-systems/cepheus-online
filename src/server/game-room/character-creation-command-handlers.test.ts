@@ -1356,24 +1356,98 @@ describe('character creation setup command handlers', () => {
     assert.deepEqual(result.value, [
       {
         type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout anagathics survival',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'DiceRolled',
         expression: '1d6',
         reason: 'Scout anagathics cost',
-        rolls: [4],
-        total: 4
+        rolls: [1],
+        total: 1
       },
       {
         type: 'CharacterCreationAnagathicsDecided',
         characterId,
+        rollEventId: 'game-1:3',
         useAnagathics: true,
         termIndex: 0,
-        cost: 10000,
+        passed: true,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: true
+        },
+        cost: 2500,
         costRoll: {
           expression: '1d6',
-          rolls: [4],
-          total: 4
+          rolls: [1],
+          total: 1
         },
         state: {
           status: 'AGING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('routes failed anagathics survival into the mishap branch', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'DecideCharacterCreationAnagathics',
+        gameId,
+        actorId,
+        characterId,
+        useAnagathics: true
+      },
+      context(
+        createCreation('AGING', {
+          terms: [activeScoutTerm()]
+        }),
+        { gameSeed: 2 }
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout anagathics survival',
+        rolls: [4, 2],
+        total: 6
+      },
+      {
+        type: 'CharacterCreationAnagathicsDecided',
+        characterId,
+        rollEventId: 'game-1:2',
+        useAnagathics: true,
+        termIndex: 0,
+        passed: false,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 2],
+          total: 6,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: false
+        },
+        pendingDecisions: [{ key: 'mishapResolution' }],
+        state: {
+          status: 'MISHAP',
           context: {
             canCommission: false,
             canAdvance: false

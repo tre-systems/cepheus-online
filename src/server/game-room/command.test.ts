@@ -2114,21 +2114,39 @@ describe('deriveEventsForCommand error categories', () => {
     assert.deepEqual(result.value, [
       {
         type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout anagathics survival',
+        rolls: [4, 4],
+        total: 8
+      },
+      {
+        type: 'DiceRolled',
         expression: '1d6',
         reason: 'Scout anagathics cost',
-        rolls: [4],
-        total: 4
+        rolls: [1],
+        total: 1
       },
       {
         type: 'CharacterCreationAnagathicsDecided',
         characterId,
+        rollEventId: 'game-1:3',
         useAnagathics: true,
         termIndex: 0,
-        cost: 10000,
+        passed: true,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: true
+        },
+        cost: 2500,
         costRoll: {
           expression: '1d6',
-          rolls: [4],
-          total: 4
+          rolls: [1],
+          total: 1
         },
         state: {
           status: 'AGING',

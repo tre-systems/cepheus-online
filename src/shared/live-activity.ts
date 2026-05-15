@@ -352,9 +352,16 @@ const describeCareerCreationEvent = (
     case 'COMPLETE_AGING':
       return agingDetails(event)
     case 'DECIDE_ANAGATHICS':
+      if (event.passed === false) {
+        return 'Anagathics survival failed; career mishap'
+      }
       return event.useAnagathics
-        ? 'Anagathics used this term'
+        ? event.cost !== undefined
+          ? `Anagathics used this term; cost Cr${event.cost}`
+          : 'Anagathics used this term'
         : 'Anagathics skipped this term'
+    case 'ANAGATHICS_FAILED':
+      return 'Anagathics survival failed; career mishap'
     case 'RESOLVE_REENLISTMENT':
       return reenlistmentDetails({
         outcome: event.reenlistment.outcome,
@@ -722,11 +729,17 @@ export const deriveLiveActivity = (
         characterId: event.characterId,
         transition: 'DECIDE_ANAGATHICS',
         details:
-          event.useAnagathics && event.cost !== undefined
-            ? `Anagathics used this term; cost Cr${event.cost}`
-            : event.useAnagathics
-              ? 'Anagathics used this term'
-              : 'Anagathics skipped this term',
+          event.passed === false
+            ? 'Anagathics survival failed; career mishap'
+            : event.useAnagathics && event.cost !== undefined
+              ? `Anagathics used this term; cost Cr${event.cost}`
+              : event.useAnagathics
+                ? 'Anagathics used this term'
+                : 'Anagathics skipped this term',
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }

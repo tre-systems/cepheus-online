@@ -155,13 +155,14 @@ const recordActiveTermAnagathics = (
   terms: readonly CareerTerm[],
   termIndex: number,
   useAnagathics: boolean,
+  passed?: boolean,
   cost?: number
 ) =>
   terms.map((term, index) =>
     index === termIndex
       ? {
           ...cloneCareerTerm(term),
-          anagathics: useAnagathics,
+          anagathics: useAnagathics && passed !== false,
           ...(cost !== undefined ? { anagathicsCost: cost } : {})
         }
       : cloneCareerTerm(term)
@@ -911,14 +912,20 @@ const rawCharacterEventHandlers = {
           character.creation.terms,
           event.termIndex,
           event.useAnagathics,
+          event.passed,
           event.cost
         ),
         event.termIndex,
         (facts) => ({
           ...facts,
           anagathicsDecision: {
+            ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
             useAnagathics: event.useAnagathics,
             termIndex: event.termIndex,
+            ...(event.passed !== undefined ? { passed: event.passed } : {}),
+            ...(event.survival
+              ? { survival: structuredClone(event.survival) }
+              : {}),
             ...(event.cost !== undefined ? { cost: event.cost } : {}),
             ...(event.costRoll
               ? { costRoll: structuredClone(event.costRoll) }
@@ -926,6 +933,9 @@ const rawCharacterEventHandlers = {
           }
         })
       ),
+      pendingDecisions: event.pendingDecisions
+        ? event.pendingDecisions.map((decision) => ({ ...decision }))
+        : character.creation.pendingDecisions,
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event)
     }

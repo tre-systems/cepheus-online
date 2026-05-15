@@ -1126,13 +1126,14 @@ Status: partially done. Aging roll modifiers, aging effect selection, required
 aging loss resolution, reenlistment resolution, seven-term retirement, forced
 reenlistment, allowed/blocked career decisions, voluntary career exit, and
 server-backed semantic aging/reenlistment facts exist. Anagathics decisions,
-cost deduction, and export provenance exist; optional survival/payment edge
-cases and some UI provenance still need completion.
+the required second survival check, cost deduction, and export provenance exist;
+detailed mishap consequences after failed treatment survival and some UI
+provenance still need completion.
 
 Tasks:
 
-- Complete optional anagathics survival/payment consequences beyond the existing
-  decision, cost deduction, and projection/export provenance.
+- Complete detailed mishap consequences after failed anagathics survival and
+  keep treatment debt/payment provenance visible through mustering/export.
 - Keep aging modifier, legal aging-loss choice, and characteristic-change
   provenance regression coverage healthy as new branches are added.
 - Polish reenlistment UI/provenance for mandatory retirement after seven terms,

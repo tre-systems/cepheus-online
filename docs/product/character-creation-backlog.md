@@ -104,9 +104,11 @@ Important remaining gaps:
   and finalization plus final sheet reload recovery. Named E2E scripts now
   isolate reveal, death, multi-career, and finalization checks. Remaining work
   is edge-case coverage and UX polish.
-- Optional mishaps remain unimplemented. Anagathics now has a server-owned
-  use/skip decision before aging, but full survival-risk, cost/payment,
-  provenance, and UX polish are still open.
+- Optional mishaps remain shallow. Anagathics now has a server-owned use/skip
+  decision before aging, the required second survival check, treatment cost,
+  credit deduction, and projected provenance. Failed anagathics survival enters
+  the mishap branch, but detailed mishap consequences and UI polish are still
+  open.
 - Character creation follow mode needs stronger two-tab automation and reveal
   timing contracts so spectators never see roll-dependent outcomes early.
 - Spectator follow should show the same projected creation state as the creator
@@ -163,10 +165,11 @@ tests before it is considered done.
   resolution polish, and provenance need browser-hardening.
 - [~] Resolve aging from the `aging` table, including characteristic loss
   choices and anagathics modifiers. Semantic aging facts and a server-owned
-  anagathics use/skip event exist. Anagathics use now rolls and stores the
-  server-derived treatment cost, deducts it from credits, and projects the cost
-  provenance onto the active term. Gap: anagathics survival-risk effects and
-  characteristic-choice UI/projection polish are incomplete.
+  anagathics use/skip event exist. Anagathics use now resolves the required
+  second survival check, rolls and stores the server-derived treatment cost,
+  deducts it from credits, projects provenance onto the active term, and routes
+  failed treatment survival into the mishap branch. Gap: detailed mishap
+  consequences and characteristic-choice UI/projection polish are incomplete.
 - [~] Roll reenlistment from `careerBasics`, handling mandatory retirement
   after seven terms, forced reenlistment on 12, success, failure, and voluntary
   exit. Current legal actions cover unresolved, forced, allowed, and blocked
@@ -462,8 +465,10 @@ Tasks:
 - Present aging characteristic loss choices only when required, and only for
   legal characteristics.
 - Persist characteristic changes with term provenance.
-- Complete optional anagathics survival check, cost/payment flow, and
-  provenance on top of the server-owned use/skip decision.
+- Polish anagathics UI/provenance and complete the detailed mishap
+  consequences after failed treatment survival. The server-owned use/skip
+  decision, second survival check, cost/payment flow, and projection provenance
+  are in place.
 - Polish reenlistment UI/provenance for retirement after seven terms, forced
   reenlistment on 12, success, failure toward mustering out, and voluntary
   career exit. The semantic command/event split is done; this is now

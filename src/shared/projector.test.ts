@@ -1406,13 +1406,24 @@ describe('game state projection', () => {
       envelope(4, {
         type: 'CharacterCreationAnagathicsDecided',
         characterId,
+        rollEventId: asEventId('game-1:4'),
         useAnagathics: true,
         termIndex: 0,
-        cost: 10000,
+        passed: true,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: true
+        },
+        cost: 2500,
         costRoll: {
           expression: '1d6',
-          rolls: [4],
-          total: 4
+          rolls: [1],
+          total: 1
         },
         state: {
           status: 'AGING',
@@ -1428,30 +1439,150 @@ describe('game state projection', () => {
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'AGING')
     assert.equal(creation?.terms[0]?.anagathics, true)
-    assert.equal(creation?.terms[0]?.anagathicsCost, 10000)
-    assert.equal(state?.characters[characterId]?.credits, -10000)
+    assert.equal(creation?.terms[0]?.anagathicsCost, 2500)
+    assert.equal(state?.characters[characterId]?.credits, -2500)
     assert.deepEqual(creation?.terms[0]?.facts?.anagathicsDecision, {
+      rollEventId: 'game-1:4',
       useAnagathics: true,
       termIndex: 0,
-      cost: 10000,
+      passed: true,
+      survival: {
+        expression: '2d6',
+        rolls: [4, 4],
+        total: 8,
+        characteristic: 'end',
+        modifier: 0,
+        target: 7,
+        success: true
+      },
+      cost: 2500,
       costRoll: {
         expression: '1d6',
-        rolls: [4],
-        total: 4
+        rolls: [1],
+        total: 1
       }
     })
     assert.deepEqual(creation?.history?.at(-1), {
       type: 'DECIDE_ANAGATHICS',
       useAnagathics: true,
       termIndex: 0,
-      cost: 10000,
+      passed: true,
+      survival: {
+        expression: '2d6',
+        rolls: [4, 4],
+        total: 8,
+        characteristic: 'end',
+        modifier: 0,
+        target: 7,
+        success: true
+      },
+      cost: 2500,
       costRoll: {
         expression: '1d6',
-        rolls: [4],
-        total: 4
+        rolls: [1],
+        total: 1
       }
     })
     assert.equal(state?.eventSeq, 4)
+  })
+
+  it('projects failed anagathics survival into a mishap decision', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'AGING',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Scout',
+              skills: ['Vacc Suit-1'],
+              skillsAndTraining: ['Vacc Suit-1'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 8
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationAnagathicsDecided',
+        characterId,
+        rollEventId: asEventId('game-1:4'),
+        useAnagathics: true,
+        termIndex: 0,
+        passed: false,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 2],
+          total: 6,
+          characteristic: 'end',
+          modifier: 0,
+          target: 7,
+          success: false
+        },
+        pendingDecisions: [{ key: 'mishapResolution' }],
+        state: {
+          status: 'MISHAP',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'MISHAP')
+    assert.equal(creation?.terms[0]?.anagathics, false)
+    assert.equal(creation?.terms[0]?.anagathicsCost, undefined)
+    assert.deepEqual(creation?.pendingDecisions, [{ key: 'mishapResolution' }])
+    assert.deepEqual(creation?.terms[0]?.facts?.anagathicsDecision, {
+      rollEventId: 'game-1:4',
+      useAnagathics: true,
+      termIndex: 0,
+      passed: false,
+      survival: {
+        expression: '2d6',
+        rolls: [4, 2],
+        total: 6,
+        characteristic: 'end',
+        modifier: 0,
+        target: 7,
+        success: false
+      }
+    })
   })
 
   it('projects semantic reenlistment facts onto the active term', () => {

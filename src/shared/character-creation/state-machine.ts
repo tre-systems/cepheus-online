@@ -112,6 +112,9 @@ const transitionStatus = (
         ? { ...state, status: 'AGING' }
         : null
     case 'AGING':
+      if (event.type === 'ANAGATHICS_FAILED') {
+        return { ...state, status: 'MISHAP' }
+      }
       return event.type === 'COMPLETE_AGING'
         ? { ...state, status: 'REENLISTMENT' }
         : null

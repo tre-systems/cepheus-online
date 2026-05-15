@@ -147,8 +147,11 @@ export interface CareerTermAgingLossFact {
 }
 
 export interface CareerTermAnagathicsDecisionFact {
+  rollEventId?: EventId
   useAnagathics: boolean
   termIndex: number
+  passed?: boolean
+  survival?: CareerCreationCheckFact
   cost?: number
   costRoll?: {
     expression: '1d6'
@@ -214,7 +217,20 @@ export type CareerCreationEvent =
     }
   | { type: 'COMPLETE_SKILLS' }
   | { type: 'COMPLETE_AGING'; aging?: CareerCreationAgingFact }
-  | { type: 'DECIDE_ANAGATHICS'; useAnagathics: boolean; termIndex: number }
+  | {
+      type: 'DECIDE_ANAGATHICS'
+      useAnagathics: boolean
+      termIndex: number
+      passed?: boolean
+      survival?: CareerCreationCheckFact
+      cost?: number
+      costRoll?: {
+        expression: '1d6'
+        rolls: number[]
+        total: number
+      }
+    }
+  | { type: 'ANAGATHICS_FAILED'; survival?: CareerCreationCheckFact }
   | {
       type: 'RESOLVE_REENLISTMENT'
       reenlistment: CareerCreationReenlistmentFact
