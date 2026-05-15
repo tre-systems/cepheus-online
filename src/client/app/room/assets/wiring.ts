@@ -70,6 +70,7 @@ export const createRoomAssetCreationWiring = ({
       pieceHeightInput: elements.pieceHeightInput,
       pieceScaleInput: elements.pieceScaleInput,
       pieceSheetInput: elements.pieceSheetInput,
+      pieceCharacterSelect: elements.pieceCharacterSelect,
       localAssetMetadataInput: elements.localAssetMetadataInput,
       loadLocalAssets: elements.loadLocalAssets,
       boardAssetSelect: elements.boardAssetSelect,

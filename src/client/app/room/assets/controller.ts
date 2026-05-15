@@ -1,5 +1,5 @@
 import type { GameCommand } from '../../../../shared/commands'
-import type { PieceId } from '../../../../shared/ids'
+import type { CharacterId, PieceId } from '../../../../shared/ids'
 import type {
   BoardState,
   GameState,
@@ -48,6 +48,7 @@ export interface RoomAssetCreationElements {
   pieceHeightInput: HTMLInputElement
   pieceScaleInput: HTMLInputElement
   pieceSheetInput: HTMLInputElement
+  pieceCharacterSelect: HTMLSelectElement
   localAssetMetadataInput: HTMLTextAreaElement
   loadLocalAssets: HTMLButtonElement
   boardAssetSelect: HTMLSelectElement
@@ -146,6 +147,12 @@ const renderAssetOptions = (
   select.disabled = items.length === 0
 }
 
+const characterOptionLabel = ({
+  name,
+  type
+}: Pick<GameState['characters'][CharacterId], 'name' | 'type'>): string =>
+  `${name} (${type.toLowerCase()})`
+
 const selectedAssetItem = (
   viewModel: MapAssetPickerViewModel | null,
   assetRef: string
@@ -242,6 +249,50 @@ export const createRoomAssetCreationController = ({
   ): Promise<void> => {
     const dataUrl = await readImageDataUrl(fileInput)
     if (dataUrl) imageInput.value = dataUrl
+  }
+
+  const renderCharacterLinkOptions = (): void => {
+    const selectedCharacterId = elements.pieceCharacterSelect.value
+    const characters = Object.values(getState()?.characters ?? {})
+      .filter((character) => character.active)
+      .sort((left, right) => left.name.localeCompare(right.name))
+    const options = [
+      createSelectOption(
+        elements.pieceCharacterSelect,
+        '',
+        characters.length === 0 ? 'No existing characters' : 'No character link'
+      ),
+      ...characters.map((character) =>
+        createSelectOption(
+          elements.pieceCharacterSelect,
+          character.id,
+          characterOptionLabel(character)
+        )
+      )
+    ]
+
+    elements.pieceCharacterSelect.replaceChildren(...options)
+    elements.pieceCharacterSelect.value = characters.some(
+      (character) => character.id === selectedCharacterId
+    )
+      ? selectedCharacterId
+      : ''
+  }
+
+  const selectedPieceCharacterId = (): CharacterId | null => {
+    const characterId = elements.pieceCharacterSelect.value.trim()
+    return characterId ? (characterId as CharacterId) : null
+  }
+
+  const applySelectedPieceCharacter = (): void => {
+    const characterId = selectedPieceCharacterId()
+    const character = characterId ? getState()?.characters[characterId] : null
+    if (!character) return
+    if (!elements.pieceNameInput.value.trim()) {
+      elements.pieceNameInput.value = character.name
+    }
+    elements.pieceSheetInput.checked = false
+    reportError('')
   }
 
   const renderLocalAssetPicker = (
@@ -411,6 +462,7 @@ export const createRoomAssetCreationController = ({
   }
 
   const createCustomPiece = async (): Promise<void> => {
+    renderCharacterLinkOptions()
     const state = getState()
     const board = getSelectedBoard()
     if (!state || !board) {
@@ -418,7 +470,12 @@ export const createRoomAssetCreationController = ({
       return
     }
 
-    const name = elements.pieceNameInput.value.trim()
+    const linkedCharacterId = selectedPieceCharacterId()
+    const linkedCharacter = linkedCharacterId
+      ? state.characters[linkedCharacterId]
+      : null
+    const name =
+      elements.pieceNameInput.value.trim() || linkedCharacter?.name || ''
     if (!name) {
       reportError('Piece name is required')
       elements.pieceNameInput.focus()
@@ -430,6 +487,7 @@ export const createRoomAssetCreationController = ({
       state,
       board,
       name,
+      linkedCharacterId,
       imageAssetId: await selectedPieceImageDataUrl(),
       width: parsePositiveIntegerInput(elements.pieceWidthInput, 50),
       height: parsePositiveIntegerInput(elements.pieceHeightInput, 50),
@@ -456,6 +514,7 @@ export const createRoomAssetCreationController = ({
     elements.pieceWidthInput.value = '50'
     elements.pieceHeightInput.value = '50'
     elements.pieceScaleInput.value = '1'
+    elements.pieceCharacterSelect.value = ''
     elements.roomDialog.close()
     requestRender()
   }
@@ -475,6 +534,15 @@ export const createRoomAssetCreationController = ({
   })
   addListener(elements.useCounterAsset, 'click', () => {
     applySelectedCounterAsset()
+  })
+  addListener(elements.pieceCharacterSelect, 'focus', () => {
+    renderCharacterLinkOptions()
+  })
+  addListener(elements.pieceCharacterSelect, 'click', () => {
+    renderCharacterLinkOptions()
+  })
+  addListener(elements.pieceCharacterSelect, 'change', () => {
+    applySelectedPieceCharacter()
   })
   addListener(elements.pieceImageFileInput, 'change', () => {
     Promise.all([
@@ -499,6 +567,7 @@ export const createRoomAssetCreationController = ({
   })
 
   renderLocalAssetPicker(null)
+  renderCharacterLinkOptions()
 
   return {
     dispose: () => {

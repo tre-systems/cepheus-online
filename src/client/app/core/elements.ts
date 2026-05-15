@@ -39,6 +39,7 @@ export interface AppElements {
   pieceHeightInput: HTMLInputElement | null
   pieceScaleInput: HTMLInputElement | null
   pieceSheetInput: HTMLInputElement | null
+  pieceCharacterSelect: HTMLSelectElement | null
   localAssetMetadataInput: HTMLTextAreaElement | null
   loadLocalAssets: HTMLButtonElement | null
   boardAssetSelect: HTMLSelectElement | null
@@ -127,6 +128,7 @@ export const getAppElements = (document: AppElementsDocument): AppElements => ({
   pieceHeightInput: getElement(document, 'pieceHeightInput'),
   pieceScaleInput: getElement(document, 'pieceScaleInput'),
   pieceSheetInput: getElement(document, 'pieceSheetInput'),
+  pieceCharacterSelect: getElement(document, 'pieceCharacterSelect'),
   localAssetMetadataInput: getElement(document, 'localAssetMetadataInput'),
   loadLocalAssets: getElement(document, 'loadLocalAssetsButton'),
   boardAssetSelect: getElement(document, 'boardAssetSelect'),

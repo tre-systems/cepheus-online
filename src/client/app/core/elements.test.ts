@@ -43,6 +43,7 @@ const elementIds = {
   pieceHeightInput: 'pieceHeightInput',
   pieceScaleInput: 'pieceScaleInput',
   pieceSheetInput: 'pieceSheetInput',
+  pieceCharacterSelect: 'pieceCharacterSelect',
   localAssetMetadataInput: 'localAssetMetadataInput',
   loadLocalAssets: 'loadLocalAssetsButton',
   boardAssetSelect: 'boardAssetSelect',

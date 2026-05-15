@@ -2,8 +2,17 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import type { GameCommand } from '../../../../shared/commands'
-import { asBoardId, asGameId, asUserId } from '../../../../shared/ids'
-import type { BoardState, GameState } from '../../../../shared/state'
+import {
+  asBoardId,
+  asCharacterId,
+  asGameId,
+  asUserId
+} from '../../../../shared/ids'
+import type {
+  BoardState,
+  CharacterState,
+  GameState
+} from '../../../../shared/state'
 import { createRoomAssetCreationController } from './controller'
 
 class FakeTarget {
@@ -79,6 +88,28 @@ const board = (): BoardState => ({
   doors: {}
 })
 
+const character = (id: string, name: string): CharacterState => ({
+  id: asCharacterId(id),
+  ownerId: actorId,
+  type: 'PLAYER',
+  name,
+  active: true,
+  notes: '',
+  age: 22,
+  characteristics: {
+    str: 7,
+    dex: 7,
+    end: 7,
+    int: 7,
+    edu: 7,
+    soc: 7
+  },
+  skills: [],
+  equipment: [],
+  credits: 0,
+  creation: null
+})
+
 const gameState = (): GameState => ({
   id: gameId,
   slug: 'room-1',
@@ -120,6 +151,7 @@ const createHarness = (initialState: GameState | null = gameState()) => {
     pieceHeightInput: new FakeInput(),
     pieceScaleInput: new FakeInput(),
     pieceSheetInput: new FakeInput(),
+    pieceCharacterSelect: new FakeSelect(),
     localAssetMetadataInput: new FakeInput(),
     loadLocalAssets: new FakeTarget(),
     boardAssetSelect: new FakeSelect(),
@@ -252,6 +284,32 @@ describe('room asset creation controller', () => {
     assert.equal(harness.elements.pieceScaleInput.value, '1')
     assert.equal(harness.elements.roomDialog.closed, true)
     assert.equal(harness.renderCount(), 1)
+  })
+
+  it('links a new piece to an existing character without creating a blank sheet', async () => {
+    const harness = createHarness({
+      ...gameState(),
+      characters: {
+        [asCharacterId('mae-1')]: character('mae-1', 'Mae')
+      }
+    })
+
+    harness.elements.pieceCharacterSelect.dispatch('focus')
+    harness.elements.pieceCharacterSelect.value = 'mae-1'
+    harness.elements.pieceCharacterSelect.dispatch('change')
+    harness.elements.createPiece.dispatch('click')
+    await flushAsyncListeners()
+
+    const batch = harness.commandBatches[0]
+    assert.deepEqual(
+      batch?.map((command) => command.type),
+      ['CreatePiece']
+    )
+    const command = batch?.[0]
+    assert.equal(command?.type, 'CreatePiece')
+    if (command?.type !== 'CreatePiece') return
+    assert.equal(command.name, 'Mae')
+    assert.equal(command.characterId, 'mae-1')
   })
 
   it('creates a game before creating a board when the room is empty', async () => {

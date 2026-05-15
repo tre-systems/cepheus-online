@@ -33,6 +33,7 @@ type TacticalRoomStateMessage = {
         id: string
         boardId: string
         name: string
+        characterId?: string | null
         imageAssetId?: string | null
         x: number
         y: number
@@ -40,6 +41,7 @@ type TacticalRoomStateMessage = {
         freedom: string
       }
     >
+    characters: Record<string, { id: string; name: string; type: string }>
   } | null
 }
 
@@ -241,6 +243,66 @@ test.describe('tactical board smoke', () => {
       (candidate) => candidate.name === 'File Counter'
     )
     expect(piece?.imageAssetId).toContain('data:image/png;base64,')
+  })
+
+  test('links a new tactical piece to an existing character from the room dialog', async ({
+    page
+  }) => {
+    const roomId = uniqueRoomId('linked-piece')
+    const refereeId = 'linked-referee'
+    await openRoom(page, {
+      roomId,
+      userId: refereeId,
+      viewer: 'referee'
+    })
+    const refereeSession = await actorSessionFromPage(page, roomId, refereeId)
+
+    await postCommand(page, roomId, refereeId, refereeSession, {
+      type: 'CreateGame',
+      slug: roomId,
+      name: 'Linked Piece Smoke'
+    })
+    await postSequencedCommand(page, roomId, refereeId, refereeSession, {
+      type: 'CreateBoard',
+      boardId: 'ship-deck',
+      name: 'Ship Deck',
+      imageAssetId: null,
+      url: null,
+      width: 1000,
+      height: 1000,
+      scale: 50,
+      losSidecar: null
+    })
+    await postSequencedCommand(page, roomId, refereeId, refereeSession, {
+      type: 'CreateCharacter',
+      characterId: 'mae-1',
+      characterType: 'PLAYER',
+      name: 'Mae'
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.locator('#menuButton').click()
+    await expect(page.locator('#roomDialog')).toBeVisible()
+    await page.locator('#pieceSheetInput').check()
+    await page.locator('#pieceCharacterSelect').focus()
+    await expect(
+      page.locator('#pieceCharacterSelect option[value="mae-1"]')
+    ).toHaveText('Mae (player)')
+
+    await page.locator('#pieceCharacterSelect').selectOption('mae-1')
+    await expect(page.locator('#pieceNameInput')).toHaveValue('Mae')
+    await expect(page.locator('#pieceSheetInput')).not.toBeChecked()
+    await page.locator('#createPieceButton').click()
+    await expect(page.locator('#roomDialog')).toBeHidden()
+
+    const state = await fetchTacticalState(page, roomId, refereeId)
+    const pieces = Object.values(state.state?.pieces ?? {})
+    expect(Object.keys(state.state?.characters ?? {})).toHaveLength(1)
+    expect(pieces).toHaveLength(1)
+    expect(pieces[0]).toMatchObject({
+      name: 'Mae',
+      characterId: 'mae-1'
+    })
   })
 
   test('creates a board, moves pieces, toggles doors, and filters hidden pieces', async ({

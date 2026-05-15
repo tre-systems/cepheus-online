@@ -12,6 +12,7 @@ export interface CreatePieceCommandPlanInput {
   state: GameState | null
   board: BoardState | null
   name: string
+  linkedCharacterId?: CharacterId | null
   imageAssetId: string | null
   width: number
   height: number
@@ -105,6 +106,7 @@ export const planCreatePieceCommands = ({
   state,
   board,
   name,
+  linkedCharacterId = null,
   imageAssetId,
   width,
   height,
@@ -129,10 +131,20 @@ export const planCreatePieceCommands = ({
     }
   }
 
+  if (linkedCharacterId && !state.characters[linkedCharacterId]) {
+    return {
+      ok: false,
+      error: 'Selected character is not available',
+      focus: null
+    }
+  }
+
   const pieceId = uniquePieceId(state, trimmedName)
-  const characterId = withCharacterSheet
-    ? uniqueCharacterId(state, trimmedName)
-    : null
+  const characterId = linkedCharacterId
+    ? linkedCharacterId
+    : withCharacterSheet
+      ? uniqueCharacterId(state, trimmedName)
+      : null
   const { x, y } = planPiecePlacement({
     board,
     width,
@@ -141,13 +153,14 @@ export const planCreatePieceCommands = ({
     existingPieceCount
   })
 
-  const characterCommands = characterId
-    ? planDefaultPieceCharacterCommands({
-        identity,
-        characterId,
-        name: trimmedName
-      })
-    : []
+  const characterCommands =
+    characterId && !linkedCharacterId
+      ? planDefaultPieceCharacterCommands({
+          identity,
+          characterId,
+          name: trimmedName
+        })
+      : []
 
   const createPieceCommand: Command = {
     type: 'CreatePiece',
