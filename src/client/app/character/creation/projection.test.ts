@@ -1010,4 +1010,39 @@ describe('character creation projection helpers', () => {
       'equipment'
     )
   })
+
+  it('ignores stale aggregate mustering benefits on projection-owned terms', () => {
+    const creation: CharacterCreationProjection = {
+      ...agingProjection(),
+      state: {
+        status: 'MUSTERING_OUT',
+        context: {
+          canCommission: false,
+          canAdvance: false
+        }
+      },
+      terms: [
+        {
+          career: 'Scout',
+          skills: [],
+          skillsAndTraining: [],
+          benefits: ['Low Passage', '20000'],
+          facts: {},
+          complete: true,
+          canReenlist: false,
+          completedBasicTraining: true,
+          musteringOut: true,
+          anagathics: false,
+          survival: 8
+        }
+      ],
+      history: []
+    }
+
+    assert.deepEqual(musteringBenefitsFromProjection(creation), [])
+    assert.deepEqual(
+      flowFromProjectedCharacter(character(creation))?.draft.musteringBenefits,
+      []
+    )
+  })
 })

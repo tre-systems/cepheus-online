@@ -329,6 +329,7 @@ const legacyMusteringBenefitsFromProjectedTerms = (
 export const musteringBenefitsFromProjection = (
   creation: CharacterCreationProjection
 ): CharacterCreationMusteringBenefit[] => {
+  const hasProjectedTermFacts = creation.terms.some(hasProjectedCareerTermFacts)
   const benefits = creation.terms.flatMap((term) =>
     (term.facts?.musteringBenefits ?? []).map((benefit) => ({
       career: benefit.career,
@@ -345,9 +346,8 @@ export const musteringBenefitsFromProjection = (
     }))
   )
 
-  return benefits.length > 0
-    ? benefits
-    : legacyMusteringBenefitsFromProjectedTerms(creation)
+  if (benefits.length > 0 || hasProjectedTermFacts) return benefits
+  return legacyMusteringBenefitsFromProjectedTerms(creation)
 }
 
 export const flowFromProjectedCharacter = (
