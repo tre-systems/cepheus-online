@@ -144,6 +144,23 @@ changes, and owner/spectator synchronization.
 Playwright is a development dependency only. That does not change the runtime
 dependency budget for the shipped app.
 
+## Mobile PWA Manual Checks
+
+Run these against a deployed Worker URL, or a local HTTPS tunnel when testing a
+candidate build on a real phone:
+
+- Install the app from the browser and confirm the installed app opens the room
+  shell without browser chrome.
+- Reload the installed app and confirm the room shell, PWA icons, manifest, and
+  service worker continue to load.
+- Put the device offline, reopen or reload the installed app, and confirm the
+  offline shell fallback appears while room commands and state reads fail
+  instead of being cached.
+- Deploy or switch to a newer build, return the installed app online, then
+  foreground it and confirm it refreshes onto the newer Worker/static build.
+- While offline, attempt a room reconnect; return online and confirm reconnect
+  feedback clears after the WebSocket and room state recover.
+
 ## Local Verification
 
 The target local gate once implementation starts:

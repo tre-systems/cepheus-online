@@ -18,22 +18,102 @@ interface ServiceWorkerRegistrationTarget {
   ) => void
 }
 
+interface ServiceWorkerUpdateWindowTarget {
+  addEventListener: (
+    type: 'focus' | 'online',
+    listener: (event: Event) => void
+  ) => void
+  removeEventListener: (
+    type: 'focus' | 'online',
+    listener: (event: Event) => void
+  ) => void
+  setInterval: (handler: () => void, timeout: number) => number
+  clearInterval: (handle: number) => void
+}
+
+interface ServiceWorkerUpdateDocumentTarget {
+  visibilityState: DocumentVisibilityState
+  addEventListener: (
+    type: 'visibilitychange',
+    listener: (event: Event) => void
+  ) => void
+  removeEventListener: (
+    type: 'visibilitychange',
+    listener: (event: Event) => void
+  ) => void
+}
+
 export interface ServiceWorkerControllerOptions {
   navigatorLike?: Navigator
   locationLike?: Pick<Location, 'reload'>
+  windowTarget?: ServiceWorkerUpdateWindowTarget | null
+  documentTarget?: ServiceWorkerUpdateDocumentTarget | null
   scriptUrl?: string
+  updateCheckIntervalMs?: number | null
   onUpdateStateChange?: (state: PwaUpdateState, event: PwaUpdateEvent) => void
 }
 
 export interface ServiceWorkerController {
   getUpdateState: () => PwaUpdateState
+  checkForUpdate?: () => void
+  dispose?: () => void
 }
+
+const DEFAULT_UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000
 
 const hasEventTarget = (
   target: ServiceWorker | ServiceWorkerRegistration | null
 ): target is (ServiceWorker | ServiceWorkerRegistration) &
   ServiceWorkerEventTarget =>
   target !== null && typeof target.addEventListener === 'function'
+
+const requestServiceWorkerUpdate = (
+  registration: ServiceWorkerRegistration
+): void => {
+  registration.update().catch(() => {
+    // Browsers reject update checks while offline or under transient network
+    // failures; the next focus/online/interval check will try again.
+  })
+}
+
+const startServiceWorkerUpdateChecks = ({
+  registration,
+  windowTarget,
+  documentTarget,
+  updateCheckIntervalMs
+}: {
+  registration: ServiceWorkerRegistration
+  windowTarget: ServiceWorkerUpdateWindowTarget | null
+  documentTarget: ServiceWorkerUpdateDocumentTarget | null
+  updateCheckIntervalMs: number | null
+}): (() => void) => {
+  const checkForUpdate = (): void => {
+    requestServiceWorkerUpdate(registration)
+  }
+  const checkWhenVisible = (): void => {
+    if (documentTarget?.visibilityState === 'visible') {
+      checkForUpdate()
+    }
+  }
+
+  windowTarget?.addEventListener('focus', checkForUpdate)
+  windowTarget?.addEventListener('online', checkForUpdate)
+  documentTarget?.addEventListener('visibilitychange', checkWhenVisible)
+
+  const intervalHandle =
+    windowTarget && updateCheckIntervalMs !== null && updateCheckIntervalMs > 0
+      ? windowTarget.setInterval(checkForUpdate, updateCheckIntervalMs)
+      : null
+
+  return () => {
+    windowTarget?.removeEventListener('focus', checkForUpdate)
+    windowTarget?.removeEventListener('online', checkForUpdate)
+    documentTarget?.removeEventListener('visibilitychange', checkWhenVisible)
+    if (windowTarget && intervalHandle !== null) {
+      windowTarget.clearInterval(intervalHandle)
+    }
+  }
+}
 
 const addUpdateFoundListener = (
   registration: ServiceWorkerRegistration,
@@ -67,7 +147,10 @@ const observeServiceWorkerRegistration = (
 export const registerClientServiceWorker = ({
   navigatorLike = navigator,
   locationLike = location,
+  windowTarget = typeof window === 'undefined' ? null : window,
+  documentTarget = typeof document === 'undefined' ? null : document,
   scriptUrl = '/sw.js',
+  updateCheckIntervalMs = DEFAULT_UPDATE_CHECK_INTERVAL_MS,
   onUpdateStateChange
 }: ServiceWorkerControllerOptions = {}): ServiceWorkerController | null => {
   if (!('serviceWorker' in navigatorLike)) return null
@@ -76,14 +159,28 @@ export const registerClientServiceWorker = ({
     navigatorLike.serviceWorker as ServiceWorkerRegistrationTarget
   let hadServiceWorkerController = serviceWorker.controller !== null
   let isReloadingForServiceWorker = false
+  let registration: ServiceWorkerRegistration | null = null
+  let stopUpdateChecks = (): void => {}
   const updateState = createPwaUpdateStateStore({
     onStateChange: onUpdateStateChange
   })
 
   serviceWorker
     .register(scriptUrl)
-    .then((registration) => {
-      observeServiceWorkerRegistration(registration, updateState)
+    .then((nextRegistration) => {
+      registration = nextRegistration
+      observeServiceWorkerRegistration(nextRegistration, updateState)
+      stopUpdateChecks()
+      stopUpdateChecks = startServiceWorkerUpdateChecks({
+        registration: nextRegistration,
+        windowTarget,
+        documentTarget,
+        updateCheckIntervalMs
+      })
+
+      if (hadServiceWorkerController) {
+        requestServiceWorkerUpdate(nextRegistration)
+      }
     })
     .catch(() => {
       updateState.dispatch({
@@ -105,6 +202,12 @@ export const registerClientServiceWorker = ({
   })
 
   return {
-    getUpdateState: updateState.getState
+    getUpdateState: updateState.getState,
+    checkForUpdate: () => {
+      if (registration) requestServiceWorkerUpdate(registration)
+    },
+    dispose: () => {
+      stopUpdateChecks()
+    }
   }
 }
