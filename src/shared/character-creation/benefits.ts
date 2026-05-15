@@ -31,19 +31,22 @@ export const deriveRemainingCareerBenefits = ({
     deriveCareerBenefitCount({ termsInCareer, currentRank }) - benefitsReceived
   )
 
+const hasSemanticTermFacts = (term: Pick<CareerTerm, 'facts'>): boolean =>
+  Object.keys(term.facts ?? {}).length > 0
+
 export const deriveCareerTermMusteringBenefitCount = (
   term: Pick<CareerTerm, 'benefits' | 'facts'>
 ): number =>
-  term.facts?.musteringBenefits === undefined
-    ? deriveLegacyCareerTermMusteringBenefitCount(term)
-    : deriveProjectedCareerTermMusteringBenefitCount(term)
+  hasSemanticTermFacts(term)
+    ? deriveProjectedCareerTermMusteringBenefitCount(term)
+    : deriveLegacyCareerTermMusteringBenefitCount(term)
 
 export const deriveCareerTermCashBenefitCount = (
   term: Pick<CareerTerm, 'benefits' | 'facts'>
 ): number =>
-  term.facts?.musteringBenefits === undefined
-    ? deriveLegacyCareerTermCashBenefitCount(term)
-    : deriveProjectedCareerTermCashBenefitCount(term)
+  hasSemanticTermFacts(term)
+    ? deriveProjectedCareerTermCashBenefitCount(term)
+    : deriveLegacyCareerTermCashBenefitCount(term)
 
 export const deriveProjectedCareerTermMusteringBenefitCount = (
   term: Pick<CareerTerm, 'facts'>

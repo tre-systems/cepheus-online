@@ -319,6 +319,25 @@ describe('SRD career term rules alignment', () => {
       benefits: ['1000', 'Low Passage', '2000'],
       facts: {}
     }
+    const semanticTermWithoutMusteringFacts = {
+      benefits: ['1000', 'Low Passage', '2000'],
+      facts: {
+        survival: {
+          passed: true,
+          canCommission: false,
+          canAdvance: true,
+          survival: {
+            expression: '2d6' as const,
+            rolls: [4, 4],
+            total: 8,
+            characteristic: 'end' as const,
+            modifier: 0,
+            target: 7,
+            success: true
+          }
+        }
+      }
+    }
     assert.equal(
       deriveProjectedCareerTermMusteringBenefitCount(termWithFacts),
       3
@@ -330,6 +349,14 @@ describe('SRD career term rules alignment', () => {
     assert.equal(deriveCareerTermCashBenefitCount(termWithFacts), 2)
     assert.equal(deriveCareerTermMusteringBenefitCount(legacyTerm), 3)
     assert.equal(deriveCareerTermCashBenefitCount(legacyTerm), 2)
+    assert.equal(
+      deriveCareerTermMusteringBenefitCount(semanticTermWithoutMusteringFacts),
+      0
+    )
+    assert.equal(
+      deriveCareerTermCashBenefitCount(semanticTermWithoutMusteringFacts),
+      0
+    )
 
     assert.deepEqual(
       resolveCareerBenefit({
