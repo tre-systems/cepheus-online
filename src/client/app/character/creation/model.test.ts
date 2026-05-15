@@ -813,6 +813,22 @@ describe('character creation view model', () => {
     assert.equal(aging.wizard?.reenlistmentRoll, null)
   })
 
+  it('hides roll prompts when projected legal actions do not allow them', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow(),
+      projection: projection('REENLISTMENT', {
+        actionPlan: {
+          status: 'REENLISTMENT',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.reenlistmentRoll, null)
+  })
+
   it('includes anagathics decision state for eligible career terms', () => {
     const base = resolvedCareerFlow()
     const viewModel = deriveCharacterCreationViewModel({

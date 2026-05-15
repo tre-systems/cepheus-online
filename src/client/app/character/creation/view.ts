@@ -1448,8 +1448,10 @@ export const deriveCharacterCreationTermSkillTrainingViewModel = (
 }
 
 export const deriveCharacterCreationReenlistmentRollViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  { available }: { available?: boolean } = {}
 ): CharacterCreationReenlistmentRollViewModel | null => {
+  if (available === false) return null
   const action = deriveNextCharacterCreationReenlistmentRoll(flow)
   if (!action) return null
 
@@ -1460,8 +1462,10 @@ export const deriveCharacterCreationReenlistmentRollViewModel = (
 }
 
 export const deriveCharacterCreationAgingRollViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  { available }: { available?: boolean } = {}
 ): CharacterCreationAgingRollViewModel | null => {
+  if (available === false) return null
   const action = deriveNextCharacterCreationAgingRoll(flow)
   if (!action) return null
 
@@ -1522,8 +1526,10 @@ export const deriveCharacterCreationTermCascadeChoicesViewModel = (
 }
 
 export const deriveCharacterCreationAnagathicsDecisionViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  { available }: { available?: boolean } = {}
 ): CharacterCreationAnagathicsDecisionViewModel | null => {
+  if (available === false) return null
   const decision = deriveCharacterCreationAnagathicsDecision(flow)
   if (!decision) return null
 

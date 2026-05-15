@@ -5,6 +5,7 @@ import {
   type CharacterCreationReadModel,
   type CharacterCreationProjectionReadModel
 } from '../../../../shared/character-creation/view-state.js'
+import type { CareerCreationActionKey } from '../../../../shared/character-creation/types.js'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -303,6 +304,15 @@ const wizardViewModel = ({
     projectedCreation?.state.status === 'HOMEWORLD'
       ? projectedCreation.actionPlan?.homeworldChoiceOptions
       : undefined
+  const projectedLegalActions = projectedCreation?.actionPlan
+    ? new Set(
+        projectedCreation.actionPlan.legalActions.map((action) => action.key)
+      )
+    : null
+  const isProjectedLegalActionAvailable = (
+    key: CareerCreationActionKey
+  ): boolean | undefined =>
+    projectedLegalActions ? projectedLegalActions.has(key) : undefined
   const careerChoiceOptions =
     projectedCreation?.state.status === 'CAREER_SELECTION'
       ? projectedCreation.actionPlan?.careerChoiceOptions
@@ -336,11 +346,19 @@ const wizardViewModel = ({
       failedQualificationOptions
     }),
     careerRoll: deriveCharacterCreationCareerRollButton(flow),
-    reenlistmentRoll: deriveCharacterCreationReenlistmentRollViewModel(flow),
-    agingRoll: deriveCharacterCreationAgingRollViewModel(flow),
+    reenlistmentRoll: deriveCharacterCreationReenlistmentRollViewModel(flow, {
+      available: isProjectedLegalActionAvailable('rollReenlistment')
+    }),
+    agingRoll: deriveCharacterCreationAgingRollViewModel(flow, {
+      available: isProjectedLegalActionAvailable('resolveAging')
+    }),
     agingChoices: deriveCharacterCreationAgingChoicesViewModel(flow),
-    anagathicsDecision:
-      deriveCharacterCreationAnagathicsDecisionViewModel(flow),
+    anagathicsDecision: deriveCharacterCreationAnagathicsDecisionViewModel(
+      flow,
+      {
+        available: isProjectedLegalActionAvailable('decideAnagathics')
+      }
+    ),
     termCascadeChoices: deriveCharacterCreationTermCascadeChoicesViewModel(
       flow,
       {
