@@ -401,6 +401,56 @@ describe('character sheet export view', () => {
     )
   })
 
+  it('prefers semantic term facts over conflicting legacy aggregates', () => {
+    const creation = finalizedCreation()
+    const term = creation.terms[0]
+    term.skills = ['Legacy Skill-6']
+    term.skillsAndTraining = ['Legacy Training-5']
+    term.benefits = ['Legacy Benefit']
+    term.survival = 2
+    term.advancement = 2
+    term.reEnlistment = 2
+    term.facts = {
+      ...term.facts,
+      basicTrainingSkills: ['Comms-0'],
+      termSkillRolls: [
+        {
+          career: 'Scout',
+          table: 'serviceSkills',
+          roll: { expression: '1d6', rolls: [3], total: 3 },
+          tableRoll: 3,
+          rawSkill: 'Piloting',
+          skill: 'Piloting-1',
+          characteristic: null,
+          pendingCascadeSkill: null
+        }
+      ],
+      musteringBenefits: [
+        {
+          career: 'Scout',
+          kind: 'material',
+          roll: { expression: '2d6', rolls: [2, 2], total: 4 },
+          modifier: 0,
+          tableRoll: 4,
+          value: 'Blade',
+          credits: 0,
+          materialItem: 'Blade'
+        }
+      ]
+    }
+
+    const exportText = derivePlainCharacterExport(character({ creation })) ?? ''
+
+    assert.equal(exportText.includes('skills Piloting-1, Comms-0'), true)
+    assert.equal(exportText.includes('benefits Blade (roll 4)'), true)
+    assert.equal(exportText.includes('Legacy Skill'), false)
+    assert.equal(exportText.includes('Legacy Training'), false)
+    assert.equal(exportText.includes('Legacy Benefit'), false)
+    assert.equal(exportText.includes('survival 2'), false)
+    assert.equal(exportText.includes('advancement 2'), false)
+    assert.equal(exportText.includes('reenlistment 2'), false)
+  })
+
   it('includes resolved cascade choices and aging loss provenance', () => {
     const creation = finalizedCreation()
     creation.terms[0].facts = {

@@ -222,12 +222,23 @@ const qualificationValue = (
   return `${formatCheckFact('qualification', qualification.passed, qualification.qualification)}${previousCareerText}`
 }
 
+const hasSemanticTermFacts = (term: CareerTerm): boolean =>
+  Object.keys(term.facts ?? {}).length > 0
+
+const skillsFromTermFacts = (term: CareerTerm): string[] => [
+  ...(term.facts?.basicTrainingSkills ?? []),
+  ...(term.facts?.termSkillRolls ?? []).flatMap((roll) =>
+    roll.skill ? [roll.skill] : []
+  )
+]
+
 const termSkillValue = (term: CareerTerm): string | null => {
-  const skills = sortSkillsForExport([
-    ...term.skills,
-    ...term.skillsAndTraining,
-    ...(term.facts?.basicTrainingSkills ?? [])
-  ])
+  const factSkills = skillsFromTermFacts(term)
+  const skills = sortSkillsForExport(
+    hasSemanticTermFacts(term) && factSkills.length > 0
+      ? factSkills
+      : [...term.skills, ...term.skillsAndTraining]
+  )
   return skills.length > 0 ? `skills ${listValue(skills)}` : null
 }
 
@@ -303,6 +314,8 @@ const termBenefitValue = (term: CareerTerm): string | null => {
       })
       .join(', ')}`
   }
+  if (hasSemanticTermFacts(term)) return null
+
   return term.benefits.length > 0
     ? `benefits ${listValue(term.benefits)}`
     : null
@@ -341,7 +354,7 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
         facts.survival.survival
       )
     )
-  } else if (term.survival != null) {
+  } else if (!hasSemanticTermFacts(term) && term.survival != null) {
     parts.push(`survival ${term.survival}`)
   }
   if (facts?.commission) {
@@ -369,7 +382,7 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
               : ''
           }`
     )
-  } else if (term.advancement != null) {
+  } else if (!hasSemanticTermFacts(term) && term.advancement != null) {
     parts.push(`advancement ${term.advancement}`)
   }
   const termSkills = termSkillValue(term)
@@ -407,7 +420,7 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
     parts.push(
       `${formatCheckFact('reenlistment', facts.reenlistment.reenlistment.success, facts.reenlistment.reenlistment)}: ${facts.reenlistment.outcome}`
     )
-  } else if (term.reEnlistment != null) {
+  } else if (!hasSemanticTermFacts(term) && term.reEnlistment != null) {
     parts.push(`reenlistment ${term.reEnlistment}`)
   }
   const benefits = termBenefitValue(term)
