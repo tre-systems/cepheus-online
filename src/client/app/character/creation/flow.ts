@@ -94,6 +94,7 @@ export interface CharacterCreationCareerPlan {
   agingRoll?: number | null
   agingMessage?: string | null
   agingSelections?: CharacterCreationAgingSelection[]
+  benefitForfeiture?: 'forfeit_current_term' | 'lose_all' | null
   reenlistmentRoll?: number | null
   reenlistmentOutcome?: CharacterCreationReenlistmentOutcome | null
 }
@@ -138,6 +139,7 @@ export interface CharacterCreationCompletedTerm {
   agingRoll?: number | null
   agingMessage?: string | null
   agingSelections?: CharacterCreationAgingSelection[]
+  benefitForfeiture?: 'forfeit_current_term' | 'lose_all' | null
   reenlistmentRoll?: number | null
   reenlistmentOutcome?: CharacterCreationReenlistmentOutcome | null
 }
@@ -2059,7 +2061,19 @@ const termsInCareer = (
   draft: Pick<CharacterCreationDraft, 'completedTerms'>,
   career: string
 ): number =>
-  draft.completedTerms.filter((term) => term.career === career).length
+  draft.completedTerms.filter(
+    (term) =>
+      term.career === career &&
+      term.benefitForfeiture !== 'forfeit_current_term'
+  ).length
+
+const hasLostAllCareerBenefits = (
+  draft: Pick<CharacterCreationDraft, 'completedTerms'>,
+  career: string
+): boolean =>
+  draft.completedTerms.some(
+    (term) => term.career === career && term.benefitForfeiture === 'lose_all'
+  )
 
 const benefitsInCareer = (
   draft: Pick<CharacterCreationDraft, 'musteringBenefits'>,
@@ -2083,12 +2097,15 @@ const rankInCareer = (
 const remainingMusteringBenefitsForCareer = (
   draft: Pick<CharacterCreationDraft, 'completedTerms' | 'musteringBenefits'>,
   career: string
-): number =>
-  deriveRemainingCareerBenefits({
+): number => {
+  if (hasLostAllCareerBenefits(draft, career)) return 0
+
+  return deriveRemainingCareerBenefits({
     termsInCareer: termsInCareer(draft, career),
     currentRank: rankInCareer(draft, career),
     benefitsReceived: benefitsInCareer(draft, career)
   })
+}
 
 const nextMusteringBenefitTerm = (
   draft: Pick<CharacterCreationDraft, 'completedTerms' | 'musteringBenefits'>

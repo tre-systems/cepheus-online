@@ -145,6 +145,9 @@ const completedTermFromSemanticFacts = (
     advancementPassed:
       advancement?.skipped === true ? false : (advancement?.passed ?? null),
     termSkillRolls: termSkillRollsFromFacts(term),
+    ...(facts?.mishap?.outcome.benefitEffect
+      ? { benefitForfeiture: facts.mishap.outcome.benefitEffect }
+      : {}),
     reenlistmentRoll: facts?.reenlistment?.reenlistment.total ?? null,
     reenlistmentOutcome: facts?.reenlistment?.outcome ?? null
   }

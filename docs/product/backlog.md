@@ -1101,13 +1101,13 @@ death and optional-mishap transition payloads are fenced or replaced by semantic
 commands. The separate `MISHAP` status is now used by failed anagathics
 treatment survival and the optional mishap branch. Mishap table rolls, outcome
 facts, outcome text, career exit, debt, extra service years, reveal-safe
-activity, and refresh replay are server-backed. Remaining consequence gaps are
-injury detail resolution, benefit forfeiture enforcement, and UI polish.
+activity, benefit forfeiture, and refresh replay are server-backed. Remaining
+consequence gaps are injury detail resolution and UI polish.
 
 Tasks:
 
-- Add injury detail resolution and benefit forfeiture enforcement for mishap
-  outcomes that require more than career exit, debt, or extra service years.
+- Add injury detail resolution for mishap outcomes that require characteristic
+  loss choices after the mishap table roll.
 - Keep default failed survival as an immediate deceased state.
 - Keep deceased creation state from finalizing or mustering into a playable
   character.
@@ -1128,13 +1128,12 @@ reenlistment, allowed/blocked career decisions, voluntary career exit, and
 server-backed semantic aging/reenlistment facts exist. Anagathics decisions,
 the required second survival check, cost deduction, and export provenance exist;
 detailed mishap table outcomes after failed treatment survival exist; injury
-detail, benefit forfeiture, and some UI provenance still need completion.
+detail and some UI provenance still need completion.
 
 Tasks:
 
-- Complete injury detail and benefit forfeiture after failed anagathics
-  survival mishaps, and keep treatment debt/payment provenance visible through
-  mustering/export.
+- Complete injury detail after failed anagathics survival mishaps, and keep
+  treatment debt/payment provenance visible through mustering/export.
 - Keep aging modifier, legal aging-loss choice, and characteristic-change
   provenance regression coverage healthy as new branches are added.
 - Polish reenlistment UI/provenance for mandatory retirement after seven terms,

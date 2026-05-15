@@ -85,6 +85,33 @@ const termSkillFact = (
   ...overrides
 })
 
+const mishapFact = (
+  benefitEffect: 'forfeit_current_term' | 'lose_all'
+): NonNullable<CareerTerm['facts']>['mishap'] => ({
+  roll: {
+    expression: '1d6',
+    rolls: [benefitEffect === 'lose_all' ? 4 : 2],
+    total: benefitEffect === 'lose_all' ? 4 : 2
+  },
+  outcome: {
+    career: 'Scout',
+    roll: benefitEffect === 'lose_all' ? 4 : 2,
+    id:
+      benefitEffect === 'lose_all'
+        ? 'dishonorable_discharge'
+        : 'honorable_discharge',
+    description:
+      benefitEffect === 'lose_all'
+        ? 'Dishonorably discharged from the service. Lose all benefits.'
+        : 'Honorably discharged from the service.',
+    discharge: benefitEffect === 'lose_all' ? 'dishonorable' : 'honorable',
+    benefitEffect,
+    debtCredits: 0,
+    extraServiceYears: 0,
+    injury: null
+  }
+})
+
 describe('career creation legal action planner', () => {
   it('derives legal action keys from the coarse creation status', () => {
     assert.deepEqual(
@@ -1235,6 +1262,61 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(creation),
       ['resolveMusteringBenefit']
+    )
+  })
+
+  it('applies mishap benefit forfeiture to mustering legal actions', () => {
+    const singleForfeitedTerm = projection('MUSTERING_OUT', {
+      terms: [
+        term({
+          complete: true,
+          musteringOut: true,
+          facts: { mishap: mishapFact('forfeit_current_term') }
+        })
+      ],
+      careers: [{ name: 'Scout', rank: 0 }]
+    })
+
+    assert.equal(deriveRemainingCareerCreationBenefits(singleForfeitedTerm), 0)
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(singleForfeitedTerm),
+      ['continueCareer', 'finishMustering']
+    )
+
+    const multiTermForfeiture = projection('MUSTERING_OUT', {
+      terms: [
+        term({ complete: true, facts: {} }),
+        term({
+          complete: true,
+          musteringOut: true,
+          facts: { mishap: mishapFact('forfeit_current_term') }
+        })
+      ],
+      careers: [{ name: 'Scout', rank: 0 }]
+    })
+
+    assert.equal(deriveRemainingCareerCreationBenefits(multiTermForfeiture), 1)
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(multiTermForfeiture),
+      ['resolveMusteringBenefit']
+    )
+
+    const lostAllBenefits = projection('MUSTERING_OUT', {
+      terms: [
+        term({ complete: true, facts: {} }),
+        term({
+          complete: true,
+          musteringOut: true,
+          facts: { mishap: mishapFact('lose_all') }
+        })
+      ],
+      careers: [{ name: 'Scout', rank: 5 }]
+    })
+
+    assert.equal(deriveRemainingCareerCreationBenefits(lostAllBenefits), 0)
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(lostAllBenefits),
+      ['continueCareer', 'finishMustering']
     )
   })
 

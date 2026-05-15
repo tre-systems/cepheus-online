@@ -1,10 +1,8 @@
 import {
   canRollCashBenefit,
   deriveLegacyCareerTermCashBenefitCount,
-  deriveLegacyCareerTermMusteringBenefitCount,
   deriveProjectedCareerTermCashBenefitCount,
-  deriveProjectedCareerTermMusteringBenefitCount,
-  deriveRemainingCareerBenefits
+  deriveRemainingCareerBenefitsForCareer
 } from './benefits'
 import { derivePrimaryEducationSkillOptions } from './background-skills'
 import {
@@ -131,27 +129,6 @@ const hasIncompleteHomeworldSelection = (
   return backgroundSelectionCount(creation) < allowance
 }
 
-const termsInCareer = (
-  creation: CareerCreationActionProjection,
-  career: string
-): number =>
-  creation.terms?.filter((term) => term.career === career).length ?? 0
-
-const benefitsReceivedInCareer = (
-  creation: CareerCreationActionProjection,
-  career: string
-): number =>
-  creation.terms
-    ?.filter((term) => term.career === career)
-    .reduce(
-      (total, term) =>
-        total +
-        (hasSemanticTermFacts(term)
-          ? deriveProjectedCareerTermMusteringBenefitCount(term)
-          : deriveLegacyCareerTermMusteringBenefitCount(term)),
-      0
-    ) ?? 0
-
 const rankInCareer = (
   creation: CareerCreationActionProjection,
   career: string
@@ -160,7 +137,8 @@ const rankInCareer = (
   let hasProjectedCareerFacts = false
   for (const term of creation.terms ?? []) {
     if (term.career !== career) continue
-    hasProjectedCareerFacts = hasProjectedCareerFacts || hasSemanticTermFacts(term)
+    hasProjectedCareerFacts =
+      hasProjectedCareerFacts || hasSemanticTermFacts(term)
     const advancement = term.facts?.advancement
     if (
       advancement &&
@@ -257,10 +235,10 @@ export const deriveRemainingCareerCreationBenefits = (
   for (const term of creation.terms) {
     if (seen.has(term.career)) continue
     seen.add(term.career)
-    remaining += deriveRemainingCareerBenefits({
-      termsInCareer: termsInCareer(creation, term.career),
-      currentRank: rankInCareer(creation, term.career),
-      benefitsReceived: benefitsReceivedInCareer(creation, term.career)
+    remaining += deriveRemainingCareerBenefitsForCareer({
+      terms: creation.terms,
+      career: term.career,
+      currentRank: rankInCareer(creation, term.career)
     })
   }
 
@@ -492,10 +470,10 @@ const deriveMusteringBenefitOptions = (
     if (seen.has(term.career)) continue
     seen.add(term.career)
     if (
-      deriveRemainingCareerBenefits({
-        termsInCareer: termsInCareer(creation, term.career),
-        currentRank: rankInCareer(creation, term.career),
-        benefitsReceived: benefitsReceivedInCareer(creation, term.career)
+      deriveRemainingCareerBenefitsForCareer({
+        terms: creation.terms ?? [],
+        career: term.career,
+        currentRank: rankInCareer(creation, term.career)
       }) <= 0
     ) {
       continue

@@ -108,8 +108,8 @@ Important remaining gaps:
   outcome facts, career exit, debt, extra service years, reveal-safe follower
   activity, and refresh replay. Anagathics now has a server-owned use/skip
   decision before aging, the required second survival check, treatment cost,
-  credit deduction, and projected provenance. Remaining gaps are injury detail
-  resolution, benefit forfeiture enforcement, and UI polish.
+  credit deduction, projected provenance, and benefit forfeiture enforcement.
+  Remaining gaps are injury detail resolution and UI polish.
 - Character creation follow mode needs stronger two-tab automation and reveal
   timing contracts so spectators never see roll-dependent outcomes early.
 - Spectator follow should show the same projected creation state as the creator
@@ -156,7 +156,7 @@ tests before it is considered done.
   exit handling. Current legal action: `rollSurvival`. Semantic survival
   command/event and roll facts are server-backed. Default failed survival is
   death; optional mishap table outcome facts now replay from the server. Gap:
-  injury detail and benefit forfeiture are not fully applied.
+  injury detail is not fully applied.
 - [~] Resolve commission and advancement from `careerBasics` and
   `ranksAndSkills`, including rank titles and bonus skills. Semantic events and
   server dice facts exist. Gap: bonus skill decisions and rank provenance still
@@ -171,7 +171,7 @@ tests before it is considered done.
   second survival check, rolls and stores the server-derived treatment cost,
   deducts it from credits, projects provenance onto the active term, and routes
   failed treatment survival into the mishap branch with server-owned table
-  facts. Gap: injury detail, benefit forfeiture, and characteristic-choice
+  facts plus benefit forfeiture. Gap: injury detail and characteristic-choice
   UI/projection polish are incomplete.
 - [~] Roll reenlistment from `careerBasics`, handling mandatory retirement
   after seven terms, forced reenlistment on 12, success, failure, and voluntary

@@ -24,6 +24,7 @@ import {
   deriveRemainingCashBenefits,
   deriveCashBenefitRollModifier,
   deriveCareerBenefitCount,
+  deriveCareerBenefitEligibleTermCount,
   deriveLegacyCareerTermCashBenefitCount,
   deriveLegacyCareerTermMusteringBenefitCount,
   deriveMaterialBenefitEffect,
@@ -31,6 +32,7 @@ import {
   deriveProjectedCareerTermCashBenefitCount,
   deriveProjectedCareerTermMusteringBenefitCount,
   normalizeMaterialBenefitValue,
+  deriveRemainingCareerBenefitsForCareer,
   resolveCareerBenefit
 } from './benefits'
 
@@ -375,6 +377,87 @@ describe('SRD career term rules alignment', () => {
         kind: 'cash'
       }),
       { kind: 'cash', value: '20000', credits: 20000 }
+    )
+  })
+
+  it('applies mishap benefit forfeiture to projected mustering entitlement', () => {
+    const survivedTerm = {
+      career: 'Scout',
+      benefits: [],
+      facts: {}
+    }
+    const forfeitedTerm = {
+      career: 'Scout',
+      benefits: [],
+      facts: {
+        mishap: {
+          roll: { expression: '1d6' as const, rolls: [2], total: 2 },
+          outcome: {
+            career: 'Scout',
+            roll: 2,
+            id: 'honorable_discharge',
+            description: 'Honorably discharged from the service.',
+            discharge: 'honorable' as const,
+            benefitEffect: 'forfeit_current_term' as const,
+            debtCredits: 0,
+            extraServiceYears: 0,
+            injury: null
+          }
+        }
+      }
+    }
+    const lostAllTerm = {
+      career: 'Scout',
+      benefits: [],
+      facts: {
+        mishap: {
+          roll: { expression: '1d6' as const, rolls: [4], total: 4 },
+          outcome: {
+            career: 'Scout',
+            roll: 4,
+            id: 'dishonorable_discharge',
+            description:
+              'Dishonorably discharged from the service. Lose all benefits.',
+            discharge: 'dishonorable' as const,
+            benefitEffect: 'lose_all' as const,
+            debtCredits: 0,
+            extraServiceYears: 0,
+            injury: null
+          }
+        }
+      }
+    }
+
+    assert.equal(
+      deriveCareerBenefitEligibleTermCount({
+        terms: [survivedTerm, forfeitedTerm],
+        career: 'Scout'
+      }),
+      1
+    )
+    assert.equal(
+      deriveRemainingCareerBenefitsForCareer({
+        terms: [survivedTerm, forfeitedTerm],
+        career: 'Scout',
+        currentRank: 0
+      }),
+      1
+    )
+    assert.equal(
+      deriveRemainingCareerBenefitsForCareer({
+        terms: [survivedTerm, forfeitedTerm],
+        career: 'Scout',
+        currentRank: 5
+      }),
+      4
+    )
+    assert.equal(
+      deriveRemainingCareerBenefitsForCareer({
+        terms: [survivedTerm, lostAllTerm],
+        career: 'Scout',
+        currentRank: 5
+      }),
+      0
     )
   })
 

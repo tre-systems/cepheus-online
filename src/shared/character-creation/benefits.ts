@@ -48,6 +48,65 @@ export const deriveCareerTermCashBenefitCount = (
     ? deriveProjectedCareerTermCashBenefitCount(term)
     : deriveLegacyCareerTermCashBenefitCount(term)
 
+const careerTermBenefitEffect = (
+  term: Pick<CareerTerm, 'facts'>
+): 'forfeit_current_term' | 'lose_all' | null =>
+  term.facts?.mishap?.outcome.benefitEffect ?? null
+
+export const deriveCareerBenefitEligibleTermCount = ({
+  terms,
+  career
+}: {
+  terms: readonly Pick<CareerTerm, 'career' | 'facts'>[]
+  career: string
+}): number => {
+  const careerTerms = terms.filter((term) => term.career === career)
+  if (
+    careerTerms.some((term) => careerTermBenefitEffect(term) === 'lose_all')
+  ) {
+    return 0
+  }
+
+  return careerTerms.filter(
+    (term) => careerTermBenefitEffect(term) !== 'forfeit_current_term'
+  ).length
+}
+
+export const deriveCareerBenefitsReceivedCount = ({
+  terms,
+  career
+}: {
+  terms: readonly Pick<CareerTerm, 'career' | 'benefits' | 'facts'>[]
+  career: string
+}): number =>
+  terms
+    .filter((term) => term.career === career)
+    .reduce(
+      (total, term) => total + deriveCareerTermMusteringBenefitCount(term),
+      0
+    )
+
+export const deriveRemainingCareerBenefitsForCareer = ({
+  terms,
+  career,
+  currentRank
+}: {
+  terms: readonly Pick<CareerTerm, 'career' | 'benefits' | 'facts'>[]
+  career: string
+  currentRank: number
+}): number => {
+  const eligibleTerms = deriveCareerBenefitEligibleTermCount({ terms, career })
+  if (eligibleTerms <= 0) return 0
+
+  return Math.max(
+    0,
+    deriveCareerBenefitCount({
+      termsInCareer: eligibleTerms,
+      currentRank
+    }) - deriveCareerBenefitsReceivedCount({ terms, career })
+  )
+}
+
 export const deriveProjectedCareerTermMusteringBenefitCount = (
   term: Pick<CareerTerm, 'facts'>
 ): number => term.facts?.musteringBenefits?.length ?? 0

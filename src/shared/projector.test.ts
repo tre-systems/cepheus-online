@@ -2678,6 +2678,113 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
+  it('projects mishap benefit forfeiture into refreshed mustering actions', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Mara Vale'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'MISHAP',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Scout',
+              skills: ['Vacc Suit-1'],
+              skillsAndTraining: ['Vacc Suit-1'],
+              benefits: [],
+              complete: true,
+              canReenlist: false,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              facts: {}
+            },
+            {
+              career: 'Scout',
+              skills: ['Vacc Suit-1'],
+              skillsAndTraining: ['Vacc Suit-1'],
+              benefits: [],
+              complete: false,
+              canReenlist: false,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 3
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 5 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          homeworld: null,
+          backgroundSkills: [],
+          pendingCascadeSkills: [],
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationMishapResolved',
+        characterId,
+        rollEventId: asEventId('game-1:4'),
+        mishap: {
+          roll: { expression: '1d6', rolls: [4], total: 4 },
+          outcome: {
+            career: 'Scout',
+            roll: 4,
+            id: 'dishonorable_discharge',
+            description:
+              'Dishonorably discharged from the service. Lose all benefits.',
+            discharge: 'dishonorable',
+            benefitEffect: 'lose_all',
+            debtCredits: 0,
+            extraServiceYears: 0,
+            injury: null
+          }
+        },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+
+    assert.equal(
+      creation?.terms[1]?.facts?.mishap?.outcome.benefitEffect,
+      'lose_all'
+    )
+    assert.deepEqual(creation?.actionPlan?.pendingDecisions, [])
+    assert.deepEqual(
+      creation?.actionPlan?.legalActions.map((action) => action.key),
+      ['continueCareer', 'finishMustering']
+    )
+  })
+
   it('projects semantic death confirmation with legacy history compatibility', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

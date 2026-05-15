@@ -5,10 +5,8 @@ import {
   deriveMaterialBenefitRollModifier,
   deriveMaterialBenefitEffect,
   deriveLegacyCareerTermCashBenefitCount,
-  deriveLegacyCareerTermMusteringBenefitCount,
   deriveProjectedCareerTermCashBenefitCount,
-  deriveProjectedCareerTermMusteringBenefitCount,
-  deriveRemainingCareerBenefits,
+  deriveRemainingCareerBenefitsForCareer,
   resolveCareerBenefit,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
@@ -51,26 +49,6 @@ type CharacterCreationMusteringBenefitRolledEvent = Extract<
   GameEvent,
   { type: 'CharacterCreationMusteringBenefitRolled' }
 >
-
-const termsInCareer = (
-  creation: CharacterCreationProjection,
-  career: string
-): number => creation.terms.filter((term) => term.career === career).length
-
-const benefitsReceivedInCareer = (
-  creation: CharacterCreationProjection,
-  career: string
-): number =>
-  creation.terms
-    .filter((term) => term.career === career)
-    .reduce(
-      (total, term) =>
-        total +
-        (hasSemanticTermFacts(term)
-          ? deriveProjectedCareerTermMusteringBenefitCount(term)
-          : deriveLegacyCareerTermMusteringBenefitCount(term)),
-      0
-    )
 
 const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
   creation.terms.reduce(
@@ -130,10 +108,10 @@ const validateMusteringBenefitRoll = (
   )
   if (!decisions.ok) return decisions
 
-  const remainingInCareer = deriveRemainingCareerBenefits({
-    termsInCareer: termsInCareer(character.creation, career),
-    currentRank: deriveProjectedCareerRank(character.creation, career),
-    benefitsReceived: benefitsReceivedInCareer(character.creation, career)
+  const remainingInCareer = deriveRemainingCareerBenefitsForCareer({
+    terms: character.creation.terms,
+    career,
+    currentRank: deriveProjectedCareerRank(character.creation, career)
   })
   if (remainingInCareer <= 0) {
     return err(

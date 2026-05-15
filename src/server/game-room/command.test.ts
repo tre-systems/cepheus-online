@@ -4,7 +4,8 @@ import { describe, it } from 'node:test'
 import {
   createCareerCreationState,
   type CareerCreationEvent,
-  type CareerCreationStatus
+  type CareerCreationStatus,
+  type CareerTerm
 } from '../../shared/characterCreation'
 import { asCharacterId, asEventId, asGameId, asUserId } from '../../shared/ids'
 import type {
@@ -95,6 +96,33 @@ const completedTerm = () => ({
   completedBasicTraining: true,
   musteringOut: true,
   anagathics: false
+})
+
+const mishapFact = (
+  benefitEffect: 'forfeit_current_term' | 'lose_all'
+): NonNullable<CareerTerm['facts']>['mishap'] => ({
+  roll: {
+    expression: '1d6' as const,
+    rolls: [benefitEffect === 'lose_all' ? 4 : 2],
+    total: benefitEffect === 'lose_all' ? 4 : 2
+  },
+  outcome: {
+    career: 'Scout',
+    roll: benefitEffect === 'lose_all' ? 4 : 2,
+    id:
+      benefitEffect === 'lose_all'
+        ? 'dishonorable_discharge'
+        : 'honorable_discharge',
+    description:
+      benefitEffect === 'lose_all'
+        ? 'Dishonorably discharged from the service. Lose all benefits.'
+        : 'Honorably discharged from the service.',
+    discharge: benefitEffect === 'lose_all' ? 'dishonorable' : 'honorable',
+    benefitEffect,
+    debtCredits: 0,
+    extraServiceYears: 0,
+    injury: null
+  }
 })
 
 const runCommand = (
@@ -382,6 +410,73 @@ describe('deriveEventsForCommand error categories', () => {
     assert.equal(
       result.error.message,
       'FINISH_MUSTERING is blocked by unresolved character creation decisions'
+    )
+  })
+
+  it('blocks mustering benefit rolls for a forfeited mishap term', () => {
+    const result = runCommand(
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'material'
+      },
+      createCreation('MUSTERING_OUT', {
+        terms: [
+          {
+            ...completedTerm(),
+            benefits: [],
+            facts: { mishap: mishapFact('forfeit_current_term') }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'No remaining mustering benefits for Scout'
+    )
+  })
+
+  it('blocks mustering benefit rolls when a mishap loses all career benefits', () => {
+    const result = runCommand(
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'material'
+      },
+      createCreation('MUSTERING_OUT', {
+        terms: [
+          {
+            ...completedTerm(),
+            benefits: [],
+            facts: {}
+          },
+          {
+            ...completedTerm(),
+            benefits: [],
+            facts: { mishap: mishapFact('lose_all') }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 5 }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'No remaining mustering benefits for Scout'
     )
   })
 
