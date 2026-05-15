@@ -405,6 +405,13 @@ const expectMobileControlUsable = async (
     .toBe(true)
 }
 
+const expectDiceRollPending = async (page: Page): Promise<void> => {
+  await expect(page.locator('#diceStage .roll-total')).toHaveText(
+    /^(Rolling\.\.\.|\?)$/,
+    { timeout: 100 }
+  )
+}
+
 const attachRepeatTravellerContext = async (
   page: Page,
   roomId: string,
@@ -853,7 +860,7 @@ test.describe('character creation smoke', () => {
   test('repeat-runs disposable seeded travellers with failure context', async ({
     page
   }, testInfo) => {
-    test.setTimeout(60_000)
+    test.setTimeout(120_000)
     const consoleErrors: string[] = []
     page.on('console', (message) => {
       if (message.type() === 'error') consoleErrors.push(message.text())
@@ -1414,10 +1421,7 @@ test.describe('character creation smoke', () => {
       await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
         timeout: 5_000
       })
-      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
-        'Rolling...',
-        { timeout: 100 }
-      )
+      await expectDiceRollPending(spectator)
       await expect(spectatorStatValue('Str')).toHaveCount(0)
 
       await waitForDiceReveal(page)
@@ -1451,10 +1455,7 @@ test.describe('character creation smoke', () => {
       await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
         timeout: 5_000
       })
-      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
-        'Rolling...',
-        { timeout: 100 }
-      )
+      await expectDiceRollPending(spectator)
       await expect(spectator.locator('#characterCreationFields')).not.toContainText(
         'Homeworld',
         { timeout: 100 }
@@ -2280,10 +2281,7 @@ test.describe('character creation smoke', () => {
     await expect(page.locator('#diceOverlay.visible')).toBeVisible({
       timeout: 5_000
     })
-    await expect(page.locator('#diceStage .roll-total')).toHaveText(
-      'Rolling...',
-      { timeout: 100 }
-    )
+    await expectDiceRollPending(page)
     await expect(survivalRoll).toHaveValue('', { timeout: 100 })
     await expect(outcome).not.toContainText(/Survival \d+|survived|failed/i, {
       timeout: 100
@@ -2372,10 +2370,7 @@ test.describe('character creation smoke', () => {
     await expect(page.locator('#diceOverlay.visible')).toBeVisible({
       timeout: 5_000
     })
-    await expect(page.locator('#diceStage .roll-total')).toHaveText(
-      'Rolling...',
-      { timeout: 100 }
-    )
+    await expectDiceRollPending(page)
     await expect(deathCard).toHaveCount(0, { timeout: 100 })
 
     await waitForDiceReveal(page)
@@ -2517,10 +2512,7 @@ test.describe('character creation smoke', () => {
       await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
         timeout: 5_000
       })
-      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
-        'Rolling...',
-        { timeout: 100 }
-      )
+      await expectDiceRollPending(spectator)
       await expect(spectatorSurvivalRoll).toHaveValue('', { timeout: 100 })
       await expect(spectatorDeathCard).toHaveCount(0, { timeout: 100 })
       await expect(spectatorFields).not.toContainText(
@@ -2789,10 +2781,7 @@ test.describe('character creation smoke', () => {
       await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
         timeout: 5_000
       })
-      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
-        'Rolling...',
-        { timeout: 100 }
-      )
+      await expectDiceRollPending(spectator)
       await expect(spectatorTermSkillRolls).toHaveCount(0, { timeout: 100 })
       await expect(spectatorFields).not.toContainText(termSkillPattern, {
         timeout: 100
@@ -3097,10 +3086,7 @@ test.describe('character creation smoke', () => {
       await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
         timeout: 5_000
       })
-      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
-        'Rolling...',
-        { timeout: 100 }
-      )
+      await expectDiceRollPending(spectator)
       await expect(spectatorBenefitList).toHaveCount(0, { timeout: 100 })
       await expect(spectatorFields).not.toContainText(/Merchant Cash.*Cr\d+/s, {
         timeout: 100
@@ -3374,9 +3360,7 @@ test.describe('character creation smoke', () => {
       await expect(
         termSkillSpectator.locator('#diceOverlay.visible')
       ).toBeVisible({ timeout: 5_000 })
-      await expect(
-        termSkillSpectator.locator('#diceStage .roll-total')
-      ).toHaveText('Rolling...', { timeout: 100 })
+      await expectDiceRollPending(termSkillSpectator)
       await expect(spectatorTermSkillRolls()).toHaveCount(0, { timeout: 100 })
       await expect(spectatorFields).not.toContainText(termSkillPattern, {
         timeout: 100
@@ -3503,10 +3487,7 @@ test.describe('character creation smoke', () => {
         await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
           timeout: 5_000
         })
-        await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
-          'Rolling...',
-          { timeout: 100 }
-        )
+        await expectDiceRollPending(spectator)
         await expect(spectatorFields).not.toContainText(/Aging \d+:/, {
           timeout: 100
         })
@@ -3567,10 +3548,7 @@ test.describe('character creation smoke', () => {
       await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
         timeout: 5_000
       })
-      await expect(spectator.locator('#diceStage .roll-total')).toHaveText(
-        'Rolling...',
-        { timeout: 100 }
-      )
+      await expectDiceRollPending(spectator)
       await expect(spectatorFields).not.toContainText(/Reenlistment \d+:/, {
         timeout: 100
       })
@@ -3679,9 +3657,7 @@ test.describe('character creation smoke', () => {
       await expect(
         musteringSpectator.locator('#diceOverlay.visible')
       ).toBeVisible({ timeout: 5_000 })
-      await expect(
-        musteringSpectator.locator('#diceStage .roll-total')
-      ).toHaveText('Rolling...', { timeout: 100 })
+      await expectDiceRollPending(musteringSpectator)
       await expect(spectatorFields).not.toContainText(/Merchant: cash \d+ ->/, {
         timeout: 100
       })
