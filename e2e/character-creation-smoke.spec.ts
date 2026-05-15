@@ -29,6 +29,7 @@ import {
   projectedMusteringBenefits,
   projectedTermSkillCount,
   rollCareerOutcomeWithSpectatorReveal,
+  seedCreationToAnagathicsDecision,
   seedCreationToCareerSelection,
   seedCreationToHomeworld,
   seedNextProjectedRoll,
@@ -3554,6 +3555,124 @@ test.describe('character creation smoke', () => {
     } finally {
       await spectator.close()
       await lateSpectator.close()
+    }
+  })
+
+  test('lets spectators follow failed anagathics into mishap without early reveal and recover after refresh', async ({
+    browser,
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 24_681)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToAnagathicsDecision(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId)
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+
+    const spectatorId = 'e2e-anagathics-spectator'
+    const spectator = await browser.newPage()
+    try {
+      await openRoom(spectator, {
+        roomId,
+        userId: spectatorId,
+        viewer: 'player'
+      })
+      await openOrExpectFollowedCreation(spectator, characterName)
+
+      await seedNextProjectedRoll(page, roomId, actorId, [1, 1])
+      const useAnagathics = page.getByRole('button', {
+        name: 'Use anagathics'
+      })
+      await expect(useAnagathics).toBeVisible({ timeout: 5_000 })
+      await useAnagathics.click()
+
+      await expect(spectator.locator('#diceOverlay.visible')).toBeVisible({
+        timeout: 5_000
+      })
+      await expectDiceRollPending(spectator)
+      await expect(spectator.locator('#characterCreationFields')).not.toContainText(
+        /mishap|Resolve mishap/i,
+        { timeout: 100 }
+      )
+
+      const preRevealProjection = await fetchProjectedCharacter(
+        spectator,
+        roomId,
+        spectatorId,
+        characterId,
+        'player'
+      )
+      expect(preRevealProjection?.creation?.state?.status).not.toBe('MISHAP')
+
+      await waitForDiceReveal(spectator)
+      await expect
+        .poll(async () => {
+          const owner = await fetchProjectedCharacter(
+            page,
+            roomId,
+            actorId,
+            characterId
+          )
+          return owner?.creation?.state?.status
+        })
+        .toBe('MISHAP')
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(page, characterName)
+
+      const resolveMishap = page.getByRole('button', { name: 'Resolve mishap' })
+      await expect(resolveMishap).toBeVisible({ timeout: 5_000 })
+      await expect(spectator.locator('#characterCreationFields')).toContainText(
+        /mishap/i,
+        { timeout: 5_000 }
+      )
+
+      await spectator.reload({ waitUntil: 'domcontentloaded' })
+      await expect(spectator.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(spectator, characterName)
+      await expect(spectator.locator('#characterCreationFields')).toContainText(
+        /mishap/i,
+        { timeout: 5_000 }
+      )
+
+      await expect
+        .poll(async () => {
+          const owner = await fetchProjectedCharacter(
+            page,
+            roomId,
+            actorId,
+            characterId
+          )
+          const viewer = await fetchProjectedCharacter(
+            spectator,
+            roomId,
+            spectatorId,
+            characterId,
+            'player'
+          )
+          return {
+            ownerStatus: owner?.creation?.state?.status,
+            viewerStatus: viewer?.creation?.state?.status
+          }
+        })
+        .toEqual({ ownerStatus: 'MISHAP', viewerStatus: 'MISHAP' })
+    } finally {
+      await spectator.close()
     }
   })
 

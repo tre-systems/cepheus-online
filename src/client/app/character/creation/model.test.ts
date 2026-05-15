@@ -733,6 +733,47 @@ describe('character creation view model', () => {
     )
   })
 
+  it('renders mishap resolution when anagathics failure enters mishap after a survived term', () => {
+    const currentFlow = resolvedCareerFlow()
+    const careerPlan = currentFlow.draft.careerPlan
+    assert.equal(careerPlan === null, false)
+    if (!careerPlan) return
+    currentFlow.draft.careerPlan = {
+      ...careerPlan,
+      survivalRoll: 9,
+      survivalPassed: true,
+      anagathics: true
+    }
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('MISHAP', {
+        actionPlan: {
+          status: 'MISHAP',
+          pendingDecisions: [{ key: 'mishapResolution' }],
+          legalActions: [
+            {
+              key: 'resolveMishap',
+              status: 'MISHAP',
+              commandTypes: ['ResolveCharacterCreationMishap'],
+              rollRequirement: { key: 'mishap', dice: '1d6' }
+            }
+          ]
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.death, null)
+    assert.equal(viewModel.wizard?.mishapResolution?.title, 'Merchant mishap')
+    assert.equal(
+      /mishap must be resolved/i.test(
+        viewModel.wizard?.mishapResolution?.message ?? ''
+      ),
+      true
+    )
+  })
+
   it('renders injury resolution choices from projected mishap facts', () => {
     const currentFlow = resolvedCareerFlow()
     const careerPlan = currentFlow.draft.careerPlan

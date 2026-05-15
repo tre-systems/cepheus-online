@@ -1040,6 +1040,105 @@ describe('viewer filtering', () => {
     assert.equal(term?.facts?.aging, undefined)
   })
 
+  it('redacts pre-reveal failed anagathics progress from top-level creation state', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 22,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: ['Vacc Suit-0'],
+      equipment: [],
+      credits: -5000,
+      creation: {
+        state: {
+          status: 'MISHAP',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Vacc Suit-0'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            facts: {
+              basicTrainingSkills: ['Vacc Suit-0'],
+              anagathicsDecision: {
+                rollEventId: asEventId('roll-1'),
+                useAnagathics: true,
+                termIndex: 0,
+                passed: false,
+                survival: {
+                  expression: '2d6',
+                  rolls: [1, 1],
+                  total: 2,
+                  characteristic: 'end',
+                  modifier: 0,
+                  target: 7,
+                  success: false
+                }
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        pendingDecisions: [{ key: 'mishapResolution' }],
+        creationComplete: false,
+        actionPlan: {
+          status: 'MISHAP',
+          pendingDecisions: [{ key: 'mishapResolution' }],
+          legalActions: [
+            {
+              key: 'resolveMishap',
+              status: 'MISHAP',
+              commandTypes: ['ResolveCharacterCreationMishap']
+            }
+          ]
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const character = filtered.characters[asCharacterId('char-1')]
+    const creation = character?.creation
+    const term = creation?.terms[0]
+    assert.equal(creation?.state.status, 'AGING')
+    assert.equal(creation?.actionPlan, undefined)
+    assert.equal(creation?.pendingDecisions, undefined)
+    assert.equal(term?.facts?.anagathicsDecision, undefined)
+  })
+
   it('keeps roll-dependent creation history visible after reveal', () => {
     const state = buildState()
     addDiceRoll(state, pastRevealAt)

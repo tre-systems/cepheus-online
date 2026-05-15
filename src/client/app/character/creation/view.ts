@@ -1447,7 +1447,7 @@ export const deriveCharacterCreationDeathViewModel = (
   if (available === false) return null
 
   const name = flow.draft.name.trim() || 'This traveller'
-  const career = plan.career.trim() || 'career'
+  const career = plan?.career.trim() || 'career'
   const roll = plan.survivalRoll === null ? '-' : String(plan.survivalRoll)
 
   return {
@@ -1464,15 +1464,19 @@ export const deriveCharacterCreationMishapResolutionViewModel = (
   { available }: { available?: boolean } = {}
 ): CharacterCreationMishapResolutionViewModel | null => {
   const plan = flow.draft.careerPlan
-  if (flow.step !== 'career' || plan?.survivalPassed !== false) return null
+  if (flow.step !== 'career') return null
   if (available === false) return null
+  if (available !== true && plan?.survivalPassed !== false) return null
 
-  const career = plan.career.trim() || 'career'
+  const career = plan?.career.trim() || 'career'
 
   return {
     title: `${career} mishap`,
-    message:
-      'Survival failed. Resolve the mishap before this traveller musters out.',
+    message: `${
+      plan?.survivalPassed === false
+        ? 'Survival failed.'
+        : 'A mishap must be resolved.'
+    } Resolve the mishap before this traveller musters out.`,
     buttonLabel: 'Resolve mishap'
   }
 }

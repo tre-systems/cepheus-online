@@ -485,11 +485,21 @@ const redactUnrevealedCreationFacts = (
       delete facts.aging
     }
     if (hasUnrevealedRollFact(facts.anagathicsDecision, unrevealedRollIds)) {
+      redactCreationProgress(character, 'AGING')
       redactAnagathicsSheetEffect(
         character,
         term,
         facts.anagathicsDecision?.cost
       )
+      if (character.creation?.pendingDecisions) {
+        character.creation.pendingDecisions =
+          character.creation.pendingDecisions.filter(
+            (decision) => decision.key !== 'mishapResolution'
+          )
+        if (character.creation.pendingDecisions.length === 0) {
+          delete character.creation.pendingDecisions
+        }
+      }
       delete facts.anagathicsDecision
     }
     if (hasUnrevealedRollFact(facts.mishap, unrevealedRollIds)) {

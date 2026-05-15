@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import type { CareerCreationTermSkillTable } from '../../src/shared/characterCreation'
 import { setSeedForNextRoll } from './app'
 
 export type CharacterCreationProjection = {
@@ -18,6 +19,10 @@ export type CharacterCreationProjection = {
     legalActions?: Array<{
       key: string
       commandTypes?: string[]
+      termSkillTableOptions?: Array<{
+        table: CareerCreationTermSkillTable
+        label?: string
+      }>
     }>
   }
   state?: {
@@ -814,4 +819,175 @@ export const seedCreationToCareerSelection = async (
     type: 'CompleteCharacterCreationHomeworld',
     characterId
   })
+}
+
+const projectedLegalAction = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  characterId: string,
+  key: string
+) => {
+  const character = await fetchProjectedCharacter(
+    page,
+    roomId,
+    actorId,
+    characterId
+  )
+  return character?.creation?.actionPlan?.legalActions?.find(
+    (action) => action.key === key
+  )
+}
+
+const resolvePendingProjectionCascadeSkills = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  actorSession: string,
+  characterId: string
+): Promise<void> => {
+  for (let index = 0; index < 8; index += 1) {
+    const character = await fetchProjectedCharacter(
+      page,
+      roomId,
+      actorId,
+      characterId
+    )
+    const cascadeSkill = character?.creation?.pendingCascadeSkills?.[0]
+    if (!cascadeSkill) return
+    const cascadeChoice = character.creation?.actionPlan?.cascadeSkillChoices
+      ?.find((choice) => choice.cascadeSkill === cascadeSkill)
+      ?.options.find((option) => !option.cascade)
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationTermCascadeSkill',
+      characterId,
+      cascadeSkill,
+      selection: cascadeChoice?.value ?? cascadeSkill.replace(/\*$/, '')
+    })
+  }
+}
+
+export const seedCreationToAnagathicsDecision = async (
+  page: Page,
+  {
+    roomId,
+    actorId,
+    actorSession,
+    characterId,
+    career = 'Scout'
+  }: {
+    roomId: string
+    actorId: string
+    actorSession: string
+    characterId: string
+    career?: string
+  }
+): Promise<void> => {
+  await seedCreationToCareerSelection(page, {
+    roomId,
+    actorId,
+    actorSession,
+    characterId
+  })
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'UpdateCharacterSheet',
+    characterId,
+    characteristics: {
+      str: 15,
+      dex: 15,
+      end: 15,
+      int: 15,
+      edu: 15,
+      soc: 15
+    }
+  })
+  await seedNextProjectedRoll(page, roomId, actorId, [6, 6])
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'ResolveCharacterCreationQualification',
+    characterId,
+    career
+  })
+  const basicTraining = await projectedLegalAction(
+    page,
+    roomId,
+    actorId,
+    characterId,
+    'completeBasicTraining'
+  )
+  if (basicTraining) {
+    const character = await fetchProjectedCharacter(
+      page,
+      roomId,
+      actorId,
+      characterId
+    )
+    const previousTermCount = Math.max(
+      0,
+      (character?.creation?.terms?.length ?? 1) - 1
+    )
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationBasicTraining',
+      characterId,
+      ...(previousTermCount > 0 ? { skill: 'Comms-0' } : {})
+    })
+  }
+  await seedNextProjectedRoll(page, roomId, actorId, [6, 6])
+  await postCommand(page, roomId, actorId, actorSession, {
+    type: 'ResolveCharacterCreationSurvival',
+    characterId
+  })
+
+  for (let index = 0; index < 8; index += 1) {
+    const action = await projectedLegalAction(
+      page,
+      roomId,
+      actorId,
+      characterId,
+      'rollTermSkill'
+    )
+    if (!action) break
+    const table =
+      'termSkillTableOptions' in action &&
+      Array.isArray(action.termSkillTableOptions)
+        ? action.termSkillTableOptions[0]?.table
+        : undefined
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'RollCharacterCreationTermSkill',
+      characterId,
+      table: table ?? 'serviceSkills'
+    })
+    await resolvePendingProjectionCascadeSkills(
+      page,
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    )
+  }
+
+  const completeSkills = await projectedLegalAction(
+    page,
+    roomId,
+    actorId,
+    characterId,
+    'completeSkills'
+  )
+  if (completeSkills) {
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationSkills',
+      characterId
+    })
+  }
+  await expect
+    .poll(async () => {
+      const action = await projectedLegalAction(
+        page,
+        roomId,
+        actorId,
+        characterId,
+        'decideAnagathics'
+      )
+      return Boolean(action)
+    })
+    .toBe(true)
 }
