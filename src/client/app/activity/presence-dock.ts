@@ -137,8 +137,11 @@ export const createCreationPresenceDock = ({
       }
 
       const currentActorId = getActorId()
+      const canAutoFollow =
+        !characterCreatorOpen || !isCharacterCreatorActive()
       if (
         autoFollowSingleRemoteCreation &&
+        canAutoFollow &&
         summaries.length === 1 &&
         summaries[0]?.ownerId !== currentActorId
       ) {

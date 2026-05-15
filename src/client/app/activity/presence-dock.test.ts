@@ -201,6 +201,7 @@ describe('creation presence dock helpers', () => {
       getActorId: () => 'local-user',
       openCharacterCreationFollow: (characterId, options) => {
         opened.push({ characterId, readOnly: options.readOnly })
+        return undefined
       },
       localStorage: new MapStorage()
     })
@@ -290,6 +291,7 @@ describe('creation presence dock helpers', () => {
       getActorId: () => 'local-user',
       openCharacterCreationFollow: (characterId) => {
         opened.push(characterId)
+        return undefined
       },
       localStorage: new MapStorage()
     })
@@ -333,7 +335,7 @@ describe('creation presence dock helpers', () => {
       },
       getRoomId: () => 'game',
       getActorId: () => 'local-user',
-      openCharacterCreationFollow: () => {},
+      openCharacterCreationFollow: () => undefined,
       localStorage: new MapStorage(),
       isCharacterCreatorReadOnly: () => true
     })
@@ -341,6 +343,55 @@ describe('creation presence dock helpers', () => {
     try {
       controller.render(gameState({ local }))
 
+      assert.equal(dock.hidden, false)
+    } finally {
+      globalThis.document = previousDocument
+    }
+  })
+
+  it('does not auto-follow recursively while a read-only flow is already open', () => {
+    const previousDocument = globalThis.document
+    globalThis.document = testDocument as unknown as Document
+    const remote = character(
+      'remote',
+      {
+        state: { status: 'CHARACTERISTICS', context: creationContext },
+        terms: [],
+        careers: [],
+        canEnterDraft: false,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false
+      },
+      'remote-player'
+    )
+    const opened: CharacterId[] = []
+    const dock = new TestNode('section') as unknown as HTMLElement
+    const characterCreator = new TestNode('aside') as unknown as HTMLElement
+    const sheet = new TestNode('aside') as unknown as HTMLElement
+    characterCreator.hidden = false
+
+    const controller = createCreationPresenceDock({
+      elements: {
+        dock,
+        characterCreator,
+        sheet
+      },
+      getRoomId: () => 'game',
+      getActorId: () => 'local-user',
+      openCharacterCreationFollow: (characterId) => {
+        opened.push(characterId)
+        return undefined
+      },
+      localStorage: new MapStorage(),
+      isCharacterCreatorActive: () => true,
+      isCharacterCreatorReadOnly: () => true
+    })
+
+    try {
+      controller.render(gameState({ remote }))
+
+      assert.deepEqual(opened, [])
       assert.equal(dock.hidden, false)
     } finally {
       globalThis.document = previousDocument
@@ -374,7 +425,7 @@ describe('creation presence dock helpers', () => {
       },
       getRoomId: () => 'game',
       getActorId: () => 'local-user',
-      openCharacterCreationFollow: () => {},
+      openCharacterCreationFollow: () => undefined,
       localStorage: new MapStorage()
     })
 
@@ -412,7 +463,7 @@ describe('creation presence dock helpers', () => {
       },
       getRoomId: () => 'game',
       getActorId: () => 'local-user',
-      openCharacterCreationFollow: () => {},
+      openCharacterCreationFollow: () => undefined,
       localStorage: new MapStorage(),
       isCharacterCreatorActive: () => false
     })

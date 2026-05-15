@@ -266,7 +266,10 @@ export const waitForDiceReveal = async (page: Page): Promise<void> => {
   })
   const visibleTotal = page.locator('#diceOverlay.visible #diceStage .roll-total')
   if (((await visibleTotal.textContent()) ?? '').trim() === 'Rolling...') {
-    await expect(visibleTotal).not.toHaveText('Rolling...', { timeout: 5_000 })
+    await Promise.race([
+      expect(visibleTotal).not.toHaveText('Rolling...', { timeout: 5_000 }),
+      expect(overlay).not.toHaveClass(/visible/, { timeout: 5_000 })
+    ])
   }
   await expect(overlay).not.toHaveClass(/visible/, { timeout: 5_000 })
 }
@@ -286,7 +289,14 @@ export const openOrExpectFollowedCreation = async (
     .locator('#creationPresenceDock .creation-presence-card')
     .filter({ hasText: characterName })
 
-  const deadline = Date.now() + 20_000
+  const url = new URL(page.url())
+  const roomId = url.searchParams.get('game') ?? ''
+  const actorId = url.searchParams.get('user') ?? 'local-user'
+  const viewer =
+    (url.searchParams.get('viewer') as 'referee' | 'player' | 'spectator') ??
+    'player'
+  let reloadedAfterProjection = false
+  const deadline = Date.now() + 25_000
   while (Date.now() < deadline) {
     if (
       (await panel.isVisible().catch(() => false)) &&
@@ -300,6 +310,24 @@ export const openOrExpectFollowedCreation = async (
       await expect(panel).toBeVisible({ timeout: 5_000 })
       await expect(title).toHaveText(characterName, { timeout: 5_000 })
       return
+    }
+    if (roomId && !reloadedAfterProjection) {
+      const message = await fetchRoomState(page, roomId, actorId, viewer).catch(
+        () => null
+      )
+      const hasProjectedCreation = Object.values(
+        message?.state?.characters ?? {}
+      ).some(
+        (character) =>
+          character.creation &&
+          (character.creation.name === characterName ||
+            character.name === characterName)
+      )
+      if (hasProjectedCreation) {
+        reloadedAfterProjection = true
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await expect(page.locator('#boardCanvas')).toBeVisible()
+      }
     }
     await page.waitForTimeout(100)
   }

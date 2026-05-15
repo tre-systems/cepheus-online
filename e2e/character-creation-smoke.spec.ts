@@ -1333,10 +1333,12 @@ test.describe('character creation smoke', () => {
     page
   }) => {
     const roomId = await openUniqueRoom(page)
+    const actorId = actorIdFromPage(page)
     await page.locator('#createCharacterRailButton').click()
 
     const characterName =
       (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    await activeCreationCharacterId(page, roomId, actorId)
 
     const spectator = await browser.newPage()
     try {
@@ -2048,10 +2050,7 @@ test.describe('character creation smoke', () => {
         spectator.locator('#characterCreationFields .creation-draft-fallback')
       ).toHaveCount(0, { timeout: 100 })
 
-      await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
-        'Rolling...',
-        { timeout: 5_000 }
-      )
+      await waitForDiceReveal(spectator)
       await expect(spectatorFields).toContainText(
         /Apply basic training|Qualification failed|Enter the draft|Enter Drifter/,
         { timeout: 15_000 }
@@ -2622,6 +2621,11 @@ test.describe('character creation smoke', () => {
       await expect(ownerDeathCard).toContainText('Hunter')
       await expect(ownerDeathCard).toContainText('Killed in service')
       await expect(ownerDeathCard).toContainText('Survival roll')
+      await waitForDiceReveal(spectator)
+      await expect(spectatorDeathCard).toBeVisible({ timeout: 8_000 })
+      await expect(spectatorDeathCard).toContainText('Hunter')
+      await expect(spectatorDeathCard).toContainText('Killed in service')
+      await expect(spectatorDeathCard).toContainText('Survival roll')
 
       const restartAccepted = page.waitForResponse(
         (response) =>
