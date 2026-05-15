@@ -81,6 +81,49 @@ const termCharacteristicGain = (
   }
 }
 
+const hasSemanticTermFacts = (
+  term: CharacterCreationProjection['terms'][number]
+): boolean => Object.keys(term.facts ?? {}).length > 0
+
+const termSkillFactValue = (
+  termSkill: NonNullable<
+    NonNullable<
+      CharacterCreationProjection['terms'][number]['facts']
+    >['termSkillRolls']
+  >[number]
+): string | null =>
+  termSkill.characteristic
+    ? termSkill.rawSkill
+    : (termSkill.pendingCascadeSkill ?? termSkill.skill)
+
+const deriveTermSkillFacts = (
+  term: CharacterCreationProjection['terms'][number]
+): string[] => {
+  const skills = (term.facts?.termSkillRolls ?? []).flatMap((termSkill) => {
+    const skill = termSkillFactValue(termSkill)
+    return skill ? [skill] : []
+  })
+
+  for (const selection of term.facts?.termCascadeSelections ?? []) {
+    const index = skills.indexOf(selection.cascadeSkill)
+    if (index >= 0) {
+      skills[index] = selection.selection
+      continue
+    }
+    skills.push(selection.selection)
+  }
+
+  return uniqueSkills(skills)
+}
+
+const deriveTrainingSkillsFromFacts = (
+  term: CharacterCreationProjection['terms'][number]
+): string[] =>
+  uniqueSkills([
+    ...(term.facts?.basicTrainingSkills ?? []),
+    ...deriveTermSkillFacts(term)
+  ])
+
 export const requiredTermSkillCount = (
   creation: CharacterCreationProjection
 ): number => {
@@ -108,7 +151,7 @@ export const activeTermSkillCount = (
   const term = creation.terms.at(-1)
   if (!term) return 0
 
-  return Object.keys(term.facts ?? {}).length > 0
+  return hasSemanticTermFacts(term)
     ? (term.facts?.termSkillRolls?.length ?? 0)
     : term.skills.length
 }
@@ -282,8 +325,17 @@ export const resolveTermSkillCreationEvent = ({
     return err(commandError('invalid_command', 'Rolled skill is not valid'))
   }
 
-  const existingSkills = creation.terms.at(-1)?.skillsAndTraining ?? []
-  const existingTermSkills = creation.terms.at(-1)?.skills ?? []
+  const term = creation.terms.at(-1)
+  const existingSkills = term
+    ? hasSemanticTermFacts(term)
+      ? deriveTrainingSkillsFromFacts(term)
+      : term.skillsAndTraining
+    : []
+  const existingTermSkills = term
+    ? hasSemanticTermFacts(term)
+      ? deriveTermSkillFacts(term)
+      : term.skills
+    : []
   const nextSkill = characteristic
     ? rawSkill
     : (pendingCascadeSkill ?? normalizedSkill)
@@ -443,14 +495,22 @@ export const deriveSkillCommandEvents = (
         cascadeSkill: cascadeSkill.value,
         selection: selection.value
       })
+      const existingTermSkills = term
+        ? hasSemanticTermFacts(term)
+          ? deriveTermSkillFacts(term)
+          : term.skills
+        : []
+      const existingTrainingSkills = term
+        ? hasSemanticTermFacts(term)
+          ? deriveTrainingSkillsFromFacts(term)
+          : term.skillsAndTraining
+        : []
       const termSkills = uniqueSkills([
-        ...(term?.skills ?? []).filter((skill) => skill !== cascadeSkill.value),
+        ...existingTermSkills.filter((skill) => skill !== cascadeSkill.value),
         ...resolution.termSkills
       ])
       const skillsAndTraining = uniqueSkills([
-        ...(term?.skillsAndTraining ?? []).filter(
-          (skill) => skill !== cascadeSkill.value
-        ),
+        ...existingTrainingSkills.filter((skill) => skill !== cascadeSkill.value),
         ...resolution.termSkills
       ])
 

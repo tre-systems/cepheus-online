@@ -58,7 +58,13 @@ const deriveBasicTrainingSkills = (
   if (!currentTerm) {
     return err(commandError('invalid_command', 'No active career term exists'))
   }
-  if (currentTerm.skillsAndTraining.length > 0) {
+  const hasSemanticTermFacts = Object.keys(currentTerm.facts ?? {}).length > 0
+  if (hasSemanticTermFacts) {
+    const trainingSkills = currentTerm.facts?.basicTrainingSkills
+    if (trainingSkills && trainingSkills.length > 0) {
+      return ok([...trainingSkills])
+    }
+  } else if (currentTerm.skillsAndTraining.length > 0) {
     return ok([...currentTerm.skillsAndTraining])
   }
 

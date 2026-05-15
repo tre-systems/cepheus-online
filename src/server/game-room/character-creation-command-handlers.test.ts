@@ -517,6 +517,47 @@ describe('character creation setup command handlers', () => {
     ])
   })
 
+  it('ignores stale legacy training when semantic basic training facts exist', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'CompleteCharacterCreationBasicTraining',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('BASIC_TRAINING', {
+          terms: [
+            {
+              career: 'Scout',
+              skills: [],
+              skillsAndTraining: ['Legacy Training-6'],
+              benefits: [],
+              facts: {
+                basicTrainingSkills: []
+              },
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: false,
+              musteringOut: false,
+              anagathics: false
+            }
+          ]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const completed = result.value.find(
+      (event) => event.type === 'CharacterCreationBasicTrainingCompleted'
+    )
+    assert.equal(completed?.type, 'CharacterCreationBasicTrainingCompleted')
+    if (completed?.type !== 'CharacterCreationBasicTrainingCompleted') return
+    assert.equal(completed.trainingSkills.includes('Legacy Training-6'), false)
+    assert.equal(completed.trainingSkills.length > 1, true)
+  })
+
   it('starts a career term with requested and accepted career facts', () => {
     const result = deriveCharacterCreationCommandEvents(
       {
@@ -1593,6 +1634,59 @@ describe('character creation setup command handlers', () => {
     assert.equal(extraRoll.error.code, 'invalid_command')
     assert.equal(extraRoll.error.message.includes('complete'), true)
     assert.equal(completion.ok, true)
+  })
+
+  it('builds semantic term skill aggregates from facts before legacy fields', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationTermSkill',
+        gameId,
+        actorId,
+        characterId,
+        table: 'serviceSkills'
+      },
+      context(
+        createCreation('SKILLS_TRAINING', {
+          state: createCareerCreationState('SKILLS_TRAINING', {
+            canCommission: true,
+            canAdvance: false
+          }),
+          requiredTermSkillCount: 2,
+          terms: [
+            {
+              career: 'Merchant',
+              skills: ['Legacy Skill-6'],
+              skillsAndTraining: ['Legacy Training-6'],
+              benefits: [],
+              facts: {
+                basicTrainingSkills: ['Broker-0'],
+                survival: survivalFact(true)
+              },
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 7
+            }
+          ]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const rolled = result.value.find(
+      (event) => event.type === 'CharacterCreationTermSkillRolled'
+    )
+    assert.equal(rolled?.type, 'CharacterCreationTermSkillRolled')
+    if (rolled?.type !== 'CharacterCreationTermSkillRolled') return
+    assert.equal(rolled.termSkills.includes('Legacy Skill-6'), false)
+    assert.equal(
+      rolled.skillsAndTraining.includes('Legacy Training-6'),
+      false
+    )
+    assert.equal(rolled.skillsAndTraining.includes('Broker-0'), true)
   })
 
   it('rejects term skill rolls blocked by unrelated projected decisions', () => {
