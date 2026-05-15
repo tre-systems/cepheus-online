@@ -345,7 +345,9 @@ const wizardViewModel = ({
       careerChoiceOptions,
       failedQualificationOptions
     }),
-    careerRoll: deriveCharacterCreationCareerRollButton(flow),
+    careerRoll: deriveCharacterCreationCareerRollButton(flow, {
+      availableActionKeys: projectedLegalActions ?? undefined
+    }),
     reenlistmentRoll: deriveCharacterCreationReenlistmentRollViewModel(flow, {
       available: isProjectedLegalActionAvailable('rollReenlistment')
     }),

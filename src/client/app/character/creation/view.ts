@@ -24,6 +24,7 @@ import type {
   BasicTrainingActionOption,
   CascadeSkillChoice,
   CareerChoiceOptions,
+  CareerCreationActionKey,
   FailedQualificationActionOption,
   FailedQualificationOption,
   HomeworldChoiceOptions
@@ -711,11 +712,30 @@ export const deriveCharacterCreationButtonStates = (
 }
 
 export const deriveCharacterCreationCareerRollButton = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  {
+    availableActionKeys
+  }: { availableActionKeys?: ReadonlySet<CareerCreationActionKey> } = {}
 ): CharacterCreationCareerRollButton | null => {
   if (flow.step !== 'career') return null
   const action = deriveNextCharacterCreationCareerRoll(flow)
   if (!action) return null
+  const requiredAction: Partial<
+    Record<CharacterCreationCareerRollButton['key'], CareerCreationActionKey>
+  > = {
+    qualificationRoll: 'selectCareer',
+    survivalRoll: 'rollSurvival',
+    commissionRoll: 'rollCommission',
+    advancementRoll: 'rollAdvancement'
+  }
+  const requiredActionKey = requiredAction[action.key]
+  if (
+    availableActionKeys &&
+    requiredActionKey &&
+    !availableActionKeys.has(requiredActionKey)
+  ) {
+    return null
+  }
 
   return {
     key: action.key,

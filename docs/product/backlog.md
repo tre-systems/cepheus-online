@@ -390,8 +390,9 @@ Current Character Creation completion focus:
   qualification, survival, commission, and advancement check summaries. The
   client still keeps fallback helpers for legacy local flows, but the active
   server projection is now the preferred source for rendered choices. Aging,
-  anagathics, and reenlistment prompts are also hidden when the projected legal
-  action plan says they are not currently legal.
+  anagathics, reenlistment, survival, commission, and advancement prompts are
+  also hidden when the projected legal action plan says they are not currently
+  legal.
 - Keep extending deterministic two-tab browser journeys for multi-term and
   multi-career travellers, especially through finalization and no early roll
   reveal. A focused deterministic browser test now covers a rolled term cascade

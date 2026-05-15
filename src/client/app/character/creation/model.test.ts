@@ -675,6 +675,43 @@ describe('character creation view model', () => {
     )
   })
 
+  it('hides career roll prompts when projected legal actions do not allow them', () => {
+    const currentFlow = flow({
+      step: 'career',
+      draft: {
+        ...flow().draft,
+        careerPlan: {
+          career: 'Merchant',
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: null,
+          survivalPassed: null,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: true,
+          canAdvance: true,
+          drafted: false
+        }
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('SURVIVAL', {
+        actionPlan: {
+          status: 'SURVIVAL',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.careerRoll, null)
+  })
+
   it('includes term skill training state for resolved career terms', () => {
     const viewModel = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow({ termSkillRolls: [] }),
