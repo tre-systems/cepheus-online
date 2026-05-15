@@ -85,12 +85,14 @@ Important remaining gaps:
   actions, roll requirements, or term sub-state.
 - Too much creation behavior still lives in the client wizard/draft flow rather
   than in shared deterministic rules and server-backed events.
-- Homeworld, primary education, background skills, cascade choices, term skill
-  choices, aging losses, and mustering choices need to become more consistently
-  projection-owned and easier to recover after refresh.
+- Homeworld, primary education, background skills, cascade choices, career
+  choices, basic training, term skill choices, aging losses, and mustering
+  choices are now projected into the shared action plan or read model. Remaining
+  work is to reduce legacy client fallback paths and keep polishing provenance
+  and presentation.
 - Multi-term career play, mustering out, and multi-career continuation have
-  deterministic browser coverage. Remaining work is finalization-through-export
-  coverage, edge cases, and UX polish.
+  deterministic browser coverage, including spectator follow through mustering
+  and finalization. Remaining work is edge-case coverage and UX polish.
 - Optional mishaps remain unimplemented. Anagathics now has a server-owned
   use/skip decision before aging, but full survival-risk, cost/payment,
   provenance, and UX polish are still open.
@@ -120,13 +122,13 @@ tests before it is considered done.
   facts and replayed provenance.
 - [~] Set homeworld data and derive background skills from law level, trade
   codes, and primary education options. Current legal action:
-  `completeHomeworld`; semantic completion and pure helpers exist. Gap:
-  background-choice allowance and refresh-safe pending cascade flow are not yet
-  fully projection-owned across every source.
+  `completeHomeworld`; semantic completion, pure helpers, and projected
+  homeworld option lists exist. Gap: richer background-skill provenance still
+  needs polish across every source.
 - [~] Resolve cascade skills whenever SRD table entries use cascade markers.
-  Current planner can block on `cascadeSkillResolution`. Gap: cascade choices
-  are not yet a first-class server-backed modal step through all creation
-  sources.
+  Current planner can block on `cascadeSkillResolution` and projects cascade
+  choices for homeworld and term skill flows. Gap: cascade provenance and modal
+  polish still need tightening across every creation source.
 - [x] Qualify for a career using `careerBasics`, applying prior-career limits
   and qualification penalties, with dedicated persisted roll facts.
 - [x] Resolve the Draft by rolling the `theDraft` table when eligible, then
@@ -146,8 +148,8 @@ tests before it is considered done.
   need UI/projection polish.
 - [~] Select a term skill table and roll skills from `personalDevelopment`,
   `serviceSkills`, `specialistSkills`, or `advEducation`. Semantic table roll
-  events exist. Gap: table-choice UX, cascade resolution, and provenance need
-  browser-hardening.
+  events and projected table choices exist. Gap: table-choice UX, cascade
+  resolution polish, and provenance need browser-hardening.
 - [~] Resolve aging from the `aging` table, including characteristic loss
   choices and anagathics modifiers. Semantic aging facts and a server-owned
   anagathics use/skip event exist. Gap: anagathics cost/survival effects and
@@ -167,7 +169,7 @@ tests before it is considered done.
   decisions, no unresolved death/mishap branch, and all mustering benefits are
   resolved. Current legal action: `completeCreation`. The command is
   intent-only and the server derives the final sheet. Gap: completed-character
-  display, export polish, and remaining final-field coverage.
+  display polish and remaining final-field edge coverage.
 
 ## Backlog Principles
 
