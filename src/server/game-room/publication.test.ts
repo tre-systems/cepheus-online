@@ -3107,8 +3107,16 @@ describe('room publication flow', () => {
       false,
       'non-owner refreshes should not reveal finalized skills while their source term-skill dice are still hidden'
     )
-    assert.deepEqual(refreshedCharacter?.equipment, finalizedEvent.equipment)
-    assert.equal(refreshedCharacter?.credits, finalizedEvent.credits)
+    assert.deepEqual(
+      refreshedCharacter?.equipment,
+      [],
+      'non-owner refreshes should not reveal finalized equipment while its source mustering dice are still hidden'
+    )
+    assert.equal(
+      refreshedCharacter?.credits,
+      0,
+      'non-owner refreshes should not reveal finalized credits while their source mustering dice are still hidden'
+    )
     assert.equal(
       refreshedCharacter?.notes.includes('Term 1: Scout, survived.'),
       false,
