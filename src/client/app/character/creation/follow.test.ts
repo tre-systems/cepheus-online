@@ -141,7 +141,7 @@ describe('character creation follow helpers', () => {
     assert.equal(syncedFlow === staleHomeworldFlow, false)
   })
 
-  it('hydrates mustering benefits from projected semantic history', () => {
+  it('hydrates mustering benefits from projected semantic facts', () => {
     const projectedFlow = syncCharacterCreationFlowFromRoomState({
       currentFlow: null,
       roomState: stateWithCreation({
@@ -173,25 +173,6 @@ describe('character creation follow helpers', () => {
                   credits: 0
                 }
               ]
-            }
-          }
-        ],
-        history: [
-          {
-            type: 'FINISH_MUSTERING',
-            musteringBenefit: {
-              career: 'Scout',
-              kind: 'material',
-              roll: {
-                expression: '2d6',
-                rolls: [5, 6],
-                total: 11
-              },
-              modifier: 0,
-              tableRoll: 11,
-              value: 'Low Passage',
-              credits: 0,
-              materialItem: 'Low Passage'
             }
           }
         ]
