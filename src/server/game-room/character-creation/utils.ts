@@ -5,8 +5,11 @@ export const deriveProjectedCareerRank = (
   career: string
 ): number => {
   let projectedRank: number | null = null
+  let hasProjectedCareerFacts = false
   for (const term of creation.terms) {
     if (term.career !== career) continue
+    hasProjectedCareerFacts =
+      hasProjectedCareerFacts || Object.keys(term.facts ?? {}).length > 0
     const advancement = term.facts?.advancement
     if (
       advancement &&
@@ -16,6 +19,8 @@ export const deriveProjectedCareerRank = (
       projectedRank = advancement.rank.newRank
     }
   }
+
+  if (hasProjectedCareerFacts) return projectedRank ?? 0
 
   return (
     projectedRank ??

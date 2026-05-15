@@ -1189,6 +1189,32 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('ignores stale legacy career rank when semantic terms have no rank facts', () => {
+    const creation = projection('MUSTERING_OUT', {
+      terms: [
+        term({
+          career: 'Scout',
+          complete: true,
+          musteringOut: true,
+          facts: {
+            basicTrainingSkills: ['Comms-0']
+          }
+        })
+      ],
+      careers: [{ name: 'Scout', rank: 5 }]
+    })
+
+    assert.equal(deriveRemainingCareerCreationBenefits(creation), 1)
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(creation).legalActions[0]
+        ?.musteringBenefitOptions,
+      [
+        { career: 'Scout', kind: 'cash' },
+        { career: 'Scout', kind: 'material' }
+      ]
+    )
+  })
+
   it('derives remaining projected mustering benefits by career', () => {
     const creation = projection('MUSTERING_OUT', {
       terms: [

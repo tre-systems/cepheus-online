@@ -1,7 +1,9 @@
 import {
   canRollCashBenefit,
-  deriveCareerTermCashBenefitCount,
-  deriveCareerTermMusteringBenefitCount,
+  deriveLegacyCareerTermCashBenefitCount,
+  deriveLegacyCareerTermMusteringBenefitCount,
+  deriveProjectedCareerTermCashBenefitCount,
+  deriveProjectedCareerTermMusteringBenefitCount,
   deriveRemainingCareerBenefits
 } from './benefits'
 import { derivePrimaryEducationSkillOptions } from './background-skills'
@@ -142,7 +144,11 @@ const benefitsReceivedInCareer = (
   creation.terms
     ?.filter((term) => term.career === career)
     .reduce(
-      (total, term) => total + deriveCareerTermMusteringBenefitCount(term),
+      (total, term) =>
+        total +
+        (hasSemanticTermFacts(term)
+          ? deriveProjectedCareerTermMusteringBenefitCount(term)
+          : deriveLegacyCareerTermMusteringBenefitCount(term)),
       0
     ) ?? 0
 
@@ -151,8 +157,10 @@ const rankInCareer = (
   career: string
 ): number => {
   let projectedRank: number | null = null
+  let hasProjectedCareerFacts = false
   for (const term of creation.terms ?? []) {
     if (term.career !== career) continue
+    hasProjectedCareerFacts = hasProjectedCareerFacts || hasSemanticTermFacts(term)
     const advancement = term.facts?.advancement
     if (
       advancement &&
@@ -162,6 +170,8 @@ const rankInCareer = (
       projectedRank = advancement.rank.newRank
     }
   }
+
+  if (hasProjectedCareerFacts) return projectedRank ?? 0
 
   return (
     projectedRank ??
@@ -446,7 +456,11 @@ const deriveCashBenefitsReceived = (
   creation: CareerCreationActionProjection
 ): number =>
   (creation.terms ?? []).reduce(
-    (total, term) => total + deriveCareerTermCashBenefitCount(term),
+    (total, term) =>
+      total +
+      (hasSemanticTermFacts(term)
+        ? deriveProjectedCareerTermCashBenefitCount(term)
+        : deriveLegacyCareerTermCashBenefitCount(term)),
     0
   )
 

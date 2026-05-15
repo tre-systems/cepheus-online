@@ -2,10 +2,12 @@ import {
   canRollCashBenefit,
   deriveCareerCreationComplete,
   deriveCashBenefitRollModifier,
-  deriveCareerTermCashBenefitCount,
-  deriveCareerTermMusteringBenefitCount,
   deriveMaterialBenefitRollModifier,
   deriveMaterialBenefitEffect,
+  deriveLegacyCareerTermCashBenefitCount,
+  deriveLegacyCareerTermMusteringBenefitCount,
+  deriveProjectedCareerTermCashBenefitCount,
+  deriveProjectedCareerTermMusteringBenefitCount,
   deriveRemainingCareerBenefits,
   resolveCareerBenefit,
   transitionCareerCreationState
@@ -62,13 +64,21 @@ const benefitsReceivedInCareer = (
   creation.terms
     .filter((term) => term.career === career)
     .reduce(
-      (total, term) => total + deriveCareerTermMusteringBenefitCount(term),
+      (total, term) =>
+        total +
+        (hasSemanticTermFacts(term)
+          ? deriveProjectedCareerTermMusteringBenefitCount(term)
+          : deriveLegacyCareerTermMusteringBenefitCount(term)),
       0
     )
 
 const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
   creation.terms.reduce(
-    (total, term) => total + deriveCareerTermCashBenefitCount(term),
+    (total, term) =>
+      total +
+      (hasSemanticTermFacts(term)
+        ? deriveProjectedCareerTermCashBenefitCount(term)
+        : deriveLegacyCareerTermCashBenefitCount(term)),
     0
   )
 

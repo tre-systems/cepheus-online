@@ -2044,6 +2044,45 @@ describe('character creation setup command handlers', () => {
     assert.equal(benefit.musteringBenefit.tableRoll, 9)
   })
 
+  it('ignores stale legacy career rank for semantic material mustering modifiers', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'material'
+      },
+      context(
+        createCreation('MUSTERING_OUT', {
+          terms: [
+            {
+              ...activeScoutTerm(),
+              facts: {
+                basicTrainingSkills: ['Comms-0']
+              },
+              complete: true,
+              canReenlist: false,
+              musteringOut: true
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 5 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const benefit = result.value.find(
+      (event) => event.type === 'CharacterCreationMusteringBenefitRolled'
+    )
+    assert.equal(benefit?.type, 'CharacterCreationMusteringBenefitRolled')
+    if (benefit?.type !== 'CharacterCreationMusteringBenefitRolled') return
+    assert.equal(benefit.musteringBenefit.modifier, 0)
+    assert.equal(benefit.musteringBenefit.tableRoll, 8)
+  })
+
   it('emits mustering completion and continuation events', () => {
     const creation = createCreation('MUSTERING_OUT', {
       terms: [
