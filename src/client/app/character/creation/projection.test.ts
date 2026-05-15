@@ -270,6 +270,21 @@ describe('character creation projection helpers', () => {
     assert.deepEqual(flow.draft.skills, ['Pilot-1', 'Survival-0'])
   })
 
+  it('hydrates editable skills from semantic term facts before legacy training', () => {
+    const creation = agingProjection([termSkillEvent('Gambling-1')])
+    creation.terms[0].skills = ['Legacy Skill-6']
+    creation.terms[0].skillsAndTraining = ['Legacy Training-5']
+    creation.terms[0].facts = {
+      ...creation.terms[0].facts,
+      basicTrainingSkills: ['Vacc Suit-0']
+    }
+
+    const flow = flowFromProjectedCharacter(character(creation))
+    if (!flow) throw new Error('Expected projected flow')
+
+    assert.deepEqual(flow.draft.skills, ['Vacc Suit-0', 'Gambling-1'])
+  })
+
   it('keeps anagathics cost on completed projected terms', () => {
     assert.equal(
       completedTermFromProjection({

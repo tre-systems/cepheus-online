@@ -40,6 +40,20 @@ const termSkillRollsFromFacts = (
     skill: termSkill.skill ?? termSkill.rawSkill
   }))
 
+const skillListFromTermFacts = (term: CareerTerm): string[] => [
+  ...(term.facts?.basicTrainingSkills ?? []),
+  ...(term.facts?.termSkillRolls ?? []).flatMap((termSkill) =>
+    termSkill.skill ? [termSkill.skill] : []
+  )
+]
+
+const creationSkillsFromTerm = (term: CareerTerm): string[] => {
+  const factSkills = skillListFromTermFacts(term)
+  return hasSemanticTermFacts(term) && factSkills.length > 0
+    ? factSkills
+    : term.skillsAndTraining
+}
+
 const legacyTermSkillRollsFromAggregate = (
   term: CareerTerm
 ): CharacterCreationCompletedTerm['termSkillRolls'] =>
@@ -285,7 +299,7 @@ export const flowFromProjectedCharacter = (
 
   const creationSkills = normalizeSkillList([
     ...character.skills,
-    ...creation.terms.flatMap((term) => term.skillsAndTraining)
+    ...creation.terms.flatMap(creationSkillsFromTerm)
   ])
 
   const step =
