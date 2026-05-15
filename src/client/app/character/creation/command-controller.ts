@@ -48,6 +48,7 @@ export interface CharacterCreationCommandController {
   rollReenlistment: () => Promise<void>
   completeTerm: (continueCareer: boolean) => Promise<void>
   decideAnagathics: (useAnagathics: boolean) => Promise<void>
+  resolveMishap: () => Promise<void>
   rollAging: () => Promise<void>
   resolveAgingLoss: (
     index: number,
@@ -568,6 +569,29 @@ export const createCharacterCreationCommandController = (
         response,
         fallbackFlow
       )
+    },
+
+    resolveMishap: async () => {
+      const flow = guardEditableFlow()
+      if (!flow) return
+      setError('')
+      syncFields()
+
+      await ensurePublished()
+      const response = await postCharacterCreationCommand(
+        {
+          type: 'ResolveCharacterCreationMishap',
+          ...commandIdentity(),
+          characterId: flow.draft.characterId
+        },
+        requestId('mishap-roll')
+      )
+      if (
+        await syncDiceFlow(response, 'Mishap roll did not return a dice result')
+      ) {
+        renderWizard()
+        scrollToTop()
+      }
     },
 
     rollAging: async () => {

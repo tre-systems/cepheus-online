@@ -28,6 +28,7 @@ import {
 } from './views/homeworld.js'
 import type { CharacterCreationHomeworldPublisher } from './homeworld-publisher.js'
 import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './views/mustering.js'
+import { renderCharacterCreationMishapResolution as renderCharacterCreationMishapResolutionView } from './views/mishap-resolution.js'
 import type { CharacterCreationPanelController } from './panel.js'
 import type {
   CharacterCreationAgingChoicesViewModel,
@@ -39,6 +40,7 @@ import type {
   CharacterCreationCharacteristicGridViewModel,
   CharacterCreationHomeworldViewModel,
   CharacterCreationMusteringOutViewModel,
+  CharacterCreationMishapResolutionViewModel,
   CharacterCreationReenlistmentRollViewModel,
   CharacterCreationReviewSummary,
   CharacterCreationTermCascadeChoicesViewModel,
@@ -218,6 +220,13 @@ export const createCharacterCreationRenderController = ({
         fragment.append(
           renderCharacterCreationAnagathicsDecision(
             viewModel.wizard.anagathicsDecision
+          )
+        )
+      }
+      if (viewModel.wizard?.mishapResolution) {
+        fragment.append(
+          renderCharacterCreationMishapResolution(
+            viewModel.wizard.mishapResolution
           )
         )
       }
@@ -484,6 +493,13 @@ export const createCharacterCreationRenderController = ({
       }
     })
   }
+
+  const renderCharacterCreationMishapResolution = (
+    viewModel: CharacterCreationMishapResolutionViewModel
+  ): HTMLElement =>
+    renderCharacterCreationMishapResolutionView(document, viewModel, {
+      resolveMishap: () => getCommandController().resolveMishap()
+    })
 
   const renderCharacterCreationTermHistory = (
     viewModel: CharacterCreationTermHistoryViewModel

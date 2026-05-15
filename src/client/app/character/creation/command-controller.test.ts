@@ -1462,4 +1462,75 @@ describe('character creation command controller', () => {
     assert.equal(rendered, false)
     assert.equal(scrolled, false)
   })
+
+  it('resolves a mishap, waits for reveal, and syncs accepted projection', async () => {
+    const flow = {
+      ...careerFlow(),
+      draft: {
+        ...careerFlow().draft,
+        careerPlan: {
+          career: 'Scout',
+          drafted: false,
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 2,
+          survivalPassed: false,
+          canCommission: false,
+          commissionRoll: null,
+          commissionPassed: null,
+          canAdvance: false,
+          advancementRoll: null,
+          advancementPassed: null,
+          termSkillRolls: []
+        }
+      }
+    } satisfies CharacterCreationFlow
+    const commands: CharacterCreationCommand[] = []
+    const waitedFor: string[] = []
+    const roll = diceRoll(4)
+    let published = 0
+    let renderCount = 0
+    let scrollCount = 0
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: () => {},
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command) => {
+        commands.push(command)
+        return { state: stateWithDice(roll) }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async (nextRoll) => {
+        waitedFor.push(nextRoll.id)
+      },
+      syncFlowFromRoomState: () => flow,
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        renderCount += 1
+      },
+      scrollToTop: () => {
+        scrollCount += 1
+      }
+    })
+
+    await controller.resolveMishap()
+
+    assert.equal(published, 1)
+    assert.deepEqual(
+      commands.map((command) => command.type),
+      ['ResolveCharacterCreationMishap']
+    )
+    assert.deepEqual(waitedFor, ['roll-1'])
+    assert.equal(renderCount, 1)
+    assert.equal(scrollCount, 1)
+  })
 })

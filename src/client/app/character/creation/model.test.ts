@@ -534,6 +534,77 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.homeworld, null)
   })
 
+  it('renders mishap resolution instead of death when projection allows mishaps', () => {
+    const currentFlow = resolvedCareerFlow()
+    const careerPlan = currentFlow.draft.careerPlan
+    assert.equal(careerPlan === null, false)
+    if (!careerPlan) return
+    currentFlow.draft.careerPlan = {
+      ...careerPlan,
+      survivalRoll: 2,
+      survivalPassed: false
+    }
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('MISHAP', {
+        actionPlan: {
+          status: 'MISHAP',
+          pendingDecisions: [{ key: 'mishapResolution' }],
+          legalActions: [
+            {
+              key: 'resolveMishap',
+              status: 'MISHAP',
+              commandTypes: ['ResolveCharacterCreationMishap'],
+              rollRequirement: { key: 'mishap', dice: '1d6' }
+            }
+          ]
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.death, null)
+    assert.equal(viewModel.wizard?.mishapResolution?.title, 'Merchant mishap')
+    assert.equal(
+      viewModel.wizard?.mishapResolution?.buttonLabel,
+      'Resolve mishap'
+    )
+  })
+
+  it('renders death confirmation only when projection allows death', () => {
+    const currentFlow = resolvedCareerFlow()
+    const careerPlan = currentFlow.draft.careerPlan
+    assert.equal(careerPlan === null, false)
+    if (!careerPlan) return
+    currentFlow.draft.careerPlan = {
+      ...careerPlan,
+      survivalRoll: 2,
+      survivalPassed: false
+    }
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('MISHAP', {
+        actionPlan: {
+          status: 'MISHAP',
+          pendingDecisions: [{ key: 'survivalResolution' }],
+          legalActions: [
+            {
+              key: 'confirmDeath',
+              status: 'MISHAP',
+              commandTypes: ['ConfirmCharacterCreationDeath']
+            }
+          ]
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.mishapResolution, null)
+    assert.equal(viewModel.wizard?.death?.title, 'Killed in service')
+  })
+
   it('uses projected career choice options for the career picker', () => {
     const viewModel = deriveCharacterCreationViewModel({
       flow: flow({ step: 'career' }),

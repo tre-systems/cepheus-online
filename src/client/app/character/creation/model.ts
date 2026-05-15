@@ -25,6 +25,7 @@ import {
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationMusteringOutViewModel,
   deriveCharacterCreationDeathViewModel,
+  deriveCharacterCreationMishapResolutionViewModel,
   deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationReenlistmentRollViewModel,
   deriveCharacterCreationReviewSummary,
@@ -46,6 +47,7 @@ import {
   type CharacterCreationDeathViewModel,
   type CharacterCreationHomeworldViewModel,
   type CharacterCreationMusteringOutViewModel,
+  type CharacterCreationMishapResolutionViewModel,
   type CharacterCreationNextStepViewModel,
   type CharacterCreationReenlistmentRollViewModel,
   type CharacterCreationReviewSummary,
@@ -99,6 +101,7 @@ export interface CharacterCreationWizardViewModel {
   agingRoll: CharacterCreationAgingRollViewModel | null
   agingChoices: CharacterCreationAgingChoicesViewModel | null
   anagathicsDecision: CharacterCreationAnagathicsDecisionViewModel | null
+  mishapResolution: CharacterCreationMishapResolutionViewModel | null
   termCascadeChoices: CharacterCreationTermCascadeChoicesViewModel | null
   termResolution: CharacterCreationTermResolutionViewModel | null
   termSkills: CharacterCreationTermSkillTrainingViewModel | null
@@ -387,6 +390,9 @@ const wizardViewModel = ({
         available: isProjectedLegalActionAvailable('decideAnagathics')
       }
     ),
+    mishapResolution: deriveCharacterCreationMishapResolutionViewModel(flow, {
+      available: isProjectedLegalActionAvailable('resolveMishap')
+    }),
     termCascadeChoices: deriveCharacterCreationTermCascadeChoicesViewModel(
       flow,
       {
@@ -415,7 +421,9 @@ const wizardViewModel = ({
             musteringBenefitOptions
           })
         : null,
-    death: deriveCharacterCreationDeathViewModel(flow),
+    death: deriveCharacterCreationDeathViewModel(flow, {
+      available: isProjectedLegalActionAvailable('confirmDeath')
+    }),
     termHistory: deriveCharacterCreationTermHistoryViewModel(flow),
     review:
       flow.step === 'review'

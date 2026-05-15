@@ -551,6 +551,12 @@ export interface CharacterCreationTermResolutionViewModel {
   actions: CharacterCreationTermResolutionActionViewModel[]
 }
 
+export interface CharacterCreationMishapResolutionViewModel {
+  title: string
+  message: string
+  buttonLabel: string
+}
+
 export interface CharacterCreationMusteringBenefitViewModel {
   label: string
   valueLabel: string
@@ -1414,10 +1420,12 @@ export const deriveCharacterCreationNextStepViewModel = (
 }
 
 export const deriveCharacterCreationDeathViewModel = (
-  flow: Pick<CharacterCreationFlow, 'step' | 'draft'>
+  flow: Pick<CharacterCreationFlow, 'step' | 'draft'>,
+  { available }: { available?: boolean } = {}
 ): CharacterCreationDeathViewModel | null => {
   const plan = flow.draft.careerPlan
   if (flow.step !== 'career' || plan?.survivalPassed !== false) return null
+  if (available === false) return null
 
   const name = flow.draft.name.trim() || 'This traveller'
   const career = plan.career.trim() || 'career'
@@ -1429,6 +1437,24 @@ export const deriveCharacterCreationDeathViewModel = (
     detail: `${name} failed the ${career} survival roll. Character creation ends here.`,
     roll,
     career
+  }
+}
+
+export const deriveCharacterCreationMishapResolutionViewModel = (
+  flow: Pick<CharacterCreationFlow, 'step' | 'draft'>,
+  { available }: { available?: boolean } = {}
+): CharacterCreationMishapResolutionViewModel | null => {
+  const plan = flow.draft.careerPlan
+  if (flow.step !== 'career' || plan?.survivalPassed !== false) return null
+  if (available === false) return null
+
+  const career = plan.career.trim() || 'career'
+
+  return {
+    title: `${career} mishap`,
+    message:
+      'Survival failed. Resolve the mishap before this traveller musters out.',
+    buttonLabel: 'Resolve mishap'
   }
 }
 
