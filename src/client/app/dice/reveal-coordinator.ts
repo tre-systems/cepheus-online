@@ -41,6 +41,9 @@ interface DiceRevealCoordinatorOptions {
   revealFallbackBufferMs?: number
 }
 
+const rollHasVisibleResult = (roll: DiceRevealRoll): boolean =>
+  Array.isArray(roll.rolls) && typeof roll.total === 'number'
+
 export const createDiceRevealCoordinator = ({
   nowMs = Date.now,
   setTimer = (callback, delayMs) => globalThis.setTimeout(callback, delayMs),
@@ -90,8 +93,6 @@ export const createDiceRevealCoordinator = ({
       ])
     },
     diceRollsForStateDeferral: ({ nextState, diceRollActivities }) => {
-      if (!firstStateApplied) return []
-
       const pendingActivities = diceRollActivities.filter(
         (activity) => !revealedDiceIds.has(activity.id)
       )
@@ -100,6 +101,7 @@ export const createDiceRevealCoordinator = ({
       const latestRoll =
         nextState?.diceLog?.[nextState.diceLog.length - 1] ?? null
       if (!latestRoll) return []
+      if (!firstStateApplied && rollHasVisibleResult(latestRoll)) return []
       if (latestRoll.id === latestDiceId) return []
       if (revealedDiceIds.has(latestRoll.id)) return []
       return [latestRoll]

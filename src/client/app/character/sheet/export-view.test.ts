@@ -215,7 +215,7 @@ describe('character sheet export view', () => {
         'Credits: Cr1200',
         'Equipment: Vacc Suit x1 (Carried)',
         'Career History:',
-        '- Term 1: Scout - qualified passed 8; survival passed 7; advancement passed 10 to rank 1 (Courier); skills Pilot-1, Vacc Suit-0; aging 11: no effect; no anagathics; reenlistment 10: allowed; benefits Low Passage (roll 3 +1 DM = table 4); term complete',
+        '- Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); skills Pilot-1, Vacc Suit-0; aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (roll 3 +1 DM = table 4); term complete',
         'Notes:',
         'Detached scout.'
       ].join('\n')
@@ -282,6 +282,99 @@ describe('character sheet export view', () => {
     assert.equal(
       exportText.includes(
         'Background Skills: Slug Pistol-0 (law Low Law), Zero-G-0 (trade Asteroid), Admin-0 (primary education)'
+      ),
+      true
+    )
+  })
+
+  it('includes career-entry penalties and draft table provenance', () => {
+    const creation = finalizedCreation()
+    const firstTerm = creation.terms[0]
+    if (firstTerm.facts?.qualification) {
+      firstTerm.facts.qualification.previousCareerCount = 2
+    }
+    creation.terms.push({
+      career: 'Navy',
+      draft: 1,
+      skills: [],
+      skillsAndTraining: [],
+      benefits: [],
+      facts: {
+        draft: {
+          roll: { expression: '1d6', rolls: [4], total: 4 },
+          tableRoll: 4,
+          acceptedCareer: 'Navy'
+        }
+      },
+      complete: true,
+      canReenlist: false,
+      completedBasicTraining: false,
+      musteringOut: false,
+      anagathics: false
+    })
+
+    const exportText = derivePlainCharacterExport(character({ creation })) ?? ''
+
+    assert.equal(exportText.includes('previous career DM -4'), true)
+    assert.equal(
+      exportText.includes('Term 2: Navy - drafted Navy from table 4 (roll 4)'),
+      true
+    )
+  })
+
+  it('includes basic training and term skill roll provenance', () => {
+    const creation = finalizedCreation()
+    creation.terms[0].facts = {
+      ...creation.terms[0].facts,
+      basicTrainingSkills: ['Comms-0'],
+      termSkillRolls: [
+        {
+          career: 'Scout',
+          table: 'serviceSkills',
+          roll: { expression: '1d6', rolls: [3], total: 3 },
+          tableRoll: 3,
+          rawSkill: 'Piloting',
+          skill: 'Piloting-1',
+          characteristic: null,
+          pendingCascadeSkill: null
+        },
+        {
+          career: 'Scout',
+          table: 'personalDevelopment',
+          roll: { expression: '1d6', rolls: [1], total: 1 },
+          tableRoll: 1,
+          rawSkill: '+1 Str',
+          skill: null,
+          characteristic: { key: 'str', modifier: 1 },
+          pendingCascadeSkill: null
+        },
+        {
+          career: 'Scout',
+          table: 'specialistSkills',
+          roll: { expression: '1d6', rolls: [6], total: 6 },
+          tableRoll: 6,
+          rawSkill: 'Gun Combat*',
+          skill: null,
+          characteristic: null,
+          pendingCascadeSkill: 'Slug Rifle'
+        }
+      ]
+    }
+
+    const exportText = derivePlainCharacterExport(character({ creation })) ?? ''
+
+    assert.equal(exportText.includes('basic training Comms-0'), true)
+    assert.equal(
+      exportText.includes('term skills service skills roll 3: Piloting-1'),
+      true
+    )
+    assert.equal(
+      exportText.includes('personal development roll 1: Str +1'),
+      true
+    )
+    assert.equal(
+      exportText.includes(
+        'specialist skills roll 6: Gun Combat* -> Slug Rifle'
       ),
       true
     )

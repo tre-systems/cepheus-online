@@ -997,8 +997,10 @@ custom-piece creation, are now off generic `SELECT_CAREER`. Direct player use
 of `StartCharacterCareerTerm` is blocked server-side and covered by a
 regression test, so that bypass is no longer an active backlog item. The
 remaining work is to tighten the browser affordances around failed
-qualification and draft fallback, and to keep improving provenance display for
-career entry.
+qualification and draft fallback, and to keep improving presentation around
+career entry. The final plain export now includes qualification target/DM,
+previous-career penalty, draft table-roll provenance, and projected
+basic-training / term-skill roll provenance.
 
 Tasks:
 
@@ -1010,8 +1012,10 @@ Tasks:
   explicit legal actions.
 - Keep the existing browser coverage for failed qualification, Draft roll,
   Drifter fallback, and refresh recovery green as career-entry UI changes.
-- Tighten career-entry provenance for requested career, accepted/drafted
-  career, prior-career penalty, and basic training source skills.
+- Keep tightening career-entry provenance for requested career,
+  accepted/drafted career, and prior-career penalty as richer projected facts
+  land. Basic-training and term-skill roll provenance are now exported from
+  projected facts.
 
 Done when:
 
@@ -1177,7 +1181,10 @@ Tasks:
 - Add a pre-reveal reload/new-join regression for spectators: if a roll is
   still unrevealed, refreshed or newly opened spectator views must keep dice,
   roll-dependent outcome text, projected term skill/benefit details, and
-  activity details redacted until the reveal boundary.
+  activity details redacted until the reveal boundary. The client reveal
+  coordinator now defers an initial redacted state until the dice reveal path
+  completes; keep extending this with browser coverage around projected
+  character creation panels.
 - Show follower state after reconnect from projection/history, with transient
   live activity only for events seen in real time.
 - Keep Discord logging as a future consumer of the same semantic events rather

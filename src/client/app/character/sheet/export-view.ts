@@ -5,7 +5,10 @@ import type {
   CharacterState,
   CharacteristicKey
 } from '../../../../shared/state'
-import type { CareerTerm } from '../../../../shared/characterCreation'
+import type {
+  CareerCreationCheckFact,
+  CareerTerm
+} from '../../../../shared/characterCreation'
 import {
   deriveMaterialBenefitEffect,
   parseCareerSkill
@@ -197,12 +200,27 @@ const careerValue = (
     .join('; ')
 }
 
-const formatCheck = (
+const formatCheckFact = (
   label: string,
   passed: boolean,
-  total: number | null | undefined
-): string =>
-  `${label} ${passed ? 'passed' : 'failed'}${total == null ? '' : ` ${total}`}`
+  check: CareerCreationCheckFact
+): string => {
+  const characteristic = check.characteristic
+    ? `${characteristicLabels[check.characteristic]} `
+    : ''
+  return `${label} ${passed ? 'passed' : 'failed'} ${check.total} vs ${check.target} (${characteristic}DM ${formatSignedModifier(check.modifier)})`
+}
+
+const qualificationValue = (
+  qualification: NonNullable<CareerTerm['facts']>['qualification']
+): string | null => {
+  if (!qualification) return null
+  const previousCareerText =
+    qualification.previousCareerCount > 0
+      ? `, previous career DM ${formatSignedModifier(-2 * qualification.previousCareerCount)}`
+      : ''
+  return `${formatCheckFact('qualification', qualification.passed, qualification.qualification)}${previousCareerText}`
+}
 
 const termSkillValue = (term: CareerTerm): string | null => {
   const skills = sortSkillsForExport([
@@ -211,6 +229,47 @@ const termSkillValue = (term: CareerTerm): string | null => {
     ...(term.facts?.basicTrainingSkills ?? [])
   ])
   return skills.length > 0 ? `skills ${listValue(skills)}` : null
+}
+
+const termSkillTableLabels: Record<string, string> = {
+  personalDevelopment: 'personal development',
+  serviceSkills: 'service skills',
+  specialistSkills: 'specialist skills',
+  advancedEducation: 'advanced education'
+}
+
+const formatTermSkillFactResult = (
+  roll: NonNullable<NonNullable<CareerTerm['facts']>['termSkillRolls']>[number]
+): string => {
+  if (roll.skill) return roll.skill
+  if (roll.characteristic) {
+    return `${characteristicLabels[roll.characteristic.key]} ${formatSignedModifier(roll.characteristic.modifier)}`
+  }
+  if (roll.pendingCascadeSkill) {
+    return `${roll.rawSkill} -> ${roll.pendingCascadeSkill}`
+  }
+  return roll.rawSkill
+}
+
+const basicTrainingValue = (term: CareerTerm): string | null => {
+  const skills = sortSkillsForExport(term.facts?.basicTrainingSkills ?? [])
+  return skills.length > 0 ? `basic training ${listValue(skills)}` : null
+}
+
+const termSkillRollValue = (term: CareerTerm): string | null => {
+  const rolls = term.facts?.termSkillRolls ?? []
+  if (rolls.length === 0) return null
+
+  return `term skills ${rolls
+    .map((roll) => {
+      const table = termSkillTableLabels[roll.table] ?? roll.table
+      const rolled =
+        roll.roll.total === roll.tableRoll
+          ? `roll ${roll.roll.total}`
+          : `roll ${roll.roll.total} = table ${roll.tableRoll}`
+      return `${table} ${rolled}: ${formatTermSkillFactResult(roll)}`
+    })
+    .join(', ')}`
 }
 
 const termBenefitValue = (term: CareerTerm): string | null => {
@@ -245,23 +304,18 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
   const parts: string[] = []
   if (term.draft === 1 && facts?.draft) {
     parts.push(
-      `drafted ${facts.draft.acceptedCareer} ${facts.draft.roll.total}`
+      `drafted ${facts.draft.acceptedCareer} from table ${facts.draft.tableRoll} (roll ${facts.draft.roll.total})`
     )
   } else if (facts?.qualification) {
-    parts.push(
-      formatCheck(
-        'qualified',
-        facts.qualification.passed,
-        facts.qualification.qualification.total
-      )
-    )
+    const qualification = qualificationValue(facts.qualification)
+    if (qualification) parts.push(qualification)
   }
   if (facts?.survival) {
     parts.push(
-      formatCheck(
+      formatCheckFact(
         'survival',
         facts.survival.passed,
-        facts.survival.survival.total
+        facts.survival.survival
       )
     )
   } else if (term.survival != null) {
@@ -271,10 +325,10 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
     parts.push(
       facts.commission.skipped
         ? 'commission skipped'
-        : formatCheck(
+        : formatCheckFact(
             'commission',
             facts.commission.passed,
-            facts.commission.commission.total
+            facts.commission.commission
           )
     )
   }
@@ -282,10 +336,10 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
     parts.push(
       facts.advancement.skipped
         ? 'advancement skipped'
-        : `${formatCheck(
+        : `${formatCheckFact(
             'advancement',
             facts.advancement.passed,
-            facts.advancement.advancement.total
+            facts.advancement.advancement
           )}${
             facts.advancement.rank
               ? ` to rank ${facts.advancement.rank.newRank}${facts.advancement.rank.title ? ` (${facts.advancement.rank.title})` : ''}`
@@ -297,6 +351,10 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
   }
   const termSkills = termSkillValue(term)
   if (termSkills) parts.push(termSkills)
+  const basicTraining = basicTrainingValue(term)
+  if (basicTraining) parts.push(basicTraining)
+  const termSkillRolls = termSkillRollValue(term)
+  if (termSkillRolls) parts.push(termSkillRolls)
   if (facts?.aging) {
     parts.push(
       `aging ${facts.aging.roll.total}: ${
@@ -319,7 +377,7 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
   }
   if (facts?.reenlistment) {
     parts.push(
-      `reenlistment ${facts.reenlistment.reenlistment.total}: ${facts.reenlistment.outcome}`
+      `${formatCheckFact('reenlistment', facts.reenlistment.reenlistment.success, facts.reenlistment.reenlistment)}: ${facts.reenlistment.outcome}`
     )
   } else if (term.reEnlistment != null) {
     parts.push(`reenlistment ${term.reEnlistment}`)

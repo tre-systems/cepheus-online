@@ -225,6 +225,54 @@ describe('dice reveal coordinator', () => {
     )
   })
 
+  it('defers redacted pending live dice activities before first state is applied', () => {
+    const coordinator = createDiceRevealCoordinator()
+    const pending = redactedActivity('roll-1')
+
+    assert.deepEqual(
+      coordinator.diceRollsForStateDeferral({
+        nextState: gameState([redactedDiceRoll('roll-1')]),
+        diceRollActivities: [pending]
+      }),
+      [pending]
+    )
+  })
+
+  it('defers an initial redacted dice log roll before projecting a refresh state', () => {
+    const coordinator = createDiceRevealCoordinator()
+    const pending = redactedDiceRoll('roll-1')
+
+    assert.deepEqual(
+      coordinator.diceRollsForStateDeferral({
+        nextState: gameState([pending]),
+        diceRollActivities: []
+      }),
+      [pending]
+    )
+
+    coordinator.markRevealed('roll-1')
+
+    assert.deepEqual(
+      coordinator.diceRollsForStateDeferral({
+        nextState: gameState([pending]),
+        diceRollActivities: []
+      }),
+      []
+    )
+  })
+
+  it('does not defer a first state that already contains visible dice results', () => {
+    const coordinator = createDiceRevealCoordinator()
+
+    assert.deepEqual(
+      coordinator.diceRollsForStateDeferral({
+        nextState: gameState([diceRoll('roll-1')]),
+        diceRollActivities: []
+      }),
+      []
+    )
+  })
+
   it('uses live activity reveal targets before falling back to the latest dice log roll', () => {
     const coordinator = createDiceRevealCoordinator()
     coordinator.recordStateApplied(gameState([diceRoll('roll-1')]))
