@@ -2402,9 +2402,31 @@ test.describe('character creation smoke', () => {
       })
       .toBe(2)
     expect(restartedCreationIds).toContain(characterId)
-    expect(restartedCreationIds.some((id) => id !== characterId)).toBe(true)
+    const replacementCharacterId = restartedCreationIds.find(
+      (id) => id !== characterId
+    )
+    expect(replacementCharacterId).toBeTruthy()
+    const replacementCharacterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
 
     await expect(deathCard).toHaveCount(0, { timeout: 5_000 })
+    await expect(fields).toContainText('Characteristics', { timeout: 5_000 })
+    await expect(
+      fields.getByRole('button', { name: 'Roll Str' })
+    ).toBeVisible()
+
+    const restartedState = await fetchRoomState(page, roomId, actorId)
+    expect(
+      restartedState.state?.characters[characterId]?.creation?.state?.status
+    ).toBe('DECEASED')
+    expect(
+      restartedState.state?.characters[replacementCharacterId ?? '']?.creation
+        ?.state?.status
+    ).toBe('CHARACTERISTICS')
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, replacementCharacterName)
     await expect(fields).toContainText('Characteristics', { timeout: 5_000 })
     await expect(
       fields.getByRole('button', { name: 'Roll Str' })
