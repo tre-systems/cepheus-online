@@ -1,4 +1,9 @@
-import { canRollCashBenefit, deriveRemainingCareerBenefits } from './benefits'
+import {
+  canRollCashBenefit,
+  deriveCareerTermCashBenefitCount,
+  deriveCareerTermMusteringBenefitCount,
+  deriveRemainingCareerBenefits
+} from './benefits'
 import { derivePrimaryEducationSkillOptions } from './background-skills'
 import {
   CEPHEUS_SRD_CAREERS,
@@ -114,7 +119,10 @@ const benefitsReceivedInCareer = (
 ): number =>
   creation.terms
     ?.filter((term) => term.career === career)
-    .reduce((total, term) => total + term.benefits.length, 0) ?? 0
+    .reduce(
+      (total, term) => total + deriveCareerTermMusteringBenefitCount(term),
+      0
+    ) ?? 0
 
 const rankInCareer = (
   creation: CareerCreationActionProjection,
@@ -141,7 +149,7 @@ const shouldDecideAnagathics = (
   if (hasAnagathicsDecisionForActiveTerm(creation)) return false
   if (!CEPHEUS_SRD_RULESET.careerBasics[term.career]) return false
 
-  return term.survival !== undefined
+  return term.facts?.survival !== undefined || term.survival !== undefined
 }
 
 const canResolveBasicTrainingSelection = (
@@ -288,6 +296,8 @@ export const deriveCareerCreationReenlistmentOutcome = (
   const term = lastTerm(creation)
   if (!term) return 'unresolved'
   if ((creation.terms?.length ?? 0) >= 7) return 'retire'
+  const projectedOutcome = term.facts?.reenlistment?.outcome
+  if (projectedOutcome) return projectedOutcome
   if (term.reEnlistment === 12) return 'forced'
   if (term.reEnlistment !== undefined && term.canReenlist) return 'allowed'
   if (term.musteringOut || !term.canReenlist) return 'blocked'
@@ -394,9 +404,7 @@ const deriveCashBenefitsReceived = (
   creation: CareerCreationActionProjection
 ): number =>
   (creation.terms ?? []).reduce(
-    (total, term) =>
-      total +
-      term.benefits.filter((benefit) => /^\d+$/.test(benefit.trim())).length,
+    (total, term) => total + deriveCareerTermCashBenefitCount(term),
     0
   )
 

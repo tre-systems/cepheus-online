@@ -612,6 +612,70 @@ describe('deriveEventsForCommand error categories', () => {
     )
   })
 
+  it('blocks semantic cash mustering benefits from projected facts without legacy benefit strings', () => {
+    const cashBenefits = [1000, 5000, 10000].map((credits, index) => ({
+      career: 'Scout',
+      kind: 'cash' as const,
+      roll: {
+        expression: '2d6' as const,
+        rolls: [index + 1, index + 2],
+        total: index * 2 + 3
+      },
+      modifier: 0,
+      tableRoll: index + 3,
+      value: String(credits),
+      credits,
+      materialItem: null
+    }))
+    const result = runCommand(
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'cash'
+      },
+      createCreation('MUSTERING_OUT', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            facts: { musteringBenefits: cashBenefits },
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          },
+          ...Array.from({ length: 3 }, () => ({
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            facts: {},
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          }))
+        ],
+        careers: [{ name: 'Scout', rank: 0 }]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Cash mustering benefit limit has been reached'
+    )
+  })
+
   it('emits a semantic mustering completion event once benefits are resolved', () => {
     const result = runCommand(
       {

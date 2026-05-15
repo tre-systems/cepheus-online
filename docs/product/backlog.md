@@ -1347,10 +1347,12 @@ The next batch should run like this, in this order:
    client creator code from reading legacy history outside compatibility
    helpers. Per-term semantic `facts` now carry qualification, draft,
    survival, commission, advancement, rank, term skill, aging, anagathics,
-   reenlistment, and mustering benefit details; legal actions and the client
-   projection adapter use those facts instead of reconstructing the active term
-   from legacy history. The legacy `history` model remains only for historical
-   replay compatibility and older activity consumers.
+   reenlistment, and mustering benefit details; legal actions, mustering
+   validators, and the client projection adapter use those facts instead of
+   reconstructing the active term from legacy history. The remaining legacy
+   aggregate fallbacks are explicit compatibility paths for old projections;
+   the legacy `history` model remains only for historical replay compatibility
+   and older activity consumers.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.
@@ -1360,7 +1362,7 @@ The next batch should run like this, in this order:
    new controls, and keep reveal timing coverage for every roll-bearing action.
 6. Finish the remaining projection/read-model consolidation: expose compact
    follower and final-sheet view models from semantic timeline plus per-term
-   facts, keep remaining term-skill and mustering gates projection-owned, and
+   facts, reduce compatibility fallbacks for older aggregate term fields, and
    reject commands that are not legal from the current projection.
 7. Harden the SRD term loop in browser automation: repeated refreshes, mobile
    layouts, and multi-term continuation.

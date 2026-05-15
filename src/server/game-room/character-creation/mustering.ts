@@ -2,6 +2,8 @@ import {
   canRollCashBenefit,
   deriveCareerCreationComplete,
   deriveCashBenefitRollModifier,
+  deriveCareerTermCashBenefitCount,
+  deriveCareerTermMusteringBenefitCount,
   deriveMaterialBenefitRollModifier,
   deriveMaterialBenefitEffect,
   deriveRemainingCareerBenefits,
@@ -63,13 +65,14 @@ const benefitsReceivedInCareer = (
 ): number =>
   creation.terms
     .filter((term) => term.career === career)
-    .reduce((total, term) => total + term.benefits.length, 0)
+    .reduce(
+      (total, term) => total + deriveCareerTermMusteringBenefitCount(term),
+      0
+    )
 
 const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
   creation.terms.reduce(
-    (total, term) =>
-      total +
-      term.benefits.filter((benefit) => /^\d+$/.test(benefit.trim())).length,
+    (total, term) => total + deriveCareerTermCashBenefitCount(term),
     0
   )
 

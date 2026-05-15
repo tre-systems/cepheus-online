@@ -16,7 +16,12 @@ import {
   projectCareerCreationActionPlan,
   resolveSurvivalFailureOutcome
 } from './index'
-import type { CareerCreationActionProjection, CareerTerm } from './types'
+import type {
+  CareerCreationActionProjection,
+  CareerCreationBenefitFact,
+  CareerTermReenlistmentFact,
+  CareerTerm
+} from './types'
 
 const term = (overrides: Partial<CareerTerm> = {}): CareerTerm => ({
   ...createCareerTerm({ career: 'Scout' }),
@@ -33,6 +38,36 @@ const projection = (
   pendingCascadeSkills: [],
   creationComplete: false,
   ...overrides
+})
+
+const musteringBenefit = (
+  overrides: Partial<CareerCreationBenefitFact> = {}
+): CareerCreationBenefitFact => ({
+  career: 'Scout',
+  kind: 'material',
+  roll: { expression: '2d6', rolls: [3, 4], total: 7 },
+  modifier: 0,
+  tableRoll: 7,
+  value: 'Low Passage',
+  credits: 0,
+  materialItem: 'Low Passage',
+  ...overrides
+})
+
+const reenlistmentFact = (
+  outcome: CareerTermReenlistmentFact['outcome']
+): CareerTermReenlistmentFact => ({
+  outcome,
+  reenlistment: {
+    expression: '2d6',
+    rolls: outcome === 'forced' ? [6, 6] : [3, 4],
+    total: outcome === 'forced' ? 12 : 7,
+    characteristic: null,
+    modifier: 0,
+    target: 6,
+    success: outcome !== 'blocked',
+    outcome
+  }
 })
 
 describe('career creation legal action planner', () => {
@@ -911,6 +946,61 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('counts projected mustering facts before legacy benefit fields', () => {
+    const creation = projection('MUSTERING_OUT', {
+      terms: [
+        term({
+          career: 'Scout',
+          complete: true,
+          musteringOut: true,
+          benefits: [],
+          facts: {
+            musteringBenefits: [
+              musteringBenefit({
+                career: 'Scout',
+                kind: 'cash',
+                value: '1000',
+                credits: 1000,
+                materialItem: null
+              }),
+              musteringBenefit({
+                career: 'Scout',
+                kind: 'cash',
+                value: '2000',
+                credits: 2000,
+                materialItem: null
+              }),
+              musteringBenefit({
+                career: 'Scout',
+                kind: 'cash',
+                value: '3000',
+                credits: 3000,
+                materialItem: null
+              })
+            ]
+          }
+        }),
+        ...Array.from({ length: 6 }, () =>
+          term({
+            career: 'Scout',
+            complete: true,
+            musteringOut: true,
+            benefits: [],
+            facts: {}
+          })
+        )
+      ],
+      careers: [{ name: 'Scout', rank: 0 }]
+    })
+
+    assert.equal(deriveRemainingCareerCreationBenefits(creation), 4)
+    assert.deepEqual(
+      deriveCareerCreationActionPlan(creation).legalActions[0]
+        ?.musteringBenefitOptions,
+      [{ career: 'Scout', kind: 'material' }]
+    )
+  })
+
   it('derives remaining projected mustering benefits by career', () => {
     const creation = projection('MUSTERING_OUT', {
       terms: [
@@ -1020,6 +1110,35 @@ describe('career creation legal action planner', () => {
       ['decideAnagathics']
     )
 
+    const beforeDecisionFromFacts = projection('AGING', {
+      terms: [
+        term({
+          survival: undefined,
+          facts: {
+            survival: {
+              passed: true,
+              canCommission: false,
+              canAdvance: true,
+              survival: {
+                expression: '2d6',
+                rolls: [4, 4],
+                total: 8,
+                characteristic: 'end',
+                modifier: 0,
+                target: 7,
+                success: true
+              }
+            }
+          }
+        })
+      ]
+    })
+
+    assert.deepEqual(
+      deriveCareerCreationPendingDecisions(beforeDecisionFromFacts),
+      [{ key: 'anagathicsDecision' }]
+    )
+
     const afterDecision = projection('AGING', {
       terms: [
         term({
@@ -1104,6 +1223,35 @@ describe('career creation legal action planner', () => {
       deriveLegalCareerCreationActionKeysForProjection(
         projection('REENLISTMENT', {
           terms: Array.from({ length: 7 }, () => term())
+        })
+      ),
+      ['leaveCareer']
+    )
+  })
+
+  it('derives reenlistment outcomes from projected facts without legacy roll fields', () => {
+    assert.equal(
+      deriveCareerCreationReenlistmentOutcome(
+        projection('REENLISTMENT', {
+          terms: [
+            term({
+              reEnlistment: undefined,
+              facts: { reenlistment: reenlistmentFact('forced') }
+            })
+          ]
+        })
+      ),
+      'forced'
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('REENLISTMENT', {
+          terms: [
+            term({
+              reEnlistment: undefined,
+              facts: { reenlistment: reenlistmentFact('blocked') }
+            })
+          ]
         })
       ),
       ['leaveCareer']

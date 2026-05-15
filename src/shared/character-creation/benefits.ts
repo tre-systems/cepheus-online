@@ -1,5 +1,10 @@
 import type { CharacteristicKey } from '../state'
-import type { BenefitKind, BenefitTables, CareerBenefit } from './types'
+import type {
+  BenefitKind,
+  BenefitTables,
+  CareerBenefit,
+  CareerTerm
+} from './types'
 
 export const CEPHEUS_SRD_MAX_CASH_BENEFITS = 3
 
@@ -25,6 +30,17 @@ export const deriveRemainingCareerBenefits = ({
     0,
     deriveCareerBenefitCount({ termsInCareer, currentRank }) - benefitsReceived
   )
+
+export const deriveCareerTermMusteringBenefitCount = (
+  term: Pick<CareerTerm, 'benefits' | 'facts'>
+): number => term.facts?.musteringBenefits?.length ?? term.benefits.length
+
+export const deriveCareerTermCashBenefitCount = (
+  term: Pick<CareerTerm, 'benefits' | 'facts'>
+): number =>
+  term.facts?.musteringBenefits?.filter((benefit) => benefit.kind === 'cash')
+    .length ??
+  term.benefits.filter((benefit) => /^\d+$/.test(benefit.trim())).length
 
 export const deriveRemainingCashBenefits = ({
   cashBenefitsReceived,
