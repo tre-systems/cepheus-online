@@ -285,6 +285,34 @@ describe('character creation projection helpers', () => {
     assert.deepEqual(flow.draft.skills, ['Vacc Suit-0', 'Gambling-1'])
   })
 
+  it('does not hydrate stale legacy skills from semantic terms without skill facts', () => {
+    const creation = agingProjection([])
+    creation.terms[0].skills = ['Legacy Skill-6']
+    creation.terms[0].skillsAndTraining = ['Legacy Training-5']
+    creation.terms[0].facts = {
+      ...creation.terms[0].facts,
+      survival: {
+        survival: {
+          expression: '2d6',
+          rolls: [5, 5],
+          total: 10,
+          characteristic: 'end',
+          modifier: 0,
+          target: 5,
+          success: true
+        },
+        passed: true,
+        canCommission: true,
+        canAdvance: false
+      }
+    }
+
+    const flow = flowFromProjectedCharacter(character(creation))
+    if (!flow) throw new Error('Expected projected flow')
+
+    assert.deepEqual(flow.draft.skills, [])
+  })
+
   it('hydrates resolved term cascade skills from semantic facts', () => {
     const creation = agingProjection([])
     const term = creation.terms[0]

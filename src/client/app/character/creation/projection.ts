@@ -98,9 +98,7 @@ const skillListFromTermFacts = (term: CareerTerm): string[] => [
 
 const creationSkillsFromTerm = (term: CareerTerm): string[] => {
   const factSkills = skillListFromTermFacts(term)
-  return hasSemanticTermFacts(term) && factSkills.length > 0
-    ? factSkills
-    : term.skillsAndTraining
+  return hasSemanticTermFacts(term) ? factSkills : term.skillsAndTraining
 }
 
 const legacyTermSkillRollsFromAggregate = (
