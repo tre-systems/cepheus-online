@@ -243,7 +243,7 @@ describe('viewer filtering', () => {
         edu: 8,
         soc: 7
       },
-      skills: [],
+      skills: ['Vacc Suit-0', 'Pilot-1'],
       equipment: [
         {
           name: 'Low Passage',
@@ -528,6 +528,10 @@ describe('viewer filtering', () => {
     assert.equal(term?.facts?.musteringBenefits, undefined)
     assert.deepEqual(term?.skills, [])
     assert.deepEqual(term?.skillsAndTraining, ['Vacc Suit-0'])
+    assert.deepEqual(
+      filtered.characters[asCharacterId('char-1')]?.skills,
+      ['Vacc Suit-0']
+    )
     assert.deepEqual(term?.benefits, [])
     assert.equal(
       filtered.characters[asCharacterId('char-1')]?.credits,
@@ -580,6 +584,10 @@ describe('viewer filtering', () => {
       state.characters[asCharacterId('char-1')]?.characteristics.edu,
       8
     )
+    assert.deepEqual(state.characters[asCharacterId('char-1')]?.skills, [
+      'Vacc Suit-0',
+      'Pilot-1'
+    ])
     assert.equal(state.characters[asCharacterId('char-1')]?.credits, 7100)
     assert.equal(state.characters[asCharacterId('char-1')]?.age, 24)
     assert.equal(

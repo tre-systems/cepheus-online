@@ -113,6 +113,11 @@ const redactTermSkillSheetEffect = (
   character: CharacterState,
   fact: CareerCreationTermSkillFact
 ): void => {
+  const skill = visibleSkillFromTermSkillFact(fact)
+  if (skill) {
+    character.skills = character.skills.filter((candidate) => candidate !== skill)
+  }
+
   if (!fact.characteristic) return
 
   const current = character.characteristics[fact.characteristic.key]
