@@ -1,6 +1,8 @@
 import type { BoardId } from '../../../shared/ids'
+import type { PieceId } from '../../../shared/ids'
 import type { BoardState, GameState, PieceState } from '../../../shared/state'
 import { browserImageUrl } from '../assets/images.js'
+import { deriveVisiblePieceIds } from './los-view.js'
 
 export const boardList = (
   state: Pick<GameState, 'boards'> | null | undefined
@@ -42,6 +44,51 @@ export const selectedBoardPieces = (
     | null
     | undefined
 ): PieceState[] => boardPieces(state, selectedBoard(state))
+
+export const filterBoardPiecesForLineOfSight = ({
+  board,
+  pieces,
+  selectedPieceId,
+  canSeeAllPieces
+}: {
+  board: BoardState | null | undefined
+  pieces: readonly PieceState[]
+  selectedPieceId: PieceId | null | undefined
+  canSeeAllPieces: boolean
+}): PieceState[] => {
+  if (canSeeAllPieces || !board?.losSidecar || !selectedPieceId) {
+    return Array.from(pieces)
+  }
+
+  const visibleIds = new Set<PieceId>([
+    selectedPieceId,
+    ...deriveVisiblePieceIds(
+      selectedPieceId,
+      pieces,
+      board.losSidecar.occluders,
+      board.doors
+    )
+  ])
+
+  return pieces.filter((piece) => visibleIds.has(piece.id))
+}
+
+export const selectedBoardPiecesForViewer = (
+  state:
+    | Pick<GameState, 'boards' | 'pieces' | 'selectedBoardId'>
+    | null
+    | undefined,
+  selectedPieceId: PieceId | null | undefined,
+  canSeeAllPieces: boolean
+): PieceState[] => {
+  const board = selectedBoard(state)
+  return filterBoardPiecesForLineOfSight({
+    board,
+    pieces: boardPieces(state, board),
+    selectedPieceId,
+    canSeeAllPieces
+  })
+}
 
 export const pieceImageUrl = (piece: Pick<PieceState, 'imageAssetId'>) =>
   browserImageUrl(piece.imageAssetId)

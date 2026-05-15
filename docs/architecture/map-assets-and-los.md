@@ -191,4 +191,9 @@ whose centers are visible from a source rectangle under the current door state.
 These helpers preserve caller-owned target data and ordering.
 
 The server remains authoritative for door open/closed state and piece position.
-The client can render visibility cheaply from the latest projected state.
+The client can render visibility cheaply from the latest projected state. The
+current browser renderer filters non-referee canvas pieces through the selected
+piece's center-to-center LOS when a reviewed sidecar is present, while referee
+and owner views keep the complete projected board. This is a display aid, not a
+security boundary; player projections must still omit hidden-piece details
+server-side.

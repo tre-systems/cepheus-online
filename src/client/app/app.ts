@@ -425,6 +425,7 @@ boardController = createBoardController({
   getState: () => state,
   getIdentity: clientIdentity,
   getSelectedPieceId: currentSelectedPieceId,
+  getCanSeeAllPieces: () => isActorRefereeOrOwner(state, asUserId(actorId)),
   setSelectedPieceId: (pieceId) => {
     selectPiece(pieceId)
   },

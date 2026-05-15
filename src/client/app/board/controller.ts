@@ -20,7 +20,7 @@ import {
   boardImageUrl,
   pieceImageUrl,
   selectedBoard,
-  selectedBoardPieces
+  selectedBoardPiecesForViewer
 } from './view.js'
 import {
   type BrowserImageCacheEntry,
@@ -87,6 +87,7 @@ export interface BoardControllerOptions {
   getState: () => GameState | null
   getIdentity: () => ClientIdentity
   getSelectedPieceId: () => PieceId | null
+  getCanSeeAllPieces?: () => boolean
   setSelectedPieceId: (pieceId: PieceId | null) => void
   sendCommand: (command: BoardCommand) => Promise<unknown>
   setError: (message: string) => void
@@ -184,6 +185,7 @@ export const createBoardController = ({
   getState,
   getIdentity,
   getSelectedPieceId,
+  getCanSeeAllPieces = () => false,
   setSelectedPieceId,
   sendCommand,
   setError,
@@ -197,7 +199,12 @@ export const createBoardController = ({
   const pieceImageCache = new Map<string, BrowserImageCacheEntry>()
 
   const currentBoard = () => selectedBoard(getState())
-  const currentPieces = () => selectedBoardPieces(getState())
+  const currentPieces = () =>
+    selectedBoardPiecesForViewer(
+      getState(),
+      getSelectedPieceId(),
+      getCanSeeAllPieces()
+    )
 
   const loadImage = (
     url: string | null,
