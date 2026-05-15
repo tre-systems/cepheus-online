@@ -2106,4 +2106,54 @@ describe('character creation setup command handlers', () => {
     if (finalized?.type !== 'CharacterCreationFinalized') return
     assert.deepEqual(finalized.skills, ['Vacc Suit-0', 'Pilot-1'])
   })
+
+  it('finalizes resolved term cascade skills from projected facts', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'FinalizeCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(
+        createCreation('ACTIVE', {
+          terms: [
+            {
+              ...completedTerm(),
+              skills: ['Legacy Skill-5'],
+              skillsAndTraining: ['Legacy Training-5'],
+              facts: {
+                termSkillRolls: [
+                  {
+                    career: 'Scout',
+                    table: 'serviceSkills',
+                    roll: { expression: '1d6', rolls: [2], total: 2 },
+                    tableRoll: 2,
+                    rawSkill: 'Gun Combat*',
+                    skill: null,
+                    characteristic: null,
+                    pendingCascadeSkill: 'Gun Combat-1'
+                  }
+                ],
+                termCascadeSelections: [
+                  {
+                    cascadeSkill: 'Gun Combat-1',
+                    selection: 'Slug Rifle'
+                  }
+                ]
+              }
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const finalized = result.value[1]
+    assert.equal(finalized?.type, 'CharacterCreationFinalized')
+    if (finalized?.type !== 'CharacterCreationFinalized') return
+    assert.deepEqual(finalized.skills, ['Slug Rifle-1'])
+  })
 })

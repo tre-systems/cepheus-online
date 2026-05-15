@@ -1,5 +1,8 @@
 import {
   deriveCareerCreationComplete,
+  formatCareerSkill,
+  isCascadeCareerSkill,
+  parseCareerSkill,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
 import type { GameEvent } from '../../../shared/events'
@@ -52,12 +55,42 @@ const hasSemanticTermFacts = (
   term: CharacterCreationProjection['terms'][number]
 ): boolean => Object.keys(term.facts ?? {}).length > 0
 
+const resolvedTermCascadeSkill = (
+  term: CharacterCreationProjection['terms'][number],
+  cascadeSkill: string | null
+): string | null => {
+  if (!cascadeSkill) return null
+
+  let current = cascadeSkill
+  const visited = new Set<string>()
+
+  while (!visited.has(current)) {
+    visited.add(current)
+    const selection = term.facts?.termCascadeSelections?.find(
+      (entry) => entry.cascadeSkill === current
+    )?.selection
+    if (!selection) return null
+
+    const level = parseCareerSkill(current)?.level ?? 0
+    if (isCascadeCareerSkill(selection)) {
+      current = selection.trim().replace('*', `-${level}`)
+      continue
+    }
+
+    return formatCareerSkill({ name: selection.trim(), level })
+  }
+
+  return null
+}
+
 const deriveTermSkillsFromFacts = (
   term: CharacterCreationProjection['terms'][number]
 ): string[] => [
   ...(term.facts?.basicTrainingSkills ?? []),
   ...(term.facts?.termSkillRolls ?? []).flatMap((termSkill) =>
-    termSkill.skill ? [termSkill.skill] : []
+    termSkill.skill
+      ? [termSkill.skill]
+      : (resolvedTermCascadeSkill(term, termSkill.pendingCascadeSkill) ?? [])
   )
 ]
 
