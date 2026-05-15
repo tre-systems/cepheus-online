@@ -2270,7 +2270,8 @@ export const deriveCharacterCreationFailedQualificationViewModel = (
   const open =
     flow.step === 'career' &&
     plan?.qualificationPassed === false &&
-    plan.drafted !== true
+    plan.drafted !== true &&
+    failedQualificationOptions?.length !== 0
   const actionOptions =
     failedQualificationOptions ??
     deriveFailedQualificationOptions({

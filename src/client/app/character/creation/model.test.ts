@@ -724,6 +724,48 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.careerRoll, null)
   })
 
+  it('hides stale failed qualification options when projection moved on', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'career',
+        draft: {
+          ...flow().draft,
+          careerPlan: {
+            career: 'Merchant',
+            qualificationRoll: 4,
+            qualificationPassed: false,
+            survivalRoll: null,
+            survivalPassed: null,
+            commissionRoll: null,
+            commissionPassed: null,
+            advancementRoll: null,
+            advancementPassed: null,
+            canCommission: false,
+            canAdvance: false,
+            drafted: false
+          }
+        }
+      }),
+      projection: projection('SURVIVAL', {
+        actionPlan: {
+          status: 'SURVIVAL',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(
+      viewModel.wizard?.careerSelection?.failedQualification.open,
+      false
+    )
+    assert.deepEqual(
+      viewModel.wizard?.careerSelection?.failedQualification.options,
+      []
+    )
+  })
+
   it('includes term skill training state for resolved career terms', () => {
     const viewModel = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow({ termSkillRolls: [] }),
@@ -796,7 +838,7 @@ describe('character creation view model', () => {
 
     const viewModel = deriveCharacterCreationViewModel({
       flow: currentFlow,
-      projection: projection('SKILLS_TRAINING'),
+      projection: null,
       readOnly: false
     })
 
@@ -957,6 +999,39 @@ describe('character creation view model', () => {
     assert.equal(reenlistment.wizard?.reenlistmentRoll, null)
     assert.equal(basicTraining.wizard?.basicTraining, null)
     assert.deepEqual(mustering.wizard?.musteringOut?.actions, [])
+  })
+
+  it('hides stale phase widgets when projected status has moved on', () => {
+    const termSkills = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow({ termSkillRolls: [] }),
+      projection: projection('REENLISTMENT', {
+        actionPlan: {
+          status: 'REENLISTMENT',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }),
+      readOnly: false
+    })
+    const mustering = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'equipment',
+        draft: createInitialCharacterDraft(characterId, {
+          completedTerms: [completedTerm()]
+        })
+      }),
+      projection: projection('ACTIVE', {
+        actionPlan: {
+          status: 'ACTIVE',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(termSkills.wizard?.termSkills, null)
+    assert.equal(mustering.wizard?.musteringOut, null)
   })
 
   it('includes anagathics decision state for eligible career terms', () => {

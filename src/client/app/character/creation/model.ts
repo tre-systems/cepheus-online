@@ -302,6 +302,7 @@ const wizardViewModel = ({
       ? projectedCreation.actionPlan?.homeworldChoiceOptions
       : undefined
   const projectedActionPlan = projectedCreation?.actionPlan ?? null
+  const hasProjectedCreation = projectedCreation !== null
   const projectedLegalActions = projectedCreation
     ? new Set<CareerCreationActionKey>(
         projectedActionPlan?.legalActions?.map((action) => action.key) ?? []
@@ -311,34 +312,39 @@ const wizardViewModel = ({
     key: CareerCreationActionKey
   ): boolean | undefined =>
     projectedLegalActions ? projectedLegalActions.has(key) : undefined
-  const careerChoiceOptions =
-    projectedCreation?.state.status === 'CAREER_SELECTION'
+  const careerChoiceOptions = !hasProjectedCreation
+    ? undefined
+    : projectedCreation.state.status === 'CAREER_SELECTION'
       ? (projectedActionPlan?.careerChoiceOptions ?? { careers: [] })
-      : undefined
-  const failedQualificationOptions =
-    projectedCreation?.state.status === 'CAREER_SELECTION'
-      ? (projectedActionPlan?.legalActions.find(
+      : { careers: [] }
+  const failedQualificationOptions = !hasProjectedCreation
+    ? undefined
+    : projectedCreation.state.status === 'CAREER_SELECTION'
+      ? (projectedActionPlan?.legalActions?.find(
           (action) => action.key === 'selectCareer'
         )?.failedQualificationOptions ?? [])
-      : undefined
-  const basicTrainingOptions =
-    projectedCreation?.state.status === 'BASIC_TRAINING'
-      ? (projectedActionPlan?.legalActions.find(
+      : []
+  const basicTrainingOptions = !hasProjectedCreation
+    ? undefined
+    : projectedCreation.state.status === 'BASIC_TRAINING'
+      ? (projectedActionPlan?.legalActions?.find(
           (action) => action.key === 'completeBasicTraining'
         )?.basicTrainingOptions ?? { kind: 'none', skills: [] })
-      : undefined
-  const termSkillTableOptions =
-    projectedCreation?.state.status === 'SKILLS_TRAINING'
-      ? (projectedActionPlan?.legalActions.find(
+      : { kind: 'none' as const, skills: [] }
+  const termSkillTableOptions = !hasProjectedCreation
+    ? undefined
+    : projectedCreation.state.status === 'SKILLS_TRAINING'
+      ? (projectedActionPlan?.legalActions?.find(
           (action) => action.key === 'rollTermSkill'
         )?.termSkillTableOptions ?? [])
-      : undefined
-  const musteringBenefitOptions =
-    projectedCreation?.state.status === 'MUSTERING_OUT'
-      ? (projectedActionPlan?.legalActions.find(
+      : []
+  const musteringBenefitOptions = !hasProjectedCreation
+    ? undefined
+    : projectedCreation.state.status === 'MUSTERING_OUT'
+      ? (projectedActionPlan?.legalActions?.find(
           (action) => action.key === 'resolveMusteringBenefit'
         )?.musteringBenefitOptions ?? [])
-      : undefined
+      : []
 
   return {
     step: flow.step,
@@ -380,14 +386,21 @@ const wizardViewModel = ({
     termResolution: deriveCharacterCreationTermResolutionViewModel(flow, {
       availableActionKeys: projectedLegalActions ?? undefined
     }),
-    termSkills: deriveCharacterCreationTermSkillTrainingViewModel(flow, {
-      termSkillTableOptions
-    }),
-    basicTraining: deriveCharacterCreationBasicTrainingButton(flow, {
-      basicTrainingOptions
-    }),
+    termSkills:
+      hasProjectedCreation && projectedCreation.state.status !== 'SKILLS_TRAINING'
+        ? null
+        : deriveCharacterCreationTermSkillTrainingViewModel(flow, {
+            termSkillTableOptions
+          }),
+    basicTraining:
+      hasProjectedCreation && projectedCreation.state.status !== 'BASIC_TRAINING'
+        ? null
+        : deriveCharacterCreationBasicTrainingButton(flow, {
+            basicTrainingOptions
+          }),
     musteringOut:
-      flow.step === 'equipment'
+      flow.step === 'equipment' &&
+      (!hasProjectedCreation || projectedCreation.state.status === 'MUSTERING_OUT')
         ? deriveCharacterCreationMusteringOutViewModel(flow, {
             musteringBenefitOptions
           })
