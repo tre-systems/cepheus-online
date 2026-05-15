@@ -161,8 +161,10 @@ tests before it is considered done.
 - [~] Roll survival from `careerBasics`; on failure, enter mishap/death or legal
   exit handling. Current legal action: `rollSurvival`. Semantic survival
   command/event and roll facts are server-backed. Default failed survival is
-  death; optional mishap table outcome facts now replay from the server. Gap:
-  injury detail is not fully applied.
+  death; optional mishap table outcome facts now replay from the server, and
+  injury consequences are resolved by semantic server commands. Gap: the
+  optional injured-in-action "roll twice and take the lower result" branch still
+  needs an explicit dice-fact representation.
 - [~] Resolve commission and advancement from `careerBasics` and
   `ranksAndSkills`, including rank titles and bonus skills. Semantic events and
   server dice facts exist. Gap: bonus skill decisions and rank provenance still
@@ -177,8 +179,8 @@ tests before it is considered done.
   second survival check, rolls and stores the server-derived treatment cost,
   deducts it from credits, projects provenance onto the active term, and routes
   failed treatment survival into the mishap branch with server-owned table
-  facts plus benefit forfeiture. Gap: injury detail and characteristic-choice
-  UI/projection polish are incomplete.
+  facts plus benefit forfeiture and injury resolution. Gap: characteristic-loss
+  explanation and injury-choice UI polish still need refinement.
 - [~] Roll reenlistment from `careerBasics`, handling mandatory retirement
   after seven terms, forced reenlistment on 12, success, failure, and voluntary
   exit. Current legal actions cover unresolved, forced, allowed, and blocked

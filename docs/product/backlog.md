@@ -1101,13 +1101,16 @@ death and optional-mishap transition payloads are fenced or replaced by semantic
 commands. The separate `MISHAP` status is now used by failed anagathics
 treatment survival and the optional mishap branch. Mishap table rolls, outcome
 facts, outcome text, career exit, debt, extra service years, reveal-safe
-activity, benefit forfeiture, and refresh replay are server-backed. Remaining
-consequence gaps are injury detail resolution and UI polish.
+activity, benefit forfeiture, injury resolution, and refresh replay are
+server-backed. Remaining consequence gaps are the optional injured-in-action
+"roll twice and take the lower result" branch and UI polish.
 
 Tasks:
 
-- Add injury detail resolution for mishap outcomes that require characteristic
-  loss choices after the mishap table roll.
+- Add an explicit dice-fact representation and UI choice for the optional
+  injured-in-action "roll twice and take the lower result" branch.
+- Polish injury resolution copy so severe and nearly-killed characteristic-loss
+  choices are easy to understand on mobile.
 - Keep default failed survival as an immediate deceased state.
 - Keep deceased creation state from finalizing or mustering into a playable
   character.
@@ -1128,12 +1131,14 @@ reenlistment, allowed/blocked career decisions, voluntary career exit, and
 server-backed semantic aging/reenlistment facts exist. Anagathics decisions,
 the required second survival check, cost deduction, and export provenance exist;
 detailed mishap table outcomes after failed treatment survival exist; injury
-detail and some UI provenance still need completion.
+resolution and export provenance exist; some injury UI provenance still needs
+completion.
 
 Tasks:
 
-- Complete injury detail after failed anagathics survival mishaps, and keep
-  treatment debt/payment provenance visible through mustering/export.
+- Keep injury details after failed anagathics survival mishaps visible through
+  mustering/export and improve the creator/follower explanation of
+  characteristic losses.
 - Keep aging modifier, legal aging-loss choice, and characteristic-change
   provenance regression coverage healthy as new branches are added.
 - Polish reenlistment UI/provenance for mandatory retirement after seven terms,
