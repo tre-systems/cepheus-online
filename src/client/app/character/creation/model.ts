@@ -70,7 +70,6 @@ export interface CharacterCreationProjectionViewModel {
   isDeceased: boolean
   termCount: number
   completedTermCount: number
-  historyCount: number
   timelineCount: number
 }
 
@@ -154,7 +153,6 @@ const projectionViewModel = (
         isDeceased: false,
         termCount: 0,
         completedTermCount: 0,
-        historyCount: 0,
         timelineCount: 0
       },
       readModel: null
@@ -175,7 +173,6 @@ const projectionViewModel = (
       isDeceased: readModel.isDeceased,
       termCount: readModel.termCount,
       completedTermCount: readModel.completedTermCount,
-      historyCount: readModel.historyCount,
       timelineCount: readModel.timelineCount
     },
     readModel

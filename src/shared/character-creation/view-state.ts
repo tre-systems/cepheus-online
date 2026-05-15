@@ -35,7 +35,6 @@ export interface CharacterCreationProjectionReadModel {
   isDeceased: boolean
   termCount: number
   completedTermCount: number
-  historyCount: number
   timelineCount: number
   timeline: CharacterCreationTimelineEntry[]
   activeTerm: CareerTerm | null
@@ -132,7 +131,6 @@ export const deriveCharacterCreationProjectionReadModel = (
     completedTermCount: terms.filter(
       (term) => term.complete || term.musteringOut
     ).length,
-    historyCount: creation.history?.length ?? 0,
     timelineCount: creation.timeline?.length ?? 0,
     timeline: (creation.timeline ?? []).map(cloneTimelineEntry),
     activeTerm: terms.at(-1) ?? null,

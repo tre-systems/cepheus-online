@@ -209,7 +209,6 @@ describe('character creation view model', () => {
     assert.equal(viewModel.projection.isPlayable, false)
     assert.equal(viewModel.projection.isDeceased, false)
     assert.equal(viewModel.projection.termCount, 0)
-    assert.equal(viewModel.projection.historyCount, 1)
     assert.equal(viewModel.projection.timelineCount, 0)
     assert.equal(viewModel.wizard?.step, 'homeworld')
     assert.equal(viewModel.wizard?.projectedStepCurrent, true)

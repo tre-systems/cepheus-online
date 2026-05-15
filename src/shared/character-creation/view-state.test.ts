@@ -75,7 +75,6 @@ describe('character creation shared view state', () => {
     assert.equal(readModel.step, 'homeworld')
     assert.equal(readModel.isActive, true)
     assert.equal(readModel.creationComplete, false)
-    assert.equal(readModel.historyCount, 1)
     assert.equal(readModel.timelineCount, 1)
     assert.deepEqual(readModel.timeline, [
       {
