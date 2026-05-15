@@ -1030,7 +1030,8 @@ describe('career creation legal action planner', () => {
       terms: [
         term({
           reEnlistment: 12,
-          canReenlist: true,
+          canReenlist: false,
+          musteringOut: true,
           facts: { termSkillRolls: [] }
         })
       ]

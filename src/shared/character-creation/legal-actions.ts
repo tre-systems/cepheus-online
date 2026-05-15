@@ -320,9 +320,7 @@ export const deriveCareerCreationReenlistmentOutcome = (
   if ((creation.terms?.length ?? 0) >= 7) return 'retire'
   const projectedOutcome = term.facts?.reenlistment?.outcome
   if (projectedOutcome) return projectedOutcome
-  if (hasSemanticTermFacts(term)) {
-    return term.musteringOut || !term.canReenlist ? 'blocked' : 'unresolved'
-  }
+  if (hasSemanticTermFacts(term)) return 'unresolved'
   if (term.reEnlistment === 12) return 'forced'
   if (term.reEnlistment !== undefined && term.canReenlist) return 'allowed'
   if (term.musteringOut || !term.canReenlist) return 'blocked'
