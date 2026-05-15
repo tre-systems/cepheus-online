@@ -20,6 +20,7 @@ import type {
   CareerCreationActionProjection,
   CareerCreationBenefitFact,
   CareerTermReenlistmentFact,
+  CareerCreationTermSkillFact,
   CareerTerm
 } from './types'
 
@@ -68,6 +69,20 @@ const reenlistmentFact = (
     success: outcome !== 'blocked',
     outcome
   }
+})
+
+const termSkillFact = (
+  overrides: Partial<CareerCreationTermSkillFact> = {}
+): CareerCreationTermSkillFact => ({
+  career: 'Scout',
+  table: 'serviceSkills',
+  roll: { expression: '1d6', rolls: [1], total: 1 },
+  tableRoll: 1,
+  rawSkill: 'Pilot',
+  skill: 'Pilot-1',
+  characteristic: null,
+  pendingCascadeSkill: null,
+  ...overrides
 })
 
 describe('career creation legal action planner', () => {
@@ -774,6 +789,20 @@ describe('career creation legal action planner', () => {
           terms: [
             term({
               completedBasicTraining: false,
+              skillsAndTraining: [],
+              facts: { basicTrainingSkills: ['Broker-0'] }
+            })
+          ]
+        })
+      ),
+      []
+    )
+    assert.deepEqual(
+      deriveCareerCreationPendingDecisions(
+        projection('BASIC_TRAINING', {
+          terms: [
+            term({
+              completedBasicTraining: false,
               skillsAndTraining: ['Pilot-0']
             })
           ]
@@ -788,6 +817,20 @@ describe('career creation legal action planner', () => {
         })
       ),
       [{ key: 'skillTrainingSelection' }]
+    )
+    assert.deepEqual(
+      deriveCareerCreationPendingDecisions(
+        projection('SKILLS_TRAINING', {
+          requiredTermSkillCount: 1,
+          terms: [
+            term({
+              skills: [],
+              facts: { termSkillRolls: [termSkillFact()] }
+            })
+          ]
+        })
+      ),
+      []
     )
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(
@@ -820,6 +863,30 @@ describe('career creation legal action planner', () => {
             term({
               career: 'Scout',
               skills: ['Pilot-1', 'Mechanics-1']
+            })
+          ]
+        })
+      ),
+      ['completeSkills']
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('SKILLS_TRAINING', {
+          requiredTermSkillCount: 2,
+          terms: [
+            term({
+              career: 'Scout',
+              skills: [],
+              facts: {
+                termSkillRolls: [
+                  termSkillFact({ skill: 'Pilot-1' }),
+                  termSkillFact({
+                    table: 'specialistSkills',
+                    rawSkill: 'Mechanics',
+                    skill: 'Mechanics-1'
+                  })
+                ]
+              }
             })
           ]
         })

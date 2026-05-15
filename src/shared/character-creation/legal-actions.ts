@@ -91,6 +91,19 @@ const lastTerm = (
 ): NonNullable<CareerCreationActionProjection['terms']>[number] | null =>
   creation.terms?.[creation.terms.length - 1] ?? null
 
+type ProjectedCareerTerm = NonNullable<
+  CareerCreationActionProjection['terms']
+>[number]
+
+const hasResolvedSurvivalForRules = (term: ProjectedCareerTerm): boolean =>
+  term.facts?.survival !== undefined || term.survival !== undefined
+
+const basicTrainingSkillCountForRules = (term: ProjectedCareerTerm): number =>
+  term.facts?.basicTrainingSkills?.length ?? term.skillsAndTraining.length
+
+const termSkillRollCountForRules = (term: ProjectedCareerTerm): number =>
+  term.facts?.termSkillRolls?.length ?? term.skills.length
+
 const backgroundSelectionCount = (
   creation: CareerCreationActionProjection
 ): number =>
@@ -149,7 +162,7 @@ const shouldDecideAnagathics = (
   if (hasAnagathicsDecisionForActiveTerm(creation)) return false
   if (!CEPHEUS_SRD_RULESET.careerBasics[term.career]) return false
 
-  return term.facts?.survival !== undefined || term.survival !== undefined
+  return hasResolvedSurvivalForRules(term)
 }
 
 const canResolveBasicTrainingSelection = (
@@ -241,7 +254,7 @@ export const deriveCareerCreationPendingDecisions = (
     creation.state.status === 'BASIC_TRAINING' &&
     term &&
     !term.completedBasicTraining &&
-    term.skillsAndTraining.length === 0
+    basicTrainingSkillCountForRules(term) === 0
   ) {
     const basicTraining = deriveBasicTrainingPlan({
       career: term.career,
@@ -258,7 +271,7 @@ export const deriveCareerCreationPendingDecisions = (
   if (
     creation.state.status === 'SKILLS_TRAINING' &&
     term &&
-    term.skills.length < (creation.requiredTermSkillCount ?? 1)
+    termSkillRollCountForRules(term) < (creation.requiredTermSkillCount ?? 1)
   ) {
     pushDecision({ key: 'skillTrainingSelection' })
   }
@@ -364,7 +377,7 @@ const deriveTermSkillTableOptions = (
   const required =
     context.requiredTermSkillCount ??
     defaultActionContext.requiredTermSkillCount
-  if (term.skills.length >= required) return []
+  if (termSkillRollCountForRules(term) >= required) return []
 
   return (Object.keys(termSkillTableLabels) as CareerCreationTermSkillTable[])
     .filter(
