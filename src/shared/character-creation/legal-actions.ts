@@ -22,6 +22,7 @@ import {
   normalizeCareerSkill,
   parseCareerSkill
 } from './skills'
+import { hasProjectedCareerTermFacts } from './term-skills'
 import { canCompleteCreation, canOfferNewCareer } from './term-lifecycle'
 import type {
   CascadeSkillChoice,
@@ -95,11 +96,8 @@ type ProjectedCareerTerm = NonNullable<
   CareerCreationActionProjection['terms']
 >[number]
 
-const hasSemanticTermFacts = (term: ProjectedCareerTerm): boolean =>
-  Object.keys(term.facts ?? {}).length > 0
-
 const hasProjectedTermFacts = (term: ProjectedCareerTerm): boolean =>
-  term.facts !== undefined
+  hasProjectedCareerTermFacts(term)
 
 const hasResolvedSurvivalForRules = (term: ProjectedCareerTerm): boolean =>
   hasProjectedTermFacts(term)
@@ -141,7 +139,7 @@ const rankInCareer = (
   for (const term of creation.terms ?? []) {
     if (term.career !== career) continue
     hasProjectedCareerFacts =
-      hasProjectedCareerFacts || hasSemanticTermFacts(term)
+      hasProjectedCareerFacts || hasProjectedTermFacts(term)
     const advancement = term.facts?.advancement
     if (
       advancement &&
@@ -346,7 +344,7 @@ export const deriveCareerCreationReenlistmentOutcome = (
   if ((creation.terms?.length ?? 0) >= 7) return 'retire'
   const projectedOutcome = term.facts?.reenlistment?.outcome
   if (projectedOutcome) return projectedOutcome
-  if (hasSemanticTermFacts(term)) return 'unresolved'
+  if (hasProjectedTermFacts(term)) return 'unresolved'
   if (term.reEnlistment === 12) return 'forced'
   if (term.reEnlistment !== undefined && term.canReenlist) return 'allowed'
   if (term.musteringOut || !term.canReenlist) return 'blocked'
@@ -455,7 +453,7 @@ const deriveCashBenefitsReceived = (
   (creation.terms ?? []).reduce(
     (total, term) =>
       total +
-      (hasSemanticTermFacts(term)
+      (hasProjectedTermFacts(term)
         ? deriveProjectedCareerTermCashBenefitCount(term)
         : deriveLegacyCareerTermCashBenefitCount(term)),
     0

@@ -1141,6 +1141,28 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('ignores legacy reenlistment rolls when projection-owned facts are empty', () => {
+    const creation = projection('REENLISTMENT', {
+      terms: [
+        term({
+          reEnlistment: 12,
+          canReenlist: false,
+          musteringOut: true,
+          facts: {}
+        })
+      ]
+    })
+
+    assert.equal(
+      deriveCareerCreationReenlistmentOutcome(creation),
+      'unresolved'
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(creation),
+      ['rollReenlistment']
+    )
+  })
+
   it('projects legal mustering benefit choices from remaining benefits', () => {
     const creation = projection('MUSTERING_OUT', {
       terms: [term({ career: 'Scout', complete: true, musteringOut: true })],
@@ -1163,13 +1185,15 @@ describe('career creation legal action planner', () => {
               career: 'Scout',
               complete: true,
               musteringOut: true,
-              benefits: ['1000', '2000', '3000']
+              benefits: ['1000', '2000', '3000'],
+              facts: undefined
             }),
             ...Array.from({ length: 6 }, () =>
               term({
                 career: 'Scout',
                 complete: true,
-                musteringOut: true
+                musteringOut: true,
+                facts: undefined
               })
             )
           ],
@@ -1306,12 +1330,28 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('ignores stale legacy career rank when projection-owned facts are empty', () => {
+    const creation = projection('MUSTERING_OUT', {
+      terms: [
+        term({
+          career: 'Scout',
+          complete: true,
+          musteringOut: true,
+          facts: {}
+        })
+      ],
+      careers: [{ name: 'Scout', rank: 5 }]
+    })
+
+    assert.equal(deriveRemainingCareerCreationBenefits(creation), 1)
+  })
+
   it('derives remaining projected mustering benefits by career', () => {
     const creation = projection('MUSTERING_OUT', {
       terms: [
-        term({ career: 'Scout', benefits: ['Low Passage'] }),
-        term({ career: 'Scout', benefits: [] }),
-        term({ career: 'Navy', benefits: [] })
+        term({ career: 'Scout', benefits: ['Low Passage'], facts: undefined }),
+        term({ career: 'Scout', benefits: [], facts: undefined }),
+        term({ career: 'Navy', benefits: [], facts: undefined })
       ],
       careers: [
         { name: 'Scout', rank: 4 },
@@ -1557,7 +1597,7 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(
         projection('REENLISTMENT', {
-          terms: [term()]
+          terms: [term({ facts: undefined })]
         })
       ),
       ['rollReenlistment']
@@ -1565,7 +1605,7 @@ describe('career creation legal action planner', () => {
     assert.equal(
       deriveCareerCreationReenlistmentOutcome(
         projection('REENLISTMENT', {
-          terms: [term({ reEnlistment: 12 })]
+          terms: [term({ reEnlistment: 12, facts: undefined })]
         })
       ),
       'forced'
@@ -1573,7 +1613,7 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(
         projection('REENLISTMENT', {
-          terms: [term({ reEnlistment: 12 })]
+          terms: [term({ reEnlistment: 12, facts: undefined })]
         })
       ),
       ['forcedReenlist']
@@ -1581,7 +1621,7 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(
         projection('REENLISTMENT', {
-          terms: [term({ reEnlistment: 7 })]
+          terms: [term({ reEnlistment: 7, facts: undefined })]
         })
       ),
       ['reenlist', 'leaveCareer']
@@ -1589,7 +1629,13 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(
         projection('REENLISTMENT', {
-          terms: [term({ canReenlist: false, musteringOut: true })]
+          terms: [
+            term({
+              canReenlist: false,
+              musteringOut: true,
+              facts: undefined
+            })
+          ]
         })
       ),
       ['leaveCareer']
@@ -1597,7 +1643,7 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(
         projection('REENLISTMENT', {
-          terms: Array.from({ length: 7 }, () => term())
+          terms: Array.from({ length: 7 }, () => term({ facts: undefined }))
         })
       ),
       ['leaveCareer']
@@ -1637,7 +1683,7 @@ describe('career creation legal action planner', () => {
     assert.deepEqual(
       deriveCareerCreationActionPlan(
         projection('REENLISTMENT', {
-          terms: [term({ reEnlistment: 12 })]
+          terms: [term({ reEnlistment: 12, facts: undefined })]
         })
       ),
       {
