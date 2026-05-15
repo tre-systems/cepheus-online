@@ -87,9 +87,11 @@ Important remaining gaps:
   than in shared deterministic rules and server-backed events.
 - Homeworld, primary education, background skills, cascade choices, career
   choices, basic training, term skill choices, aging losses, and mustering
-  choices are now projected into the shared action plan or read model. Remaining
-  work is to reduce legacy client fallback paths and keep polishing provenance
-  and presentation.
+  choices are now projected into the shared action plan or read model. The
+  creator panel consumes projected term-skill and mustering options when they
+  are present, including mustering career ownership. Remaining work is to
+  reduce legacy client fallback paths and keep polishing provenance and
+  presentation.
 - Multi-term career play, mustering out, and multi-career continuation have
   deterministic browser coverage, including spectator follow through mustering
   and finalization. Remaining work is edge-case coverage and UX polish.

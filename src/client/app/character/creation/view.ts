@@ -27,7 +27,9 @@ import type {
   CareerCreationActionKey,
   FailedQualificationActionOption,
   FailedQualificationOption,
-  HomeworldChoiceOptions
+  HomeworldChoiceOptions,
+  MusteringBenefitActionOption,
+  TermSkillTableActionOption
 } from '../../../../shared/character-creation/types.js'
 import type {
   CharacterCharacteristics,
@@ -557,6 +559,7 @@ export interface CharacterCreationMusteringBenefitViewModel {
 }
 
 export interface CharacterCreationMusteringActionViewModel {
+  career: string
   kind: BenefitKind
   label: string
   disabled: boolean
@@ -1429,13 +1432,32 @@ export const deriveCharacterCreationDeathViewModel = (
 }
 
 export const deriveCharacterCreationTermSkillTrainingViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  {
+    termSkillTableOptions
+  }: {
+    termSkillTableOptions?: readonly TermSkillTableActionOption[]
+  } = {}
 ): CharacterCreationTermSkillTrainingViewModel | null => {
   if (flow.step !== 'career') return null
 
   const required = requiredCharacterCreationTermSkillRolls(flow.draft)
   const remaining = remainingCharacterCreationTermSkillRolls(flow.draft)
-  const actions = deriveCharacterCreationTermSkillTableActions(flow)
+  const localActions = deriveCharacterCreationTermSkillTableActions(flow)
+  const localActionsByTable = new Map(
+    localActions.map((action) => [action.table, action])
+  )
+  const actions = termSkillTableOptions
+    ? termSkillTableOptions.map((option) => {
+        const localAction = localActionsByTable.get(option.table)
+        return {
+          table: option.table,
+          label: option.label,
+          reason: localAction?.reason ?? 'Roll this term skill table.',
+          disabled: localAction?.disabled ?? false
+        }
+      })
+    : localActions
   const rolled =
     flow.draft.careerPlan?.termSkillRolls?.map((roll) => ({
       label: roll.skill,
@@ -1663,7 +1685,12 @@ export const deriveCharacterCreationTermResolutionViewModel = (
 }
 
 export const deriveCharacterCreationMusteringOutViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  {
+    musteringBenefitOptions
+  }: {
+    musteringBenefitOptions?: readonly MusteringBenefitActionOption[]
+  } = {}
 ): CharacterCreationMusteringOutViewModel => {
   const remaining = remainingMusteringBenefits(flow.draft)
   const summary =
@@ -1672,10 +1699,28 @@ export const deriveCharacterCreationMusteringOutViewModel = (
       : remaining > 0
         ? `${remaining} benefit ${remaining === 1 ? 'roll' : 'rolls'} remaining.`
         : 'Benefits complete.'
-  const benefitActions = [
-    ['cash', 'Roll cash'],
-    ['material', 'Roll benefit']
-  ] satisfies readonly [BenefitKind, string][]
+  const benefitActions =
+    musteringBenefitOptions?.map((option) => ({
+      career: option.career,
+      kind: option.kind,
+      label: `Roll ${option.career} ${musteringBenefitKindLabel(option.kind).toLowerCase()}`
+    })) ??
+    ([
+      {
+        career: flow.draft.completedTerms.at(-1)?.career ?? '',
+        kind: 'cash',
+        label: 'Roll cash'
+      },
+      {
+        career: flow.draft.completedTerms.at(-1)?.career ?? '',
+        kind: 'material',
+        label: 'Roll benefit'
+      }
+    ] satisfies readonly {
+      career: string
+      kind: BenefitKind
+      label: string
+    }[])
 
   return {
     title: 'Mustering out',
@@ -1689,20 +1734,23 @@ export const deriveCharacterCreationMusteringOutViewModel = (
           ? 'Credits'
           : (benefit.materialItem ?? benefit.value)
     })),
-    actions: benefitActions.map(([kind, label]) => {
+    actions: benefitActions.map(({ career, kind, label }) => {
       const modifier = characterCreationMusteringBenefitRollModifier({
         draft: flow.draft,
         kind
       })
-      return {
-        kind,
-        label,
-        disabled:
-          remaining <= 0 ||
+      const disabled =
+        !musteringBenefitOptions &&
+        (remaining <= 0 ||
           !canRollCharacterCreationMusteringBenefit({
             draft: flow.draft,
             kind
-          }),
+          }))
+      return {
+        career,
+        kind,
+        label,
+        disabled,
         title: modifier === 0 ? '' : `${modifier > 0 ? '+' : ''}${modifier} DM`
       }
     })

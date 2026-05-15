@@ -555,8 +555,8 @@ export const createCharacterCreationRenderController = ({
     viewModel: CharacterCreationMusteringOutViewModel
   ): HTMLElement => {
     return renderCharacterCreationMusteringOutView(document, viewModel, {
-      rollMusteringBenefit: (kind) =>
-        getCommandController().rollMusteringBenefit(kind),
+      rollMusteringBenefit: (career, kind) =>
+        getCommandController().rollMusteringBenefit(kind, career),
       reportError
     })
   }

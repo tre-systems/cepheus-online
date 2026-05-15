@@ -79,6 +79,33 @@ describe('character creation mustering view', () => {
     assert.equal(node.children[3]?.children[1]?.textContent, 'Roll benefit')
   })
 
+  it('renders projected legal benefit options with their career', async () => {
+    const rolled: string[] = []
+    const node = asNode(
+      renderCharacterCreationMusteringOut(
+        testDocument,
+        deriveCharacterCreationMusteringOutViewModel(flow(), {
+          musteringBenefitOptions: [{ career: 'Merchant', kind: 'cash' }]
+        }),
+        {
+          rollMusteringBenefit: async (career, kind) => {
+            rolled.push(`${career}:${kind}`)
+          },
+          reportError: () => {}
+        }
+      )
+    )
+
+    const actions = node.children[3]
+    assert.equal(actions?.children.length, 1)
+    assert.equal(actions?.children[0]?.textContent, 'Roll Merchant cash')
+
+    actions?.children[0]?.click()
+    await Promise.resolve()
+
+    assert.deepEqual(rolled, ['Merchant:cash'])
+  })
+
   it('disables cash after three cash benefits and reports roll errors', async () => {
     const rolled: string[] = []
     let error = ''
@@ -117,7 +144,7 @@ describe('character creation mustering view', () => {
           ]
         }),
         {
-          rollMusteringBenefit: async (kind) => {
+          rollMusteringBenefit: async (_career, kind) => {
             rolled.push(kind)
             throw new Error('No benefit')
           },
@@ -144,7 +171,7 @@ describe('character creation mustering view', () => {
     let resolveRoll: () => void = () => {}
     const node = asNode(
       renderCharacterCreationMusteringOut(testDocument, musteringViewModel(), {
-        rollMusteringBenefit: (kind) => {
+        rollMusteringBenefit: (_career, kind) => {
           rolled.push(kind)
           return new Promise<void>((resolve) => {
             resolveRoll = resolve

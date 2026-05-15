@@ -55,7 +55,7 @@ export interface CharacterCreationCommandController {
   ) => Promise<void>
   completeBasicTraining: (skill?: string) => Promise<void>
   rollTermSkill: (table: CharacterCreationTermSkillTable) => Promise<void>
-  rollMusteringBenefit: (kind: BenefitKind) => Promise<void>
+  rollMusteringBenefit: (kind: BenefitKind, career?: string) => Promise<void>
   rollReenlistment: () => Promise<void>
   decideAnagathics: (useAnagathics: boolean) => Promise<void>
   rollAging: () => Promise<void>
@@ -493,13 +493,14 @@ export const createCharacterCreationCommandController = (
       }
     },
 
-    rollMusteringBenefit: async (kind) => {
+    rollMusteringBenefit: async (kind, careerOverride) => {
       const flow = guardEditableFlow()
       if (!flow) return
       setError('')
       syncFields()
 
-      const career = nextCharacterCreationMusteringBenefitCareer(flow.draft)
+      const career =
+        careerOverride ?? nextCharacterCreationMusteringBenefitCareer(flow.draft)
       if (!career) return
 
       await ensurePublished()

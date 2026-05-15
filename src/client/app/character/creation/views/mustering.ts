@@ -8,7 +8,7 @@ export interface CharacterCreationMusteringDocument {
 }
 
 export interface CharacterCreationMusteringViewDeps {
-  rollMusteringBenefit: (kind: BenefitKind) => Promise<void>
+  rollMusteringBenefit: (career: string, kind: BenefitKind) => Promise<void>
   reportError: (message: string) => void
 }
 
@@ -50,7 +50,7 @@ export const renderCharacterCreationMusteringOut = (
     button.disabled = action.disabled
     if (action.title) button.title = action.title
     bindAsyncActionButton(button, () =>
-      rollMusteringBenefit(action.kind).catch((error) =>
+      rollMusteringBenefit(action.career, action.kind).catch((error) =>
         reportError(error.message)
       )
     )

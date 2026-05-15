@@ -329,6 +329,18 @@ const wizardViewModel = ({
           (action) => action.key === 'completeBasicTraining'
         )?.basicTrainingOptions
       : undefined
+  const termSkillTableOptions =
+    projectedCreation?.state.status === 'SKILLS_TRAINING'
+      ? projectedCreation.actionPlan?.legalActions.find(
+          (action) => action.key === 'completeSkills'
+        )?.termSkillTableOptions
+      : undefined
+  const musteringBenefitOptions =
+    projectedCreation?.state.status === 'MUSTERING_OUT'
+      ? projectedCreation.actionPlan?.legalActions.find(
+          (action) => action.key === 'resolveMusteringBenefit'
+        )?.musteringBenefitOptions
+      : undefined
 
   return {
     step: flow.step,
@@ -368,13 +380,17 @@ const wizardViewModel = ({
       }
     ),
     termResolution: deriveCharacterCreationTermResolutionViewModel(flow),
-    termSkills: deriveCharacterCreationTermSkillTrainingViewModel(flow),
+    termSkills: deriveCharacterCreationTermSkillTrainingViewModel(flow, {
+      termSkillTableOptions
+    }),
     basicTraining: deriveCharacterCreationBasicTrainingButton(flow, {
       basicTrainingOptions
     }),
     musteringOut:
       flow.step === 'equipment'
-        ? deriveCharacterCreationMusteringOutViewModel(flow)
+        ? deriveCharacterCreationMusteringOutViewModel(flow, {
+            musteringBenefitOptions
+          })
         : null,
     death: deriveCharacterCreationDeathViewModel(flow),
     termHistory: deriveCharacterCreationTermHistoryViewModel(flow),

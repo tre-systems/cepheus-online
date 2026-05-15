@@ -1554,6 +1554,23 @@ describe('character creation view helpers', () => {
     assert.equal(viewModel?.prompt, 'Choose a table and roll 1 more skill.')
     assert.equal(viewModel?.remaining, 1)
     assert.equal(viewModel?.actions.length, 4)
+
+    const projectedViewModel = deriveCharacterCreationTermSkillTrainingViewModel(
+      pending,
+      {
+        termSkillTableOptions: [
+          { table: 'serviceSkills', label: 'Service skills' }
+        ]
+      }
+    )
+    assert.deepEqual(projectedViewModel?.actions, [
+      {
+        table: 'serviceSkills',
+        label: 'Service skills',
+        reason: 'Iona Vesh Merchant service skills',
+        disabled: false
+      }
+    ])
   })
 
   it('derives review summaries suitable for display', () => {
