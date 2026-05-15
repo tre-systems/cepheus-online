@@ -199,7 +199,8 @@ const startProjectedCareerTerm = ({
     terms: result.terms.map((term) => structuredClone(term)),
     careers: result.careers.map((career) => ({ ...career })),
     canEnterDraft: result.canEnterDraft,
-    failedToQualify: result.failedToQualify
+    failedToQualify: result.failedToQualify,
+    failedQualification: null
   }
 }
 
@@ -620,6 +621,16 @@ const rawCharacterEventHandlers = {
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
       failedToQualify: !event.passed,
+      failedQualification: event.passed
+        ? null
+        : {
+            ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
+            career: event.career,
+            passed: event.passed,
+            qualification: structuredClone(event.qualification),
+            previousCareerCount: event.previousCareerCount,
+            failedQualificationOptions: [...event.failedQualificationOptions]
+          },
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event, {
         canEnterDraft

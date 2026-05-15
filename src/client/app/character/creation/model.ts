@@ -429,7 +429,10 @@ const wizardViewModel = ({
           })
         : null,
     death: deriveCharacterCreationDeathViewModel(flow, {
-      available: isProjectedLegalActionAvailable('confirmDeath')
+      available:
+        projectedCreation?.state.status === 'DECEASED'
+          ? true
+          : isProjectedLegalActionAvailable('confirmDeath')
     }),
     termHistory: deriveCharacterCreationTermHistoryViewModel(flow),
     review:

@@ -200,12 +200,15 @@ export const creationCharacterIds = async (
 }
 
 export const waitForDiceReveal = async (page: Page): Promise<void> => {
+  const overlay = page.locator('#diceOverlay')
   await expect(page.locator('#diceOverlay.visible')).toBeVisible({
     timeout: 5_000
   })
   const total = page.locator('#diceStage .roll-total')
-  if (((await total.textContent()) ?? '').trim() !== 'Rolling...') return
-  await expect(total).not.toHaveText('Rolling...', { timeout: 5_000 })
+  if (((await total.textContent()) ?? '').trim() === 'Rolling...') {
+    await expect(total).not.toHaveText('Rolling...', { timeout: 5_000 })
+  }
+  await expect(overlay).not.toHaveClass(/visible/, { timeout: 5_000 })
 }
 
 export const normalizedText = async (

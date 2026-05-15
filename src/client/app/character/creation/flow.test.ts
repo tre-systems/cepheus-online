@@ -1729,8 +1729,7 @@ describe('character creation flow', () => {
         'Homeworld law level is required',
         'Homeworld trade code is required',
         'Career is required',
-        'At least one skill is required',
-        'Credits must be a non-negative number'
+        'At least one skill is required'
       ]
     })
   })

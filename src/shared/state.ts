@@ -8,7 +8,8 @@ import type {
   CareerCreationState,
   CharacterCreationTimelineEntry,
   CareerRank,
-  CareerTerm
+  CareerTerm,
+  CareerTermQualificationFact
 } from './characterCreation'
 
 export type CharacterType = 'PLAYER' | 'NPC' | 'ANIMAL' | 'ROBOT'
@@ -56,6 +57,7 @@ export interface CharacterCreationProjection {
   careers: CareerRank[]
   canEnterDraft: boolean
   failedToQualify: boolean
+  failedQualification?: CareerTermQualificationFact | null
   characteristicChanges: AgingChange[]
   creationComplete: boolean
   homeworld?: CharacterCreationHomeworld | null

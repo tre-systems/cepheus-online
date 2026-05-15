@@ -684,6 +684,32 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.death?.title, 'Killed in service')
   })
 
+  it('keeps terminal death visible after confirmation removes legal actions', () => {
+    const currentFlow = resolvedCareerFlow()
+    const careerPlan = currentFlow.draft.careerPlan
+    assert.equal(careerPlan === null, false)
+    if (!careerPlan) return
+    currentFlow.draft.careerPlan = {
+      ...careerPlan,
+      survivalRoll: 2,
+      survivalPassed: false
+    }
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('DECEASED', {
+        actionPlan: {
+          status: 'DECEASED',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.death?.title, 'Killed in service')
+  })
+
   it('uses projected career choice options for the career picker', () => {
     const viewModel = deriveCharacterCreationViewModel({
       flow: flow({ step: 'career' }),

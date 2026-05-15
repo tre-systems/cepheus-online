@@ -133,6 +133,98 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
+  it('keeps failed qualification details in the projection without starting a term', () => {
+    const characterId = asCharacterId('char-failed-qualification')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Rejected Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'CAREER_SELECTION',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [],
+          careers: [],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'DiceRolled',
+        expression: '2d6',
+        reason: 'Scout qualification',
+        rolls: [1, 3],
+        total: 4
+      }),
+      envelope(5, {
+        type: 'CharacterCreationQualificationResolved',
+        characterId,
+        rollEventId: asEventId(`${gameId}:4`),
+        career: 'Scout',
+        passed: false,
+        qualification: {
+          expression: '2d6',
+          rolls: [1, 3],
+          total: 4,
+          characteristic: 'int',
+          target: 6,
+          modifier: -2,
+          success: false
+        },
+        previousCareerCount: 0,
+        failedQualificationOptions: ['Drifter', 'Draft'],
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.terms.length, 0)
+    assert.equal(creation?.failedToQualify, true)
+    assert.deepEqual(creation?.failedQualification, {
+      rollEventId: asEventId(`${gameId}:4`),
+      career: 'Scout',
+      passed: false,
+      qualification: {
+        expression: '2d6',
+        rolls: [1, 3],
+        total: 4,
+        characteristic: 'int',
+        target: 6,
+        modifier: -2,
+        success: false
+      },
+      previousCareerCount: 0,
+      failedQualificationOptions: ['Drifter', 'Draft']
+    })
+  })
+
   it('projects default and partial manual character sheet fields', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

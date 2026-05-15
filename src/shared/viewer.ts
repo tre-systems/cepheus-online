@@ -112,6 +112,10 @@ const redactUnrevealedCreationFacts = (
   const creation = character.creation
   if (!creation || unrevealedRollIds.size === 0) return
 
+  if (hasUnrevealedRollFact(creation.failedQualification, unrevealedRollIds)) {
+    delete creation.failedQualification
+  }
+
   for (const term of creation.terms) {
     const facts = term.facts
     if (!facts) continue

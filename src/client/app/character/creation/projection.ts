@@ -1,6 +1,7 @@
 import type {
   CareerCreationStatus,
   CareerCreationTermSkillFact,
+  CareerTermQualificationFact,
   CareerTerm
 } from '../../../../shared/character-creation/types'
 import {
@@ -223,11 +224,42 @@ const semanticCareerPlanFromFacts = (
   }
 }
 
+const failedQualificationCareerPlan = (
+  qualification: CareerTermQualificationFact
+): CharacterCreationCareerPlan => ({
+  career: qualification.career,
+  qualificationRoll: qualification.qualification.total,
+  qualificationPassed: false,
+  survivalRoll: null,
+  survivalPassed: null,
+  commissionRoll: null,
+  commissionPassed: null,
+  advancementRoll: null,
+  advancementPassed: null,
+  canCommission: null,
+  canAdvance: null,
+  drafted: false,
+  rank: null,
+  rankTitle: null,
+  rankBonusSkill: null,
+  termSkillRolls: [],
+  anagathics: null,
+  agingRoll: null,
+  agingMessage: null,
+  agingSelections: [],
+  reenlistmentRoll: null,
+  reenlistmentOutcome: null
+})
+
 export const careerPlanFromProjection = (
   creation: CharacterCreationProjection
 ): CharacterCreationCareerPlan | null => {
   const activeTerm = activeTermFromProjection(creation)
-  if (!activeTerm) return null
+  if (!activeTerm) {
+    return creation.failedQualification
+      ? failedQualificationCareerPlan(creation.failedQualification)
+      : null
+  }
 
   const facts = activeTerm.facts
   const commission = facts?.commission

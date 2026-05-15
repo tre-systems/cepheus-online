@@ -750,8 +750,8 @@ const validateSkills = (draft: CharacterCreationDraft): string[] =>
 
 const validateEquipment = (draft: CharacterCreationDraft): string[] => {
   const errors: string[] = []
-  if (!isFiniteNonNegativeNumber(draft.credits)) {
-    errors.push('Credits must be a non-negative number')
+  if (!Number.isFinite(draft.credits)) {
+    errors.push('Credits must be a number')
   }
   if (remainingMusteringBenefits(draft) > 0) {
     errors.push('Mustering out benefits are incomplete')

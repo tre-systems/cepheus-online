@@ -319,7 +319,7 @@ describe('character creation view helpers', () => {
         step: 'equipment',
         value: '-1',
         required: false,
-        errors: ['Credits must be a non-negative number']
+        errors: []
       },
       {
         key: 'notes',

@@ -225,6 +225,69 @@ const character = (creation: CharacterCreationProjection): CharacterState => ({
 })
 
 describe('character creation projection helpers', () => {
+  it('hydrates a failed qualification choice from projection-owned facts', () => {
+    const flow = flowFromProjectedCharacter(
+      character({
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [],
+        careers: [],
+        canEnterDraft: true,
+        failedToQualify: true,
+        failedQualification: {
+          career: 'Scout',
+          passed: false,
+          qualification: {
+            expression: '2d6',
+            rolls: [1, 3],
+            total: 4,
+            characteristic: 'int',
+            target: 6,
+            modifier: -2,
+            success: false
+          },
+          previousCareerCount: 0,
+          failedQualificationOptions: ['Drifter', 'Draft']
+        },
+        characteristicChanges: [],
+        creationComplete: false,
+        history: []
+      })
+    )
+    if (!flow) throw new Error('Expected projected flow')
+
+    assert.equal(flow.step, 'career')
+    assert.deepEqual(flow.draft.careerPlan, {
+      career: 'Scout',
+      qualificationRoll: 4,
+      qualificationPassed: false,
+      survivalRoll: null,
+      survivalPassed: null,
+      commissionRoll: null,
+      commissionPassed: null,
+      advancementRoll: null,
+      advancementPassed: null,
+      canCommission: null,
+      canAdvance: null,
+      drafted: false,
+      rank: null,
+      rankTitle: null,
+      rankBonusSkill: null,
+      termSkillRolls: [],
+      anagathics: null,
+      agingRoll: null,
+      agingMessage: null,
+      agingSelections: [],
+      reenlistmentRoll: null,
+      reenlistmentOutcome: null
+    })
+  })
+
   it('keeps projected aging blocked until anagathics is explicitly decided', () => {
     const flow = flowFromProjectedCharacter(
       character(agingProjection(resolvedTermSkillHistory))

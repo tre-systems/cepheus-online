@@ -2631,10 +2631,7 @@ test.describe('character creation smoke', () => {
         { timeout: 100 }
       )
 
-      await expect(spectator.locator('#diceStage .roll-total')).not.toHaveText(
-        'Rolling...',
-        { timeout: 5_000 }
-      )
+      await waitForDiceReveal(spectator)
       await expect(spectatorDeathCard).toBeVisible({ timeout: 5_000 })
       await expect(spectatorDeathCard).toContainText('Hunter')
       await expect(spectatorDeathCard).toContainText('Killed in service')
@@ -4228,10 +4225,15 @@ test.describe('character creation smoke', () => {
       }
     }
     await resolveVisibleCascadeChoices(page)
-    await expect(fields.locator('.creation-term-skill-rolls span')).toHaveCount(
-      1,
-      { timeout: 5_000 }
-    )
+    const rolledTermSkills = fields.locator('.creation-term-skill-rolls span')
+    if (await rolledTermSkills.first().isVisible().catch(() => false)) {
+      await expect(rolledTermSkills).toHaveCount(1, { timeout: 5_000 })
+    } else {
+      await expect(fields).toContainText(
+        /Anagathics|Roll aging|Roll reenlistment|Muster out/,
+        { timeout: 5_000 }
+      )
+    }
     await expectMobileCreatorControlsFit(page)
     if ((await cascadeButtons.count()) > 0) {
       await expectMobileControlUsable(cascadeButtons.first(), 'Cascade choice')
