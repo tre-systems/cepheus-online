@@ -4708,7 +4708,41 @@ test.describe('character creation smoke', () => {
     await expect(selectedRailPiece).toHaveCount(1)
     await expect(selectedRailPiece).toHaveAttribute('title', characterName)
     await expect(page.locator('#sheetName')).toContainText(characterName)
-    await expect(page.locator('#sheetBody')).toContainText('Final Character')
-    await expect(page.locator('#sheetBody')).toContainText('UPP')
+    const sheetBody = page.locator('#sheetBody')
+    const finalizedCharacter = await fetchProjectedCharacter(
+      page,
+      roomId,
+      actorId,
+      context.characterId
+    )
+    const firstSkill = finalizedCharacter?.skills?.[0]
+    if (!firstSkill) throw new Error('Finalized character had no skills')
+
+    await expect(sheetBody).toContainText('Final Character')
+    await expect(sheetBody).toContainText('UPP')
+    await expect(sheetBody).toContainText('Scout')
+    await expect(sheetBody).toContainText(firstSkill)
+    await expect(sheetBody).toContainText(
+      `Cr${finalizedCharacter?.credits ?? 0}`
+    )
+    await expect(sheetBody).toContainText('Career History')
+    await expect(sheetBody).toContainText(/Term 1: Scout/)
+    await expect(sheetBody).toContainText('Skills:')
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await expect(page.locator('#initiativeRail .rail-piece').first()).toHaveAttribute(
+      'title',
+      characterName,
+      { timeout: 5_000 }
+    )
+    await page.locator('#initiativeRail .rail-piece').first().click()
+    await expect(page.locator('#characterSheet.open')).toBeVisible({
+      timeout: 5_000
+    })
+    await expect(page.locator('#sheetName')).toContainText(characterName)
+    await expect(sheetBody).toContainText('Final Character')
+    await expect(sheetBody).toContainText(/Term 1: Scout/)
+    await expect(sheetBody).toContainText(firstSkill)
   })
 })

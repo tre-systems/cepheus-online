@@ -1,5 +1,9 @@
 import type { CharacterCreationProjection } from '../../../../shared/state'
-import type { CharacterCreationFlow, CharacterCreationStep } from './flow.js'
+import {
+  remainingMusteringBenefits,
+  type CharacterCreationFlow,
+  type CharacterCreationStep
+} from './flow.js'
 import { creationStepFromStatus } from './projection.js'
 
 const characterCreationStepOrder = [
@@ -47,6 +51,12 @@ export const shouldSyncEditableCharacterCreationFlowWithProjection = ({
   const projectedStep = creationStepFromStatus(creation.state.status)
   const projectedStepIndex = characterCreationStepIndex(projectedStep)
   const localStepIndex = characterCreationStepIndex(flow.step)
+  const completedMusteringReview =
+    creation.state.status === 'MUSTERING_OUT' &&
+    flow.step === 'review' &&
+    remainingMusteringBenefits(flow.draft) === 0
+
+  if (completedMusteringReview) return false
 
   return (
     projectedStepIndex < localStepIndex ||

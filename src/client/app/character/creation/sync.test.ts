@@ -6,7 +6,11 @@ import type {
   CharacterCreationProjection,
   CharacterCharacteristics
 } from '../../../../shared/state'
-import { createInitialCharacterDraft, type CharacterCreationFlow } from './flow'
+import {
+  createInitialCharacterDraft,
+  type CharacterCreationCompletedTerm,
+  type CharacterCreationFlow
+} from './flow'
 import {
   characterCreationCharacteristicsComplete,
   characterCreationStepIndex,
@@ -37,6 +41,28 @@ const flow = (
       soc: characteristics.soc ?? null
     }
   })
+})
+
+const completedTerm = (): CharacterCreationCompletedTerm => ({
+  career: 'Scout',
+  drafted: false,
+  age: 22,
+  rank: 0,
+  qualificationRoll: 8,
+  survivalRoll: 9,
+  survivalPassed: true,
+  canCommission: false,
+  commissionRoll: null,
+  commissionPassed: null,
+  canAdvance: false,
+  advancementRoll: null,
+  advancementPassed: null,
+  termSkillRolls: [{ table: 'serviceSkills', roll: 1, skill: 'Pilot' }],
+  agingRoll: 7,
+  agingMessage: 'No aging effects.',
+  agingSelections: [],
+  reenlistmentRoll: 6,
+  reenlistmentOutcome: 'allowed'
 })
 
 const creation = (
@@ -143,6 +169,29 @@ describe('character creation sync helpers', () => {
     assert.equal(
       shouldSyncEditableCharacterCreationFlowWithProjection({
         flow: flow('equipment'),
+        creation: creation('MUSTERING_OUT'),
+        readOnly: false
+      }),
+      false
+    )
+    assert.equal(
+      shouldSyncEditableCharacterCreationFlowWithProjection({
+        flow: {
+          ...flow('review'),
+          draft: {
+            ...flow('review').draft,
+            completedTerms: [completedTerm()],
+            musteringBenefits: [
+              {
+                career: 'Scout',
+                kind: 'material',
+                roll: 1,
+                value: 'Scout Ship',
+                credits: 0
+              }
+            ]
+          }
+        },
         creation: creation('MUSTERING_OUT'),
         readOnly: false
       }),
