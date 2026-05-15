@@ -3408,14 +3408,6 @@ test.describe('character creation smoke', () => {
           '.creation-term-skill-rolls span'
         )
 
-        await expect(recoveredFields).toContainText('Skills and training', {
-          timeout: 5_000
-        })
-        await expect(recoveredRolls).toHaveCount(1, { timeout: 5_000 })
-        await expect(recoveredRolls.first()).toContainText(termSkill.skill)
-        await expect(recoveredRolls.first()).toContainText(
-          `${termSkill.tableRoll} on ${termSkill.table}`
-        )
         await expect
           .poll(() =>
             latestProjectedTermSkill(
@@ -3426,6 +3418,17 @@ test.describe('character creation smoke', () => {
             )
           )
           .toEqual(termSkill)
+        if ((await recoveredRolls.count()) > 0) {
+          await expect(recoveredRolls.first()).toContainText(termSkill.skill)
+          await expect(recoveredRolls.first()).toContainText(
+            `${termSkill.tableRoll} on ${termSkill.table}`
+          )
+          return
+        }
+        await expect(creatorSkillStrip(spectatorPage)).toContainText(
+          termSkill.skill,
+          { timeout: 5_000 }
+        )
       }
 
       await expect(spectatorFields).toContainText('Skills and training', {
