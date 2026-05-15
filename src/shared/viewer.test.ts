@@ -240,7 +240,7 @@ describe('viewer filtering', () => {
         dex: 7,
         end: 7,
         int: 7,
-        edu: 7,
+        edu: 8,
         soc: 7
       },
       skills: [],
@@ -302,6 +302,17 @@ describe('viewer filtering', () => {
                   skill: null,
                   characteristic: null,
                   pendingCascadeSkill: 'Pilot-1'
+                },
+                {
+                  rollEventId: asEventId('roll-1'),
+                  career: 'Scout',
+                  table: 'personalDevelopment',
+                  roll: { expression: '1d6', rolls: [4], total: 4 },
+                  tableRoll: 4,
+                  rawSkill: '+1 Edu',
+                  skill: null,
+                  characteristic: { key: 'edu', modifier: 1 },
+                  pendingCascadeSkill: null
                 }
               ],
               reenlistment: {
@@ -464,6 +475,10 @@ describe('viewer filtering', () => {
       null
     )
     assert.equal(
+      filtered.characters[asCharacterId('char-1')]?.characteristics.edu,
+      7
+    )
+    assert.equal(
       filtered.characters[asCharacterId('char-1')]?.creation
         ?.characteristicRolls,
       undefined
@@ -505,6 +520,10 @@ describe('viewer filtering', () => {
     assert.equal(
       state.characters[asCharacterId('char-1')]?.characteristics.str,
       7
+    )
+    assert.equal(
+      state.characters[asCharacterId('char-1')]?.characteristics.edu,
+      8
     )
     assert.equal(state.characters[asCharacterId('char-1')]?.credits, 10100)
     assert.equal(

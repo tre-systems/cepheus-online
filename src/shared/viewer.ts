@@ -109,6 +109,19 @@ const visibleSkillFromTermSkillFact = (
   fact: CareerCreationTermSkillFact
 ): string | null => fact.skill ?? fact.pendingCascadeSkill ?? null
 
+const redactTermSkillSheetEffect = (
+  character: CharacterState,
+  fact: CareerCreationTermSkillFact
+): void => {
+  if (!fact.characteristic) return
+
+  const current = character.characteristics[fact.characteristic.key]
+  if (current === null) return
+
+  character.characteristics[fact.characteristic.key] =
+    current - fact.characteristic.modifier
+}
+
 const rollDependentCreationHistoryTypes = new Set<string>([
   'SELECT_CAREER',
   'SURVIVAL_PASSED',
@@ -155,8 +168,11 @@ const redactMusteringBenefitSheetEffect = (
 
   const effect = deriveMaterialBenefitEffect(fact.value)
   if (effect.kind === 'characteristic') {
-    character.characteristics[effect.characteristic] =
-      (character.characteristics[effect.characteristic] ?? 0) - effect.modifier
+    const current = character.characteristics[effect.characteristic]
+    if (current !== null) {
+      character.characteristics[effect.characteristic] =
+        current - effect.modifier
+    }
     return
   }
 
@@ -248,6 +264,9 @@ const redactUnrevealedCreationFacts = (
       const hiddenFacts = facts.termSkillRolls.filter((fact) =>
         hasUnrevealedRollFact(fact, unrevealedRollIds)
       )
+      for (const fact of hiddenFacts) {
+        redactTermSkillSheetEffect(character, fact)
+      }
       const visibleFacts = visibleTermSkillFacts(term, unrevealedRollIds)
       if (visibleFacts.length === 0) {
         delete facts.termSkillRolls
