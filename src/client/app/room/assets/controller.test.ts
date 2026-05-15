@@ -408,8 +408,16 @@ describe('room asset creation controller', () => {
     harness.elements.pieceImageFileInput.dispatch('change')
     await flushAsyncListeners()
 
+    assert.equal(
+      harness.elements.boardImageInput.value,
+      'data:image/png;base64,test'
+    )
     assert.equal(harness.elements.boardWidthInput.value, '200')
     assert.equal(harness.elements.boardHeightInput.value, '100')
+    assert.equal(
+      harness.elements.pieceImageInput.value,
+      'data:image/png;base64,test'
+    )
     assert.equal(harness.elements.pieceWidthInput.value, '100')
     assert.equal(harness.elements.pieceHeightInput.value, '50')
   })

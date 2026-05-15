@@ -16,6 +16,7 @@ type TacticalRoomStateMessage = {
         id: string
         name: string
         imageAssetId?: string | null
+        url?: string | null
         width: number
         height: number
         scale: number
@@ -77,6 +78,15 @@ const postSequencedCommand = async (
     expectedSeq: await currentEventSeq(page, roomId, actorId)
   })
 }
+
+const tinyPngFile = (name: string) => ({
+  name,
+  mimeType: 'image/png',
+  buffer: Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=',
+    'base64'
+  )
+})
 
 test.describe('tactical board smoke', () => {
   test('loads local map metadata into referee board and counter fields', async ({
@@ -172,6 +182,65 @@ test.describe('tactical board smoke', () => {
       assetRef: 'Geomorphs/standard/deck-01.jpg',
       occluders: [{ type: 'door', id: 'iris-1' }]
     })
+  })
+
+  test('creates boards and pieces from selected local image files without committed assets', async ({
+    page
+  }) => {
+    const roomId = uniqueRoomId('file-assets')
+    const refereeId = 'file-referee'
+    await openRoom(page, {
+      roomId,
+      userId: refereeId,
+      viewer: 'referee'
+    })
+
+    await page.locator('#menuButton').click()
+    await expect(page.locator('#roomDialog')).toBeVisible()
+
+    await page.locator('#boardNameInput').fill('File Deck')
+    await page
+      .locator('#boardImageFileInput')
+      .setInputFiles(tinyPngFile('file-deck.png'))
+    await expect(page.locator('#boardImageInput')).toHaveValue(
+      /^data:image\/png;base64,/
+    )
+    await expect(page.locator('#boardWidthInput')).toHaveValue('1')
+    await expect(page.locator('#boardHeightInput')).toHaveValue('1')
+    await page.locator('#createBoardButton').click()
+    await expect(page.locator('#roomDialog')).toBeHidden()
+
+    let state = await fetchTacticalState(page, roomId, refereeId)
+    const boardId = state.state?.selectedBoardId
+    expect(boardId).not.toBeNull()
+    const board = state.state?.boards[boardId ?? '']
+    expect(board).toMatchObject({
+      name: 'File Deck',
+      imageAssetId: null,
+      width: 1,
+      height: 1
+    })
+    expect(board?.url).toContain('data:image/png;base64,')
+
+    await page.locator('#menuButton').click()
+    await expect(page.locator('#roomDialog')).toBeVisible()
+    await page.locator('#pieceNameInput').fill('File Counter')
+    await page
+      .locator('#pieceImageFileInput')
+      .setInputFiles(tinyPngFile('file-counter.png'))
+    await expect(page.locator('#pieceImageInput')).toHaveValue(
+      /^data:image\/png;base64,/
+    )
+    await expect(page.locator('#pieceWidthInput')).toHaveValue('50')
+    await expect(page.locator('#pieceHeightInput')).toHaveValue('50')
+    await page.locator('#createPieceButton').click()
+    await expect(page.locator('#roomDialog')).toBeHidden()
+
+    state = await fetchTacticalState(page, roomId, refereeId)
+    const piece = Object.values(state.state?.pieces ?? {}).find(
+      (candidate) => candidate.name === 'File Counter'
+    )
+    expect(piece?.imageAssetId).toContain('data:image/png;base64,')
   })
 
   test('creates a board, moves pieces, toggles doors, and filters hidden pieces', async ({

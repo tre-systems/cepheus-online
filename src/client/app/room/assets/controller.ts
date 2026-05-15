@@ -236,6 +236,14 @@ export const createRoomAssetCreationController = ({
     })
   }
 
+  const applySelectedImageFileDataUrl = async (
+    fileInput: ImageFileInput,
+    imageInput: HTMLInputElement
+  ): Promise<void> => {
+    const dataUrl = await readImageDataUrl(fileInput)
+    if (dataUrl) imageInput.value = dataUrl
+  }
+
   const renderLocalAssetPicker = (
     viewModel: MapAssetPickerViewModel | null
   ): void => {
@@ -469,13 +477,25 @@ export const createRoomAssetCreationController = ({
     applySelectedCounterAsset()
   })
   addListener(elements.pieceImageFileInput, 'change', () => {
-    applyPieceFileDimensions().catch((error) => reportError(error.message))
+    Promise.all([
+      applySelectedImageFileDataUrl(
+        elements.pieceImageFileInput,
+        elements.pieceImageInput
+      ),
+      applyPieceFileDimensions()
+    ]).catch((error: Error) => reportError(error.message))
   })
   addListener(elements.createBoard, 'click', () => {
     createCustomBoard().catch((error) => reportError(error.message))
   })
   addListener(elements.boardImageFileInput, 'change', () => {
-    applyBoardFileDimensions().catch((error) => reportError(error.message))
+    Promise.all([
+      applySelectedImageFileDataUrl(
+        elements.boardImageFileInput,
+        elements.boardImageInput
+      ),
+      applyBoardFileDimensions()
+    ]).catch((error: Error) => reportError(error.message))
   })
 
   renderLocalAssetPicker(null)
