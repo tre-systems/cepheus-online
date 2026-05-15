@@ -1,6 +1,7 @@
 import type { GameId, UserId } from '../../../../shared/ids'
 import type { LiveDiceRollRevealTarget } from '../../../../shared/live-activity'
 import type { BenefitKind } from '../../../../shared/character-creation/types.js'
+import type { InjurySecondaryChoice } from '../../../../shared/characterCreation.js'
 import type {
   CharacteristicKey,
   DiceRollState,
@@ -49,6 +50,10 @@ export interface CharacterCreationCommandController {
   completeTerm: (continueCareer: boolean) => Promise<void>
   decideAnagathics: (useAnagathics: boolean) => Promise<void>
   resolveMishap: () => Promise<void>
+  resolveInjury: (
+    primaryCharacteristic: CharacteristicKey,
+    secondaryChoice?: InjurySecondaryChoice | null
+  ) => Promise<void>
   rollAging: () => Promise<void>
   resolveAgingLoss: (
     index: number,
@@ -588,6 +593,31 @@ export const createCharacterCreationCommandController = (
       )
       if (
         await syncDiceFlow(response, 'Mishap roll did not return a dice result')
+      ) {
+        renderWizard()
+        scrollToTop()
+      }
+    },
+
+    resolveInjury: async (primaryCharacteristic, secondaryChoice = null) => {
+      const flow = guardEditableFlow()
+      if (!flow) return
+      setError('')
+      syncFields()
+
+      await ensurePublished()
+      const response = await postCharacterCreationCommand(
+        {
+          type: 'ResolveCharacterCreationInjury',
+          ...commandIdentity(),
+          characterId: flow.draft.characterId,
+          primaryCharacteristic,
+          ...(secondaryChoice ? { secondaryChoice } : {})
+        },
+        requestId('injury-roll')
+      )
+      if (
+        await syncDiceFlow(response, 'Injury roll did not return a dice result')
       ) {
         renderWizard()
         scrollToTop()

@@ -143,6 +143,9 @@ const redactUnrevealedCreationFacts = (
     if (hasUnrevealedRollFact(facts.mishap, unrevealedRollIds)) {
       delete facts.mishap
     }
+    if (hasUnrevealedRollFact(facts.injury, unrevealedRollIds)) {
+      delete facts.injury
+    }
     if (hasUnrevealedRollFact(facts.reenlistment, unrevealedRollIds)) {
       delete facts.reenlistment
       delete (term as unknown as { reEnlistment?: number }).reEnlistment

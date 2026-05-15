@@ -258,6 +258,7 @@ type CharacterEventType =
   | 'CharacterCreationAgingResolved'
   | 'CharacterCreationAgingLossesResolved'
   | 'CharacterCreationMishapResolved'
+  | 'CharacterCreationInjuryResolved'
   | 'CharacterCreationDeathConfirmed'
   | 'CharacterCreationAnagathicsDecided'
   | 'CharacterCreationReenlistmentResolved'
@@ -484,8 +485,47 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      pendingDecisions: [],
+      pendingDecisions: event.mishap?.outcome.injury
+        ? [{ key: 'injuryResolution' }]
+        : [],
       terms,
+      timeline: appendCharacterCreationTimeline(character, envelope),
+      history: appendCharacterCreationHistory(character, event)
+    }
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreationInjuryResolved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character?.creation) return nextState
+
+    applyCharacterSheetPatch(character, {
+      characteristics: event.characteristicPatch
+    })
+    character.creation = {
+      ...character.creation,
+      state: structuredClone(event.state),
+      creationComplete: event.creationComplete,
+      pendingDecisions: [],
+      terms: recordActiveTermFacts(character.creation.terms, (facts) => ({
+        ...facts,
+        injury: {
+          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
+          ...(event.injuryRoll
+            ? { injuryRoll: structuredClone(event.injuryRoll) }
+            : {}),
+          ...(event.severityRoll
+            ? { severityRoll: structuredClone(event.severityRoll) }
+            : {}),
+          outcome: structuredClone(event.outcome),
+          selectedLosses: structuredClone(event.selectedLosses),
+          characteristicPatch: structuredClone(event.characteristicPatch)
+        }
+      })),
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event)
     }

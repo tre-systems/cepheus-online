@@ -348,6 +348,21 @@ describe('viewer filtering', () => {
                   injury: null
                 }
               },
+              injury: {
+                rollEventId: asEventId('roll-1'),
+                injuryRoll: { expression: '1d6', rolls: [2], total: 2 },
+                severityRoll: { expression: '1d6', rolls: [4], total: 4 },
+                outcome: {
+                  career: 'Scout',
+                  roll: 2,
+                  id: 'severely_injured',
+                  description:
+                    'Severely injured. Reduce one physical characteristic by 1D6.',
+                  crisisRisk: true
+                },
+                selectedLosses: [{ characteristic: 'str', modifier: -4 }],
+                characteristicPatch: { str: 3 }
+              },
               musteringBenefits: [
                 {
                   rollEventId: asEventId('roll-1'),
@@ -397,6 +412,7 @@ describe('viewer filtering', () => {
     assert.equal(term?.facts?.reenlistment, undefined)
     assert.equal(term?.facts?.anagathicsDecision, undefined)
     assert.equal(term?.facts?.mishap, undefined)
+    assert.equal(term?.facts?.injury, undefined)
     assert.equal(term?.facts?.musteringBenefits, undefined)
     assert.deepEqual(term?.skills, [])
     assert.deepEqual(term?.skillsAndTraining, ['Vacc Suit-0'])

@@ -15,8 +15,16 @@ import type { ClientIdentity } from '../../../game-commands.js'
 type CharacterCreationFairnessCommand = Extract<
   GameCommand,
   {
-    type: 'ResolveCharacterCreationMishap' | 'ConfirmCharacterCreationDeath'
+    type:
+      | 'ResolveCharacterCreationMishap'
+      | 'ResolveCharacterCreationInjury'
+      | 'ConfirmCharacterCreationDeath'
   }
+>
+
+type CharacterCreationInjuryCommand = Extract<
+  GameCommand,
+  { type: 'ResolveCharacterCreationInjury' }
 >
 
 export interface CharacterCreationActionViewModel {
@@ -49,6 +57,18 @@ const fairnessCommand = (
   gameId: identity.gameId,
   actorId: identity.actorId,
   characterId: character.id
+})
+
+const defaultInjuryCommand = (
+  identity: ClientIdentity,
+  character: CharacterState
+): CharacterCreationInjuryCommand => ({
+  type: 'ResolveCharacterCreationInjury',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  characterId: character.id,
+  primaryCharacteristic: 'str',
+  secondaryChoice: { mode: 'both_other_physical' }
 })
 
 const action = (
@@ -220,6 +240,12 @@ const actionsForLegalKey = (
           'Resolve mishap',
           fairnessCommand(identity, character, 'ResolveCharacterCreationMishap')
         )
+      ]
+    case 'resolveInjury':
+      return [
+        action('resolve-injury', 'Resolve injury', {
+          ...defaultInjuryCommand(identity, character)
+        })
       ]
     case 'confirmDeath':
       return [
@@ -413,6 +439,7 @@ const actionKeyOrder: readonly CareerCreationActionKey[] = [
   'completeBasicTraining',
   'rollSurvival',
   'resolveMishap',
+  'resolveInjury',
   'confirmDeath',
   'skipCommission',
   'rollCommission',

@@ -104,7 +104,8 @@ const eventFixtures = {
   FINISH_MUSTERING: [{ type: 'FINISH_MUSTERING' }],
   CREATION_COMPLETE: [{ type: 'CREATION_COMPLETE' }],
   DEATH_CONFIRMED: [{ type: 'DEATH_CONFIRMED' }],
-  MISHAP_RESOLVED: [{ type: 'MISHAP_RESOLVED' }]
+  MISHAP_RESOLVED: [{ type: 'MISHAP_RESOLVED' }],
+  INJURY_RESOLVED: [{ type: 'INJURY_RESOLVED' }]
 } satisfies CareerCreationEventFixtures
 
 const flattenEventFixtures = (): readonly NonResetCareerCreationEvent[] =>
@@ -179,6 +180,11 @@ describe('career creation state machine transition matrix', () => {
     {
       from: 'MISHAP',
       event: eventFixtures.MISHAP_RESOLVED[0],
+      to: 'MUSTERING_OUT'
+    },
+    {
+      from: 'MISHAP',
+      event: eventFixtures.INJURY_RESOLVED[0],
       to: 'MUSTERING_OUT'
     },
     {
@@ -424,6 +430,31 @@ describe('career creation state machine transition matrix', () => {
         type: 'MISHAP_RESOLVED'
       }).status,
       'MUSTERING_OUT'
+    )
+    assert.equal(
+      transitionCareerCreationState(createCareerCreationState('MISHAP'), {
+        type: 'MISHAP_RESOLVED',
+        mishap: {
+          roll: { expression: '1d6', rolls: [1], total: 1 },
+          outcome: {
+            career: 'Scout',
+            roll: 1,
+            id: 'injured_in_action',
+            description:
+              'Injured in action. Treat as injury table result 2, or roll twice and take the lower result.',
+            discharge: 'honorable',
+            benefitEffect: 'forfeit_current_term',
+            debtCredits: 0,
+            extraServiceYears: 0,
+            injury: {
+              type: 'fixed',
+              injuryRoll: 2,
+              alternative: 'roll_twice_take_lower'
+            }
+          }
+        }
+      }).status,
+      'MISHAP'
     )
   })
 })

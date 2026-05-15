@@ -167,6 +167,15 @@ const hasAnagathicsDecisionForActiveTerm = (
   return creation.terms?.[termIndex]?.facts?.anagathicsDecision !== undefined
 }
 
+const hasUnresolvedInjuryForActiveTerm = (
+  creation: CareerCreationActionProjection
+): boolean => {
+  const term = lastTerm(creation)
+  if (!term?.facts?.mishap?.outcome.injury) return false
+
+  return term.facts.injury === undefined
+}
+
 const shouldDecideAnagathics = (
   creation: CareerCreationActionProjection
 ): boolean => {
@@ -298,6 +307,13 @@ export const deriveCareerCreationPendingDecisions = (
 
   if (shouldDecideAnagathics(creation)) {
     pushDecision({ key: 'anagathicsDecision' })
+  }
+
+  if (
+    creation.state.status === 'MISHAP' &&
+    hasUnresolvedInjuryForActiveTerm(creation)
+  ) {
+    pushDecision({ key: 'injuryResolution' })
   }
 
   if (
@@ -649,6 +665,10 @@ export const deriveLegalCareerCreationActionKeys = (
           context,
           'mishapResolution'
         )
+        const hasInjuryResolution = hasPendingDecision(
+          context,
+          'injuryResolution'
+        )
 
         if (
           hasSurvivalResolution &&
@@ -661,9 +681,19 @@ export const deriveLegalCareerCreationActionKeys = (
         if (
           hasMishapResolution &&
           !hasSurvivalResolution &&
+          !hasInjuryResolution &&
           context.pendingDecisions?.length === 1
         ) {
           return ['resolveMishap']
+        }
+
+        if (
+          hasInjuryResolution &&
+          !hasSurvivalResolution &&
+          !hasMishapResolution &&
+          context.pendingDecisions?.length === 1
+        ) {
+          return ['resolveInjury']
         }
 
         return []
@@ -759,6 +789,10 @@ const actionDefinitions = {
   resolveMishap: {
     commandTypes: ['ResolveCharacterCreationMishap'],
     rollRequirement: { key: 'mishap', dice: '1d6' }
+  },
+  resolveInjury: {
+    commandTypes: ['ResolveCharacterCreationInjury'],
+    rollRequirement: { key: 'injury', dice: '1d6' }
   },
   confirmDeath: {
     commandTypes: ['ConfirmCharacterCreationDeath']

@@ -22,6 +22,8 @@ export const deriveCharacterCreationHistoryEvent = (
         type: 'MISHAP_RESOLVED',
         ...(event.mishap ? { mishap: structuredClone(event.mishap) } : {})
       }
+    case 'CharacterCreationInjuryResolved':
+      return { type: 'INJURY_RESOLVED' }
     case 'CharacterCreationDeathConfirmed':
       return { type: 'DEATH_CONFIRMED' }
     case 'CharacterCreationBasicTrainingCompleted':

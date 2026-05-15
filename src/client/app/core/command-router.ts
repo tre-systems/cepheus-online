@@ -53,6 +53,7 @@ export type CharacterCreationCommand = Extract<
       | 'CompleteCharacterCreationBasicTraining'
       | 'ResolveCharacterCreationSurvival'
       | 'ResolveCharacterCreationMishap'
+      | 'ResolveCharacterCreationInjury'
       | 'ConfirmCharacterCreationDeath'
       | 'ResolveCharacterCreationCommission'
       | 'SkipCharacterCreationCommission'

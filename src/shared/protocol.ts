@@ -10,7 +10,8 @@ import type {
   CareerCreationRankFact,
   CareerCreationReenlistmentFact,
   CareerCreationTermSkillTable,
-  FailedQualificationOption
+  FailedQualificationOption,
+  InjurySecondaryChoice
 } from './characterCreation'
 import { err, ok, type Result } from './result'
 import type { GameCommand } from './commands'
@@ -563,6 +564,37 @@ const parseAgingLossSelections = (
   }
 
   return ok(losses)
+}
+
+const parseInjurySecondaryChoice = (
+  raw: unknown,
+  label: string
+): Result<InjurySecondaryChoice | null, CommandError> => {
+  if (raw === undefined || raw === null) return ok(null)
+  if (!isObject(raw)) return err(invalidCommand(`${label} must be an object`))
+
+  const mode = parseString(raw.mode, `${label}.mode`)
+  if (!mode.ok) return mode
+  if (mode.value === 'both_other_physical') {
+    return ok({ mode: 'both_other_physical' })
+  }
+  if (mode.value !== 'one_other_physical') {
+    return err(invalidCommand(`${label}.mode is not supported`))
+  }
+
+  const characteristic = parseCharacteristicKey(
+    raw.characteristic,
+    `${label}.characteristic`
+  )
+  if (!characteristic.ok) return characteristic
+  if (characteristic.value === null) {
+    return err(invalidCommand(`${label}.characteristic cannot be null`))
+  }
+
+  return ok({
+    mode: 'one_other_physical',
+    characteristic: characteristic.value
+  })
 }
 
 const parseCareerCreationDiceFact = (
@@ -1271,6 +1303,29 @@ export const decodeCommand = (
         type: 'ResolveCharacterCreationMishap',
         ...base.value,
         characterId: characterId.value
+      })
+    }
+
+    case 'ResolveCharacterCreationInjury': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const primaryCharacteristic = parseCharacteristicKey(
+        raw.primaryCharacteristic ?? null,
+        'primaryCharacteristic'
+      )
+      if (!primaryCharacteristic.ok) return primaryCharacteristic
+      const secondaryChoice = parseInjurySecondaryChoice(
+        raw.secondaryChoice,
+        'secondaryChoice'
+      )
+      if (!secondaryChoice.ok) return secondaryChoice
+
+      return ok({
+        type: 'ResolveCharacterCreationInjury',
+        ...base.value,
+        characterId: characterId.value,
+        primaryCharacteristic: primaryCharacteristic.value,
+        secondaryChoice: secondaryChoice.value
       })
     }
 

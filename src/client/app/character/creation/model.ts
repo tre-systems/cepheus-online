@@ -25,6 +25,7 @@ import {
   deriveCharacterCreationHomeworldViewModel,
   deriveCharacterCreationMusteringOutViewModel,
   deriveCharacterCreationDeathViewModel,
+  deriveCharacterCreationInjuryResolutionViewModel,
   deriveCharacterCreationMishapResolutionViewModel,
   deriveCharacterCreationNextStepViewModel,
   deriveCharacterCreationReenlistmentRollViewModel,
@@ -46,6 +47,7 @@ import {
   type CharacterCreationCharacteristicGridViewModel,
   type CharacterCreationDeathViewModel,
   type CharacterCreationHomeworldViewModel,
+  type CharacterCreationInjuryResolutionViewModel,
   type CharacterCreationMusteringOutViewModel,
   type CharacterCreationMishapResolutionViewModel,
   type CharacterCreationNextStepViewModel,
@@ -102,6 +104,7 @@ export interface CharacterCreationWizardViewModel {
   agingChoices: CharacterCreationAgingChoicesViewModel | null
   anagathicsDecision: CharacterCreationAnagathicsDecisionViewModel | null
   mishapResolution: CharacterCreationMishapResolutionViewModel | null
+  injuryResolution: CharacterCreationInjuryResolutionViewModel | null
   termCascadeChoices: CharacterCreationTermCascadeChoicesViewModel | null
   termResolution: CharacterCreationTermResolutionViewModel | null
   termSkills: CharacterCreationTermSkillTrainingViewModel | null
@@ -392,6 +395,10 @@ const wizardViewModel = ({
     ),
     mishapResolution: deriveCharacterCreationMishapResolutionViewModel(flow, {
       available: isProjectedLegalActionAvailable('resolveMishap')
+    }),
+    injuryResolution: deriveCharacterCreationInjuryResolutionViewModel(flow, {
+      available: isProjectedLegalActionAvailable('resolveInjury'),
+      projection: projectedCreation
     }),
     termCascadeChoices: deriveCharacterCreationTermCascadeChoicesViewModel(
       flow,

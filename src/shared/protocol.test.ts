@@ -664,6 +664,7 @@ describe('protocol validation', () => {
   it('accepts semantic mishap and death character creation commands', () => {
     const commands = [
       'ResolveCharacterCreationMishap',
+      'ResolveCharacterCreationInjury',
       'ConfirmCharacterCreationDeath'
     ] as const
 
@@ -687,6 +688,42 @@ describe('protocol validation', () => {
       assert.equal(result.value.command.type, type)
       assert.equal(result.value.command.expectedSeq, 7)
     }
+  })
+
+  it('accepts semantic injury resolution choices', () => {
+    const result = decodeClientMessage({
+      type: 'command',
+      requestId: 'req-injury',
+      command: {
+        type: 'ResolveCharacterCreationInjury',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        expectedSeq: 7,
+        characterId: 'char-1',
+        primaryCharacteristic: 'str',
+        secondaryChoice: {
+          mode: 'one_other_physical',
+          characteristic: 'dex'
+        }
+      }
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'command')
+    if (result.value.type !== 'command') return
+    assert.deepEqual(result.value.command, {
+      type: 'ResolveCharacterCreationInjury',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      expectedSeq: 7,
+      characterId: 'char-1',
+      primaryCharacteristic: 'str',
+      secondaryChoice: {
+        mode: 'one_other_physical',
+        characteristic: 'dex'
+      }
+    })
   })
 
   it('rejects generic mishap and death character creation transitions', () => {

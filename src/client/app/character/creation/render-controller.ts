@@ -29,6 +29,7 @@ import {
 import type { CharacterCreationHomeworldPublisher } from './homeworld-publisher.js'
 import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './views/mustering.js'
 import { renderCharacterCreationMishapResolution as renderCharacterCreationMishapResolutionView } from './views/mishap-resolution.js'
+import { renderCharacterCreationInjuryResolution as renderCharacterCreationInjuryResolutionView } from './views/injury-resolution.js'
 import type { CharacterCreationPanelController } from './panel.js'
 import type {
   CharacterCreationAgingChoicesViewModel,
@@ -39,6 +40,7 @@ import type {
   CharacterCreationCareerSelectionViewModel,
   CharacterCreationCharacteristicGridViewModel,
   CharacterCreationHomeworldViewModel,
+  CharacterCreationInjuryResolutionViewModel,
   CharacterCreationMusteringOutViewModel,
   CharacterCreationMishapResolutionViewModel,
   CharacterCreationReenlistmentRollViewModel,
@@ -227,6 +229,13 @@ export const createCharacterCreationRenderController = ({
         fragment.append(
           renderCharacterCreationMishapResolution(
             viewModel.wizard.mishapResolution
+          )
+        )
+      }
+      if (viewModel.wizard?.injuryResolution) {
+        fragment.append(
+          renderCharacterCreationInjuryResolution(
+            viewModel.wizard.injuryResolution
           )
         )
       }
@@ -499,6 +508,17 @@ export const createCharacterCreationRenderController = ({
   ): HTMLElement =>
     renderCharacterCreationMishapResolutionView(document, viewModel, {
       resolveMishap: () => getCommandController().resolveMishap()
+    })
+
+  const renderCharacterCreationInjuryResolution = (
+    viewModel: CharacterCreationInjuryResolutionViewModel
+  ): HTMLElement =>
+    renderCharacterCreationInjuryResolutionView(document, viewModel, {
+      readOnly: controller.readOnly(),
+      resolveInjury: (primaryCharacteristic) =>
+        getCommandController().resolveInjury(primaryCharacteristic, {
+          mode: 'both_other_physical'
+        })
     })
 
   const renderCharacterCreationTermHistory = (

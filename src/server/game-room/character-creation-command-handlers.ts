@@ -88,6 +88,7 @@ export const deriveCharacterCreationCommandEvents = (
       return deriveMusteringCommandEvents(command, context, rollEventId)
 
     case 'ResolveCharacterCreationMishap':
+    case 'ResolveCharacterCreationInjury':
     case 'ConfirmCharacterCreationDeath':
       return deriveSurvivalCommandEvents(command, context, rollEventId)
 

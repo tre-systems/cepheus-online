@@ -143,6 +143,11 @@ const commandMetadataDefinitions = {
     usesSeededDice: true,
     autoAddExpectedSeq: true
   },
+  ResolveCharacterCreationInjury: {
+    route: 'characterCreation',
+    usesSeededDice: true,
+    autoAddExpectedSeq: true
+  },
   ConfirmCharacterCreationDeath: {
     route: 'characterCreation',
     usesSeededDice: false,

@@ -166,6 +166,15 @@ export interface CareerTermMishapFact {
   outcome: SurvivalMishapOutcome
 }
 
+export interface CareerTermInjuryFact {
+  rollEventId?: EventId
+  injuryRoll?: CareerCreationDiceFact
+  severityRoll?: CareerCreationDiceFact
+  outcome: InjuryOutcome
+  selectedLosses: InjuryLossSelection[]
+  characteristicPatch: CharacterSheetPatch['characteristics']
+}
+
 export interface CareerTermReenlistmentFact {
   rollEventId?: EventId
   outcome: CareerCreationReenlistmentFact['outcome']
@@ -185,6 +194,7 @@ export interface CareerTermFacts {
   agingLosses?: CareerTermAgingLossFact
   anagathicsDecision?: CareerTermAnagathicsDecisionFact
   mishap?: CareerTermMishapFact
+  injury?: CareerTermInjuryFact
   reenlistment?: CareerTermReenlistmentFact
   musteringBenefits?: CareerCreationBenefitFact[]
 }
@@ -257,6 +267,7 @@ export type CareerCreationEvent =
         outcome: SurvivalMishapOutcome
       }
     }
+  | { type: 'INJURY_RESOLVED' }
   | { type: 'RESET' }
 
 export interface CareerCreationContext {
@@ -276,6 +287,7 @@ export type CareerCreationActionKey =
   | 'completeBasicTraining'
   | 'rollSurvival'
   | 'resolveMishap'
+  | 'resolveInjury'
   | 'confirmDeath'
   | 'rollCommission'
   | 'skipCommission'
@@ -310,6 +322,7 @@ export type CareerCreationServerCommandType =
   | 'ResolveCharacterCreationAging'
   | 'ResolveCharacterCreationAgingLosses'
   | 'ResolveCharacterCreationMishap'
+  | 'ResolveCharacterCreationInjury'
   | 'ConfirmCharacterCreationDeath'
   | 'ResolveCharacterCreationReenlistment'
   | 'ReenlistCharacterCreationCareer'
@@ -331,6 +344,7 @@ export type CareerCreationRollRequirementKey =
   | 'draft'
   | 'survival'
   | 'mishap'
+  | 'injury'
   | 'commission'
   | 'advancement'
   | 'termSkill'
@@ -437,6 +451,7 @@ export type CareerCreationPendingDecisionKey =
   | 'basicTrainingSkillSelection'
   | 'survivalResolution'
   | 'mishapResolution'
+  | 'injuryResolution'
   | 'commissionResolution'
   | 'advancementResolution'
   | 'skillTrainingSelection'

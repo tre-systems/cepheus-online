@@ -312,6 +312,48 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('derives injury resolution from projected mishap facts before mustering', () => {
+    const plan = deriveCareerCreationActionPlan(
+      projection('MISHAP', {
+        terms: [
+          term({
+            facts: {
+              mishap: {
+                roll: { expression: '1d6', rolls: [1], total: 1 },
+                outcome: {
+                  career: 'Scout',
+                  roll: 1,
+                  id: 'injured_in_action',
+                  description:
+                    'Injured in action. Treat as injury table result 2, or roll twice and take the lower result.',
+                  discharge: 'honorable',
+                  benefitEffect: 'forfeit_current_term',
+                  debtCredits: 0,
+                  extraServiceYears: 0,
+                  injury: {
+                    type: 'fixed',
+                    injuryRoll: 2,
+                    alternative: 'roll_twice_take_lower'
+                  }
+                }
+              }
+            }
+          })
+        ]
+      })
+    )
+
+    assert.deepEqual(plan.pendingDecisions, [{ key: 'injuryResolution' }])
+    assert.deepEqual(plan.legalActions, [
+      {
+        key: 'resolveInjury',
+        status: 'MISHAP',
+        commandTypes: ['ResolveCharacterCreationInjury'],
+        rollRequirement: { key: 'injury', dice: '1d6' }
+      }
+    ])
+  })
+
   it('exposes only Drifter or Draft options after failed qualification', () => {
     const plan = deriveCareerCreationActionPlan(
       projection('CAREER_SELECTION', {

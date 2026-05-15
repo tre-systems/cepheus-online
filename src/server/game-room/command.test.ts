@@ -2584,6 +2584,148 @@ describe('deriveEventsForCommand error categories', () => {
     )
   })
 
+  it('emits semantic injury resolution with server-derived losses', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationInjury',
+        gameId,
+        actorId,
+        characterId,
+        primaryCharacteristic: 'str'
+      },
+      createCreation('MISHAP', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 3,
+            facts: {
+              mishap: {
+                roll: { expression: '1d6', rolls: [1], total: 1 },
+                outcome: {
+                  career: 'Scout',
+                  roll: 1,
+                  id: 'injured_in_action',
+                  description:
+                    'Injured in action. Treat as injury table result 2, or roll twice and take the lower result.',
+                  discharge: 'honorable',
+                  benefitEffect: 'forfeit_current_term',
+                  debtCredits: 0,
+                  extraServiceYears: 0,
+                  injury: {
+                    type: 'fixed',
+                    injuryRoll: 2,
+                    alternative: 'roll_twice_take_lower'
+                  }
+                }
+              }
+            }
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '1d6',
+        reason: 'Scout injury',
+        rolls: [4],
+        total: 4
+      },
+      {
+        type: 'CharacterCreationInjuryResolved',
+        characterId,
+        rollEventId: 'game-1:2',
+        severityRoll: {
+          expression: '1d6',
+          rolls: [4],
+          total: 4
+        },
+        outcome: {
+          career: 'Scout',
+          roll: 2,
+          id: 'severely_injured',
+          description:
+            'Severely injured. Reduce one physical characteristic by 1D6.',
+          crisisRisk: true
+        },
+        selectedLosses: [{ characteristic: 'str', modifier: -4 }],
+        characteristicPatch: { str: 0 },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('rejects injury resolution without required player choices', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationInjury',
+        gameId,
+        actorId,
+        characterId
+      },
+      createCreation('MISHAP', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 3,
+            facts: {
+              mishap: {
+                roll: { expression: '1d6', rolls: [1], total: 1 },
+                outcome: {
+                  career: 'Scout',
+                  roll: 1,
+                  id: 'injured_in_action',
+                  description:
+                    'Injured in action. Treat as injury table result 2, or roll twice and take the lower result.',
+                  discharge: 'honorable',
+                  benefitEffect: 'forfeit_current_term',
+                  debtCredits: 0,
+                  extraServiceYears: 0,
+                  injury: {
+                    type: 'fixed',
+                    injuryRoll: 2,
+                    alternative: 'roll_twice_take_lower'
+                  }
+                }
+              }
+            }
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'Choose the injured characteristic')
+  })
+
   it('emits semantic death confirmation with server-derived transition', () => {
     const result = runCommand(
       {

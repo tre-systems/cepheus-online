@@ -59,6 +59,7 @@ const commandController = (): CharacterCreationCommandController => ({
   completeTerm: async () => {},
   decideAnagathics: async () => {},
   resolveMishap: async () => {},
+  resolveInjury: async () => {},
   rollAging: async () => {},
   resolveAgingLoss: async () => {},
   rollCareerCheck: async () => {}

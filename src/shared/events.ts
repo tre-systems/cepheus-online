@@ -20,6 +20,8 @@ import type {
   CareerCreationReenlistmentOutcome,
   CareerCreationTermSkillFact,
   FailedQualificationOption,
+  InjuryLossSelection,
+  InjuryOutcome,
   SurvivalMishapOutcome
 } from './characterCreation'
 import type {
@@ -191,6 +193,18 @@ export type GameEvent =
         roll: CareerCreationDiceFact
         outcome: SurvivalMishapOutcome
       }
+      state: CharacterCreationProjection['state']
+      creationComplete: boolean
+    }
+  | {
+      type: 'CharacterCreationInjuryResolved'
+      characterId: CharacterId
+      rollEventId?: EventId
+      injuryRoll?: CareerCreationDiceFact
+      severityRoll?: CareerCreationDiceFact
+      outcome: InjuryOutcome
+      selectedLosses: InjuryLossSelection[]
+      characteristicPatch: CharacterSheetPatch['characteristics']
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

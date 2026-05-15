@@ -2678,6 +2678,128 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
+  it('keeps injury-causing mishaps pending until injury resolution is projected', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Mara Vale'
+      }),
+      envelope(3, {
+        type: 'CharacterCreationStarted',
+        characterId,
+        creation: {
+          state: {
+            status: 'MISHAP',
+            context: {
+              canCommission: false,
+              canAdvance: false
+            }
+          },
+          terms: [
+            {
+              career: 'Scout',
+              skills: ['Vacc Suit-1'],
+              skillsAndTraining: ['Vacc Suit-1'],
+              benefits: [],
+              complete: false,
+              canReenlist: false,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: 3
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          homeworld: null,
+          backgroundSkills: [],
+          pendingCascadeSkills: [],
+          history: []
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterCreationMishapResolved',
+        characterId,
+        rollEventId: asEventId('game-1:4'),
+        mishap: {
+          roll: { expression: '1d6', rolls: [1], total: 1 },
+          outcome: {
+            career: 'Scout',
+            roll: 1,
+            id: 'injured_in_action',
+            description:
+              'Injured in action. Treat as injury table result 2, or roll twice and take the lower result.',
+            discharge: 'honorable',
+            benefitEffect: 'forfeit_current_term',
+            debtCredits: 0,
+            extraServiceYears: 0,
+            injury: {
+              type: 'fixed',
+              injuryRoll: 2,
+              alternative: 'roll_twice_take_lower'
+            }
+          }
+        },
+        state: {
+          status: 'MISHAP',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(5, {
+        type: 'CharacterCreationInjuryResolved',
+        characterId,
+        rollEventId: asEventId('game-1:5'),
+        severityRoll: { expression: '1d6', rolls: [3], total: 3 },
+        outcome: {
+          career: 'Scout',
+          roll: 2,
+          id: 'severely_injured',
+          description:
+            'Severely injured. Reduce one physical characteristic by 1D6.',
+          crisisRisk: true
+        },
+        selectedLosses: [{ characteristic: 'str', modifier: -3 }],
+        characteristicPatch: { str: 0 },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      })
+    ])
+
+    const creation = state?.characters[characterId]?.creation
+    assert.equal(creation?.state.status, 'MUSTERING_OUT')
+    assert.deepEqual(creation?.pendingDecisions, [])
+    assert.equal(creation?.terms[0]?.facts?.mishap?.outcome.injury?.type, 'fixed')
+    assert.equal(creation?.terms[0]?.facts?.injury?.outcome.id, 'severely_injured')
+    assert.deepEqual(creation?.terms[0]?.facts?.injury?.characteristicPatch, {
+      str: 0
+    })
+    assert.equal(creation?.history?.at(0)?.type, 'MISHAP_RESOLVED')
+    assert.equal(creation?.history?.at(1)?.type, 'INJURY_RESOLVED')
+  })
+
   it('projects mishap benefit forfeiture into refreshed mustering actions', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([

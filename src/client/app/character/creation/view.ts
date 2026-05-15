@@ -34,8 +34,10 @@ import type {
 import type {
   CharacterCharacteristics,
   CharacterEquipmentItem,
+  CharacterCreationProjection,
   CharacteristicKey
 } from '../../../../shared/state'
+import type { InjurySecondaryChoice } from '../../../../shared/characterCreation.js'
 import type {
   CharacterCreationCareerPlan,
   CharacterCreationCompletedTerm,
@@ -555,6 +557,20 @@ export interface CharacterCreationMishapResolutionViewModel {
   title: string
   message: string
   buttonLabel: string
+}
+
+export interface CharacterCreationInjuryTargetViewModel {
+  characteristic: CharacteristicKey
+  label: string
+  value: string
+  modifier: string
+}
+
+export interface CharacterCreationInjuryResolutionViewModel {
+  title: string
+  message: string
+  targets: CharacterCreationInjuryTargetViewModel[]
+  secondaryChoice: InjurySecondaryChoice
 }
 
 export interface CharacterCreationMusteringBenefitViewModel {
@@ -1455,6 +1471,61 @@ export const deriveCharacterCreationMishapResolutionViewModel = (
     message:
       'Survival failed. Resolve the mishap before this traveller musters out.',
     buttonLabel: 'Resolve mishap'
+  }
+}
+
+const injuryTargetKeys = (
+  projection: CharacterCreationProjection
+): CharacteristicKey[] => {
+  const injury = projection.terms.at(-1)?.facts?.mishap?.outcome.injury
+  if (!injury) return []
+  if (injury.type === 'roll') return ['str', 'dex']
+  if (injury.injuryRoll === 3) return ['str', 'dex']
+
+  return ['str', 'dex', 'end']
+}
+
+export const deriveCharacterCreationInjuryResolutionViewModel = (
+  flow: Pick<CharacterCreationFlow, 'step' | 'draft'>,
+  {
+    available,
+    projection
+  }: { available?: boolean; projection?: CharacterCreationProjection | null } = {}
+): CharacterCreationInjuryResolutionViewModel | null => {
+  if (available === false || flow.step !== 'career' || !projection) return null
+  const term = projection.terms.at(-1)
+  const injury = term?.facts?.mishap?.outcome.injury
+  if (!term || !injury || term.facts?.injury) return null
+
+  const targets = injuryTargetKeys(projection)
+  if (targets.length === 0) return null
+
+  const career = term.career.trim() || flow.draft.careerPlan?.career || 'Career'
+  const characteristics = flow.draft.characteristics
+
+  return {
+    title: `${career} injury`,
+    message:
+      injury.type === 'roll'
+        ? 'Roll the injury table and choose where any permanent loss applies.'
+        : 'Resolve this injury before mustering out.',
+    targets: targets.map((characteristic) => {
+      const definition = characteristicDefinitions.find(
+        (candidate) => candidate.key === characteristic
+      )
+      const value = characteristics[characteristic]
+
+      return {
+        characteristic,
+        label: definition?.label ?? characteristic.toUpperCase(),
+        value: value === null ? '-' : String(value),
+        modifier:
+          value === null
+            ? ''
+            : formatCharacterCreationCharacteristicModifier(value)
+      }
+    }),
+    secondaryChoice: { mode: 'both_other_physical' }
   }
 }
 

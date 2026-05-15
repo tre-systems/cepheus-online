@@ -114,6 +114,28 @@ describe('live activity derivation', () => {
         creationComplete: false
       }),
       envelope(4, {
+        type: 'CharacterCreationInjuryResolved',
+        characterId,
+        outcome: {
+          career: 'Scout',
+          roll: 2,
+          id: 'severely_injured',
+          description:
+            'Severely injured. Reduce one physical characteristic by 1D6.',
+          crisisRisk: true
+        },
+        selectedLosses: [{ characteristic: 'str', modifier: -4 }],
+        characteristicPatch: { str: 3 },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }),
+      envelope(5, {
         type: 'CharacterCreationDeathConfirmed',
         characterId,
         state: {
@@ -135,6 +157,11 @@ describe('live activity derivation', () => {
       ),
       [
         ['MISHAP_RESOLVED', 'Mishap resolved', 'MUSTERING_OUT'],
+        [
+          'INJURY_RESOLVED',
+          'Severely injured. Reduce one physical characteristic by 1D6.; 1 characteristic change',
+          'MUSTERING_OUT'
+        ],
         ['DEATH_CONFIRMED', 'Death confirmed', 'DECEASED']
       ]
     )
@@ -1471,6 +1498,34 @@ describe('live activity derivation', () => {
             injury: null
           }
         },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      },
+      {
+        type: 'CharacterCreationInjuryResolved',
+        characterId,
+        rollEventId: asEventId('game-1:11'),
+        severityRoll: {
+          expression: '1d6',
+          rolls: [4],
+          total: 4
+        },
+        outcome: {
+          career: 'Scout',
+          roll: 2,
+          id: 'severely_injured',
+          description:
+            'Severely injured. Reduce one physical characteristic by 1D6.',
+          crisisRisk: true
+        },
+        selectedLosses: [{ characteristic: 'str', modifier: -4 }],
+        characteristicPatch: { str: 3 },
         state: {
           status: 'MUSTERING_OUT',
           context: {

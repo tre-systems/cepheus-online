@@ -83,7 +83,13 @@ const transitionStatus = (
       if (event.type === 'DEATH_CONFIRMED') {
         return { ...state, status: 'DECEASED' }
       }
-      return event.type === 'MISHAP_RESOLVED'
+      if (event.type === 'MISHAP_RESOLVED') {
+        return {
+          ...state,
+          status: event.mishap?.outcome.injury ? 'MISHAP' : 'MUSTERING_OUT'
+        }
+      }
+      return event.type === 'INJURY_RESOLVED'
         ? { ...state, status: 'MUSTERING_OUT' }
         : null
     case 'COMMISSION':

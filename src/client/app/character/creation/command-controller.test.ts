@@ -1533,4 +1533,81 @@ describe('character creation command controller', () => {
     assert.equal(renderCount, 1)
     assert.equal(scrollCount, 1)
   })
+
+  it('resolves an injury with selected characteristic losses', async () => {
+    const flow = {
+      ...careerFlow(),
+      draft: {
+        ...careerFlow().draft,
+        careerPlan: {
+          career: 'Scout',
+          drafted: false,
+          qualificationRoll: 8,
+          qualificationPassed: true,
+          survivalRoll: 2,
+          survivalPassed: false,
+          canCommission: false,
+          commissionRoll: null,
+          commissionPassed: null,
+          canAdvance: false,
+          advancementRoll: null,
+          advancementPassed: null,
+          termSkillRolls: []
+        }
+      }
+    } satisfies CharacterCreationFlow
+    const commands: CharacterCreationCommand[] = []
+    const waitedFor: string[] = []
+    const roll = diceRoll(4)
+    let published = 0
+    let renderCount = 0
+    let scrollCount = 0
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: () => {},
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => null,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command) => {
+        commands.push(command)
+        return { state: stateWithDice(roll) }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async (nextRoll) => {
+        waitedFor.push(nextRoll.id)
+      },
+      syncFlowFromRoomState: () => flow,
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {
+        renderCount += 1
+      },
+      scrollToTop: () => {
+        scrollCount += 1
+      }
+    })
+
+    await controller.resolveInjury('dex', { mode: 'both_other_physical' })
+
+    assert.equal(published, 1)
+    assert.deepEqual(commands, [
+      {
+        type: 'ResolveCharacterCreationInjury',
+        gameId,
+        actorId,
+        characterId: flow.draft.characterId,
+        primaryCharacteristic: 'dex',
+        secondaryChoice: { mode: 'both_other_physical' }
+      }
+    ])
+    assert.deepEqual(waitedFor, ['roll-1'])
+    assert.equal(renderCount, 1)
+    assert.equal(scrollCount, 1)
+  })
 })

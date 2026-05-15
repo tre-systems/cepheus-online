@@ -572,6 +572,85 @@ describe('character creation view model', () => {
     )
   })
 
+  it('renders injury resolution choices from projected mishap facts', () => {
+    const currentFlow = resolvedCareerFlow()
+    const careerPlan = currentFlow.draft.careerPlan
+    assert.equal(careerPlan === null, false)
+    if (!careerPlan) return
+    currentFlow.draft.careerPlan = {
+      ...careerPlan,
+      survivalRoll: 2,
+      survivalPassed: false
+    }
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('MISHAP', {
+        terms: [
+          {
+            career: 'Merchant',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            facts: {
+              mishap: {
+                roll: { expression: '1d6', rolls: [1], total: 1 },
+                outcome: {
+                  career: 'Merchant',
+                  roll: 1,
+                  id: 'injured_in_action',
+                  description:
+                    'Injured in action. Treat as injury table result 2, or roll twice and take the lower result.',
+                  discharge: 'honorable',
+                  benefitEffect: 'forfeit_current_term',
+                  debtCredits: 0,
+                  extraServiceYears: 0,
+                  injury: {
+                    type: 'fixed',
+                    injuryRoll: 2,
+                    alternative: 'roll_twice_take_lower'
+                  }
+                }
+              }
+            }
+          }
+        ],
+        actionPlan: {
+          status: 'MISHAP',
+          pendingDecisions: [{ key: 'injuryResolution' }],
+          legalActions: [
+            {
+              key: 'resolveInjury',
+              status: 'MISHAP',
+              commandTypes: ['ResolveCharacterCreationInjury'],
+              rollRequirement: { key: 'injury', dice: '1d6' }
+            }
+          ]
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.mishapResolution, null)
+    assert.equal(viewModel.wizard?.injuryResolution?.title, 'Merchant injury')
+    assert.deepEqual(
+      viewModel.wizard?.injuryResolution?.targets.map((target) => [
+        target.characteristic,
+        target.value
+      ]),
+      [
+        ['str', '7'],
+        ['dex', '8'],
+        ['end', '7']
+      ]
+    )
+  })
+
   it('renders death confirmation only when projection allows death', () => {
     const currentFlow = resolvedCareerFlow()
     const careerPlan = currentFlow.draft.careerPlan

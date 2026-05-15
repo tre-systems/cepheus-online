@@ -250,6 +250,7 @@ describe('app command router dispatch', () => {
       CompleteCharacterCreationBasicTraining: 'characterCreation',
       ResolveCharacterCreationSurvival: 'characterCreation',
       ResolveCharacterCreationMishap: 'characterCreation',
+      ResolveCharacterCreationInjury: 'characterCreation',
       ConfirmCharacterCreationDeath: 'characterCreation',
       ResolveCharacterCreationCommission: 'characterCreation',
       SkipCharacterCreationCommission: 'characterCreation',

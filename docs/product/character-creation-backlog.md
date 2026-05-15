@@ -109,7 +109,13 @@ Important remaining gaps:
   activity, and refresh replay. Anagathics now has a server-owned use/skip
   decision before aging, the required second survival check, treatment cost,
   credit deduction, projected provenance, and benefit forfeiture enforcement.
-  Remaining gaps are injury detail resolution and UI polish.
+  Injury detail resolution is now server-owned through semantic
+  `ResolveCharacterCreationInjury` / `CharacterCreationInjuryResolved` facts,
+  projection-owned pending decisions, reveal-safe filtering, and a minimal
+  creator/viewer panel for applying physical characteristic losses. Remaining
+  gaps are the optional "roll twice and take the lower result" alternative for
+  injured-in-action mishaps and UI polish around explaining severe injury
+  choices.
 - Character creation follow mode needs stronger two-tab automation and reveal
   timing contracts so spectators never see roll-dependent outcomes early.
 - Spectator follow should show the same projected creation state as the creator
