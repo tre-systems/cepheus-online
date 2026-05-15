@@ -1352,6 +1352,9 @@ The next batch should run like this, in this order:
    creator code from reading legacy history outside compatibility helpers.
    Client compatibility fallbacks for old aggregate mustering benefits are
    marked as legacy and no longer present fake roll provenance.
+   Mustering benefit count helpers now expose separate projected-fact and
+   legacy-aggregate paths so production gates can keep moving toward semantic
+   facts without hiding replay compatibility behind unnamed field reads.
    Per-term semantic `facts` now carry qualification, draft,
    survival, commission, advancement, rank, term skill, aging, anagathics,
    reenlistment, and mustering benefit details; legal actions, term-skill and

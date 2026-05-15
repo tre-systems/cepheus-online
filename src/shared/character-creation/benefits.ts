@@ -33,13 +33,35 @@ export const deriveRemainingCareerBenefits = ({
 
 export const deriveCareerTermMusteringBenefitCount = (
   term: Pick<CareerTerm, 'benefits' | 'facts'>
-): number => term.facts?.musteringBenefits?.length ?? term.benefits.length
+): number =>
+  term.facts?.musteringBenefits === undefined
+    ? deriveLegacyCareerTermMusteringBenefitCount(term)
+    : deriveProjectedCareerTermMusteringBenefitCount(term)
 
 export const deriveCareerTermCashBenefitCount = (
   term: Pick<CareerTerm, 'benefits' | 'facts'>
 ): number =>
+  term.facts?.musteringBenefits === undefined
+    ? deriveLegacyCareerTermCashBenefitCount(term)
+    : deriveProjectedCareerTermCashBenefitCount(term)
+
+export const deriveProjectedCareerTermMusteringBenefitCount = (
+  term: Pick<CareerTerm, 'facts'>
+): number => term.facts?.musteringBenefits?.length ?? 0
+
+export const deriveProjectedCareerTermCashBenefitCount = (
+  term: Pick<CareerTerm, 'facts'>
+): number =>
   term.facts?.musteringBenefits?.filter((benefit) => benefit.kind === 'cash')
-    .length ??
+    .length ?? 0
+
+export const deriveLegacyCareerTermMusteringBenefitCount = (
+  term: Pick<CareerTerm, 'benefits'>
+): number => term.benefits.length
+
+export const deriveLegacyCareerTermCashBenefitCount = (
+  term: Pick<CareerTerm, 'benefits'>
+): number =>
   term.benefits.filter((benefit) => /^\d+$/.test(benefit.trim())).length
 
 export const deriveRemainingCashBenefits = ({

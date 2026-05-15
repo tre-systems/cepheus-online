@@ -19,11 +19,17 @@ import {
 import { resolveCareerSkillTableRoll } from './skills'
 import {
   canRollCashBenefit,
+  deriveCareerTermCashBenefitCount,
+  deriveCareerTermMusteringBenefitCount,
   deriveRemainingCashBenefits,
   deriveCashBenefitRollModifier,
   deriveCareerBenefitCount,
+  deriveLegacyCareerTermCashBenefitCount,
+  deriveLegacyCareerTermMusteringBenefitCount,
   deriveMaterialBenefitEffect,
   deriveMaterialBenefitRollModifier,
+  deriveProjectedCareerTermCashBenefitCount,
+  deriveProjectedCareerTermMusteringBenefitCount,
   normalizeMaterialBenefitValue,
   resolveCareerBenefit
 } from './benefits'
@@ -272,6 +278,58 @@ describe('SRD career term rules alignment', () => {
     assert.equal(deriveRemainingCashBenefits({ cashBenefitsReceived: 3 }), 0)
     assert.equal(canRollCashBenefit({ cashBenefitsReceived: 2 }), true)
     assert.equal(canRollCashBenefit({ cashBenefitsReceived: 3 }), false)
+    const termWithFacts = {
+      benefits: ['1000', 'Low Passage', '2000'],
+      facts: {
+        musteringBenefits: [
+          {
+            career: 'Scout',
+            kind: 'cash' as const,
+            roll: { expression: '2d6' as const, rolls: [1, 2], total: 3 },
+            modifier: 0,
+            tableRoll: 3,
+            value: '1000',
+            credits: 1000,
+            materialItem: null
+          },
+          {
+            career: 'Scout',
+            kind: 'material' as const,
+            roll: { expression: '2d6' as const, rolls: [3, 3], total: 6 },
+            modifier: 0,
+            tableRoll: 6,
+            value: 'Low Passage',
+            credits: 0,
+            materialItem: 'Low Passage'
+          },
+          {
+            career: 'Scout',
+            kind: 'cash' as const,
+            roll: { expression: '2d6' as const, rolls: [4, 4], total: 8 },
+            modifier: 0,
+            tableRoll: 8,
+            value: '2000',
+            credits: 2000,
+            materialItem: null
+          }
+        ]
+      }
+    }
+    const legacyTerm = {
+      benefits: ['1000', 'Low Passage', '2000'],
+      facts: {}
+    }
+    assert.equal(
+      deriveProjectedCareerTermMusteringBenefitCount(termWithFacts),
+      3
+    )
+    assert.equal(deriveProjectedCareerTermCashBenefitCount(termWithFacts), 2)
+    assert.equal(deriveLegacyCareerTermMusteringBenefitCount(legacyTerm), 3)
+    assert.equal(deriveLegacyCareerTermCashBenefitCount(legacyTerm), 2)
+    assert.equal(deriveCareerTermMusteringBenefitCount(termWithFacts), 3)
+    assert.equal(deriveCareerTermCashBenefitCount(termWithFacts), 2)
+    assert.equal(deriveCareerTermMusteringBenefitCount(legacyTerm), 3)
+    assert.equal(deriveCareerTermCashBenefitCount(legacyTerm), 2)
 
     assert.deepEqual(
       resolveCareerBenefit({
