@@ -282,6 +282,95 @@ describe('character creation projection helpers', () => {
     )
   })
 
+  it('hydrates completed terms from semantic facts before legacy aggregates', () => {
+    assert.deepEqual(
+      completedTermFromProjection({
+        ...agingProjection().terms[0],
+        skillsAndTraining: ['Legacy Training-0'],
+        complete: true,
+        survival: 2,
+        advancement: 2,
+        reEnlistment: 2,
+        facts: {
+          survival: {
+            passed: true,
+            canCommission: false,
+            canAdvance: true,
+            survival: {
+              expression: '2d6',
+              rolls: [4, 4],
+              total: 8,
+              characteristic: 'end',
+              modifier: 0,
+              target: 7,
+              success: true
+            }
+          },
+          advancement: {
+            skipped: false,
+            passed: true,
+            advancement: {
+              expression: '2d6',
+              rolls: [5, 5],
+              total: 10,
+              characteristic: 'edu',
+              modifier: 1,
+              target: 8,
+              success: true
+            },
+            rank: {
+              career: 'Scout',
+              previousRank: 0,
+              newRank: 1,
+              title: 'Courier',
+              bonusSkill: null
+            }
+          },
+          termSkillRolls: [termSkillEvent('Pilot-1').termSkill],
+          reenlistment: {
+            outcome: 'allowed',
+            reenlistment: {
+              expression: '2d6',
+              rolls: [5, 4],
+              total: 9,
+              characteristic: null,
+              modifier: 0,
+              target: 6,
+              success: true,
+              outcome: 'allowed'
+            }
+          }
+        }
+      }),
+      {
+        career: 'Scout',
+        drafted: false,
+        anagathics: false,
+        anagathicsCost: null,
+        age: null,
+        rank: 1,
+        qualificationRoll: null,
+        survivalRoll: 8,
+        survivalPassed: true,
+        canCommission: false,
+        commissionRoll: null,
+        commissionPassed: null,
+        canAdvance: true,
+        advancementRoll: 10,
+        advancementPassed: true,
+        termSkillRolls: [
+          {
+            table: 'serviceSkills',
+            roll: 1,
+            skill: 'Pilot-1'
+          }
+        ],
+        reenlistmentRoll: 9,
+        reenlistmentOutcome: 'allowed'
+      }
+    )
+  })
+
   it('starts a fresh active plan after reenlisting for another term', () => {
     const flow = flowFromProjectedCharacter(
       character({
