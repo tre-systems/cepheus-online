@@ -238,7 +238,7 @@ describe('dice reveal coordinator', () => {
     )
   })
 
-  it('defers an initial redacted dice log roll before projecting a refresh state', () => {
+  it('keeps deferring a redacted dice log roll until a visible refresh arrives', () => {
     const coordinator = createDiceRevealCoordinator()
     const pending = redactedDiceRoll('roll-1')
 
@@ -257,7 +257,7 @@ describe('dice reveal coordinator', () => {
         nextState: gameState([pending]),
         diceRollActivities: []
       }),
-      []
+      [pending]
     )
   })
 

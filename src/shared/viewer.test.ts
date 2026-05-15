@@ -224,6 +224,158 @@ describe('viewer filtering', () => {
     }
   })
 
+  it('redacts pre-reveal character creation roll facts from player state', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 22,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Pilot-1'],
+            skillsAndTraining: ['Vacc Suit-0', 'Pilot-1'],
+            benefits: ['Low Passage'],
+            complete: true,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 7,
+            advancement: 9,
+            reEnlistment: 10,
+            facts: {
+              basicTrainingSkills: ['Vacc Suit-0'],
+              survival: {
+                rollEventId: asEventId('roll-1'),
+                passed: true,
+                survival: {
+                  expression: '2d6',
+                  rolls: [3, 4],
+                  total: 7,
+                  characteristic: 'end',
+                  modifier: 0,
+                  target: 7,
+                  success: true
+                },
+                canCommission: false,
+                canAdvance: false
+              },
+              termSkillRolls: [
+                {
+                  rollEventId: asEventId('roll-1'),
+                  career: 'Scout',
+                  table: 'serviceSkills',
+                  roll: { expression: '1d6', rolls: [3], total: 3 },
+                  tableRoll: 3,
+                  rawSkill: 'Pilot*',
+                  skill: null,
+                  characteristic: null,
+                  pendingCascadeSkill: 'Pilot-1'
+                }
+              ],
+              reenlistment: {
+                rollEventId: asEventId('roll-1'),
+                outcome: 'allowed',
+                reenlistment: {
+                  expression: '2d6',
+                  rolls: [5, 5],
+                  total: 10,
+                  characteristic: null,
+                  modifier: 0,
+                  target: 6,
+                  success: true,
+                  outcome: 'allowed'
+                }
+              },
+              musteringBenefits: [
+                {
+                  rollEventId: asEventId('roll-1'),
+                  career: 'Scout',
+                  kind: 'material',
+                  roll: { expression: '2d6', rolls: [5, 6], total: 11 },
+                  modifier: 0,
+                  tableRoll: 11,
+                  value: 'Low Passage',
+                  credits: 0
+                }
+              ]
+            }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        pendingCascadeSkills: ['Pilot-1'],
+        creationComplete: false,
+        timeline: [
+          {
+            eventId: asEventId('game-1:4'),
+            seq: 4,
+            createdAt: '2026-05-03T00:00:02.000Z',
+            eventType: 'CharacterCreationSurvivalResolved',
+            rollEventId: asEventId('roll-1')
+          }
+        ]
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const term =
+      filtered.characters[asCharacterId('char-1')]?.creation?.terms[0]
+    assert.equal(term?.facts?.survival, undefined)
+    assert.equal(term?.facts?.termSkillRolls, undefined)
+    assert.equal(term?.facts?.reenlistment, undefined)
+    assert.equal(term?.facts?.musteringBenefits, undefined)
+    assert.deepEqual(term?.skills, [])
+    assert.deepEqual(term?.skillsAndTraining, ['Vacc Suit-0'])
+    assert.deepEqual(term?.benefits, [])
+    assert.deepEqual(
+      filtered.characters[asCharacterId('char-1')]?.creation
+        ?.pendingCascadeSkills,
+      undefined
+    )
+    assert.equal('survival' in (term ?? {}), false)
+    assert.equal('reEnlistment' in (term ?? {}), false)
+    assert.deepEqual(state.characters[asCharacterId('char-1')]?.creation?.terms[0]?.facts?.survival?.survival.rolls, [
+      3,
+      4
+    ])
+  })
+
   it('redacts pre-reveal dice and roll-dependent activity details from players and spectators', () => {
     for (const role of ['PLAYER', 'SPECTATOR'] as const) {
       const state = buildState()

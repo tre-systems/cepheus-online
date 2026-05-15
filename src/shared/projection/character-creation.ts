@@ -538,6 +538,7 @@ const rawCharacterEventHandlers = {
         (facts) => ({
           ...facts,
           qualification: {
+            ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
             career: event.career,
             passed: event.passed,
             qualification: structuredClone(event.qualification),
@@ -578,7 +579,10 @@ const rawCharacterEventHandlers = {
       character.creation.terms,
       (facts) => ({
         ...facts,
-        draft: structuredClone(event.draft)
+        draft: {
+          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
+          ...structuredClone(event.draft)
+        }
       })
     )
 
@@ -630,6 +634,9 @@ const rawCharacterEventHandlers = {
             ...withCareerTermFacts(term, (facts) => ({
               ...facts,
               survival: {
+                ...(event.rollEventId
+                  ? { rollEventId: event.rollEventId }
+                  : {}),
                 passed: event.passed,
                 survival: structuredClone(event.survival),
                 canCommission: event.canCommission,
@@ -677,6 +684,7 @@ const rawCharacterEventHandlers = {
         ...facts,
         commission: {
           skipped: false,
+          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
           passed: event.passed,
           commission: structuredClone(event.commission)
         }
@@ -726,6 +734,7 @@ const rawCharacterEventHandlers = {
         ...facts,
         advancement: {
           skipped: false,
+          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
           passed: event.passed,
           advancement: structuredClone(event.advancement),
           rank: event.rank ? structuredClone(event.rank) : null
@@ -790,7 +799,12 @@ const rawCharacterEventHandlers = {
               ...facts,
               termSkillRolls: [
                 ...(facts.termSkillRolls ?? []),
-                structuredClone(event.termSkill)
+                {
+                  ...(event.rollEventId
+                    ? { rollEventId: event.rollEventId }
+                    : {}),
+                  ...structuredClone(event.termSkill)
+                }
               ]
             })),
             skills: [...event.termSkills],
@@ -836,7 +850,10 @@ const rawCharacterEventHandlers = {
       creationComplete: event.creationComplete,
       terms: recordActiveTermFacts(character.creation.terms, (facts) => ({
         ...facts,
-        aging: structuredClone(event.aging)
+        aging: {
+          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
+          ...structuredClone(event.aging)
+        }
       })),
       characteristicChanges: event.aging.characteristicChanges.map(
         (change) => ({ ...change })
@@ -924,6 +941,7 @@ const rawCharacterEventHandlers = {
         ...withCareerTermFacts(term, (facts) => ({
           ...facts,
           reenlistment: {
+            ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
             outcome: event.outcome,
             reenlistment: structuredClone(event.reenlistment)
           }
@@ -1062,7 +1080,10 @@ const rawCharacterEventHandlers = {
         character.creation.terms,
         event.musteringBenefit.career,
         event.musteringBenefit.value,
-        event.musteringBenefit
+        {
+          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
+          ...event.musteringBenefit
+        }
       ),
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event)

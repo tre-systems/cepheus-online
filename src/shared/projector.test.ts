@@ -667,6 +667,7 @@ describe('game state projection', () => {
       envelope(4, {
         type: 'CharacterCreationSurvivalResolved',
         characterId,
+        rollEventId: asEventId('game-1:3'),
         passed: true,
         survival: {
           expression: '2d6',
@@ -715,6 +716,7 @@ describe('game state projection', () => {
     })
     assert.equal(creation?.terms[0]?.survival, 8)
     assert.deepEqual(creation?.terms[0]?.facts?.survival, {
+      rollEventId: asEventId('game-1:3'),
       passed: true,
       survival: {
         expression: '2d6',

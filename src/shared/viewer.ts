@@ -4,7 +4,11 @@ import {
   type CharacterCreationActivityDescriptor,
   type LiveActivityDescriptor
 } from './live-activity'
-import type { GameState, PlayerState, PieceState } from './state'
+import type { CharacterState, GameState, PlayerState, PieceState } from './state'
+import type {
+  CareerCreationTermSkillFact,
+  CareerTerm
+} from './characterCreation'
 
 export type ViewerRole = PlayerState['role']
 
@@ -66,6 +70,125 @@ const isFutureCharacterCreationReveal = (
 ): boolean =>
   Date.parse(deriveCharacterCreationActivityRevealAt(activity)) > nowMs
 
+const unrevealedDiceRollIds = (state: GameState, nowMs: number): Set<string> =>
+  new Set(
+    state.diceLog
+      .filter((roll) => Date.parse(roll.revealAt) > nowMs)
+      .map((roll) => roll.id)
+  )
+
+const hasUnrevealedRollFact = (
+  fact: object | null | undefined,
+  unrevealedRollIds: ReadonlySet<string>
+): boolean =>
+  Boolean(
+    fact &&
+      'rollEventId' in fact &&
+      typeof fact.rollEventId === 'string' &&
+      unrevealedRollIds.has(fact.rollEventId)
+  )
+
+const visibleTermSkillFacts = (
+  term: CareerTerm,
+  unrevealedRollIds: ReadonlySet<string>
+): CareerCreationTermSkillFact[] =>
+  (term.facts?.termSkillRolls ?? []).filter(
+    (fact) => !hasUnrevealedRollFact(fact, unrevealedRollIds)
+  )
+
+const visibleSkillFromTermSkillFact = (
+  fact: CareerCreationTermSkillFact
+): string | null => fact.skill ?? fact.pendingCascadeSkill ?? null
+
+const redactUnrevealedCreationFacts = (
+  character: CharacterState,
+  unrevealedRollIds: ReadonlySet<string>
+): void => {
+  const creation = character.creation
+  if (!creation || unrevealedRollIds.size === 0) return
+
+  for (const term of creation.terms) {
+    const facts = term.facts
+    if (!facts) continue
+
+    if (hasUnrevealedRollFact(facts.qualification, unrevealedRollIds)) {
+      delete facts.qualification
+    }
+    if (hasUnrevealedRollFact(facts.draft, unrevealedRollIds)) {
+      delete facts.draft
+    }
+    if (hasUnrevealedRollFact(facts.survival, unrevealedRollIds)) {
+      delete facts.survival
+      delete (term as unknown as { survival?: number }).survival
+    }
+    if (hasUnrevealedRollFact(facts.commission, unrevealedRollIds)) {
+      delete facts.commission
+    }
+    if (hasUnrevealedRollFact(facts.advancement, unrevealedRollIds)) {
+      delete facts.advancement
+      delete (term as unknown as { advancement?: number }).advancement
+    }
+    if (hasUnrevealedRollFact(facts.aging, unrevealedRollIds)) {
+      delete facts.aging
+    }
+    if (hasUnrevealedRollFact(facts.reenlistment, unrevealedRollIds)) {
+      delete facts.reenlistment
+      delete (term as unknown as { reEnlistment?: number }).reEnlistment
+    }
+
+    if (facts.termSkillRolls) {
+      const hiddenFacts = facts.termSkillRolls.filter((fact) =>
+        hasUnrevealedRollFact(fact, unrevealedRollIds)
+      )
+      const visibleFacts = visibleTermSkillFacts(term, unrevealedRollIds)
+      if (visibleFacts.length === 0) {
+        delete facts.termSkillRolls
+      } else {
+        facts.termSkillRolls = visibleFacts
+      }
+      const hiddenPendingCascadeSkills = new Set(
+        hiddenFacts.flatMap((fact) =>
+          fact.pendingCascadeSkill ? [fact.pendingCascadeSkill] : []
+        )
+      )
+      if (hiddenPendingCascadeSkills.size > 0) {
+        creation.pendingCascadeSkills = (
+          creation.pendingCascadeSkills ?? []
+        ).filter((skill) => !hiddenPendingCascadeSkills.has(skill))
+        if (creation.pendingCascadeSkills.length === 0) {
+          delete creation.pendingCascadeSkills
+        }
+      }
+      const visibleFactSkills = visibleFacts.flatMap((fact) => {
+        const skill = visibleSkillFromTermSkillFact(fact)
+        return skill ? [skill] : []
+      })
+      term.skills = [...visibleFactSkills]
+      term.skillsAndTraining = [
+        ...(facts.basicTrainingSkills ?? []),
+        ...visibleFactSkills
+      ]
+    }
+
+    if (facts.musteringBenefits) {
+      const hiddenBenefitValues = new Set(
+        facts.musteringBenefits
+          .filter((fact) => hasUnrevealedRollFact(fact, unrevealedRollIds))
+          .map((fact) => fact.value)
+      )
+      facts.musteringBenefits = facts.musteringBenefits.filter(
+        (fact) => !hasUnrevealedRollFact(fact, unrevealedRollIds)
+      )
+      if (facts.musteringBenefits.length === 0) delete facts.musteringBenefits
+      if (hiddenBenefitValues.size > 0) {
+        term.benefits = term.benefits.filter(
+          (benefit) => !hiddenBenefitValues.has(benefit)
+        )
+      }
+    }
+  }
+}
+
 export const resolveViewerForState = (
   state: GameState,
   viewer: GameViewer
@@ -105,10 +228,14 @@ export const filterGameStateForViewer = (
     )
   )
   if (!canViewerSeeUnrevealedDice(state, resolvedViewer)) {
+    const unrevealedRollIds = unrevealedDiceRollIds(state, nowMs)
     for (const roll of filtered.diceLog) {
       if (Date.parse(roll.revealAt) <= nowMs) continue
       delete (roll as unknown as Record<string, unknown>).rolls
       delete (roll as unknown as Record<string, unknown>).total
+    }
+    for (const character of Object.values(filtered.characters)) {
+      redactUnrevealedCreationFacts(character, unrevealedRollIds)
     }
   }
 

@@ -45,6 +45,7 @@ export interface CareerCreationCheckFact extends CareerCreationDiceFact {
 }
 
 export interface CareerCreationDraftFact {
+  rollEventId?: EventId
   roll: CareerCreationDiceFact
   tableRoll: number
   acceptedCareer: string
@@ -65,6 +66,7 @@ export type CareerCreationTermSkillTable =
   | 'advancedEducation'
 
 export interface CareerCreationTermSkillFact {
+  rollEventId?: EventId
   career: string
   table: CareerCreationTermSkillTable
   roll: CareerCreationDiceFact
@@ -79,6 +81,7 @@ export interface CareerCreationTermSkillFact {
 }
 
 export interface CareerCreationAgingFact {
+  rollEventId?: EventId
   roll: CareerCreationDiceFact
   modifier: number
   age: number
@@ -91,6 +94,7 @@ export interface CareerCreationReenlistmentFact
 }
 
 export interface CareerCreationBenefitFact {
+  rollEventId?: EventId
   career: string
   kind: BenefitKind
   roll: CareerCreationDiceFact
@@ -102,6 +106,7 @@ export interface CareerCreationBenefitFact {
 }
 
 export interface CareerTermQualificationFact {
+  rollEventId?: EventId
   career: string
   passed: boolean
   qualification: CareerCreationCheckFact
@@ -110,6 +115,7 @@ export interface CareerTermQualificationFact {
 }
 
 export interface CareerTermSurvivalFact {
+  rollEventId?: EventId
   passed: boolean
   survival: CareerCreationCheckFact
   canCommission: boolean
@@ -119,6 +125,7 @@ export interface CareerTermSurvivalFact {
 export type CareerTermCommissionFact =
   | {
       skipped: false
+      rollEventId?: EventId
       passed: boolean
       commission: CareerCreationCheckFact
     }
@@ -127,6 +134,7 @@ export type CareerTermCommissionFact =
 export type CareerTermAdvancementFact =
   | {
       skipped: false
+      rollEventId?: EventId
       passed: boolean
       advancement: CareerCreationCheckFact
       rank: CareerCreationRankFact | null
@@ -144,6 +152,7 @@ export interface CareerTermAnagathicsDecisionFact {
 }
 
 export interface CareerTermReenlistmentFact {
+  rollEventId?: EventId
   outcome: CareerCreationReenlistmentFact['outcome']
   reenlistment: CareerCreationReenlistmentFact
 }

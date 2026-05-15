@@ -71,6 +71,7 @@ let boardControlsWiring: ReturnType<typeof createBoardControlsWiring> | null =
   null
 const diceRevealCoordinator = createDiceRevealCoordinator()
 const animatedDiceRollActivityIds = new Set<string>()
+let diceRevealRefetchTimer: number | null = null
 let characterCreationFeature: CharacterCreationFeature
 const setStatus = (text: string): void => {
   els.status.textContent = text
@@ -170,6 +171,7 @@ const handleServerMessage = (message: ServerMessage): void => {
 
 const resolveDiceReveal = (rollId: string): void => {
   diceRevealCoordinator.markRevealed(rollId)
+  refetchStateSoon()
 }
 
 const waitForDiceReveal = (
@@ -184,12 +186,46 @@ const waitForDiceRevealOrDelay = (
   return diceRevealCoordinator.waitForRevealOrDelay(roll)
 }
 
+const stateHasRedactedDiceResults = (nextState: GameState | null): boolean =>
+  Boolean(
+    nextState?.diceLog.some((roll) => {
+      const projectedRoll = roll as unknown as Record<string, unknown>
+      return (
+        !Array.isArray(projectedRoll.rolls) ||
+        projectedRoll.total === undefined
+      )
+    })
+  )
+
+const refetchStateSoon = (): void => {
+  if (diceRevealRefetchTimer !== null) {
+    window.clearTimeout(diceRevealRefetchTimer)
+  }
+  diceRevealRefetchTimer = window.setTimeout(() => {
+    diceRevealRefetchTimer = null
+    void fetchState()
+  }, 120)
+}
+
+const shouldRefetchStateAfterDiceReveal = (
+  nextState: GameState | null,
+  diceRollActivities: readonly (ClientDiceRollActivity | DiceRollState)[]
+): boolean => {
+  if (!nextState || diceRollActivities.length === 0) return false
+
+  return stateHasRedactedDiceResults(nextState)
+}
+
 const applyStateAfterDiceReveal = (
   nextState: GameState | null,
   diceRollActivities: readonly (ClientDiceRollActivity | DiceRollState)[]
 ): void => {
   Promise.all(diceRollActivities.map((roll) => waitForDiceRevealOrDelay(roll)))
     .then(() => {
+      if (shouldRefetchStateAfterDiceReveal(nextState, diceRollActivities)) {
+        void fetchState()
+        return
+      }
       const currentSeq = state?.eventSeq ?? -1
       const nextSeq = nextState?.eventSeq ?? -1
       if (nextSeq < currentSeq) return

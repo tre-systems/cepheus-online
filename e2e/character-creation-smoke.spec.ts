@@ -2,7 +2,6 @@ import {
   expect,
   test,
   type Page,
-  type Response,
   type TestInfo
 } from '@playwright/test'
 import {
@@ -2759,10 +2758,9 @@ test.describe('character creation smoke', () => {
         .getByRole('button', { name: 'Service skills' })
       const termSkillPattern =
         /\d+ on (personalDevelopment|serviceSkills|specialistSkills|advancedEducation)/
-      const expectRedactedTermSkillState = async (
-        stateResponse: Response
-      ): Promise<void> => {
-        const message = (await stateResponse.json()) as RoomStateMessage
+      const expectRedactedTermSkillState = (
+        message: RoomStateMessage
+      ): void => {
         const latestRoll = message.state?.diceLog?.at(-1)
         const creationActivity = message.liveActivities?.find(
           (activity) => activity.type === 'characterCreation'
@@ -2809,16 +2807,21 @@ test.describe('character creation smoke', () => {
         timeout: 100
       })
 
-      const waitForSpectatorState = (spectatorPage: Page, userId: string) =>
-        spectatorPage.waitForResponse((response) => {
-          const url = new URL(response.url())
+      const waitForSpectatorState = async (
+        spectatorPage: Page,
+        userId: string
+      ): Promise<RoomStateMessage> => {
+        const response = await spectatorPage.waitForResponse((candidate) => {
+          const url = new URL(candidate.url())
           return (
-            response.request().method() === 'GET' &&
+            candidate.request().method() === 'GET' &&
             url.pathname === `/rooms/${roomId}/state` &&
             url.searchParams.get('viewer') === 'spectator' &&
             url.searchParams.get('user') === userId
           )
         })
+        return (await response.json()) as RoomStateMessage
+      }
       const reloadedState = waitForSpectatorState(spectator, spectatorId)
       const joinedState = waitForSpectatorState(lateSpectator, lateSpectatorId)
 
@@ -2834,10 +2837,8 @@ test.describe('character creation smoke', () => {
         reloadedState,
         joinedState
       ])
-      await Promise.all([
-        expectRedactedTermSkillState(reloadState),
-        expectRedactedTermSkillState(joinState)
-      ])
+      expectRedactedTermSkillState(reloadState)
+      expectRedactedTermSkillState(joinState)
 
       await expect(spectator.locator('#boardCanvas')).toBeVisible()
       await openOrExpectFollowedCreation(spectator, characterName)

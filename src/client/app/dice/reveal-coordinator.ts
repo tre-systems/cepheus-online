@@ -101,6 +101,7 @@ export const createDiceRevealCoordinator = ({
       const latestRoll =
         nextState?.diceLog?.[nextState.diceLog.length - 1] ?? null
       if (!latestRoll) return []
+      if (!rollHasVisibleResult(latestRoll)) return [latestRoll]
       if (!firstStateApplied && rollHasVisibleResult(latestRoll)) return []
       if (latestRoll.id === latestDiceId) return []
       if (revealedDiceIds.has(latestRoll.id)) return []
