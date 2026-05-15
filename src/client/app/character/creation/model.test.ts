@@ -1756,4 +1756,42 @@ describe('character creation view model', () => {
       false
     )
   })
+
+  it('prefers projected terms in the review summary over stale local completed terms', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'review',
+        draft: createInitialCharacterDraft(characterId, {
+          completedTerms: [completedTerm()]
+        })
+      }),
+      projection: projection('ACTIVE', {
+        terms: [
+          projectedCompletedTerm({
+            career: 'Scout',
+            skillsAndTraining: ['Pilot-1']
+          })
+        ]
+      }),
+      character: character(
+        projection('ACTIVE', {
+          terms: [
+            projectedCompletedTerm({
+              career: 'Scout',
+              skillsAndTraining: ['Pilot-1']
+            })
+          ]
+        })
+      ),
+      readOnly: false
+    })
+
+    const terms = viewModel.wizard?.review?.sections.find(
+      (section) => section.key === 'career-history'
+    )
+
+    assert.equal(terms?.items[0]?.label, 'Term 1')
+    assert.equal(terms?.items[0]?.value.includes('Scout'), true)
+    assert.equal(terms?.items[0]?.value.includes('Merchant'), false)
+  })
 })

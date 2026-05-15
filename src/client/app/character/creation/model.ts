@@ -14,7 +14,11 @@ import type {
   CharacterState
 } from '../../../../shared/state'
 import type { CharacterCreationActionPlan } from './actions.js'
-import type { CharacterCreationFlow, CharacterCreationStep } from './flow.js'
+import type {
+  CharacterCreationCompletedTerm,
+  CharacterCreationFlow,
+  CharacterCreationStep
+} from './flow.js'
 import { completedTermFromProjection } from './projection.js'
 import {
   characteristicDefinitions,
@@ -339,9 +343,7 @@ const pendingViewModel = (
 const projectedTermHistoryViewModel = (
   readModel: CharacterCreationReadModel
 ): CharacterCreationTermHistoryViewModel | null => {
-  const completedTerms = readModel.terms
-    .filter((term) => term.complete || term.musteringOut)
-    .map(completedTermFromProjection)
+  const completedTerms = completedTermsFromReadModel(readModel)
   if (completedTerms.length === 0) return null
 
   return {
@@ -351,6 +353,13 @@ const projectedTermHistoryViewModel = (
     )
   }
 }
+
+const completedTermsFromReadModel = (
+  readModel: CharacterCreationReadModel
+): CharacterCreationCompletedTerm[] =>
+  readModel.terms
+    .filter((term) => term.complete || term.musteringOut)
+    .map(completedTermFromProjection)
 
 const wizardViewModel = ({
   flow,
@@ -493,7 +502,11 @@ const wizardViewModel = ({
       : deriveCharacterCreationTermHistoryViewModel(flow),
     review:
       flow.step === 'review'
-        ? deriveCharacterCreationReviewSummary(flow)
+        ? deriveCharacterCreationReviewSummary(flow, {
+            completedTerms: characterReadModel
+              ? completedTermsFromReadModel(characterReadModel)
+              : undefined
+          })
         : null,
     characteristics:
       projectedCharacteristicGridViewModel(characterReadModel) ??

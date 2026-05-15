@@ -2286,13 +2286,13 @@ const careerReviewItems = (
 }
 
 const termHistoryReviewItems = (
-  draft: CharacterCreationFlow['draft']
+  completedTerms: readonly CharacterCreationCompletedTerm[]
 ): CharacterCreationReviewItem[] => {
-  if (draft.completedTerms.length === 0) {
+  if (completedTerms.length === 0) {
     return [{ label: 'Terms', value: 'Not recorded' }]
   }
 
-  return draft.completedTerms.map((term, index) => ({
+  return completedTerms.map((term, index) => ({
     label: `Term ${index + 1}`,
     value: [
       term.career,
@@ -2487,7 +2487,10 @@ export const deriveCharacterCreationCareerSelectionViewModel = (
 }
 
 export const deriveCharacterCreationReviewSummary = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  {
+    completedTerms = flow.draft.completedTerms
+  }: { completedTerms?: readonly CharacterCreationCompletedTerm[] } = {}
 ): CharacterCreationReviewSummary => {
   const { draft } = flow
   const skills = draft.skills.length > 0 ? draft.skills.join(', ') : 'Not set'
@@ -2527,7 +2530,7 @@ export const deriveCharacterCreationReviewSummary = (
       {
         key: 'career-history',
         label: 'Terms',
-        items: termHistoryReviewItems(draft)
+        items: termHistoryReviewItems(completedTerms)
       },
       {
         key: 'skills',
