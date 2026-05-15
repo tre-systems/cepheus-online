@@ -109,6 +109,60 @@ const failedQualificationFlow = (): CharacterCreationFlow => {
   }
 }
 
+const survivalPendingFlow = (): CharacterCreationFlow => {
+  const flow = careerFlow()
+  return {
+    step: 'career',
+    draft: {
+      ...flow.draft,
+      careerPlan: {
+        career: 'Scout',
+        drafted: false,
+        qualificationRoll: 8,
+        qualificationPassed: true,
+        survivalRoll: null,
+        survivalPassed: null,
+        canCommission: true,
+        commissionRoll: null,
+        commissionPassed: null,
+        canAdvance: true,
+        advancementRoll: null,
+        advancementPassed: null,
+        termSkillRolls: []
+      }
+    }
+  }
+}
+
+const survivalProjection = (
+  legalActions: NonNullable<
+    CharacterCreationProjection['actionPlan']
+  >['legalActions']
+): CharacterCreationProjection => ({
+  state: {
+    status: 'SURVIVAL',
+    context: {
+      canCommission: true,
+      canAdvance: true
+    }
+  },
+  terms: [],
+  careers: [],
+  canEnterDraft: true,
+  failedToQualify: false,
+  characteristicChanges: [],
+  creationComplete: false,
+  homeworld: null,
+  backgroundSkills: [],
+  pendingCascadeSkills: [],
+  history: [],
+  actionPlan: {
+    status: 'SURVIVAL',
+    pendingDecisions: [],
+    legalActions
+  }
+})
+
 const projectedDraftCharacter = (
   flow: CharacterCreationFlow,
   creation: CharacterCreationProjection
@@ -666,6 +720,96 @@ describe('character creation command controller', () => {
     assert.equal(flow?.draft.careerPlan?.career, 'Rogue')
     assert.equal(flow?.draft.careerPlan?.qualificationRoll, null)
     assert.equal(flow?.draft.careerPlan?.qualificationPassed, null)
+  })
+
+  it('does not post career roll commands that are not projected legal actions', async () => {
+    const flow = survivalPendingFlow()
+    const commands: CharacterCreationCommand[] = []
+    let published = 0
+    const currentState = stateWithDiceAndCharacter(
+      diceRoll(),
+      projectedDraftCharacter(flow, survivalProjection([]))
+    )
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: () => {},
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => currentState,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {
+        published += 1
+      },
+      postCharacterCreationCommand: async (command) => {
+        commands.push(command)
+        return { state: null }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {},
+      syncFlowFromRoomState: () => null,
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {},
+      scrollToTop: () => {}
+    })
+
+    await controller.rollCareerCheck()
+
+    assert.equal(published, 0)
+    assert.deepEqual(commands, [])
+  })
+
+  it('posts career roll commands from projected legal actions', async () => {
+    const flow = survivalPendingFlow()
+    const commands: CharacterCreationCommand[] = []
+    const waitedFor: string[] = []
+    const currentState = stateWithDiceAndCharacter(
+      diceRoll(),
+      projectedDraftCharacter(
+        flow,
+        survivalProjection([
+          {
+            key: 'rollSurvival',
+            status: 'SURVIVAL',
+            commandTypes: ['ResolveCharacterCreationSurvival'],
+            rollRequirement: { key: 'survival', dice: '2d6' }
+          }
+        ])
+      )
+    )
+    const responseState = stateWithDice(diceRoll(8))
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => flow,
+      setFlow: () => {},
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {},
+      getState: () => currentState,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async (command) => {
+        commands.push(command)
+        return { state: responseState }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async (roll) => {
+        waitedFor.push(roll.id)
+      },
+      syncFlowFromRoomState: () => flow,
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {},
+      scrollToTop: () => {}
+    })
+
+    await controller.rollCareerCheck()
+
+    assert.deepEqual(
+      commands.map((command) => command.type),
+      ['ResolveCharacterCreationSurvival']
+    )
+    assert.deepEqual(waitedFor, ['roll-1'])
   })
 
   it('reports accepted qualification commands without dice results', async () => {

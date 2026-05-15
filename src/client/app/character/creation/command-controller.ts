@@ -20,7 +20,6 @@ import {
   type CharacterCreationTermSkillTable
 } from './flow.js'
 import {
-  deriveCharacterCreationCareerRollButton,
   deriveCharacterCreationCharacteristicRollButton,
   parseCharacterCreationDraftPatch
 } from './view.js'
@@ -120,6 +119,45 @@ const shouldCompleteSkillsAfterTermCascade = (
     creation?.state.status === 'SKILLS_TRAINING' &&
     (creation.pendingCascadeSkills?.length ?? 0) === 0
   )
+}
+
+const projectedCareerRollCommand = (
+  state: GameState | null,
+  flow: CharacterCreationFlow,
+  identity: { gameId: GameId; actorId: UserId }
+): CharacterCreationCommand | null => {
+  const characterId = flow.draft.characterId
+  const legalActions =
+    state?.characters[characterId]?.creation?.actionPlan?.legalActions ?? []
+  const legalAction = legalActions.find(
+    (action) =>
+      action.key === 'rollSurvival' ||
+      action.key === 'rollCommission' ||
+      action.key === 'rollAdvancement'
+  )
+
+  switch (legalAction?.key) {
+    case 'rollSurvival':
+      return {
+        type: 'ResolveCharacterCreationSurvival',
+        ...identity,
+        characterId
+      }
+    case 'rollCommission':
+      return {
+        type: 'ResolveCharacterCreationCommission',
+        ...identity,
+        characterId
+      }
+    case 'rollAdvancement':
+      return {
+        type: 'ResolveCharacterCreationAdvancement',
+        ...identity,
+        characterId
+      }
+    default:
+      return null
+  }
 }
 
 export const createCharacterCreationCommandController = (
@@ -612,30 +650,11 @@ export const createCharacterCreationCommandController = (
       setError('')
       syncFields()
 
-      const rollAction = deriveCharacterCreationCareerRollButton(flow)
-      if (!rollAction) return
-
-      const characterId = flow.draft.characterId
-      let command: CharacterCreationCommand | null = null
-      if (rollAction.key === 'survivalRoll') {
-        command = {
-          type: 'ResolveCharacterCreationSurvival',
-          ...commandIdentity(),
-          characterId
-        }
-      } else if (rollAction.key === 'commissionRoll') {
-        command = {
-          type: 'ResolveCharacterCreationCommission',
-          ...commandIdentity(),
-          characterId
-        }
-      } else if (rollAction.key === 'advancementRoll') {
-        command = {
-          type: 'ResolveCharacterCreationAdvancement',
-          ...commandIdentity(),
-          characterId
-        }
-      }
+      const command = projectedCareerRollCommand(
+        getState(),
+        flow,
+        commandIdentity()
+      )
       if (!command) return
 
       await ensurePublished()
