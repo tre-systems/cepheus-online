@@ -3915,6 +3915,141 @@ describe('room publication flow', () => {
     assert.equal(character?.credits, 900)
   })
 
+  it('publishes event-backed character equipment and credit ledger changes', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    await publish(storage, createGameCommand())
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+
+    const added = await publish(storage, {
+      type: 'AddCharacterEquipmentItem',
+      gameId,
+      actorId,
+      characterId,
+      item: {
+        id: 'vacc-suit-1',
+        name: 'Vacc suit',
+        quantity: 1,
+        notes: ''
+      }
+    })
+    assert.equal(added.ok, true, added.ok ? undefined : added.error.message)
+
+    const updated = await publish(storage, {
+      type: 'UpdateCharacterEquipmentItem',
+      gameId,
+      actorId,
+      characterId,
+      itemId: 'vacc-suit-1',
+      patch: {
+        quantity: 2,
+        notes: 'Ship locker'
+      }
+    })
+    assert.equal(
+      updated.ok,
+      true,
+      updated.ok ? undefined : updated.error.message
+    )
+
+    const credited = await publish(storage, {
+      type: 'AdjustCharacterCredits',
+      gameId,
+      actorId,
+      characterId,
+      ledgerEntryId: 'ledger-1',
+      amount: -250,
+      reason: 'Bought ammunition'
+    })
+    assert.equal(
+      credited.ok,
+      true,
+      credited.ok ? undefined : credited.error.message
+    )
+    if (!credited.ok) return
+    assert.deepEqual(credited.value.state.characters[characterId]?.equipment, [
+      {
+        id: 'vacc-suit-1',
+        name: 'Vacc suit',
+        quantity: 2,
+        notes: 'Ship locker'
+      }
+    ])
+    assert.equal(credited.value.state.characters[characterId]?.credits, -250)
+    assert.deepEqual(credited.value.state.characters[characterId]?.ledger, [
+      {
+        id: 'ledger-1',
+        actorId,
+        createdAt:
+          credited.value.state.characters[characterId]?.ledger?.[0]?.createdAt,
+        amount: -250,
+        balance: -250,
+        reason: 'Bought ammunition'
+      }
+    ])
+
+    const removed = await publish(storage, {
+      type: 'RemoveCharacterEquipmentItem',
+      gameId,
+      actorId,
+      characterId,
+      itemId: 'vacc-suit-1'
+    })
+    assert.equal(
+      removed.ok,
+      true,
+      removed.ok ? undefined : removed.error.message
+    )
+    if (!removed.ok) return
+    assert.deepEqual(removed.value.state.characters[characterId]?.equipment, [])
+  })
+
+  it('rejects player equipment and credit changes without referee authority', async () => {
+    const storage = createMemoryStorage()
+    const characterId = asCharacterId('char-1')
+    const refereeId = asUserId('referee-1')
+    await publish(storage, {
+      type: 'CreateGame',
+      gameId,
+      actorId: refereeId,
+      slug: 'game-1',
+      name: 'Spinward Test'
+    })
+    await publish(storage, {
+      type: 'CreateCharacter',
+      gameId,
+      actorId,
+      characterId,
+      characterType: 'PLAYER',
+      name: 'Scout'
+    })
+
+    const rejected = await publish(storage, {
+      type: 'AdjustCharacterCredits',
+      gameId,
+      actorId,
+      characterId,
+      ledgerEntryId: 'ledger-1',
+      amount: 1000,
+      reason: 'Found treasure'
+    })
+
+    assert.equal(rejected.ok, false)
+    if (rejected.ok) return
+    assert.equal(rejected.error.code, 'not_allowed')
+    assert.equal(
+      rejected.error.message,
+      'Only the room referee can change character equipment or credits'
+    )
+  })
+
   it('blocks player edits to server-authored creation sheet fields', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')

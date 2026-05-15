@@ -129,7 +129,9 @@ export const createCharacterCreationController = ({
 
     openFollow: (characterId, { readOnly: nextReadOnly = true } = {}) => {
       const character = getState()?.characters[characterId] ?? null
-      const nextFlow = character ? legacyFlowFromProjectedCharacter(character) : null
+      const nextFlow = character
+        ? legacyFlowFromProjectedCharacter(character)
+        : null
       if (!nextFlow) return null
 
       batch(() => {

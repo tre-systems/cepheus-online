@@ -1041,7 +1041,8 @@ describe('character creation projection helpers', () => {
 
     assert.deepEqual(musteringBenefitsFromProjection(creation), [])
     assert.deepEqual(
-      legacyFlowFromProjectedCharacter(character(creation))?.draft.musteringBenefits,
+      legacyFlowFromProjectedCharacter(character(creation))?.draft
+        .musteringBenefits,
       []
     )
   })

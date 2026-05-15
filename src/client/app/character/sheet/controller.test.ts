@@ -188,6 +188,21 @@ const createHarness = (options: {
   const visibility: PieceVisibility[] = []
   const freedom: PieceFreedom[] = []
   const rolls: string[] = []
+  const addedEquipment: Array<{
+    characterId: string
+    item: { id: string; name: string; quantity: number; notes: string }
+  }> = []
+  const updatedEquipment: Array<{
+    characterId: string
+    itemId: string
+    patch: { name?: string; quantity?: number; notes?: string }
+  }> = []
+  const removedEquipment: Array<{ characterId: string; itemId: string }> = []
+  const creditAdjustments: Array<{
+    characterId: string
+    amount: number
+    reason: string
+  }> = []
   const errors: string[] = []
 
   const controller = createCharacterSheetController({
@@ -225,13 +240,40 @@ const createHarness = (options: {
       rolls.push(reason)
       return Promise.resolve()
     },
+    addEquipmentItem: (nextCharacterId, item) => {
+      addedEquipment.push({ characterId: nextCharacterId, item })
+      return Promise.resolve()
+    },
+    updateEquipmentItem: (nextCharacterId, itemId, patch) => {
+      updatedEquipment.push({ characterId: nextCharacterId, itemId, patch })
+      return Promise.resolve()
+    },
+    removeEquipmentItem: (nextCharacterId, itemId) => {
+      removedEquipment.push({ characterId: nextCharacterId, itemId })
+      return Promise.resolve()
+    },
+    adjustCredits: (nextCharacterId, amount, reason) => {
+      creditAdjustments.push({ characterId: nextCharacterId, amount, reason })
+      return Promise.resolve()
+    },
+    createEquipmentItemId: () => 'new-equipment-1',
     reportError: (message) => errors.push(message)
   })
 
   return {
     controller,
     elements: { sheet, sheetName, sheetBody, detailTab, actionTab, itemsTab },
-    calls: { patches, visibility, freedom, rolls, errors }
+    calls: {
+      patches,
+      visibility,
+      freedom,
+      rolls,
+      addedEquipment,
+      updatedEquipment,
+      removedEquipment,
+      creditAdjustments,
+      errors
+    }
   }
 }
 
@@ -533,7 +575,7 @@ describe('character sheet controller', () => {
     )
   })
 
-  it('edits items with row controls instead of textarea text', () => {
+  it('edits items with event-backed row controls instead of textarea text', () => {
     const scout = character()
     const harness = createHarness({
       selectedPiece: piece(),
@@ -559,15 +601,62 @@ describe('character sheet controller', () => {
     nameInput.value = 'Cutlass'
     quantityInput.value = '2'
     notesInput.value = 'Ceremonial'
-    findByText(harness.elements.sheetBody, 'Save items').click()
+    findByText(harness.elements.sheetBody, 'Update').click()
 
-    assert.deepEqual(harness.calls.patches, [
+    assert.deepEqual(harness.calls.updatedEquipment, [
       {
-        target: characterId,
+        characterId,
+        itemId: 'Laser Pistol',
         patch: {
-          credits: 1200,
-          equipment: [{ name: 'Cutlass', quantity: 2, notes: 'Ceremonial' }]
+          name: 'Cutlass',
+          quantity: 2,
+          notes: 'Ceremonial'
         }
+      }
+    ])
+
+    findByText(harness.elements.sheetBody, 'Remove').click()
+    assert.deepEqual(harness.calls.removedEquipment, [
+      { characterId, itemId: 'Laser Pistol' }
+    ])
+
+    const newName = inputs.find((input) => input.name === 'newEquipmentName')
+    const newQuantity = inputs.find(
+      (input) => input.name === 'newEquipmentQuantity'
+    )
+    const newNotes = inputs.find((input) => input.name === 'newEquipmentNotes')
+    if (!newName || !newQuantity || !newNotes) {
+      throw new Error('Expected new equipment row inputs')
+    }
+    newName.value = 'Medkit'
+    newQuantity.value = '1'
+    newNotes.value = 'Field issue'
+    findByText(harness.elements.sheetBody, 'Add item').click()
+    assert.deepEqual(harness.calls.addedEquipment, [
+      {
+        characterId,
+        item: {
+          id: 'new-equipment-1',
+          name: 'Medkit',
+          quantity: 1,
+          notes: 'Field issue'
+        }
+      }
+    ])
+
+    const creditAmount = inputs.find((input) => input.name === 'creditAmount')
+    const creditReason = inputs.find((input) => input.name === 'creditReason')
+    if (!creditAmount || !creditReason) {
+      throw new Error('Expected credit ledger inputs')
+    }
+    creditAmount.value = '-250'
+    creditReason.value = 'Bought ammunition'
+    findByText(harness.elements.sheetBody, 'Record credits').click()
+    assert.deepEqual(harness.calls.creditAdjustments, [
+      {
+        characterId,
+        amount: -250,
+        reason: 'Bought ammunition'
       }
     ])
   })

@@ -18,6 +18,7 @@ import { requireState } from './state'
 import type { EventHandler, EventHandlerMap } from './types'
 import type {
   CharacterCharacteristics,
+  CharacterEquipmentItem,
   CharacterState,
   CharacterSheetPatch,
   GameState
@@ -49,6 +50,31 @@ const applyCharacterSheetPatch = (
     character.equipment = patch.equipment.map((item) => ({ ...item }))
   }
   if (patch.credits !== undefined) character.credits = patch.credits
+}
+
+const cloneEquipmentItem = (
+  item: CharacterEquipmentItem
+): CharacterEquipmentItem => ({
+  ...(item.id === undefined ? {} : { id: item.id }),
+  name: item.name,
+  quantity: item.quantity,
+  notes: item.notes
+})
+
+const itemMatchesId = (item: CharacterEquipmentItem, itemId: string) =>
+  item.id === itemId || (!item.id && item.name === itemId)
+
+const applyEquipmentPatch = (
+  item: CharacterEquipmentItem,
+  patch: Partial<CharacterEquipmentItem>
+): CharacterEquipmentItem => {
+  const id = item.id ?? patch.id
+  return {
+    ...(id === undefined ? {} : { id }),
+    name: patch.name ?? item.name,
+    quantity: patch.quantity ?? item.quantity,
+    notes: patch.notes ?? item.notes
+  }
 }
 
 const requiredTermSkillCount = ({
@@ -243,6 +269,10 @@ const withCharacterCreationActionPlans = <
 type CharacterEventType =
   | 'CharacterCreated'
   | 'CharacterSheetUpdated'
+  | 'CharacterEquipmentItemAdded'
+  | 'CharacterEquipmentItemUpdated'
+  | 'CharacterEquipmentItemRemoved'
+  | 'CharacterCreditsAdjusted'
   | 'CharacterCreationStarted'
   | 'CharacterCreationTransitioned'
   | 'CharacterCreationCharacteristicRolled'
@@ -296,6 +326,7 @@ const rawCharacterEventHandlers = {
       skills: [],
       equipment: [],
       credits: 0,
+      ledger: [],
       creation: null
     }
     nextState.eventSeq = envelope.seq
@@ -310,6 +341,74 @@ const rawCharacterEventHandlers = {
     if (!character) return nextState
 
     applyCharacterSheetPatch(character, event)
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterEquipmentItemAdded: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character) return nextState
+
+    character.equipment = [
+      ...character.equipment.map(cloneEquipmentItem),
+      cloneEquipmentItem(event.item)
+    ]
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterEquipmentItemUpdated: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character) return nextState
+
+    character.equipment = character.equipment.map((item) =>
+      itemMatchesId(item, event.itemId)
+        ? applyEquipmentPatch(item, event.patch)
+        : cloneEquipmentItem(item)
+    )
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterEquipmentItemRemoved: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character) return nextState
+
+    character.equipment = character.equipment
+      .filter((item) => !itemMatchesId(item, event.itemId))
+      .map(cloneEquipmentItem)
+    nextState.eventSeq = envelope.seq
+
+    return nextState
+  },
+
+  CharacterCreditsAdjusted: (state, envelope) => {
+    const event = envelope.event
+    const nextState = requireState(state, event.type)
+    const character = nextState.characters[event.characterId]
+    if (!character) return nextState
+
+    character.credits = event.balance
+    character.ledger = [
+      ...(character.ledger ?? []),
+      {
+        id: event.ledgerEntryId,
+        actorId: envelope.actorId,
+        createdAt: envelope.createdAt,
+        amount: event.amount,
+        balance: event.balance,
+        reason: event.reason
+      }
+    ]
     nextState.eventSeq = envelope.seq
 
     return nextState

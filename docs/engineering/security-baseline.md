@@ -22,6 +22,11 @@ finalization. Manual `UpdateCharacterSheet` patches from non-referees are
 notes-only; age, characteristics, skills, equipment, and credits are
 creation-owned fields that only a referee may correct manually.
 
+In-play equipment and credit changes use dedicated item/ledger commands rather
+than whole-sheet replacement. For the current public-room phase, those commands
+are referee-only so a player cannot mint credits or equipment by editing their
+browser request.
+
 ## Discord Identity
 
 Discord OAuth should establish identity, but the app should still issue its own

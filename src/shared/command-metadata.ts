@@ -78,6 +78,26 @@ const commandMetadataDefinitions = {
     usesSeededDice: false,
     autoAddExpectedSeq: true
   },
+  AddCharacterEquipmentItem: {
+    route: 'sheet',
+    usesSeededDice: false,
+    autoAddExpectedSeq: true
+  },
+  UpdateCharacterEquipmentItem: {
+    route: 'sheet',
+    usesSeededDice: false,
+    autoAddExpectedSeq: true
+  },
+  RemoveCharacterEquipmentItem: {
+    route: 'sheet',
+    usesSeededDice: false,
+    autoAddExpectedSeq: true
+  },
+  AdjustCharacterCredits: {
+    route: 'sheet',
+    usesSeededDice: false,
+    autoAddExpectedSeq: true
+  },
   StartCharacterCreation: {
     route: 'characterCreation',
     usesSeededDice: false,

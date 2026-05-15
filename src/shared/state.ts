@@ -39,9 +39,19 @@ export type CharacterCreationCharacteristicRolls = Partial<
 export type CharacterCharacteristics = Record<CharacteristicKey, number | null>
 
 export interface CharacterEquipmentItem {
+  id?: string
   name: string
   quantity: number
   notes: string
+}
+
+export interface CharacterLedgerEntry {
+  id: string
+  actorId: UserId | null
+  createdAt: string
+  amount: number
+  balance: number
+  reason: string
 }
 
 export interface CharacterSheetPatch {
@@ -120,6 +130,7 @@ export interface CharacterState {
   skills: string[]
   equipment: CharacterEquipmentItem[]
   credits: number
+  ledger?: CharacterLedgerEntry[]
   creation: CharacterCreationProjection | null
 }
 

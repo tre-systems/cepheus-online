@@ -81,6 +81,22 @@ export interface CharacterSheetControllerOptions {
     skill: string,
     reason: string
   ) => Promise<unknown>
+  addEquipmentItem: (
+    characterId: string,
+    item: CharacterEquipmentItem & { id: string }
+  ) => Promise<unknown>
+  updateEquipmentItem: (
+    characterId: string,
+    itemId: string,
+    patch: Partial<CharacterEquipmentItem>
+  ) => Promise<unknown>
+  removeEquipmentItem: (characterId: string, itemId: string) => Promise<unknown>
+  adjustCredits: (
+    characterId: string,
+    amount: number,
+    reason: string
+  ) => Promise<unknown>
+  createEquipmentItemId?: (character: CharacterState) => string
   getCharacterCreationActions?: (
     character: CharacterState | null
   ) => CharacterSheetCreationActions | null
@@ -120,6 +136,12 @@ export const createCharacterSheetController = ({
   setVisibility,
   setFreedom,
   rollSkill,
+  addEquipmentItem,
+  updateEquipmentItem,
+  removeEquipmentItem,
+  adjustCredits,
+  createEquipmentItemId = (character) =>
+    `equipment-${character.id}-${Date.now().toString(36)}`,
   getCharacterCreationActions,
   reportError
 }: CharacterSheetControllerOptions): CharacterSheetController => {
@@ -526,25 +548,41 @@ export const createCharacterSheetController = ({
 
     const form = documentApi.createElement('div')
     form.className = 'sheet-items-editor'
-    const creditsLabel = documentApi.createElement('label')
-    creditsLabel.textContent = 'Credits'
-    const creditsInput = documentApi.createElement('input')
-    creditsInput.name = 'credits'
-    creditsInput.inputMode = 'numeric'
-    creditsInput.autocomplete = 'off'
-    creditsInput.value =
-      character.credits == null ? '0' : String(character.credits)
-    creditsLabel.append(creditsInput)
+    const creditLine = documentApi.createElement('div')
+    creditLine.className = 'sheet-edit-line'
+    const amountLabel = documentApi.createElement('label')
+    amountLabel.textContent = 'Credit change'
+    const amountInput = documentApi.createElement('input')
+    amountInput.name = 'creditAmount'
+    amountInput.inputMode = 'numeric'
+    amountInput.autocomplete = 'off'
+    amountInput.placeholder = '-250'
+    amountLabel.append(amountInput)
+    const reasonLabel = documentApi.createElement('label')
+    reasonLabel.textContent = 'Reason'
+    const reasonInput = documentApi.createElement('input')
+    reasonInput.name = 'creditReason'
+    reasonInput.autocomplete = 'off'
+    reasonInput.placeholder = 'Bought ammunition'
+    reasonLabel.append(reasonInput)
+    const creditSave = documentApi.createElement('button')
+    creditSave.type = 'button'
+    creditSave.textContent = 'Record credits'
+    creditSave.addEventListener('click', () => {
+      const amount = nullableNumberFromInput(amountInput)
+      const reason = reasonInput.value.trim()
+      if (amount === null || amount === 0 || !reason) {
+        reportError('Credit changes need a non-zero amount and reason')
+        return
+      }
+      handleAsyncError(adjustCredits(character.id, amount, reason))
+    })
+    creditLine.append(amountLabel, reasonLabel, creditSave)
 
     const equipmentRows = documentApi.createElement('div')
     equipmentRows.className = 'sheet-equipment-rows'
-    const rowInputs: Array<{
-      name: HTMLInputElement
-      quantity: HTMLInputElement
-      notes: HTMLInputElement
-    }> = []
 
-    const appendEquipmentRow = (item?: Partial<CharacterEquipmentItem>) => {
+    const appendEditableEquipmentRow = (item: CharacterEquipmentItem) => {
       const row = documentApi.createElement('div')
       row.className = 'sheet-equipment-row'
       const name = documentApi.createElement('input')
@@ -564,44 +602,70 @@ export const createCharacterSheetController = ({
       notes.autocomplete = 'off'
       notes.placeholder = 'Notes'
       notes.value = item?.notes || ''
-      rowInputs.push({ name, quantity, notes })
-      row.append(name, quantity, notes)
+      const save = documentApi.createElement('button')
+      save.type = 'button'
+      save.textContent = 'Update'
+      save.addEventListener('click', () => {
+        const itemId = item.id ?? item.name
+        handleAsyncError(
+          updateEquipmentItem(character.id, itemId, {
+            name: name.value.trim(),
+            quantity: nullableNumberFromInput(quantity) ?? 1,
+            notes: notes.value.trim()
+          })
+        )
+      })
+      const remove = documentApi.createElement('button')
+      remove.type = 'button'
+      remove.textContent = 'Remove'
+      remove.addEventListener('click', () => {
+        handleAsyncError(
+          removeEquipmentItem(character.id, item.id ?? item.name)
+        )
+      })
+      row.append(name, quantity, notes, save, remove)
       equipmentRows.append(row)
     }
 
-    for (const item of equipment) appendEquipmentRow(item)
-    if (equipment.length === 0) appendEquipmentRow()
+    for (const item of equipment) appendEditableEquipmentRow(item)
 
+    const addRow = documentApi.createElement('div')
+    addRow.className = 'sheet-equipment-row'
+    const newName = documentApi.createElement('input')
+    newName.name = 'newEquipmentName'
+    newName.autocomplete = 'off'
+    newName.placeholder = 'New item'
+    const newQuantity = documentApi.createElement('input')
+    newQuantity.name = 'newEquipmentQuantity'
+    newQuantity.inputMode = 'numeric'
+    newQuantity.autocomplete = 'off'
+    newQuantity.placeholder = 'Qty'
+    newQuantity.value = '1'
+    const newNotes = documentApi.createElement('input')
+    newNotes.name = 'newEquipmentNotes'
+    newNotes.autocomplete = 'off'
+    newNotes.placeholder = 'Notes'
     const addItem = documentApi.createElement('button')
     addItem.type = 'button'
     addItem.textContent = 'Add item'
     addItem.addEventListener('click', () => {
-      appendEquipmentRow()
-    })
-
-    const save = documentApi.createElement('button')
-    save.type = 'button'
-    save.textContent = 'Save items'
-    save.addEventListener('click', () => {
-      const nextEquipment = rowInputs
-        .map(({ name, quantity, notes }) => ({
-          name: name.value.trim(),
-          quantity: nullableNumberFromInput(quantity) ?? 1,
-          notes: notes.value.trim()
-        }))
-        .filter((item) => item.name.length > 0)
+      const name = newName.value.trim()
+      if (!name) {
+        reportError('Equipment item name is required')
+        return
+      }
       handleAsyncError(
-        sendCharacterSheetPatch(
-          { characterId: character.id },
-          {
-            credits: nullableNumberFromInput(creditsInput) ?? 0,
-            equipment: nextEquipment
-          }
-        )
+        addEquipmentItem(character.id, {
+          id: createEquipmentItemId(character),
+          name,
+          quantity: nullableNumberFromInput(newQuantity) ?? 1,
+          notes: newNotes.value.trim()
+        })
       )
     })
+    addRow.append(newName, newQuantity, newNotes, addItem)
 
-    form.append(creditsLabel, equipmentRows, addItem, save)
+    form.append(creditLine, equipmentRows, addRow)
     return form
   }
 

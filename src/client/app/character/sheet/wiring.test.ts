@@ -126,6 +126,17 @@ describe('character sheet wiring', () => {
     const patch: CharacterSheetPatch = { notes: 'Updated' }
     await options.sendPatch(character.id, patch)
     await options.sendPatch({ characterId: character.id }, patch)
+    await options.addEquipmentItem(character.id, {
+      id: 'vacc-suit-1',
+      name: 'Vacc suit',
+      quantity: 1,
+      notes: ''
+    })
+    await options.updateEquipmentItem(character.id, 'vacc-suit-1', {
+      quantity: 2
+    })
+    await options.removeEquipmentItem(character.id, 'vacc-suit-1')
+    await options.adjustCredits(character.id, -250, 'Bought ammunition')
     await options.setVisibility(piece, 'HIDDEN')
     await options.setFreedom(piece, 'UNLOCKED')
     await options.rollSkill(piece, character, 'Pilot', 'Pilot check')
@@ -151,6 +162,45 @@ describe('character sheet wiring', () => {
         actorId,
         characterId: character.id,
         notes: 'Updated'
+      },
+      {
+        type: 'AddCharacterEquipmentItem',
+        gameId,
+        actorId,
+        characterId: character.id,
+        item: {
+          id: 'vacc-suit-1',
+          name: 'Vacc suit',
+          quantity: 1,
+          notes: ''
+        }
+      },
+      {
+        type: 'UpdateCharacterEquipmentItem',
+        gameId,
+        actorId,
+        characterId: character.id,
+        itemId: 'vacc-suit-1',
+        patch: {
+          quantity: 2
+        }
+      },
+      {
+        type: 'RemoveCharacterEquipmentItem',
+        gameId,
+        actorId,
+        characterId: character.id,
+        itemId: 'vacc-suit-1'
+      },
+      {
+        type: 'AdjustCharacterCredits',
+        gameId,
+        actorId,
+        characterId: character.id,
+        ledgerEntryId: (sheetCommands[5] as { ledgerEntryId?: string })
+          .ledgerEntryId,
+        amount: -250,
+        reason: 'Bought ammunition'
       },
       {
         type: 'SetPieceVisibility',

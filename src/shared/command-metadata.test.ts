@@ -29,6 +29,14 @@ describe('command metadata', () => {
       'character'
     )
     assert.equal(
+      commandMetadataByType.AddCharacterEquipmentItem.handlerDomain,
+      'character'
+    )
+    assert.equal(
+      commandMetadataByType.AdjustCharacterCredits.handlerDomain,
+      'character'
+    )
+    assert.equal(
       commandMetadataByType.StartCharacterCreation.handlerDomain,
       'characterCreation'
     )
@@ -68,10 +76,16 @@ describe('command metadata', () => {
           CommandTypeForHandlerDomain<'character'>
         >
       >,
+      Assert<
+        IsAssignable<
+          'AddCharacterEquipmentItem',
+          CommandTypeForHandlerDomain<'character'>
+        >
+      >,
       Assert<IsAssignable<'SetDoorOpen', CommandTypeForHandlerDomain<'board'>>>,
       Assert<IsAssignable<'RollDice', CommandTypeForHandlerDomain<'dice'>>>
-    ] = [true, true, true, true, true, true]
+    ] = [true, true, true, true, true, true, true]
 
-    assert.equal(assertions.length, 6)
+    assert.equal(assertions.length, 7)
   })
 })

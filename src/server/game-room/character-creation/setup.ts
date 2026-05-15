@@ -66,8 +66,7 @@ const hasUnrevealedCreationDice = (
   const nowMs = createdAt ? Date.parse(createdAt) : Date.now()
 
   return state.diceLog.some(
-    (roll) =>
-      creationRollIds.has(roll.id) && Date.parse(roll.revealAt) > nowMs
+    (roll) => creationRollIds.has(roll.id) && Date.parse(roll.revealAt) > nowMs
   )
 }
 
@@ -236,7 +235,9 @@ export const deriveCreationFinalizationCommandEvents = (
           'Only the character owner or referee can finalize character creation'
         )
       }
-      if (hasUnrevealedCreationDice(state.value, character, context.createdAt)) {
+      if (
+        hasUnrevealedCreationDice(state.value, character, context.createdAt)
+      ) {
         return err(
           commandError(
             'invalid_command',

@@ -137,8 +137,7 @@ export const createCreationPresenceDock = ({
       }
 
       const currentActorId = getActorId()
-      const canAutoFollow =
-        !characterCreatorOpen || !isCharacterCreatorActive()
+      const canAutoFollow = !characterCreatorOpen || !isCharacterCreatorActive()
       if (
         autoFollowSingleRemoteCreation &&
         canAutoFollow &&

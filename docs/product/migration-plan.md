@@ -50,10 +50,13 @@ dice, refresh, and recover from the event stream.
 - Port entity schemas into hand-built forms. In progress with the dependency-free
   character sheet tabs.
 - Add character create/edit events. Basic create/edit events are in place for
-  notes, age, characteristics, skills, credits, and simple equipment.
-- Add equipment add/update/remove events. Not started as item-level events;
-  current UI replaces the simple equipment list through `UpdateCharacterSheet`.
-- Add ledger append/export.
+  notes, age, characteristics, skills, and referee corrections.
+- Add equipment add/update/remove events. Done for item-level equipment
+  add/update/remove commands and events; the sheet UI now uses those commands
+  instead of replacing the whole equipment list.
+- Add ledger append/export. Ledger-backed credit adjustments are in place for
+  spend/gain events; export presentation can be expanded in a later polish
+  slice.
 - Add notes as server-ordered blocks.
 
 Success criteria: player-facing character sheet matches the useful parts of the

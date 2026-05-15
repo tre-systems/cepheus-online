@@ -1,6 +1,7 @@
 import { asCharacterId } from '../../../../shared/ids'
 import type {
   BoardState,
+  CharacterEquipmentItem,
   CharacterState,
   GameState,
   PieceFreedom,
@@ -61,6 +62,10 @@ export const createCharacterSheetWiring = ({
   reportError,
   createController = createCharacterSheetController
 }: CharacterSheetWiringOptions): CharacterSheetController => {
+  let ledgerSequence = 0
+  const createLedgerEntryId = () =>
+    `ledger-${Date.now().toString(36)}-${++ledgerSequence}`
+
   return createController({
     elements: {
       sheet: elements.sheet,
@@ -107,6 +112,44 @@ export const createCharacterSheetWiring = ({
           reason
         }) as DiceCommand
       ),
+    addEquipmentItem: (
+      characterId: string,
+      item: CharacterEquipmentItem & { id: string }
+    ) =>
+      postSheetCommand({
+        type: 'AddCharacterEquipmentItem',
+        ...getCommandIdentity(),
+        characterId: asCharacterId(characterId),
+        item
+      }),
+    updateEquipmentItem: (
+      characterId: string,
+      itemId: string,
+      patch: Partial<CharacterEquipmentItem>
+    ) =>
+      postSheetCommand({
+        type: 'UpdateCharacterEquipmentItem',
+        ...getCommandIdentity(),
+        characterId: asCharacterId(characterId),
+        itemId,
+        patch
+      }),
+    removeEquipmentItem: (characterId: string, itemId: string) =>
+      postSheetCommand({
+        type: 'RemoveCharacterEquipmentItem',
+        ...getCommandIdentity(),
+        characterId: asCharacterId(characterId),
+        itemId
+      }),
+    adjustCredits: (characterId: string, amount: number, reason: string) =>
+      postSheetCommand({
+        type: 'AdjustCharacterCredits',
+        ...getCommandIdentity(),
+        characterId: asCharacterId(characterId),
+        ledgerEntryId: createLedgerEntryId(),
+        amount,
+        reason
+      }),
     getCharacterCreationActions: (character) =>
       renderCharacterCreationSheetActions(character, {
         document,

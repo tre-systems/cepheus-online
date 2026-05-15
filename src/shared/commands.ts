@@ -9,6 +9,7 @@ import type {
   CareerCreationTermSkillTable
 } from './characterCreation'
 import type {
+  CharacterEquipmentItem,
   CharacterCreationHomeworld,
   CharacteristicKey,
   CharacterSheetPatch,
@@ -42,6 +43,41 @@ export type Command =
       expectedSeq?: number
       characterId: CharacterId
     } & CharacterSheetPatch)
+  | {
+      type: 'AddCharacterEquipmentItem'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+      item: CharacterEquipmentItem & { id: string }
+    }
+  | {
+      type: 'UpdateCharacterEquipmentItem'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+      itemId: string
+      patch: Partial<CharacterEquipmentItem>
+    }
+  | {
+      type: 'RemoveCharacterEquipmentItem'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+      itemId: string
+    }
+  | {
+      type: 'AdjustCharacterCredits'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      characterId: CharacterId
+      ledgerEntryId: string
+      amount: number
+      reason: string
+    }
   | {
       type: 'StartCharacterCreation'
       gameId: GameId

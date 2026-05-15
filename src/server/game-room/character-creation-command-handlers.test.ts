@@ -5,12 +5,7 @@ import {
   createCareerCreationState,
   type CareerCreationStatus
 } from '../../shared/characterCreation'
-import {
-  asCharacterId,
-  asEventId,
-  asGameId,
-  asUserId
-} from '../../shared/ids'
+import { asCharacterId, asEventId, asGameId, asUserId } from '../../shared/ids'
 import type {
   CharacterCreationProjection,
   CharacterState,

@@ -465,6 +465,61 @@ describe('protocol validation', () => {
     assert.equal(command.credits, 1200)
   })
 
+  it('accepts event-backed character equipment and credit commands', () => {
+    const commands = [
+      {
+        type: 'AddCharacterEquipmentItem',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        item: {
+          id: 'vacc-suit-1',
+          name: 'Vacc suit',
+          quantity: 1,
+          notes: 'Tailored'
+        }
+      },
+      {
+        type: 'UpdateCharacterEquipmentItem',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        itemId: 'vacc-suit-1',
+        patch: {
+          quantity: 2,
+          notes: 'Ship locker'
+        }
+      },
+      {
+        type: 'RemoveCharacterEquipmentItem',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        itemId: 'vacc-suit-1'
+      },
+      {
+        type: 'AdjustCharacterCredits',
+        gameId: 'game-1',
+        actorId: 'user-1',
+        characterId: 'char-1',
+        ledgerEntryId: 'ledger-1',
+        amount: -250,
+        reason: 'Bought ammunition'
+      }
+    ]
+
+    for (const command of commands) {
+      const decoded = decodeClientMessage({
+        type: 'command',
+        requestId: `req-${command.type}`,
+        command
+      })
+      assert.equal(decoded.ok, true)
+      if (!decoded.ok || decoded.value.type !== 'command') continue
+      assert.equal(decoded.value.command.type, command.type)
+    }
+  })
+
   it('accepts expected sequence on all decoded command types', () => {
     const base = { gameId: 'game-1', actorId: 'player-1', expectedSeq: 7 }
     const commands = [
@@ -480,6 +535,38 @@ describe('protocol validation', () => {
         ...base,
         characterId: 'char-1',
         notes: 'Ready'
+      },
+      {
+        type: 'AddCharacterEquipmentItem',
+        ...base,
+        characterId: 'char-1',
+        item: {
+          id: 'vacc-suit-1',
+          name: 'Vacc suit',
+          quantity: 1,
+          notes: ''
+        }
+      },
+      {
+        type: 'UpdateCharacterEquipmentItem',
+        ...base,
+        characterId: 'char-1',
+        itemId: 'vacc-suit-1',
+        patch: { quantity: 2 }
+      },
+      {
+        type: 'RemoveCharacterEquipmentItem',
+        ...base,
+        characterId: 'char-1',
+        itemId: 'vacc-suit-1'
+      },
+      {
+        type: 'AdjustCharacterCredits',
+        ...base,
+        characterId: 'char-1',
+        ledgerEntryId: 'ledger-1',
+        amount: -50,
+        reason: 'Berthing fee'
       },
       {
         type: 'StartCharacterCreation',

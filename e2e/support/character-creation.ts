@@ -467,6 +467,26 @@ export const waitForDiceReveal = async (page: Page): Promise<void> => {
   await expect(overlay).not.toHaveClass(/visible/, { timeout: 5_000 })
 }
 
+export const waitForLatestDiceRevealBoundary = async (
+  page: Page,
+  roomId: string,
+  actorId: string,
+  viewer: 'referee' | 'player' | 'spectator' = 'referee'
+): Promise<void> => {
+  await expect
+    .poll(
+      async () => {
+        const message = await fetchRoomState(page, roomId, actorId, viewer)
+        const revealAt = message.state?.diceLog?.at(-1)?.revealAt
+        if (!revealAt) return true
+        const revealAtMs = Date.parse(revealAt)
+        return Number.isFinite(revealAtMs) && Date.now() >= revealAtMs + 50
+      },
+      { timeout: 7_000 }
+    )
+    .toBe(true)
+}
+
 export const normalizedText = async (
   locator: ReturnType<Page['locator']>
 ): Promise<string> =>

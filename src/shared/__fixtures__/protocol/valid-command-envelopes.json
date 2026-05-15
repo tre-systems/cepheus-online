@@ -18,6 +18,47 @@
     "expectedSeq": 12
   },
   {
+    "name": "character equipment add command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-add-equipment",
+      "command": {
+        "type": "AddCharacterEquipmentItem",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 13,
+        "characterId": "crew-scout-1",
+        "item": {
+          "id": "vacc-suit-1",
+          "name": "Vacc suit",
+          "quantity": 1,
+          "notes": "Tailored"
+        }
+      }
+    },
+    "commandType": "AddCharacterEquipmentItem",
+    "expectedSeq": 13
+  },
+  {
+    "name": "character credit ledger command",
+    "message": {
+      "type": "command",
+      "requestId": "cepheus-adjust-credits",
+      "command": {
+        "type": "AdjustCharacterCredits",
+        "gameId": "cepheus-run",
+        "actorId": "referee-1",
+        "expectedSeq": 14,
+        "characterId": "crew-scout-1",
+        "ledgerEntryId": "ledger-berthing-1",
+        "amount": -250,
+        "reason": "Berthing fees"
+      }
+    },
+    "commandType": "AdjustCharacterCredits",
+    "expectedSeq": 14
+  },
+  {
     "name": "stale-sensitive movement command",
     "message": {
       "type": "command",

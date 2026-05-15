@@ -29,6 +29,10 @@ export type SheetCommand = Extract<
   {
     type:
       | 'UpdateCharacterSheet'
+      | 'AddCharacterEquipmentItem'
+      | 'UpdateCharacterEquipmentItem'
+      | 'RemoveCharacterEquipmentItem'
+      | 'AdjustCharacterCredits'
       | 'SetPieceVisibility'
       | 'SetPieceFreedom'
       | 'RollDice'

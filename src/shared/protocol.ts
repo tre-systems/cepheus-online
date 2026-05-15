@@ -301,8 +301,11 @@ const parseEquipment = (
     if (!quantity.ok) return quantity
     const notes = parseOptionalString(item.notes, `${label}[${index}].notes`)
     if (!notes.ok) return notes
+    const id = parseOptionalString(item.id, `${label}[${index}].id`)
+    if (!id.ok) return id
 
     equipment.push({
+      ...(id.value === null ? {} : { id: id.value }),
       name: name.value,
       quantity: quantity.value,
       notes: notes.value ?? ''
@@ -355,6 +358,59 @@ const parseCharacterSheetPatch = (
     const credits = parseNumber(raw.credits, 'credits')
     if (!credits.ok) return credits
     patch.credits = credits.value
+  }
+
+  return ok(patch)
+}
+
+const parseEquipmentCommandItem = (
+  raw: unknown,
+  label: string
+): Result<CharacterEquipmentItem & { id: string }, CommandError> => {
+  if (!isObject(raw)) {
+    return err(invalidCommand(`${label} must be an object`))
+  }
+
+  const id = parseString(raw.id, `${label}.id`)
+  if (!id.ok) return id
+  const name = parseString(raw.name, `${label}.name`)
+  if (!name.ok) return name
+  const quantity = parseNumber(raw.quantity, `${label}.quantity`)
+  if (!quantity.ok) return quantity
+  const notes = parseOptionalString(raw.notes, `${label}.notes`)
+  if (!notes.ok) return notes
+
+  return ok({
+    id: id.value,
+    name: name.value,
+    quantity: quantity.value,
+    notes: notes.value ?? ''
+  })
+}
+
+const parseEquipmentItemPatch = (
+  raw: unknown,
+  label: string
+): Result<Partial<CharacterEquipmentItem>, CommandError> => {
+  if (!isObject(raw)) {
+    return err(invalidCommand(`${label} must be an object`))
+  }
+
+  const patch: Partial<CharacterEquipmentItem> = {}
+  if (raw.name !== undefined) {
+    const name = parseString(raw.name, `${label}.name`)
+    if (!name.ok) return name
+    patch.name = name.value
+  }
+  if (raw.quantity !== undefined) {
+    const quantity = parseNumber(raw.quantity, `${label}.quantity`)
+    if (!quantity.ok) return quantity
+    patch.quantity = quantity.value
+  }
+  if (raw.notes !== undefined) {
+    const notes = parseOptionalString(raw.notes, `${label}.notes`)
+    if (!notes.ok) return notes
+    patch.notes = notes.value ?? ''
   }
 
   return ok(patch)
@@ -1121,6 +1177,71 @@ export const decodeCommand = (
         ...base.value,
         characterId: characterId.value,
         ...sheetPatch.value
+      })
+    }
+
+    case 'AddCharacterEquipmentItem': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const item = parseEquipmentCommandItem(raw.item, 'item')
+      if (!item.ok) return item
+
+      return ok({
+        type: 'AddCharacterEquipmentItem',
+        ...base.value,
+        characterId: characterId.value,
+        item: item.value
+      })
+    }
+
+    case 'UpdateCharacterEquipmentItem': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const itemId = parseString(raw.itemId, 'itemId')
+      if (!itemId.ok) return itemId
+      const patch = parseEquipmentItemPatch(raw.patch, 'patch')
+      if (!patch.ok) return patch
+
+      return ok({
+        type: 'UpdateCharacterEquipmentItem',
+        ...base.value,
+        characterId: characterId.value,
+        itemId: itemId.value,
+        patch: patch.value
+      })
+    }
+
+    case 'RemoveCharacterEquipmentItem': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const itemId = parseString(raw.itemId, 'itemId')
+      if (!itemId.ok) return itemId
+
+      return ok({
+        type: 'RemoveCharacterEquipmentItem',
+        ...base.value,
+        characterId: characterId.value,
+        itemId: itemId.value
+      })
+    }
+
+    case 'AdjustCharacterCredits': {
+      const characterId = parseId(raw.characterId, 'characterId', asCharacterId)
+      if (!characterId.ok) return characterId
+      const ledgerEntryId = parseString(raw.ledgerEntryId, 'ledgerEntryId')
+      if (!ledgerEntryId.ok) return ledgerEntryId
+      const amount = parseNumber(raw.amount, 'amount')
+      if (!amount.ok) return amount
+      const reason = parseString(raw.reason, 'reason')
+      if (!reason.ok) return reason
+
+      return ok({
+        type: 'AdjustCharacterCredits',
+        ...base.value,
+        characterId: characterId.value,
+        ledgerEntryId: ledgerEntryId.value,
+        amount: amount.value,
+        reason: reason.value
       })
     }
 

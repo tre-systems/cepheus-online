@@ -26,6 +26,7 @@ import type {
   SurvivalMishapOutcome
 } from './characterCreation'
 import type {
+  CharacterEquipmentItem,
   CharacterCreationSheet,
   CharacteristicKey,
   CharacterCreationHomeworld,
@@ -64,6 +65,30 @@ export type GameEvent =
       type: 'CharacterSheetUpdated'
       characterId: CharacterId
     } & CharacterSheetPatch)
+  | {
+      type: 'CharacterEquipmentItemAdded'
+      characterId: CharacterId
+      item: CharacterEquipmentItem & { id: string }
+    }
+  | {
+      type: 'CharacterEquipmentItemUpdated'
+      characterId: CharacterId
+      itemId: string
+      patch: Partial<CharacterEquipmentItem>
+    }
+  | {
+      type: 'CharacterEquipmentItemRemoved'
+      characterId: CharacterId
+      itemId: string
+    }
+  | {
+      type: 'CharacterCreditsAdjusted'
+      characterId: CharacterId
+      ledgerEntryId: string
+      amount: number
+      balance: number
+      reason: string
+    }
   | {
       type: 'CharacterCreationStarted'
       characterId: CharacterId

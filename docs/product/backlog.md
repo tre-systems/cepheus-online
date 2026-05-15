@@ -1333,8 +1333,10 @@ Tasks:
 - Port skill roll helpers, difficulty modifiers, and action roll presentation.
 - Port combat, damage, healing, armor, initiative, and status calculations as
   pure shared rules helpers.
-- Replace simple equipment text with item-level equipment commands/events and a
-  ledger/export path.
+- Done: replace simple equipment text mutations with item-level equipment
+  add/update/remove commands/events and ledger-backed credit adjustments.
+- Extend the equipment/ledger export path so completed sheets show credit
+  history and equipment provenance cleanly.
 - Add character action-sheet controls that use skills, equipment, cover, stance,
   fatigue, and status.
 - Add notes and handouts as server-ordered blocks, with CRDTs only if a concrete

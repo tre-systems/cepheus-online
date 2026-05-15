@@ -32,6 +32,7 @@ import {
   seedCreationToCareerSelection,
   seedCreationToHomeworld,
   seedNextProjectedRoll,
+  waitForLatestDiceRevealBoundary,
   waitForRoomStateResponse,
   waitForDiceReveal,
   type ProjectedTermSkill,
@@ -372,6 +373,7 @@ const completeCurrentScoutTermFromReenlistmentAndFinalize = async ({
       `Expected creation completion to be legal; legal actions were ${completionActions.join(', ')}`
     )
   }
+  await waitForLatestDiceRevealBoundary(page, roomId, actorId)
   await postCommand(page, roomId, actorId, actorSession, {
     type: 'FinalizeCharacterCreation',
     characterId
@@ -945,6 +947,7 @@ const driveRepeatTravellerToFinalized = async (
     type: 'CompleteCharacterCreationMustering',
     characterId: context.characterId
   })
+  await waitForLatestDiceRevealBoundary(page, roomId, actorId)
   await postRepeatCommand(page, roomId, actorId, actorSession, context, {
     type: 'FinalizeCharacterCreation',
     characterId: context.characterId
@@ -3959,6 +3962,7 @@ test.describe('character creation smoke', () => {
         { timeout: 5_000 }
       )
 
+      await waitForLatestDiceRevealBoundary(page, roomId, actorId)
       await postCommand(page, roomId, actorId, actorSession, {
         type: 'FinalizeCharacterCreation',
         characterId

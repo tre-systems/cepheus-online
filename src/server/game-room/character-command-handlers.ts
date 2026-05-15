@@ -11,6 +11,7 @@ import {
   isReferee,
   notAllowed,
   requireFiniteCoordinate,
+  requireFinitePositive,
   requireFiniteOrNull,
   requireGame,
   requireNonEmptyString
@@ -19,6 +20,21 @@ import {
 type UpdateCharacterSheetCommand = Extract<
   GameCommand,
   { type: 'UpdateCharacterSheet' }
+>
+
+type AddCharacterEquipmentItemCommand = Extract<
+  GameCommand,
+  { type: 'AddCharacterEquipmentItem' }
+>
+
+type UpdateCharacterEquipmentItemCommand = Extract<
+  GameCommand,
+  { type: 'UpdateCharacterEquipmentItem' }
+>
+
+type AdjustCharacterCreditsCommand = Extract<
+  GameCommand,
+  { type: 'AdjustCharacterCredits' }
 >
 
 type CharacterCommand = Extract<
@@ -106,6 +122,88 @@ const validateCharacterSheetAuthority = (
   return ok(undefined)
 }
 
+const validateResourceAuthority = (
+  state: GameState,
+  actorId: CharacterCommand['actorId']
+): Result<void, CommandError> =>
+  isReferee(state, actorId)
+    ? ok(undefined)
+    : notAllowed(
+        'Only the room referee can change character equipment or credits'
+      )
+
+const equipmentItemId = (item: { id?: string; name: string }) =>
+  item.id ?? item.name
+
+const hasEquipmentItem = (
+  character: GameState['characters'][keyof GameState['characters']],
+  itemId: string
+) => character.equipment.some((item) => equipmentItemId(item) === itemId)
+
+const validateAddEquipmentItem = (
+  command: AddCharacterEquipmentItemCommand
+): Result<void, CommandError> => {
+  const itemId = requireNonEmptyString(command.item.id, 'item.id')
+  if (!itemId.ok) return itemId
+  const name = requireNonEmptyString(command.item.name, 'item.name')
+  if (!name.ok) return name
+  const quantity = requireFinitePositive(command.item.quantity, 'item.quantity')
+  if (!quantity.ok) return quantity
+  if (typeof command.item.notes !== 'string') {
+    return err(commandError('invalid_command', 'item.notes must be a string'))
+  }
+
+  return ok(undefined)
+}
+
+const validateUpdateEquipmentItem = (
+  command: UpdateCharacterEquipmentItemCommand
+): Result<void, CommandError> => {
+  const itemId = requireNonEmptyString(command.itemId, 'itemId')
+  if (!itemId.ok) return itemId
+  if (Object.keys(command.patch).length === 0) {
+    return err(commandError('invalid_command', 'patch cannot be empty'))
+  }
+  if (command.patch.name !== undefined) {
+    const name = requireNonEmptyString(command.patch.name, 'patch.name')
+    if (!name.ok) return name
+  }
+  if (command.patch.quantity !== undefined) {
+    const quantity = requireFinitePositive(
+      command.patch.quantity,
+      'patch.quantity'
+    )
+    if (!quantity.ok) return quantity
+  }
+  if (
+    command.patch.notes !== undefined &&
+    typeof command.patch.notes !== 'string'
+  ) {
+    return err(commandError('invalid_command', 'patch.notes must be a string'))
+  }
+
+  return ok(undefined)
+}
+
+const validateCreditAdjustment = (
+  command: AdjustCharacterCreditsCommand
+): Result<void, CommandError> => {
+  const ledgerEntryId = requireNonEmptyString(
+    command.ledgerEntryId,
+    'ledgerEntryId'
+  )
+  if (!ledgerEntryId.ok) return ledgerEntryId
+  const amount = requireFiniteCoordinate(command.amount, 'amount')
+  if (!amount.ok) return amount
+  if (command.amount === 0) {
+    return err(commandError('invalid_command', 'amount cannot be zero'))
+  }
+  const reason = requireNonEmptyString(command.reason, 'reason')
+  if (!reason.ok) return reason
+
+  return ok(undefined)
+}
+
 export const deriveCharacterCommandEvents = (
   command: CharacterCommand,
   context: CommandContext
@@ -151,6 +249,129 @@ export const deriveCharacterCommandEvents = (
           type: 'CharacterSheetUpdated',
           characterId: command.characterId,
           ...characterSheetPatchFields(command)
+        }
+      ])
+    }
+
+    case 'AddCharacterEquipmentItem': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed(
+          'Only the character owner or referee can edit a sheet'
+        )
+      }
+      const authority = validateResourceAuthority(state.value, command.actorId)
+      if (!authority.ok) return authority
+      const valid = validateAddEquipmentItem(command)
+      if (!valid.ok) return valid
+      if (hasEquipmentItem(character, command.item.id)) {
+        return err(
+          commandError('duplicate_entity', 'Equipment item already exists')
+        )
+      }
+
+      return ok([
+        {
+          type: 'CharacterEquipmentItemAdded',
+          characterId: command.characterId,
+          item: { ...command.item }
+        }
+      ])
+    }
+
+    case 'UpdateCharacterEquipmentItem': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed(
+          'Only the character owner or referee can edit a sheet'
+        )
+      }
+      const authority = validateResourceAuthority(state.value, command.actorId)
+      if (!authority.ok) return authority
+      const valid = validateUpdateEquipmentItem(command)
+      if (!valid.ok) return valid
+      if (!hasEquipmentItem(character, command.itemId)) {
+        return err(
+          commandError('missing_entity', 'Equipment item does not exist')
+        )
+      }
+
+      return ok([
+        {
+          type: 'CharacterEquipmentItemUpdated',
+          characterId: command.characterId,
+          itemId: command.itemId,
+          patch: { ...command.patch }
+        }
+      ])
+    }
+
+    case 'RemoveCharacterEquipmentItem': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed(
+          'Only the character owner or referee can edit a sheet'
+        )
+      }
+      const authority = validateResourceAuthority(state.value, command.actorId)
+      if (!authority.ok) return authority
+      const itemId = requireNonEmptyString(command.itemId, 'itemId')
+      if (!itemId.ok) return itemId
+      if (!hasEquipmentItem(character, command.itemId)) {
+        return err(
+          commandError('missing_entity', 'Equipment item does not exist')
+        )
+      }
+
+      return ok([
+        {
+          type: 'CharacterEquipmentItemRemoved',
+          characterId: command.characterId,
+          itemId: command.itemId
+        }
+      ])
+    }
+
+    case 'AdjustCharacterCredits': {
+      const state = requireGame(context.state)
+      if (!state.ok) return state
+      const character = state.value.characters[command.characterId]
+      if (!character) {
+        return err(commandError('missing_entity', 'Character does not exist'))
+      }
+      if (!canMutateCharacter(state.value, character, command.actorId)) {
+        return notAllowed(
+          'Only the character owner or referee can edit a sheet'
+        )
+      }
+      const authority = validateResourceAuthority(state.value, command.actorId)
+      if (!authority.ok) return authority
+      const valid = validateCreditAdjustment(command)
+      if (!valid.ok) return valid
+
+      return ok([
+        {
+          type: 'CharacterCreditsAdjusted',
+          characterId: command.characterId,
+          ledgerEntryId: command.ledgerEntryId,
+          amount: command.amount,
+          balance: character.credits + command.amount,
+          reason: command.reason
         }
       ])
     }

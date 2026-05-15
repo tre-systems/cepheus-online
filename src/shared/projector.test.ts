@@ -290,6 +290,71 @@ describe('game state projection', () => {
     assert.equal(character?.credits, 900)
   })
 
+  it('projects event-backed character equipment and credit ledger entries', () => {
+    const characterId = asCharacterId('char-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'CharacterCreated',
+        characterId,
+        ownerId: actorId,
+        characterType: 'PLAYER',
+        name: 'Scout'
+      }),
+      envelope(3, {
+        type: 'CharacterEquipmentItemAdded',
+        characterId,
+        item: {
+          id: 'vacc-suit-1',
+          name: 'Vacc suit',
+          quantity: 1,
+          notes: ''
+        }
+      }),
+      envelope(4, {
+        type: 'CharacterEquipmentItemUpdated',
+        characterId,
+        itemId: 'vacc-suit-1',
+        patch: {
+          quantity: 2,
+          notes: 'Ship locker'
+        }
+      }),
+      envelope(5, {
+        type: 'CharacterCreditsAdjusted',
+        characterId,
+        ledgerEntryId: 'ledger-1',
+        amount: -250,
+        balance: 950,
+        reason: 'Bought ammunition'
+      }),
+      envelope(6, {
+        type: 'CharacterEquipmentItemRemoved',
+        characterId,
+        itemId: 'vacc-suit-1'
+      })
+    ])
+
+    const character = state?.characters[characterId]
+    assert.deepEqual(character?.equipment, [])
+    assert.equal(character?.credits, 950)
+    assert.deepEqual(character?.ledger, [
+      {
+        id: 'ledger-1',
+        actorId,
+        createdAt: '2026-05-03T00:00:05.000Z',
+        amount: -250,
+        balance: 950,
+        reason: 'Bought ammunition'
+      }
+    ])
+  })
+
   it('projects character creation lifecycle events into character creation state', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
