@@ -15,6 +15,7 @@ import type {
 } from '../../../../shared/state'
 import type { CharacterCreationActionPlan } from './actions.js'
 import type { CharacterCreationFlow, CharacterCreationStep } from './flow.js'
+import { completedTermFromProjection } from './projection.js'
 import {
   characteristicDefinitions,
   deriveCharacterCreationButtonStates,
@@ -40,6 +41,7 @@ import {
   deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary,
   formatCharacterCreationCharacteristicModifier,
+  formatCharacterCreationCompletedTermSummary,
   type CharacterCreationAgingChoicesViewModel,
   type CharacterCreationAgingRollViewModel,
   type CharacterCreationAnagathicsDecisionViewModel,
@@ -334,6 +336,22 @@ const pendingViewModel = (
   }
 }
 
+const projectedTermHistoryViewModel = (
+  readModel: CharacterCreationReadModel
+): CharacterCreationTermHistoryViewModel | null => {
+  const completedTerms = readModel.terms
+    .filter((term) => term.complete || term.musteringOut)
+    .map(completedTermFromProjection)
+  if (completedTerms.length === 0) return null
+
+  return {
+    title: 'Terms served',
+    terms: completedTerms.map((term, index) =>
+      formatCharacterCreationCompletedTermSummary(term, index)
+    )
+  }
+}
+
 const wizardViewModel = ({
   flow,
   projectedCreation,
@@ -470,7 +488,9 @@ const wizardViewModel = ({
           ? true
           : actionSection.isLegalActionAvailable('confirmDeath')
     }),
-    termHistory: deriveCharacterCreationTermHistoryViewModel(flow),
+    termHistory: characterReadModel
+      ? projectedTermHistoryViewModel(characterReadModel)
+      : deriveCharacterCreationTermHistoryViewModel(flow),
     review:
       flow.step === 'review'
         ? deriveCharacterCreationReviewSummary(flow)

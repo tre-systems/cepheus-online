@@ -7,8 +7,8 @@ import {
   MAX_LIVE_ACTIVITY_ROLLS,
   MAX_LIVE_ACTIVITY_TEXT_LENGTH
 } from './live-activity'
-import { decodeClientMessage, decodeCommand } from './protocol'
 import type { CommandErrorCode, ServerMessage } from './protocol'
+import { decodeClientMessage, decodeCommand } from './protocol'
 
 type ValidCommandEnvelopeFixture = {
   readonly name: string
@@ -490,7 +490,7 @@ describe('protocol validation', () => {
         type: 'AdvanceCharacterCreation',
         ...base,
         characterId: 'char-1',
-        creationEvent: { type: 'SET_CHARACTERISTICS' }
+        creationEvent: { type: 'COMPLETE_HOMEWORLD' }
       },
       {
         type: 'SetCharacterCreationHomeworld',
@@ -630,7 +630,7 @@ describe('protocol validation', () => {
     }
   })
 
-  it('accepts character creation event commands', () => {
+  it('rejects generic survival outcomes that must use semantic commands', () => {
     const result = decodeClientMessage({
       type: 'command',
       requestId: 'req-creation',
@@ -647,18 +647,13 @@ describe('protocol validation', () => {
       }
     })
 
-    assert.equal(result.ok, true)
-    if (!result.ok) return
-    assert.equal(result.value.type, 'command')
-    if (result.value.type !== 'command') return
-    const { command } = result.value
-    assert.equal(command.type, 'AdvanceCharacterCreation')
-    if (command.type !== 'AdvanceCharacterCreation') return
-    assert.deepEqual(command.creationEvent, {
-      type: 'SURVIVAL_PASSED',
-      canCommission: true,
-      canAdvance: false
-    })
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'SURVIVAL_PASSED must use ResolveCharacterCreationSurvival'
+    )
   })
 
   it('accepts semantic mishap and death character creation commands', () => {
@@ -758,7 +753,7 @@ describe('protocol validation', () => {
     }
   })
 
-  it('preserves career selection qualification and failed fallback facts', () => {
+  it('rejects generic career selection qualification facts', () => {
     const result = decodeClientMessage({
       type: 'command',
       requestId: 'req-career-selection',
@@ -786,29 +781,13 @@ describe('protocol validation', () => {
       }
     })
 
-    assert.equal(result.ok, true)
-    if (!result.ok) return
-    assert.equal(result.value.type, 'command')
-    if (result.value.type !== 'command') return
-    const { command } = result.value
-    assert.equal(command.type, 'AdvanceCharacterCreation')
-    if (command.type !== 'AdvanceCharacterCreation') return
-    assert.deepEqual(command.creationEvent, {
-      type: 'SELECT_CAREER',
-      isNewCareer: true,
-      drafted: false,
-      canEnterDraft: true,
-      qualification: {
-        expression: '2d6',
-        rolls: [1, 2],
-        total: 3,
-        characteristic: 'int',
-        modifier: 1,
-        target: 4,
-        success: false
-      },
-      failedQualificationOptions: ['Drifter', 'Draft']
-    })
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'SELECT_CAREER must use ResolveCharacterCreationQualification'
+    )
   })
 
   it('accepts semantic basic training completion commands', () => {
@@ -927,7 +906,7 @@ describe('protocol validation', () => {
     assert.equal(result.value.expectedSeq, 7)
   })
 
-  it('preserves generic commission roll facts for legacy creation commands', () => {
+  it('rejects generic commission roll facts', () => {
     const result = decodeCommand({
       type: 'AdvanceCharacterCreation',
       gameId: 'game-1',
@@ -947,22 +926,13 @@ describe('protocol validation', () => {
       }
     })
 
-    assert.equal(result.ok, true)
-    if (!result.ok) return
-    assert.equal(result.value.type, 'AdvanceCharacterCreation')
-    if (result.value.type !== 'AdvanceCharacterCreation') return
-    assert.deepEqual(result.value.creationEvent, {
-      type: 'COMPLETE_COMMISSION',
-      commission: {
-        expression: '2d6',
-        rolls: [4, 4],
-        total: 8,
-        characteristic: 'int',
-        modifier: 0,
-        target: 5,
-        success: true
-      }
-    })
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'COMPLETE_COMMISSION must use ResolveCharacterCreationCommission'
+    )
   })
 
   it('accepts semantic commission skip commands', () => {
@@ -1229,11 +1199,13 @@ describe('protocol validation', () => {
         }
       }
     })
-    assert.equal(transition.ok, true)
-    if (!transition.ok) return
-    assert.equal(transition.value.type, 'AdvanceCharacterCreation')
-    if (transition.value.type !== 'AdvanceCharacterCreation') return
-    assert.equal(transition.value.creationEvent.type, 'RESOLVE_REENLISTMENT')
+    assert.equal(transition.ok, false)
+    if (transition.ok) return
+    assert.equal(transition.error.code, 'invalid_command')
+    assert.equal(
+      transition.error.message,
+      'RESOLVE_REENLISTMENT must use ResolveCharacterCreationReenlistment'
+    )
   })
 
   it('accepts semantic career lifecycle commands', () => {

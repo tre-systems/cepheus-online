@@ -2973,6 +2973,7 @@ test.describe('character creation smoke', () => {
     await setRoomSeed(page, roomId, 4)
     const actorId = actorIdFromPage(page)
     const actorSession = await actorSessionFromPage(page, roomId, actorId)
+    const spectatorId = 'e2e-death-restart-spectator'
 
     await page.locator('#createCharacterRailButton').click()
     const characterName =
@@ -3027,8 +3028,8 @@ test.describe('character creation smoke', () => {
     try {
       await openRoom(spectator, {
         roomId,
-        userId: 'e2e-spectator',
-        viewer: 'player'
+        userId: spectatorId,
+        viewer: 'spectator'
       })
       await openOrExpectFollowedCreation(spectator, characterName)
 
@@ -3103,6 +3104,13 @@ test.describe('character creation smoke', () => {
         })
         .toBe(2)
       expect(restartedCreationIds).toContain(characterId)
+      const replacementCharacterId = restartedCreationIds.find(
+        (id) => id !== characterId
+      )
+      expect(replacementCharacterId).toBeTruthy()
+      if (!replacementCharacterId) {
+        throw new Error('Replacement character was not created')
+      }
       const replacementCharacterName =
         (await page.locator('#characterCreatorTitle').textContent()) ?? ''
 
@@ -3113,6 +3121,42 @@ test.describe('character creation smoke', () => {
         'Characteristics',
         { timeout: 5_000 }
       )
+
+      await openOrExpectFollowedCreation(spectator, replacementCharacterName)
+      await expect(spectator.locator('#characterCreatorTitle')).toHaveText(
+        replacementCharacterName
+      )
+      await expect(spectator.locator('#characterCreationFields')).toContainText(
+        'Characteristics',
+        { timeout: 5_000 }
+      )
+      await expectSpectatorRefreshPreservesCreationProjection({
+        spectator,
+        roomId,
+        spectatorId,
+        characterId: replacementCharacterId,
+        characterName: replacementCharacterName
+      })
+      await expect
+        .poll(async () => {
+          const state = await fetchRoomState(
+            spectator,
+            roomId,
+            spectatorId,
+            'spectator'
+          )
+          return {
+            originalStatus:
+              state.state?.characters[characterId]?.creation?.state?.status,
+            replacementStatus:
+              state.state?.characters[replacementCharacterId]?.creation?.state
+                ?.status
+          }
+        })
+        .toEqual({
+          originalStatus: 'DECEASED',
+          replacementStatus: 'CHARACTERISTICS'
+        })
     } finally {
       await spectator.close()
     }

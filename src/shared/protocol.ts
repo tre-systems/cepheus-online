@@ -1,4 +1,3 @@
-import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
 import type {
   AgingChangeType,
   AgingLossSelection,
@@ -14,16 +13,17 @@ import type {
   InjuryResolutionMethod,
   InjurySecondaryChoice
 } from './characterCreation'
-import { err, ok, type Result } from './result'
 import type { GameCommand } from './commands'
-import type { GameState } from './state'
+import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
 import type { LiveActivityDescriptor } from './live-activity'
+import { err, ok, type Result } from './result'
 import type {
   CharacterCreationHomeworld,
   CharacterEquipmentItem,
   CharacteristicKey,
   CharacterSheetPatch,
   CharacterType,
+  GameState,
   PieceFreedom,
   PieceVisibility
 } from './state'
@@ -1018,6 +1018,32 @@ const parseCareerCreationEvent = (
   }
 }
 
+const semanticCharacterCreationCommandForGenericEvent = (
+  event: CareerCreationEvent
+): string | null => {
+  switch (event.type) {
+    case 'SET_CHARACTERISTICS':
+      return 'RollCharacterCreationCharacteristic'
+    case 'SELECT_CAREER':
+      return 'ResolveCharacterCreationQualification'
+    case 'SURVIVAL_PASSED':
+    case 'SURVIVAL_FAILED':
+      return 'ResolveCharacterCreationSurvival'
+    case 'COMPLETE_COMMISSION':
+      return 'ResolveCharacterCreationCommission'
+    case 'COMPLETE_ADVANCEMENT':
+      return 'ResolveCharacterCreationAdvancement'
+    case 'RESOLVE_REENLISTMENT':
+      return 'ResolveCharacterCreationReenlistment'
+    case 'REENLIST':
+    case 'REENLIST_BLOCKED':
+    case 'FORCED_REENLIST':
+      return 'ReenlistCharacterCreationCareer'
+    default:
+      return null
+  }
+}
+
 const parseBaseCommand = (
   raw: Record<string, unknown>
 ): Result<
@@ -1134,6 +1160,16 @@ export const decodeCommand = (
             ? 'CompleteCharacterCreationMustering'
             : 'RollCharacterCreationMusteringBenefit'
         return err(invalidCommand(`FINISH_MUSTERING must use ${commandType}`))
+      }
+      const semanticCommand = semanticCharacterCreationCommandForGenericEvent(
+        creationEvent.value
+      )
+      if (semanticCommand !== null) {
+        return err(
+          invalidCommand(
+            `${creationEvent.value.type} must use ${semanticCommand}`
+          )
+        )
       }
 
       return ok({

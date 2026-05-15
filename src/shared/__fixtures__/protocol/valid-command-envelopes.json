@@ -36,24 +36,19 @@
     "expectedSeq": 27
   },
   {
-    "name": "character creation transition command",
+    "name": "character creation survival command",
     "message": {
       "type": "command",
-      "requestId": "cepheus-advance-creation",
+      "requestId": "cepheus-survival",
       "command": {
-        "type": "AdvanceCharacterCreation",
+        "type": "ResolveCharacterCreationSurvival",
         "gameId": "cepheus-run",
         "actorId": "referee-1",
         "expectedSeq": 19,
-        "characterId": "crew-scout-1",
-        "creationEvent": {
-          "type": "SURVIVAL_PASSED",
-          "canCommission": true,
-          "canAdvance": false
-        }
+        "characterId": "crew-scout-1"
       }
     },
-    "commandType": "AdvanceCharacterCreation",
+    "commandType": "ResolveCharacterCreationSurvival",
     "expectedSeq": 19
   },
   {

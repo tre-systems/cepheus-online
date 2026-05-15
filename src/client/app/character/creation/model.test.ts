@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { asCharacterId } from '../../../../shared/ids'
+import type { CareerTerm } from '../../../../shared/character-creation/types'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -85,6 +86,23 @@ const completedTerm = (): CharacterCreationCompletedTerm => ({
   agingSelections: [],
   reenlistmentRoll: 7,
   reenlistmentOutcome: 'allowed'
+})
+
+const projectedCompletedTerm = (
+  overrides: Partial<CareerTerm> = {}
+): CareerTerm => ({
+  career: 'Scout',
+  skills: ['Pilot-1'],
+  skillsAndTraining: ['Pilot-1'],
+  benefits: [],
+  complete: true,
+  canReenlist: true,
+  completedBasicTraining: true,
+  musteringOut: false,
+  anagathics: false,
+  survival: 9,
+  reEnlistment: 7,
+  ...overrides
 })
 
 const character = (
@@ -1694,5 +1712,44 @@ describe('character creation view model', () => {
 
     assert.equal(review.wizard?.review?.title, 'Iona Vesh')
     assert.equal(review.wizard?.review?.sections[0]?.label, 'Basics')
+  })
+
+  it('prefers projected term history over stale local completed terms', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({
+        step: 'career',
+        draft: createInitialCharacterDraft(characterId, {
+          completedTerms: [completedTerm()]
+        })
+      }),
+      projection: projection('CAREER_SELECTION', {
+        terms: [
+          projectedCompletedTerm({
+            career: 'Scout',
+            skillsAndTraining: ['Pilot-1']
+          })
+        ]
+      }),
+      character: character(
+        projection('CAREER_SELECTION', {
+          terms: [
+            projectedCompletedTerm({
+              career: 'Scout',
+              skillsAndTraining: ['Pilot-1']
+            })
+          ]
+        })
+      ),
+      readOnly: false
+    })
+
+    assert.equal(
+      viewModel.wizard?.termHistory?.terms[0]?.startsWith('1. Scout: survived'),
+      true
+    )
+    assert.equal(
+      viewModel.wizard?.termHistory?.terms[0]?.includes('Merchant'),
+      false
+    )
   })
 })
