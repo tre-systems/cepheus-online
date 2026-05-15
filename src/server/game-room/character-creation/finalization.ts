@@ -1,8 +1,7 @@
 import {
   deriveCareerCreationComplete,
-  formatCareerSkill,
-  isCascadeCareerSkill,
-  parseCareerSkill,
+  deriveCareerTermTrainingSkillsFromFacts,
+  hasProjectedCareerTermFacts,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
 import type { GameEvent } from '../../../shared/events'
@@ -26,7 +25,7 @@ import { uniqueSkills } from './utils'
 const deriveTermSurvivalSummary = (
   term: CharacterCreationProjection['terms'][number]
 ): 'survived' | 'mishap' => {
-  if (hasSemanticTermFacts(term)) {
+  if (hasProjectedCareerTermFacts(term)) {
     return term.facts?.survival?.passed === false ? 'mishap' : 'survived'
   }
 
@@ -51,55 +50,11 @@ const derivedCreationNotes = (character: CharacterState): string => {
   return notes.join('\n')
 }
 
-const hasSemanticTermFacts = (
-  term: CharacterCreationProjection['terms'][number]
-): boolean => Object.keys(term.facts ?? {}).length > 0
-
-const resolvedTermCascadeSkill = (
-  term: CharacterCreationProjection['terms'][number],
-  cascadeSkill: string | null
-): string | null => {
-  if (!cascadeSkill) return null
-
-  let current = cascadeSkill
-  const visited = new Set<string>()
-
-  while (!visited.has(current)) {
-    visited.add(current)
-    const selection = term.facts?.termCascadeSelections?.find(
-      (entry) => entry.cascadeSkill === current
-    )?.selection
-    if (!selection) return null
-
-    const level = parseCareerSkill(current)?.level ?? 0
-    if (isCascadeCareerSkill(selection)) {
-      current = selection.trim().replace('*', `-${level}`)
-      continue
-    }
-
-    return formatCareerSkill({ name: selection.trim(), level })
-  }
-
-  return null
-}
-
-const deriveTermSkillsFromFacts = (
-  term: CharacterCreationProjection['terms'][number]
-): string[] => [
-  ...(term.facts?.basicTrainingSkills ?? []),
-  ...(term.facts?.termSkillRolls ?? []).flatMap((termSkill) =>
-    termSkill.skill
-      ? [termSkill.skill]
-      : (resolvedTermCascadeSkill(term, termSkill.pendingCascadeSkill) ?? [])
-  )
-]
-
 const deriveTermCreationSkills = (
   term: CharacterCreationProjection['terms'][number]
 ): string[] => {
-  const factSkills = deriveTermSkillsFromFacts(term)
-  if (hasSemanticTermFacts(term)) {
-    return factSkills
+  if (hasProjectedCareerTermFacts(term)) {
+    return deriveCareerTermTrainingSkillsFromFacts(term)
   }
 
   return term.skillsAndTraining

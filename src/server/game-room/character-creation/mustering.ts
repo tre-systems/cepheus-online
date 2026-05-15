@@ -6,7 +6,9 @@ import {
   deriveMaterialBenefitEffect,
   deriveLegacyCareerTermCashBenefitCount,
   deriveProjectedCareerTermCashBenefitCount,
+  deriveCareerTermTrainingSkillsFromFacts,
   deriveRemainingCareerBenefitsForCareer,
+  hasProjectedCareerTermFacts,
   resolveCareerBenefit,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
@@ -54,26 +56,19 @@ const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
   creation.terms.reduce(
     (total, term) =>
       total +
-      (hasSemanticTermFacts(term)
+      (hasProjectedCareerTermFacts(term)
         ? deriveProjectedCareerTermCashBenefitCount(term)
         : deriveLegacyCareerTermCashBenefitCount(term)),
     0
   )
 
-const hasSemanticTermFacts = (
-  term: CharacterCreationProjection['terms'][number]
-): boolean => Object.keys(term.facts ?? {}).length > 0
-
 const hasGamblingSkill = (character: CharacterState): boolean => {
   const creation = character.creation
   const termSkills = (term: CharacterCreationProjection['terms'][number]) => {
-    const factSkills = [
-      ...(term.facts?.basicTrainingSkills ?? []),
-      ...(term.facts?.termSkillRolls ?? []).flatMap((termSkill) =>
-        termSkill.skill ? [termSkill.skill] : []
-      )
-    ]
-    return hasSemanticTermFacts(term) ? factSkills : term.skillsAndTraining
+    if (hasProjectedCareerTermFacts(term)) {
+      return deriveCareerTermTrainingSkillsFromFacts(term)
+    }
+    return term.skillsAndTraining
   }
   const creationSkills = [
     ...(creation?.backgroundSkills ?? []),

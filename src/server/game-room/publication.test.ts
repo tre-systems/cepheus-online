@@ -3105,7 +3105,23 @@ describe('room publication flow', () => {
                 completedBasicTraining: true,
                 musteringOut: false,
                 anagathics: false,
-                survival: 8
+                survival: 8,
+                facts: {
+                  survival: {
+                    passed: true,
+                    canCommission: true,
+                    canAdvance: true,
+                    survival: {
+                      expression: '2d6',
+                      rolls: [4, 4],
+                      total: 8,
+                      characteristic: 'int',
+                      modifier: 0,
+                      target: 5,
+                      success: true
+                    }
+                  }
+                }
               }
             ],
             careers: [{ name: 'Merchant', rank: 0 }],

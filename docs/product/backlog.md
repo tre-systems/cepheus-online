@@ -1065,11 +1065,10 @@ finalization. SRD data alignment tests cover career tables, draft, rank rewards,
 skill tables, and benefits. Semantic survival, commission, advancement, term
 skill, aging, reenlistment, and mustering rolls now use server-derived dice
 facts. Projected legal actions now carry term-skill table options and mustering
-benefit choices, and term-skill rolls are separated from skill completion, so
-the browser no longer has to rediscover those visible choice lists or roll gates
-from local rules helpers. The next priority is hardening optional branches,
-provenance, browser automation, and multi-term/mustering UX rather than adding
-more client-only flow logic.
+benefit choices, and shared term-skill fact helpers drive browser display,
+server gates, finalization, and mustering calculations. The next priority is
+hardening optional branches, provenance, browser automation, and
+multi-term/mustering UX rather than adding more client-only flow logic.
 
 Tasks:
 
@@ -1077,13 +1076,13 @@ Tasks:
   term loop: command intent, server-derived roll facts, projection-owned gates,
   and replay tests.
 - Keep enforcing outstanding selection gates for cascade, commission,
-  promotion, and term skills before the server accepts the next command.
-- Keep moving cascade follow-up decisions into projection so refresh restores
-  the same next action. Term skill table choices, term-skill roll gates, and
-  mustering benefit choices are now exposed through projected legal-action
-  options.
-- Harden the real-browser term loop through survival, commission,
-  advancement, term skills, aging, reenlistment, and either death or mustering.
+  promotion, aging losses, anagathics, reenlistment, mustering, and term skills
+  before the server accepts the next command.
+- Keep moving follow-up decisions into projection so refresh restores the same
+  next action. Term skill table choices, term-skill roll gates, and mustering
+  benefit choices are now exposed through projected legal-action options.
+- Harden the real-browser term loop through aging, reenlistment, death,
+  mustering, finalization, and multi-term career changes.
 - Add compact term-history cards from semantic term events.
 
 Done when:

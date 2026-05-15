@@ -325,10 +325,7 @@ describe('character sheet export view', () => {
 
     const exportText = derivePlainCharacterExport(character({ creation })) ?? ''
 
-    assert.equal(
-      exportText.includes('mishap 1: Injured in action.'),
-      true
-    )
+    assert.equal(exportText.includes('mishap 1: Injured in action.'), true)
     assert.equal(
       exportText.includes(
         'injury table 2, severity 4: Severely injured. Reduce one physical characteristic by 1D6.; losses Str -4'

@@ -341,8 +341,7 @@ export const deriveLifecycleCommandEvents = (
       if (survivalRoll && !survivalRoll.ok) {
         return err(commandError('invalid_command', survivalRoll.error))
       }
-      const survivalRollValue =
-        survivalRoll?.ok ? survivalRoll.value : null
+      const survivalRollValue = survivalRoll?.ok ? survivalRoll.value : null
       const survivalOutcome =
         command.useAnagathics && basics && survivalRollValue
           ? evaluateCareerCheck({
@@ -378,12 +377,13 @@ export const deriveLifecycleCommandEvents = (
         term: activeTerm,
         survived: command.useAnagathics && survivedAnagathics
       })
-      const costRoll = command.useAnagathics && survivedAnagathics
-        ? rollDiceExpression(
-            '1d6',
-            deriveEventRng(context.gameSeed, context.nextSeq + 1)
-          )
-        : null
+      const costRoll =
+        command.useAnagathics && survivedAnagathics
+          ? rollDiceExpression(
+              '1d6',
+              deriveEventRng(context.gameSeed, context.nextSeq + 1)
+            )
+          : null
       if (costRoll && !costRoll.ok) {
         return err(commandError('invalid_command', costRoll.error))
       }
@@ -452,7 +452,9 @@ export const deriveLifecycleCommandEvents = (
                 }
               }
             : {}),
-          ...(pendingDecisions ? { pendingDecisions: [...pendingDecisions] } : {}),
+          ...(pendingDecisions
+            ? { pendingDecisions: [...pendingDecisions] }
+            : {}),
           state: nextState,
           creationComplete: false
         }

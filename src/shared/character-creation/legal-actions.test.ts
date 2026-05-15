@@ -1508,7 +1508,9 @@ describe('career creation legal action planner', () => {
       []
     )
     assert.deepEqual(
-      deriveLegalCareerCreationActionKeysForProjection(unresolvedFactsOwnedTerm),
+      deriveLegalCareerCreationActionKeysForProjection(
+        unresolvedFactsOwnedTerm
+      ),
       ['resolveAging']
     )
 

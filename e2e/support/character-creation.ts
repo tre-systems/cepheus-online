@@ -32,6 +32,11 @@ export type CharacterCreationProjection = {
         tableRoll?: number
         rawSkill?: string
         skill?: string | null
+        pendingCascadeSkill?: string | null
+      }>
+      termCascadeSelections?: Array<{
+        cascadeSkill: string
+        selection: string
       }>
       musteringBenefits?: ProjectedMusteringBenefit[]
     }
@@ -147,7 +152,8 @@ export const latestProjectedTermSkill = async (
 ): Promise<ProjectedTermSkill | null> => {
   const message = await fetchRoomState(page, roomId, actorId)
   const creation = message.state?.characters[characterId]?.creation
-  const termSkill = projectedTermSkillFacts(creation).at(-1)
+  const projectedTermSkill = projectedTermSkillEntries(creation).at(-1)
+  const termSkill = projectedTermSkill?.termSkill
   if (
     !termSkill?.career ||
     !termSkill.table ||
@@ -155,7 +161,15 @@ export const latestProjectedTermSkill = async (
   ) {
     return null
   }
-  const skill = termSkill.skill ?? termSkill.rawSkill
+  const skill =
+    termSkill.skill ??
+    resolveProjectedTermCascadeSkill(
+      projectedTermSkill?.term ?? null,
+      termSkill.pendingCascadeSkill ?? null
+    ) ??
+    termSkill.pendingCascadeSkill ??
+    creation?.pendingCascadeSkills?.at(-1) ??
+    termSkill.rawSkill
   if (!skill) return null
   return {
     career: termSkill.career,
@@ -163,6 +177,51 @@ export const latestProjectedTermSkill = async (
     tableRoll: termSkill.tableRoll,
     skill
   }
+}
+
+const projectedTermSkillEntries = (
+  creation: CharacterCreationProjection | null | undefined
+): Array<{
+  term: NonNullable<CharacterCreationProjection['terms']>[number]
+  termSkill: NonNullable<
+    NonNullable<
+      NonNullable<CharacterCreationProjection['terms']>[number]['facts']
+    >['termSkillRolls']
+  >[number]
+}> =>
+  (creation?.terms ?? []).flatMap((term) =>
+    (term.facts?.termSkillRolls ?? []).map((termSkill) => ({
+      term,
+      termSkill
+    }))
+  )
+
+const resolveProjectedTermCascadeSkill = (
+  term: NonNullable<CharacterCreationProjection['terms']>[number] | null,
+  cascadeSkill: string | null
+): string | null => {
+  if (!term || !cascadeSkill) return null
+
+  let current = cascadeSkill
+  const visited = new Set<string>()
+
+  while (!visited.has(current)) {
+    visited.add(current)
+    const selection = term.facts?.termCascadeSelections?.find(
+      (entry) => entry.cascadeSkill === current
+    )?.selection
+    if (!selection) return null
+
+    const level = Number.parseInt(current.match(/-(\d+)$/)?.[1] ?? '0', 10)
+    if (selection.endsWith('*')) {
+      current = selection.replace(/\*$/, `-${level}`)
+      continue
+    }
+
+    return `${selection}-${level}`
+  }
+
+  return null
 }
 
 export const projectedTermSkillFacts = (
@@ -173,6 +232,7 @@ export const projectedTermSkillFacts = (
   tableRoll?: number
   rawSkill?: string
   skill?: string | null
+  pendingCascadeSkill?: string | null
 }> =>
   (creation?.terms ?? []).flatMap((term) => term.facts?.termSkillRolls ?? [])
 

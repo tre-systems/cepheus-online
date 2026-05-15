@@ -1,7 +1,10 @@
 import {
   careerSkillWithLevel,
+  deriveCareerTermSkillFactValues,
+  deriveCareerTermTrainingSkillsFromFacts,
   deriveCareerCreationActionContext,
   deriveCareerCreationComplete,
+  hasProjectedCareerTermFacts,
   isCascadeCareerSkill,
   normalizeCareerSkill,
   resolveCascadeCareerSkill,
@@ -81,49 +84,6 @@ const termCharacteristicGain = (
   }
 }
 
-const hasSemanticTermFacts = (
-  term: CharacterCreationProjection['terms'][number]
-): boolean => Object.keys(term.facts ?? {}).length > 0
-
-const termSkillFactValue = (
-  termSkill: NonNullable<
-    NonNullable<
-      CharacterCreationProjection['terms'][number]['facts']
-    >['termSkillRolls']
-  >[number]
-): string | null =>
-  termSkill.characteristic
-    ? termSkill.rawSkill
-    : (termSkill.pendingCascadeSkill ?? termSkill.skill)
-
-const deriveTermSkillFacts = (
-  term: CharacterCreationProjection['terms'][number]
-): string[] => {
-  const skills = (term.facts?.termSkillRolls ?? []).flatMap((termSkill) => {
-    const skill = termSkillFactValue(termSkill)
-    return skill ? [skill] : []
-  })
-
-  for (const selection of term.facts?.termCascadeSelections ?? []) {
-    const index = skills.indexOf(selection.cascadeSkill)
-    if (index >= 0) {
-      skills[index] = selection.selection
-      continue
-    }
-    skills.push(selection.selection)
-  }
-
-  return uniqueSkills(skills)
-}
-
-const deriveTrainingSkillsFromFacts = (
-  term: CharacterCreationProjection['terms'][number]
-): string[] =>
-  uniqueSkills([
-    ...(term.facts?.basicTrainingSkills ?? []),
-    ...deriveTermSkillFacts(term)
-  ])
-
 export const requiredTermSkillCount = (
   creation: CharacterCreationProjection
 ): number => {
@@ -134,7 +94,9 @@ export const requiredTermSkillCount = (
   const term = creation.terms.at(-1)
   if (
     !term ||
-    (term.facts?.survival === undefined && term.survival === undefined)
+    (hasProjectedCareerTermFacts(term)
+      ? term.facts?.survival === undefined
+      : term.survival === undefined)
   ) {
     return 0
   }
@@ -151,7 +113,7 @@ export const activeTermSkillCount = (
   const term = creation.terms.at(-1)
   if (!term) return 0
 
-  return hasSemanticTermFacts(term)
+  return hasProjectedCareerTermFacts(term)
     ? (term.facts?.termSkillRolls?.length ?? 0)
     : term.skills.length
 }
@@ -327,13 +289,19 @@ export const resolveTermSkillCreationEvent = ({
 
   const term = creation.terms.at(-1)
   const existingSkills = term
-    ? hasSemanticTermFacts(term)
-      ? deriveTrainingSkillsFromFacts(term)
+    ? hasProjectedCareerTermFacts(term)
+      ? deriveCareerTermTrainingSkillsFromFacts(term, {
+          includePendingCascade: true,
+          includeCharacteristicGain: true
+        })
       : term.skillsAndTraining
     : []
   const existingTermSkills = term
-    ? hasSemanticTermFacts(term)
-      ? deriveTermSkillFacts(term)
+    ? hasProjectedCareerTermFacts(term)
+      ? deriveCareerTermSkillFactValues(term, {
+          includePendingCascade: true,
+          includeCharacteristicGain: true
+        })
       : term.skills
     : []
   const nextSkill = characteristic
@@ -496,13 +464,19 @@ export const deriveSkillCommandEvents = (
         selection: selection.value
       })
       const existingTermSkills = term
-        ? hasSemanticTermFacts(term)
-          ? deriveTermSkillFacts(term)
+        ? hasProjectedCareerTermFacts(term)
+          ? deriveCareerTermSkillFactValues(term, {
+              includePendingCascade: true,
+              includeCharacteristicGain: true
+            })
           : term.skills
         : []
       const existingTrainingSkills = term
-        ? hasSemanticTermFacts(term)
-          ? deriveTrainingSkillsFromFacts(term)
+        ? hasProjectedCareerTermFacts(term)
+          ? deriveCareerTermTrainingSkillsFromFacts(term, {
+              includePendingCascade: true,
+              includeCharacteristicGain: true
+            })
           : term.skillsAndTraining
         : []
       const termSkills = uniqueSkills([
@@ -510,7 +484,9 @@ export const deriveSkillCommandEvents = (
         ...resolution.termSkills
       ])
       const skillsAndTraining = uniqueSkills([
-        ...existingTrainingSkills.filter((skill) => skill !== cascadeSkill.value),
+        ...existingTrainingSkills.filter(
+          (skill) => skill !== cascadeSkill.value
+        ),
         ...resolution.termSkills
       ])
 

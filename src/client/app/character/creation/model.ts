@@ -308,8 +308,7 @@ const wizardViewModel = ({
     key: CareerCreationActionKey
   ): (typeof projectedLegalActionList)[number] | undefined =>
     projectedLegalActionList.find((action) => action.key === key)
-  const projectedCascadeChoices =
-    projectedActionPlan?.cascadeSkillChoices ?? []
+  const projectedCascadeChoices = projectedActionPlan?.cascadeSkillChoices ?? []
   const backgroundCascadeChoices =
     projectedCreation?.state.status === 'HOMEWORLD'
       ? projectedCascadeChoices
@@ -345,7 +344,8 @@ const wizardViewModel = ({
   const basicTrainingOptions = !hasProjectedCreation
     ? undefined
     : projectedCreation.state.status === 'BASIC_TRAINING'
-      ? (projectedLegalAction('completeBasicTraining')?.basicTrainingOptions ?? {
+      ? (projectedLegalAction('completeBasicTraining')
+          ?.basicTrainingOptions ?? {
           kind: 'none',
           skills: []
         })
@@ -410,20 +410,23 @@ const wizardViewModel = ({
       availableActionKeys: projectedLegalActions ?? undefined
     }),
     termSkills:
-      hasProjectedCreation && projectedCreation.state.status !== 'SKILLS_TRAINING'
+      hasProjectedCreation &&
+      projectedCreation.state.status !== 'SKILLS_TRAINING'
         ? null
         : deriveCharacterCreationTermSkillTrainingViewModel(flow, {
             termSkillTableOptions
           }),
     basicTraining:
-      hasProjectedCreation && projectedCreation.state.status !== 'BASIC_TRAINING'
+      hasProjectedCreation &&
+      projectedCreation.state.status !== 'BASIC_TRAINING'
         ? null
         : deriveCharacterCreationBasicTrainingButton(flow, {
             basicTrainingOptions
           }),
     musteringOut:
       flow.step === 'equipment' &&
-      (!hasProjectedCreation || projectedCreation.state.status === 'MUSTERING_OUT')
+      (!hasProjectedCreation ||
+        projectedCreation.state.status === 'MUSTERING_OUT')
         ? deriveCharacterCreationMusteringOutViewModel(flow, {
             musteringBenefitOptions
           })

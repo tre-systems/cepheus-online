@@ -2898,16 +2898,21 @@ test.describe('character creation smoke', () => {
         spectatorPage: Page,
         userId: string
       ): Promise<RoomStateMessage> => {
-        const response = await spectatorPage.waitForResponse((candidate) => {
+        let state: Promise<RoomStateMessage> | null = null
+        await spectatorPage.waitForResponse((candidate) => {
           const url = new URL(candidate.url())
-          return (
+          const matches =
             candidate.request().method() === 'GET' &&
             url.pathname === `/rooms/${roomId}/state` &&
             url.searchParams.get('viewer') === 'spectator' &&
             url.searchParams.get('user') === userId
-          )
+          if (matches) {
+            state = candidate.json() as Promise<RoomStateMessage>
+          }
+          return matches
         })
-        return (await response.json()) as RoomStateMessage
+        if (!state) throw new Error(`Missing spectator state for ${userId}`)
+        return state
       }
       const reloadedState = waitForSpectatorState(spectator, spectatorId)
       const joinedState = waitForSpectatorState(lateSpectator, lateSpectatorId)

@@ -365,7 +365,9 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
     parts.push(`survival ${term.survival}`)
   }
   if (facts?.mishap) {
-    parts.push(`mishap ${facts.mishap.roll.total}: ${facts.mishap.outcome.description}`)
+    parts.push(
+      `mishap ${facts.mishap.roll.total}: ${facts.mishap.outcome.description}`
+    )
   }
   if (facts?.injury) {
     const injuryRoll = facts.injury.injuryRoll

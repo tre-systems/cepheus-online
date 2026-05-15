@@ -1769,10 +1769,7 @@ describe('character creation setup command handlers', () => {
     assert.equal(rolled?.type, 'CharacterCreationTermSkillRolled')
     if (rolled?.type !== 'CharacterCreationTermSkillRolled') return
     assert.equal(rolled.termSkills.includes('Legacy Skill-6'), false)
-    assert.equal(
-      rolled.skillsAndTraining.includes('Legacy Training-6'),
-      false
-    )
+    assert.equal(rolled.skillsAndTraining.includes('Legacy Training-6'), false)
     assert.equal(rolled.skillsAndTraining.includes('Broker-0'), true)
   })
 

@@ -1490,7 +1490,10 @@ export const deriveCharacterCreationInjuryResolutionViewModel = (
   {
     available,
     projection
-  }: { available?: boolean; projection?: CharacterCreationProjection | null } = {}
+  }: {
+    available?: boolean
+    projection?: CharacterCreationProjection | null
+  } = {}
 ): CharacterCreationInjuryResolutionViewModel | null => {
   if (available === false || flow.step !== 'career' || !projection) return null
   const term = projection.terms.at(-1)

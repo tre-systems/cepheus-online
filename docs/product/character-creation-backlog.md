@@ -414,9 +414,8 @@ keep that coverage green and tighten copy/provenance.
 Tasks:
 
 - Keep career-entry smoke coverage current as the UI is refactored.
-- Carry requested career, accepted career, drafted status, qualification
-  penalty, failed-qualification options, and basic-training choice as projected
-  facts.
+- Keep projected career-entry facts, failed-qualification options, and
+  basic-training choices covered as the server projection evolves.
 - Keep browser coverage for failed qualification, Draft roll, Drifter fallback,
   and refresh recovery current as the UI is refactored.
 - Tighten player-facing copy and provenance around qualification and draft
@@ -442,15 +441,15 @@ provenance, and browser UX robust enough to use without manual recovery.
 
 Tasks:
 
-- Move choose-one basic training and term skill table choices into projected
-  pending decisions.
+- Keep choose-one basic training, term skill table choices, and term-skill roll
+  gates projection-owned through the shared term-skill fact helpers.
 - Polish commission eligibility, rank title, bonus skill reward, and provenance
   display.
 - Polish advancement eligibility, rank title, bonus skill reward, and
   provenance display.
-- Harden term skill table selection and roll resolution in browser automation,
-  including the SRD rule preserved from legacy that careers without commission
-  require two term skill rolls before aging/reenlistment can proceed.
+- Keep browser automation for term skill table selection and roll resolution
+  green, including the SRD rule preserved from legacy that careers without
+  commission require two term skill rolls before aging/reenlistment can proceed.
 - Enforce outstanding selection gates for cascade skills, commission skills,
   promotion skills, and term skills.
 - Add term history cards that summarize the term in a compact, readable way.
@@ -462,9 +461,9 @@ Acceptance:
   mode.
 - Term history matches the event stream after refresh.
 
-Next priority: harden the term-skill, aging, mustering, and multi-term browser
-paths on top of the semantic server facts that now exist. Keep death as the
-first hard branch after the normal pass path is authoritative, then keep
+Next priority: harden the aging, reenlistment, mustering, death, and multi-term
+browser paths on top of the semantic server facts that now exist. Keep death as
+the first hard branch after the normal pass path is authoritative, then keep
 mishaps as an optional variant.
 
 ## Milestone 5: Aging, Anagathics, And Reenlistment

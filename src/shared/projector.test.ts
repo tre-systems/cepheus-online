@@ -2883,8 +2883,14 @@ describe('game state projection', () => {
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'MUSTERING_OUT')
     assert.deepEqual(creation?.pendingDecisions, [])
-    assert.equal(creation?.terms[0]?.facts?.mishap?.outcome.injury?.type, 'fixed')
-    assert.equal(creation?.terms[0]?.facts?.injury?.outcome.id, 'severely_injured')
+    assert.equal(
+      creation?.terms[0]?.facts?.mishap?.outcome.injury?.type,
+      'fixed'
+    )
+    assert.equal(
+      creation?.terms[0]?.facts?.injury?.outcome.id,
+      'severely_injured'
+    )
     assert.deepEqual(creation?.terms[0]?.facts?.injury?.characteristicPatch, {
       str: 0
     })

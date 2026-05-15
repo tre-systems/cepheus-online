@@ -51,7 +51,7 @@ export const renderCharacterCreationTermSkillTables = (
     const label = document.createElement('b')
     label.textContent = roll.label
     const detail = document.createElement('small')
-    detail.textContent = roll.detail
+    detail.textContent = ` ${roll.detail}`
     chip.append(label, detail)
     rolled.append(chip)
   }

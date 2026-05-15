@@ -209,7 +209,10 @@ const resolveSurvivalCreationEvent = ({
 const rollD6 = (
   context: CommandContext,
   sequenceOffset = 0
-): Result<{ expression: '1d6'; rolls: number[]; total: number }, CommandError> => {
+): Result<
+  { expression: '1d6'; rolls: number[]; total: number },
+  CommandError
+> => {
   const rolled = rollDiceExpression(
     '1d6',
     deriveEventRng(context.gameSeed, context.nextSeq + sequenceOffset)

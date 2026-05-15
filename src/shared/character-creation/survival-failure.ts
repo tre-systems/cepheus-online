@@ -344,9 +344,7 @@ export const resolveInjuryLosses = ({
     return ok(
       patchCharacteristics({
         characteristics,
-        selectedLosses: [
-          { characteristic: primary, modifier: -severity }
-        ]
+        selectedLosses: [{ characteristic: primary, modifier: -severity }]
       })
     )
   }
