@@ -4372,6 +4372,22 @@ test.describe('character creation smoke', () => {
       consoleErrors: [],
       serverResponses: []
     }
+    const postedCommandTypes: string[] = []
+
+    page.on('request', (request) => {
+      if (
+        request.method() !== 'POST' ||
+        !request.url().includes(`/rooms/${roomId}/command`)
+      ) {
+        return
+      }
+      const body = request.postData()
+      if (!body) return
+      const message = JSON.parse(body) as {
+        command?: { type?: string }
+      }
+      if (message.command?.type) postedCommandTypes.push(message.command.type)
+    })
 
     await page.locator('#createCharacterRailButton').click()
     const characterName =
@@ -4443,5 +4459,62 @@ test.describe('character creation smoke', () => {
     await expect(fields).toContainText(/Create character|Fix the highlighted/, {
       timeout: 5_000
     })
+
+    const createCharacter = page.getByRole('button', {
+      name: 'Create character'
+    })
+    await expectMobileControlUsable(createCharacter, 'Create character')
+    const finalized = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes(`/rooms/${roomId}/command`) &&
+        (response.request().postData() ?? '').includes(
+          'FinalizeCharacterCreation'
+        )
+    )
+    const tokenCreated = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes(`/rooms/${roomId}/command`) &&
+        (response.request().postData() ?? '').includes('CreatePiece')
+    )
+    await createCharacter.click()
+    await expect((await finalized).ok()).toBe(true)
+    await expect((await tokenCreated).ok()).toBe(true)
+    await expect.poll(() => postedCommandTypes).toContain(
+      'FinalizeCharacterCreation'
+    )
+    await expect.poll(() => postedCommandTypes).toContain('CreatePiece')
+
+    await expect
+      .poll(async () => {
+        const message = await fetchRoomState(page, roomId, actorId)
+        const character = message.state?.characters[context.characterId]
+        const linkedPieces = Object.values(message.state?.pieces ?? {}).filter(
+          (piece) => piece.characterId === context.characterId
+        )
+        return {
+          status: character?.creation?.state?.status,
+          creationComplete: character?.creation?.creationComplete,
+          pieceCount: linkedPieces.length,
+          pieceName: linkedPieces[0]?.name ?? ''
+        }
+      })
+      .toMatchObject({
+        status: 'PLAYABLE',
+        creationComplete: true,
+        pieceCount: 1,
+        pieceName: characterName
+      })
+
+    await expect(page.locator('#characterCreator')).not.toBeVisible({
+      timeout: 5_000
+    })
+    await expect(page.locator('#characterSheet.open')).toBeVisible({
+      timeout: 5_000
+    })
+    await expect(page.locator('#sheetName')).toContainText(characterName)
+    await expect(page.locator('#sheetBody')).toContainText('Final Character')
+    await expect(page.locator('#sheetBody')).toContainText('UPP')
   })
 })

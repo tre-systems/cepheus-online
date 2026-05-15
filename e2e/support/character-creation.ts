@@ -46,6 +46,15 @@ export type RoomStateMessage = {
       rolls?: number[]
       total?: number
     }>
+    eventSeq?: number
+    pieces?: Record<
+      string,
+      {
+        id?: string
+        name?: string
+        characterId?: string | null
+      }
+    >
     characters: Record<
       string,
       {
