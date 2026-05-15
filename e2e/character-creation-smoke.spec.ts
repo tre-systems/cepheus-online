@@ -226,16 +226,42 @@ const completeCurrentScoutTermToAging = async ({
   actorSession: string
   characterId: string
 }): Promise<void> => {
-  await postCommand(page, roomId, actorId, actorSession, {
-    type: 'CompleteCharacterCreationBasicTraining',
-    characterId,
-    skill: 'Comms-0'
-  })
-  await postCommand(page, roomId, actorId, actorSession, {
-    type: 'ResolveCharacterCreationSurvival',
+  let legalActions = await legalCreationActionKeys({
+    page,
+    roomId,
+    actorId,
     characterId
   })
-  for (const table of ['serviceSkills', 'specialistSkills'] as const) {
+  if (legalActions.includes('completeBasicTraining')) {
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationBasicTraining',
+      characterId,
+      skill: 'Comms-0'
+    })
+  }
+  legalActions = await legalCreationActionKeys({
+    page,
+    roomId,
+    actorId,
+    characterId
+  })
+  if (legalActions.includes('rollSurvival')) {
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationSurvival',
+      characterId
+    })
+  }
+  const creation = (await fetchProjectedCharacter(
+    page,
+    roomId,
+    actorId,
+    characterId
+  ))?.creation
+  const activeTermSkillCount =
+    creation?.terms?.at(-1)?.facts?.termSkillRolls?.length ?? 0
+  for (const table of (['serviceSkills', 'specialistSkills'] as const).slice(
+    activeTermSkillCount
+  )) {
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'RollCharacterCreationTermSkill',
       characterId,
@@ -254,7 +280,7 @@ const completeCurrentScoutTermToAging = async ({
     characterId
   })
 
-  const legalActions = await legalCreationActionKeys({
+  legalActions = await legalCreationActionKeys({
     page,
     roomId,
     actorId,
@@ -4008,6 +4034,15 @@ test.describe('character creation smoke', () => {
       drafted: false
     })
     postedCommandTypes.push('StartCharacterCareerTerm')
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationBasicTraining',
+      characterId,
+      skill: 'Comms-0'
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'ResolveCharacterCreationSurvival',
+      characterId
+    })
 
     const roomState = await fetchRoomState(page, roomId, actorId)
     const creationJson = JSON.stringify(
@@ -4041,7 +4076,9 @@ test.describe('character creation smoke', () => {
     }
 
     const secondTermSpectatorId = 'e2e-second-term-spectator'
+    const secondTermLateSpectatorId = 'e2e-second-term-late-spectator'
     const secondTermSpectator = await browser.newPage()
+    const secondTermLateSpectator = await browser.newPage()
     try {
       await openRoom(secondTermSpectator, {
         roomId,
@@ -4054,9 +4091,12 @@ test.describe('character creation smoke', () => {
         '#characterCreationFields'
       )
 
-      await expect(spectatorFields).toContainText(/Skills|Review the skill list/, {
-        timeout: 5_000
-      })
+      await expect(spectatorFields).toContainText(
+        /Skills|Review the skill list/,
+        {
+          timeout: 5_000
+        }
+      )
       await expect
         .poll(async () => {
           const state = await fetchRoomState(
@@ -4069,6 +4109,96 @@ test.describe('character creation smoke', () => {
           )
         })
         .toEqual(['Merchant', 'Scout'])
+
+      const ownerFields = page.locator('#characterCreationFields')
+      await expect(ownerFields).toContainText(/Skills|Review the skill list/, {
+        timeout: 5_000
+      })
+      const previousTermSkillCount = projectedTermSkillCount(
+        (await fetchProjectedCharacter(page, roomId, actorId, characterId))
+          ?.creation
+      )
+      const scoutSkillButton = ownerFields
+        .locator('.creation-term-actions')
+        .getByRole('button', { name: 'Service skills' })
+      const scoutTermSkillAccepted = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/rooms/${roomId}/command`) &&
+          (response.request().postData() ?? '').includes(
+            'RollCharacterCreationTermSkill'
+          )
+      )
+      await expect(scoutSkillButton).toBeVisible({ timeout: 5_000 })
+      await scoutSkillButton.click()
+      await expect((await scoutTermSkillAccepted).ok()).toBe(true)
+
+      await expect(
+        secondTermSpectator.locator('#diceOverlay.visible')
+      ).toBeVisible({ timeout: 5_000 })
+      await expectDiceRollPending(secondTermSpectator)
+      await expect(spectatorFields).not.toContainText(/Scout.*\d+ on/, {
+        timeout: 100
+      })
+
+      await secondTermSpectator.reload({ waitUntil: 'domcontentloaded' })
+      await openRoom(secondTermLateSpectator, {
+        roomId,
+        userId: secondTermLateSpectatorId,
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(secondTermSpectator, characterName)
+      await openOrExpectFollowedCreation(secondTermLateSpectator, characterName)
+      for (const [spectatorPage, spectatorId] of [
+        [secondTermSpectator, secondTermSpectatorId],
+        [secondTermLateSpectator, secondTermLateSpectatorId]
+      ] as const) {
+        const state = await fetchRoomState(
+          spectatorPage,
+          roomId,
+          spectatorId,
+          'spectator'
+        )
+        const latestRoll = state.state?.diceLog?.at(-1)
+        expect(latestRoll?.rolls).toBeUndefined()
+        expect(latestRoll?.total).toBeUndefined()
+        expect(
+          projectedTermSkillCount(
+            state.state?.characters[characterId]?.creation
+          )
+        ).toBe(previousTermSkillCount)
+        expect(
+          state.liveActivities?.find(
+            (activity) => activity.type === 'characterCreation'
+          )?.details
+        ).toBeUndefined()
+      }
+
+      await waitForDiceReveal(page)
+      const scoutTermSkill = await latestProjectedTermSkill(
+        page,
+        roomId,
+        actorId,
+        characterId
+      )
+      expect(scoutTermSkill?.career).toBe('Scout')
+      if (!scoutTermSkill) throw new Error('Scout term skill was not projected')
+      for (const spectatorPage of [
+        secondTermSpectator,
+        secondTermLateSpectator
+      ]) {
+        const termSkillRolls = spectatorPage
+          .locator('#characterCreationFields')
+          .locator('.creation-term-skill-rolls span')
+        await expect(termSkillRolls).toHaveCount(1, {
+          timeout: 5_000
+        })
+        await expect(termSkillRolls.last()).toContainText(scoutTermSkill.skill)
+        await expect(termSkillRolls.last()).toContainText(
+          `${scoutTermSkill.tableRoll} on ${scoutTermSkill.table}`
+        )
+      }
+
       await expectSpectatorRefreshPreservesCreationProjection({
         spectator: secondTermSpectator,
         roomId,
@@ -4090,6 +4220,7 @@ test.describe('character creation smoke', () => {
         .toEqual(['Merchant', 'Scout'])
     } finally {
       await secondTermSpectator.close()
+      await secondTermLateSpectator.close()
     }
 
     const finalizationSpectatorId = 'e2e-finalization-spectator'
