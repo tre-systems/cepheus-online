@@ -1777,6 +1777,48 @@ describe('character creation setup command handlers', () => {
     assert.equal(benefit.musteringBenefit.credits, 50000)
   })
 
+  it('ignores stale legacy term skills for cash benefit gambling modifiers on semantic terms', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationMusteringBenefit',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout',
+        kind: 'cash'
+      },
+      context(
+        createCreation('MUSTERING_OUT', {
+          terms: [
+            {
+              ...activeScoutTerm(),
+              skills: ['Gambling-1'],
+              skillsAndTraining: ['Gambling-1'],
+              facts: {
+                survival: survivalFact(true)
+              },
+              complete: true,
+              canReenlist: false,
+              musteringOut: true
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    const benefit = result.value.find(
+      (event) => event.type === 'CharacterCreationMusteringBenefitRolled'
+    )
+    assert.equal(benefit?.type, 'CharacterCreationMusteringBenefitRolled')
+    if (benefit?.type !== 'CharacterCreationMusteringBenefitRolled') return
+    assert.equal(benefit.musteringBenefit.modifier, 0)
+    assert.equal(benefit.musteringBenefit.tableRoll, 8)
+    assert.equal(benefit.musteringBenefit.credits, 50000)
+  })
+
   it('ignores stale legacy benefit fields on semantic terms when mustering', () => {
     const result = deriveCharacterCreationCommandEvents(
       {

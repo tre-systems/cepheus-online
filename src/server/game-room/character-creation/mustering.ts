@@ -95,6 +95,10 @@ const cashBenefitsReceived = (creation: CharacterCreationProjection): number =>
     0
   )
 
+const hasSemanticTermFacts = (
+  term: CharacterCreationProjection['terms'][number]
+): boolean => Object.keys(term.facts ?? {}).length > 0
+
 const hasGamblingSkill = (character: CharacterState): boolean => {
   const creation = character.creation
   const termSkills = (term: CharacterCreationProjection['terms'][number]) => {
@@ -104,7 +108,7 @@ const hasGamblingSkill = (character: CharacterState): boolean => {
         termSkill.skill ? [termSkill.skill] : []
       )
     ]
-    return factSkills.length > 0 ? factSkills : term.skillsAndTraining
+    return hasSemanticTermFacts(term) ? factSkills : term.skillsAndTraining
   }
   const creationSkills = [
     ...(creation?.backgroundSkills ?? []),
