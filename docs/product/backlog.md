@@ -78,8 +78,9 @@ Each wave should make later work simpler, safer, or more testable.
    one projection/filter path, and protocol fixtures.
 2. Keep new character creation work on semantic commands/events while
    preserving historical generic transition replay. Commands remain intent,
-   events record accepted facts with dice and outcome data, and
-   compatibility-only generic facts stay fenced from new production writes.
+   events record accepted facts with dice and outcome data, semantic events
+   project into read-model/facts, and legacy `creation.history` remains
+   compatibility-only for old `CharacterCreationTransitioned` replay.
 3. Keep moving the server projection toward the source of truth for every
    creation gate:
    pending choices, legal actions, term facts, final sheet fields, and refresh
@@ -748,9 +749,9 @@ metadata while keeping the previous timestamp fallback for legacy events. The
 remaining risk is narrower: roll-bearing semantic creation events now project
 onto per-term `facts`, and new legal-action/client projection code consumes
 those facts instead of legacy `creation.history`. The legacy history model
-still exists for historical replay compatibility and older activity paths, so
-future work should keep shrinking compatibility reads rather than adding new
-ones.
+still exists only for historical replay compatibility of old
+`CharacterCreationTransitioned` streams, so future work should remove remaining
+compatibility reads rather than adding new ones.
 
 Primary write ownership:
 
@@ -1387,9 +1388,10 @@ The next batch should run like this, in this order:
    dice, sheet, and character creation commands now route through focused
    domain modules, and the character creation router derives its handled
    command type from shared command metadata.
-3. Replace creation history with a semantic timeline after retiring the
-   remaining legacy activity fallbacks. Roll-bearing semantic events, including
-   characteristic rolls, now point at the dice event that drives reveal timing.
+3. Project semantic character creation events into read-model/facts while
+   keeping legacy creation history compatibility-only. Roll-bearing semantic
+   events, including characteristic rolls, now point at the dice event that
+   drives reveal timing.
    Semantic creation history mapping is centralized and lifecycle mapping
    coverage now spans the active SRD semantic event set. The projection now
    also records a redaction-safe semantic `timeline` with event ids, sequence,
@@ -1416,7 +1418,7 @@ The next batch should run like this, in this order:
    client review/compatibility adapter now uses that shared completed-term
    projection. The remaining legacy aggregate fallbacks are explicit
    compatibility paths for old projections; the legacy `history` model remains
-   only for historical replay compatibility and older activity consumers.
+   only for replaying old `CharacterCreationTransitioned` streams.
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.

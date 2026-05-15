@@ -1,7 +1,7 @@
 export const DICE_ROLL_ANIMATION_MS = 2200
 export const DICE_OVERLAY_VISIBLE_MS = 1200
 export const DICE_REVEAL_MIN_MS = 500
-export const DICE_REVEALED_HOLD_MS = 1200
+export const DICE_REVEALED_HOLD_MS = 350
 
 export const DICE_PIP_SLOTS = {
   1: ['center'],

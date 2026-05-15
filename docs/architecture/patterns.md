@@ -16,6 +16,11 @@ Every authoritative mutation in a room should be a command that produces one or
 more events. Live state is a projection of the event stream plus optional
 checkpoints.
 
+For character creation, semantic events project into read-model fields such as
+term facts, legal actions, timeline entries, and final-sheet/export views;
+legacy `creation.history` is compatibility-only for replaying old
+`CharacterCreationTransitioned` streams.
+
 ```mermaid
 flowchart LR
   C["client command"] --> DO["GameRoom Durable Object"]

@@ -611,7 +611,7 @@ describe('game state projection', () => {
     assert.equal(character?.characteristics.soc, 10)
     assert.equal(creation?.state.status, 'HOMEWORLD')
     assert.equal(creation?.creationComplete, false)
-    assert.deepEqual(creation?.history, [{ type: 'SET_CHARACTERISTICS' }])
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 6)
   })
 
@@ -687,7 +687,7 @@ describe('game state projection', () => {
     )
   })
 
-  it('projects legacy characteristic completion with legacy history', () => {
+  it('projects semantic characteristic completion without legacy history', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {
@@ -740,7 +740,7 @@ describe('game state projection', () => {
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'HOMEWORLD')
     assert.equal(creation?.creationComplete, false)
-    assert.deepEqual(creation?.history, [{ type: 'SET_CHARACTERISTICS' }])
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
@@ -810,7 +810,7 @@ describe('game state projection', () => {
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'SURVIVAL')
     assert.equal(creation?.creationComplete, false)
-    assert.deepEqual(creation?.history, [{ type: 'COMPLETE_BASIC_TRAINING' }])
+    assert.deepEqual(creation?.history, [])
     assert.deepEqual(creation?.terms[0]?.skillsAndTraining, ['Vacc Suit-0'])
     assert.deepEqual(creation?.terms[0]?.facts?.basicTrainingSkills, [
       'Vacc Suit-0'
@@ -819,7 +819,7 @@ describe('game state projection', () => {
     assert.equal(state?.eventSeq, 4)
   })
 
-  it('projects semantic survival resolution into history and the active term', () => {
+  it('projects semantic survival resolution into facts and the active term', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {
@@ -930,26 +930,11 @@ describe('game state projection', () => {
       canCommission: false,
       canAdvance: false
     })
-    assert.deepEqual(creation?.history, [
-      {
-        type: 'SURVIVAL_PASSED',
-        canCommission: false,
-        canAdvance: false,
-        survival: {
-          expression: '2d6',
-          rolls: [4, 4],
-          total: 8,
-          characteristic: 'end',
-          modifier: 0,
-          target: 7,
-          success: true
-        }
-      }
-    ])
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
-  it('projects semantic commission resolution into history', () => {
+  it('projects semantic commission resolution into facts', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {
@@ -1037,24 +1022,11 @@ describe('game state projection', () => {
         success: true
       }
     })
-    assert.deepEqual(creation?.history, [
-      {
-        type: 'COMPLETE_COMMISSION',
-        commission: {
-          expression: '2d6',
-          rolls: [4, 4],
-          total: 8,
-          characteristic: 'int',
-          modifier: 0,
-          target: 5,
-          success: true
-        }
-      }
-    ])
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
-  it('projects semantic commission skip into history', () => {
+  it('projects semantic commission skip without legacy history', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {
@@ -1109,11 +1081,11 @@ describe('game state projection', () => {
 
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'SKILLS_TRAINING')
-    assert.deepEqual(creation?.history, [{ type: 'SKIP_COMMISSION' }])
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
-  it('projects semantic advancement resolution into history, term, and career rank', () => {
+  it('projects semantic advancement resolution into facts, term, and career rank', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {
@@ -1217,31 +1189,11 @@ describe('game state projection', () => {
       }
     })
     assert.deepEqual(creation?.careers, [{ name: 'Merchant', rank: 2 }])
-    assert.deepEqual(creation?.history, [
-      {
-        type: 'COMPLETE_ADVANCEMENT',
-        advancement: {
-          expression: '2d6',
-          rolls: [4, 4],
-          total: 8,
-          characteristic: 'edu',
-          modifier: 0,
-          target: 8,
-          success: true
-        },
-        rank: {
-          career: 'Merchant',
-          previousRank: 1,
-          newRank: 2,
-          title: 'Fourth Officer',
-          bonusSkill: null
-        }
-      }
-    ])
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
-  it('projects semantic advancement skip into history', () => {
+  it('projects semantic advancement skip without legacy history', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {
@@ -1297,11 +1249,11 @@ describe('game state projection', () => {
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'SKILLS_TRAINING')
     assert.deepEqual(creation?.careers, [{ name: 'Merchant', rank: 1 }])
-    assert.deepEqual(creation?.history, [{ type: 'SKIP_ADVANCEMENT' }])
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
-  it('projects semantic term skill rolls into active term history', () => {
+  it('projects semantic term skill rolls into active term facts', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {
@@ -1385,23 +1337,11 @@ describe('game state projection', () => {
       'Broker-0',
       'Broker-1'
     ])
-    assert.deepEqual(creation?.history?.at(-1), {
-      type: 'ROLL_TERM_SKILL',
-      termSkill: {
-        career: 'Merchant',
-        table: 'serviceSkills',
-        roll: { expression: '1d6', rolls: [1], total: 1 },
-        tableRoll: 1,
-        rawSkill: 'Broker',
-        skill: 'Broker-1',
-        characteristic: null,
-        pendingCascadeSkill: null
-      }
-    })
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
-  it('projects semantic aging facts into character creation history', () => {
+  it('projects semantic aging facts without legacy history', () => {
     const characterId = asCharacterId('char-1')
     const aging = {
       roll: { expression: '2d6' as const, rolls: [1, 1], total: 2 },
@@ -1468,10 +1408,7 @@ describe('game state projection', () => {
       { type: 'PHYSICAL', modifier: -1 },
       { type: 'PHYSICAL', modifier: -1 }
     ])
-    assert.deepEqual(character?.creation?.history?.at(-1), {
-      type: 'COMPLETE_AGING',
-      aging
-    })
+    assert.deepEqual(character?.creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
@@ -1665,27 +1602,7 @@ describe('game state projection', () => {
         total: 1
       }
     })
-    assert.deepEqual(creation?.history?.at(-1), {
-      type: 'DECIDE_ANAGATHICS',
-      useAnagathics: true,
-      termIndex: 0,
-      passed: true,
-      survival: {
-        expression: '2d6',
-        rolls: [4, 4],
-        total: 8,
-        characteristic: 'end',
-        modifier: 0,
-        target: 7,
-        success: true
-      },
-      cost: 2500,
-      costRoll: {
-        expression: '1d6',
-        rolls: [1],
-        total: 1
-      }
-    })
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
@@ -1871,14 +1788,11 @@ describe('game state projection', () => {
       outcome: 'allowed',
       reenlistment
     })
-    assert.deepEqual(creation?.history?.at(-1), {
-      type: 'RESOLVE_REENLISTMENT',
-      reenlistment
-    })
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
-  it('projects semantic career lifecycle events with legacy history entries', () => {
+  it('projects semantic career lifecycle events without legacy history entries', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {
@@ -1972,10 +1886,7 @@ describe('game state projection', () => {
     ])
 
     const creation = state?.characters[characterId]?.creation
-    assert.deepEqual(
-      creation?.history?.map((event) => event.type),
-      ['REENLIST', 'REENLIST_BLOCKED', 'CONTINUE_CAREER']
-    )
+    assert.deepEqual(creation?.history, [])
     assert.deepEqual(
       creation?.terms.map((term) => ({
         career: term.career,
@@ -2119,10 +2030,7 @@ describe('game state projection', () => {
       }
     ])
     assert.equal(character?.characteristics.edu, 9)
-    assert.deepEqual(character?.creation?.history?.at(-1), {
-      type: 'FINISH_MUSTERING',
-      musteringBenefit: characteristicBenefit
-    })
+    assert.deepEqual(character?.creation?.history, [])
     assert.equal(state?.eventSeq, 6)
   })
 
@@ -2190,7 +2098,7 @@ describe('game state projection', () => {
 
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'ACTIVE')
-    assert.deepEqual(creation?.history?.at(-1), { type: 'FINISH_MUSTERING' })
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 4)
   })
 
@@ -2354,7 +2262,7 @@ describe('game state projection', () => {
     ])
     assert.deepEqual(creation?.pendingCascadeSkills, [])
     assert.equal(creation?.state.status, 'CAREER_SELECTION')
-    assert.deepEqual(creation?.history, [{ type: 'COMPLETE_HOMEWORLD' }])
+    assert.deepEqual(creation?.history, [])
     assert.equal(state?.eventSeq, 7)
   })
 
@@ -2636,29 +2544,7 @@ describe('game state projection', () => {
     const creation = state?.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'AGING')
     assert.equal(creation?.creationComplete, false)
-    assert.deepEqual(creation?.history, [
-      { type: 'COMPLETE_HOMEWORLD' },
-      { type: 'COMPLETE_BASIC_TRAINING' },
-      {
-        type: 'SURVIVAL_PASSED',
-        canCommission: true,
-        canAdvance: true,
-        survival
-      },
-      {
-        type: 'COMPLETE_COMMISSION',
-        commission
-      },
-      {
-        type: 'COMPLETE_ADVANCEMENT',
-        advancement,
-        rank
-      },
-      {
-        type: 'ROLL_TERM_SKILL',
-        termSkill
-      }
-    ])
+    assert.deepEqual(creation?.history, [])
     assert.deepEqual(
       creation?.terms.map(({ facts: _facts, ...term }) => term),
       [
@@ -2806,7 +2692,7 @@ describe('game state projection', () => {
     )
   })
 
-  it('projects semantic mishap resolution with legacy history compatibility', () => {
+  it('projects semantic mishap resolution without legacy history compatibility', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {
@@ -2874,7 +2760,7 @@ describe('game state projection', () => {
 
     const creation = state?.characters[characterId]?.creation
 
-    assert.deepEqual(creation?.history, [{ type: 'MISHAP_RESOLVED' }])
+    assert.deepEqual(creation?.history, [])
     assert.deepEqual(creation?.state.status, 'MUSTERING_OUT')
     assert.equal(creation?.terms[0]?.complete, true)
     assert.equal(creation?.terms[0]?.musteringOut, true)
@@ -3005,8 +2891,7 @@ describe('game state projection', () => {
     assert.deepEqual(creation?.terms[0]?.facts?.injury?.characteristicPatch, {
       str: 0
     })
-    assert.equal(creation?.history?.at(0)?.type, 'MISHAP_RESOLVED')
-    assert.equal(creation?.history?.at(1)?.type, 'INJURY_RESOLVED')
+    assert.deepEqual(creation?.history, [])
   })
 
   it('projects mishap benefit forfeiture into refreshed mustering actions', () => {
@@ -3116,7 +3001,7 @@ describe('game state projection', () => {
     )
   })
 
-  it('projects semantic death confirmation with legacy history compatibility', () => {
+  it('projects semantic death confirmation without legacy history compatibility', () => {
     const characterId = asCharacterId('char-1')
     const state = projectGameState([
       envelope(1, {
@@ -3171,7 +3056,7 @@ describe('game state projection', () => {
 
     const creation = state?.characters[characterId]?.creation
 
-    assert.deepEqual(creation?.history, [{ type: 'DEATH_CONFIRMED' }])
+    assert.deepEqual(creation?.history, [])
     assert.deepEqual(creation?.state.status, 'DECEASED')
     assert.equal(state?.eventSeq, 4)
   })

@@ -546,8 +546,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -596,8 +595,7 @@ const rawCharacterEventHandlers = {
         ? [{ key: 'injuryResolution' }]
         : [],
       terms,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -634,8 +632,7 @@ const rawCharacterEventHandlers = {
           characteristicPatch: structuredClone(event.characteristicPatch)
         }
       })),
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -653,8 +650,7 @@ const rawCharacterEventHandlers = {
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
       pendingDecisions: [],
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -687,8 +683,7 @@ const rawCharacterEventHandlers = {
       creationComplete: event.creationComplete,
       pendingDecisions: [],
       terms,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -701,7 +696,6 @@ const rawCharacterEventHandlers = {
     const character = nextState.characters[event.characterId]
     if (!character?.creation) return nextState
 
-    const canEnterDraft = character.creation.canEnterDraft
     if (event.passed) {
       startProjectedCareerTerm({
         character,
@@ -738,10 +732,7 @@ const rawCharacterEventHandlers = {
             previousCareerCount: event.previousCareerCount,
             failedQualificationOptions: [...event.failedQualificationOptions]
           },
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event, {
-        canEnterDraft
-      })
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -774,8 +765,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -797,8 +787,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -846,8 +835,7 @@ const rawCharacterEventHandlers = {
         ? event.pendingDecisions.map((decision) => ({ ...decision }))
         : [],
       terms,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -873,8 +861,7 @@ const rawCharacterEventHandlers = {
           commission: structuredClone(event.commission)
         }
       })),
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -895,8 +882,7 @@ const rawCharacterEventHandlers = {
         ...facts,
         commission: { skipped: true }
       })),
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -939,8 +925,7 @@ const rawCharacterEventHandlers = {
       creationComplete: event.creationComplete,
       terms,
       careers,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -961,8 +946,7 @@ const rawCharacterEventHandlers = {
         ...facts,
         advancement: { skipped: true }
       })),
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1013,8 +997,7 @@ const rawCharacterEventHandlers = {
       creationComplete: event.creationComplete,
       terms,
       pendingCascadeSkills: [...event.pendingCascadeSkills],
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1042,8 +1025,7 @@ const rawCharacterEventHandlers = {
       characteristicChanges: event.aging.characteristicChanges.map(
         (change) => ({ ...change })
       ),
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1117,8 +1099,7 @@ const rawCharacterEventHandlers = {
       pendingDecisions: event.pendingDecisions
         ? event.pendingDecisions.map((decision) => ({ ...decision }))
         : character.creation.pendingDecisions,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     if (event.cost !== undefined) {
       character.credits -= event.cost
@@ -1157,8 +1138,7 @@ const rawCharacterEventHandlers = {
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
       terms,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1179,8 +1159,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1203,8 +1182,7 @@ const rawCharacterEventHandlers = {
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
       terms,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1241,8 +1219,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       terms,
       pendingCascadeSkills: [...event.pendingCascadeSkills],
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1259,8 +1236,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1286,8 +1262,7 @@ const rawCharacterEventHandlers = {
           ...event.musteringBenefit
         }
       ),
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     if (event.musteringBenefit.kind === 'cash') {
       character.credits += event.musteringBenefit.credits
@@ -1326,8 +1301,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1344,8 +1318,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1362,8 +1335,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -1400,8 +1372,7 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope),
-      history: appendCharacterCreationHistory(character, event)
+      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 

@@ -620,7 +620,7 @@ describe('room publication flow', () => {
     )
     const creation = lastRoll.value.state.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'HOMEWORLD')
-    assert.deepEqual(creation?.history, [{ type: 'SET_CHARACTERISTICS' }])
+    assert.deepEqual(creation?.history, [])
     assert.deepEqual(
       lastRoll.value.liveActivities.map((activity) => activity.type),
       ['diceRoll', 'characterCreation', 'characterCreation']
@@ -825,10 +825,11 @@ describe('room publication flow', () => {
       agingEvent.aging.age
     )
     assert.deepEqual(
-      resolved.value.state.characters[characterId]?.creation?.history?.at(-1),
+      resolved.value.state.characters[characterId]?.creation?.terms.at(-1)
+        ?.facts?.aging,
       {
-        type: 'COMPLETE_AGING',
-        aging: agingEvent.aging
+        rollEventId: agingEvent.rollEventId,
+        ...agingEvent.aging
       }
     )
   })
@@ -967,8 +968,9 @@ describe('room publication flow', () => {
         storedEvent.reenlistment.total
       )
     }
-    assert.deepEqual(creation?.history?.at(-1), {
-      type: 'RESOLVE_REENLISTMENT',
+    assert.deepEqual(creation?.terms.at(-1)?.facts?.reenlistment, {
+      rollEventId: storedEvent.rollEventId,
+      outcome: storedEvent.outcome,
       reenlistment: storedEvent.reenlistment
     })
   })
@@ -1763,9 +1765,11 @@ describe('room publication flow', () => {
     })
 
     const recovered = await getProjectedGameState(storage, gameId)
+    assert.deepEqual(recovered?.characters[characterId]?.creation?.history, [])
     assert.deepEqual(
-      recovered?.characters[characterId]?.creation?.history?.at(-1),
-      { type: 'COMPLETE_BASIC_TRAINING' }
+      recovered?.characters[characterId]?.creation?.terms.at(-1)?.facts
+        ?.basicTrainingSkills,
+      ['Vacc Suit-0']
     )
     assert.equal(
       recovered?.characters[characterId]?.creation?.terms.at(-1)
@@ -1889,8 +1893,18 @@ describe('room publication flow', () => {
     )
 
     const recovered = await getProjectedGameState(storage, gameId)
-    const history = recovered?.characters[characterId]?.creation?.history ?? []
-    assert.equal(history.at(-1)?.type, activity.transition)
+    assert.deepEqual(recovered?.characters[characterId]?.creation?.history, [])
+    assert.deepEqual(
+      recovered?.characters[characterId]?.creation?.terms.at(-1)?.facts
+        ?.survival,
+      {
+        rollEventId: storedEvent.rollEventId,
+        passed: storedEvent.passed,
+        survival: storedEvent.survival,
+        canCommission: storedEvent.canCommission,
+        canAdvance: storedEvent.canAdvance
+      }
+    )
     assert.equal(
       recovered?.characters[characterId]?.creation?.terms.at(-1)?.survival,
       storedEvent.survival.total
@@ -2015,15 +2029,17 @@ describe('room publication flow', () => {
     )
 
     const recovered = await getProjectedGameState(storage, gameId)
-    const history = recovered?.characters[characterId]?.creation?.history ?? []
-    const lastHistoryEvent = history.at(-1)
-    assert.equal(lastHistoryEvent?.type, 'COMPLETE_COMMISSION')
     assert.deepEqual(
-      lastHistoryEvent?.type === 'COMPLETE_COMMISSION'
-        ? lastHistoryEvent.commission
-        : null,
-      storedEvent.commission
+      recovered?.characters[characterId]?.creation?.terms.at(-1)?.facts
+        ?.commission,
+      {
+        rollEventId: storedEvent.rollEventId,
+        skipped: false,
+        passed: storedEvent.passed,
+        commission: storedEvent.commission
+      }
     )
+    assert.deepEqual(recovered?.characters[characterId]?.creation?.history, [])
     assert.equal(
       recovered?.characters[characterId]?.creation?.state.status,
       'SKILLS_TRAINING'
@@ -2166,7 +2182,14 @@ describe('room publication flow', () => {
 
     const recovered = await getProjectedGameState(storage, gameId)
     const creation = recovered?.characters[characterId]?.creation
-    assert.equal(creation?.history?.at(-1)?.type, 'COMPLETE_ADVANCEMENT')
+    assert.deepEqual(creation?.history, [])
+    assert.deepEqual(creation?.terms.at(-1)?.facts?.advancement, {
+      rollEventId: storedEvent.rollEventId,
+      skipped: false,
+      passed: storedEvent.passed,
+      advancement: storedEvent.advancement,
+      rank: storedEvent.rank
+    })
     assert.equal(
       creation?.terms.at(-1)?.advancement,
       storedEvent.advancement.total
@@ -2355,7 +2378,7 @@ describe('room publication flow', () => {
     assert.equal(storedEvent?.type, 'CharacterCreationHomeworldSet')
   })
 
-  it('publishes semantic homeworld completion into projection history', async () => {
+  it('publishes semantic homeworld completion into projection state', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-homeworld-complete')
     await publish(storage, createGameCommand())
@@ -2477,17 +2500,14 @@ describe('room publication flow', () => {
 
     const creation = completed.value.state.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'CAREER_SELECTION')
-    assert.deepEqual(creation?.history, [
-      { type: 'SET_CHARACTERISTICS' },
-      { type: 'COMPLETE_HOMEWORLD' }
-    ])
+    assert.deepEqual(creation?.history, [])
     assert.equal(
       (await readEventStream(storage, gameId)).length,
       completed.value.state.eventSeq
     )
   })
 
-  it('records semantic SRD roll facts in character creation transition history', async () => {
+  it('records semantic SRD roll facts in projected term facts', async () => {
     const storage = createMemoryStorage()
     const characterId = asCharacterId('char-1')
     await publish(storage, createGameCommand())
@@ -2648,35 +2668,26 @@ describe('room publication flow', () => {
     assert.equal(persistedAgingEvents.length, 2)
 
     const recovered = await getProjectedGameState(storage, gameId)
-    const history = recovered?.characters[characterId]?.creation?.history ?? []
-
+    const creation = recovered?.characters[characterId]?.creation
+    const terms = creation?.terms ?? []
     assert.deepEqual(
-      history.find((event) => event.type === 'SELECT_CAREER')?.qualification,
+      terms[0]?.facts?.qualification?.qualification,
       persistedQualificationEvents[0]?.type ===
         'CharacterCreationQualificationResolved'
         ? persistedQualificationEvents[0].qualification
         : undefined
     )
+    assert.equal(terms[0]?.facts?.survival?.survival?.success, true)
+    assert.equal(terms.filter((term) => term.facts?.aging).length, 2)
+    const reenlistmentTerms = terms.filter((term) => term.facts?.reenlistment)
+    assert.equal(reenlistmentTerms.length, 2)
     assert.equal(
-      history.find((event) => event.type === 'SURVIVAL_PASSED')?.survival
-        ?.success,
+      reenlistmentTerms[0]?.facts?.reenlistment?.reenlistment.success,
       true
     )
-    assert.equal(
-      history.filter((event) => event.type === 'COMPLETE_AGING').length,
-      2
-    )
-    const reenlistmentEvents = history.filter(
-      (event) => event.type === 'RESOLVE_REENLISTMENT'
-    )
-    assert.equal(reenlistmentEvents.length, 2)
-    assert.equal(reenlistmentEvents[0]?.reenlistment.success, true)
-    assert.equal(
-      history.some((event) => event.type === 'REENLIST'),
-      true
-    )
+    assert.equal(terms.length > 1, true)
     assert.deepEqual(
-      history.find((event) => event.type === 'FINISH_MUSTERING')
+      creation?.history?.find((event) => event.type === 'FINISH_MUSTERING')
         ?.musteringBenefit,
       {
         career: 'Scout',
@@ -3286,10 +3297,37 @@ describe('room publication flow', () => {
     const advancementEvent = recoveredTail
       .map((envelope) => envelope.event)
       .find((event) => event.type === 'CharacterCreationAdvancementResolved')
+    const termSkillEvent = recoveredTail
+      .map((envelope) => envelope.event)
+      .find((event) => event.type === 'CharacterCreationTermSkillRolled')
     assert.deepEqual(recovered, skilled.value.state)
-    assert.equal(creation?.history?.at(-3)?.type, 'COMPLETE_COMMISSION')
-    assert.equal(creation?.history?.at(-2)?.type, 'COMPLETE_ADVANCEMENT')
-    assert.equal(creation?.history?.at(-1)?.type, 'ROLL_TERM_SKILL')
+    assert.deepEqual(creation?.history, [
+      {
+        type: 'SURVIVAL_PASSED',
+        canCommission: true,
+        canAdvance: true,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 4],
+          total: 8,
+          characteristic: 'int',
+          modifier: 0,
+          target: 5,
+          success: true
+        }
+      }
+    ])
+    assert.equal(creation?.terms.at(-1)?.facts?.commission?.skipped, false)
+    assert.equal(creation?.terms.at(-1)?.facts?.advancement?.skipped, false)
+    assert.deepEqual(
+      creation?.terms.at(-1)?.facts?.termSkillRolls?.at(-1),
+      termSkillEvent?.type === 'CharacterCreationTermSkillRolled'
+        ? {
+            rollEventId: termSkillEvent.rollEventId,
+            ...termSkillEvent.termSkill
+          }
+        : undefined
+    )
     assert.equal(
       creation?.terms.at(-1)?.advancement,
       advancementEvent?.type === 'CharacterCreationAdvancementResolved'
