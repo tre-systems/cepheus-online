@@ -811,6 +811,10 @@ describe('character creation view model', () => {
 
     assert.equal(viewModel.wizard?.mishapResolution, null)
     assert.equal(viewModel.wizard?.injuryResolution?.title, 'Merchant injury')
+    assert.equal(
+      viewModel.wizard?.injuryResolution?.choiceHint,
+      'Choose the physical characteristic that takes the 1D6 loss.'
+    )
     assert.deepEqual(
       viewModel.wizard?.injuryResolution?.targets.map((target) => [
         target.characteristic,

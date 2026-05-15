@@ -570,6 +570,7 @@ export interface CharacterCreationInjuryTargetViewModel {
 export interface CharacterCreationInjuryResolutionViewModel {
   title: string
   message: string
+  choiceHint: string | null
   targets: CharacterCreationInjuryTargetViewModel[]
   secondaryChoice: InjurySecondaryChoice
   methods: readonly InjuryResolutionActionOption[]
@@ -1487,6 +1488,31 @@ const injuryTargetKeys = (
   return ['str', 'dex', 'end']
 }
 
+const injuryChoiceHint = (
+  injury: NonNullable<
+    NonNullable<
+      NonNullable<
+        CharacterCreationProjection['terms'][number]['facts']
+      >['mishap']
+    >['outcome']['injury']
+  >
+): string => {
+  if (injury.type === 'roll') {
+    return 'Choose the characteristic to use if the injury table result needs a loss target.'
+  }
+  if (injury.injuryRoll === 1) {
+    return 'Choose the primary characteristic for the 1D6 loss; remaining physical losses are applied by the rules.'
+  }
+  if (injury.injuryRoll === 2) {
+    return 'Choose the physical characteristic that takes the 1D6 loss.'
+  }
+  if (injury.injuryRoll === 3) {
+    return 'Choose whether Strength or Dexterity takes the -2 loss.'
+  }
+
+  return 'Choose the physical characteristic that takes the permanent loss.'
+}
+
 export const deriveCharacterCreationInjuryResolutionViewModel = (
   flow: Pick<CharacterCreationFlow, 'step' | 'draft'>,
   {
@@ -1518,6 +1544,7 @@ export const deriveCharacterCreationInjuryResolutionViewModel = (
       injury.type === 'roll'
         ? 'Roll the injury table and choose where any permanent loss applies.'
         : 'Resolve this injury before mustering out.',
+    choiceHint: injuryChoiceHint(injury),
     targets: targets.map((characteristic) => {
       const definition = characteristicDefinitions.find(
         (candidate) => candidate.key === characteristic

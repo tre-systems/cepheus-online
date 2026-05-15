@@ -508,7 +508,7 @@ describe('character sheet controller', () => {
     findByText(harness.elements.sheetBody, 'Career History')
     findByText(
       harness.elements.sheetBody,
-      'Term 1: Scout - benefits High Passage (roll 8); term complete'
+      'Term 1: Scout - benefits High Passage (Scout material benefit; roll 8; DM 0; table 8); term complete'
     )
     findByText(harness.elements.sheetBody, 'Plain Export')
     findByText(
@@ -526,7 +526,7 @@ describe('character sheet controller', () => {
         'Credits: Cr1200',
         'Equipment: Laser Pistol x1 (3D6)',
         'Career History:',
-        '- Term 1: Scout - benefits High Passage (roll 8); term complete',
+        '- Term 1: Scout - benefits High Passage (Scout material benefit; roll 8; DM 0; table 8); term complete',
         'Notes:',
         'Known contacts on Regina.'
       ].join('\n')

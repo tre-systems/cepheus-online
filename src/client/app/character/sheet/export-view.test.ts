@@ -226,7 +226,7 @@ describe('character sheet export view', () => {
       credits: 'Cr1200',
       equipment: 'Vacc Suit x1 (Carried)',
       careerHistory: [
-        'Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (roll 3 +1 DM = table 4); term complete'
+        'Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (Scout material benefit; roll 3; DM +1; table 4); term complete'
       ],
       notes: 'Detached scout.'
     })
@@ -246,7 +246,7 @@ describe('character sheet export view', () => {
         'Credits: Cr1200',
         'Equipment: Vacc Suit x1 (Carried)',
         'Career History:',
-        '- Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (roll 3 +1 DM = table 4); term complete',
+        '- Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (Scout material benefit; roll 3; DM +1; table 4); term complete',
         'Notes:',
         'Detached scout.'
       ].join('\n')
@@ -353,7 +353,7 @@ describe('character sheet export view', () => {
     }
 
     assert.equal(
-      /benefits Soc \+1 \(roll 8\)/.test(
+      /benefits Soc \+1 \(Aerospace material benefit; roll 8; DM 0; table 8\)/.test(
         derivePlainCharacterExport(character({ creation })) ?? ''
       ),
       true
@@ -526,7 +526,12 @@ describe('character sheet export view', () => {
     )
     assert.equal(exportText.includes('Careers: Scout rank 0'), false)
     assert.equal(exportText.includes('skills Piloting-1, Comms-0'), true)
-    assert.equal(exportText.includes('benefits Blade (roll 4)'), true)
+    assert.equal(
+      exportText.includes(
+        'benefits Blade (Scout material benefit; roll 4; DM 0; table 4)'
+      ),
+      true
+    )
     assert.equal(exportText.includes('Legacy Skill'), false)
     assert.equal(exportText.includes('Legacy Training'), false)
     assert.equal(exportText.includes('Legacy Benefit'), false)
@@ -579,7 +584,12 @@ describe('character sheet export view', () => {
       history?.includes('term skills service skills roll 3: Piloting-1'),
       true
     )
-    assert.equal(history?.includes('benefits Blade (roll 4)'), true)
+    assert.equal(
+      history?.includes(
+        'benefits Blade (Scout material benefit; roll 4; DM 0; table 4)'
+      ),
+      true
+    )
   })
 
   it('does not fall back to conflicting legacy skills when semantic facts have none', () => {

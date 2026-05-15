@@ -2420,6 +2420,10 @@ h1 {
   line-height: 1.35;
 }
 
+.creation-term-resolution .creation-injury-choice-hint {
+  color: var(--text);
+}
+
 .creation-term-skill-progress {
   display: inline-flex;
   width: fit-content;

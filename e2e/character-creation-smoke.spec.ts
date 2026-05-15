@@ -481,6 +481,55 @@ const expectMobileControlUsable = async (
     .toBe(true)
 }
 
+const expectMobileCreatorOverviewVisible = async (
+  page: Page
+): Promise<void> => {
+  const fields = page.locator('#characterCreationFields')
+  const statStrip = fields.locator('.creation-stat-strip')
+  const skillStrip = fields.locator('.creation-skill-strip')
+  const currentAction = fields
+    .locator('.creation-term-actions button:not([disabled])')
+    .first()
+  const viewportVisible = async (
+    locator: ReturnType<Page['locator']>
+  ): Promise<boolean> =>
+    locator.evaluate((element) => {
+      const rect = element.getBoundingClientRect()
+      const style = window.getComputedStyle(element)
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        Number(style.opacity) !== 0 &&
+        rect.bottom > 0 &&
+        rect.top < window.innerHeight &&
+        rect.left >= -1 &&
+        rect.right <= window.innerWidth + 1
+      )
+    })
+
+  await expect(statStrip).toContainText('Str')
+  await expect(statStrip).toContainText('Soc')
+  await expect(skillStrip).toContainText(/Admin-0|Gun Combat-0|Slug Rifle-0/)
+  await expect(currentAction).toBeVisible()
+  await expect
+    .poll(() => viewportVisible(statStrip), {
+      message: 'Characteristic summary is visible in the phone viewport'
+    })
+    .toBe(true)
+  await expect
+    .poll(() => viewportVisible(skillStrip), {
+      message: 'Skill summary is visible in the phone viewport'
+    })
+    .toBe(true)
+  await expect
+    .poll(() => viewportVisible(currentAction), {
+      message: 'Current creation action is visible in the phone viewport'
+    })
+    .toBe(true)
+}
+
 const continueCreationWizardToSkills = async ({
   page,
   fields,
@@ -5070,6 +5119,7 @@ test.describe('character creation smoke', () => {
     await expect(creatorSkillStrip(page)).toContainText('Admin-0')
     await expect(creatorSkillStrip(page)).toContainText('Gun Combat-0')
     await expect(creatorSkillStrip(page)).toContainText('Slug Rifle-0')
+    await expectMobileCreatorOverviewVisible(page)
     await expectMobileCreatorControlsFit(page)
 
     const termSkillButtons = fields.locator(

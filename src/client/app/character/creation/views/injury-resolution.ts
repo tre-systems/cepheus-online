@@ -30,6 +30,12 @@ export const renderCharacterCreationInjuryResolution = (
   const text = document.createElement('p')
   text.textContent = viewModel.message
 
+  const choiceHint = viewModel.choiceHint ? document.createElement('p') : null
+  if (choiceHint) {
+    choiceHint.className = 'creation-injury-choice-hint'
+    choiceHint.textContent = viewModel.choiceHint
+  }
+
   const actions = document.createElement('div')
   actions.className = 'creation-term-actions'
 
@@ -56,6 +62,6 @@ export const renderCharacterCreationInjuryResolution = (
     }
   }
 
-  panel.append(title, text, actions)
+  panel.append(title, text, ...(choiceHint ? [choiceHint] : []), actions)
   return panel
 }

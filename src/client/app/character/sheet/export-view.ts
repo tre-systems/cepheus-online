@@ -320,10 +320,7 @@ const termBenefitValue = (term: CareerTerm): string | null => {
   if (benefits && benefits.length > 0) {
     return `benefits ${benefits
       .map((benefit) => {
-        const roll =
-          benefit.modifier === 0
-            ? `roll ${benefit.roll.total}`
-            : `roll ${benefit.roll.total} ${formatSignedModifier(benefit.modifier)} DM = table ${benefit.tableRoll}`
+        const roll = `roll ${benefit.roll.total}; DM ${formatSignedModifier(benefit.modifier)}; table ${benefit.tableRoll}`
         if (benefit.kind === 'cash') return `Cr${benefit.credits} (${roll})`
 
         const effect = deriveMaterialBenefitEffect(benefit.value)
@@ -333,7 +330,7 @@ const termBenefitValue = (term: CareerTerm): string | null => {
             : effect.kind === 'characteristic'
               ? `${characteristicLabels[effect.characteristic]} ${formatSignedModifier(effect.modifier)}`
               : effect.item
-        return `${value} (${roll})`
+        return `${value} (${benefit.career} material benefit; ${roll})`
       })
       .join(', ')}`
   }
