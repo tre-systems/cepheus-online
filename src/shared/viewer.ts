@@ -140,6 +140,9 @@ const redactUnrevealedCreationFacts = (
       delete facts.anagathicsDecision
       delete (term as unknown as { anagathicsCost?: number }).anagathicsCost
     }
+    if (hasUnrevealedRollFact(facts.mishap, unrevealedRollIds)) {
+      delete facts.mishap
+    }
     if (hasUnrevealedRollFact(facts.reenlistment, unrevealedRollIds)) {
       delete facts.reenlistment
       delete (term as unknown as { reEnlistment?: number }).reEnlistment

@@ -18,7 +18,10 @@ export const deriveCharacterCreationHistoryEvent = (
     case 'CharacterCreationCharacteristicsCompleted':
       return { type: 'SET_CHARACTERISTICS' }
     case 'CharacterCreationMishapResolved':
-      return { type: 'MISHAP_RESOLVED' }
+      return {
+        type: 'MISHAP_RESOLVED',
+        ...(event.mishap ? { mishap: structuredClone(event.mishap) } : {})
+      }
     case 'CharacterCreationDeathConfirmed':
       return { type: 'DEATH_CONFIRMED' }
     case 'CharacterCreationBasicTrainingCompleted':

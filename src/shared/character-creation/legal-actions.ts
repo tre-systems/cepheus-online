@@ -780,7 +780,7 @@ const actionDefinitions = {
   },
   resolveMishap: {
     commandTypes: ['ResolveCharacterCreationMishap'],
-    rollRequirement: { key: 'mishap', dice: '2d6' }
+    rollRequirement: { key: 'mishap', dice: '1d6' }
   },
   confirmDeath: {
     commandTypes: ['ConfirmCharacterCreationDeath']

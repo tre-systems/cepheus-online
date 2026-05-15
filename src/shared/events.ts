@@ -11,6 +11,7 @@ import type {
   CareerCreationAgingFact,
   AgingLossSelection,
   CareerCreationBenefitFact,
+  CareerCreationDiceFact,
   CareerCreationDraftFact,
   CareerCreationEvent,
   CareerCreationRankFact,
@@ -18,7 +19,8 @@ import type {
   CareerCreationReenlistmentFact,
   CareerCreationReenlistmentOutcome,
   CareerCreationTermSkillFact,
-  FailedQualificationOption
+  FailedQualificationOption,
+  SurvivalMishapOutcome
 } from './characterCreation'
 import type {
   CharacterCreationSheet,
@@ -184,6 +186,11 @@ export type GameEvent =
   | {
       type: 'CharacterCreationMishapResolved'
       characterId: CharacterId
+      rollEventId?: EventId
+      mishap?: {
+        roll: CareerCreationDiceFact
+        outcome: SurvivalMishapOutcome
+      }
       state: CharacterCreationProjection['state']
       creationComplete: boolean
     }

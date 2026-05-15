@@ -454,8 +454,31 @@ const rawCharacterEventHandlers = {
 
     const lastTermIndex = character.creation.terms.length - 1
     const terms = character.creation.terms.map((term, index) =>
-      index === lastTermIndex ? leaveCareerTerm(term) : structuredClone(term)
+      index === lastTermIndex
+        ? withCareerTermFacts(leaveCareerTerm(term), (facts) => ({
+            ...facts,
+            ...(event.mishap
+              ? {
+                  mishap: {
+                    ...(event.rollEventId
+                      ? { rollEventId: event.rollEventId }
+                      : {}),
+                    roll: structuredClone(event.mishap.roll),
+                    outcome: structuredClone(event.mishap.outcome)
+                  }
+                }
+              : {})
+          }))
+        : structuredClone(term)
     )
+
+    if ((event.mishap?.outcome.debtCredits ?? 0) > 0) {
+      character.credits -= event.mishap?.outcome.debtCredits ?? 0
+    }
+    if ((event.mishap?.outcome.extraServiceYears ?? 0) > 0) {
+      character.age =
+        (character.age ?? 18) + (event.mishap?.outcome.extraServiceYears ?? 0)
+    }
 
     character.creation = {
       ...character.creation,

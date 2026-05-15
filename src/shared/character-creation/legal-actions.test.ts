@@ -279,7 +279,7 @@ describe('career creation legal action planner', () => {
           key: 'resolveMishap',
           status: 'MISHAP',
           commandTypes: ['ResolveCharacterCreationMishap'],
-          rollRequirement: { key: 'mishap', dice: '2d6' }
+          rollRequirement: { key: 'mishap', dice: '1d6' }
         }
       ]
     )

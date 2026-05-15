@@ -140,7 +140,7 @@ const commandMetadataDefinitions = {
   },
   ResolveCharacterCreationMishap: {
     route: 'characterCreation',
-    usesSeededDice: false,
+    usesSeededDice: true,
     autoAddExpectedSeq: true
   },
   ConfirmCharacterCreationDeath: {

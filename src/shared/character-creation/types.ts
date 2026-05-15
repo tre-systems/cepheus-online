@@ -160,6 +160,12 @@ export interface CareerTermAnagathicsDecisionFact {
   }
 }
 
+export interface CareerTermMishapFact {
+  rollEventId?: EventId
+  roll: CareerCreationDiceFact
+  outcome: SurvivalMishapOutcome
+}
+
 export interface CareerTermReenlistmentFact {
   rollEventId?: EventId
   outcome: CareerCreationReenlistmentFact['outcome']
@@ -178,6 +184,7 @@ export interface CareerTermFacts {
   aging?: CareerCreationAgingFact
   agingLosses?: CareerTermAgingLossFact
   anagathicsDecision?: CareerTermAnagathicsDecisionFact
+  mishap?: CareerTermMishapFact
   reenlistment?: CareerTermReenlistmentFact
   musteringBenefits?: CareerCreationBenefitFact[]
 }
@@ -243,7 +250,13 @@ export type CareerCreationEvent =
   | { type: 'FINISH_MUSTERING'; musteringBenefit?: CareerCreationBenefitFact }
   | { type: 'CREATION_COMPLETE' }
   | { type: 'DEATH_CONFIRMED' }
-  | { type: 'MISHAP_RESOLVED' }
+  | {
+      type: 'MISHAP_RESOLVED'
+      mishap?: {
+        roll: CareerCreationDiceFact
+        outcome: SurvivalMishapOutcome
+      }
+    }
   | { type: 'RESET' }
 
 export interface CareerCreationContext {

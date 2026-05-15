@@ -104,11 +104,12 @@ Important remaining gaps:
   and finalization plus final sheet reload recovery. Named E2E scripts now
   isolate reveal, death, multi-career, and finalization checks. Remaining work
   is edge-case coverage and UX polish.
-- Optional mishaps remain shallow. Anagathics now has a server-owned use/skip
+- Optional mishaps are now server-backed through a 1D6 table roll, projected
+  outcome facts, career exit, debt, extra service years, reveal-safe follower
+  activity, and refresh replay. Anagathics now has a server-owned use/skip
   decision before aging, the required second survival check, treatment cost,
-  credit deduction, and projected provenance. Failed anagathics survival enters
-  the mishap branch, but detailed mishap consequences and UI polish are still
-  open.
+  credit deduction, and projected provenance. Remaining gaps are injury detail
+  resolution, benefit forfeiture enforcement, and UI polish.
 - Character creation follow mode needs stronger two-tab automation and reveal
   timing contracts so spectators never see roll-dependent outcomes early.
 - Spectator follow should show the same projected creation state as the creator
@@ -153,8 +154,9 @@ tests before it is considered done.
   browser renders the choose-one service skill as explicit buttons.
 - [~] Roll survival from `careerBasics`; on failure, enter mishap/death or legal
   exit handling. Current legal action: `rollSurvival`. Semantic survival
-  command/event and roll facts are server-backed. Gap: mishap/death outcome
-  tables remain unresolved for the optional variant.
+  command/event and roll facts are server-backed. Default failed survival is
+  death; optional mishap table outcome facts now replay from the server. Gap:
+  injury detail and benefit forfeiture are not fully applied.
 - [~] Resolve commission and advancement from `careerBasics` and
   `ranksAndSkills`, including rank titles and bonus skills. Semantic events and
   server dice facts exist. Gap: bonus skill decisions and rank provenance still
@@ -168,8 +170,9 @@ tests before it is considered done.
   anagathics use/skip event exist. Anagathics use now resolves the required
   second survival check, rolls and stores the server-derived treatment cost,
   deducts it from credits, projects provenance onto the active term, and routes
-  failed treatment survival into the mishap branch. Gap: detailed mishap
-  consequences and characteristic-choice UI/projection polish are incomplete.
+  failed treatment survival into the mishap branch with server-owned table
+  facts. Gap: injury detail, benefit forfeiture, and characteristic-choice
+  UI/projection polish are incomplete.
 - [~] Roll reenlistment from `careerBasics`, handling mandatory retirement
   after seven terms, forced reenlistment on 12, success, failure, and voluntary
   exit. Current legal actions cover unresolved, forced, allowed, and blocked

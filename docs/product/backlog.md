@@ -1098,27 +1098,27 @@ Done when:
 Status: partial. The default Classic Traveller-style flow now routes failed
 survival directly to `DECEASED` through semantic death commands/events. Generic
 death and optional-mishap transition payloads are fenced or replaced by semantic
-commands. The separate `MISHAP` status remains only as the placeholder for a
-future optional mishap variant. Ruleset-backed optional mishap outcome tables
-and full consequence events are still missing.
+commands. The separate `MISHAP` status is now used by failed anagathics
+treatment survival and the optional mishap branch. Mishap table rolls, outcome
+facts, outcome text, career exit, debt, extra service years, reveal-safe
+activity, and refresh replay are server-backed. Remaining consequence gaps are
+injury detail resolution, benefit forfeiture enforcement, and UI polish.
 
 Tasks:
 
-- Add SRD mishap table data and pure resolution helpers with deterministic
-  injected dice.
-- Add semantic mishap events for optional-variant table roll, outcome text,
-  skill/equipment/stat consequences, career exit, and death when applicable.
+- Add injury detail resolution and benefit forfeiture enforcement for mishap
+  outcomes that require more than career exit, debt, or extra service years.
 - Keep default failed survival as an immediate deceased state.
 - Keep deceased creation state from finalizing or mustering into a playable
   character.
-- Add activity cards for mishap and death that reveal outcome after dice timing.
+- Keep mishap and death activity cards reveal-safe as consequence detail grows.
 
 Done when:
 
 - Failed survival produces deceased state in the default rules mode.
 - Death cannot be bypassed into final playable state.
 - Optional mishap outcomes replay after refresh and are visible to followers
-  once that variant is enabled.
+  after dice reveal.
 
 ### Slice 2C: Aging, Anagathics, And Reenlistment
 
@@ -1127,13 +1127,14 @@ aging loss resolution, reenlistment resolution, seven-term retirement, forced
 reenlistment, allowed/blocked career decisions, voluntary career exit, and
 server-backed semantic aging/reenlistment facts exist. Anagathics decisions,
 the required second survival check, cost deduction, and export provenance exist;
-detailed mishap consequences after failed treatment survival and some UI
-provenance still need completion.
+detailed mishap table outcomes after failed treatment survival exist; injury
+detail, benefit forfeiture, and some UI provenance still need completion.
 
 Tasks:
 
-- Complete detailed mishap consequences after failed anagathics survival and
-  keep treatment debt/payment provenance visible through mustering/export.
+- Complete injury detail and benefit forfeiture after failed anagathics
+  survival mishaps, and keep treatment debt/payment provenance visible through
+  mustering/export.
 - Keep aging modifier, legal aging-loss choice, and characteristic-change
   provenance regression coverage healthy as new branches are added.
 - Polish reenlistment UI/provenance for mandatory retirement after seven terms,

@@ -2344,8 +2344,35 @@ describe('character creation setup command handlers', () => {
     if (!result.ok) return
     assert.deepEqual(result.value, [
       {
+        type: 'DiceRolled',
+        expression: '1d6',
+        reason: 'Scout mishap',
+        rolls: [4],
+        total: 4
+      },
+      {
         type: 'CharacterCreationMishapResolved',
         characterId,
+        rollEventId: 'game-1:2',
+        mishap: {
+          roll: {
+            expression: '1d6',
+            rolls: [4],
+            total: 4
+          },
+          outcome: {
+            career: 'Scout',
+            roll: 4,
+            id: 'dishonorable_discharge',
+            description:
+              'Dishonorably discharged from the service. Lose all benefits.',
+            discharge: 'dishonorable',
+            benefitEffect: 'lose_all',
+            debtCredits: 0,
+            extraServiceYears: 0,
+            injury: null
+          }
+        },
         state: {
           status: 'MUSTERING_OUT',
           context: {

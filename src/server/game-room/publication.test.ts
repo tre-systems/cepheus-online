@@ -428,6 +428,7 @@ describe('room publication flow', () => {
         'ResolveCharacterCreationAging',
         'ResolveCharacterCreationCommission',
         'ResolveCharacterCreationDraft',
+        'ResolveCharacterCreationMishap',
         'ResolveCharacterCreationQualification',
         'ResolveCharacterCreationReenlistment',
         'ResolveCharacterCreationSurvival',

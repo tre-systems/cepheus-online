@@ -2,6 +2,7 @@ import {
   deriveCareerCreationComplete,
   deriveSurvivalPromotionOptions,
   evaluateCareerCheck,
+  resolveSurvivalMishapOutcome,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
 import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
@@ -258,7 +259,30 @@ export const deriveSurvivalCommandEvents = (
       const { character } = loaded.value
       const creation = validateMishapResolution(character)
       if (!creation.ok) return creation
-      const creationEvent = { type: 'MISHAP_RESOLVED' } as const
+      const activeTerm = creation.value.terms.at(-1)
+      if (!activeTerm) {
+        return err(commandError('missing_entity', 'Career term does not exist'))
+      }
+
+      const rolled = rollDiceExpression(
+        '1d6',
+        deriveEventRng(context.gameSeed, context.nextSeq)
+      )
+      if (!rolled.ok) {
+        return err(commandError('invalid_command', rolled.error))
+      }
+      const mishap = {
+        roll: {
+          expression: '1d6' as const,
+          rolls: [...rolled.value.rolls],
+          total: rolled.value.total
+        },
+        outcome: resolveSurvivalMishapOutcome({
+          career: activeTerm.career,
+          roll: { total: rolled.value.total }
+        })
+      }
+      const creationEvent = { type: 'MISHAP_RESOLVED', mishap } as const
 
       const nextState = transitionCareerCreationState(
         creation.value.state,
@@ -267,8 +291,17 @@ export const deriveSurvivalCommandEvents = (
 
       return ok([
         {
+          type: 'DiceRolled',
+          expression: '1d6',
+          reason: `${activeTerm.career} mishap`,
+          rolls: [...rolled.value.rolls],
+          total: rolled.value.total
+        },
+        {
           type: 'CharacterCreationMishapResolved',
           characterId: command.characterId,
+          rollEventId,
+          mishap,
           state: nextState,
           creationComplete: deriveCareerCreationComplete(nextState)
         }

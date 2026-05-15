@@ -386,7 +386,7 @@ const describeCareerCreationEvent = (
     case 'DEATH_CONFIRMED':
       return 'Death confirmed'
     case 'MISHAP_RESOLVED':
-      return 'Mishap resolved'
+      return event.mishap?.outcome.description ?? 'Mishap resolved'
     case 'RESET':
       return 'Creation reset'
     default: {
@@ -488,7 +488,11 @@ export const deriveLiveActivity = (
         type: 'characterCreation',
         characterId: event.characterId,
         transition: 'MISHAP_RESOLVED',
-        details: 'Mishap resolved',
+        details: event.mishap?.outcome.description ?? 'Mishap resolved',
+        ...characterCreationRevealMetadata(
+          event.rollEventId,
+          envelope.createdAt
+        ),
         status: event.state.status,
         creationComplete: event.creationComplete
       }
