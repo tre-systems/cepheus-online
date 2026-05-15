@@ -16,8 +16,8 @@ test plan should continue to grow in layers as implementation expands.
   CommonJS build and runs Node's built-in test runner.
 - `npm run verify:quick`: rebuilds served client assets, then runs lint,
   documentation checks, boundary checks, and TypeScript.
-- `npm run verify:full`: runs `verify:quick`, the unit test suite, and the
-  current character creation browser smoke.
+- `npm run verify:full`: runs `verify:quick`, the unit test suite, the current
+  character creation browser smoke, and the focused tactical board smoke.
 - `npm run test:e2e`: Playwright browser tests against a local Wrangler dev
   Worker. Run `npm run build:client` first when client assets changed.
 - `npm run test:e2e:character-creation`: focused Playwright coverage for
