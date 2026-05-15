@@ -414,6 +414,63 @@ describe('room asset creation controller', () => {
     assert.equal(command.losSidecar?.occluders[0]?.id, 'iris-1')
   })
 
+  it('preserves selected geomorph metadata when a renderable board image file is supplied', async () => {
+    const harness = createHarness()
+    const imageFile = { type: 'image/png' } as File
+    harness.elements.localAssetMetadataInput.value = JSON.stringify({
+      assets: [
+        {
+          root: 'Geomorphs',
+          relativePath: 'standard/deck-01.jpg',
+          kind: 'geomorph',
+          width: 200,
+          height: 100,
+          gridScale: 50
+        }
+      ],
+      losSidecars: [
+        {
+          assetRef: 'Geomorphs/standard/deck-01.jpg',
+          width: 200,
+          height: 100,
+          gridScale: 50,
+          occluders: [
+            {
+              type: 'door',
+              id: 'iris-1',
+              x1: 80,
+              y1: 30,
+              x2: 120,
+              y2: 30,
+              open: false
+            }
+          ]
+        }
+      ]
+    })
+
+    harness.elements.loadLocalAssets.dispatch('click')
+    harness.elements.boardAssetSelect.value = 'Geomorphs/standard/deck-01.jpg'
+    harness.elements.useBoardAsset.dispatch('click')
+    harness.elements.boardImageFileInput.files = [
+      imageFile
+    ] as unknown as FileList
+    harness.elements.boardImageFileInput.dispatch('change')
+    await flushAsyncListeners()
+
+    harness.elements.createBoard.dispatch('click')
+    await flushAsyncListeners()
+
+    const command = harness.boardCommands[0]
+    assert.equal(command?.type, 'CreateBoard')
+    if (command?.type !== 'CreateBoard') {
+      throw new Error('Expected a CreateBoard command')
+    }
+    assert.equal(command.imageAssetId, 'Geomorphs/standard/deck-01.jpg')
+    assert.equal(command.url, 'data:image/png;base64,test')
+    assert.equal(command.losSidecar?.occluders[0]?.id, 'iris-1')
+  })
+
   it('applies validated local counter metadata to piece fields', () => {
     const harness = createHarness()
     harness.elements.localAssetMetadataInput.value = JSON.stringify([

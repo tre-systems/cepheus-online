@@ -186,6 +186,83 @@ test.describe('tactical board smoke', () => {
     })
   })
 
+  test('creates a local geomorph board with a renderable file url and LOS sidecar', async ({
+    page
+  }) => {
+    const roomId = uniqueRoomId('asset-file-los')
+    const refereeId = 'asset-file-referee'
+    await openRoom(page, {
+      roomId,
+      userId: refereeId,
+      viewer: 'referee'
+    })
+
+    await page.locator('#menuButton').click()
+    await expect(page.locator('#roomDialog')).toBeVisible()
+
+    await page.locator('#localAssetMetadataInput').fill(
+      JSON.stringify({
+        assets: [
+          {
+            root: 'Geomorphs',
+            relativePath: 'standard/file-deck.jpg',
+            kind: 'geomorph',
+            width: 1,
+            height: 1,
+            gridScale: 1
+          }
+        ],
+        losSidecars: [
+          {
+            assetRef: 'Geomorphs/standard/file-deck.jpg',
+            width: 1,
+            height: 1,
+            gridScale: 1,
+            occluders: [
+              {
+                type: 'door',
+                id: 'iris-1',
+                x1: 0,
+                y1: 0,
+                x2: 1,
+                y2: 0,
+                open: false
+              }
+            ]
+          }
+        ]
+      })
+    )
+    await page.locator('#loadLocalAssetsButton').click()
+    await page
+      .locator('#boardAssetSelect')
+      .selectOption('Geomorphs/standard/file-deck.jpg')
+    await page.locator('#useBoardAssetButton').click()
+    await page
+      .locator('#boardImageFileInput')
+      .setInputFiles(tinyPngFile('file-deck.png'))
+    await expect(page.locator('#boardImageInput')).toHaveValue(
+      /^data:image\/png;base64,/
+    )
+
+    await page.locator('#createBoardButton').click()
+    await expect(page.locator('#roomDialog')).toBeHidden()
+
+    const state = await fetchTacticalState(page, roomId, refereeId)
+    const boardId = state.state?.selectedBoardId
+    const board = state.state?.boards[boardId ?? '']
+    expect(board).toMatchObject({
+      imageAssetId: 'Geomorphs/standard/file-deck.jpg',
+      width: 1,
+      height: 1
+    })
+    expect(board?.url).toContain('data:image/png;base64,')
+    expect(board?.losSidecar).toMatchObject({
+      assetRef: 'Geomorphs/standard/file-deck.jpg',
+      occluders: [{ type: 'door', id: 'iris-1' }]
+    })
+  })
+
   test('creates boards and pieces from selected local image files without committed assets', async ({
     page
   }) => {

@@ -218,6 +218,7 @@ export const createRoomAssetCreationController = ({
     readSelectedCroppedImageFileAsDataUrl
   const listeners: Array<() => void> = []
   let assetPickerViewModel: MapAssetPickerViewModel | null = null
+  let selectedBoardAssetId: string | null = null
 
   const addListener = (
     target: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>,
@@ -354,6 +355,7 @@ export const createRoomAssetCreationController = ({
 
   const loadLocalAssetMetadata = (): void => {
     reportError('')
+    selectedBoardAssetId = null
     assetPickerViewModel = deriveMapAssetPickerViewModel(
       parseLocalAssetMetadataCandidates(elements.localAssetMetadataInput.value),
       parseLocalAssetLosSidecarCandidates(
@@ -376,6 +378,7 @@ export const createRoomAssetCreationController = ({
 
     elements.boardNameInput.value = defaults.name
     elements.boardImageInput.value = defaults.imageAssetId
+    selectedBoardAssetId = defaults.imageAssetId
     elements.boardWidthInput.value = String(defaults.width)
     elements.boardHeightInput.value = String(defaults.height)
     elements.boardScaleInput.value = String(defaults.scale)
@@ -439,7 +442,13 @@ export const createRoomAssetCreationController = ({
       elements.boardImageInput.value.trim() ||
       null
     const imageUrl = browserImageUrl(imageRef) ? imageRef : null
-    const imageAssetId = imageRef && !imageUrl ? imageRef : null
+    const hasBoardFile = Boolean(elements.boardImageFileInput.files?.[0])
+    const imageAssetId =
+      imageRef && !imageUrl
+        ? imageRef
+        : hasBoardFile
+          ? selectedBoardAssetId
+          : null
 
     await postBoardCommand({
       type: 'CreateBoard',
@@ -457,6 +466,7 @@ export const createRoomAssetCreationController = ({
     elements.boardNameInput.value = ''
     elements.boardImageInput.value = ''
     elements.boardImageFileInput.value = ''
+    selectedBoardAssetId = null
     elements.roomDialog.close()
     requestRender()
   }
