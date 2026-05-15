@@ -312,6 +312,42 @@ describe('viewer filtering', () => {
                   outcome: 'allowed'
                 }
               },
+              anagathicsDecision: {
+                rollEventId: asEventId('roll-1'),
+                useAnagathics: true,
+                termIndex: 0,
+                passed: true,
+                survival: {
+                  expression: '2d6',
+                  rolls: [5, 4],
+                  total: 9,
+                  characteristic: 'end',
+                  modifier: 0,
+                  target: 6,
+                  success: true
+                },
+                cost: 2500,
+                costRoll: {
+                  expression: '1d6',
+                  rolls: [2],
+                  total: 2
+                }
+              },
+              mishap: {
+                rollEventId: asEventId('roll-1'),
+                roll: { expression: '1d6', rolls: [4], total: 4 },
+                outcome: {
+                  career: 'Scout',
+                  roll: 4,
+                  id: 'dishonorable_discharge',
+                  description: 'Dishonorable discharge.',
+                  discharge: 'dishonorable',
+                  benefitEffect: 'lose_all',
+                  debtCredits: 0,
+                  extraServiceYears: 0,
+                  injury: null
+                }
+              },
               musteringBenefits: [
                 {
                   rollEventId: asEventId('roll-1'),
@@ -359,6 +395,8 @@ describe('viewer filtering', () => {
     assert.equal(term?.facts?.survival, undefined)
     assert.equal(term?.facts?.termSkillRolls, undefined)
     assert.equal(term?.facts?.reenlistment, undefined)
+    assert.equal(term?.facts?.anagathicsDecision, undefined)
+    assert.equal(term?.facts?.mishap, undefined)
     assert.equal(term?.facts?.musteringBenefits, undefined)
     assert.deepEqual(term?.skills, [])
     assert.deepEqual(term?.skillsAndTraining, ['Vacc Suit-0'])

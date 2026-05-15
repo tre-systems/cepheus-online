@@ -30,7 +30,7 @@ const envelope = (
   gameId,
   seq,
   actorId,
-  createdAt: `2026-05-03T00:00:0${seq}.000Z`,
+  createdAt: `2026-05-03T00:00:${String(seq).padStart(2, '0')}.000Z`,
   event
 })
 
@@ -1408,6 +1408,68 @@ describe('live activity derivation', () => {
           tableRoll: 4,
           value: '20000',
           credits: 20000
+        },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      },
+      {
+        type: 'CharacterCreationAnagathicsDecided',
+        characterId,
+        rollEventId: asEventId('game-1:9'),
+        useAnagathics: true,
+        termIndex: 0,
+        passed: true,
+        survival: {
+          expression: '2d6',
+          rolls: [4, 5],
+          total: 9,
+          characteristic: 'end',
+          modifier: 0,
+          target: 6,
+          success: true
+        },
+        cost: 2500,
+        costRoll: {
+          expression: '1d6',
+          rolls: [2],
+          total: 2
+        },
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      },
+      {
+        type: 'CharacterCreationMishapResolved',
+        characterId,
+        rollEventId: asEventId('game-1:10'),
+        mishap: {
+          roll: {
+            expression: '1d6',
+            rolls: [3],
+            total: 3
+          },
+          outcome: {
+            career: 'Merchant',
+            roll: 3,
+            id: 'legal_battle_debt',
+            description: 'Legal battle; Cr10000 debt.',
+            discharge: 'honorable',
+            benefitEffect: 'forfeit_current_term',
+            debtCredits: 10000,
+            extraServiceYears: 0,
+            injury: null
+          }
         },
         state: {
           status: 'MUSTERING_OUT',
