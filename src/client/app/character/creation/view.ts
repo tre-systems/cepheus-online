@@ -22,7 +22,8 @@ import {
 import type {
   BenefitKind,
   CascadeSkillChoice,
-  FailedQualificationOption
+  FailedQualificationOption,
+  HomeworldChoiceOptions
 } from '../../../../shared/character-creation/types.js'
 import type {
   CharacterCharacteristics,
@@ -1151,7 +1152,10 @@ const pendingCascadeChoiceViewModel = (
 
 const deriveCharacterCreationBackgroundSkillSummary = (
   flow: CharacterCreationFlow,
-  projectedChoices: readonly CascadeSkillChoice[] = []
+  options: {
+    backgroundCascadeChoices?: readonly CascadeSkillChoice[]
+    homeworldChoiceOptions?: HomeworldChoiceOptions
+  } = {}
 ): CharacterCreationBackgroundSkillSummary => {
   const fields = homeworldDraftFields(flow.draft)
   const homeworld = selectedHomeworld(flow.draft)
@@ -1161,25 +1165,31 @@ const deriveCharacterCreationBackgroundSkillSummary = (
   const selectedSkills = [...(fields.backgroundSkills ?? [])]
   const pendingCascadeSkills = [...(fields.pendingCascadeSkills ?? [])]
   const selected = new Set([...selectedSkills, ...pendingCascadeSkills])
-  const primaryEducationOptions = derivePrimaryEducationSkillOptions({
-    edu: flow.draft.characteristics.edu,
-    homeworld,
-    rules: CEPHEUS_SRD_RULESET
-  })
-  const skillOptions = primaryEducationOptions.map((option) => {
-    const value = backgroundSkillValue(option.name)
-    return {
-      value,
-      label: option.name,
-      selected: selected.has(value),
-      preselected: option.preselected,
-      cascade: isCascadeCareerSkill(option.name)
-    }
-  })
+  const projectedSkillOptions = options.homeworldChoiceOptions?.backgroundSkills
+  const legacySkillOptions = () =>
+    derivePrimaryEducationSkillOptions({
+      edu: flow.draft.characteristics.edu,
+      homeworld,
+      rules: CEPHEUS_SRD_RULESET
+    }).map((option) => {
+      const value = backgroundSkillValue(option.name)
+      return {
+        value,
+        label: option.name,
+        preselected: option.preselected,
+        cascade: isCascadeCareerSkill(option.name)
+      }
+    })
+  const skillOptions = (projectedSkillOptions ?? legacySkillOptions()).map(
+    (option) => ({
+      ...option,
+      selected: selected.has(option.value)
+    })
+  )
   const cascadeSkillChoices =
     deriveCharacterCreationCascadeSkillChoiceViewModels(
       pendingCascadeSkills,
-      projectedChoices
+      options.backgroundCascadeChoices
     )
   const errors =
     pendingCascadeSkills.length === 0
@@ -1195,7 +1205,7 @@ const deriveCharacterCreationBackgroundSkillSummary = (
   return {
     allowance,
     selectedSkills,
-    availableSkills: primaryEducationOptions.map((option) => option.name),
+    availableSkills: skillOptions.map((option) => option.label),
     skillOptions,
     remainingSelections: Math.max(
       allowance - selectedSkills.length - pendingCascadeSkills.length,
@@ -1213,13 +1223,16 @@ const plural = (count: number, singular: string, pluralText: string): string =>
 
 const homeworldSummaryViewModel = (
   flow: CharacterCreationFlow,
-  projectedChoices: readonly CascadeSkillChoice[] = []
+  options: {
+    backgroundCascadeChoices?: readonly CascadeSkillChoice[]
+    homeworldChoiceOptions?: HomeworldChoiceOptions
+  } = {}
 ): CharacterCreationHomeworldSummaryViewModel => {
   const homeworld = selectedHomeworld(flow.draft)
   const tradeCodes = selectedTradeCodes(homeworld.tradeCodes)
   const backgroundSkills = deriveCharacterCreationBackgroundSkillSummary(
     flow,
-    projectedChoices
+    options
   )
   const selectedCount =
     backgroundSkills.selectedSkills.length +
@@ -1837,26 +1850,32 @@ const optionViewModels = (
 
 export const deriveCharacterCreationHomeworldViewModel = (
   flow: CharacterCreationFlow,
-  options: { backgroundCascadeChoices?: readonly CascadeSkillChoice[] } = {}
+  options: {
+    backgroundCascadeChoices?: readonly CascadeSkillChoice[]
+    homeworldChoiceOptions?: HomeworldChoiceOptions
+  } = {}
 ): CharacterCreationHomeworldViewModel => {
   const homeworld = selectedHomeworld(flow.draft)
   const tradeCodes = selectedTradeCodes(homeworld.tradeCodes)
+  const lawLevels =
+    options.homeworldChoiceOptions?.lawLevels ??
+    Object.keys(CEPHEUS_SRD_RULESET.homeWorldSkillsByLawLevel)
+  const tradeCodeOptions =
+    options.homeworldChoiceOptions?.tradeCodes ??
+    Object.keys(CEPHEUS_SRD_RULESET.homeWorldSkillsByTradeCode)
 
   return {
     step: 'homeworld',
     fields: deriveCharacterCreationFieldViewModels(flow, 'homeworld'),
     lawLevelOptions: optionViewModels(
-      Object.keys(CEPHEUS_SRD_RULESET.homeWorldSkillsByLawLevel),
+      lawLevels,
       homeworld.lawLevel ? [homeworld.lawLevel] : []
     ),
-    tradeCodeOptions: optionViewModels(
-      Object.keys(CEPHEUS_SRD_RULESET.homeWorldSkillsByTradeCode),
-      tradeCodes
-    ),
-    summary: homeworldSummaryViewModel(flow, options.backgroundCascadeChoices),
+    tradeCodeOptions: optionViewModels(tradeCodeOptions, tradeCodes),
+    summary: homeworldSummaryViewModel(flow, options),
     backgroundSkills: deriveCharacterCreationBackgroundSkillSummary(
       flow,
-      options.backgroundCascadeChoices
+      options
     ),
     pendingCascadeChoice: pendingCascadeChoiceViewModel(
       flow.draft.pendingCascadeSkills,

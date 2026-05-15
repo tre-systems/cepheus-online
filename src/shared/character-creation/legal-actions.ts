@@ -1,4 +1,5 @@
 import { canRollCashBenefit, deriveRemainingCareerBenefits } from './benefits'
+import { derivePrimaryEducationSkillOptions } from './background-skills'
 import { CEPHEUS_SRD_RULESET } from './cepheus-srd-ruleset'
 import { deriveBasicTrainingPlan } from './career-rules'
 import {
@@ -20,6 +21,7 @@ import type {
   CareerCreationPendingDecisionKey,
   CareerCreationReenlistmentOutcome,
   CareerCreationState,
+  HomeworldChoiceOptions,
   LegalCareerCreationAction
 } from './types'
 
@@ -168,6 +170,11 @@ const termSkillTableLabels: Record<CareerCreationTermSkillTable, string> = {
   specialistSkills: 'Specialist skills',
   advancedEducation: 'Advanced education'
 }
+
+const backgroundSkillValue = (skill: string): string =>
+  isCascadeCareerSkill(skill)
+    ? careerSkillWithLevel(skill, 0)
+    : formatCareerSkill({ name: skill, level: 0 })
 
 export const deriveRemainingCareerCreationBenefits = (
   creation: CareerCreationActionProjection
@@ -422,6 +429,31 @@ export const deriveCareerCreationCascadeSkillChoices = (
   }
 
   return choices
+}
+
+const deriveHomeworldChoiceOptions = (
+  creation: CareerCreationActionProjection,
+  { characteristics }: CareerCreationActionPlanOptions
+): HomeworldChoiceOptions | null => {
+  if (creation.state.status !== 'HOMEWORLD') return null
+
+  const homeworld = creation.homeworld ?? undefined
+  const backgroundSkills = derivePrimaryEducationSkillOptions({
+    edu: characteristics?.edu,
+    homeworld,
+    rules: CEPHEUS_SRD_RULESET
+  }).map((option) => ({
+    value: backgroundSkillValue(option.name),
+    label: option.name,
+    preselected: option.preselected,
+    cascade: isCascadeCareerSkill(option.name)
+  }))
+
+  return {
+    lawLevels: Object.keys(CEPHEUS_SRD_RULESET.homeWorldSkillsByLawLevel),
+    tradeCodes: Object.keys(CEPHEUS_SRD_RULESET.homeWorldSkillsByTradeCode),
+    backgroundSkills
+  }
 }
 
 export const deriveLegalCareerCreationActionKeys = (
@@ -724,6 +756,7 @@ export const deriveCareerCreationActionPlan = (
   const cascadeSkillChoices = deriveCareerCreationCascadeSkillChoices(
     creation.pendingCascadeSkills ?? []
   )
+  const homeworldChoiceOptions = deriveHomeworldChoiceOptions(creation, options)
 
   return {
     status: creation.state.status,
@@ -732,7 +765,8 @@ export const deriveCareerCreationActionPlan = (
       ...options,
       creation
     }),
-    ...(cascadeSkillChoices.length > 0 ? { cascadeSkillChoices } : {})
+    ...(cascadeSkillChoices.length > 0 ? { cascadeSkillChoices } : {}),
+    ...(homeworldChoiceOptions ? { homeworldChoiceOptions } : {})
   }
 }
 

@@ -566,6 +566,50 @@ describe('career creation legal action planner', () => {
     )
   })
 
+  it('projects homeworld law, trade code, and background skill choices', () => {
+    const creation = projection('HOMEWORLD', {
+      homeworld: {
+        lawLevel: 'No Law',
+        tradeCodes: ['Asteroid']
+      }
+    })
+    const plan = deriveCareerCreationActionPlan(creation, {
+      characteristics: { edu: 12 }
+    })
+
+    assert.equal(
+      plan.homeworldChoiceOptions?.lawLevels.includes('No Law'),
+      true
+    )
+    assert.equal(
+      plan.homeworldChoiceOptions?.tradeCodes.includes('Asteroid'),
+      true
+    )
+    assert.deepEqual(
+      plan.homeworldChoiceOptions?.backgroundSkills.slice(0, 3),
+      [
+        {
+          value: 'Gun Combat-0',
+          label: 'Gun Combat*',
+          preselected: true,
+          cascade: true
+        },
+        {
+          value: 'Zero-G-0',
+          label: 'Zero-G',
+          preselected: true,
+          cascade: false
+        },
+        {
+          value: 'Admin-0',
+          label: 'Admin',
+          preselected: false,
+          cascade: false
+        }
+      ]
+    )
+  })
+
   it('projects the shared action plan onto creation state without mutating input', () => {
     const creation = projection('SURVIVAL')
     const projected = projectCareerCreationActionPlan(creation)

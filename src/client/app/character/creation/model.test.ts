@@ -419,6 +419,71 @@ describe('character creation view model', () => {
     ])
   })
 
+  it('uses projected homeworld options for read-only homeworld choices', () => {
+    const currentFlow = flow({
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        homeworld: {
+          lawLevel: 'Low Law',
+          tradeCodes: ['Desert']
+        },
+        backgroundSkills: ['Survival-0'],
+        pendingCascadeSkills: []
+      })
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: projection('HOMEWORLD', {
+        actionPlan: {
+          status: 'HOMEWORLD',
+          pendingDecisions: [{ key: 'homeworldSkillSelection' }],
+          legalActions: [],
+          homeworldChoiceOptions: {
+            lawLevels: ['Low Law'],
+            tradeCodes: ['Desert'],
+            backgroundSkills: [
+              {
+                value: 'Survival-0',
+                label: 'Survival',
+                preselected: true,
+                cascade: false
+              }
+            ]
+          }
+        }
+      }),
+      readOnly: true
+    })
+
+    assert.deepEqual(viewModel.wizard?.homeworld?.lawLevelOptions, [
+      { value: 'Low Law', label: 'Low Law', selected: true }
+    ])
+    assert.deepEqual(viewModel.wizard?.homeworld?.tradeCodeOptions, [
+      { value: 'Desert', label: 'Desert', selected: true }
+    ])
+    assert.deepEqual(
+      viewModel.wizard?.homeworld?.backgroundSkills.skillOptions,
+      [
+        {
+          value: 'Survival-0',
+          label: 'Survival',
+          selected: true,
+          preselected: true,
+          cascade: false
+        }
+      ]
+    )
+  })
+
   it('includes career selection and roll state for the career step', () => {
     const currentFlow = flow({
       step: 'career',

@@ -4,6 +4,7 @@ import type {
   CharacterCharacteristics,
   CharacterSheetPatch
 } from '../state'
+import type { BackgroundHomeworld } from './background-skills'
 
 export type CareerCreationStatus =
   | 'CHARACTERISTICS'
@@ -324,6 +325,19 @@ export interface CascadeSkillChoice {
   options: readonly CascadeSkillChoiceOption[]
 }
 
+export interface HomeworldBackgroundSkillChoice {
+  value: string
+  label: string
+  preselected: boolean
+  cascade: boolean
+}
+
+export interface HomeworldChoiceOptions {
+  lawLevels: readonly string[]
+  tradeCodes: readonly string[]
+  backgroundSkills: readonly HomeworldBackgroundSkillChoice[]
+}
+
 export interface LegalCareerCreationAction {
   key: CareerCreationActionKey
   status: CareerCreationStatus
@@ -378,6 +392,7 @@ export interface CareerCreationActionPlan {
   pendingDecisions: readonly CareerCreationPendingDecision[]
   legalActions: readonly LegalCareerCreationAction[]
   cascadeSkillChoices?: readonly CascadeSkillChoice[]
+  homeworldChoiceOptions?: HomeworldChoiceOptions
 }
 
 export interface CareerCreationActionPlanOptions {
@@ -388,6 +403,7 @@ export interface CareerCreationActionProjection {
   state: CareerCreationState
   terms?: readonly CareerTerm[]
   careers?: readonly CareerRank[]
+  homeworld?: BackgroundHomeworld | null
   canEnterDraft?: boolean
   failedToQualify?: boolean
   characteristicChanges?: readonly AgingChange[]

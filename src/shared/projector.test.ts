@@ -2080,6 +2080,44 @@ describe('game state projection', () => {
         }
       ]
     )
+    assert.equal(
+      state?.characters[
+        characterId
+      ]?.creation?.actionPlan?.homeworldChoiceOptions?.lawLevels.includes(
+        'No Law'
+      ),
+      true
+    )
+    assert.equal(
+      state?.characters[
+        characterId
+      ]?.creation?.actionPlan?.homeworldChoiceOptions?.tradeCodes.includes(
+        'Asteroid'
+      ),
+      true
+    )
+    assert.deepEqual(
+      state?.characters[
+        characterId
+      ]?.creation?.actionPlan?.homeworldChoiceOptions?.backgroundSkills.slice(
+        0,
+        2
+      ),
+      [
+        {
+          value: 'Gun Combat-0',
+          label: 'Gun Combat*',
+          preselected: true,
+          cascade: true
+        },
+        {
+          value: 'Zero-G-0',
+          label: 'Zero-G',
+          preselected: true,
+          cascade: false
+        }
+      ]
+    )
   })
 
   it('replays semantic character creation milestone events in order', () => {

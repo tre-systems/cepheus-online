@@ -299,6 +299,10 @@ const wizardViewModel = ({
     projectedCreation?.state.status === 'SKILLS_TRAINING'
       ? projectedCascadeChoices
       : []
+  const homeworldChoiceOptions =
+    projectedCreation?.state.status === 'HOMEWORLD'
+      ? projectedCreation.actionPlan?.homeworldChoiceOptions
+      : undefined
 
   return {
     step: flow.step,
@@ -343,7 +347,8 @@ const wizardViewModel = ({
     homeworld:
       flow.step === 'homeworld'
         ? deriveCharacterCreationHomeworldViewModel(flow, {
-            backgroundCascadeChoices
+            backgroundCascadeChoices,
+            homeworldChoiceOptions
           })
         : null
   }
