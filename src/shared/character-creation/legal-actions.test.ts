@@ -887,7 +887,7 @@ describe('career creation legal action planner', () => {
     ])
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(creation),
-      ['completeSkills']
+      ['rollTermSkill']
     )
     assert.deepEqual(
       deriveLegalCareerCreationActionKeysForProjection(
@@ -926,6 +926,23 @@ describe('career creation legal action planner', () => {
         })
       ),
       ['completeSkills']
+    )
+    assert.deepEqual(
+      deriveLegalCareerCreationActionKeysForProjection(
+        projection('SKILLS_TRAINING', {
+          requiredTermSkillCount: 2,
+          terms: [
+            term({
+              career: 'Scout',
+              skills: ['Legacy Pilot-1', 'Legacy Mechanics-1'],
+              facts: {
+                termSkillRolls: [termSkillFact({ skill: 'Pilot-1' })]
+              }
+            })
+          ]
+        })
+      ),
+      ['rollTermSkill']
     )
   })
 

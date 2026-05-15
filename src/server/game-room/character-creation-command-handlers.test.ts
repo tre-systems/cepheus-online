@@ -1296,6 +1296,66 @@ describe('character creation setup command handlers', () => {
     assert.equal(result.value[1]?.type, 'CharacterCreationTermSkillRolled')
   })
 
+  it('uses projected term skill facts instead of legacy aggregate skills for term roll gates', () => {
+    const termSkillRoll = {
+      career: 'Merchant',
+      table: 'serviceSkills' as const,
+      roll: { expression: '1d6' as const, rolls: [2], total: 2 },
+      tableRoll: 2,
+      rawSkill: 'Broker',
+      skill: 'Broker-1',
+      characteristic: null,
+      pendingCascadeSkill: null
+    }
+    const creation = createCreation('SKILLS_TRAINING', {
+      state: createCareerCreationState('SKILLS_TRAINING', {
+        canCommission: true,
+        canAdvance: false
+      }),
+      terms: [
+        {
+          career: 'Merchant',
+          skills: [],
+          skillsAndTraining: ['Broker-0'],
+          benefits: [],
+          facts: { termSkillRolls: [termSkillRoll] },
+          complete: false,
+          canReenlist: true,
+          completedBasicTraining: true,
+          musteringOut: false,
+          anagathics: false,
+          survival: 7
+        }
+      ]
+    })
+
+    const extraRoll = deriveCharacterCreationCommandEvents(
+      {
+        type: 'RollCharacterCreationTermSkill',
+        gameId,
+        actorId,
+        characterId,
+        table: 'serviceSkills'
+      },
+      context(creation)
+    )
+    const completion = deriveCharacterCreationCommandEvents(
+      {
+        type: 'CompleteCharacterCreationSkills',
+        gameId,
+        actorId,
+        characterId
+      },
+      context(creation)
+    )
+
+    assert.equal(extraRoll.ok, false)
+    if (extraRoll.ok) return
+    assert.equal(extraRoll.error.code, 'invalid_command')
+    assert.equal(extraRoll.error.message.includes('complete'), true)
+    assert.equal(completion.ok, true)
+  })
+
   it('emits skills completion after required term skills', () => {
     const result = deriveCharacterCreationCommandEvents(
       {

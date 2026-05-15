@@ -280,6 +280,8 @@ const actionsForLegalKey = (
           'secondary'
         )
       ]
+    case 'rollTermSkill':
+      return []
     case 'completeSkills':
       return [
         action('complete-skills', 'Complete skills', {
@@ -420,6 +422,7 @@ const actionKeyOrder: readonly CareerCreationActionKey[] = [
   'rollCommission',
   'rollAdvancement',
   'skipAdvancement',
+  'rollTermSkill',
   'completeSkills',
   'decideAnagathics',
   'resolveAging',
@@ -455,10 +458,10 @@ const deriveActions = (
   const termSkillRollActions = deriveTermSkillRollActions(
     identity,
     character,
-    legalActionsByKey.get('completeSkills')
+    legalActionsByKey.get('rollTermSkill')
   )
   if (
-    legalActionsByKey.has('completeSkills') &&
+    legalActionsByKey.has('rollTermSkill') &&
     termSkillRollActions.length > 0
   ) {
     return termSkillRollActions

@@ -246,6 +246,7 @@ export type CareerCreationActionKey =
   | 'skipCommission'
   | 'rollAdvancement'
   | 'skipAdvancement'
+  | 'rollTermSkill'
   | 'completeSkills'
   | 'resolveAging'
   | 'decideAnagathics'

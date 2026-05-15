@@ -1626,7 +1626,7 @@ export const deriveCharacterCreationTermResolutionViewModel = (
 
   if (
     deriveCharacterCreationTermSkillTableActions(flow).length > 0 &&
-    actionAvailable('completeSkills')
+    actionAvailable('rollTermSkill')
   ) {
     return {
       title,

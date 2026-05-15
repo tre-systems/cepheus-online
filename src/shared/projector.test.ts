@@ -699,12 +699,9 @@ describe('game state projection', () => {
       pendingDecisions: [{ key: 'skillTrainingSelection' }],
       legalActions: [
         {
-          key: 'completeSkills',
+          key: 'rollTermSkill',
           status: 'SKILLS_TRAINING',
-          commandTypes: [
-            'RollCharacterCreationTermSkill',
-            'CompleteCharacterCreationSkills'
-          ],
+          commandTypes: ['RollCharacterCreationTermSkill'],
           rollRequirement: { key: 'termSkill', dice: '1d6' },
           termSkillTableOptions: [
             { table: 'personalDevelopment', label: 'Personal development' },

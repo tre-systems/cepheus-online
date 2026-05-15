@@ -95,7 +95,14 @@ export const requiredTermSkillCount = (
 
 export const activeTermSkillCount = (
   creation: CharacterCreationProjection
-): number => creation.terms.at(-1)?.skills.length ?? 0
+): number => {
+  const term = creation.terms.at(-1)
+  if (!term) return 0
+
+  return Object.keys(term.facts ?? {}).length > 0
+    ? (term.facts?.termSkillRolls?.length ?? 0)
+    : term.skills.length
+}
 
 export const validateTermSkillRoll = (
   character: CharacterState,

@@ -863,12 +863,10 @@ describe('character creation actions', () => {
             pendingDecisions: [{ key: 'skillTrainingSelection' }],
             legalActions: [
               {
-                key: 'completeSkills',
+                key: 'rollTermSkill',
                 status: 'SKILLS_TRAINING',
-                commandTypes: [
-                  'RollCharacterCreationTermSkill',
-                  'CompleteCharacterCreationSkills'
-                ],
+                commandTypes: ['RollCharacterCreationTermSkill'],
+                rollRequirement: { key: 'termSkill', dice: '1d6' },
                 termSkillTableOptions: [
                   { table: 'serviceSkills', label: 'Service skills' }
                 ]

@@ -329,7 +329,7 @@ const wizardViewModel = ({
   const termSkillTableOptions =
     projectedCreation?.state.status === 'SKILLS_TRAINING'
       ? projectedCreation.actionPlan?.legalActions.find(
-          (action) => action.key === 'completeSkills'
+          (action) => action.key === 'rollTermSkill'
         )?.termSkillTableOptions
       : undefined
   const musteringBenefitOptions =

@@ -668,10 +668,10 @@ export const deriveLegalCareerCreationActionKeys = (
       if (!state.context.canAdvance || !noPendingDecisions) return []
       return ['rollAdvancement', 'skipAdvancement']
     case 'SKILLS_TRAINING':
-      return noPendingDecisions ||
-        hasOnlyPendingDecision(context, 'skillTrainingSelection')
-        ? ['completeSkills']
-        : []
+      if (hasOnlyPendingDecision(context, 'skillTrainingSelection')) {
+        return ['rollTermSkill']
+      }
+      return noPendingDecisions ? ['completeSkills'] : []
     case 'AGING':
       if (
         context.pendingDecisions?.length === 1 &&
@@ -768,12 +768,12 @@ const actionDefinitions = {
   skipAdvancement: {
     commandTypes: ['SkipCharacterCreationAdvancement']
   },
-  completeSkills: {
-    commandTypes: [
-      'RollCharacterCreationTermSkill',
-      'CompleteCharacterCreationSkills'
-    ],
+  rollTermSkill: {
+    commandTypes: ['RollCharacterCreationTermSkill'],
     rollRequirement: { key: 'termSkill', dice: '1d6' }
+  },
+  completeSkills: {
+    commandTypes: ['CompleteCharacterCreationSkills']
   },
   resolveAging: {
     commandTypes: [
@@ -840,7 +840,7 @@ export const deriveLegalCareerCreationActions = (
       }
     }
 
-    if (key === 'completeSkills') {
+    if (key === 'rollTermSkill') {
       return {
         key,
         status: state.status,
