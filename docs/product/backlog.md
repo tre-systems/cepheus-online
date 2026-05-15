@@ -1278,6 +1278,9 @@ Tasks:
   geomorphs, with manual correction before use.
 - Make door open/close commands visible and replayable through the normal event
   stream.
+- Add focused tactical browser smoke for board creation, piece creation,
+  sequenced movement, door toggles, refresh recovery, and hidden-piece viewer
+  filtering. Initial coverage is now in `npm run test:e2e:tactical`.
 - Add prep/admin mode, richer piece/character visibility controls, and direct
   board management.
 

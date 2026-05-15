@@ -24,6 +24,7 @@
     "test:e2e:character-creation:finalization": "playwright test e2e/character-creation-smoke.spec.ts --grep \"mustering finalization|seeded multi-career|finalization controls\"",
     "test:e2e:character-creation:multi-career": "playwright test e2e/character-creation-smoke.spec.ts --grep \"seeded multi-career\"",
     "test:e2e:character-creation:reveal": "playwright test e2e/character-creation-smoke.spec.ts --grep \"without early reveal|hidden until reveal|reload and join a term skill roll\"",
+    "test:e2e:tactical": "playwright test e2e/tactical-board-smoke.spec.ts",
     "verify": "npm run verify:full",
     "verify:quick": "npm run build:client && npm run lint && npm run check:docs && npm run check:boundaries && npm run check",
     "verify:full": "npm run verify:quick && npm test && npm run test:e2e:character-creation",

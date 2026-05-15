@@ -32,6 +32,9 @@ test plan should continue to grow in layers as implementation expands.
   browser coverage.
 - `npm run test:e2e:character-creation:finalization`: targeted mustering and
   final-sheet browser coverage.
+- `npm run test:e2e:tactical`: focused Playwright coverage for board creation,
+  linked tactical pieces, sequenced movement, door state, refresh recovery, and
+  hidden-piece viewer filtering.
 - Current tests cover shared protocol/dice/projection behavior, event envelope
   versioning, chunk-boundary storage, import boundaries, stale `expectedSeq`
   rejection, Durable Object HTTP flow, Worker static fallback including PWA
@@ -120,6 +123,8 @@ app:
   or DOM snapshots on failure
 - two-tab owner/spectator tests for live character creation follow mode
 - mobile viewport checks for the high-risk creator screens
+- a tactical board smoke that exercises the server-ordered board/piece/door
+  command path and viewer-filtered projections
 - explicit assertions that roll-dependent results are hidden until the dice
   reveal boundary
 
