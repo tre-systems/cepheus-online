@@ -349,7 +349,19 @@ describe('career creation legal action planner', () => {
         key: 'resolveInjury',
         status: 'MISHAP',
         commandTypes: ['ResolveCharacterCreationInjury'],
-        rollRequirement: { key: 'injury', dice: '1d6' }
+        rollRequirement: { key: 'injury', dice: '1d6' },
+        injuryResolutionOptions: [
+          {
+            method: 'fixed_result',
+            label: 'Use injury table result 2',
+            rollRequirement: { key: 'injury', dice: '1d6' }
+          },
+          {
+            method: 'roll_twice_take_lower',
+            label: 'Roll twice and take lower',
+            rollRequirement: { key: 'injury', dice: '2d6' }
+          }
+        ]
       }
     ])
   })

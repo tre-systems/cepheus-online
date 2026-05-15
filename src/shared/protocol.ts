@@ -11,6 +11,7 @@ import type {
   CareerCreationReenlistmentFact,
   CareerCreationTermSkillTable,
   FailedQualificationOption,
+  InjuryResolutionMethod,
   InjurySecondaryChoice
 } from './characterCreation'
 import { err, ok, type Result } from './result'
@@ -595,6 +596,24 @@ const parseInjurySecondaryChoice = (
     mode: 'one_other_physical',
     characteristic: characteristic.value
   })
+}
+
+const parseInjuryResolutionMethod = (
+  raw: unknown,
+  label: string
+): Result<InjuryResolutionMethod | undefined, CommandError> => {
+  if (raw === undefined) return ok(undefined)
+  const value = parseString(raw, label)
+  if (!value.ok) return value
+  if (
+    value.value !== 'fixed_result' &&
+    value.value !== 'roll_table' &&
+    value.value !== 'roll_twice_take_lower'
+  ) {
+    return err(invalidCommand(`${label} is not supported`))
+  }
+
+  return ok(value.value)
 }
 
 const parseCareerCreationDiceFact = (
@@ -1319,11 +1338,14 @@ export const decodeCommand = (
         'secondaryChoice'
       )
       if (!secondaryChoice.ok) return secondaryChoice
+      const method = parseInjuryResolutionMethod(raw.method, 'method')
+      if (!method.ok) return method
 
       return ok({
         type: 'ResolveCharacterCreationInjury',
         ...base.value,
         characterId: characterId.value,
+        ...(method.value ? { method: method.value } : {}),
         primaryCharacteristic: primaryCharacteristic.value,
         secondaryChoice: secondaryChoice.value
       })

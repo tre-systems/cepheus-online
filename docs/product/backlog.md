@@ -1101,13 +1101,12 @@ commands. The separate `MISHAP` status is now used by failed anagathics
 treatment survival and the optional mishap branch. Mishap table rolls, outcome
 facts, outcome text, career exit, debt, extra service years, reveal-safe
 activity, benefit forfeiture, injury resolution, and refresh replay are
-server-backed. Remaining consequence gaps are the optional injured-in-action
-"roll twice and take the lower result" branch and UI polish.
+server-backed. The optional injured-in-action fixed result and "roll twice and
+take the lower result" branch is represented as explicit server dice facts.
+Remaining consequence work is UI polish.
 
 Tasks:
 
-- Add an explicit dice-fact representation and UI choice for the optional
-  injured-in-action "roll twice and take the lower result" branch.
 - Polish injury resolution copy so severe and nearly-killed characteristic-loss
   choices are easy to understand on mobile.
 - Keep default failed survival as an immediate deceased state.

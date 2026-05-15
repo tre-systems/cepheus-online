@@ -628,7 +628,19 @@ describe('character creation view model', () => {
               key: 'resolveInjury',
               status: 'MISHAP',
               commandTypes: ['ResolveCharacterCreationInjury'],
-              rollRequirement: { key: 'injury', dice: '1d6' }
+              rollRequirement: { key: 'injury', dice: '1d6' },
+              injuryResolutionOptions: [
+                {
+                  method: 'fixed_result',
+                  label: 'Use injury table result 2',
+                  rollRequirement: { key: 'injury', dice: '1d6' }
+                },
+                {
+                  method: 'roll_twice_take_lower',
+                  label: 'Roll twice and take lower',
+                  rollRequirement: { key: 'injury', dice: '2d6' }
+                }
+              ]
             }
           ]
         }
@@ -648,6 +660,12 @@ describe('character creation view model', () => {
         ['dex', '8'],
         ['end', '7']
       ]
+    )
+    assert.deepEqual(
+      viewModel.wizard?.injuryResolution?.methods.map(
+        (method) => method.method
+      ),
+      ['fixed_result', 'roll_twice_take_lower']
     )
   })
 

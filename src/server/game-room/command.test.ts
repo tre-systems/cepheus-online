@@ -2646,6 +2646,7 @@ describe('deriveEventsForCommand error categories', () => {
         type: 'CharacterCreationInjuryResolved',
         characterId,
         rollEventId: 'game-1:2',
+        method: 'fixed_result',
         severityRoll: {
           expression: '1d6',
           rolls: [4],
@@ -2661,6 +2662,107 @@ describe('deriveEventsForCommand error categories', () => {
         },
         selectedLosses: [{ characteristic: 'str', modifier: -4 }],
         characteristicPatch: { str: 0 },
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        creationComplete: false
+      }
+    ])
+  })
+
+  it('supports injured-in-action roll-twice injury resolution', () => {
+    const result = runCommand(
+      {
+        type: 'ResolveCharacterCreationInjury',
+        gameId,
+        actorId,
+        characterId,
+        method: 'roll_twice_take_lower',
+        primaryCharacteristic: 'dex',
+        secondaryChoice: { mode: 'both_other_physical' }
+      },
+      createCreation('MISHAP', {
+        terms: [
+          {
+            career: 'Scout',
+            skills: ['Vacc Suit-1'],
+            skillsAndTraining: ['Vacc Suit-1'],
+            benefits: [],
+            complete: false,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            survival: 3,
+            facts: {
+              mishap: {
+                roll: { expression: '1d6', rolls: [1], total: 1 },
+                outcome: {
+                  career: 'Scout',
+                  roll: 1,
+                  id: 'injured_in_action',
+                  description:
+                    'Injured in action. Treat as injury table result 2, or roll twice and take the lower result.',
+                  discharge: 'honorable',
+                  benefitEffect: 'forfeit_current_term',
+                  debtCredits: 0,
+                  extraServiceYears: 0,
+                  injury: {
+                    type: 'fixed',
+                    injuryRoll: 2,
+                    alternative: 'roll_twice_take_lower'
+                  }
+                }
+              }
+            }
+          }
+        ]
+      })
+    )
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.deepEqual(result.value, [
+      {
+        type: 'DiceRolled',
+        expression: '3d6',
+        reason: 'Scout injury',
+        rolls: [4, 1, 4],
+        total: 9
+      },
+      {
+        type: 'CharacterCreationInjuryResolved',
+        characterId,
+        rollEventId: 'game-1:2',
+        method: 'roll_twice_take_lower',
+        injuryRoll: {
+          expression: '2d6',
+          rolls: [4, 1],
+          total: 1
+        },
+        severityRoll: {
+          expression: '1d6',
+          rolls: [4],
+          total: 4
+        },
+        outcome: {
+          career: 'Scout',
+          roll: 1,
+          id: 'nearly_killed',
+          description:
+            'Nearly killed. Reduce one physical characteristic by 1D6, and reduce both other physical characteristics by 2 or one by 4.',
+          crisisRisk: true
+        },
+        selectedLosses: [
+          { characteristic: 'dex', modifier: -4 },
+          { characteristic: 'str', modifier: -2 },
+          { characteristic: 'end', modifier: -2 }
+        ],
+        characteristicPatch: { dex: 0, str: 0, end: 0 },
         state: {
           status: 'MUSTERING_OUT',
           context: {

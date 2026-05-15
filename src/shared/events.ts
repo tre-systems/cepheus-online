@@ -22,6 +22,7 @@ import type {
   FailedQualificationOption,
   InjuryLossSelection,
   InjuryOutcome,
+  InjuryResolutionMethod,
   SurvivalMishapOutcome
 } from './characterCreation'
 import type {
@@ -200,6 +201,7 @@ export type GameEvent =
       type: 'CharacterCreationInjuryResolved'
       characterId: CharacterId
       rollEventId?: EventId
+      method?: InjuryResolutionMethod
       injuryRoll?: CareerCreationDiceFact
       severityRoll?: CareerCreationDiceFact
       outcome: InjuryOutcome

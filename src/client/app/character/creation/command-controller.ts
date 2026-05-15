@@ -1,7 +1,10 @@
 import type { GameId, UserId } from '../../../../shared/ids'
 import type { LiveDiceRollRevealTarget } from '../../../../shared/live-activity'
 import type { BenefitKind } from '../../../../shared/character-creation/types.js'
-import type { InjurySecondaryChoice } from '../../../../shared/characterCreation.js'
+import type {
+  InjuryResolutionMethod,
+  InjurySecondaryChoice
+} from '../../../../shared/characterCreation.js'
 import type {
   CharacteristicKey,
   DiceRollState,
@@ -52,7 +55,8 @@ export interface CharacterCreationCommandController {
   resolveMishap: () => Promise<void>
   resolveInjury: (
     primaryCharacteristic: CharacteristicKey,
-    secondaryChoice?: InjurySecondaryChoice | null
+    secondaryChoice?: InjurySecondaryChoice | null,
+    method?: InjuryResolutionMethod
   ) => Promise<void>
   rollAging: () => Promise<void>
   resolveAgingLoss: (
@@ -599,7 +603,11 @@ export const createCharacterCreationCommandController = (
       }
     },
 
-    resolveInjury: async (primaryCharacteristic, secondaryChoice = null) => {
+    resolveInjury: async (
+      primaryCharacteristic,
+      secondaryChoice = null,
+      method
+    ) => {
       const flow = guardEditableFlow()
       if (!flow) return
       setError('')
@@ -611,6 +619,7 @@ export const createCharacterCreationCommandController = (
           type: 'ResolveCharacterCreationInjury',
           ...commandIdentity(),
           characterId: flow.draft.characterId,
+          ...(method ? { method } : {}),
           primaryCharacteristic,
           ...(secondaryChoice ? { secondaryChoice } : {})
         },

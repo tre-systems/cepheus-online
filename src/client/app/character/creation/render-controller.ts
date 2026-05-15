@@ -515,10 +515,14 @@ export const createCharacterCreationRenderController = ({
   ): HTMLElement =>
     renderCharacterCreationInjuryResolutionView(document, viewModel, {
       readOnly: controller.readOnly(),
-      resolveInjury: (primaryCharacteristic) =>
-        getCommandController().resolveInjury(primaryCharacteristic, {
-          mode: 'both_other_physical'
-        })
+      resolveInjury: (primaryCharacteristic, method) =>
+        getCommandController().resolveInjury(
+          primaryCharacteristic,
+          {
+            mode: 'both_other_physical'
+          },
+          method
+        )
     })
 
   const renderCharacterCreationTermHistory = (

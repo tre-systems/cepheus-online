@@ -516,6 +516,7 @@ const rawCharacterEventHandlers = {
         ...facts,
         injury: {
           ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
+          ...(event.method ? { method: event.method } : {}),
           ...(event.injuryRoll
             ? { injuryRoll: structuredClone(event.injuryRoll) }
             : {}),

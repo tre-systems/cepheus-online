@@ -39,6 +39,7 @@ import type {
   CareerCreationReenlistmentOutcome,
   CareerCreationState,
   HomeworldChoiceOptions,
+  InjuryResolutionActionOption,
   LegalCareerCreationAction
 } from './types'
 
@@ -496,6 +497,39 @@ const deriveMusteringBenefitOptions = (
   return options
 }
 
+const deriveInjuryResolutionOptions = (
+  creation: CareerCreationActionProjection | undefined
+): readonly InjuryResolutionActionOption[] => {
+  const injury = creation?.terms?.at(-1)?.facts?.mishap?.outcome.injury
+  if (!injury) return []
+  if (injury.type === 'roll') {
+    return [
+      {
+        method: 'roll_table',
+        label: 'Roll injury table',
+        rollRequirement: { key: 'injury', dice: '1d6' }
+      }
+    ]
+  }
+
+  return [
+    {
+      method: 'fixed_result',
+      label: `Use injury table result ${injury.injuryRoll}`,
+      rollRequirement: { key: 'injury', dice: '1d6' }
+    },
+    ...(injury.alternative === 'roll_twice_take_lower'
+      ? [
+          {
+            method: 'roll_twice_take_lower' as const,
+            label: 'Roll twice and take lower',
+            rollRequirement: { key: 'injury' as const, dice: '2d6' as const }
+          }
+        ]
+      : [])
+  ]
+}
+
 export const deriveCareerCreationCascadeSkillChoices = (
   pendingCascadeSkills: readonly string[]
 ): CascadeSkillChoice[] => {
@@ -912,6 +946,17 @@ export const deriveLegalCareerCreationActions = (
         musteringBenefitOptions: deriveMusteringBenefitOptions(
           actionOptions.creation,
           context
+        )
+      }
+    }
+
+    if (key === 'resolveInjury') {
+      return {
+        key,
+        status: state.status,
+        ...actionDefinitions[key],
+        injuryResolutionOptions: deriveInjuryResolutionOptions(
+          actionOptions.creation
         )
       }
     }

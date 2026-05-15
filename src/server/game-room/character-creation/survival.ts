@@ -2,9 +2,11 @@ import {
   deriveCareerCreationComplete,
   deriveSurvivalPromotionOptions,
   evaluateCareerCheck,
+  type InjuryResolutionMethod,
   resolveInjuryLosses,
   resolveInjuryOutcome,
   resolveSurvivalMishapOutcome,
+  type SurvivalMishapInjuryRequirement,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
 import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
@@ -228,6 +230,61 @@ const rollD6 = (
   })
 }
 
+const rollTwiceTakeLower = (
+  context: CommandContext
+): Result<
+  { expression: '2d6'; rolls: number[]; total: number },
+  CommandError
+> => {
+  const first = rollD6(context)
+  if (!first.ok) return first
+  const second = rollD6(context, 1)
+  if (!second.ok) return second
+
+  return ok({
+    expression: '2d6',
+    rolls: [first.value.rolls[0] ?? 1, second.value.rolls[0] ?? 1],
+    total: Math.min(first.value.total, second.value.total)
+  })
+}
+
+const resolveInjuryMethod = ({
+  requirement,
+  method
+}: {
+  requirement: SurvivalMishapInjuryRequirement | null
+  method?: InjuryResolutionMethod
+}): Result<InjuryResolutionMethod, CommandError> => {
+  if (!requirement) {
+    return err(commandError('missing_entity', 'No pending injury exists'))
+  }
+  if (requirement.type === 'roll') {
+    if (method && method !== 'roll_table') {
+      return err(
+        commandError(
+          'invalid_command',
+          'This injury must roll on the injury table'
+        )
+      )
+    }
+    return ok('roll_table')
+  }
+  if (!method || method === 'fixed_result') return ok('fixed_result')
+  if (
+    method === 'roll_twice_take_lower' &&
+    requirement.alternative === 'roll_twice_take_lower'
+  ) {
+    return ok(method)
+  }
+
+  return err(
+    commandError(
+      'invalid_command',
+      'This injury resolution method is not legal'
+    )
+  )
+}
+
 export const deriveSurvivalCommandEvents = (
   command: CharacterCreationSurvivalCommand,
   context: CommandContext,
@@ -373,15 +430,24 @@ export const deriveSurvivalCommandEvents = (
       if (!activeTerm || !injuryRequirement) {
         return err(commandError('missing_entity', 'No pending injury exists'))
       }
+      const injuryMethod = resolveInjuryMethod({
+        requirement: injuryRequirement,
+        method: command.method
+      })
+      if (!injuryMethod.ok) return injuryMethod
 
       let injuryRoll:
-        | { expression: '1d6'; rolls: number[]; total: number }
+        | { expression: '1d6' | '2d6'; rolls: number[]; total: number }
         | undefined
       let severityRoll:
         | { expression: '1d6'; rolls: number[]; total: number }
         | undefined
-      if (injuryRequirement.type === 'roll') {
+      if (injuryMethod.value === 'roll_table') {
         const rolled = rollD6(context)
+        if (!rolled.ok) return rolled
+        injuryRoll = rolled.value
+      } else if (injuryMethod.value === 'roll_twice_take_lower') {
+        const rolled = rollTwiceTakeLower(context)
         if (!rolled.ok) return rolled
         injuryRoll = rolled.value
       }
@@ -389,13 +455,15 @@ export const deriveSurvivalCommandEvents = (
         career: activeTerm.career,
         roll: {
           total:
-            injuryRequirement.type === 'fixed'
-              ? injuryRequirement.injuryRoll
+            injuryMethod.value === 'fixed_result'
+              ? injuryRequirement.type === 'fixed'
+                ? injuryRequirement.injuryRoll
+                : 1
               : (injuryRoll?.total ?? 1)
         }
       })
       if (injury.id === 'nearly_killed' || injury.id === 'severely_injured') {
-        const rolled = rollD6(context, injuryRoll ? 1 : 0)
+        const rolled = rollD6(context, injuryRoll?.rolls.length ?? 0)
         if (!rolled.ok) return rolled
         severityRoll = rolled.value
       }
@@ -420,7 +488,7 @@ export const deriveSurvivalCommandEvents = (
         ...(injuryRoll?.rolls ?? []),
         ...(severityRoll?.rolls ?? [])
       ]
-      const expression = rolls.length > 1 ? '2d6' : '1d6'
+      const expression = `${Math.max(1, rolls.length)}d6`
 
       return ok([
         {
@@ -434,6 +502,7 @@ export const deriveSurvivalCommandEvents = (
           type: 'CharacterCreationInjuryResolved',
           characterId: command.characterId,
           rollEventId,
+          method: injuryMethod.value,
           ...(injuryRoll ? { injuryRoll } : {}),
           ...(severityRoll ? { severityRoll } : {}),
           outcome: injury,

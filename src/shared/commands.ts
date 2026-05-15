@@ -4,6 +4,7 @@ import type {
   AgingLossSelection,
   FailedQualificationOption,
   CareerCreationEvent,
+  InjuryResolutionMethod,
   InjurySecondaryChoice,
   CareerCreationTermSkillTable
 } from './characterCreation'
@@ -320,6 +321,7 @@ export type CharacterCreationInjuryResolutionCommand = {
   actorId: UserId
   expectedSeq?: number
   characterId: CharacterId
+  method?: InjuryResolutionMethod
   primaryCharacteristic?: CharacteristicKey | null
   secondaryChoice?: InjurySecondaryChoice | null
 }

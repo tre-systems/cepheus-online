@@ -1,4 +1,5 @@
 import type { CharacteristicKey } from '../../../../../shared/state'
+import type { InjuryResolutionMethod } from '../../../../../shared/characterCreation'
 import { bindAsyncActionButton } from '../../../core/async-button.js'
 import type { CharacterCreationInjuryResolutionViewModel } from '../view.js'
 
@@ -9,7 +10,10 @@ export interface CharacterCreationInjuryResolutionDocument {
 
 export interface CharacterCreationInjuryResolutionViewDeps {
   readOnly: boolean
-  resolveInjury: (characteristic: CharacteristicKey) => Promise<void> | void
+  resolveInjury: (
+    characteristic: CharacteristicKey,
+    method?: InjuryResolutionMethod
+  ) => Promise<void> | void
 }
 
 export const renderCharacterCreationInjuryResolution = (
@@ -29,13 +33,27 @@ export const renderCharacterCreationInjuryResolution = (
   const actions = document.createElement('div')
   actions.className = 'creation-term-actions'
 
-  for (const target of viewModel.targets) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.disabled = readOnly
-    button.textContent = `${target.label} ${target.value}${target.modifier ? ` ${target.modifier}` : ''}`
-    bindAsyncActionButton(button, () => resolveInjury(target.characteristic))
-    actions.append(button)
+  const methods =
+    viewModel.methods.length > 0
+      ? viewModel.methods
+      : [{ method: undefined, label: '' }]
+
+  for (const method of methods) {
+    for (const target of viewModel.targets) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.disabled = readOnly
+      button.textContent = [
+        method.label,
+        `${target.label} ${target.value}${target.modifier ? ` ${target.modifier}` : ''}`
+      ]
+        .filter(Boolean)
+        .join(': ')
+      bindAsyncActionButton(button, () =>
+        resolveInjury(target.characteristic, method.method)
+      )
+      actions.append(button)
+    }
   }
 
   panel.append(title, text, actions)

@@ -168,6 +168,7 @@ export interface CareerTermMishapFact {
 
 export interface CareerTermInjuryFact {
   rollEventId?: EventId
+  method?: InjuryResolutionMethod
   injuryRoll?: CareerCreationDiceFact
   severityRoll?: CareerCreationDiceFact
   outcome: InjuryOutcome
@@ -377,6 +378,17 @@ export interface BasicTrainingActionOption {
   skills: readonly string[]
 }
 
+export type InjuryResolutionMethod =
+  | 'fixed_result'
+  | 'roll_table'
+  | 'roll_twice_take_lower'
+
+export interface InjuryResolutionActionOption {
+  method: InjuryResolutionMethod
+  label: string
+  rollRequirement?: CareerCreationRollRequirement
+}
+
 export interface CascadeSkillChoiceOption {
   value: string
   label: string
@@ -435,6 +447,7 @@ export interface LegalCareerCreationAction {
   termSkillTableOptions?: readonly TermSkillTableActionOption[]
   musteringBenefitOptions?: readonly MusteringBenefitActionOption[]
   basicTrainingOptions?: BasicTrainingActionOption
+  injuryResolutionOptions?: readonly InjuryResolutionActionOption[]
 }
 
 export type CareerCreationReenlistmentOutcome =

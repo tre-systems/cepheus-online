@@ -28,6 +28,7 @@ import type {
   FailedQualificationActionOption,
   FailedQualificationOption,
   HomeworldChoiceOptions,
+  InjuryResolutionActionOption,
   MusteringBenefitActionOption,
   TermSkillTableActionOption
 } from '../../../../shared/character-creation/types.js'
@@ -571,6 +572,7 @@ export interface CharacterCreationInjuryResolutionViewModel {
   message: string
   targets: CharacterCreationInjuryTargetViewModel[]
   secondaryChoice: InjurySecondaryChoice
+  methods: readonly InjuryResolutionActionOption[]
 }
 
 export interface CharacterCreationMusteringBenefitViewModel {
@@ -1502,6 +1504,10 @@ export const deriveCharacterCreationInjuryResolutionViewModel = (
 
   const targets = injuryTargetKeys(projection)
   if (targets.length === 0) return null
+  const methods =
+    projection.actionPlan?.legalActions.find(
+      (action) => action.key === 'resolveInjury'
+    )?.injuryResolutionOptions ?? []
 
   const career = term.career.trim() || flow.draft.careerPlan?.career || 'Career'
   const characteristics = flow.draft.characteristics
@@ -1528,6 +1534,7 @@ export const deriveCharacterCreationInjuryResolutionViewModel = (
             : formatCharacterCreationCharacteristicModifier(value)
       }
     }),
+    methods,
     secondaryChoice: { mode: 'both_other_physical' }
   }
 }

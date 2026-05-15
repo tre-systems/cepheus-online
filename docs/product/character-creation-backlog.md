@@ -111,11 +111,10 @@ Important remaining gaps:
   credit deduction, projected provenance, and benefit forfeiture enforcement.
   Injury detail resolution is now server-owned through semantic
   `ResolveCharacterCreationInjury` / `CharacterCreationInjuryResolved` facts,
-  projection-owned pending decisions, reveal-safe filtering, and a minimal
-  creator/viewer panel for applying physical characteristic losses. Remaining
-  gaps are the optional "roll twice and take the lower result" alternative for
-  injured-in-action mishaps and UI polish around explaining severe injury
-  choices.
+  projection-owned pending decisions, reveal-safe filtering, explicit
+  fixed-result versus roll-twice injury methods, and a minimal creator/viewer
+  panel for applying physical characteristic losses. Remaining gaps are UI
+  polish around explaining severe injury choices.
 - Character creation follow mode needs stronger two-tab automation and reveal
   timing contracts so spectators never see roll-dependent outcomes early.
 - Spectator follow should show the same projected creation state as the creator
@@ -164,9 +163,10 @@ tests before it is considered done.
   exit handling. Current legal action: `rollSurvival`. Semantic survival
   command/event and roll facts are server-backed. Default failed survival is
   death; optional mishap table outcome facts now replay from the server, and
-  injury consequences are resolved by semantic server commands. Gap: the
-  optional injured-in-action "roll twice and take the lower result" branch still
-  needs an explicit dice-fact representation.
+  injury consequences are resolved by semantic server commands. The
+  injured-in-action fixed result and "roll twice and take the lower result"
+  alternatives are explicit server dice facts. Gap: injury-choice UX copy still
+  needs polish for severe injuries.
 - [~] Resolve commission and advancement from `careerBasics` and
   `ranksAndSkills`, including rank titles and bonus skills. Semantic events and
   server dice facts exist. Gap: bonus skill decisions and rank provenance still
