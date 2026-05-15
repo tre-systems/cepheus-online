@@ -184,8 +184,7 @@ describe('character creation setup command handlers', () => {
           homeworld: null,
           backgroundSkills: [],
           pendingCascadeSkills: [],
-          timeline: [],
-          history: []
+          timeline: []
         }
       }
     ])

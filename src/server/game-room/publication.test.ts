@@ -620,7 +620,7 @@ describe('room publication flow', () => {
     )
     const creation = lastRoll.value.state.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'HOMEWORLD')
-    assert.deepEqual(creation?.history, [])
+    assert.equal(creation?.history, undefined)
     assert.deepEqual(
       lastRoll.value.liveActivities.map((activity) => activity.type),
       ['diceRoll', 'characterCreation', 'characterCreation']
@@ -2500,7 +2500,7 @@ describe('room publication flow', () => {
 
     const creation = completed.value.state.characters[characterId]?.creation
     assert.equal(creation?.state.status, 'CAREER_SELECTION')
-    assert.deepEqual(creation?.history, [])
+    assert.equal(creation?.history, undefined)
     assert.equal(
       (await readEventStream(storage, gameId)).length,
       completed.value.state.eventSeq

@@ -112,8 +112,7 @@ export const deriveCreationSetupCommandEvents = (
             homeworld: null,
             backgroundSkills: [],
             pendingCascadeSkills: [],
-            timeline: [],
-            history: []
+            timeline: []
           }
         }
       ])
