@@ -386,9 +386,10 @@ Current Character Creation completion focus:
 - Projection-owned legal action data now covers term skill table choices,
   mustering benefit choices, and pending cascade skill choice options. The
   projection also carries homeworld law-level, trade-code, and background-skill
-  choice lists. The client still keeps fallback helpers for legacy local flows,
-  but the active server projection is now the preferred source for rendered
-  choices.
+  choice lists, plus career-selection choices and their SRD qualification,
+  survival, commission, and advancement check summaries. The client still keeps
+  fallback helpers for legacy local flows, but the active server projection is
+  now the preferred source for rendered choices.
 - Keep extending deterministic two-tab browser journeys for multi-term and
   multi-career travellers, especially through finalization and no early roll
   reveal. A focused deterministic browser test now covers a rolled term cascade
@@ -970,17 +971,17 @@ Status: mostly done in shared/client helpers, command handlers, projector
 support, and final export display. The current code projects homeworld,
 background skills, pending cascade skills, cascade resolution, and semantic
 homeworld completion. The final plain export labels background skill sources
-from law level, trade codes, or primary education. The remaining work is to
-make background allowance and cascade choices fully projection-owned across
-every creation source and to keep tightening server validation and UX around
-those choices.
+from law level, trade codes, or primary education. Shared action plans now also
+carry the projected homeworld option list. The remaining work is to carry richer
+homeworld/background provenance facts for every creation source and to keep
+tightening server validation and UX around those choices.
 
 Tasks:
 
 - Carry background allowance, granted skills, selected skills, and unresolved
   cascades as explicit projection state for every creation source.
-- Replace remaining client-derived homeworld/cascade gates with projection
-  legal actions.
+- Replace remaining client-derived homeworld/cascade fallback gates where they
+  are no longer needed for legacy local flows.
 - Keep improving provenance display for homeworld, background, and cascade
   skill sources on the final sheet as richer projection facts land.
 - Extend browser refresh/follow checks for nested cascade choices and blocked

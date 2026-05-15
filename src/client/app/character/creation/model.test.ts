@@ -522,6 +522,101 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.homeworld, null)
   })
 
+  it('uses projected career choice options for the career picker', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({ step: 'career' }),
+      projection: projection('CAREER_SELECTION', {
+        actionPlan: {
+          status: 'CAREER_SELECTION',
+          pendingDecisions: [],
+          legalActions: [],
+          careerChoiceOptions: {
+            careers: [
+              {
+                key: 'Projected Scout',
+                label: 'Projected Scout',
+                selected: true,
+                qualification: {
+                  label: 'Qualification',
+                  requirement: 'Int 6+',
+                  available: true,
+                  characteristic: 'int',
+                  target: 6,
+                  modifier: 1
+                },
+                survival: {
+                  label: 'Survival',
+                  requirement: 'End 7+',
+                  available: true,
+                  characteristic: 'end',
+                  target: 7,
+                  modifier: 0
+                },
+                commission: {
+                  label: 'Commission',
+                  requirement: '-',
+                  available: false,
+                  characteristic: null,
+                  target: null,
+                  modifier: 0
+                },
+                advancement: {
+                  label: 'Advancement',
+                  requirement: '-',
+                  available: false,
+                  characteristic: null,
+                  target: null,
+                  modifier: 0
+                }
+              }
+            ]
+          }
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.deepEqual(viewModel.wizard?.careerSelection?.careerOptions, [
+      {
+        key: 'Projected Scout',
+        label: 'Projected Scout',
+        selected: true,
+        qualification: {
+          label: 'Qualification',
+          requirement: 'Int 6+',
+          available: true,
+          characteristic: 'int',
+          target: 6,
+          modifier: 1
+        },
+        survival: {
+          label: 'Survival',
+          requirement: 'End 7+',
+          available: true,
+          characteristic: 'end',
+          target: 7,
+          modifier: 0
+        },
+        commission: {
+          label: 'Commission',
+          requirement: '-',
+          available: false,
+          characteristic: null,
+          target: null,
+          modifier: 0
+        },
+        advancement: {
+          label: 'Advancement',
+          requirement: '-',
+          available: false,
+          characteristic: null,
+          target: null,
+          modifier: 0
+        }
+      }
+    ])
+  })
+
   it('includes term skill training state for resolved career terms', () => {
     const viewModel = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow({ termSkillRolls: [] }),

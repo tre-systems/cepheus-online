@@ -303,6 +303,10 @@ const wizardViewModel = ({
     projectedCreation?.state.status === 'HOMEWORLD'
       ? projectedCreation.actionPlan?.homeworldChoiceOptions
       : undefined
+  const careerChoiceOptions =
+    projectedCreation?.state.status === 'CAREER_SELECTION'
+      ? projectedCreation.actionPlan?.careerChoiceOptions
+      : undefined
 
   return {
     step: flow.step,
@@ -315,7 +319,9 @@ const wizardViewModel = ({
     nextStep: deriveCharacterCreationNextStepViewModel(flow, {
       backgroundCascadeChoices
     }),
-    careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow),
+    careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow, {
+      careerChoiceOptions
+    }),
     careerRoll: deriveCharacterCreationCareerRollButton(flow),
     reenlistmentRoll: deriveCharacterCreationReenlistmentRollViewModel(flow),
     agingRoll: deriveCharacterCreationAgingRollViewModel(flow),

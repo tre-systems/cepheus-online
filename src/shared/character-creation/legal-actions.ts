@@ -1,7 +1,15 @@
 import { canRollCashBenefit, deriveRemainingCareerBenefits } from './benefits'
 import { derivePrimaryEducationSkillOptions } from './background-skills'
-import { CEPHEUS_SRD_RULESET } from './cepheus-srd-ruleset'
-import { deriveBasicTrainingPlan } from './career-rules'
+import {
+  CEPHEUS_SRD_CAREERS,
+  CEPHEUS_SRD_RULESET,
+  type CepheusCareerDefinition
+} from './cepheus-srd-ruleset'
+import {
+  characteristicModifier,
+  deriveBasicTrainingPlan,
+  parseCareerCheck
+} from './career-rules'
 import {
   careerSkillWithLevel,
   formatCareerSkill,
@@ -11,6 +19,8 @@ import {
 import { canCompleteCreation, canOfferNewCareer } from './term-lifecycle'
 import type {
   CascadeSkillChoice,
+  CareerChoiceCheckOption,
+  CareerChoiceOptions,
   CareerCreationActionContext,
   CareerCreationActionKey,
   CareerCreationActionPlan,
@@ -456,6 +466,68 @@ const deriveHomeworldChoiceOptions = (
   }
 }
 
+const deriveCareerChoiceCheckOption = ({
+  label,
+  requirement,
+  characteristics
+}: {
+  label: string
+  requirement: string
+  characteristics: NonNullable<
+    CareerCreationActionPlanOptions['characteristics']
+  >
+}): CareerChoiceCheckOption => {
+  const check = parseCareerCheck(requirement)
+
+  return {
+    label,
+    requirement,
+    available: check !== null,
+    characteristic: check?.characteristic ?? null,
+    target: check?.target ?? null,
+    modifier:
+      check?.characteristic === undefined || check.characteristic === null
+        ? 0
+        : characteristicModifier(characteristics[check.characteristic])
+  }
+}
+
+const deriveCareerChoiceOptions = (
+  creation: CareerCreationActionProjection,
+  { characteristics = {} }: CareerCreationActionPlanOptions
+): CareerChoiceOptions | null => {
+  if (creation.state.status !== 'CAREER_SELECTION') return null
+  const activeCareer = lastTerm(creation)?.career ?? null
+
+  return {
+    careers: CEPHEUS_SRD_CAREERS.map((career: CepheusCareerDefinition) => ({
+      key: career.name,
+      label: career.name,
+      selected: activeCareer === career.name,
+      qualification: deriveCareerChoiceCheckOption({
+        label: 'Qualification',
+        requirement: career.qualification,
+        characteristics
+      }),
+      survival: deriveCareerChoiceCheckOption({
+        label: 'Survival',
+        requirement: career.survival,
+        characteristics
+      }),
+      commission: deriveCareerChoiceCheckOption({
+        label: 'Commission',
+        requirement: career.commission,
+        characteristics
+      }),
+      advancement: deriveCareerChoiceCheckOption({
+        label: 'Advancement',
+        requirement: career.advancement,
+        characteristics
+      })
+    }))
+  }
+}
+
 export const deriveLegalCareerCreationActionKeys = (
   state: CareerCreationState,
   context: CareerCreationActionContext = {}
@@ -757,6 +829,7 @@ export const deriveCareerCreationActionPlan = (
     creation.pendingCascadeSkills ?? []
   )
   const homeworldChoiceOptions = deriveHomeworldChoiceOptions(creation, options)
+  const careerChoiceOptions = deriveCareerChoiceOptions(creation, options)
 
   return {
     status: creation.state.status,
@@ -766,7 +839,8 @@ export const deriveCareerCreationActionPlan = (
       creation
     }),
     ...(cascadeSkillChoices.length > 0 ? { cascadeSkillChoices } : {}),
-    ...(homeworldChoiceOptions ? { homeworldChoiceOptions } : {})
+    ...(homeworldChoiceOptions ? { homeworldChoiceOptions } : {}),
+    ...(careerChoiceOptions ? { careerChoiceOptions } : {})
   }
 }
 

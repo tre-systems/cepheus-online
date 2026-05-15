@@ -22,6 +22,7 @@ import {
 import type {
   BenefitKind,
   CascadeSkillChoice,
+  CareerChoiceOptions,
   FailedQualificationOption,
   HomeworldChoiceOptions
 } from '../../../../shared/character-creation/types.js'
@@ -2100,6 +2101,19 @@ export const deriveCharacterCreationCareerOptionViewModels = (
     })
   }))
 
+const projectedCareerOptionViewModels = (
+  options: CareerChoiceOptions
+): CharacterCreationCareerOptionViewModel[] =>
+  options.careers.map((career) => ({
+    key: career.key,
+    label: career.label,
+    selected: career.selected,
+    qualification: { ...career.qualification },
+    survival: { ...career.survival },
+    commission: { ...career.commission },
+    advancement: { ...career.advancement }
+  }))
+
 export const deriveCharacterCreationFailedQualificationViewModel = (
   flow: Pick<CharacterCreationFlow, 'step' | 'draft'>
 ): CharacterCreationFailedQualificationViewModel => {
@@ -2127,7 +2141,8 @@ export const deriveCharacterCreationFailedQualificationViewModel = (
 }
 
 export const deriveCharacterCreationCareerSelectionViewModel = (
-  flow: CharacterCreationFlow
+  flow: CharacterCreationFlow,
+  { careerChoiceOptions }: { careerChoiceOptions?: CareerChoiceOptions } = {}
 ): CharacterCreationCareerSelectionViewModel | null => {
   if (flow.step !== 'career') return null
 
@@ -2155,7 +2170,9 @@ export const deriveCharacterCreationCareerSelectionViewModel = (
     outcomeTitle: plan?.career ? `${plan.career} term` : 'Choose a career',
     outcomeText: formatCharacterCreationCareerOutcome(plan),
     showCareerList: !plan?.career,
-    careerOptions: deriveCharacterCreationCareerOptionViewModels(flow.draft),
+    careerOptions: careerChoiceOptions
+      ? projectedCareerOptionViewModels(careerChoiceOptions)
+      : deriveCharacterCreationCareerOptionViewModels(flow.draft),
     failedQualification:
       deriveCharacterCreationFailedQualificationViewModel(flow)
   }

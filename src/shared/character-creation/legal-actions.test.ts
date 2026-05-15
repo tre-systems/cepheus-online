@@ -236,36 +236,37 @@ describe('career creation legal action planner', () => {
   })
 
   it('exposes only Drifter or Draft options after failed qualification', () => {
-    assert.deepEqual(
-      deriveCareerCreationActionPlan(
-        projection('CAREER_SELECTION', {
-          failedToQualify: true,
-          canEnterDraft: true
-        })
-      ),
+    const plan = deriveCareerCreationActionPlan(
+      projection('CAREER_SELECTION', {
+        failedToQualify: true,
+        canEnterDraft: true
+      })
+    )
+
+    assert.equal(plan.status, 'CAREER_SELECTION')
+    assert.deepEqual(plan.pendingDecisions, [])
+    assert.deepEqual(plan.legalActions, [
       {
+        key: 'selectCareer',
         status: 'CAREER_SELECTION',
-        pendingDecisions: [],
-        legalActions: [
+        commandTypes: [
+          'ResolveCharacterCreationQualification',
+          'ResolveCharacterCreationDraft',
+          'EnterCharacterCreationDrifter'
+        ],
+        failedQualificationOptions: [
+          { option: 'Drifter' },
           {
-            key: 'selectCareer',
-            status: 'CAREER_SELECTION',
-            commandTypes: [
-              'ResolveCharacterCreationQualification',
-              'ResolveCharacterCreationDraft',
-              'EnterCharacterCreationDrifter'
-            ],
-            failedQualificationOptions: [
-              { option: 'Drifter' },
-              {
-                option: 'Draft',
-                rollRequirement: { key: 'draft', dice: '1d6' }
-              }
-            ]
+            option: 'Draft',
+            rollRequirement: { key: 'draft', dice: '1d6' }
           }
         ]
       }
-    )
+    ])
+    assert.equal((plan.careerChoiceOptions?.careers.length ?? 0) > 0, true)
+  })
+
+  it('does not expose the Draft option after the draft has been used', () => {
     assert.deepEqual(
       deriveCareerCreationActionPlan(
         projection('CAREER_SELECTION', {
@@ -608,6 +609,37 @@ describe('career creation legal action planner', () => {
         }
       ]
     )
+  })
+
+  it('projects career selection choices and check modifiers', () => {
+    const creation = projection('CAREER_SELECTION', {
+      terms: [term({ career: 'Scout' })]
+    })
+    const plan = deriveCareerCreationActionPlan(creation, {
+      characteristics: { end: 7, int: 9 }
+    })
+    const scout = plan.careerChoiceOptions?.careers.find(
+      (career) => career.key === 'Scout'
+    )
+
+    assert.equal(plan.careerChoiceOptions?.careers[0]?.key, 'Scout')
+    assert.equal(scout?.selected, true)
+    assert.deepEqual(scout?.qualification, {
+      label: 'Qualification',
+      requirement: 'Int 6+',
+      available: true,
+      characteristic: 'int',
+      target: 6,
+      modifier: 1
+    })
+    assert.deepEqual(scout?.survival, {
+      label: 'Survival',
+      requirement: 'End 7+',
+      available: true,
+      characteristic: 'end',
+      target: 7,
+      modifier: 0
+    })
   })
 
   it('projects the shared action plan onto creation state without mutating input', () => {

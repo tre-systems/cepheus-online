@@ -338,6 +338,29 @@ export interface HomeworldChoiceOptions {
   backgroundSkills: readonly HomeworldBackgroundSkillChoice[]
 }
 
+export interface CareerChoiceCheckOption {
+  label: string
+  requirement: string
+  available: boolean
+  characteristic: CharacteristicKey | null
+  target: number | null
+  modifier: number
+}
+
+export interface CareerChoiceOption {
+  key: string
+  label: string
+  selected: boolean
+  qualification: CareerChoiceCheckOption
+  survival: CareerChoiceCheckOption
+  commission: CareerChoiceCheckOption
+  advancement: CareerChoiceCheckOption
+}
+
+export interface CareerChoiceOptions {
+  careers: readonly CareerChoiceOption[]
+}
+
 export interface LegalCareerCreationAction {
   key: CareerCreationActionKey
   status: CareerCreationStatus
@@ -393,6 +416,7 @@ export interface CareerCreationActionPlan {
   legalActions: readonly LegalCareerCreationAction[]
   cascadeSkillChoices?: readonly CascadeSkillChoice[]
   homeworldChoiceOptions?: HomeworldChoiceOptions
+  careerChoiceOptions?: CareerChoiceOptions
 }
 
 export interface CareerCreationActionPlanOptions {
