@@ -1,7 +1,13 @@
 import type {
   CareerCreationStatus,
+  CareerCreationTermSkillFact,
   CareerTerm
 } from '../../../../shared/character-creation/types'
+import {
+  formatCareerSkill,
+  isCascadeCareerSkill,
+  parseCareerSkill
+} from '../../../../shared/character-creation/skills.js'
 import { characterCreationStepFromStatus } from '../../../../shared/character-creation/view-state.js'
 import type {
   CharacterCreationProjection,
@@ -31,20 +37,60 @@ export const completedTermFromProjection = (
 const hasSemanticTermFacts = (term: CareerTerm): boolean =>
   Object.keys(term.facts ?? {}).length > 0
 
+const resolvedTermCascadeSkill = (
+  term: CareerTerm,
+  cascadeSkill: string | null
+): string | null => {
+  if (!cascadeSkill) return null
+
+  let current = cascadeSkill
+  const visited = new Set<string>()
+
+  while (!visited.has(current)) {
+    visited.add(current)
+    const selection = term.facts?.termCascadeSelections?.find(
+      (entry) => entry.cascadeSkill === current
+    )?.selection
+
+    if (!selection) return null
+    if (isCascadeCareerSkill(selection)) {
+      const level = parseCareerSkill(current)?.level ?? 0
+      current = selection.trim().replace('*', `-${level}`)
+      continue
+    }
+
+    return formatCareerSkill({
+      name: selection.trim(),
+      level: parseCareerSkill(current)?.level ?? 0
+    })
+  }
+
+  return null
+}
+
+const termSkillFactSkill = (
+  term: CareerTerm,
+  termSkill: CareerCreationTermSkillFact
+): string | null =>
+  termSkill.skill ??
+  resolvedTermCascadeSkill(term, termSkill.pendingCascadeSkill) ??
+  null
+
 const termSkillRollsFromFacts = (
   term: CareerTerm
 ): CharacterCreationCompletedTerm['termSkillRolls'] =>
   (term.facts?.termSkillRolls ?? []).map((termSkill) => ({
     table: termSkill.table,
     roll: termSkill.roll.total,
-    skill: termSkill.skill ?? termSkill.rawSkill
+    skill: termSkillFactSkill(term, termSkill) ?? termSkill.rawSkill
   }))
 
 const skillListFromTermFacts = (term: CareerTerm): string[] => [
   ...(term.facts?.basicTrainingSkills ?? []),
-  ...(term.facts?.termSkillRolls ?? []).flatMap((termSkill) =>
-    termSkill.skill ? [termSkill.skill] : []
-  )
+  ...(term.facts?.termSkillRolls ?? []).flatMap((termSkill) => {
+    const skill = termSkillFactSkill(term, termSkill)
+    return skill ? [skill] : []
+  })
 ]
 
 const creationSkillsFromTerm = (term: CareerTerm): string[] => {
@@ -221,7 +267,7 @@ export const careerPlanFromProjection = (
       facts?.termSkillRolls?.map((termSkill) => ({
         table: termSkill.table,
         roll: termSkill.roll.total,
-        skill: termSkill.skill ?? termSkill.rawSkill
+        skill: termSkillFactSkill(activeTerm, termSkill) ?? termSkill.rawSkill
       })) ?? [],
     anagathics:
       facts?.anagathicsDecision?.useAnagathics ??

@@ -285,6 +285,45 @@ describe('character creation projection helpers', () => {
     assert.deepEqual(flow.draft.skills, ['Vacc Suit-0', 'Gambling-1'])
   })
 
+  it('hydrates resolved term cascade skills from semantic facts', () => {
+    const creation = agingProjection([])
+    const term = creation.terms[0]
+    term.skillsAndTraining = ['Legacy Training-5']
+    term.facts = {
+      ...term.facts,
+      termSkillRolls: [
+        {
+          career: 'Scout',
+          table: 'serviceSkills',
+          roll: { expression: '1d6', rolls: [2], total: 2 },
+          tableRoll: 2,
+          rawSkill: 'Gun Combat*',
+          skill: null,
+          characteristic: null,
+          pendingCascadeSkill: 'Gun Combat-1'
+        }
+      ],
+      termCascadeSelections: [
+        {
+          cascadeSkill: 'Gun Combat-1',
+          selection: 'Slug Rifle'
+        }
+      ]
+    }
+
+    const flow = flowFromProjectedCharacter(character(creation))
+    if (!flow) throw new Error('Expected projected flow')
+
+    assert.deepEqual(flow.draft.skills, ['Slug Rifle-1'])
+    assert.deepEqual(flow.draft.careerPlan?.termSkillRolls, [
+      {
+        table: 'serviceSkills',
+        roll: 2,
+        skill: 'Slug Rifle-1'
+      }
+    ])
+  })
+
   it('keeps anagathics cost on completed projected terms', () => {
     assert.equal(
       completedTermFromProjection({
