@@ -3000,6 +3000,154 @@ test.describe('character creation smoke', () => {
     }
   })
 
+  test('requires two projected term skill rolls for careers without promotion checks', async ({
+    page
+  }) => {
+    test.setTimeout(60_000)
+    const roomId = await openUniqueRoom(page)
+    await setRoomSeed(page, roomId, 13_579)
+    const actorId = actorIdFromPage(page)
+    const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+    await page.locator('#createCharacterRailButton').click()
+    const characterName =
+      (await page.locator('#characterCreatorTitle').textContent()) ?? ''
+    const characterId = await activeCreationCharacterId(page, roomId, actorId)
+
+    await seedCreationToCareerSelection(page, {
+      roomId,
+      actorId,
+      actorSession,
+      characterId
+    })
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'UpdateCharacterSheet',
+      characterId,
+      characteristics: {
+        str: 15,
+        dex: 15,
+        end: 15,
+        int: 15,
+        edu: 15,
+        soc: 15
+      }
+    })
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+
+    await setSeedForNextRoll(
+      page,
+      roomId,
+      await nextEventSeq(page, roomId, actorId),
+      [3, 3]
+    )
+    const scoutCareer = characterCreationCareerButton(page, 'Scout')
+    await expect(scoutCareer).toBeVisible({ timeout: 5_000 })
+    await scoutCareer.click()
+    await waitForDiceReveal(page)
+
+    await resolveVisibleCascadeChoices(page)
+    await page.getByRole('button', { name: 'Apply basic training' }).click()
+
+    await setSeedForNextRoll(
+      page,
+      roomId,
+      await nextEventSeq(page, roomId, actorId),
+      [4, 4]
+    )
+    const rollSurvival = page.getByRole('button', { name: 'Roll survival' })
+    await expect(rollSurvival).toBeVisible({ timeout: 5_000 })
+    await rollSurvival.click()
+    await waitForDiceReveal(page)
+
+    const fields = page.locator('#characterCreationFields')
+    const progress = fields.locator('.creation-term-skill-progress')
+    const serviceSkills = fields
+      .locator('.creation-term-actions')
+      .getByRole('button', { name: 'Service skills' })
+
+    await expect(fields).toContainText('Skills and training', {
+      timeout: 5_000
+    })
+    await expect(progress).toHaveText('0/2 rolled')
+    await expect(page.getByRole('button', { name: 'Roll aging' })).toHaveCount(
+      0
+    )
+    await expect(
+      page.getByRole('button', { name: 'Roll reenlistment' })
+    ).toHaveCount(0)
+
+    await setSeedForNextRoll(
+      page,
+      roomId,
+      await nextEventSeq(page, roomId, actorId),
+      [1]
+    )
+    await expect(serviceSkills).toBeVisible({ timeout: 5_000 })
+    await serviceSkills.click()
+    await waitForDiceReveal(page)
+
+    await expect(progress).toHaveText('1/2 rolled', { timeout: 5_000 })
+    await expect(fields.locator('.creation-term-skill-rolls span')).toHaveCount(
+      1
+    )
+    await expect(page.getByRole('button', { name: 'Roll aging' })).toHaveCount(
+      0
+    )
+    await expect(
+      page.getByRole('button', { name: 'Roll reenlistment' })
+    ).toHaveCount(0)
+    await expect
+      .poll(async () => {
+        const character = await fetchProjectedCharacter(
+          page,
+          roomId,
+          actorId,
+          characterId
+        )
+        return character?.creation?.state?.status
+      })
+      .toBe('SKILLS_TRAINING')
+
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.locator('#boardCanvas')).toBeVisible()
+    await openOrExpectFollowedCreation(page, characterName)
+    await expect(progress).toHaveText('1/2 rolled', { timeout: 5_000 })
+    await expect(fields.locator('.creation-term-skill-rolls span')).toHaveCount(
+      1
+    )
+    await expect(serviceSkills).toBeVisible({ timeout: 5_000 })
+
+    await setSeedForNextRoll(
+      page,
+      roomId,
+      await nextEventSeq(page, roomId, actorId),
+      [2]
+    )
+    await serviceSkills.click()
+    await waitForDiceReveal(page)
+
+    await expect(fields).toContainText(/Anagathics|Roll aging/, {
+      timeout: 5_000
+    })
+    await expect
+      .poll(async () => {
+        const character = await fetchProjectedCharacter(
+          page,
+          roomId,
+          actorId,
+          characterId
+        )
+        return {
+          status: character?.creation?.state?.status,
+          skillCount: projectedTermSkillCount(character?.creation)
+        }
+      })
+      .toEqual({ status: 'AGING', skillCount: 2 })
+  })
+
   test('lets a spectator follow mustering finalization and recover the projected sheet after refresh', async ({
     browser,
     page
