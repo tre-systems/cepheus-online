@@ -398,6 +398,36 @@ describe('viewer filtering', () => {
             eventType: 'CharacterCreationSurvivalResolved',
             rollEventId: asEventId('roll-1')
           }
+        ],
+        history: [
+          { type: 'COMPLETE_HOMEWORLD' },
+          {
+            type: 'SURVIVAL_PASSED',
+            canCommission: false,
+            canAdvance: false,
+            survival: {
+              expression: '2d6',
+              rolls: [3, 4],
+              total: 7,
+              characteristic: 'end',
+              modifier: 0,
+              target: 7,
+              success: true
+            }
+          },
+          {
+            type: 'ROLL_TERM_SKILL',
+            termSkill: {
+              career: 'Scout',
+              table: 'serviceSkills',
+              roll: { expression: '1d6', rolls: [3], total: 3 },
+              tableRoll: 3,
+              rawSkill: 'Pilot*',
+              skill: null,
+              characteristic: null,
+              pendingCascadeSkill: 'Pilot-1'
+            }
+          }
         ]
       }
     }
@@ -437,6 +467,10 @@ describe('viewer filtering', () => {
         ?.pendingCascadeSkills,
       undefined
     )
+    assert.deepEqual(
+      filtered.characters[asCharacterId('char-1')]?.creation?.history,
+      [{ type: 'COMPLETE_HOMEWORLD' }]
+    )
     assert.equal('survival' in (term ?? {}), false)
     assert.equal('reEnlistment' in (term ?? {}), false)
     assert.deepEqual(
@@ -447,6 +481,89 @@ describe('viewer filtering', () => {
     assert.equal(
       state.characters[asCharacterId('char-1')]?.characteristics.str,
       7
+    )
+    assert.equal(
+      state.characters[asCharacterId('char-1')]?.creation?.history?.length,
+      3
+    )
+  })
+
+  it('keeps roll-dependent creation history visible after reveal', () => {
+    const state = buildState()
+    addDiceRoll(state, pastRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: 7,
+        dex: null,
+        end: null,
+        int: null,
+        edu: null,
+        soc: null
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'SKILLS_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [],
+        careers: [],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false,
+        timeline: [
+          {
+            eventId: asEventId('game-1:4'),
+            seq: 4,
+            createdAt: '2026-05-03T00:00:02.000Z',
+            eventType: 'CharacterCreationSurvivalResolved',
+            rollEventId: asEventId('roll-1')
+          }
+        ],
+        history: [
+          {
+            type: 'SURVIVAL_PASSED',
+            canCommission: false,
+            canAdvance: false,
+            survival: {
+              expression: '2d6',
+              rolls: [3, 4],
+              total: 7,
+              characteristic: 'end',
+              modifier: 0,
+              target: 7,
+              success: true
+            }
+          }
+        ]
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    assert.deepEqual(
+      filtered.characters[asCharacterId('char-1')]?.creation?.history,
+      state.characters[asCharacterId('char-1')]?.creation?.history
     )
   })
 

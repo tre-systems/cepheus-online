@@ -12,6 +12,7 @@ import type {
   PieceState
 } from './state'
 import type {
+  CareerCreationEvent,
   CareerCreationTermSkillFact,
   CareerTerm
 } from './characterCreation'
@@ -106,12 +107,56 @@ const visibleSkillFromTermSkillFact = (
   fact: CareerCreationTermSkillFact
 ): string | null => fact.skill ?? fact.pendingCascadeSkill ?? null
 
+const rollDependentCreationHistoryTypes = new Set<string>([
+  'SELECT_CAREER',
+  'SURVIVAL_PASSED',
+  'SURVIVAL_FAILED',
+  'COMPLETE_COMMISSION',
+  'COMPLETE_ADVANCEMENT',
+  'ROLL_TERM_SKILL',
+  'COMPLETE_AGING',
+  'DECIDE_ANAGATHICS',
+  'RESOLVE_REENLISTMENT',
+  'MISHAP_RESOLVED',
+  'FINISH_MUSTERING'
+])
+
+const hasUnrevealedCreationTimelineRoll = (
+  creation: NonNullable<CharacterState['creation']>,
+  unrevealedRollIds: ReadonlySet<string>
+): boolean =>
+  (creation.timeline ?? []).some(
+    (entry) => entry.rollEventId && unrevealedRollIds.has(entry.rollEventId)
+  )
+
+const visibleCreationHistory = (
+  creation: NonNullable<CharacterState['creation']>,
+  unrevealedRollIds: ReadonlySet<string>
+): CareerCreationEvent[] => {
+  if (!hasUnrevealedCreationTimelineRoll(creation, unrevealedRollIds)) {
+    return creation.history ?? []
+  }
+
+  return (creation.history ?? []).filter(
+    (entry) => !rollDependentCreationHistoryTypes.has(entry.type)
+  )
+}
+
 const redactUnrevealedCreationFacts = (
   character: CharacterState,
   unrevealedRollIds: ReadonlySet<string>
 ): void => {
   const creation = character.creation
   if (!creation || unrevealedRollIds.size === 0) return
+
+  if (creation.history) {
+    const history = visibleCreationHistory(creation, unrevealedRollIds)
+    if (history.length === 0) {
+      delete creation.history
+    } else {
+      creation.history = history
+    }
+  }
 
   if (creation.characteristicRolls) {
     for (const [characteristic, fact] of Object.entries(
