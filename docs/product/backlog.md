@@ -1288,7 +1288,10 @@ Tasks:
   character-creation live activity transition/status/completion data until the
   reveal boundary.
 - Show follower state after reconnect from projection/history, with transient
-  live activity only for events seen in real time.
+  live activity only for events seen in real time. Done: fetched room-state
+  snapshots apply projection and presence state without replaying transient live
+  activities; accepted commands and WebSocket broadcasts keep the real-time
+  activity path.
 - Keep Discord logging as a future consumer of the same semantic events rather
   than a separate creation log.
 

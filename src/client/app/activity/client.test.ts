@@ -8,11 +8,15 @@ import {
   asUserId
 } from '../../../shared/ids'
 import type { LiveActivityDescriptor } from '../../../shared/live-activity'
-import type { ClientDiceRollActivity } from '../../game-commands'
+import type {
+  ClientDiceRollActivity,
+  ClientMessageApplication
+} from '../../game-commands'
 import {
   filterPendingDiceRollActivities,
   hasRedactedCreationActivityDetails,
-  prepareLiveActivityApplication
+  prepareLiveActivityApplication,
+  suppressTransientLiveActivities
 } from './client'
 
 const activity = (id: string, total: number = 7): ClientDiceRollActivity => ({
@@ -105,6 +109,30 @@ describe('live activity client helpers', () => {
     assert.deepEqual(prepared.diceRollActivities, [])
     assert.deepEqual([...prepared.deferDiceRevealIds], [])
     assert.equal(prepared.animateLatestDiceLog, true)
+  })
+
+  it('strips transient activities from fetched room-state applications', () => {
+    const diceActivity = activity('game-1:10')
+    const application: ClientMessageApplication = {
+      state: null,
+      shouldApplyState: true,
+      shouldReload: false,
+      error: null,
+      liveActivities: [creationActivity({ details: 'Mustering benefit' })],
+      diceRollActivities: [diceActivity]
+    }
+
+    const suppressed = suppressTransientLiveActivities(application)
+
+    assert.deepEqual(suppressed, {
+      ...application,
+      liveActivities: [],
+      diceRollActivities: []
+    })
+    assert.deepEqual(application.liveActivities, [
+      creationActivity({ details: 'Mustering benefit' })
+    ])
+    assert.deepEqual(application.diceRollActivities, [diceActivity])
   })
 
   it('identifies redacted character creation activity details', () => {

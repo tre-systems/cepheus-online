@@ -44,7 +44,10 @@ import {
   resolveAppLocationIdentity
 } from './core/location.js'
 import { createRoomConnectionController } from './room/connection.js'
-import { prepareLiveActivityApplication } from './activity/client.js'
+import {
+  prepareLiveActivityApplication,
+  suppressTransientLiveActivities
+} from './activity/client.js'
 import { createRequestIdFactory } from './core/request-id.js'
 import { createRoomCommandDispatch } from './room/command-dispatch.js'
 import { createRoomAssetCreationWiring } from './room/assets/wiring.js'
@@ -120,12 +123,21 @@ const selectedCharacter = (): CharacterState | null => {
   return characterId ? (state?.characters[characterId] ?? null) : null
 }
 
-const handleServerMessage = (message: ServerMessage): void => {
+const handleServerMessage = (
+  message: ServerMessage,
+  { showLiveActivity = true }: { showLiveActivity?: boolean } = {}
+): void => {
   const application = applyClientServerMessage(state, message)
-  const liveActivityApplication = prepareLiveActivityApplication(application, {
-    animatedDiceRollActivityIds,
-    revealedDiceIds: diceRevealCoordinator.revealedDiceIds
-  })
+  const activityApplication = showLiveActivity
+    ? application
+    : suppressTransientLiveActivities(application)
+  const liveActivityApplication = prepareLiveActivityApplication(
+    activityApplication,
+    {
+      animatedDiceRollActivityIds,
+      revealedDiceIds: diceRevealCoordinator.revealedDiceIds
+    }
+  )
   const deferredStateRolls = application.shouldApplyState
     ? diceRevealCoordinator.diceRollsForStateDeferral({
         nextState: application.state,
@@ -146,7 +158,7 @@ const handleServerMessage = (message: ServerMessage): void => {
     }
   }
   characterCreationFeature.showActivity(
-    application,
+    activityApplication,
     liveActivityApplication.diceRollActivities
   )
   for (const activity of liveActivityApplication.diceRollActivities) {
@@ -278,7 +290,7 @@ const {
 
 const fetchState = async (): Promise<void> => {
   const message = await fetchRoomState({ roomId, viewerRole, actorId })
-  handleServerMessage(message)
+  handleServerMessage(message, { showLiveActivity: false })
   if (message.type === 'roomState') {
     characterCreationFeature.renderPresence(message.state)
   }

@@ -42,6 +42,14 @@ export const prepareLiveActivityApplication = (
   }
 }
 
+export const suppressTransientLiveActivities = (
+  application: ClientMessageApplication
+): ClientMessageApplication => ({
+  ...application,
+  liveActivities: [],
+  diceRollActivities: []
+})
+
 export const hasRedactedCreationActivityDetails = (
   application: Pick<ClientMessageApplication, 'liveActivities'>
 ): boolean =>
