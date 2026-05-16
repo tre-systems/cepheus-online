@@ -342,6 +342,76 @@ describe('character creation view model', () => {
     ])
   })
 
+  it('uses the resolved room ruleset for read-only homeworld choices', () => {
+    const creation = projection('HOMEWORLD', {
+      homeworld: {
+        name: null,
+        lawLevel: 'Frontier Law',
+        tradeCodes: ['Deep Space']
+      },
+      backgroundSkills: ['Vacc Suit-0'],
+      pendingCascadeSkills: []
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: creation,
+      character: character(creation, {
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        skills: ['Vacc Suit-0']
+      }),
+      readOnly: true,
+      ruleset: customRuleset
+    })
+
+    assert.deepEqual(viewModel.wizard?.homeworld?.lawLevelOptions, [
+      { value: 'Frontier Law', label: 'Frontier Law', selected: true }
+    ])
+    assert.deepEqual(viewModel.wizard?.homeworld?.tradeCodeOptions, [
+      { value: 'Deep Space', label: 'Deep Space', selected: true }
+    ])
+  })
+
+  it('does not fabricate SRD homeworld choices for unresolved read-only rulesets', () => {
+    const creation = projection('HOMEWORLD', {
+      homeworld: {
+        name: null,
+        lawLevel: 'Frontier Law',
+        tradeCodes: ['Deep Space']
+      },
+      backgroundSkills: ['Vacc Suit-0'],
+      pendingCascadeSkills: []
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: creation,
+      character: character(creation, {
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        skills: ['Vacc Suit-0']
+      }),
+      readOnly: true,
+      ruleset: null
+    })
+
+    assert.deepEqual(viewModel.wizard?.homeworld?.lawLevelOptions, [])
+    assert.deepEqual(viewModel.wizard?.homeworld?.tradeCodeOptions, [])
+  })
+
   it('includes characteristic grid state for the characteristics step', () => {
     const viewModel = deriveCharacterCreationViewModel({
       flow: flow({

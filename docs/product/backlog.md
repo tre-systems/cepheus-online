@@ -1049,6 +1049,8 @@ previous-career penalty, draft table-roll provenance, and projected
 basic-training / term-skill roll provenance. Legacy client flow helpers now
 use the active flow ruleset for career rolls, optional roll skips, and term
 skill table actions instead of silently falling back to the bundled SRD data.
+Read-only homeworld projection views also use the resolved room ruleset and
+fail closed when a selected non-default ruleset cannot be loaded.
 
 Tasks:
 

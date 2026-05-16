@@ -188,7 +188,14 @@ export interface DeriveCharacterCreationViewModelOptions {
   character?: CharacterState | null
   readOnly: boolean
   actionPlan?: CharacterCreationActionPlan | null
+  ruleset?: CepheusRuleset | null
 }
+
+const emptyHomeworldChoiceOptions = {
+  lawLevels: [],
+  tradeCodes: [],
+  backgroundSkills: []
+} as const
 
 const projectionViewModel = (
   projection: CharacterCreationProjection | null
@@ -512,11 +519,13 @@ const readModelCharacteristicStepViewModel = (
 const readModelHomeworldStepViewModel = ({
   readModel,
   projectedCreation,
-  readOnly
+  readOnly,
+  ruleset
 }: {
   readModel: CharacterCreationReadModel
   projectedCreation: CharacterCreationProjection
   readOnly: boolean
+  ruleset?: CepheusRuleset | null
 }): CharacterCreationWizardViewModel | null => {
   if (readModel.status !== 'HOMEWORLD') return null
 
@@ -525,18 +534,26 @@ const readModelHomeworldStepViewModel = ({
   const backgroundCascadeChoices = actionSection.cascadeSkillChoices
   const flow: CharacterCreationFlow = {
     step: 'homeworld',
-    draft: createInitialCharacterDraft(readModel.characterId, {
-      name: readModel.name,
-      age: readModel.sheet.age,
-      characteristics: readModel.sheet.characteristics,
-      homeworld: projectedCreation.homeworld ?? undefined,
-      backgroundSkills: readModel.backgroundSkills,
-      pendingCascadeSkills: readModel.pendingCascadeSkills,
-      skills: readModel.sheet.skills,
-      equipment: readModel.sheet.equipment,
-      credits: readModel.sheet.credits
-    })
+    draft: createInitialCharacterDraft(
+      readModel.characterId,
+      {
+        name: readModel.name,
+        age: readModel.sheet.age,
+        characteristics: readModel.sheet.characteristics,
+        homeworld: projectedCreation.homeworld ?? undefined,
+        backgroundSkills: readModel.backgroundSkills,
+        pendingCascadeSkills: readModel.pendingCascadeSkills,
+        skills: readModel.sheet.skills,
+        equipment: readModel.sheet.equipment,
+        credits: readModel.sheet.credits
+      },
+      ruleset ? { ruleset } : {}
+    )
   }
+  const homeworldChoiceOptions =
+    actionSection.homeworldChoiceOptions ??
+    (ruleset === null ? emptyHomeworldChoiceOptions : undefined)
+  const rulesOptions = ruleset ? { ruleset } : {}
 
   return {
     step: 'homeworld',
@@ -544,9 +561,10 @@ const readModelHomeworldStepViewModel = ({
     projectedStepCurrent: true,
     controlsDisabled: readOnly,
     progress: [],
-    buttons: deriveCharacterCreationButtonStates(flow),
+    buttons: deriveCharacterCreationButtonStates(flow, rulesOptions),
     validation: deriveCharacterCreationValidationSummary(flow),
     nextStep: deriveCharacterCreationNextStepViewModel(flow, {
+      ...rulesOptions,
       backgroundCascadeChoices
     }),
     careerSelection: null,
@@ -567,8 +585,9 @@ const readModelHomeworldStepViewModel = ({
     review: null,
     characteristics: null,
     homeworld: deriveCharacterCreationHomeworldViewModel(flow, {
+      ...rulesOptions,
       backgroundCascadeChoices,
-      homeworldChoiceOptions: actionSection.homeworldChoiceOptions
+      homeworldChoiceOptions
     })
   }
 }
@@ -1098,7 +1117,8 @@ const wizardViewModel = ({
   projection,
   projectionReadModel,
   characterReadModel,
-  readOnly
+  readOnly,
+  ruleset
 }: {
   flow: CharacterCreationFlow | null
   projectedCreation: CharacterCreationProjection | null
@@ -1106,6 +1126,7 @@ const wizardViewModel = ({
   projectionReadModel: CharacterCreationProjectionReadModel | null
   characterReadModel: CharacterCreationReadModel | null
   readOnly: boolean
+  ruleset?: CepheusRuleset | null
 }): CharacterCreationWizardViewModel | null => {
   const preferLocalReviewFlow = !readOnly && flow?.step === 'review'
 
@@ -1118,7 +1139,8 @@ const wizardViewModel = ({
       return readModelHomeworldStepViewModel({
         readModel: characterReadModel,
         projectedCreation,
-        readOnly
+        readOnly,
+        ruleset
       })
     }
 
@@ -1328,7 +1350,8 @@ export const deriveCharacterCreationViewModel = ({
   projection,
   character = null,
   readOnly,
-  actionPlan = null
+  actionPlan = null,
+  ruleset
 }: DeriveCharacterCreationViewModelOptions): CharacterCreationViewModel => {
   const projected = projectionViewModel(projection)
   const characterReadModel = character
@@ -1340,7 +1363,8 @@ export const deriveCharacterCreationViewModel = ({
     projection: projected.summary,
     projectionReadModel: projected.readModel,
     characterReadModel,
-    readOnly
+    readOnly,
+    ruleset
   })
 
   return {

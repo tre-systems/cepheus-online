@@ -1,4 +1,5 @@
 import type { CharacterId } from '../../../../shared/ids'
+import { resolveRulesetById } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
 import type {
   CharacterCreationProjection,
   GameState
@@ -89,13 +90,15 @@ export const createCharacterCreationController = ({
   const viewModel = scope.computed(() => {
     const characterId =
       flow.value?.draft.characterId ?? selectedCharacterId.value
+    const resolvedRuleset = resolveRulesetById(getState()?.rulesetId)
     return deriveCharacterCreationViewModel({
       flow: flow.value,
       projection: currentProjection(),
       character: characterId
         ? (getState()?.characters[characterId] ?? null)
         : null,
-      readOnly: readOnly.value
+      readOnly: readOnly.value,
+      ruleset: resolvedRuleset.ok ? resolvedRuleset.value : null
     })
   })
 
