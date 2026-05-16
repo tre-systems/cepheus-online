@@ -139,7 +139,7 @@ describe('character sheet wiring', () => {
     await options.adjustCredits(character.id, -250, 'Bought ammunition')
     await options.setVisibility(piece, 'HIDDEN')
     await options.setFreedom(piece, 'UNLOCKED')
-    await options.rollSkill(piece, character, 'Pilot', 'Pilot check')
+    await options.rollSkill(piece, character, 'Pilot-1', 'Pilot check')
     const creationActions = options.getCharacterCreationActions?.(character)
     const creationButton = createdElements.find(
       (element) => element.tagName === 'button'
@@ -220,7 +220,7 @@ describe('character sheet wiring', () => {
         type: 'RollDice',
         gameId,
         actorId,
-        expression: '2d6',
+        expression: '2d6+1',
         reason: 'Pilot check'
       }
     ])

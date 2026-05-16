@@ -23,6 +23,7 @@ import {
   type CharacterSheetController,
   type CharacterSheetControllerOptions
 } from './controller.js'
+import { skillRollExpression } from './view.js'
 import { renderCharacterCreationSheetActions } from '../creation/sheet-actions.js'
 
 export interface CharacterSheetWiringOptions {
@@ -104,11 +105,11 @@ export const createCharacterSheetWiring = ({
         pieceId: piece.id,
         freedom
       }),
-    rollSkill: (_piece, _character, _skill, reason) =>
+    rollSkill: (_piece, _character, skill, reason) =>
       postSheetCommand(
         buildRollDiceCommand({
           identity: getClientIdentity(),
-          expression: '2d6',
+          expression: skillRollExpression(skill),
           reason
         }) as DiceCommand
       ),

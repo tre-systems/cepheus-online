@@ -22,6 +22,7 @@ import {
   equipmentFromText,
   equipmentText,
   selectedCharacter,
+  skillRollExpression,
   skillsFromText,
   skillRollReason
 } from './view'
@@ -210,6 +211,9 @@ describe('character sheet view helpers', () => {
       skillRollReason(piece(), character(), 'Recon-0'),
       'Scout: Recon-0'
     )
+    assert.equal(skillRollExpression('Recon-0'), '2d6')
+    assert.equal(skillRollExpression('Pilot-1'), '2d6+1')
+    assert.equal(skillRollExpression('Unskilled--3'), '2d6-3')
     assert.deepEqual(skillsFromText('Recon-0, Vacc Suit-0\nPilot-1'), [
       'Recon-0',
       'Vacc Suit-0',

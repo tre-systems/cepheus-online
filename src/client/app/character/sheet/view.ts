@@ -120,6 +120,15 @@ export const skillRollReason = (
   skill: string
 ) => `${character?.name || piece.name}: ${skill}`
 
+export const skillRollExpression = (skill: string): string => {
+  const parsed = /-(-?\d+)$/.exec(skill.trim())
+  if (!parsed) return '2d6'
+
+  const level = Number(parsed[1])
+  if (!Number.isFinite(level) || level === 0) return '2d6'
+  return level > 0 ? `2d6+${level}` : `2d6${level}`
+}
+
 const equipmentName = (item: LegacyEquipmentItem) =>
   item.Name || item.name || 'Item'
 
