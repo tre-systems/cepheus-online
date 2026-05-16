@@ -4798,6 +4798,8 @@ test.describe('character creation smoke', () => {
       .locator('#creationPresenceDock .creation-presence-card')
       .filter({ hasText: characterName })
       .click()
+    await page.setViewportSize({ width: 390, height: 844 })
+    await expectMobileCreatorControlsFit(page)
 
     const secondCareerSpectator = await browser.newPage()
     try {
@@ -4807,11 +4809,13 @@ test.describe('character creation smoke', () => {
         viewer: 'player'
       })
       await openOrExpectFollowedCreation(secondCareerSpectator, characterName)
+      await secondCareerSpectator.setViewportSize({ width: 390, height: 844 })
       await expect(
         secondCareerSpectator.locator('#characterCreationFields')
       ).toContainText(/Skills|Scout|Review the skill list/, {
         timeout: 5_000
       })
+      await expectMobileCreatorControlsFit(secondCareerSpectator)
     } finally {
       await secondCareerSpectator.close()
     }

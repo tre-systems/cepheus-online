@@ -1479,7 +1479,9 @@ The next batch should run like this, in this order:
    count, and benefit count. The presence dock now consumes the shared follower
    progress label instead of reconstructing creation progress locally.
 7. Harden the SRD term loop in browser automation: repeated refreshes, mobile
-   layouts, and multi-term continuation.
+   layouts, and multi-term continuation. The seeded multi-career browser smoke
+   now switches to phone width after the second career starts and checks both
+   owner and spectator creator controls for viewport overflow.
 8. Keep optional mishap tables behind an explicit variant; default failed
    survival remains Classic Traveller-style death.
 9. Complete anagathics survival/payment edge cases, multi-career continuation
