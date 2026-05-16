@@ -66,26 +66,37 @@ export const renderCharacterCreationCareerPicker = (
     const list = document.createElement('div')
     list.className = 'creation-career-list'
     for (const career of viewModel.careerOptions) {
-      const button = document.createElement('button')
-      button.type = 'button'
-      button.className = career.selected ? 'selected' : ''
-      button.setAttribute('aria-pressed', career.selected ? 'true' : 'false')
+      const row = document.createElement('div')
+      row.className = career.selected
+        ? 'creation-career-card selected'
+        : 'creation-career-card'
+      const details = document.createElement('div')
+      details.className = 'creation-career-details'
       const title = document.createElement('span')
       title.className = 'creation-career-title'
       title.textContent = career.label
+      const checks = document.createElement('div')
+      checks.className = 'creation-career-checks'
       const qualification = document.createElement('span')
       qualification.className = 'creation-career-check'
       qualification.textContent = `Qualify ${formatCharacterCreationCareerCheckShort(career.qualification)}`
       const survival = document.createElement('span')
       survival.className = 'creation-career-check'
       survival.textContent = `Survive ${formatCharacterCreationCareerCheckShort(career.survival)}`
-      button.append(title, qualification, survival)
-      bindAsyncActionButton(button, () =>
+      checks.append(qualification, survival)
+      details.append(title, checks)
+      const qualify = document.createElement('button')
+      qualify.type = 'button'
+      qualify.className = 'creation-career-qualify'
+      qualify.textContent = 'Qualify'
+      qualify.setAttribute('aria-label', `Qualify for ${career.label}`)
+      bindAsyncActionButton(qualify, () =>
         deps
           .resolveCareerQualification(career.key)
           .catch((error) => deps.reportError(error.message))
       )
-      list.append(button)
+      row.append(details, qualify)
+      list.append(row)
     }
     wrapper.append(list)
   }

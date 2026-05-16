@@ -112,13 +112,28 @@ describe('character creation career selection view', () => {
     assert.equal(node.className, 'creation-career-picker')
     assert.equal(node.children[0]?.dataset.characterCreationField, 'career')
     assert.equal(node.children[7]?.children[0]?.textContent, 'Choose a career')
-    const buttons = walk(node).filter((item) => item.tagName === 'button')
-    const merchant = buttons.find(
-      (button) => button.children[0]?.textContent === 'Merchant'
+    const rows = walk(node).filter(
+      (item) => item.className === 'creation-career-card'
     )
-    if (!merchant) throw new Error('Expected Merchant career button')
+    const merchant = rows.find(
+      (row) => row.children[0]?.children[0]?.textContent === 'Merchant'
+    )
+    if (!merchant) throw new Error('Expected Merchant career row')
+
+    assert.equal(merchant.tagName, 'div')
+    assert.equal(merchant.listeners.click, undefined)
+    assert.equal(merchant.listeners.pointerdown, undefined)
 
     merchant.click()
+    await Promise.resolve()
+    assert.deepEqual(resolved, [])
+
+    const qualify = merchant.children[1]
+    assert.equal(qualify?.tagName, 'button')
+    assert.equal(qualify?.className, 'creation-career-qualify')
+    assert.equal(qualify?.textContent, 'Qualify')
+
+    qualify?.click()
     await Promise.resolve()
 
     assert.deepEqual(resolved, ['Merchant'])

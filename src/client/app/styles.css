@@ -2336,37 +2336,50 @@ h1 {
   gap: 4px;
   max-height: min(42dvh, 340px);
   overflow: auto;
+  overscroll-behavior: contain;
   padding-right: 2px;
   scrollbar-width: thin;
+  touch-action: pan-y;
 }
 
-.creation-career-list button {
+.creation-career-card {
   min-height: 58px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px 10px;
-  align-items: start;
-  border-color: rgba(72, 255, 173, 0.2);
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(72, 255, 173, 0.2);
   border-radius: 0;
   background: rgba(0, 0, 0, 0.2);
   padding: 9px 10px;
   color: var(--muted);
-  text-align: left;
   box-shadow: none;
+  touch-action: pan-y;
 }
 
-.creation-career-list button.selected {
+.creation-career-card.selected {
   border-color: var(--accent);
   background: rgba(72, 255, 173, 0.15);
   color: var(--accent-2);
 }
 
+.creation-career-details {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
 .creation-career-title {
-  grid-column: 1 / -1;
   color: var(--text);
   font-size: 14px;
   font-weight: 820;
   line-height: 1.1;
+}
+
+.creation-career-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 10px;
 }
 
 .creation-career-check {
@@ -2376,6 +2389,19 @@ h1 {
   font-weight: 650;
   line-height: 1.2;
   white-space: normal;
+}
+
+.creation-career-qualify {
+  min-width: 82px;
+  min-height: 42px;
+  border-color: rgba(72, 255, 173, 0.58);
+  border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--accent-2);
+  font-size: 12px;
+  font-weight: 780;
+  line-height: 1;
+  text-align: center;
 }
 
 .creation-training-skills {
