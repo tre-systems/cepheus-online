@@ -22,6 +22,7 @@ import {
   latestProjectedTermSkill,
   normalizedCareerContinuationSlice,
   normalizedCharacteristicCreationSlice,
+  normalizedFinalizedCreationSlice,
   normalizedLaterTermRollSlice,
   normalizedText,
   openOrExpectFollowedCreation,
@@ -1616,6 +1617,66 @@ test.describe('character creation smoke', () => {
         0
       )
     )
+  })
+
+  test('normalizes same-seed finalized creation across rooms', async ({
+    page
+  }) => {
+    test.setTimeout(90_000)
+    const seed = 5
+
+    const driveFinalizedScout = async (label: string) => {
+      const roomId = await openUniqueRoom(page)
+      await setRoomSeed(page, roomId, seed)
+      const actorId = actorIdFromPage(page)
+      const actorSession = await actorSessionFromPage(page, roomId, actorId)
+
+      await page.locator('#createCharacterRailButton').click()
+      const characterId = await activeCreationCharacterId(page, roomId, actorId)
+      await seedCreationToReenlistmentDecision(page, {
+        roomId,
+        actorId,
+        actorSession,
+        context: {
+          ...createRepeatContext(label, seed, []),
+          characterId
+        }
+      })
+      await completeCurrentScoutTermFromReenlistmentAndFinalize({
+        page,
+        roomId,
+        actorId,
+        actorSession,
+        characterId
+      })
+
+      await expect
+        .poll(async () => {
+          const character = await fetchProjectedCharacter(
+            page,
+            roomId,
+            actorId,
+            characterId
+          )
+          return character?.creation?.state?.status ?? null
+        })
+        .toBe('PLAYABLE')
+
+      return normalizedFinalizedCreationSlice(
+        await fetchRoomState(page, roomId, actorId),
+        characterId
+      )
+    }
+
+    const firstRoom = await driveFinalizedScout('first-finalized')
+    const secondRoom = await driveFinalizedScout('second-finalized')
+
+    expect(firstRoom).toEqual(secondRoom)
+    expect(firstRoom.status).toBe('PLAYABLE')
+    expect(firstRoom.creationComplete).toBe(true)
+    expect(firstRoom.terms.map((term) => term.career)).toEqual(['Scout'])
+    expect(firstRoom.terms[0]?.musteringBenefits.length).toBeGreaterThan(0)
+    expect(firstRoom.skills.length).toBeGreaterThan(0)
   })
 
   test('lets another player follow a live characteristic roll without early reveal', async ({

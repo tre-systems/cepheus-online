@@ -148,6 +148,24 @@ export type NormalizedCareerContinuationSlice = {
   }>
 }
 
+export type NormalizedFinalizedCreationSlice = {
+  status: string | null
+  creationComplete: boolean
+  age: number | null
+  credits: number
+  characteristics: Record<
+    (typeof characteristicKeys)[number],
+    number | null
+  >
+  skills: string[]
+  equipment: Array<{
+    name: string
+    quantity: number
+    notes: string
+  }>
+  terms: NormalizedCareerContinuationSlice['terms']
+}
+
 export type NormalizedLaterTermRollSlice = {
   status: string | null
   termCareers: string[]
@@ -424,6 +442,39 @@ export const normalizedCareerContinuationSlice = (
         })
       )
     }))
+  }
+}
+
+export const normalizedFinalizedCreationSlice = (
+  message: RoomStateMessage,
+  characterId: string
+): NormalizedFinalizedCreationSlice => {
+  const character = message.state?.characters[characterId]
+  const career = normalizedCareerContinuationSlice(message, characterId)
+  return {
+    status: character?.creation?.state?.status ?? null,
+    creationComplete: character?.creation?.creationComplete === true,
+    age: character?.age ?? null,
+    credits: character?.credits ?? 0,
+    characteristics: Object.fromEntries(
+      characteristicKeys.map((key) => [
+        key,
+        character?.characteristics?.[key] ?? null
+      ])
+    ) as NormalizedFinalizedCreationSlice['characteristics'],
+    skills: [...(character?.skills ?? [])].sort(),
+    equipment: [...(character?.equipment ?? [])]
+      .map((item) => ({
+        name: item.name ?? '',
+        quantity: item.quantity ?? 0,
+        notes: item.notes ?? ''
+      }))
+      .sort((left, right) =>
+        `${left.name}\0${left.notes}`.localeCompare(
+          `${right.name}\0${right.notes}`
+        )
+      ),
+    terms: career.terms
   }
 }
 
