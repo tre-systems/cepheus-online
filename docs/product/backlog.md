@@ -136,8 +136,8 @@ preserve them rather than re-plan them.
   risk, mustering, finalization, and sheet-fact modules.
 - The client character creation view-model boundary keeps
   `deriveCharacterCreationViewModel()` as the public export while model types,
-  projection/action helpers, and read-model step builders live in focused
-  modules.
+  projection/action helpers, read-model step builders, and local-flow wizard
+  builders live in focused modules.
 - Architecture diagrams live in `docs/diagrams/` as Graphviz/DOT sources with
   committed PNG renders, and ADR 0007 owns event/ruleset version policy.
 
