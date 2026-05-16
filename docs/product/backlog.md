@@ -411,7 +411,8 @@ Current Character Creation completion focus:
   smoke suite, including two-tab following, no early roll reveal, death and
   replacement traveller creation, Draft/Drifter fallbacks, multi-career
   creation, mustering, browser-driven finalization, final sheet reload recovery,
-  linked token creation, and phone-width control checks.
+  linked token creation, phone-width control checks, and same-seed finalized
+  projection comparison through the focused finalization gate.
 - Remaining character-creation work should focus on shrinking legacy
   compatibility adapters, polishing the creator and final sheet for real table
   use, and adding any missing optional SRD branches behind semantic commands
