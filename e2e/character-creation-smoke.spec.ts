@@ -1753,10 +1753,15 @@ test.describe('character creation smoke', () => {
         expect(
           message.state?.characters[characterId]?.characteristics?.str ?? null
         ).toBeNull()
-        const creationActivity = message.liveActivities?.find(
+        const creationActivities = (message.liveActivities ?? []).filter(
           (activity) => activity.type === 'characterCreation'
         )
-        expect(creationActivity?.details).toBeUndefined()
+        for (const creationActivity of creationActivities) {
+          expect(creationActivity.transition).toBe('PENDING_REVEAL')
+          expect(creationActivity.status).toBe('ACTIVE')
+          expect(creationActivity.creationComplete).toBe(false)
+          expect(creationActivity.details).toBeUndefined()
+        }
       }
       const reloadedState = waitForPlayerState(spectator, 'e2e-spectator')
       const joinedState = waitForPlayerState(
@@ -3519,7 +3524,7 @@ test.describe('character creation smoke', () => {
         message: RoomStateMessage
       ): void => {
         const latestRoll = message.state?.diceLog?.at(-1)
-        const creationActivity = message.liveActivities?.find(
+        const creationActivities = (message.liveActivities ?? []).filter(
           (activity) => activity.type === 'characterCreation'
         )
 
@@ -3528,7 +3533,12 @@ test.describe('character creation smoke', () => {
         expect(typeof latestRoll?.revealAt).toBe('string')
         expect(latestRoll?.rolls).toBeUndefined()
         expect(latestRoll?.total).toBeUndefined()
-        expect(creationActivity?.details).toBeUndefined()
+        for (const creationActivity of creationActivities) {
+          expect(creationActivity.transition).toBe('PENDING_REVEAL')
+          expect(creationActivity.status).toBe('ACTIVE')
+          expect(creationActivity.creationComplete).toBe(false)
+          expect(creationActivity.details).toBeUndefined()
+        }
       }
 
       await expect(spectatorFields).toContainText('Skills and training', {

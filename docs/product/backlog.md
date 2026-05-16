@@ -1280,8 +1280,10 @@ Tasks:
   roll-dependent outcome text, projected term skill/benefit details, and
   activity details redacted until the reveal boundary. The client reveal
   coordinator now defers an initial redacted state until the dice reveal path
-  completes; keep extending this with browser coverage around projected
-  character creation panels.
+  completes. Done: browser coverage now asserts reloaded and late-joining
+  follower state redacts dice, term-skill projection details, and any attached
+  character-creation live activity transition/status/completion data until the
+  reveal boundary.
 - Show follower state after reconnect from projection/history, with transient
   live activity only for events seen in real time.
 - Keep Discord logging as a future consumer of the same semantic events rather
