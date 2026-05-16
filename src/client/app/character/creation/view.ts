@@ -2,6 +2,7 @@ import {
   derivePrimaryEducationSkillOptions,
   deriveTotalBackgroundSkillAllowance
 } from '../../../../shared/character-creation/background-skills.js'
+import { deriveMaterialBenefitEffect } from '../../../../shared/character-creation/benefits.js'
 import {
   characteristicModifier,
   deriveFailedQualificationOptions,
@@ -624,6 +625,22 @@ const musteringBenefitRollLabel = (
   if (diceRoll === null || modifier === null) return `Table ${benefit.roll}`
   if (modifier === 0) return `Roll ${diceRoll}`
   return `Roll ${diceRoll} ${signedModifier(modifier)} DM = ${tableRoll}`
+}
+
+const musteringBenefitMetaLabel = (
+  benefit: CharacterCreationMusteringBenefit
+): string => {
+  if (benefit.kind === 'cash') return 'Credits'
+
+  const effect = deriveMaterialBenefitEffect(
+    benefit.materialItem ?? benefit.value
+  )
+  if (effect.kind === 'characteristic') {
+    return `Characteristic gain: ${effect.characteristic.toUpperCase()} +${effect.modifier}`
+  }
+  if (effect.kind === 'equipment') return 'Equipment item'
+
+  return 'No material benefit'
 }
 
 export const formatCharacterCreationMusteringBenefitSummary = (
@@ -1959,10 +1976,7 @@ export const deriveCharacterCreationMusteringOutViewModel = (
       label: `${benefit.career} ${musteringBenefitKindLabel(benefit.kind)}`,
       valueLabel: musteringBenefitValueLabel(benefit),
       rollLabel: musteringBenefitRollLabel(benefit),
-      metaLabel:
-        benefit.kind === 'cash'
-          ? 'Credits'
-          : (benefit.materialItem ?? benefit.value)
+      metaLabel: musteringBenefitMetaLabel(benefit)
     })),
     actions: benefitActions.map(({ career, kind, label }) => {
       const modifier = characterCreationMusteringBenefitRollModifier({

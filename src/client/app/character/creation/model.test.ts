@@ -2222,7 +2222,7 @@ describe('character creation view model', () => {
         label: 'Merchant Material',
         valueLabel: 'Blade',
         rollLabel: 'Roll 6',
-        metaLabel: 'Blade'
+        metaLabel: 'Equipment item'
       }
     ])
     assert.deepEqual(viewModel.wizard?.musteringOut?.actions, [

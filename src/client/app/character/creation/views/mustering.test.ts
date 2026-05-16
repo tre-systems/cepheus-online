@@ -123,6 +123,40 @@ describe('character creation mustering view', () => {
     assert.equal(viewModel.benefits[0]?.rollLabel, 'Legacy benefit')
   })
 
+  it('classifies material benefits as equipment or characteristic gains', () => {
+    const viewModel = musteringViewModel({
+      musteringBenefits: [
+        {
+          career: 'Scout',
+          kind: 'material',
+          roll: 5,
+          value: 'Low Passage',
+          credits: 0,
+          materialItem: 'Low Passage'
+        },
+        {
+          career: 'Scout',
+          kind: 'material',
+          roll: 6,
+          value: '+1 SOC',
+          credits: 0,
+          materialItem: null
+        }
+      ]
+    })
+
+    assert.deepEqual(
+      viewModel.benefits.map((benefit) => [
+        benefit.valueLabel,
+        benefit.metaLabel
+      ]),
+      [
+        ['Low Passage', 'Equipment item'],
+        ['+1 SOC', 'Characteristic gain: SOC +1']
+      ]
+    )
+  })
+
   it('disables cash after three cash benefits and reports roll errors', async () => {
     const rolled: string[] = []
     let error = ''
