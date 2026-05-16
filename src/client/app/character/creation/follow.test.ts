@@ -106,7 +106,7 @@ describe('character creation follow helpers', () => {
     assert.equal(projectedCharacterCreation(null, characterId), null)
   })
 
-  it('syncs flow from projection before falling back to local flow', () => {
+  it('syncs flow from projection before using a local flow for missing state', () => {
     const projectedFlow = syncCharacterCreationFlowFromRoomState({
       currentFlow: null,
       roomState: stateWithCreation(creation('HOMEWORLD')),
@@ -116,14 +116,23 @@ describe('character creation follow helpers', () => {
 
     assert.equal(projectedFlow?.step, 'homeworld')
 
-    const fallback = syncCharacterCreationFlowFromRoomState({
+    const staleProjection = syncCharacterCreationFlowFromRoomState({
       currentFlow: null,
       roomState: stateWithCreation(null),
       characterId,
       fallbackFlow
     })
 
-    assert.equal(fallback, fallbackFlow)
+    assert.equal(staleProjection, null)
+
+    const missingState = syncCharacterCreationFlowFromRoomState({
+      currentFlow: null,
+      roomState: null,
+      characterId,
+      fallbackFlow
+    })
+
+    assert.equal(missingState, fallbackFlow)
   })
 
   it('does not preserve stale current flow when an authoritative response lacks projection', () => {

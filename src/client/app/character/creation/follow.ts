@@ -57,7 +57,7 @@ export const syncCharacterCreationFlowFromRoomState = ({
   if (projectedFlow) return projectedFlow
   if (!roomState) return fallbackFlow ?? currentFlow
 
-  return fallbackFlow
+  return null
 }
 
 export interface FollowedCharacterCreationRefresh {

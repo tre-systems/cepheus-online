@@ -401,6 +401,17 @@ await step('character creation lifecycle', async () => {
       `roll-characteristic-${characteristic}`
     )
     eventSeq = rolled.eventSeq
+    if (characteristic === 'str') {
+      const latestRoll = rolled.state?.diceLog?.at(-1)
+      assert(latestRoll?.revealAt, 'characteristic roll missing revealAt')
+      assert(!('rolls' in latestRoll), 'pre-reveal command state leaked rolls')
+      assert(!('total' in latestRoll), 'pre-reveal command state leaked total')
+      assert(
+        rolled.state?.characters?.[CHARACTER_ID]?.characteristics
+          ?.str == null,
+        'pre-reveal command state leaked STR characteristic'
+      )
+    }
     latestCreationState = rolled.state
   }
 
