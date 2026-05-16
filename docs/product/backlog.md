@@ -654,6 +654,8 @@ Implemented:
 
 - Dependency-free version/update checks let installed PWA users refresh
   when the Worker and static assets move to a new build.
+- Installed clients show an update-ready prompt and only activate a waiting
+  service worker after the user accepts the refresh.
 - A small connectivity controller tracks offline/online state and failed
   reconnect feedback.
 - The service worker stays conservative: cache shell assets, serve an offline
@@ -1219,6 +1221,9 @@ Tasks:
   fields. Finalization notes derive survival summaries from projected term
   facts, and browser finalization now hands off to the final sheet from the
   accepted projection at phone width.
+- Done: browser finalization no longer validates or trusts reconstructed draft
+  sheet fields once the server projection is finalizable, and linked tokens use
+  the projected character name.
 - Done: E2E finalization coverage reloads the completed sheet and asserts the
   structured summary survives from projected room state.
 - Extend final playable sheet coverage for deeper provenance and material

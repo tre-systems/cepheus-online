@@ -254,7 +254,7 @@ describe('character creation finalization controller', () => {
     assert.equal(harness.postedBoardCommands.length, 0)
   })
 
-  it('syncs fields before validating the review step', async () => {
+  it('syncs fields before requiring server-backed finalization state', async () => {
     const harness = createHarness()
     harness.events.length = 0
     const originalSync = harness.events.push.bind(harness.events)
@@ -287,8 +287,10 @@ describe('character creation finalization controller', () => {
 
     assert.equal(harness.events[0], 'error:')
     assert.equal(harness.events[1], 'syncFields')
-    assert.equal(/^error:/.test(harness.events[2] ?? ''), true)
-    assert.equal(harness.events[3], 'renderWizard')
+    assert.equal(
+      harness.events[2],
+      'error:Character creation needs the current room state'
+    )
     assert.equal(
       harness.events.includes('postCharacterCreationCommands'),
       false
@@ -379,6 +381,28 @@ describe('character creation finalization controller', () => {
       'openCharacterSheet',
       'renderApp'
     ])
+  })
+
+  it('uses the projected character name when creating the linked token', async () => {
+    const staleFlow = finalizableFlow()
+    staleFlow.draft.name = 'Stale local name'
+    const harness = createHarness({
+      currentFlow: staleFlow,
+      currentState: gameState({
+        characters: {
+          [characterId]: character({ name: 'Projected Name' })
+        }
+      })
+    })
+
+    await harness.controller.finish()
+
+    const token = harness.postedBoardCommands.find(
+      (command) => command.type === 'CreatePiece'
+    )
+    assert.equal(token?.type, 'CreatePiece')
+    if (token?.type !== 'CreatePiece') return
+    assert.equal(token.name, 'Projected Name')
   })
 
   it('completes server-backed mustering before finalization', async () => {

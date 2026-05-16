@@ -18,7 +18,6 @@ import {
   deriveFinalizeCharacterCreationCommand,
   type CharacterCreationFlow
 } from './flow.js'
-import { deriveCharacterCreationValidationSummary } from './view.js'
 import { planCreateCharacterTokenCommand } from '../../piece/command-plan.js'
 
 export interface CharacterCreationFinalizationControllerDeps {
@@ -133,7 +132,7 @@ export const createCharacterCreationFinalizationController = ({
       state,
       board,
       characterId: flow.draft.characterId,
-      name: flow.draft.name,
+      name: state.characters[flow.draft.characterId]?.name ?? flow.draft.name,
       existingPieceCount: getSelectedBoardPieces().length
     })
     if (!plan.ok) {
@@ -154,16 +153,6 @@ export const createCharacterCreationFinalizationController = ({
     syncFields()
     const syncedFlow = getFlow()
     if (!syncedFlow) return
-
-    const validation = deriveCharacterCreationValidationSummary({
-      ...syncedFlow,
-      step: 'review'
-    })
-    if (!validation.ok) {
-      reportError(validation.errors.join(', '))
-      renderWizard()
-      return
-    }
 
     if (!getState()) {
       await createGame(
