@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   BoardId,
   CharacterId,
@@ -175,6 +176,7 @@ const createHarness = (options: {
   state: GameState | null
   doorActions?: TestElement | null
   canEditSheetFields?: boolean
+  getRuleset?: () => CepheusRuleset | null | undefined
 }) => {
   const sheet = new TestElement('aside')
   const sheetName = new TestElement('h2')
@@ -259,6 +261,7 @@ const createHarness = (options: {
       return Promise.resolve()
     },
     createEquipmentItemId: () => 'new-equipment-1',
+    getRuleset: options.getRuleset,
     reportError: (message) => errors.push(message)
   })
 
@@ -612,6 +615,57 @@ describe('character sheet controller', () => {
         'Notes:',
         'Known contacts on Regina.'
       ].join('\n')
+    )
+  })
+
+  it('does not fall back to SRD export sources when a configured ruleset is unresolved', () => {
+    const scout = character({
+      skills: ['Gun Combat-0', 'Zero-G-0'],
+      creation: {
+        state: {
+          status: 'PLAYABLE',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [],
+        careers: [],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: true,
+        homeworld: {
+          name: 'Regina',
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid']
+        },
+        backgroundSkills: ['Gun Combat-0', 'Zero-G-0'],
+        pendingCascadeSkills: [],
+        timeline: [
+          {
+            eventId: asEventId('event-1'),
+            seq: 1,
+            createdAt: '2026-05-03T00:00:01.000Z',
+            eventType: 'CharacterCreationCompleted'
+          }
+        ]
+      }
+    })
+    const harness = createHarness({
+      selectedPiece: piece(),
+      state: gameState({ [characterId]: scout }),
+      getRuleset: () => undefined
+    })
+
+    harness.controller.render()
+
+    findByText(harness.elements.sheetBody, 'Plain Export')
+    assert.equal(
+      findAll(harness.elements.sheetBody, (candidate) =>
+        candidate.textContent.includes('Background Skills:')
+      ).length,
+      0
     )
   })
 

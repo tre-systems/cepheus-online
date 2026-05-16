@@ -1053,7 +1053,9 @@ use the active flow ruleset for career rolls, optional roll skips, and term
 skill table actions instead of silently falling back to the bundled SRD data;
 parsed local career-plan patches also re-evaluate against the active ruleset.
 Read-only homeworld projection views also use the resolved room ruleset and
-fail closed when a selected non-default ruleset cannot be loaded.
+fail closed when a selected non-default ruleset cannot be loaded. Final sheet
+plain exports also use the configured ruleset resolver and omit ruleset-sourced
+creation detail when that resolver cannot load the selected ruleset.
 
 Tasks:
 

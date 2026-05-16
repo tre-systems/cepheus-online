@@ -172,7 +172,7 @@ export const createCharacterSheetController = ({
   }
 
   const characterExportRuleset = () =>
-    getRuleset ? getRuleset() : (ruleset ?? undefined)
+    getRuleset ? (getRuleset() ?? null) : (ruleset ?? undefined)
 
   const sheetRow = (label: string, value: string) => {
     const row = documentApi.createElement('div')
