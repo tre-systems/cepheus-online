@@ -243,6 +243,24 @@ describe('character creation controller', () => {
     )
   })
 
+  it('opens editable characteristics from the shared read model without legacy flow', () => {
+    const projected = creation('CHARACTERISTICS')
+    const controller = createCharacterCreationController({
+      getState: () => stateWithCreation(projected),
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+
+    assert.equal(controller.openFollow(characterId, { readOnly: false }), null)
+    assert.equal(controller.flow(), null)
+    assert.equal(controller.readOnly(), false)
+    assert.equal(controller.selectedCharacterId(), characterId)
+    assert.equal(controller.currentProjection(), projected)
+    assert.equal(controller.viewModel().mode, 'editable')
+    assert.equal(controller.viewModel().characterId, characterId)
+    assert.equal(controller.viewModel().wizard?.step, 'characteristics')
+  })
+
   it('opens read-only homeworld from the shared read model without legacy flow', () => {
     const projected = creation('HOMEWORLD')
     const controller = createCharacterCreationController({

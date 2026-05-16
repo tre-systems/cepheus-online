@@ -141,10 +141,12 @@ export const createCharacterCreationController = ({
       if (nextReadOnly && !canRenderReadOnlyFollowFromReadModel(character)) {
         return null
       }
-      const nextFlow = nextReadOnly
+      const useReadModelOnly =
+        nextReadOnly || character.creation.state.status === 'CHARACTERISTICS'
+      const nextFlow = useReadModelOnly
         ? null
         : flowFromProjectedCharacterReadModel(character)
-      if (!nextReadOnly && !nextFlow) return null
+      if (!useReadModelOnly && !nextFlow) return null
 
       batch(() => {
         bumpProjectionRevision()
