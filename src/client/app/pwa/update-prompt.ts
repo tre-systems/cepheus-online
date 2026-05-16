@@ -58,9 +58,9 @@ export const createPwaUpdatePromptController = ({
       return
     }
 
-    elements.prompt.querySelector('[data-pwa-update-message]')?.replaceChildren(
-      promptMessage(state)
-    )
+    elements.prompt
+      .querySelector('[data-pwa-update-message]')
+      ?.replaceChildren(promptMessage(state))
     elements.updateButton.textContent =
       state.status === 'refreshFailed' ? 'Retry' : 'Refresh'
     elements.updateButton.setAttribute(

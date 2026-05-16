@@ -3578,21 +3578,20 @@ test.describe('character creation smoke', () => {
         spectatorPage: Page,
         userId: string
       ): Promise<RoomStateMessage> => {
-        let state: Promise<RoomStateMessage> | null = null
         await spectatorPage.waitForResponse((candidate) => {
           const url = new URL(candidate.url())
-          const matches =
+          return (
             candidate.request().method() === 'GET' &&
             url.pathname === `/rooms/${roomId}/state` &&
             url.searchParams.get('viewer') === 'spectator' &&
             url.searchParams.get('user') === userId
-          if (matches) {
-            state = candidate.json() as Promise<RoomStateMessage>
-          }
-          return matches
+          )
         })
-        if (!state) throw new Error(`Missing spectator state for ${userId}`)
-        return state
+        const response = await spectatorPage.request.get(
+          `/rooms/${encodeURIComponent(roomId)}/state?viewer=spectator&user=${encodeURIComponent(userId)}`
+        )
+        expect(response.ok()).toBe(true)
+        return response.json() as Promise<RoomStateMessage>
       }
       const reloadedState = waitForSpectatorState(spectator, spectatorId)
       const joinedState = waitForSpectatorState(lateSpectator, lateSpectatorId)

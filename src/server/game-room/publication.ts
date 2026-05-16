@@ -1,7 +1,7 @@
 import type { GameId } from '../../shared/ids'
 import {
   DEFAULT_RULESET_ID,
-  resolveRulesetById
+  resolveRulesetReference
 } from '../../shared/character-creation/cepheus-srd-ruleset'
 import {
   isDeprecatedGameCommand,
@@ -113,7 +113,7 @@ export const runCommandPublication = async (
     (message.command.type === 'CreateGame'
       ? (message.command.rulesetId ?? DEFAULT_RULESET_ID)
       : DEFAULT_RULESET_ID)
-  const ruleset = resolveRulesetById(rulesetId)
+  const ruleset = resolveRulesetReference(rulesetId)
   if (!ruleset.ok) {
     return err(commandError('invalid_command', ruleset.error.join('; ')))
   }
@@ -122,7 +122,7 @@ export const runCommandPublication = async (
     currentSeq,
     nextSeq: currentSeq + 1,
     gameSeed,
-    ruleset: ruleset.value,
+    ruleset: ruleset.value.ruleset,
     createdAt
   })
 

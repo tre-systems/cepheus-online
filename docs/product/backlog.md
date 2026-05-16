@@ -904,6 +904,18 @@ Primary write ownership:
 
 Tasks:
 
+- Keep `createAppClient()` as the browser runtime boundary. `app.ts` should
+  remain a thin entrypoint; room identity, transport, command routing, reveal
+  coordination, and render orchestration should stay inside the runtime.
+- Keep `GameRoomDO` as a Cloudflare lifecycle shell. Command publication,
+  broadcast shaping, reveal scheduling, and route/socket concerns should remain
+  in focused helpers rather than growing the Durable Object class again.
+- Continue treating rulesets as JSON data. The current provider boundary
+  resolves bundled data with id, version, content hash, and source metadata;
+  future custom-ruleset work should add storage/upload UI behind that same
+  provider path rather than importing bundled defaults directly.
+- Keep architecture diagrams in `docs/diagrams/` as Graphviz/DOT plus committed
+  PNGs. Use Markdown diagrams only for small inline sketches.
 - Keep the current CQRS/event-sourced architecture. Do not switch direction
   unless the product goal changes away from real-time, referee-filtered,
   recoverable tabletop play.
@@ -940,6 +952,9 @@ Done when:
   instead of step views rediscovering legal state.
 - The active docs have one owner for each architectural pattern and no stale
   repeated guidance.
+- Custom ruleset upload/storage tasks are tracked separately from the provider
+  seam and do not require changing command publication, projectors, viewer
+  filtering, or client creation views again.
 
 ## Phase 1: Server-Backed Character Creation Spine
 

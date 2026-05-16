@@ -93,18 +93,18 @@ describe('map asset picker view helpers', () => {
       height: 1000,
       gridScale: 50,
       occluders: [
-            {
-              type: 'wall',
-              id: 'bulkhead-1',
-              x1: 100,
-              y1: 100,
-              x2: 300,
-              y2: 100
-            },
-            {
-              type: 'door',
-              id: 'iris-1',
-              x1: 400,
+        {
+          type: 'wall',
+          id: 'bulkhead-1',
+          x1: 100,
+          y1: 100,
+          x2: 300,
+          y2: 100
+        },
+        {
+          type: 'door',
+          id: 'iris-1',
+          x1: 400,
           y1: 300,
           x2: 480,
           y2: 300,

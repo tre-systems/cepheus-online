@@ -17,9 +17,7 @@ class TestElement {
   }
 
   querySelector(selector: string): TestElement | null {
-    return selector === '[data-pwa-update-message]'
-      ? this.messageElement
-      : null
+    return selector === '[data-pwa-update-message]' ? this.messageElement : null
   }
 
   replaceChildren(...children: string[]): void {
@@ -129,7 +127,9 @@ describe('PWA update prompt controller', () => {
     const updateButton = new TestElement()
     const controller = createPwaUpdatePromptController({
       elements: {
-        prompt: new TestElement({ withMessage: true }) as unknown as HTMLElement,
+        prompt: new TestElement({
+          withMessage: true
+        }) as unknown as HTMLElement,
         updateButton: updateButton as unknown as HTMLElement,
         dismissButton: null
       },

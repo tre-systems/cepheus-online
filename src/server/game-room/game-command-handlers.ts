@@ -1,7 +1,7 @@
 import type { GameCommand } from '../../shared/commands'
 import {
   DEFAULT_RULESET_ID,
-  resolveRulesetById
+  resolveRulesetReference
 } from '../../shared/character-creation/cepheus-srd-ruleset'
 import type { CommandTypeForHandlerDomain } from '../../shared/command-metadata'
 import type { GameEvent } from '../../shared/events'
@@ -22,7 +22,7 @@ export const deriveGameCommandEvents = (
     return err(commandError('game_exists', 'Game already exists'))
   }
   const rulesetId = command.rulesetId ?? DEFAULT_RULESET_ID
-  const ruleset = resolveRulesetById(rulesetId)
+  const ruleset = resolveRulesetReference(rulesetId)
   if (!ruleset.ok) {
     return err(commandError('invalid_command', ruleset.error.join('; ')))
   }

@@ -1,6 +1,6 @@
 import {
   type CepheusRuleset,
-  resolveRulesetById
+  resolveRulesetReference
 } from './character-creation/cepheus-srd-ruleset'
 import { deriveUnrevealedCreationRollIds } from './character-creation/reveal'
 import type {
@@ -761,7 +761,42 @@ export const isActorRefereeOrOwner = (
       (state.ownerId === actorId || state.players[actorId]?.role === 'REFEREE')
   )
 
-export const filterGameStateForViewer = (
+const filterPiecesForViewer = (
+  filtered: GameState,
+  resolvedViewer: GameViewer
+): void => {
+  filtered.pieces = Object.fromEntries(
+    Object.entries(filtered.pieces).filter(([, piece]) =>
+      isPieceVisibleToRole(piece, resolvedViewer.role)
+    )
+  )
+}
+
+const filterUnrevealedDiceForViewer = (
+  filtered: GameState,
+  nowMs: number
+): Set<string> => {
+  const unrevealedRollIds = unrevealedDiceRollIds(filtered, nowMs)
+  for (const roll of filtered.diceLog) {
+    if (Date.parse(roll.revealAt) <= nowMs) continue
+    delete (roll as unknown as Record<string, unknown>).rolls
+    delete (roll as unknown as Record<string, unknown>).total
+  }
+
+  return unrevealedRollIds
+}
+
+const filterCharacterCreationForViewer = (
+  filtered: GameState,
+  unrevealedRollIds: ReadonlySet<string>,
+  ruleset: CepheusRuleset | null
+): void => {
+  for (const character of Object.values(filtered.characters)) {
+    redactUnrevealedCreationFacts(character, unrevealedRollIds, ruleset)
+  }
+}
+
+export const toViewerGameState = (
   state: GameState,
   viewer: GameViewer,
   { nowMs = Date.now() }: ViewerFilterOptions = {}
@@ -769,27 +804,19 @@ export const filterGameStateForViewer = (
   const resolvedViewer = resolveViewerForState(state, viewer)
   const filtered = structuredClone(state)
 
-  filtered.pieces = Object.fromEntries(
-    Object.entries(filtered.pieces).filter(([, piece]) =>
-      isPieceVisibleToRole(piece, resolvedViewer.role)
-    )
-  )
+  filterPiecesForViewer(filtered, resolvedViewer)
+
   if (!canViewerSeeUnrevealedDice(state, resolvedViewer)) {
-    const unrevealedRollIds = unrevealedDiceRollIds(state, nowMs)
-    const resolvedRuleset = resolveRulesetById(state.rulesetId)
-    const ruleset = resolvedRuleset.ok ? resolvedRuleset.value : null
-    for (const roll of filtered.diceLog) {
-      if (Date.parse(roll.revealAt) <= nowMs) continue
-      delete (roll as unknown as Record<string, unknown>).rolls
-      delete (roll as unknown as Record<string, unknown>).total
-    }
-    for (const character of Object.values(filtered.characters)) {
-      redactUnrevealedCreationFacts(character, unrevealedRollIds, ruleset)
-    }
+    const unrevealedRollIds = filterUnrevealedDiceForViewer(filtered, nowMs)
+    const resolvedRuleset = resolveRulesetReference(state.rulesetId)
+    const ruleset = resolvedRuleset.ok ? resolvedRuleset.value.ruleset : null
+    filterCharacterCreationForViewer(filtered, unrevealedRollIds, ruleset)
   }
 
   return filtered
 }
+
+export const filterGameStateForViewer = toViewerGameState
 
 export const filterLiveActivitiesForViewer = (
   activities: readonly LiveActivityDescriptor[],

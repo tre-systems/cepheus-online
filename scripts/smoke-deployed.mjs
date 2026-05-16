@@ -314,7 +314,10 @@ await step('manifest, icons, and service worker', async () => {
   assert(swResponse.ok, 'sw.js did not load')
   assert(sw.includes('/rooms/'), 'service worker must bypass room routes')
   assert(sw.includes('/health'), 'service worker must bypass health routes')
-  assert(sw.includes('SKIP_WAITING'), 'service worker must support accepted updates')
+  assert(
+    sw.includes('SKIP_WAITING'),
+    'service worker must support accepted updates'
+  )
 })
 
 let eventSeq = 0
@@ -407,8 +410,7 @@ await step('character creation lifecycle', async () => {
       assert(!('rolls' in latestRoll), 'pre-reveal command state leaked rolls')
       assert(!('total' in latestRoll), 'pre-reveal command state leaked total')
       assert(
-        rolled.state?.characters?.[CHARACTER_ID]?.characteristics
-          ?.str == null,
+        rolled.state?.characters?.[CHARACTER_ID]?.characteristics?.str == null,
         'pre-reveal command state leaked STR characteristic'
       )
     }

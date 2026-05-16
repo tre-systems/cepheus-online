@@ -39,6 +39,21 @@ export interface CepheusRulesetRegistry {
   resolveRulesetById: (rulesetId?: string) => Result<CepheusRuleset, string[]>
 }
 
+export interface ResolvedCepheusRuleset {
+  id: string
+  version: 1
+  contentHash: string
+  source: 'bundled' | 'custom'
+  ruleset: CepheusRuleset
+}
+
+export interface CepheusRulesetProvider {
+  supportedRulesetIds: readonly string[]
+  resolveRulesetById: (
+    rulesetId?: string
+  ) => Result<ResolvedCepheusRuleset, string[]>
+}
+
 const ROLL_TABLE_KEYS = ['1', '2', '3', '4', '5', '6'] as const
 
 export const DEFAULT_RULESET_ID = 'cepheus-engine-srd'
@@ -140,6 +155,31 @@ export const decodeCepheusRuleset = (
 
 export const decodeCepheusSrdRuleset = decodeCepheusRuleset
 
+const stableJson = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableJson).join(',')}]`
+  }
+  if (isRecord(value)) {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`)
+      .join(',')}}`
+  }
+
+  return JSON.stringify(value)
+}
+
+const contentHashForRuleset = (raw: unknown): string => {
+  const input = stableJson(raw)
+  let hash = 0x811c9dc5
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+
+  return `fnv1a32-${(hash >>> 0).toString(16).padStart(8, '0')}`
+}
+
 export const createRulesetRegistry = (
   rulesets: Record<string, unknown>,
   defaultRulesetId: string = DEFAULT_RULESET_ID
@@ -161,12 +201,49 @@ export const createRulesetRegistry = (
   }
 }
 
+export const createRulesetProvider = (
+  rulesets: Record<string, unknown>,
+  defaultRulesetId: string = DEFAULT_RULESET_ID,
+  source: ResolvedCepheusRuleset['source'] = 'bundled'
+): CepheusRulesetProvider => {
+  const supportedRulesetIds = Object.keys(rulesets)
+
+  return {
+    supportedRulesetIds,
+    resolveRulesetById: (
+      rulesetId: string = defaultRulesetId
+    ): Result<ResolvedCepheusRuleset, string[]> => {
+      const raw = rulesets[rulesetId]
+      if (raw === undefined) {
+        return err([`Unknown ruleset id "${rulesetId}"`])
+      }
+
+      const decoded = decodeCepheusRuleset(raw)
+      if (!decoded.ok) return decoded
+
+      return ok({
+        id: rulesetId,
+        version: 1,
+        contentHash: contentHashForRuleset(raw),
+        source,
+        ruleset: decoded.value
+      })
+    }
+  }
+}
+
 const bundledRulesetRegistry = createRulesetRegistry(bundledRulesets)
+const bundledRulesetProvider = createRulesetProvider(bundledRulesets)
 
 export const resolveRulesetById = (
   rulesetId: string = DEFAULT_RULESET_ID
 ): Result<CepheusRuleset, string[]> =>
   bundledRulesetRegistry.resolveRulesetById(rulesetId)
+
+export const resolveRulesetReference = (
+  rulesetId: string = DEFAULT_RULESET_ID
+): Result<ResolvedCepheusRuleset, string[]> =>
+  bundledRulesetProvider.resolveRulesetById(rulesetId)
 
 export const loadDefaultRuleset = (): CepheusRuleset => {
   const decoded = resolveRulesetById(DEFAULT_RULESET_ID)

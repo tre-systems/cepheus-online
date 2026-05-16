@@ -1,4 +1,8 @@
-import type { EventEnvelope, GameEvent } from '../../shared/events'
+import {
+  EVENT_ENVELOPE_VERSION,
+  type EventEnvelope,
+  type GameEvent
+} from '../../shared/events'
 import { asEventId, type GameId, type UserId } from '../../shared/ids'
 import type { GameState } from '../../shared/state'
 import type { DurableObjectStorage } from '../cloudflare'
@@ -102,7 +106,7 @@ export const appendEvents = async (
       updatedChunks.get(chunkIndex) ??
       (await getEventChunk(storage, gameId, chunkIndex))
     const envelope: EventEnvelope = {
-      version: 1,
+      version: EVENT_ENVELOPE_VERSION,
       id: asEventId(`${gameId}:${nextSeq}`),
       gameId,
       seq: nextSeq,

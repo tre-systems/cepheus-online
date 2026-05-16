@@ -144,10 +144,7 @@ const renderAssetOptions = (
             return createSelectOption(
               select,
               item.assetRef,
-              `${item.label} (${[
-                item.dimensions.label,
-                item.losSummary?.label
-              ]
+              `${item.label} (${[item.dimensions.label, item.losSummary?.label]
                 .filter(Boolean)
                 .join(', ')})`
             )

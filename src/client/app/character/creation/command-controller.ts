@@ -64,7 +64,9 @@ export interface CharacterCreationCommandController {
 
 export interface CharacterCreationCommandControllerDeps {
   getFlow: () => CharacterCreationFlow | null
-  getSelectedCharacterId?: () => CharacterCreationFlow['draft']['characterId'] | null
+  getSelectedCharacterId?: () =>
+    | CharacterCreationFlow['draft']['characterId']
+    | null
   setFlow: (flow: CharacterCreationFlow | null) => void
   setError: (message: string) => void
   isReadOnly: () => boolean
@@ -243,11 +245,7 @@ export const createCharacterCreationCommandController = (
     const flow = getFlow()
     const characterId = flow?.draft.characterId ?? getSelectedCharacterId()
     if (!characterId) return false
-    const syncedFlow = syncFlowFromRoomState(
-      revealedState,
-      characterId,
-      null
-    )
+    const syncedFlow = syncFlowFromRoomState(revealedState, characterId, null)
     const syncedCreation =
       revealedState?.characters?.[characterId]?.creation ??
       getState()?.characters?.[characterId]?.creation ??

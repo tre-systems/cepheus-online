@@ -11,6 +11,7 @@ the system. They are intentionally short: context, decision, and consequences.
 - [ADR 0004: Keep the Browser Client Dependency-Light](0004-keep-browser-client-dependency-light.md)
 - [ADR 0005: Use Discord OAuth with Internal App Sessions](0005-use-discord-oauth-with-internal-app-sessions.md)
 - [ADR 0006: Limit CRDTs to Document-Like Collaboration](0006-limit-crdts-to-document-like-collaboration.md)
+- [ADR 0007: Version Events And Ruleset Data](0007-version-events-and-ruleset-data.md)
 
 ## Open Decision Points
 
@@ -20,6 +21,5 @@ the system. They are intentionally short: context, decision, and consequences.
 - Whether Preact is worth adding later for complex forms.
 - Exact Discord OAuth/session storage design.
 - How much SRD text should be vendored versus imported at build time.
-- Exact event chunk size and checkpoint cadence for long-running campaigns.
 
 When one of these is resolved, add a new ADR and remove the item from this list.

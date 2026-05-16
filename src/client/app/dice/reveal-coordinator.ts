@@ -68,8 +68,7 @@ export const shouldAnimateLatestDiceRoll = ({
       animateLatestDiceLog &&
       wasFirstStateApplied &&
       latestRoll.id !== previousDiceId &&
-      (rollHasVisibleResult(latestRoll) ||
-        !revealedDiceIds.has(latestRoll.id))
+      (rollHasVisibleResult(latestRoll) || !revealedDiceIds.has(latestRoll.id))
   )
 
 export const createDiceRevealCoordinator = ({

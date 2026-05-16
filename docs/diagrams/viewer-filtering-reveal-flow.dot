@@ -1,0 +1,33 @@
+digraph ViewerFilteringRevealFlow {
+  graph [rankdir=TB, bgcolor="#ffffff", pad="0.55", nodesep="0.50", ranksep="0.78", splines=polyline, outputorder=edgesfirst, compound=true, newrank=true, forcelabels=true, fontname="Avenir", label=<
+    <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="0"><TR><TD><FONT POINT-SIZE="34"><B>Viewer Filtering and Reveal Flow</B></FONT></TD></TR></TABLE>
+  >, labelloc=t, labeljust=c];
+  node [shape=box, style="rounded,filled", margin="0.21,0.13", width=2.70, height=0.72, fixedsize=false, fontname="Avenir", fontsize=18, penwidth=2.4, fontcolor="#14213d", color="#2264c7", fillcolor="#eaf3ff:#ffffff", gradientangle=270];
+  edge [color="#263a59", fontname="Avenir", fontsize=13, fontcolor="#3d4a5c", penwidth=2.2, arrowsize=0.78];
+
+  S1 [label=<<B>Authoritative state</B><BR/><FONT POINT-SIZE="15">full dice and character facts</FONT>>];
+  S2 [label=<<B>Viewer context</B><BR/><FONT POINT-SIZE="15">role, actor, reveal time</FONT>>];
+  S3 [label=<<B>toViewerGameState</B><BR/><FONT POINT-SIZE="15">public projection boundary</FONT>>, fillcolor="#eaf8ef:#ffffff", color="#22865a"];
+
+  subgraph cluster_filters {
+    graph [label=<
+      <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2"><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="17" COLOR="#1f5fbf"><B>DOMAIN FILTERS</B></FONT></TD></TR><TR><TD ALIGN="LEFT"><FONT POINT-SIZE="12" COLOR="#496f9f">Each domain owns its own redaction rules.</FONT></TD></TR></TABLE>
+    >, labelloc=t, labeljust=l, color="#b9d8ff", fillcolor="#f5faff", style="rounded,filled", penwidth=1.8, margin=20];
+    F1 [label=<<B>Board and pieces</B><BR/><FONT POINT-SIZE="15">visibility by role</FONT>>];
+    F2 [label=<<B>Dice log</B><BR/><FONT POINT-SIZE="15">hide rolls until revealAt</FONT>>];
+    F3 [label=<<B>Character creation</B><BR/><FONT POINT-SIZE="15">hide roll-dependent facts</FONT>>];
+    F4 [label=<<B>Live activity</B><BR/><FONT POINT-SIZE="15">match state redaction</FONT>>];
+  }
+
+  O1 [label=<<B>Viewer-safe room state</B><BR/><FONT POINT-SIZE="15">same wire shape, redacted content</FONT>>, fillcolor="#d8f5de:#effcf2", color="#15803d", penwidth=3.0];
+  O2 [label=<<B>Reveal scheduler</B><BR/><FONT POINT-SIZE="15">broadcast after pending reveal time</FONT>>, fillcolor="#fff4d1:#fffaf0", color="#d39a00"];
+  O3 [label=<<B>Client refresh/follow</B><BR/><FONT POINT-SIZE="15">show hidden results after reveal boundary</FONT>>];
+
+  S1 -> S3;
+  S2 -> S3;
+  S3 -> F1 [lhead=cluster_filters];
+  F1 -> F2 -> F3 -> F4;
+  F4 -> O1 [ltail=cluster_filters];
+  S1 -> O2 -> S3 [style=dashed, color="#6b7280", label="post-reveal"];
+  O1 -> O3;
+}

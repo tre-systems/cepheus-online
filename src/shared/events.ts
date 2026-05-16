@@ -38,8 +38,10 @@ import type {
   PieceVisibility
 } from './state'
 
+export const EVENT_ENVELOPE_VERSION = 1
+
 export interface EventEnvelope {
-  version: 1
+  version: typeof EVENT_ENVELOPE_VERSION
   id: EventId
   gameId: GameId
   seq: number

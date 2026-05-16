@@ -6,8 +6,10 @@ import {
   CEPHEUS_SRD_CAREERS,
   CEPHEUS_SRD_RULESET,
   DEFAULT_RULESET_ID,
+  createRulesetProvider,
   createRulesetRegistry,
   decodeCepheusRuleset,
+  resolveRulesetReference,
   resolveRulesetById,
   type CepheusCareerDefinition
 } from './cepheus-srd-ruleset'
@@ -93,6 +95,38 @@ describe('Cepheus SRD career ruleset', () => {
     assert.equal(resolved.ok, true)
     if (!resolved.ok) return
     assert.deepEqual(Object.keys(resolved.value.careerBasics), ['Courier'])
+  })
+
+  it('resolves ruleset metadata through a provider boundary', () => {
+    const resolved = resolveRulesetReference(DEFAULT_RULESET_ID)
+
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    assert.equal(resolved.value.id, DEFAULT_RULESET_ID)
+    assert.equal(resolved.value.version, 1)
+    assert.equal(resolved.value.source, 'bundled')
+    assert.equal(/^fnv1a32-[0-9a-f]{8}$/.test(resolved.value.contentHash), true)
+    assert.deepEqual(resolved.value.ruleset, CEPHEUS_SRD_RULESET)
+  })
+
+  it('creates custom ruleset providers from JSON-compatible records', () => {
+    const provider = createRulesetProvider(
+      {
+        [DEFAULT_RULESET_ID]: CEPHEUS_SRD_RULESET,
+        'custom-courier': loadCustomRulesetFixture()
+      },
+      DEFAULT_RULESET_ID,
+      'custom'
+    )
+
+    const resolved = provider.resolveRulesetById('custom-courier')
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    assert.equal(resolved.value.id, 'custom-courier')
+    assert.equal(resolved.value.source, 'custom')
+    assert.deepEqual(Object.keys(resolved.value.ruleset.careerBasics), [
+      'Courier'
+    ])
   })
 
   it('fails closed for unknown or malformed registry entries', () => {

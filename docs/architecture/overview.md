@@ -22,15 +22,11 @@ state, and broadcasts a state-bearing message.
 This is a CQRS-style split: commands are the only mutation path, while reads
 return filtered projections from the event stream.
 
-```mermaid
-flowchart LR
-  C["Client command"] --> W["Worker route or WebSocket"]
-  W --> DO["GameRoom Durable Object"]
-  DO --> V["Validate command"]
-  V --> E["Append event(s)"]
-  E --> P["Project current state"]
-  P --> B["Broadcast filtered state"]
-```
+Larger runtime diagrams live in [docs/diagrams](../diagrams/README.md):
+
+- [Runtime architecture](../diagrams/runtime-architecture.png)
+- [Command publication flow](../diagrams/command-publication-flow.png)
+- [Viewer filtering and reveal flow](../diagrams/viewer-filtering-reveal-flow.png)
 
 ## Durable Objects
 
@@ -41,14 +37,16 @@ Expected classes:
 - `DiscordInstallDO` or D1-backed routes: Discord install/session bookkeeping if
   needed.
 
-The room should be small and focused. Game rules live in `src/shared`, not in
-the Durable Object class.
+The room should be small and focused. Cloudflare lifecycle methods should
+delegate to command, broadcast, reveal-scheduling, and route/socket helpers. Game
+rules live in `src/shared`, not in the Durable Object class.
 
 Ruleset selection is room state. `CreateGame` may carry a `rulesetId`,
 `GameCreated` persists it, and `GameState.rulesetId` is projected from the
-event stream. Bundled Cepheus rules live as JSON under `data/rulesets/` and are
-decoded by shared rules code; do not convert rules tables into hand-maintained
-TypeScript constants.
+event stream. Rulesets are resolved through a provider boundary that returns
+decoded JSON data plus id, version, content hash, and source metadata. Bundled
+Cepheus rules live as JSON under `data/rulesets/`; do not convert rules tables
+into hand-maintained TypeScript constants.
 
 ## Persistence
 
@@ -75,6 +73,10 @@ The current shell source is in `src/client/app` and is embedded into
 Worker-served assets with `npm run build:client`. The Worker serves the
 generated asset module from `src/server` without importing client source at
 runtime.
+
+The app entrypoint should remain thin. Runtime identity, socket/fetch handling,
+command routing, dice reveal coordination, and feature rendering belong behind
+`createAppClient()`.
 
 The app is a PWA. The shell owns install metadata, a web app manifest, service
 worker registration, controller-change reload, and an install prompt. The

@@ -21,15 +21,8 @@ term facts, legal actions, timeline entries, and final-sheet/export views;
 legacy `creation.history` is compatibility-only for replaying old
 `CharacterCreationTransitioned` streams.
 
-```mermaid
-flowchart LR
-  C["client command"] --> DO["GameRoom Durable Object"]
-  DO --> V["validate against current state"]
-  V --> E["append event envelope(s)"]
-  E --> P["project next state"]
-  P --> F["filter for viewer"]
-  F --> B["broadcast state-bearing message"]
-```
+See [Command publication flow](../diagrams/command-publication-flow.png) for the
+full service boundary diagram.
 
 This avoids the old DataStore failure mode where multiple clients raced to
 write whole nested objects.
@@ -40,7 +33,7 @@ Persist domain events inside an envelope:
 
 ```ts
 interface EventEnvelope {
-  version: 1
+  version: typeof EVENT_ENVELOPE_VERSION
   id: EventId
   gameId: GameId
   seq: number
@@ -51,8 +44,8 @@ interface EventEnvelope {
 ```
 
 The event payload says what happened. The envelope says when, where, and by
-whom. `version` is the event envelope schema version. `seq` is the ordering
-source of truth; timestamps are metadata.
+whom. `EVENT_ENVELOPE_VERSION` is the event envelope schema version. `seq` is
+the ordering source of truth; timestamps are metadata.
 
 ## Chunked Persistence
 
@@ -116,9 +109,13 @@ Tooling support:
 ## Rulesets As Data
 
 Rulesets are data, not application structure. Bundled rulesets live as JSON in
-`data/rulesets/` and are decoded at the shared rules boundary. The default
-ruleset is `cepheus-engine-srd`; future custom rulesets should follow the same
-load-decode-select path rather than being compiled into TypeScript.
+`data/rulesets/` and are decoded at the shared rules boundary. The provider
+returns decoded data plus id, version, content hash, and source metadata. The
+default ruleset is `cepheus-engine-srd`; future custom rulesets should follow
+the same load-decode-select path rather than being compiled into TypeScript.
+
+See [Ruleset data flow](../diagrams/ruleset-data-flow.png) for the provider
+boundary diagram.
 
 The bundled default is the Cepheus Engine SRD data file. A missing or unknown
 ruleset is not permission to fall back to that SRD file, except when a command

@@ -3,15 +3,10 @@ import type { LiveActivityDescriptor } from '../../shared/live-activity'
 import {
   decodeClientMessage,
   type ClientMessage,
-  type CommandError,
   type ServerMessage
 } from '../../shared/protocol'
 import type { GameState } from '../../shared/state'
-import {
-  filterGameStateForViewer,
-  filterLiveActivitiesForViewer,
-  type GameViewer
-} from '../../shared/viewer'
+import type { GameViewer } from '../../shared/viewer'
 import type { DurableObjectState, WebSocketResponseInit } from '../cloudflare'
 import type { Env } from '../env'
 import { jsonResponse } from '../http'
@@ -19,25 +14,25 @@ import {
   ACTOR_SESSION_HEADER,
   actorSessionSecretFromTags,
   actorSessionTag,
-  bindOrVerifyActorSession,
   normalizeActorSessionSecret
 } from './actor-session'
+import { broadcastRoomState, serializeMessage } from './broadcast'
 import { commandError } from './command-helpers'
 import { createCommandRateLimiter } from './command-rate-limit'
-import { CommandPublicationError, runCommandPublication } from './publication'
+import {
+  handleRoomCommandMessage,
+  statusForCommandError
+} from './command-service'
 import {
   noopPublicationTelemetrySink,
   type PublicationTelemetrySink
 } from './publication-telemetry'
-import { getProjectedGameState } from './projection'
+import { buildRoomStateMessage, parseViewerFromUrl } from './queries'
 import {
-  buildRoomStateMessage,
-  parseViewerFromUrl,
-  parseViewerRole,
-  parseViewerUserId,
-  viewerFromCommand
-} from './queries'
-import { gameSeedKey, getEventSeq } from './storage'
+  createRevealBroadcastScheduler,
+  type RevealBroadcastScheduler
+} from './reveal-scheduler'
+import { gameSeedKey } from './storage'
 
 declare const WebSocketPair: {
   new (): {
@@ -65,43 +60,6 @@ const parseRoomRoute = (url: URL): RoomRoute | null => {
   }
 }
 
-const statusForError = (error: CommandError): number => {
-  switch (error.code) {
-    case 'game_not_found':
-    case 'missing_entity':
-      return 404
-    case 'not_allowed':
-      return 403
-    case 'stale_command':
-    case 'wrong_room':
-    case 'game_exists':
-    case 'duplicate_entity':
-      return 409
-    case 'projection_mismatch':
-      return 500
-    default:
-      return 400
-  }
-}
-
-const serializeMessage = (message: ServerMessage): string =>
-  JSON.stringify(message)
-
-const activityPayload = (
-  liveActivities: readonly LiveActivityDescriptor[],
-  state: GameState,
-  viewer: GameViewer
-) =>
-  liveActivities.length === 0
-    ? {}
-    : {
-        liveActivities: filterLiveActivitiesForViewer(
-          liveActivities,
-          state,
-          viewer
-        )
-      }
-
 const MAX_COMMAND_BODY_BYTES = 64 * 1024
 const MAX_TEST_SEED_BODY_BYTES = 1024
 const MAX_WEBSOCKET_MESSAGE_BYTES = 64 * 1024
@@ -110,35 +68,6 @@ const MAX_COMMANDS_PER_WINDOW = 40
 const encoder = new TextEncoder()
 
 const byteLength = (value: string): number => encoder.encode(value).length
-
-const revealAtMsForActivity = (
-  activity: LiveActivityDescriptor
-): number | null => {
-  const revealAt =
-    activity.type === 'diceRoll'
-      ? activity.reveal.revealAt
-      : activity.reveal?.revealAt
-  if (!revealAt) return null
-
-  const parsed = Date.parse(revealAt)
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-const nextRevealBroadcastAtMs = (
-  state: GameState,
-  liveActivities: readonly LiveActivityDescriptor[],
-  nowMs = Date.now()
-): number | null => {
-  const candidates = [
-    ...state.diceLog.map((roll) => Date.parse(roll.revealAt)),
-    ...liveActivities.flatMap((activity) => {
-      const revealAt = revealAtMsForActivity(activity)
-      return revealAt === null ? [] : [revealAt]
-    })
-  ].filter((revealAt) => Number.isFinite(revealAt) && revealAt > nowMs)
-
-  return candidates.length === 0 ? null : Math.min(...candidates)
-}
 
 const isLocalTestHost = (hostname: string): boolean =>
   hostname === 'localhost' ||
@@ -152,16 +81,19 @@ export class GameRoomDO {
     windowMs: RATE_LIMIT_WINDOW_MS,
     maxCommandsPerWindow: MAX_COMMANDS_PER_WINDOW
   })
-  private readonly revealBroadcastTimers = new Map<
-    string,
-    ReturnType<typeof setTimeout>
-  >()
+  private readonly revealScheduler: RevealBroadcastScheduler
 
   constructor(
     private readonly state: DurableObjectState,
     _env: Env,
     private readonly publicationTelemetrySink: PublicationTelemetrySink = noopPublicationTelemetrySink
-  ) {}
+  ) {
+    this.revealScheduler = createRevealBroadcastScheduler({
+      storage: this.state.storage,
+      broadcastState: (state, liveActivities) =>
+        this.broadcastState(state, liveActivities)
+    })
+  }
 
   private getWebSockets(): WebSocket[] {
     return this.state.getWebSockets?.() ?? []
@@ -173,59 +105,6 @@ export class GameRoomDO {
 
   private send(socket: WebSocket, message: ServerMessage): void {
     socket.send(serializeMessage(message))
-  }
-
-  private scheduleRevealBroadcast(
-    state: GameState,
-    liveActivities: readonly LiveActivityDescriptor[] = []
-  ): void {
-    const revealAtMs = nextRevealBroadcastAtMs(state, liveActivities)
-    if (revealAtMs === null) return
-
-    const key = `${state.id}:${revealAtMs}`
-    if (this.revealBroadcastTimers.has(key)) return
-
-    const timer = setTimeout(
-      () => {
-        this.revealBroadcastTimers.delete(key)
-        void getProjectedGameState(this.state.storage, state.id).then(
-          (projectedState) => {
-            if (projectedState) {
-              this.broadcastState(projectedState, liveActivities)
-            }
-          }
-        )
-      },
-      Math.max(0, revealAtMs - Date.now() + 20)
-    )
-
-    ;(timer as { unref?: () => void }).unref?.()
-    this.revealBroadcastTimers.set(key, timer)
-  }
-
-  private async scheduleRevealBroadcastForGame(gameId: GameId): Promise<void> {
-    const projectedState = await getProjectedGameState(
-      this.state.storage,
-      gameId
-    )
-    if (projectedState) {
-      this.scheduleRevealBroadcast(projectedState)
-    }
-  }
-
-  private viewerFromSocket(socket: WebSocket): GameViewer {
-    const tags = this.getTags(socket)
-    const roleTag = tags.find((tag) => tag.startsWith('viewer:'))
-    const userTag = tags.find((tag) => tag.startsWith('user:'))
-    const role = parseViewerRole(roleTag?.slice('viewer:'.length) ?? null, {
-      allowReferee: true
-    })
-    const rawUserId = userTag?.slice('user:'.length) ?? null
-
-    return {
-      userId: parseViewerUserId(rawUserId),
-      role
-    }
   }
 
   private gameIdFromSocket(socket: WebSocket): GameId | null {
@@ -258,145 +137,30 @@ export class GameRoomDO {
       requestId: string
     }
   ): void {
-    for (const socket of this.getWebSockets()) {
-      const viewer = this.viewerFromSocket(socket)
-      const filtered = filterGameStateForViewer(state, viewer)
-
-      if (accepted && socket === accepted.socket) {
-        this.send(socket, {
-          type: 'commandAccepted',
-          requestId: accepted.requestId,
-          state: filtered,
-          eventSeq: filtered.eventSeq,
-          ...activityPayload(liveActivities, state, viewer)
-        })
-        continue
-      }
-
-      this.send(socket, {
-        type: 'roomState',
-        state: filtered,
-        eventSeq: filtered.eventSeq,
-        ...activityPayload(liveActivities, state, viewer)
-      })
-    }
-
-    this.scheduleRevealBroadcast(state, liveActivities)
+    broadcastRoomState({
+      sockets: this.getWebSockets(),
+      getTags: (socket) => this.getTags(socket),
+      send: (socket, message) => this.send(socket, message),
+      state,
+      liveActivities,
+      accepted
+    })
+    this.revealScheduler.schedule(state, liveActivities)
   }
 
   private async handleCommandMessage(
     gameId: GameId,
     message: Extract<ClientMessage, { type: 'command' }>,
     actorSessionSecret: string | null
-  ): Promise<
-    | {
-        ok: true
-        response: ServerMessage
-        state: GameState
-        liveActivities: LiveActivityDescriptor[]
-      }
-    | {
-        ok: false
-        response: ServerMessage
-        status: number
-      }
-  > {
-    const actorSession = await bindOrVerifyActorSession(
-      this.state.storage,
+  ): ReturnType<typeof handleRoomCommandMessage> {
+    return handleRoomCommandMessage({
+      storage: this.state.storage,
       gameId,
-      message.command.actorId,
-      actorSessionSecret
-    )
-    if (!actorSession.ok) {
-      return {
-        ok: false,
-        status: 403,
-        response: {
-          type: 'commandRejected',
-          requestId: message.requestId,
-          error: actorSession.error,
-          eventSeq: await getEventSeq(this.state.storage, gameId)
-        }
-      }
-    }
-
-    const rateLimit = this.commandRateLimiter.check(
-      `${gameId}:${message.command.actorId}:${message.command.type}`
-    )
-    if (!rateLimit.ok) {
-      return {
-        ok: false,
-        status: 429,
-        response: {
-          type: 'commandRejected',
-          requestId: message.requestId,
-          error: rateLimit.error,
-          eventSeq: await getEventSeq(this.state.storage, gameId)
-        }
-      }
-    }
-
-    let publication: Awaited<ReturnType<typeof runCommandPublication>>
-
-    try {
-      publication = await runCommandPublication(
-        this.state.storage,
-        gameId,
-        message,
-        {
-          telemetrySink: this.publicationTelemetrySink
-        }
-      )
-    } catch (error) {
-      if (error instanceof CommandPublicationError) {
-        return {
-          ok: false,
-          status: 500,
-          response: {
-            type: 'error',
-            error: commandError(error.code, error.message)
-          }
-        }
-      }
-
-      throw error
-    }
-
-    if (!publication.ok) {
-      const eventSeq = await getEventSeq(this.state.storage, gameId)
-
-      return {
-        ok: false,
-        status: statusForError(publication.error),
-        response: {
-          type: 'commandRejected',
-          requestId: message.requestId,
-          error: publication.error,
-          eventSeq
-        }
-      }
-    }
-
-    const viewer = viewerFromCommand(message)
-    const filtered = filterGameStateForViewer(publication.value.state, viewer)
-    const liveActivities = filterLiveActivitiesForViewer(
-      publication.value.liveActivities,
-      publication.value.state,
-      viewer
-    )
-
-    return {
-      ok: true,
-      state: publication.value.state,
-      liveActivities: publication.value.liveActivities,
-      response: {
-        type: 'commandAccepted',
-        requestId: publication.value.requestId,
-        state: filtered,
-        eventSeq: filtered.eventSeq,
-        ...(liveActivities.length === 0 ? {} : { liveActivities })
-      }
-    }
+      message,
+      actorSessionSecret,
+      commandRateLimiter: this.commandRateLimiter,
+      telemetrySink: this.publicationTelemetrySink
+    })
   }
 
   private async handleJsonMessage(
@@ -421,7 +185,7 @@ export class GameRoomDO {
     if (!decoded.ok) {
       return {
         ok: false,
-        status: statusForError(decoded.error),
+        status: statusForCommandError(decoded.error),
         message: {
           type: 'error',
           error: decoded.error
@@ -570,7 +334,7 @@ export class GameRoomDO {
 
       this.state.acceptWebSocket(server, tags)
       this.send(server, await this.buildRoomStateMessage(route.gameId, viewer))
-      await this.scheduleRevealBroadcastForGame(route.gameId)
+      await this.revealScheduler.scheduleForGame(route.gameId)
 
       return new Response(null, {
         status: 101,

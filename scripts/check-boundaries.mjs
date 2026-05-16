@@ -32,6 +32,7 @@ const isTestFile = (path) => path.endsWith('.test.ts')
 const isGeneratedFile = (path) => path.endsWith('.generated.ts')
 const rawRoomApiImportAllowed = new Set([
   'src/client/app/app.ts',
+  'src/client/app/app-client.ts',
   'src/client/app/room/command-dispatch.ts'
 ])
 const legacyCreationHistoryReadAllowed = new Set([
@@ -156,6 +157,20 @@ for (const path of sourceFiles) {
         /\b(deriveDefaultCareerCreation(?:PendingDecisions|ActionContext|CascadeSkillChoices|ActionPlan)|deriveDefaultLegalCareerCreation(?:Actions|ActionKeysForProjection)|projectDefaultCareerCreationActionPlan)\b/,
       message:
         'production code must pass the resolved room ruleset into character creation planners'
+    })
+  }
+
+  if (
+    !isTestFile(path) &&
+    path !== 'src/shared/character-creation/cepheus-srd-ruleset.ts'
+  ) {
+    checkLinePattern({
+      path,
+      lines,
+      pattern:
+        /import\s+\{[^}]*\bresolveRulesetById\b[^}]*\}\s+from\s+['"].*cepheus-srd-ruleset(?:\.js)?['"]/,
+      message:
+        'production code must use the ruleset provider boundary instead of importing resolveRulesetById directly'
     })
   }
 }
