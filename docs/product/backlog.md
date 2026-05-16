@@ -1061,7 +1061,8 @@ Tasks:
 
 - Keep failed-qualification routing on the semantic qualification, Draft,
   Drifter, and career-term events; the old local draft fallback is no longer a
-  production path.
+  production path. Drifter fallback now also fails closed when the active
+  ruleset does not define Drifter.
 - Keep the direct `StartCharacterCareerTerm` path referee-only while the normal
   player path goes through qualification, Draft, Drifter fallback, or other
   explicit legal actions. The direct referee path now also validates requested

@@ -86,7 +86,9 @@ const createState = (
 
 const context = (
   creation: CharacterCreationProjection | null,
-  overrides: Partial<Pick<CommandContext, 'gameSeed' | 'nextSeq'>> = {}
+  overrides: Partial<
+    Pick<CommandContext, 'gameSeed' | 'nextSeq' | 'ruleset'>
+  > = {}
 ): CommandContext => ({
   state: createState(creation),
   currentSeq: 1,
@@ -669,6 +671,46 @@ describe('character creation setup command handlers', () => {
       result.error.message,
       'Only the referee can start character career terms directly'
     )
+  })
+
+  it('rejects Drifter fallback when the active ruleset does not define Drifter', () => {
+    const ruleset = structuredClone(CEPHEUS_SRD_RULESET)
+    delete ruleset.careerBasics.Drifter
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'EnterCharacterCreationDrifter',
+        gameId,
+        actorId,
+        characterId,
+        option: 'Drifter'
+      },
+      context(
+        createCreation('CAREER_SELECTION', {
+          failedToQualify: true,
+          failedQualification: {
+            career: 'Scout',
+            passed: false,
+            qualification: {
+              expression: '2d6',
+              rolls: [2, 3],
+              total: 5,
+              characteristic: 'int',
+              modifier: 0,
+              target: 6,
+              success: false
+            },
+            previousCareerCount: 0,
+            failedQualificationOptions: ['Drifter']
+          }
+        }),
+        { ruleset }
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'Career Drifter is not supported')
   })
 
   it('emits qualification roll facts from career selection', () => {

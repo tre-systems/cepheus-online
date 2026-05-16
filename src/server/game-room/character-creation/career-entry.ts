@@ -404,6 +404,12 @@ export const deriveCareerEntryCommandEvents = (
       if (command.option !== 'Drifter') {
         return err(commandError('invalid_command', 'option must be Drifter'))
       }
+      const selectable = validateCareerCanBeSelected(
+        creation.value,
+        context.ruleset,
+        'Drifter'
+      )
+      if (!selectable.ok) return selectable
 
       const nextState = transitionCareerCreationState(creation.value.state, {
         type: 'SELECT_CAREER',
