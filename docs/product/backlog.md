@@ -138,6 +138,9 @@ preserve them rather than re-plan them.
   `deriveCharacterCreationViewModel()` as the public export while model types,
   projection/action helpers, read-model step builders, and local-flow wizard
   builders live in focused modules.
+- Character creation view type contracts live in `view-types.ts` and are
+  re-exported from `view.ts`; keep renderer and model code importing the public
+  `view.ts` surface unless they are extending the type boundary itself.
 - Architecture diagrams live in `docs/diagrams/` as Graphviz/DOT sources with
   committed PNG renders, and ADR 0007 owns event/ruleset version policy.
 
