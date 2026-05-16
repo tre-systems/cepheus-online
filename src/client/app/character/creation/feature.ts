@@ -23,7 +23,6 @@ import { createCharacterCreationController } from './controller.js'
 import { createCharacterCreationDomController } from './dom.js'
 import type { CharacterCreationDraft } from './flow.js'
 import { createCharacterCreationFinalizationController } from './finalization.js'
-import { readModelFollowFlowFromCharacter } from './follow.js'
 import { createCharacterCreationHomeworldPublisher } from './homeworld-publisher.js'
 import { createCharacterCreationLifecycleController } from './lifecycle.js'
 import { createCharacterCreationPanel } from './panel.js'
@@ -263,17 +262,6 @@ export const createCharacterCreationFeature = ({
     fallbackState: ReturnType<typeof getState>
   ): boolean => {
     if (lifecycleController.openFollow(characterId, options)) return true
-    const fallbackCharacter = fallbackState?.characters[characterId] ?? null
-    if (fallbackCharacter?.creation?.state.status === 'CHARACTERISTICS') {
-      const fallbackFlow = readModelFollowFlowFromCharacter(fallbackCharacter)
-      controller.setFlow(fallbackFlow)
-      controller.setSelectedCharacterId(characterId)
-      controller.setReadOnly(options?.readOnly ?? true)
-      panel.open()
-      renderWizard()
-      panel.scrollToTop()
-      return true
-    }
     const fallbackFlow = controller.syncFlowFromRoomState(
       fallbackState,
       characterId

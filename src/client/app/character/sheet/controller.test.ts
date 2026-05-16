@@ -532,6 +532,25 @@ describe('character sheet controller', () => {
     findByText(harness.elements.sheetBody, 'Latest')
     findByText(harness.elements.sheetBody, 'Completed')
     findByText(harness.elements.sheetBody, 'Final Character')
+    const finalCard = findAll(
+      harness.elements.sheetBody,
+      (candidate) => candidate.className === 'sheet-final-card'
+    )[0]
+    if (!finalCard) throw new Error('Expected final character summary card')
+    assert.equal(
+      findAll(
+        finalCard,
+        (candidate) => candidate.className === 'sheet-final-stat'
+      ).length,
+      6
+    )
+    assert.deepEqual(
+      findAll(
+        finalCard,
+        (candidate) => candidate.className === 'sheet-final-skill-chip'
+      ).map((candidate) => candidate.textContent),
+      ['Broker-2', 'Recon-0', 'Vacc Suit-0']
+    )
     findByText(harness.elements.sheetBody, 'Homeworld')
     findByText(harness.elements.sheetBody, 'Unspecified')
     findByText(harness.elements.sheetBody, 'Characteristics')

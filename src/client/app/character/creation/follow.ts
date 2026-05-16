@@ -5,7 +5,6 @@ import type {
   GameState
 } from '../../../../shared/state'
 import type { CharacterCreationFlow } from './flow.js'
-import { createInitialCharacterDraft } from './flow.js'
 import { compatibilityFlowFromProjectedCharacter } from './projection.js'
 
 export const projectedCharacterCreation = (
@@ -13,45 +12,6 @@ export const projectedCharacterCreation = (
   characterId: CharacterId
 ): CharacterCreationProjection | null =>
   state?.characters[characterId]?.creation ?? null
-
-export const readModelFollowFlowFromCharacter = (
-  character: CharacterState
-): CharacterCreationFlow | null => {
-  const creation = character.creation
-  if (!creation) return null
-
-  if (creation.state.status === 'CHARACTERISTICS') {
-    return {
-      step: 'characteristics',
-      draft: createInitialCharacterDraft(character.id, {
-        characterType: character.type,
-        name: character.name,
-        characteristics: character.characteristics
-      })
-    }
-  }
-
-  if (creation.state.status === 'HOMEWORLD') {
-    return {
-      step: 'homeworld',
-      draft: createInitialCharacterDraft(character.id, {
-        characterType: character.type,
-        name: character.name,
-        age: character.age,
-        characteristics: character.characteristics,
-        homeworld: creation.homeworld ?? undefined,
-        backgroundSkills: creation.backgroundSkills ?? [],
-        pendingCascadeSkills: creation.pendingCascadeSkills ?? [],
-        skills: character.skills,
-        equipment: character.equipment,
-        credits: character.credits,
-        notes: character.notes
-      })
-    }
-  }
-
-  return null
-}
 
 const readModelFollowStatuses = new Set([
   'CHARACTERISTICS',

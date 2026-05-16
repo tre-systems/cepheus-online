@@ -406,7 +406,31 @@ export const createCharacterSheetController = ({
     meta.textContent = `${exportView.type} - Age ${exportView.age} - ${exportView.terms} ${exportView.terms === 1 ? 'term' : 'terms'}`
     const career = documentApi.createElement('p')
     career.textContent = exportView.careers
-    card.append(title, upp, meta, career)
+    const stats = documentApi.createElement('div')
+    stats.className = 'sheet-final-stat-grid'
+    for (const row of characteristicRows(character)) {
+      const stat = documentApi.createElement('span')
+      stat.className = 'sheet-final-stat'
+      const label = documentApi.createElement('small')
+      label.textContent = row.label
+      const value = documentApi.createElement('strong')
+      value.textContent = row.value
+      const modifier = documentApi.createElement('em')
+      modifier.textContent = row.modifierLabel || '0'
+      stat.append(label, value, modifier)
+      stats.append(stat)
+    }
+    const skills = sortSkillsForExport(character?.skills ?? [])
+    const skillList = documentApi.createElement('div')
+    skillList.className = 'sheet-final-skill-list'
+    for (const skill of skills) {
+      const chip = documentApi.createElement('span')
+      chip.className = 'sheet-final-skill-chip'
+      chip.textContent = skill
+      skillList.append(chip)
+    }
+    card.append(title, upp, meta, career, stats)
+    if (skills.length > 0) card.append(skillList)
 
     body.append(
       sheetSectionTitle('Final Character'),
