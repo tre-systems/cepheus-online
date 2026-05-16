@@ -8,6 +8,7 @@ export interface ActiveCreationSummary {
   ownerId: CharacterState['ownerId']
   status: string
   statusLabel: string
+  followerProgressLabel: string
   rolledCharacteristics: number
   terms: number
 }
@@ -61,6 +62,7 @@ export const activeCreationSummaries = (
       ownerId: creation.ownerId,
       status: creation.status,
       statusLabel: creation.statusLabel,
+      followerProgressLabel: creation.follower.progressLabel,
       rolledCharacteristics: creation.rolledCharacteristicCount,
       terms: creation.termCount
     })
@@ -195,7 +197,7 @@ export const createCreationPresenceDock = ({
         name.textContent = summary.name
 
         const detail = document.createElement('span')
-        detail.textContent = `${summary.statusLabel} · ${summary.rolledCharacteristics}/6 stats · ${summary.terms} terms`
+        detail.textContent = `${summary.followerProgressLabel} · ${summary.rolledCharacteristics}/6 stats · ${summary.terms} terms`
 
         const owner = document.createElement('small')
         owner.textContent = summary.ownerId

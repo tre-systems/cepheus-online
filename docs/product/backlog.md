@@ -1457,7 +1457,8 @@ The next batch should run like this, in this order:
    Done: the shared character-creation read model now exposes a compact
    follower summary derived from semantic timeline entries and per-term facts,
    including latest event metadata, active career, term status, rank, skill
-   count, and benefit count.
+   count, and benefit count. The presence dock now consumes the shared follower
+   progress label instead of reconstructing creation progress locally.
 7. Harden the SRD term loop in browser automation: repeated refreshes, mobile
    layouts, and multi-term continuation.
 8. Keep optional mishap tables behind an explicit variant; default failed

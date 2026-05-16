@@ -102,6 +102,7 @@ describe('creation presence dock helpers', () => {
         ownerId: asUserId('owner'),
         status: 'HOMEWORLD',
         statusLabel: 'Homeworld',
+        followerProgressLabel: 'Homeworld; term 1: Scout',
         rolledCharacteristics: 2,
         terms: 1
       }
@@ -162,10 +163,70 @@ describe('creation presence dock helpers', () => {
         ownerId: asUserId('owner'),
         status: 'DECEASED',
         statusLabel: 'Deceased',
+        followerProgressLabel: 'Deceased; term 1: Scout',
         rolledCharacteristics: 2,
         terms: 1
       }
     ])
+  })
+
+  it('renders follower progress labels from the shared read model', () => {
+    const previousDocument = globalThis.document
+    globalThis.document = testDocument as unknown as Document
+    const active = character(
+      'active',
+      {
+        state: { status: 'MUSTERING_OUT', context: creationContext },
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: ['Scout Cash'],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false
+          }
+        ],
+        careers: [],
+        canEnterDraft: false,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false
+      },
+      'local-user'
+    )
+    const dock = new TestNode('section') as unknown as HTMLElement
+    const characterCreator = new TestNode('aside') as unknown as HTMLElement
+    const sheet = new TestNode('aside') as unknown as HTMLElement
+    characterCreator.hidden = true
+
+    const controller = createCreationPresenceDock({
+      elements: {
+        dock,
+        characterCreator,
+        sheet
+      },
+      getRoomId: () => 'game',
+      getActorId: () => 'local-user',
+      openCharacterCreationFollow: () => undefined,
+      localStorage: new MapStorage()
+    })
+
+    try {
+      controller.render(gameState({ active }))
+
+      const card = (dock as unknown as TestNode).children[1]?.children[0]
+      const detail = card?.children[1]
+      assert.equal(
+        detail?.textContent,
+        'Mustering Out; term 1: Scout · 2/6 stats · 1 terms'
+      )
+    } finally {
+      globalThis.document = previousDocument
+    }
   })
 
   it('auto-opens a single remote active creation read-only', () => {
