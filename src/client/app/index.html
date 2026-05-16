@@ -85,6 +85,15 @@
         <button id="pwaInstallDismissButton" class="pwa-install-dismiss" type="button" aria-label="Dismiss install prompt">×</button>
       </div>
 
+      <div id="pwaUpdatePrompt" class="pwa-install-prompt pwa-update-prompt" role="status" aria-live="polite" hidden>
+        <div>
+          <strong>Update ready</strong>
+          <span data-pwa-update-message>A new version is ready.</span>
+        </div>
+        <button id="pwaUpdateButton" type="button">Refresh</button>
+        <button id="pwaUpdateDismissButton" class="pwa-install-dismiss" type="button" aria-label="Dismiss update prompt">×</button>
+      </div>
+
       <aside class="character-sheet" id="characterSheet" aria-label="Character sheet">
         <header class="sheet-header">
           <div>

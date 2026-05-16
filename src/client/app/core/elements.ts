@@ -69,6 +69,9 @@ export interface AppElements {
   pwaInstallPrompt: HTMLElement | null
   pwaInstallButton: HTMLButtonElement | null
   pwaInstallDismissButton: HTMLButtonElement | null
+  pwaUpdatePrompt: HTMLElement | null
+  pwaUpdateButton: HTMLButtonElement | null
+  pwaUpdateDismissButton: HTMLButtonElement | null
   initiativeRail: HTMLElement | null
   sheet: HTMLElement | null
   sheetButton: HTMLButtonElement | null
@@ -158,6 +161,9 @@ export const getAppElements = (document: AppElementsDocument): AppElements => ({
   pwaInstallPrompt: getElement(document, 'pwaInstallPrompt'),
   pwaInstallButton: getElement(document, 'pwaInstallButton'),
   pwaInstallDismissButton: getElement(document, 'pwaInstallDismissButton'),
+  pwaUpdatePrompt: getElement(document, 'pwaUpdatePrompt'),
+  pwaUpdateButton: getElement(document, 'pwaUpdateButton'),
+  pwaUpdateDismissButton: getElement(document, 'pwaUpdateDismissButton'),
   initiativeRail: getElement(document, 'initiativeRail'),
   sheet: getElement(document, 'characterSheet'),
   sheetButton: getElement(document, 'sheetButton'),

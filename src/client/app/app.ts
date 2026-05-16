@@ -54,9 +54,14 @@ import { createCharacterSheetControlsWiring } from './character/sheet/controls-w
 import { createRoomBootstrapScene } from './room/bootstrap-scene.js'
 import { createBoardDoorActions } from './board/doors.js'
 
-registerAppShellServiceWorker()
-
 const els = requireAppElements(getAppElements(document))
+const appShell = createAppShell({ elements: els })
+const serviceWorkerController = registerAppShellServiceWorker({
+  onUpdateStateChange: (updateState) => {
+    appShell.pwaUpdate.render(updateState)
+  }
+})
+appShell.pwaUpdate.setServiceWorker(serviceWorkerController)
 
 const initialIdentity = resolveAppLocationIdentity(location.search)
 let roomId = initialIdentity.roomId
@@ -80,8 +85,6 @@ const setStatus = (text: string): void => {
 const setError = (text: string): void => {
   els.error.textContent = text || ''
 }
-
-createAppShell({ elements: els })
 
 const requestId = createRequestIdFactory()
 

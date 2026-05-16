@@ -6,6 +6,7 @@ import type { PwaUpdateEvent, PwaUpdateState } from './update-state'
 
 class FakeServiceWorker {
   state: ServiceWorkerState = 'installing'
+  messages: unknown[] = []
   private readonly listeners: Array<(event: Event) => void> = []
 
   addEventListener(
@@ -20,6 +21,10 @@ class FakeServiceWorker {
     for (const listener of this.listeners) {
       listener(new Event('statechange'))
     }
+  }
+
+  postMessage(message: unknown): void {
+    this.messages.push(message)
   }
 }
 
@@ -329,6 +334,36 @@ describe('client service worker registration', () => {
       { status: 'installedWaiting' },
       { status: 'idle' }
     ])
+  })
+
+  it('activates a waiting update only after user acceptance', async () => {
+    const serviceWorker = new FakeServiceWorkerTarget(true)
+    const waitingWorker = new FakeServiceWorker()
+    serviceWorker.registration.waiting =
+      waitingWorker as unknown as ServiceWorker
+
+    const controller = registerClientServiceWorker({
+      navigatorLike: { serviceWorker } as unknown as Navigator,
+      locationLike: { reload: () => {} }
+    })
+
+    await flushPromises()
+
+    assert.equal(controller?.acceptUpdate?.(), true)
+    assert.deepEqual(controller?.getUpdateState(), { status: 'refreshing' })
+    assert.deepEqual(waitingWorker.messages, [{ type: 'SKIP_WAITING' }])
+  })
+
+  it('does not accept an update when no waiting worker is available', () => {
+    const serviceWorker = new FakeServiceWorkerTarget(true)
+
+    const controller = registerClientServiceWorker({
+      navigatorLike: { serviceWorker } as unknown as Navigator,
+      locationLike: { reload: () => {} }
+    })
+
+    assert.equal(controller?.acceptUpdate?.(), false)
+    assert.deepEqual(controller?.getUpdateState(), { status: 'idle' })
   })
 
   it('reports registration failures through update state', async () => {

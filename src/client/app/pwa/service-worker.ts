@@ -55,6 +55,7 @@ export interface ServiceWorkerControllerOptions {
 
 export interface ServiceWorkerController {
   getUpdateState: () => PwaUpdateState
+  acceptUpdate?: () => boolean
   checkForUpdate?: () => void
   dispose?: () => void
 }
@@ -203,6 +204,20 @@ export const registerClientServiceWorker = ({
 
   return {
     getUpdateState: updateState.getState,
+    acceptUpdate: () => {
+      const waitingWorker = registration?.waiting ?? null
+      const nextState = updateState.dispatch({ type: 'userAcceptedRefresh' })
+      if (nextState.status !== 'refreshing') return false
+      if (!waitingWorker) {
+        updateState.dispatch({
+          type: 'failure',
+          message: 'No waiting service worker update is available'
+        })
+        return false
+      }
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' })
+      return true
+    },
     checkForUpdate: () => {
       if (registration) requestServiceWorkerUpdate(registration)
     },

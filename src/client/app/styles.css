@@ -1027,6 +1027,10 @@ h1 {
   display: none;
 }
 
+.pwa-update-prompt {
+  bottom: calc(max(10px, env(safe-area-inset-bottom)) + 72px);
+}
+
 .pwa-install-prompt strong,
 .pwa-install-prompt span {
   display: block;
