@@ -171,6 +171,7 @@ const board = (): BoardState => ({
 
 const createHarness = (options: {
   selectedPiece: PieceState | null
+  selectedCharacter?: CharacterState | null
   state: GameState | null
   doorActions?: TestElement | null
   canEditSheetFields?: boolean
@@ -218,6 +219,7 @@ const createHarness = (options: {
     },
     document: documentApi as unknown as Document,
     getSelectedPiece: () => options.selectedPiece,
+    getSelectedCharacter: () => options.selectedCharacter ?? null,
     getSelectedBoard: () => board(),
     getCharacterState: () => options.state,
     canEditSheetFields: () => options.canEditSheetFields ?? true,
@@ -328,6 +330,24 @@ describe('character sheet controller', () => {
         patch: { skills: ['Pilot-1', 'Recon-0', 'Vacc Suit-0'] }
       }
     ])
+  })
+
+  it('renders skill actions for a selected character without a board token', () => {
+    const scout = character()
+    const harness = createHarness({
+      selectedPiece: null,
+      selectedCharacter: scout,
+      state: gameState({ [characterId]: scout })
+    })
+
+    harness.controller.selectTab('action')
+
+    assert.equal(harness.elements.sheetName.textContent, 'Scout')
+    findByText(harness.elements.sheetBody, 'Roll')
+    const recon = findByText(harness.elements.sheetBody, 'Recon-0')
+    recon.click()
+    assert.deepEqual(harness.calls.rolls, ['Scout: Recon-0'])
+    findByText(harness.elements.sheetBody, 'No board token selected')
   })
 
   it('sends stat editor patches when canonical sheet fields are editable', () => {

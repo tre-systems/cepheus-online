@@ -115,10 +115,10 @@ export const skillsFromText = (value: string): string[] =>
     .filter(Boolean)
 
 export const skillRollReason = (
-  piece: Pick<PieceState, 'name'>,
+  piece: Pick<PieceState, 'name'> | null | undefined,
   character: Pick<CharacterState, 'name'> | null | undefined,
   skill: string
-) => `${character?.name || piece.name}: ${skill}`
+) => `${character?.name || piece?.name || 'Traveller'}: ${skill}`
 
 export const skillRollExpression = (skill: string): string => {
   const parsed = /-(-?\d+)$/.exec(skill.trim())

@@ -77,7 +77,7 @@ export interface CharacterSheetControllerOptions {
   ) => Promise<unknown>
   setFreedom: (piece: PieceState, freedom: PieceFreedom) => Promise<unknown>
   rollSkill: (
-    piece: PieceState,
+    piece: PieceState | null,
     character: CharacterState | null,
     skill: string,
     reason: string
@@ -539,6 +539,32 @@ export const createCharacterSheetController = ({
     return form
   }
 
+  const skillActionButtons = (
+    piece: PieceState | null,
+    character: CharacterState | null,
+    skills: readonly string[]
+  ) => {
+    const actions = documentApi.createElement('div')
+    actions.className = 'sheet-skill-actions'
+    for (const skill of skills) {
+      const button = documentApi.createElement('button')
+      button.type = 'button'
+      button.textContent = skill
+      button.addEventListener('click', () => {
+        handleAsyncError(
+          rollSkill(
+            piece,
+            character,
+            skill,
+            skillRollReason(piece, character, skill)
+          )
+        )
+      })
+      actions.append(button)
+    }
+    return actions
+  }
+
   const renderDetailsTab = (
     body: HTMLElement,
     piece: PieceState,
@@ -594,25 +620,8 @@ export const createCharacterSheetController = ({
       return
     }
 
-    const actions = documentApi.createElement('div')
-    actions.className = 'sheet-skill-actions'
+    const actions = skillActionButtons(piece, character, skills)
     body.append(sheetSectionTitle('Roll'))
-    for (const skill of skills) {
-      const button = documentApi.createElement('button')
-      button.type = 'button'
-      button.textContent = skill
-      button.addEventListener('click', () => {
-        handleAsyncError(
-          rollSkill(
-            piece,
-            character,
-            skill,
-            skillRollReason(piece, character, skill)
-          )
-        )
-      })
-      actions.append(button)
-    }
     const editor = skillEditor(piece, character, skills)
     if (editor)
       body.append(
@@ -829,9 +838,14 @@ export const createCharacterSheetController = ({
   ) => {
     appendCreationActions(body, character)
     const skills = displayedCharacterSkills(character)
-    if (skills.length > 0) {
-      body.append(sheetSectionTitle('Skills'), skillChips(skills))
+    if (skills.length === 0) {
+      body.append(emptySheetText(characterSheetEmptyLabels.noTrainedSkills))
+      return
     }
+    body.append(
+      sheetSectionTitle('Roll'),
+      skillActionButtons(null, character, skills)
+    )
     body.append(emptySheetText('No board token selected'))
   }
 

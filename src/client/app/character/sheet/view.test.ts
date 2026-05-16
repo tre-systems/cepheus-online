@@ -211,6 +211,11 @@ describe('character sheet view helpers', () => {
       skillRollReason(piece(), character(), 'Recon-0'),
       'Scout: Recon-0'
     )
+    assert.equal(
+      skillRollReason(null, character(), 'Recon-0'),
+      'Scout: Recon-0'
+    )
+    assert.equal(skillRollReason(null, null, 'Recon-0'), 'Traveller: Recon-0')
     assert.equal(skillRollExpression('Recon-0'), '2d6')
     assert.equal(skillRollExpression('Pilot-1'), '2d6+1')
     assert.equal(skillRollExpression('Unskilled--3'), '2d6-3')
