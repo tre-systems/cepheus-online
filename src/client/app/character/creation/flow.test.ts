@@ -1,7 +1,12 @@
 import * as assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 
-import { CEPHEUS_SRD_RULESET } from '../../../../shared/character-creation/cepheus-srd-ruleset'
+import {
+  CEPHEUS_SRD_RULESET,
+  decodeCepheusRuleset,
+  type CepheusRuleset
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import { asCharacterId, asGameId, asUserId } from '../../../../shared/ids'
 import type { GameState } from '../../../../shared/state'
 import {
@@ -63,6 +68,25 @@ const identity = {
 }
 
 const characterId = asCharacterId('mustering-out-scout')
+
+const loadCustomRulesetFixture = (): CepheusRuleset => {
+  const decoded = decodeCepheusRuleset(
+    JSON.parse(
+      readFileSync(
+        'src/shared/character-creation/__fixtures__/custom-ruleset.json',
+        'utf8'
+      )
+    )
+  )
+
+  if (!decoded.ok) {
+    throw new Error(decoded.error.join('; '))
+  }
+
+  return decoded.value
+}
+
+const customRuleset = loadCustomRulesetFixture()
 
 const state = {
   id: identity.gameId,
@@ -793,6 +817,107 @@ describe('character creation flow', () => {
     assert.equal(flow.draft.careerPlan?.rankTitle, 'Third Officer')
     assert.equal(flow.draft.careerPlan?.rankBonusSkill, 'Piloting')
     assert.deepEqual(flow.draft.skills, ['Piloting-1'])
+  })
+
+  it('uses the flow ruleset for legacy career roll helpers', () => {
+    let flow = createCharacterCreationFlow(
+      characterId,
+      {
+        name: 'Iona Vesh',
+        characteristics: completeDraft().characteristics,
+        careerPlan: selectCharacterCreationCareerPlan('Courier')
+      },
+      { ruleset: customRuleset }
+    )
+    flow = { ...flow, step: 'career' }
+
+    flow = applyCharacterCreationCareerRoll(flow, 5).flow
+
+    assert.equal(flow.draft.careerPlan?.qualificationRoll, 5)
+    assert.equal(flow.draft.careerPlan?.qualificationPassed, true)
+
+    flow = applyCharacterCreationCareerRoll(flow, 6).flow
+
+    assert.equal(flow.draft.careerPlan?.survivalRoll, 6)
+    assert.equal(flow.draft.careerPlan?.survivalPassed, true)
+
+    flow = applyCharacterCreationCareerRoll(flow, 8).flow
+
+    assert.equal(flow.draft.careerPlan?.advancementRoll, 8)
+    assert.equal(flow.draft.careerPlan?.advancementPassed, true)
+    assert.deepEqual(
+      deriveCharacterCreationTermSkillTableActions(flow).map(
+        ({ table, reason }) => ({ table, reason })
+      ),
+      [
+        {
+          table: 'personalDevelopment',
+          reason: 'Iona Vesh Courier personal development'
+        },
+        {
+          table: 'serviceSkills',
+          reason: 'Iona Vesh Courier service skills'
+        },
+        {
+          table: 'specialistSkills',
+          reason: 'Iona Vesh Courier specialist skills'
+        },
+        {
+          table: 'advancedEducation',
+          reason: 'Iona Vesh Courier advanced education'
+        }
+      ]
+    )
+  })
+
+  it('uses the flow ruleset when skipping optional career rolls', () => {
+    const flow: CharacterCreationFlow = {
+      step: 'career',
+      ruleset: customRuleset,
+      draft: createInitialCharacterDraft(
+        characterId,
+        {
+          name: 'Iona Vesh',
+          characteristics: completeDraft().characteristics,
+          completedTerms: [
+            {
+              career: 'Courier',
+              drafted: false,
+              age: 22,
+              rank: 1,
+              qualificationRoll: 5,
+              survivalRoll: 6,
+              survivalPassed: true,
+              canCommission: false,
+              commissionRoll: null,
+              commissionPassed: null,
+              canAdvance: true,
+              advancementRoll: 8,
+              advancementPassed: true,
+              termSkillRolls: [
+                { table: 'serviceSkills' as const, roll: 1, skill: 'Survey' }
+              ],
+              reenlistmentRoll: 7,
+              reenlistmentOutcome: 'allowed'
+            }
+          ],
+          careerPlan: selectCharacterCreationCareerPlan('Courier', {
+            qualificationRoll: 12,
+            qualificationPassed: true,
+            survivalRoll: 8,
+            survivalPassed: true,
+            canCommission: false,
+            canAdvance: true
+          })
+        },
+        { ruleset: customRuleset }
+      )
+    }
+
+    const result = skipCharacterCreationCareerRoll(flow)
+
+    assert.equal(result.flow.draft.careerPlan?.advancementRoll, -1)
+    assert.equal(result.flow.draft.careerPlan?.advancementPassed, false)
   })
 
   it('lets optional commission and advancement rolls be skipped', () => {

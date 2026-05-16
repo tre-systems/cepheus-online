@@ -1374,7 +1374,10 @@ export const deriveCharacterCreationTermSkillTableActions = (
   ) {
     return []
   }
-  const career = findCareerDefinition(plan.career)
+  const career = findCareerDefinition(
+    plan.career,
+    characterCreationRuleset(flow)
+  )
   if (!career) return []
 
   return (
@@ -1898,10 +1901,14 @@ export const applyCharacterCreationCareerRoll = (
     return { flow, validation, moved: false }
   }
 
-  const updatedDraft = applyCharacterCreationCareerPlan(flow.draft, {
-    ...flow.draft.careerPlan,
-    [action.key]: roll
-  })
+  const updatedDraft = applyCharacterCreationCareerPlan(
+    flow.draft,
+    {
+      ...flow.draft.careerPlan,
+      [action.key]: roll
+    },
+    characterCreationRuleset(flow)
+  )
   const rewardSkill = updatedDraft.careerPlan?.rankBonusSkill ?? null
   const rankedDraft =
     rewardSkill && ['commissionRoll', 'advancementRoll'].includes(action.key)
@@ -1949,10 +1956,14 @@ export const skipCharacterCreationCareerRoll = (
 
   const updatedFlow = {
     ...flow,
-    draft: applyCharacterCreationCareerPlan(flow.draft, {
-      ...flow.draft.careerPlan,
-      [action.key]: -1
-    })
+    draft: applyCharacterCreationCareerPlan(
+      flow.draft,
+      {
+        ...flow.draft.careerPlan,
+        [action.key]: -1
+      },
+      characterCreationRuleset(flow)
+    )
   }
   return {
     flow: updatedFlow,

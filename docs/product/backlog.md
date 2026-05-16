@@ -1046,7 +1046,9 @@ remaining work is to tighten the browser affordances around failed
 qualification and draft fallback, and to keep improving presentation around
 career entry. The final plain export now includes qualification target/DM,
 previous-career penalty, draft table-roll provenance, and projected
-basic-training / term-skill roll provenance.
+basic-training / term-skill roll provenance. Legacy client flow helpers now
+use the active flow ruleset for career rolls, optional roll skips, and term
+skill table actions instead of silently falling back to the bundled SRD data.
 
 Tasks:
 
