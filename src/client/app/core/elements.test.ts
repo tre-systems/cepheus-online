@@ -47,6 +47,7 @@ const elementIds = {
   localAssetMetadataInput: 'localAssetMetadataInput',
   loadLocalAssets: 'loadLocalAssetsButton',
   boardAssetSelect: 'boardAssetSelect',
+  boardLosSidecarInput: 'boardLosSidecarInput',
   useBoardAsset: 'useBoardAssetButton',
   counterAssetSelect: 'counterAssetSelect',
   useCounterAsset: 'useCounterAssetButton',

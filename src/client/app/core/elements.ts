@@ -43,6 +43,7 @@ export interface AppElements {
   localAssetMetadataInput: HTMLTextAreaElement | null
   loadLocalAssets: HTMLButtonElement | null
   boardAssetSelect: HTMLSelectElement | null
+  boardLosSidecarInput: HTMLTextAreaElement | null
   useBoardAsset: HTMLButtonElement | null
   counterAssetSelect: HTMLSelectElement | null
   useCounterAsset: HTMLButtonElement | null
@@ -135,6 +136,7 @@ export const getAppElements = (document: AppElementsDocument): AppElements => ({
   localAssetMetadataInput: getElement(document, 'localAssetMetadataInput'),
   loadLocalAssets: getElement(document, 'loadLocalAssetsButton'),
   boardAssetSelect: getElement(document, 'boardAssetSelect'),
+  boardLosSidecarInput: getElement(document, 'boardLosSidecarInput'),
   useBoardAsset: getElement(document, 'useBoardAssetButton'),
   counterAssetSelect: getElement(document, 'counterAssetSelect'),
   useCounterAsset: getElement(document, 'useCounterAssetButton'),

@@ -155,6 +155,7 @@ const createHarness = (initialState: GameState | null = gameState()) => {
     localAssetMetadataInput: new FakeInput(),
     loadLocalAssets: new FakeTarget(),
     boardAssetSelect: new FakeSelect(),
+    boardLosSidecarInput: new FakeInput(),
     useBoardAsset: new FakeTarget(),
     counterAssetSelect: new FakeSelect(),
     useCounterAsset: new FakeTarget(),
@@ -411,6 +412,10 @@ describe('room asset creation controller', () => {
       harness.elements.localAssetStatus.textContent,
       'deck 01: 0 wall(s), 1 door(s)'
     )
+    assert.equal(
+      harness.elements.boardLosSidecarInput.value.includes('"iris-1"'),
+      true
+    )
 
     harness.elements.createBoard.dispatch('click')
     await flushAsyncListeners()
@@ -423,6 +428,118 @@ describe('room asset creation controller', () => {
     assert.equal(command.imageAssetId, 'Geomorphs/standard/deck-01.jpg')
     assert.equal(command.url, null)
     assert.equal(command.losSidecar?.occluders[0]?.id, 'iris-1')
+  })
+
+  it('uses reviewed local geomorph LOS sidecar JSON when creating a board', async () => {
+    const harness = createHarness()
+    harness.elements.localAssetMetadataInput.value = JSON.stringify({
+      assets: [
+        {
+          root: 'Geomorphs',
+          relativePath: 'standard/deck-01.jpg',
+          kind: 'geomorph',
+          width: 1000,
+          height: 1000,
+          gridScale: 50
+        }
+      ],
+      losSidecars: [
+        {
+          assetRef: 'Geomorphs/standard/deck-01.jpg',
+          width: 1000,
+          height: 1000,
+          gridScale: 50,
+          occluders: [
+            {
+              type: 'door',
+              id: 'iris-1',
+              x1: 400,
+              y1: 300,
+              x2: 480,
+              y2: 300,
+              open: false
+            }
+          ]
+        }
+      ]
+    })
+
+    harness.elements.loadLocalAssets.dispatch('click')
+    harness.elements.boardAssetSelect.value = 'Geomorphs/standard/deck-01.jpg'
+    harness.elements.useBoardAsset.dispatch('click')
+    harness.elements.boardLosSidecarInput.value = JSON.stringify({
+      assetRef: 'Geomorphs/standard/deck-01.jpg',
+      width: 1000,
+      height: 1000,
+      gridScale: 50,
+      occluders: [
+        {
+          type: 'door',
+          id: 'iris-1',
+          x1: 400,
+          y1: 300,
+          x2: 480,
+          y2: 300,
+          open: true
+        },
+        {
+          type: 'wall',
+          id: 'wall-1',
+          x1: 100,
+          y1: 100,
+          x2: 200,
+          y2: 100
+        }
+      ]
+    })
+
+    harness.elements.createBoard.dispatch('click')
+    await flushAsyncListeners()
+
+    const command = harness.boardCommands[0]
+    assert.equal(command?.type, 'CreateBoard')
+    if (command?.type !== 'CreateBoard') {
+      throw new Error('Expected a CreateBoard command')
+    }
+    assert.equal(command.losSidecar?.occluders.length, 2)
+    assert.deepEqual(command.losSidecar?.occluders[0], {
+      type: 'door',
+      id: 'iris-1',
+      x1: 400,
+      y1: 300,
+      x2: 480,
+      y2: 300,
+      open: true
+    })
+  })
+
+  it('rejects invalid reviewed LOS sidecar JSON before creating a board', async () => {
+    const harness = createHarness()
+    harness.elements.localAssetMetadataInput.value = JSON.stringify({
+      assets: [
+        {
+          root: 'Geomorphs',
+          relativePath: 'standard/deck-01.jpg',
+          kind: 'geomorph',
+          width: 1000,
+          height: 1000,
+          gridScale: 50
+        }
+      ]
+    })
+
+    harness.elements.loadLocalAssets.dispatch('click')
+    harness.elements.boardAssetSelect.value = 'Geomorphs/standard/deck-01.jpg'
+    harness.elements.useBoardAsset.dispatch('click')
+    harness.elements.boardLosSidecarInput.value = '{broken'
+    harness.elements.createBoard.dispatch('click')
+    await flushAsyncListeners()
+
+    assert.deepEqual(harness.errors.filter(Boolean), [
+      'LOS sidecar JSON is invalid'
+    ])
+    assert.deepEqual(harness.boardCommands, [])
+    assert.equal(harness.elements.boardLosSidecarInput.focused, true)
   })
 
   it('preserves selected geomorph metadata when a renderable board image file is supplied', async () => {

@@ -1,5 +1,9 @@
 import type { GameCommand } from '../../../../shared/commands'
 import type { CharacterId, PieceId } from '../../../../shared/ids'
+import {
+  validateMapLosSidecar,
+  type MapLosSidecar
+} from '../../../../shared/mapAssets'
 import type {
   BoardState,
   GameState,
@@ -52,6 +56,7 @@ export interface RoomAssetCreationElements {
   localAssetMetadataInput: HTMLTextAreaElement
   loadLocalAssets: HTMLButtonElement
   boardAssetSelect: HTMLSelectElement
+  boardLosSidecarInput: HTMLTextAreaElement
   useBoardAsset: HTMLButtonElement
   counterAssetSelect: HTMLSelectElement
   useCounterAsset: HTMLButtonElement
@@ -327,6 +332,7 @@ export const createRoomAssetCreationController = ({
 
     elements.loadLocalAssets.disabled = !canPick
     elements.localAssetMetadataInput.disabled = !canPick
+    elements.boardLosSidecarInput.disabled = !canPick
     elements.useBoardAsset.disabled = !canPick || boardItems.length === 0
     elements.useCounterAsset.disabled = !canPick || counterItems.length === 0
 
@@ -361,6 +367,7 @@ export const createRoomAssetCreationController = ({
   const loadLocalAssetMetadata = (): void => {
     reportError('')
     selectedBoardAssetId = null
+    elements.boardLosSidecarInput.value = ''
     assetPickerViewModel = deriveMapAssetPickerViewModel(
       parseLocalAssetMetadataCandidates(elements.localAssetMetadataInput.value),
       parseLocalAssetLosSidecarCandidates(
@@ -387,6 +394,9 @@ export const createRoomAssetCreationController = ({
     elements.boardWidthInput.value = String(defaults.width)
     elements.boardHeightInput.value = String(defaults.height)
     elements.boardScaleInput.value = String(defaults.scale)
+    elements.boardLosSidecarInput.value = item.losSidecar
+      ? JSON.stringify(item.losSidecar, null, 2)
+      : ''
     elements.localAssetStatus.textContent = item.losSummary
       ? `${defaults.name}: ${item.losSummary.label}`
       : `${defaults.name}: no LOS sidecar`
@@ -398,6 +408,46 @@ export const createRoomAssetCreationController = ({
       ? (selectedAssetItem(assetPickerViewModel, imageAssetId)?.losSidecar ??
         null)
       : null
+
+  const reviewedBoardLosSidecar = (
+    imageAssetId: string | null
+  ):
+    | { ok: true; value: MapLosSidecar | null }
+    | { ok: false; error: string } => {
+    const rawSidecar = elements.boardLosSidecarInput.value.trim()
+    if (!rawSidecar) {
+      return { ok: true, value: selectedBoardLosSidecar(imageAssetId) }
+    }
+    if (!imageAssetId) {
+      return {
+        ok: false,
+        error: 'Select a board asset before using a LOS sidecar'
+      }
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(rawSidecar)
+    } catch {
+      return { ok: false, error: 'LOS sidecar JSON is invalid' }
+    }
+
+    const result = validateMapLosSidecar(parsed)
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: `LOS sidecar is invalid: ${result.error.join(', ')}`
+      }
+    }
+    if (result.value.assetRef !== imageAssetId) {
+      return {
+        ok: false,
+        error: 'LOS sidecar assetRef must match the selected board asset'
+      }
+    }
+
+    return { ok: true, value: result.value }
+  }
 
   const applySelectedCounterAsset = (): void => {
     const item = selectedAssetItem(
@@ -457,6 +507,12 @@ export const createRoomAssetCreationController = ({
         : hasBoardFile
           ? selectedBoardAssetId
           : null
+    const losSidecar = reviewedBoardLosSidecar(imageAssetId)
+    if (!losSidecar.ok) {
+      reportError(losSidecar.error)
+      elements.boardLosSidecarInput.focus()
+      return
+    }
 
     await postBoardCommand({
       type: 'CreateBoard',
@@ -465,7 +521,7 @@ export const createRoomAssetCreationController = ({
       name,
       imageAssetId,
       url: imageUrl,
-      losSidecar: selectedBoardLosSidecar(imageAssetId),
+      losSidecar: losSidecar.value,
       width: parsePositiveIntegerInput(elements.boardWidthInput, 1200),
       height: parsePositiveIntegerInput(elements.boardHeightInput, 800),
       scale: parsePositiveIntegerInput(elements.boardScaleInput, 50)
@@ -474,6 +530,7 @@ export const createRoomAssetCreationController = ({
     elements.boardNameInput.value = ''
     elements.boardImageInput.value = ''
     elements.boardImageFileInput.value = ''
+    elements.boardLosSidecarInput.value = ''
     selectedBoardAssetId = null
     elements.roomDialog.close()
     requestRender()

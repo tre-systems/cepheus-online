@@ -2859,6 +2859,7 @@ h1 {
 }
 
 .local-asset-metadata-field,
+.local-asset-los-field,
 .local-asset-actions,
 .local-asset-use-actions {
   grid-column: 1 / -1;

@@ -74,6 +74,7 @@ export const createRoomAssetCreationWiring = ({
       localAssetMetadataInput: elements.localAssetMetadataInput,
       loadLocalAssets: elements.loadLocalAssets,
       boardAssetSelect: elements.boardAssetSelect,
+      boardLosSidecarInput: elements.boardLosSidecarInput,
       useBoardAsset: elements.useBoardAsset,
       counterAssetSelect: elements.counterAssetSelect,
       useCounterAsset: elements.useCounterAsset,
