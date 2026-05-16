@@ -1304,8 +1304,12 @@ describe('character creation view model', () => {
     assert.equal(viewModel.wizard?.mishapResolution, null)
     assert.equal(viewModel.wizard?.injuryResolution?.title, 'Merchant injury')
     assert.equal(
+      viewModel.wizard?.injuryResolution?.message,
+      'Injured in action. Treat as injury table result 2, or roll twice and take the lower result. Resolve this injury before mustering out.'
+    )
+    assert.equal(
       viewModel.wizard?.injuryResolution?.choiceHint,
-      'Choose the physical characteristic that takes the 1D6 loss.'
+      'Severely injured: choose the physical characteristic that loses 1D6.'
     )
     assert.deepEqual(
       viewModel.wizard?.injuryResolution?.targets.map((target) => [

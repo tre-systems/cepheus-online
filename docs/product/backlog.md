@@ -1153,7 +1153,10 @@ Tasks:
 
 - Keep injury details after failed anagathics survival mishaps visible through
   mustering/export and improve the creator/follower explanation of
-  characteristic losses.
+  characteristic losses. Done: the injury resolution panel now includes the
+  projected mishap description and labels severe/nearly-killed losses with the
+  exact physical characteristic loss semantics before the player chooses a
+  target.
 - Keep aging modifier, legal aging-loss choice, and characteristic-change
   provenance regression coverage healthy as new branches are added.
 - Polish reenlistment UI/provenance for mandatory retirement after seven terms,

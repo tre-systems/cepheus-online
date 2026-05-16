@@ -17,8 +17,10 @@ const testDocument =
 const severeInjuryViewModel =
   (): CharacterCreationInjuryResolutionViewModel => ({
     title: 'Merchant injury',
-    message: 'Resolve this injury before mustering out.',
-    choiceHint: 'Choose the physical characteristic that takes the 1D6 loss.',
+    message:
+      'Injured in action. Treat as injury table result 2, or roll twice and take the lower result. Resolve this injury before mustering out.',
+    choiceHint:
+      'Severely injured: choose the physical characteristic that loses 1D6.',
     targets: [
       { characteristic: 'str', label: 'Strength', value: '7', modifier: '+0' },
       { characteristic: 'dex', label: 'Dexterity', value: '8', modifier: '+0' },
@@ -53,7 +55,7 @@ describe('character creation injury resolution view', () => {
     assert.equal(node.children[0]?.textContent, 'Merchant injury')
     assert.equal(
       node.children[2]?.textContent,
-      'Choose the physical characteristic that takes the 1D6 loss.'
+      'Severely injured: choose the physical characteristic that loses 1D6.'
     )
     assert.equal(node.children[2]?.className, 'creation-injury-choice-hint')
     assert.equal(node.children[3]?.className, 'creation-term-actions')

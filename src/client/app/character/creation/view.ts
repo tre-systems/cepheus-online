@@ -1537,16 +1537,16 @@ const injuryChoiceHint = (
   >
 ): string => {
   if (injury.type === 'roll') {
-    return 'Choose the characteristic to use if the injury table result needs a loss target.'
+    return 'Roll the injury table first. If the result needs a loss target, choose the affected physical characteristic here.'
   }
   if (injury.injuryRoll === 1) {
-    return 'Choose the primary characteristic for the 1D6 loss; remaining physical losses are applied by the rules.'
+    return 'Nearly killed: choose the first physical characteristic to lose 1D6. The other two physical characteristics each lose 1D6 by the rules.'
   }
   if (injury.injuryRoll === 2) {
-    return 'Choose the physical characteristic that takes the 1D6 loss.'
+    return 'Severely injured: choose the physical characteristic that loses 1D6.'
   }
   if (injury.injuryRoll === 3) {
-    return 'Choose whether Strength or Dexterity takes the -2 loss.'
+    return 'Missing eye or limb: choose whether Strength or Dexterity takes the -2 loss.'
   }
 
   return 'Choose the physical characteristic that takes the permanent loss.'
@@ -1564,7 +1564,8 @@ export const deriveCharacterCreationInjuryResolutionViewModel = (
 ): CharacterCreationInjuryResolutionViewModel | null => {
   if (available === false || flow.step !== 'career' || !projection) return null
   const term = projection.terms.at(-1)
-  const injury = term?.facts?.mishap?.outcome.injury
+  const mishap = term?.facts?.mishap
+  const injury = mishap?.outcome.injury
   if (!term || !injury || term.facts?.injury) return null
 
   const targets = injuryTargetKeys(projection)
@@ -1581,8 +1582,8 @@ export const deriveCharacterCreationInjuryResolutionViewModel = (
     title: `${career} injury`,
     message:
       injury.type === 'roll'
-        ? 'Roll the injury table and choose where any permanent loss applies.'
-        : 'Resolve this injury before mustering out.',
+        ? `${mishap.outcome.description} Roll the injury table, then choose where any permanent loss applies.`
+        : `${mishap.outcome.description} Resolve this injury before mustering out.`,
     choiceHint: injuryChoiceHint(injury),
     targets: targets.map((characteristic) => {
       const definition = characteristicDefinitions.find(
