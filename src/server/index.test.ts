@@ -194,6 +194,7 @@ describe('Worker static client', () => {
     assert.equal(sw.includes('cepheus-online-__BUILD_HASH__'), false)
     assert.equal(sw.includes('cepheus-online-'), true)
     assert.equal(sw.includes('SW_UPDATED'), true)
+    assert.equal(sw.includes('SKIP_WAITING'), true)
     assert.equal(/event\.request\.mode\s*===\s*['"]navigate['"]/.test(sw), true)
     assert.equal(sw.includes('fetch(event.request)'), true)
     assert.equal(sw.includes('/rooms/'), true)

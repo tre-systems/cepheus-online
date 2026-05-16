@@ -259,7 +259,7 @@ await step('health endpoints', async () => {
 
 await step('shell assets', async () => {
   const assets = [
-    ['/', 'text/html', 'Cepheus Online'],
+    ['/', 'text/html', ['Cepheus Online', 'pwaUpdatePrompt']],
     ['/client.js', 'text/javascript', 'import "/client/app/app.js"'],
     ['/client/app/app.js', 'text/javascript', 'registerClientServiceWorker'],
     ['/styles.css', 'text/css', '.app-shell']
@@ -314,6 +314,7 @@ await step('manifest, icons, and service worker', async () => {
   assert(swResponse.ok, 'sw.js did not load')
   assert(sw.includes('/rooms/'), 'service worker must bypass room routes')
   assert(sw.includes('/health'), 'service worker must bypass health routes')
+  assert(sw.includes('SKIP_WAITING'), 'service worker must support accepted updates')
 })
 
 let eventSeq = 0
