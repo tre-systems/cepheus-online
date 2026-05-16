@@ -146,6 +146,20 @@ describe('creation activity view model', () => {
     ])
   })
 
+  it('does not derive transient cards from redacted pre-reveal activity', () => {
+    const activities: readonly LiveActivityDescriptor[] = [
+      characterActivity({
+        seq: 22,
+        transition: 'PENDING_REVEAL',
+        details: undefined,
+        status: 'ACTIVE',
+        creationComplete: false
+      })
+    ]
+
+    assert.deepEqual(deriveCreationActivityCards(activities), [])
+  })
+
   it('labels semantic characteristic completion as assigned characteristics', () => {
     assert.deepEqual(
       deriveCreationActivityCard(
