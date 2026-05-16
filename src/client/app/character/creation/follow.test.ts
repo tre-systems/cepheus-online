@@ -126,6 +126,22 @@ describe('character creation follow helpers', () => {
     assert.equal(fallback, fallbackFlow)
   })
 
+  it('does not preserve stale current flow when an authoritative response lacks projection', () => {
+    const staleFlow = {
+      ...fallbackFlow,
+      step: 'career' as const
+    }
+
+    const synced = syncCharacterCreationFlowFromRoomState({
+      currentFlow: staleFlow,
+      roomState: stateWithCreation(null),
+      characterId,
+      fallbackFlow: null
+    })
+
+    assert.equal(synced, null)
+  })
+
   it('replaces stale local editable flow after the server projection advances', () => {
     const staleHomeworldFlow = {
       ...fallbackFlow,

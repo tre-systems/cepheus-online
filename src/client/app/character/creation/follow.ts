@@ -6,7 +6,6 @@ import type {
 } from '../../../../shared/state'
 import type { CharacterCreationFlow } from './flow.js'
 import { flowFromProjectedCharacterReadModel } from './model.js'
-import { compatibilityFlowFromProjectedCharacter } from './projection.js'
 
 export const projectedCharacterCreation = (
   state: GameState | null,
@@ -53,11 +52,12 @@ export const syncCharacterCreationFlowFromRoomState = ({
 }): CharacterCreationFlow | null => {
   const projectedCharacter = roomState?.characters?.[characterId] ?? null
   const projectedFlow = projectedCharacter
-    ? (flowFromProjectedCharacterReadModel(projectedCharacter) ??
-      compatibilityFlowFromProjectedCharacter(projectedCharacter))
+    ? flowFromProjectedCharacterReadModel(projectedCharacter)
     : null
+  if (projectedFlow) return projectedFlow
+  if (!roomState) return fallbackFlow ?? currentFlow
 
-  return projectedFlow ?? fallbackFlow ?? currentFlow
+  return fallbackFlow
 }
 
 export interface FollowedCharacterCreationRefresh {

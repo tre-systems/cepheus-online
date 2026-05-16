@@ -17,7 +17,6 @@ import {
   shouldRefreshEditableCharacterCreationFlow,
   syncCharacterCreationFlowFromRoomState
 } from './follow.js'
-import { compatibilityFlowFromProjectedCharacter } from './projection.js'
 import { shouldSyncEditableCharacterCreationFlowWithProjection } from './sync.js'
 import {
   deriveCharacterCreationViewModel,
@@ -144,8 +143,7 @@ export const createCharacterCreationController = ({
       }
       const nextFlow = nextReadOnly
         ? null
-        : (flowFromProjectedCharacterReadModel(character) ??
-          compatibilityFlowFromProjectedCharacter(character))
+        : flowFromProjectedCharacterReadModel(character)
       if (!nextReadOnly && !nextFlow) return null
 
       batch(() => {
