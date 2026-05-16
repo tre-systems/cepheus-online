@@ -1439,6 +1439,9 @@ The next batch should run like this, in this order:
 4. Plan and execute the viewer filtering/reveal timing slice: one filtering
    contract for HTTP, WebSocket, replay/reconnect, and activity history, with
    reveal-boundary coverage for every roll-bearing creation action.
+   Done: character creation activity filtering now treats future explicit
+   reveal metadata as roll-dependent even when a descriptor has no details,
+   so transition, status, and completion fields fail closed until reveal.
 5. Extend the automated UX regression slice before more broad creator polish:
    grow the repeat runner when new SRD branches are added, keep later-term
    two-tab spectator follow checks healthy, add mobile viewport assertions for

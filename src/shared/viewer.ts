@@ -84,8 +84,8 @@ const legacyRollDependentCreationTransitions = new Set<string>([
 const hasRollDependentCreationDetails = (
   activity: CharacterCreationActivityDescriptor
 ): boolean =>
-  activity.details !== undefined &&
-  (activity.reveal !== undefined ||
+  activity.reveal !== undefined ||
+  (activity.details !== undefined &&
     legacyRollDependentCreationTransitions.has(activity.transition))
 
 const isFutureCharacterCreationReveal = (

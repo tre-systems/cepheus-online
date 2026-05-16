@@ -2460,6 +2460,49 @@ describe('viewer filtering', () => {
     })
   })
 
+  it('redacts future reveal activity metadata even when details are omitted', () => {
+    const state = buildState()
+    const activities = buildLiveActivities()
+    const creationActivity = activities[1]
+
+    assert.equal(creationActivity?.type, 'characterCreation')
+    if (creationActivity?.type !== 'characterCreation') return
+
+    creationActivity.transition = 'ADVANCEMENT_PASSED'
+    delete creationActivity.details
+    creationActivity.status = 'ADVANCEMENT'
+    creationActivity.creationComplete = true
+    creationActivity.reveal = {
+      rollEventId: asEventId('game-1:3'),
+      revealAt: futureRevealAt,
+      delayMs: 2500
+    }
+
+    const filtered = filterLiveActivitiesForViewer(
+      activities,
+      state,
+      {
+        userId: asUserId('player'),
+        role: 'PLAYER'
+      },
+      { nowMs }
+    )
+
+    const filteredCreationActivity = filtered[1]
+
+    assert.equal(filteredCreationActivity?.type, 'characterCreation')
+    if (filteredCreationActivity?.type !== 'characterCreation') return
+    assert.equal('details' in filteredCreationActivity, false)
+    assert.equal(filteredCreationActivity.transition, 'PENDING_REVEAL')
+    assert.equal(filteredCreationActivity.status, 'ACTIVE')
+    assert.equal(filteredCreationActivity.creationComplete, false)
+    assert.deepEqual(filteredCreationActivity.reveal, {
+      rollEventId: asEventId('game-1:3'),
+      revealAt: futureRevealAt,
+      delayMs: 2500
+    })
+  })
+
   it('keeps legacy characteristic completion details safe before fallback reveal', () => {
     const state = buildState()
     const activities = buildLiveActivities(
