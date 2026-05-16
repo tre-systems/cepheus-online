@@ -51,6 +51,9 @@ export const syncCharacterCreationFlowFromRoomState = ({
   fallbackFlow?: CharacterCreationFlow | null
 }): CharacterCreationFlow | null => {
   const projectedCharacter = roomState?.characters?.[characterId] ?? null
+  if (projectedCharacter?.creation?.state.status === 'CHARACTERISTICS') {
+    return null
+  }
   const projectedFlow = projectedCharacter
     ? flowFromProjectedCharacterReadModel(projectedCharacter)
     : null

@@ -20,7 +20,10 @@ import {
   type CharacterCreationFlow,
   type CharacterCreationTermSkillTable
 } from './flow.js'
-import { deriveCharacterCreationCharacteristicRollButton } from './view.js'
+import {
+  characteristicDefinitions,
+  deriveCharacterCreationCharacteristicRollButton
+} from './view.js'
 
 export interface CharacterCreationCommandResponse {
   state: GameState | null
@@ -61,6 +64,7 @@ export interface CharacterCreationCommandController {
 
 export interface CharacterCreationCommandControllerDeps {
   getFlow: () => CharacterCreationFlow | null
+  getSelectedCharacterId?: () => CharacterCreationFlow['draft']['characterId'] | null
   setFlow: (flow: CharacterCreationFlow | null) => void
   setError: (message: string) => void
   isReadOnly: () => boolean
@@ -95,6 +99,20 @@ const latestDiceRoll = (
 
 const diceRollHasVisibleResult = (roll: DiceRollState): boolean =>
   Array.isArray(roll.rolls) && typeof roll.total === 'number'
+
+const nextProjectedCharacteristicRoll = (
+  state: GameState | null,
+  characterId: CharacterCreationFlow['draft']['characterId']
+): CharacteristicKey | null => {
+  const character = state?.characters[characterId] ?? null
+  if (character?.creation?.state.status !== 'CHARACTERISTICS') return null
+
+  return (
+    characteristicDefinitions.find(
+      ({ key }) => character.characteristics[key] === null
+    )?.key ?? null
+  )
+}
 
 const syncAcceptedProjectionAndRender = (
   {
@@ -174,6 +192,7 @@ export const createCharacterCreationCommandController = (
 ): CharacterCreationCommandController => {
   const {
     getFlow,
+    getSelectedCharacterId = () => null,
     setFlow,
     setError,
     isReadOnly,
@@ -222,13 +241,18 @@ export const createCharacterCreationCommandController = (
 
     const revealedState = await stateAfterDiceReveal(response, roll)
     const flow = getFlow()
-    if (!flow) return false
+    const characterId = flow?.draft.characterId ?? getSelectedCharacterId()
+    if (!characterId) return false
     const syncedFlow = syncFlowFromRoomState(
       revealedState,
-      flow.draft.characterId,
+      characterId,
       null
     )
-    if (!syncedFlow) {
+    const syncedCreation =
+      revealedState?.characters?.[characterId]?.creation ??
+      getState()?.characters?.[characterId]?.creation ??
+      null
+    if (!syncedFlow && !syncedCreation) {
       setError('Waiting for character projection; refresh and try again')
       return false
     }
@@ -270,16 +294,22 @@ export const createCharacterCreationCommandController = (
     },
 
     rollCharacteristic: async (characteristicKey = null) => {
-      const flow = guardEditableFlow()
-      if (!flow) return
+      if (isReadOnly()) return
+      const flow = getFlow()
+      const characterId = flow?.draft.characterId ?? getSelectedCharacterId()
+      if (!characterId) return
       setError('')
-      syncFields()
+      if (flow) syncFields()
 
-      const rollAction = deriveCharacterCreationCharacteristicRollButton(flow)
-      if (!rollAction) return
+      if (flow) {
+        const rollAction = deriveCharacterCreationCharacteristicRollButton(flow)
+        if (!rollAction) return
+      }
       const targetKey =
         characteristicKey ??
-        deriveNextCharacterCreationCharacteristicRoll(flow)?.key ??
+        (flow
+          ? deriveNextCharacterCreationCharacteristicRoll(flow)?.key
+          : nextProjectedCharacteristicRoll(getState(), characterId)) ??
         null
 
       if (!targetKey) {
@@ -292,7 +322,7 @@ export const createCharacterCreationCommandController = (
         {
           type: 'RollCharacterCreationCharacteristic',
           ...commandIdentity(),
-          characterId: flow.draft.characterId,
+          characterId,
           characteristic: targetKey
         },
         requestId('characteristic-roll')

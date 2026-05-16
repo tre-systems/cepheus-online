@@ -158,6 +158,9 @@ export const createCharacterCreationController = ({
     syncFlowFromRoomState: (roomState, characterId, fallbackFlow = null) => {
       batch(() => {
         bumpProjectionRevision()
+        if (roomState?.characters?.[characterId]?.creation) {
+          selectedCharacterId.value = characterId
+        }
         flow.value = syncCharacterCreationFlowFromRoomState({
           currentFlow: flow.value,
           roomState,

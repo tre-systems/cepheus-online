@@ -593,6 +593,94 @@ describe('character creation command controller', () => {
     assert.equal(scrollCount, 1)
   })
 
+  it('rolls a characteristic from projected creation without a local flow', async () => {
+    const flow = characteristicFlow()
+    let state = stateWithDiceAndCharacter(diceRoll(8), {
+      id: flow.draft.characterId,
+      ownerId: actorId,
+      type: 'PLAYER',
+      name: flow.draft.name,
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: null,
+        dex: null,
+        end: null,
+        int: null,
+        edu: null,
+        soc: null
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'CHARACTERISTICS',
+          context: { canCommission: false, canAdvance: false }
+        },
+        terms: [],
+        careers: [],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false,
+        homeworld: null,
+        backgroundSkills: [],
+        pendingCascadeSkills: [],
+        history: []
+      }
+    })
+    const commands: CharacterCreationCommand[] = []
+    const syncedCharacterIds: string[] = []
+    let syncFieldsCount = 0
+
+    const controller = createCharacterCreationCommandController({
+      getFlow: () => null,
+      getSelectedCharacterId: () => flow.draft.characterId,
+      setFlow: () => {},
+      setError: () => {},
+      isReadOnly: () => false,
+      syncFields: () => {
+        syncFieldsCount += 1
+      },
+      getState: () => state,
+      flushHomeworldProgress: async () => {},
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async (command) => {
+        commands.push(command)
+        return { state }
+      },
+      commandIdentity: () => ({ gameId, actorId }),
+      requestId: (scope) => scope,
+      waitForDiceRevealOrDelay: async () => {},
+      syncFlowFromRoomState: (nextState, characterId) => {
+        state = nextState ?? state
+        syncedCharacterIds.push(characterId)
+        return syncProjectedFlow({
+          currentFlow: null,
+          state,
+          characterId
+        })
+      },
+      autoAdvanceSetup: () => false,
+      renderWizard: () => {},
+      scrollToTop: () => {}
+    })
+
+    await controller.rollCharacteristic()
+
+    assert.equal(syncFieldsCount, 0)
+    assert.equal(commands[0]?.type, 'RollCharacterCreationCharacteristic')
+    assert.equal(
+      commands[0]?.type === 'RollCharacterCreationCharacteristic'
+        ? commands[0].characteristic
+        : null,
+      'str'
+    )
+    assert.deepEqual(syncedCharacterIds, [flow.draft.characterId])
+  })
+
   it('reports accepted characteristic commands without dice results', async () => {
     const errors: string[] = []
     const controller = createCharacterCreationCommandController({

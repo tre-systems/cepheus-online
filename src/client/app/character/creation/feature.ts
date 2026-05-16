@@ -339,6 +339,7 @@ export const createCharacterCreationFeature = ({
 
   commandController = createCharacterCreationCommandController({
     getFlow: () => controller.flow(),
+    getSelectedCharacterId: () => controller.selectedCharacterId(),
     setFlow: (flow) => {
       controller.setFlow(flow)
     },

@@ -135,6 +135,17 @@ describe('character creation follow helpers', () => {
     assert.equal(missingState, fallbackFlow)
   })
 
+  it('does not reconstruct a flow for read-model-backed characteristics', () => {
+    const projectedFlow = syncCharacterCreationFlowFromRoomState({
+      currentFlow: fallbackFlow,
+      roomState: stateWithCreation(creation('CHARACTERISTICS')),
+      characterId,
+      fallbackFlow
+    })
+
+    assert.equal(projectedFlow, null)
+  })
+
   it('does not preserve stale current flow when an authoritative response lacks projection', () => {
     const staleFlow = {
       ...fallbackFlow,
