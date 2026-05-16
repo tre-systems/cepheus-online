@@ -493,13 +493,20 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
     )
   }
   if (facts?.anagathicsDecision) {
-    const anagathicsCost =
-      facts.anagathicsDecision.useAnagathics && term.anagathicsCost != null
-        ? ` (Cr${term.anagathicsCost})`
+    const anagathicsCost = facts.anagathicsDecision.cost ?? term.anagathicsCost
+    const anagathicsCostDetails = [
+      anagathicsCost != null ? `Cr${anagathicsCost}` : null,
+      facts.anagathicsDecision.costRoll
+        ? `cost roll ${facts.anagathicsDecision.costRoll.total}`
+        : null
+    ].filter(Boolean)
+    const anagathicsDetail =
+      facts.anagathicsDecision.useAnagathics && anagathicsCostDetails.length > 0
+        ? ` (${anagathicsCostDetails.join('; ')})`
         : ''
     parts.push(
       facts.anagathicsDecision.useAnagathics
-        ? `used anagathics${anagathicsCost}`
+        ? `used anagathics${anagathicsDetail}`
         : 'no anagathics'
     )
   }

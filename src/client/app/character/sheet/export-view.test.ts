@@ -282,18 +282,23 @@ describe('character sheet export view', () => {
     )
   })
 
-  it('includes projected anagathics cost in term history exports', () => {
+  it('includes projected anagathics cost provenance in term history exports', () => {
     const creation = finalizedCreation()
     const term = creation.terms[0]
     term.anagathics = true
-    term.anagathicsCost = 20000
+    term.anagathicsCost = 7500
     term.facts = {
       ...term.facts,
-      anagathicsDecision: { useAnagathics: true, termIndex: 0 }
+      anagathicsDecision: {
+        useAnagathics: true,
+        termIndex: 0,
+        cost: 7500,
+        costRoll: { expression: '1d6', rolls: [3], total: 3 }
+      }
     }
 
     assert.equal(
-      /used anagathics \(Cr20000\)/.test(
+      /used anagathics \(Cr7500; cost roll 3\)/.test(
         derivePlainCharacterExport(character({ creation })) ?? ''
       ),
       true

@@ -1480,9 +1480,11 @@ The next batch should run like this, in this order:
 8. Keep optional mishap tables behind an explicit variant; default failed
    survival remains Classic Traveller-style death.
 9. Complete anagathics survival/payment edge cases, multi-career continuation
-   after mustering, final sheet/export polish, and provenance. Each slice should add
-   semantic events where needed, projection replay tests, protocol fixtures,
-   and compact activity descriptors.
+   after mustering, final sheet/export polish, and provenance. Final sheet
+   term-history exports now include anagathics cost-roll provenance when the
+   projected semantic fact carries it. Each slice should add semantic events
+   where needed, projection replay tests, protocol fixtures, and compact
+   activity descriptors.
 10. Finish live following on top of semantic facts: follower cards, dice reveal
     timing, refresh recovery, and future Discord-consumable event details.
     Done: spectator transient follower cards now include the early and
