@@ -2070,11 +2070,31 @@ describe('game state projection', () => {
       creation?.terms.map((term) => ({
         career: term.career,
         complete: term.complete,
-        musteringOut: term.musteringOut
+        musteringOut: term.musteringOut,
+        lifecycle: term.facts?.careerLifecycle
       })),
       [
-        { career: 'Scout', complete: true, musteringOut: false },
-        { career: 'Scout', complete: true, musteringOut: true }
+        {
+          career: 'Scout',
+          complete: true,
+          musteringOut: false,
+          lifecycle: {
+            type: 'continued',
+            outcome: 'allowed',
+            career: 'Scout',
+            forced: false
+          }
+        },
+        {
+          career: 'Scout',
+          complete: true,
+          musteringOut: true,
+          lifecycle: {
+            type: 'left',
+            outcome: 'blocked',
+            retirement: false
+          }
+        }
       ]
     )
     assert.equal(creation?.state.status, 'CAREER_SELECTION')

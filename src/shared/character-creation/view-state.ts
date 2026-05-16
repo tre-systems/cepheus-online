@@ -17,6 +17,7 @@ import type {
   CareerCreationStatus,
   CareerRank,
   CareerTerm,
+  CareerTermFacts,
   CharacterCreationTimelineEntry
 } from './types'
 
@@ -58,6 +59,7 @@ export interface CharacterCreationCompletedTermReadModel {
   anagathics: boolean
   anagathicsCost: number | null
   anagathicsCostRoll: number | null
+  careerLifecycle: CareerTermFacts['careerLifecycle'] | null
   age: number | null
   rank: number | null
   rankTitle: string | null
@@ -180,6 +182,9 @@ const completedTermFromSemanticFacts = (
     anagathics: facts?.anagathicsDecision?.useAnagathics ?? false,
     anagathicsCost: facts?.anagathicsDecision?.cost ?? null,
     anagathicsCostRoll: facts?.anagathicsDecision?.costRoll?.total ?? null,
+    careerLifecycle: facts?.careerLifecycle
+      ? structuredClone(facts.careerLifecycle)
+      : null,
     age: facts?.aging?.age ?? null,
     rank: rank?.newRank ?? null,
     rankTitle: rank?.title ?? null,
@@ -222,6 +227,7 @@ const completedTermFromLegacyAggregate = (
   anagathics: term.anagathics,
   anagathicsCost: term.anagathicsCost ?? null,
   anagathicsCostRoll: null,
+  careerLifecycle: null,
   age: null,
   rank: null,
   rankTitle: null,

@@ -45,6 +45,7 @@ import type {
   AgingChange,
   AgingChangeType,
   BenefitKind,
+  CareerTermCareerLifecycleFact,
   DraftTable
 } from '../../../../shared/character-creation/types.js'
 import type { Command, GameCommand } from '../../../../shared/commands'
@@ -133,6 +134,7 @@ export interface CharacterCreationCompletedTerm {
   anagathics?: boolean
   anagathicsCost?: number | null
   anagathicsCostRoll?: number | null
+  careerLifecycle?: CareerTermCareerLifecycleFact | null
   age: number | null
   rank?: number | null
   rankTitle?: string | null

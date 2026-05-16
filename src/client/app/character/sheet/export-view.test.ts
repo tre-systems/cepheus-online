@@ -126,6 +126,11 @@ const finalizedCreation = (): CharacterCreationProjection => ({
             outcome: 'allowed'
           }
         },
+        careerLifecycle: {
+          type: 'left',
+          outcome: 'allowed',
+          retirement: false
+        },
         musteringBenefits: [
           {
             career: 'Scout',
@@ -228,7 +233,7 @@ describe('character sheet export view', () => {
       equipment: 'Vacc Suit x1 (Carried)',
       ledger: [],
       careerHistory: [
-        'Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (Scout material benefit; roll 3; DM +1; table 4); term complete'
+        'Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; left career by choice; benefits Low Passage (Scout material benefit; roll 3; DM +1; table 4); term complete'
       ],
       notes: 'Detached scout.'
     })
@@ -248,7 +253,7 @@ describe('character sheet export view', () => {
         'Credits: Cr1200',
         'Equipment: Vacc Suit x1 (Carried)',
         'Career History:',
-        '- Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; benefits Low Passage (Scout material benefit; roll 3; DM +1; table 4); term complete',
+        '- Term 1: Scout - qualification passed 8 vs 6 (Int DM +1); survival passed 7 vs 7 (End DM 0); advancement passed 10 vs 8 (Edu DM +1) to rank 1 (Courier); aging 11: no effect; no anagathics; reenlistment passed 10 vs 6 (DM 0): allowed; left career by choice; benefits Low Passage (Scout material benefit; roll 3; DM +1; table 4); term complete',
         'Notes:',
         'Detached scout.'
       ].join('\n')

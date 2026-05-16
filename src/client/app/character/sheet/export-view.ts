@@ -517,6 +517,22 @@ const termHistoryLine = (term: CareerTerm, index: number): string => {
   } else if (!hasSemanticTermFacts(term) && term.reEnlistment != null) {
     parts.push(`reenlistment ${term.reEnlistment}`)
   }
+  if (facts?.careerLifecycle) {
+    const lifecycle = facts.careerLifecycle
+    if (lifecycle.type === 'continued') {
+      parts.push(
+        lifecycle.forced
+          ? `forced reenlistment in ${lifecycle.career}`
+          : `reenlisted in ${lifecycle.career}`
+      )
+    } else if (lifecycle.retirement) {
+      parts.push('retired after mandatory service limit')
+    } else if (lifecycle.outcome === 'blocked') {
+      parts.push('left career after blocked reenlistment')
+    } else {
+      parts.push('left career by choice')
+    }
+  }
   const benefits = termBenefitValue(term)
   if (benefits) parts.push(benefits)
   if (term.complete) parts.push('term complete')

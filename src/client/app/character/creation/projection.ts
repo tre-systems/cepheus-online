@@ -53,6 +53,9 @@ const completedTermFromReadModel = (
     anagathics: term.anagathics,
     anagathicsCost: term.anagathicsCost,
     anagathicsCostRoll: term.anagathicsCostRoll,
+    careerLifecycle: term.careerLifecycle
+      ? structuredClone(term.careerLifecycle)
+      : null,
     age: term.age,
     rank: term.rank,
     rankTitle: term.rankTitle,

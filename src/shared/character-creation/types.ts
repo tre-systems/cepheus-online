@@ -183,6 +183,22 @@ export interface CareerTermReenlistmentFact {
   reenlistment: CareerCreationReenlistmentFact
 }
 
+export type CareerTermCareerLifecycleFact =
+  | {
+      type: 'continued'
+      outcome: Extract<CareerCreationReenlistmentOutcome, 'forced' | 'allowed'>
+      career: string
+      forced: boolean
+    }
+  | {
+      type: 'left'
+      outcome: Extract<
+        CareerCreationReenlistmentOutcome,
+        'allowed' | 'blocked' | 'retire'
+      >
+      retirement: boolean
+    }
+
 export interface CareerTermFacts {
   qualification?: CareerTermQualificationFact
   draft?: CareerCreationDraftFact
@@ -198,6 +214,7 @@ export interface CareerTermFacts {
   mishap?: CareerTermMishapFact
   injury?: CareerTermInjuryFact
   reenlistment?: CareerTermReenlistmentFact
+  careerLifecycle?: CareerTermCareerLifecycleFact
   musteringBenefits?: CareerCreationBenefitFact[]
 }
 

@@ -4,6 +4,7 @@ import type {
   CareerCreationBenefitFact,
   CareerRank,
   CareerTerm,
+  CareerTermCareerLifecycleFact,
   CareerTermFacts
 } from '../characterCreation'
 import {
@@ -235,6 +236,30 @@ const startProjectedCareerTerm = ({
     canEnterDraft: result.canEnterDraft,
     failedToQualify: result.failedToQualify,
     failedQualification: null
+  }
+}
+
+const markLastTermCareerLifecycle = (
+  character: CharacterState,
+  lifecycle: CareerTermCareerLifecycleFact
+): void => {
+  if (!character.creation) return
+  const lastTermIndex = character.creation.terms.length - 1
+  if (lastTermIndex < 0) return
+
+  character.creation = {
+    ...character.creation,
+    terms: character.creation.terms.map((term, index) =>
+      index === lastTermIndex
+        ? {
+            ...structuredClone(term),
+            facts: {
+              ...(term.facts ? structuredClone(term.facts) : {}),
+              careerLifecycle: structuredClone(lifecycle)
+            }
+          }
+        : structuredClone(term)
+    )
   }
 }
 
@@ -1191,6 +1216,12 @@ const rawCharacterEventHandlers = {
     const character = nextState.characters[event.characterId]
     if (!character?.creation) return nextState
 
+    markLastTermCareerLifecycle(character, {
+      type: 'continued',
+      outcome: event.outcome,
+      career: event.career,
+      forced: event.forced
+    })
     startProjectedCareerTerm({
       character,
       acceptedCareer: event.career
@@ -1214,7 +1245,19 @@ const rawCharacterEventHandlers = {
 
     const lastTermIndex = character.creation.terms.length - 1
     const terms = character.creation.terms.map((term, index) =>
-      index === lastTermIndex ? leaveCareerTerm(term) : structuredClone(term)
+      index === lastTermIndex
+        ? {
+            ...leaveCareerTerm(term),
+            facts: {
+              ...(term.facts ? structuredClone(term.facts) : {}),
+              careerLifecycle: {
+                type: 'left' as const,
+                outcome: event.outcome,
+                retirement: event.retirement
+              }
+            }
+          }
+        : structuredClone(term)
     )
 
     character.creation = {

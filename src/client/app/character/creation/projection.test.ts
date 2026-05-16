@@ -439,6 +439,26 @@ describe('character creation projection helpers', () => {
     assert.equal(completedTerm.anagathicsCostRoll, 5)
   })
 
+  it('keeps career lifecycle provenance on completed projected terms', () => {
+    const completedTerm = completedTermFromProjection({
+      ...agingProjection().terms[0],
+      complete: true,
+      facts: {
+        careerLifecycle: {
+          type: 'left',
+          outcome: 'retire',
+          retirement: true
+        }
+      }
+    })
+
+    assert.deepEqual(completedTerm.careerLifecycle, {
+      type: 'left',
+      outcome: 'retire',
+      retirement: true
+    })
+  })
+
   it('hydrates an active career plan from facts before stale aggregate fields', () => {
     const creation = agingProjection([])
     const term = creation.terms[0]
@@ -644,6 +664,7 @@ describe('character creation projection helpers', () => {
         anagathics: false,
         anagathicsCost: null,
         anagathicsCostRoll: null,
+        careerLifecycle: null,
         age: null,
         rank: 1,
         rankTitle: 'Courier',

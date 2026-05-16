@@ -199,11 +199,19 @@ describe('character creation view helpers', () => {
           rankBonusSkill: 'Broker-1',
           anagathics: true,
           anagathicsCost: 20000,
-          anagathicsCostRoll: 8
+          anagathicsCostRoll: 8,
+          reenlistmentRoll: 12,
+          reenlistmentOutcome: 'forced',
+          careerLifecycle: {
+            type: 'continued',
+            outcome: 'forced',
+            career: 'Scout',
+            forced: true
+          }
         },
         0
       ),
-      '1. Scout: survived, rank Fourth Officer; rank skill Broker-1; training Pilot (1); anagathics (Cr20000; cost roll 8); aging 0 Character aged to 34.; reenlistment 7 allowed'
+      '1. Scout: survived, rank Fourth Officer; rank skill Broker-1; training Pilot (1); anagathics (Cr20000; cost roll 8); aging 0 Character aged to 34.; reenlistment 12 forced; forced reenlistment'
     )
   })
 

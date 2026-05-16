@@ -413,7 +413,19 @@ export const formatCharacterCreationCompletedTermSummary = (
       : term.reenlistmentOutcome === 'retire'
         ? '; retirement required'
         : ''
-  return `${index + 1}. ${term.career}: ${result}${commission}${advancement}${rank}${bonusSkill}${training}${anagathics}${aging}${reenlistment}`
+  const lifecycle =
+    term.careerLifecycle?.type === 'continued'
+      ? term.careerLifecycle.forced
+        ? '; forced reenlistment'
+        : '; reenlisted'
+      : term.careerLifecycle?.type === 'left'
+        ? term.careerLifecycle.retirement
+          ? '; retired'
+          : term.careerLifecycle.outcome === 'blocked'
+            ? '; reenlistment blocked'
+            : '; left career'
+        : ''
+  return `${index + 1}. ${term.career}: ${result}${commission}${advancement}${rank}${bonusSkill}${training}${anagathics}${aging}${reenlistment}${lifecycle}`
 }
 
 export interface CharacterCreationHomeworldOptionViewModel {
