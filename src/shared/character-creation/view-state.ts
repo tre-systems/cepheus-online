@@ -1,27 +1,23 @@
 import type { CharacterId, UserId } from '../ids'
 import type {
+  CharacterCharacteristics,
   CharacterCreationProjection,
   CharacterEquipmentItem,
-  CharacterState,
-  CharacterCharacteristics
+  CharacterState
 } from '../state'
 import {
-  deriveCareerCreationActionContext,
-  deriveCareerCreationActionPlan
-} from './legal-actions'
-import {
+  type CareerTermSkillRollSummary,
   deriveCareerTermSkillRollSummaries,
-  hasProjectedCareerTermFacts,
-  type CareerTermSkillRollSummary
+  hasProjectedCareerTermFacts
 } from './term-skills'
 import type {
   CareerCreationActionContext,
   CareerCreationActionPlan,
   CareerCreationReenlistmentOutcome,
   CareerCreationStatus,
-  CharacterCreationTimelineEntry,
   CareerRank,
-  CareerTerm
+  CareerTerm,
+  CharacterCreationTimelineEntry
 } from './types'
 
 export type CharacterCreationProcedureStep =
@@ -229,12 +225,37 @@ export const deriveCharacterCreationCompletedTermReadModel = (
     ? completedTermFromSemanticFacts(term)
     : completedTermFromLegacyAggregate(term)
 
+const failClosedActionPlan = ({
+  state,
+  pendingDecisions
+}: CharacterCreationProjection): CareerCreationActionPlan => ({
+  status: state.status,
+  pendingDecisions: [...(pendingDecisions ?? [])],
+  legalActions: []
+})
+
+const actionContextFromPlan = ({
+  actionPlan,
+  requiredTermSkillCount,
+  failedToQualify,
+  canEnterDraft
+}: CharacterCreationProjection & {
+  actionPlan: CareerCreationActionPlan
+}): CareerCreationActionContext => ({
+  pendingDecisions: [...actionPlan.pendingDecisions],
+  ...(requiredTermSkillCount === undefined ? {} : { requiredTermSkillCount }),
+  ...(failedToQualify === undefined ? {} : { failedToQualify }),
+  ...(canEnterDraft === undefined ? {} : { canEnterDraft })
+})
+
 export const deriveCharacterCreationProjectionReadModel = (
   creation: CharacterCreationProjection
 ): CharacterCreationProjectionReadModel => {
-  const actionContext = deriveCareerCreationActionContext(creation)
-  const actionPlan =
-    creation.actionPlan ?? deriveCareerCreationActionPlan(creation)
+  const actionPlan = creation.actionPlan ?? failClosedActionPlan(creation)
+  const actionContext = actionContextFromPlan({
+    ...creation,
+    actionPlan
+  })
   const terms = creation.terms.map(cloneTerm)
   const status = creation.state.status
 

@@ -132,6 +132,11 @@ Shared rules helpers should accept a ruleset object when behavior depends on
 tables, careers, cascade skills, homeworld options, or aging data. Keep default
 ruleset imports for convenience wrappers and legacy tests only.
 
+Projected action plans must fail closed when the room ruleset cannot be
+resolved. Do not silently substitute the default SRD ruleset for a room that
+selected another ruleset; leave legal actions empty until the selected ruleset
+data is available and decoded.
+
 ## Viewer-Aware Filtering
 
 Referee state is not just UI chrome. Hidden pieces, unrevealed maps, secret

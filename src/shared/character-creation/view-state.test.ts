@@ -3,9 +3,8 @@ import { describe, it } from 'node:test'
 
 import { asCharacterId, asEventId, asUserId } from '../ids'
 import type { CharacterCreationProjection, CharacterState } from '../state'
-import type { CareerTerm } from './types'
 import { createCareerCreationState } from './state-machine'
-import { deriveCareerCreationActionPlan } from './legal-actions'
+import type { CareerTerm } from './types'
 import {
   deriveCharacterCreationProjectionReadModel,
   deriveCharacterCreationReadModel
@@ -100,17 +99,16 @@ describe('character creation shared view state', () => {
         eventType: 'CharacterCreationHomeworldSet'
       }
     ])
-    assert.deepEqual(readModel.pendingDecisions, [
-      { key: 'homeworldSkillSelection' }
-    ])
+    assert.deepEqual(readModel.pendingDecisions, [])
     assert.deepEqual(
       readModel.actionPlan.legalActions.map((action) => action.key),
       []
     )
-    assert.deepEqual(
-      readModel.actionPlan,
-      deriveCareerCreationActionPlan(projected)
-    )
+    assert.deepEqual(readModel.actionPlan, {
+      status: 'HOMEWORLD',
+      pendingDecisions: [],
+      legalActions: []
+    })
   })
 
   it('uses a materialized projection action plan when one is present', () => {
@@ -147,13 +145,7 @@ describe('character creation shared view state', () => {
   })
 
   it('derives cascade choices through the projection read model', () => {
-    const readModel = deriveCharacterCreationProjectionReadModel(
-      projection({
-        pendingCascadeSkills: ['Gun Combat-0']
-      })
-    )
-
-    assert.deepEqual(readModel.actionPlan.cascadeSkillChoices, [
+    const cascadeSkillChoices = [
       {
         cascadeSkill: 'Gun Combat-0',
         label: 'Gun Combat',
@@ -167,7 +159,23 @@ describe('character creation shared view state', () => {
           { value: 'Slug Rifle-0', label: 'Slug Rifle', cascade: false }
         ]
       }
-    ])
+    ]
+    const readModel = deriveCharacterCreationProjectionReadModel(
+      projection({
+        pendingCascadeSkills: ['Gun Combat-0'],
+        actionPlan: {
+          status: 'HOMEWORLD',
+          pendingDecisions: [{ key: 'cascadeSkillResolution' }],
+          legalActions: [],
+          cascadeSkillChoices
+        }
+      })
+    )
+
+    assert.deepEqual(
+      readModel.actionPlan.cascadeSkillChoices,
+      cascadeSkillChoices
+    )
   })
 
   it('derives completed terms from semantic facts without legacy history', () => {

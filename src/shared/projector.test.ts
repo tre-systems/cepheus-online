@@ -1,11 +1,10 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-
+import { DEFAULT_RULESET_ID } from './character-creation/cepheus-srd-ruleset'
 import type {
   CareerCreationEvent,
   CareerCreationStatus
 } from './characterCreation'
-import { DEFAULT_RULESET_ID } from './character-creation/cepheus-srd-ruleset'
 import type { EventEnvelope } from './events'
 import {
   asBoardId,
@@ -17,6 +16,7 @@ import {
 } from './ids'
 import type { MapLosSidecar } from './mapAssets'
 import { projectGameState } from './projector'
+import { err } from './result'
 
 const gameId = asGameId('game-1')
 const actorId = asUserId('user-1')
@@ -50,6 +50,18 @@ const envelope = (
   actorId,
   createdAt: `2026-05-03T00:00:0${seq}.000Z`,
   event
+})
+
+const creationProjectionState = (
+  status: CareerCreationStatus,
+  canCommission = false,
+  canAdvance = false
+) => ({
+  status,
+  context: {
+    canCommission,
+    canAdvance
+  }
 })
 
 describe('game state projection', () => {
@@ -93,6 +105,61 @@ describe('game state projection', () => {
 
     assert.equal(defaultState?.rulesetId, DEFAULT_RULESET_ID)
     assert.equal(explicitState?.rulesetId, 'cepheus-engine-srd')
+  })
+
+  it('uses projection ruleset resolver options for character creation action plans', () => {
+    const characterId = asCharacterId('char-ruleset-options')
+    const resolvedIds: string[] = []
+
+    const state = projectGameState(
+      [
+        envelope(1, {
+          type: 'GameCreated',
+          slug: 'game-1',
+          name: 'Spinward Test',
+          ownerId: actorId,
+          rulesetId: 'custom-rules'
+        }),
+        envelope(2, {
+          type: 'CharacterCreated',
+          characterId,
+          ownerId: actorId,
+          characterType: 'PLAYER',
+          name: 'Custom Scout'
+        }),
+        envelope(3, {
+          type: 'CharacterCreationStarted',
+          characterId,
+          creation: {
+            state: creationProjectionState('HOMEWORLD'),
+            terms: [],
+            careers: [],
+            canEnterDraft: true,
+            failedToQualify: false,
+            characteristicChanges: [],
+            creationComplete: false,
+            homeworld: null,
+            backgroundSkills: [],
+            pendingCascadeSkills: [],
+            history: []
+          }
+        })
+      ],
+      null,
+      {
+        resolveRulesetById: (rulesetId) => {
+          resolvedIds.push(rulesetId ?? '')
+          return err([`Unknown ruleset id "${rulesetId}"`])
+        }
+      }
+    )
+
+    assert.deepEqual(resolvedIds, ['custom-rules'])
+    assert.deepEqual(state?.characters[characterId]?.creation?.actionPlan, {
+      status: 'HOMEWORLD',
+      pendingDecisions: [],
+      legalActions: []
+    })
   })
 
   it('projects explicit board selection over the first created board', () => {

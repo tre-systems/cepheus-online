@@ -1,3 +1,11 @@
+import { resolveRulesetById } from '../character-creation/cepheus-srd-ruleset'
+import type { CareerCreationActionPlan } from '../character-creation/types'
+import type {
+  CareerCreationBenefitFact,
+  CareerRank,
+  CareerTerm,
+  CareerTermFacts
+} from '../characterCreation'
 import {
   deriveCharacterCreationHistoryEvent,
   deriveCharacterCreationTimelineEntry,
@@ -7,26 +15,22 @@ import {
   projectCareerCreationActionPlan,
   startCareerTerm
 } from '../characterCreation'
-import {
-  CEPHEUS_SRD_RULESET,
-  resolveRulesetById
-} from '../character-creation/cepheus-srd-ruleset'
 import type { GameEvent } from '../events'
-import type {
-  CareerCreationBenefitFact,
-  CareerRank,
-  CareerTerm,
-  CareerTermFacts
-} from '../characterCreation'
-import { requireState } from './state'
-import type { EventHandler, EventHandlerMap } from './types'
 import type {
   CharacterCharacteristics,
   CharacterEquipmentItem,
-  CharacterState,
   CharacterSheetPatch,
+  CharacterState,
   GameState
 } from '../state'
+import { requireState } from './state'
+import type { EventHandler, EventHandlerMap } from './types'
+
+type CharacterCreationRulesetResolver = typeof resolveRulesetById
+
+export interface CharacterCreationProjectionOptions {
+  resolveRulesetById?: CharacterCreationRulesetResolver
+}
 
 const defaultCharacteristics = (): CharacterCharacteristics => ({
   str: null,
@@ -235,29 +239,55 @@ const startProjectedCareerTerm = ({
 }
 
 const refreshCharacterCreationActionPlans = (
-  state: GameState | null
+  state: GameState | null,
+  options: CharacterCreationProjectionOptions = {}
 ): GameState | null => {
   if (!state) return state
+  const creationCharacters = Object.values(state.characters).filter(
+    (
+      character
+    ): character is CharacterState & {
+      creation: NonNullable<CharacterState['creation']>
+    } => character.creation !== null
+  )
+  if (creationCharacters.length === 0) return state
 
-  const resolvedRuleset = resolveRulesetById(state.rulesetId)
-  const ruleset = resolvedRuleset.ok
-    ? resolvedRuleset.value
-    : CEPHEUS_SRD_RULESET
-  for (const character of Object.values(state.characters)) {
-    if (!character.creation) continue
-    character.creation = projectCareerCreationActionPlan(character.creation, {
-      characteristics: character.characteristics,
-      ruleset
-    })
+  const resolvedRuleset = (options.resolveRulesetById ?? resolveRulesetById)(
+    state.rulesetId
+  )
+  const ruleset = resolvedRuleset.ok ? resolvedRuleset.value : null
+  for (const character of creationCharacters) {
+    character.creation = ruleset
+      ? projectCareerCreationActionPlan(character.creation, {
+          characteristics: character.characteristics,
+          ruleset
+        })
+      : {
+          ...character.creation,
+          actionPlan: failClosedActionPlan(character.creation)
+        }
   }
 
   return state
 }
 
+const failClosedActionPlan = ({
+  state,
+  pendingDecisions
+}: {
+  state: { status: CareerCreationActionPlan['status'] }
+  pendingDecisions?: CareerCreationActionPlan['pendingDecisions']
+}): CareerCreationActionPlan => ({
+  status: state.status,
+  pendingDecisions: pendingDecisions ?? [],
+  legalActions: []
+})
+
 const withCharacterCreationActionPlans = <
   THandlers extends EventHandlerMap<CharacterEventType>
 >(
-  handlers: THandlers
+  handlers: THandlers,
+  options: CharacterCreationProjectionOptions = {}
 ): THandlers => {
   const wrapped = {} as THandlers
 
@@ -268,7 +298,8 @@ const withCharacterCreationActionPlans = <
       envelope: Parameters<EventHandler<GameEvent>>[1]
     ) =>
       refreshCharacterCreationActionPlans(
-        handler(state, envelope)
+        handler(state, envelope),
+        options
       )) as THandlers[typeof type]
   }
 
@@ -1472,6 +1503,8 @@ const rawCharacterEventHandlers = {
   }
 } satisfies EventHandlerMap<CharacterEventType>
 
-export const characterEventHandlers = withCharacterCreationActionPlans(
-  rawCharacterEventHandlers
-)
+export const createCharacterEventHandlers = (
+  options: CharacterCreationProjectionOptions = {}
+) => withCharacterCreationActionPlans(rawCharacterEventHandlers, options)
+
+export const characterEventHandlers = createCharacterEventHandlers()
