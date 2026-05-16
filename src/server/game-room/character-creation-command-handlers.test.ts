@@ -588,6 +588,50 @@ describe('character creation setup command handlers', () => {
     ])
   })
 
+  it('rejects direct career term starts for unsupported careers', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'StartCharacterCareerTerm',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Unsupported'
+      },
+      context(createCreation('CAREER_SELECTION'))
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(result.error.message, 'Career Unsupported is not supported')
+  })
+
+  it('rejects direct career term starts for careers unavailable after prior service', () => {
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'StartCharacterCareerTerm',
+        gameId,
+        actorId,
+        characterId,
+        career: 'Scout'
+      },
+      context(
+        createCreation('CAREER_SELECTION', {
+          terms: [completedTerm()],
+          careers: [{ name: 'Scout', rank: 0 }]
+        })
+      )
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Career Scout is not available after prior service'
+    )
+  })
+
   it('rejects direct career term starts from character owners who are not referees', () => {
     const playerId = asUserId('player-1')
     const refereeId = asUserId('referee-1')

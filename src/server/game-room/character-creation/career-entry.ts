@@ -438,6 +438,12 @@ export const deriveCareerEntryCommandEvents = (
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career
       const acceptedCareer = career.value.trim()
+      const selectable = validateCareerCanBeSelected(
+        creation.value,
+        context.ruleset,
+        acceptedCareer
+      )
+      if (!selectable.ok) return selectable
       const requestedCareer = command.drafted ? 'Draft' : acceptedCareer
       const nextState = transitionCareerCreationState(creation.value.state, {
         type: 'SELECT_CAREER',

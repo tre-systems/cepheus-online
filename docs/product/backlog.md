@@ -1064,7 +1064,9 @@ Tasks:
   production path.
 - Keep the direct `StartCharacterCareerTerm` path referee-only while the normal
   player path goes through qualification, Draft, Drifter fallback, or other
-  explicit legal actions.
+  explicit legal actions. The direct referee path now also validates requested
+  careers against the active ruleset and prior-service availability before it
+  can create a term.
 - Keep the existing browser coverage for failed qualification, Draft roll,
   Drifter fallback, and refresh recovery green as career-entry UI changes.
 - Keep tightening career-entry provenance for requested career,
