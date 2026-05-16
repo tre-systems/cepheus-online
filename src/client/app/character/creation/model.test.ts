@@ -715,6 +715,144 @@ describe('character creation view model', () => {
     )
   })
 
+  it('derives editable homeworld from the shared read model without a legacy flow', () => {
+    const currentProjection = projection('HOMEWORLD', {
+      homeworld: {
+        name: null,
+        lawLevel: 'Medium Law',
+        tradeCodes: ['Industrial']
+      },
+      backgroundSkills: ['Admin-0'],
+      pendingCascadeSkills: [],
+      actionPlan: {
+        status: 'HOMEWORLD',
+        pendingDecisions: [{ key: 'homeworldSkillSelection' }],
+        legalActions: [],
+        homeworldChoiceOptions: {
+          lawLevels: ['Medium Law'],
+          tradeCodes: ['Industrial'],
+          backgroundSkills: [
+            {
+              value: 'Admin-0',
+              label: 'Admin',
+              preselected: false,
+              cascade: false
+            }
+          ]
+        }
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: currentProjection,
+      character: character(currentProjection, {
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.mode, 'editable')
+    assert.equal(viewModel.flow, null)
+    assert.equal(viewModel.wizard?.step, 'homeworld')
+    assert.equal(viewModel.wizard?.controlsDisabled, false)
+    assert.equal(viewModel.wizard?.homeworld?.summary.lawLevel, 'Medium Law')
+    assert.deepEqual(viewModel.wizard?.homeworld?.summary.tradeCodes, [
+      'Industrial'
+    ])
+    assert.deepEqual(viewModel.wizard?.homeworld?.lawLevelOptions, [
+      { value: 'Medium Law', label: 'Medium Law', selected: true }
+    ])
+    assert.deepEqual(viewModel.wizard?.homeworld?.tradeCodeOptions, [
+      { value: 'Industrial', label: 'Industrial', selected: true }
+    ])
+    assert.deepEqual(
+      viewModel.wizard?.homeworld?.backgroundSkills.skillOptions,
+      [
+        {
+          value: 'Admin-0',
+          label: 'Admin',
+          selected: true,
+          preselected: false,
+          cascade: false
+        }
+      ]
+    )
+  })
+
+  it('preserves local editable homeworld choices until they are published', () => {
+    const currentProjection = projection('HOMEWORLD', {
+      homeworld: {
+        name: null,
+        lawLevel: null,
+        tradeCodes: []
+      },
+      backgroundSkills: [],
+      pendingCascadeSkills: [],
+      actionPlan: {
+        status: 'HOMEWORLD',
+        pendingDecisions: [{ key: 'homeworldSkillSelection' }],
+        legalActions: [],
+        homeworldChoiceOptions: {
+          lawLevels: ['No Law', 'Low Law'],
+          tradeCodes: ['Asteroid'],
+          backgroundSkills: []
+        }
+      }
+    })
+
+    const localFlow = flow({
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        homeworld: {
+          lawLevel: 'No Law',
+          tradeCodes: ['Asteroid']
+        }
+      })
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: localFlow,
+      projection: currentProjection,
+      character: character(currentProjection, {
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.step, 'homeworld')
+    assert.equal(viewModel.wizard?.homeworld?.summary.lawLevel, 'No Law')
+    assert.deepEqual(viewModel.wizard?.homeworld?.summary.tradeCodes, [
+      'Asteroid'
+    ])
+    assert.deepEqual(viewModel.wizard?.homeworld?.lawLevelOptions, [
+      { value: 'No Law', label: 'No Law', selected: true },
+      { value: 'Low Law', label: 'Low Law', selected: false }
+    ])
+  })
+
   it('derives read-only career selection from the shared read model without a legacy flow', () => {
     const currentProjection = projection('CAREER_SELECTION', {
       backgroundSkills: ['Survival-0'],

@@ -1322,37 +1322,34 @@ describe('character creation command controller', () => {
     const commands: CharacterCreationCommand[] = []
     const requestIds: string[] = []
     const syncedFallbacks: Array<CharacterCreationFlow | null> = []
-    const responseState = stateWithDiceAndCharacter(
-      diceRoll(),
-      {
-        ...projectedDraftCharacter(flow, {
-          ...projectedDraftCreation(),
-          state: {
-            status: 'REENLISTMENT',
-            context: {
-              canCommission: false,
-              canAdvance: false
-            }
-          },
-          terms: [
-            {
-              ...projectedDraftCreation().terms[0],
-              career: 'Scout',
-              anagathics: false,
-              completedBasicTraining: true,
-              skillsAndTraining: ['Pilot-1', 'Vacc Suit-1']
-            }
-          ],
-          careers: [{ name: 'Scout', rank: 0 }],
-          characteristicChanges: [],
-          history: []
-        }),
-        characteristics: {
-          ...flow.draft.characteristics,
-          str: 6
-        }
+    const responseState = stateWithDiceAndCharacter(diceRoll(), {
+      ...projectedDraftCharacter(flow, {
+        ...projectedDraftCreation(),
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            ...projectedDraftCreation().terms[0],
+            career: 'Scout',
+            anagathics: false,
+            completedBasicTraining: true,
+            skillsAndTraining: ['Pilot-1', 'Vacc Suit-1']
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        characteristicChanges: [],
+        history: []
+      }),
+      characteristics: {
+        ...flow.draft.characteristics,
+        str: 6
       }
-    )
+    })
     let published = 0
     let renderCount = 0
     let scrollCount = 0

@@ -236,11 +236,7 @@ export const createCharacterCreationCommandController = (
   }
 
   return {
-    publishTermCascadeResolution: async (
-      flow,
-      cascadeSkill,
-      selection
-    ) => {
+    publishTermCascadeResolution: async (flow, cascadeSkill, selection) => {
       if (isReadOnly() || !flow || flow.step !== 'career') return
       await ensurePublished()
       const response = await postCharacterCreationCommand(
@@ -336,11 +332,7 @@ export const createCharacterCreationCommandController = (
           requestId('resolve-character-qualification')
         )
       } catch (error) {
-        syncFlowFromRoomState(
-          getState(),
-          flow.draft.characterId,
-          flow
-        )
+        syncFlowFromRoomState(getState(), flow.draft.characterId, flow)
         renderWizard()
         scrollToTop()
         throw error

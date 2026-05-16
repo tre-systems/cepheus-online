@@ -1095,7 +1095,7 @@ const wizardViewModel = ({
       return readModelCharacteristicStepViewModel(characterReadModel, readOnly)
     }
 
-    if (readOnly && characterReadModel.status === 'HOMEWORLD') {
+    if ((readOnly || !flow) && characterReadModel.status === 'HOMEWORLD') {
       return readModelHomeworldStepViewModel({
         readModel: characterReadModel,
         projectedCreation,

@@ -37,6 +37,9 @@ const rawRoomApiImportAllowed = new Set([
 const legacyCreationHistoryReadAllowed = new Set([
   'src/client/app/character/creation/projection.ts'
 ])
+const legacyCreationFlowAdapterAllowed = new Set([
+  'src/client/app/character/creation/projection.ts'
+])
 
 const failures = []
 
@@ -109,6 +112,21 @@ for (const path of sourceFiles) {
       pattern: /\bcreation\.history\b/,
       message:
         'character creation client modules must use projection read models instead of legacy creation history'
+    })
+  }
+
+  if (
+    path.startsWith('src/client/app/character/creation/') &&
+    !isTestFile(path) &&
+    !legacyCreationFlowAdapterAllowed.has(path)
+  ) {
+    checkLinePattern({
+      path,
+      lines,
+      pattern:
+        /\b(compatibilityFlowFromProjectedCharacter|legacyFlowFromProjectedCharacter)\b/,
+      message:
+        'character creation client modules must use the shared read model instead of legacy flow adapters'
     })
   }
 
