@@ -1174,7 +1174,10 @@ Tasks:
 - Polish reenlistment UI/provenance for mandatory retirement after seven terms,
   forced reenlistment on 12, allowed reenlistment, blocked reenlistment, and
   voluntary career exit. The server command/event split is done; this is now
-  presentation, history, and browser-regression work.
+  presentation, history, and browser-regression work. Done: semantic career
+  continuation and career-exit events now stamp term lifecycle provenance, and
+  creator review plus final export text distinguish forced reenlistment,
+  voluntary career exit, blocked reenlistment, and mandatory retirement.
 
 Done when:
 
@@ -1487,9 +1490,11 @@ The next batch should run like this, in this order:
 9. Complete anagathics survival/payment edge cases, multi-career continuation
    after mustering, final sheet/export polish, and provenance. Final sheet
    term-history exports now include anagathics cost-roll provenance when the
-   projected semantic fact carries it. Each slice should add semantic events
-   where needed, projection replay tests, protocol fixtures, and compact
-   activity descriptors.
+   projected semantic fact carries it. Reenlistment lifecycle provenance now
+   records continued service and career exits on projected terms and carries
+   that into creator summaries and final exports. Each slice should add
+   semantic events where needed, projection replay tests, protocol fixtures,
+   and compact activity descriptors.
 10. Finish live following on top of semantic facts: follower cards, dice reveal
     timing, refresh recovery, and future Discord-consumable event details.
     Done: spectator transient follower cards now include the early and
