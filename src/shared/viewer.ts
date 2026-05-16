@@ -234,6 +234,17 @@ const redactMishapSheetEffect = (
   }
 }
 
+const redactMishapProgress = (character: CharacterState): void => {
+  if (!character.creation) return
+
+  character.creation.state = {
+    ...character.creation.state,
+    status: 'MISHAP'
+  }
+  delete character.creation.pendingDecisions
+  delete character.creation.actionPlan
+}
+
 const redactInjurySheetEffect = (
   character: CharacterState,
   fact: NonNullable<CareerTerm['facts']>['injury']
@@ -254,6 +265,17 @@ const redactInjurySheetEffect = (
       delete character.creation.pendingDecisions
     }
   }
+}
+
+const redactInjuryProgress = (character: CharacterState): void => {
+  if (!character.creation) return
+
+  character.creation.state = {
+    ...character.creation.state,
+    status: 'MISHAP'
+  }
+  character.creation.pendingDecisions = [{ key: 'injuryResolution' }]
+  delete character.creation.actionPlan
 }
 
 const redactAdvancementSheetEffect = (
@@ -296,6 +318,20 @@ const redactSurvivalProgress = (character: CharacterState): void => {
   }
   delete character.creation.requiredTermSkillCount
   delete character.creation.pendingDecisions
+  delete character.creation.actionPlan
+}
+
+const redactReenlistmentProgress = (
+  character: CharacterState,
+  term: CareerTerm
+): void => {
+  if (!character.creation) return
+
+  character.creation.state = {
+    ...character.creation.state,
+    status: 'REENLISTMENT'
+  }
+  term.canReenlist = true
   delete character.creation.actionPlan
 }
 
@@ -542,6 +578,7 @@ const redactUnrevealedCreationFacts = (
       delete (term as unknown as { survival?: number }).survival
     }
     if (hasUnrevealedRollFact(facts.commission, unrevealedRollIds)) {
+      redactCreationProgress(character, 'COMMISSION')
       delete facts.commission
     }
     if (hasUnrevealedRollFact(facts.advancement, unrevealedRollIds)) {
@@ -575,15 +612,21 @@ const redactUnrevealedCreationFacts = (
       }
       delete facts.anagathicsDecision
     }
-    if (hasUnrevealedRollFact(facts.mishap, unrevealedRollIds)) {
+    const hiddenMishap = hasUnrevealedRollFact(facts.mishap, unrevealedRollIds)
+    if (hiddenMishap) {
+      redactMishapProgress(character)
       redactMishapSheetEffect(character, term, facts.mishap)
       delete facts.mishap
     }
     if (hasUnrevealedRollFact(facts.injury, unrevealedRollIds)) {
       redactInjurySheetEffect(character, facts.injury)
+      if (!hiddenMishap) {
+        redactInjuryProgress(character)
+      }
       delete facts.injury
     }
     if (hasUnrevealedRollFact(facts.reenlistment, unrevealedRollIds)) {
+      redactReenlistmentProgress(character, term)
       delete facts.reenlistment
       delete (term as unknown as { reEnlistment?: number }).reEnlistment
     }

@@ -988,6 +988,110 @@ describe('viewer filtering', () => {
     assert.equal('advancement' in (term ?? {}), false)
   })
 
+  it('rewinds pre-reveal commission outcomes to the commission phase', () => {
+    for (const scenario of [
+      {
+        status: 'ADVANCEMENT' as const,
+        canAdvance: true
+      },
+      {
+        status: 'SKILLS_TRAINING' as const,
+        canAdvance: false
+      }
+    ]) {
+      const state = buildState()
+      addDiceRoll(state, futureRevealAt)
+      state.characters[asCharacterId('char-1')] = {
+        id: asCharacterId('char-1'),
+        ownerId: asUserId('player'),
+        type: 'PLAYER',
+        name: 'Scout',
+        active: true,
+        notes: '',
+        age: 18,
+        characteristics: {
+          str: 7,
+          dex: 7,
+          end: 7,
+          int: 7,
+          edu: 7,
+          soc: 7
+        },
+        skills: [],
+        equipment: [],
+        credits: 0,
+        creation: {
+          state: {
+            status: scenario.status,
+            context: {
+              canCommission: true,
+              canAdvance: scenario.canAdvance
+            }
+          },
+          terms: [
+            {
+              career: 'Merchant',
+              skills: [],
+              skillsAndTraining: ['Vacc Suit-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              facts: {
+                basicTrainingSkills: ['Vacc Suit-0'],
+                commission: {
+                  rollEventId: asEventId('roll-1'),
+                  skipped: false,
+                  passed: scenario.canAdvance,
+                  commission: {
+                    expression: '2d6',
+                    rolls: scenario.canAdvance ? [6, 5] : [1, 1],
+                    total: scenario.canAdvance ? 11 : 2,
+                    characteristic: 'soc',
+                    modifier: 0,
+                    target: 4,
+                    success: scenario.canAdvance
+                  }
+                }
+              }
+            }
+          ],
+          careers: [{ name: 'Merchant', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          creationComplete: false,
+          actionPlan: {
+            status: scenario.status,
+            pendingDecisions: [],
+            legalActions: []
+          }
+        }
+      }
+
+      const filtered = filterGameStateForViewer(
+        state,
+        {
+          userId: asUserId('spectator'),
+          role: 'SPECTATOR'
+        },
+        { nowMs }
+      )
+
+      const creation = filtered.characters[asCharacterId('char-1')]?.creation
+      const term = creation?.terms[0]
+      assert.equal(creation?.state.status, 'COMMISSION')
+      assert.deepEqual(creation?.state.context, {
+        canCommission: true,
+        canAdvance: scenario.canAdvance
+      })
+      assert.equal(creation?.actionPlan, undefined)
+      assert.equal(term?.facts?.commission, undefined)
+    }
+  })
+
   it('redacts pre-reveal qualification success from top-level creation state', () => {
     const state = buildState()
     addDiceRoll(state, futureRevealAt)
@@ -1575,6 +1679,103 @@ describe('viewer filtering', () => {
     assert.equal(term?.facts?.aging, undefined)
   })
 
+  it('redacts pre-reveal reenlistment outcomes from top-level creation state', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 22,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'REENLISTMENT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            reEnlistment: 3,
+            facts: {
+              reenlistment: {
+                rollEventId: asEventId('roll-1'),
+                outcome: 'blocked',
+                reenlistment: {
+                  expression: '2d6',
+                  rolls: [1, 2],
+                  total: 3,
+                  characteristic: null,
+                  modifier: 0,
+                  target: 6,
+                  success: false,
+                  outcome: 'blocked'
+                }
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false,
+        actionPlan: {
+          status: 'REENLISTMENT',
+          pendingDecisions: [],
+          legalActions: [
+            {
+              key: 'leaveCareer',
+              status: 'REENLISTMENT',
+              commandTypes: ['LeaveCharacterCreationCareer']
+            }
+          ]
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const creation = filtered.characters[asCharacterId('char-1')]?.creation
+    const term = creation?.terms[0]
+    assert.equal(creation?.state.status, 'REENLISTMENT')
+    assert.equal(creation?.actionPlan, undefined)
+    assert.equal(term?.canReenlist, true)
+    assert.equal(term?.facts?.reenlistment, undefined)
+    assert.equal('reEnlistment' in (term ?? {}), false)
+  })
+
   it('redacts pre-reveal failed anagathics progress from top-level creation state', () => {
     const state = buildState()
     addDiceRoll(state, futureRevealAt)
@@ -1672,6 +1873,215 @@ describe('viewer filtering', () => {
     assert.equal(creation?.actionPlan, undefined)
     assert.equal(creation?.pendingDecisions, undefined)
     assert.equal(term?.facts?.anagathicsDecision, undefined)
+  })
+
+  it('rewinds pre-reveal mishap outcomes to the mishap phase', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 20,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: -500,
+      creation: {
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Vacc Suit-0'],
+            benefits: [],
+            complete: true,
+            canReenlist: false,
+            completedBasicTraining: true,
+            musteringOut: true,
+            anagathics: false,
+            facts: {
+              basicTrainingSkills: ['Vacc Suit-0'],
+              mishap: {
+                rollEventId: asEventId('roll-1'),
+                roll: { expression: '1d6', rolls: [4], total: 4 },
+                outcome: {
+                  career: 'Scout',
+                  roll: 4,
+                  id: 'dishonorable_discharge',
+                  description: 'Dishonorable discharge.',
+                  discharge: 'dishonorable',
+                  benefitEffect: 'lose_all',
+                  debtCredits: 500,
+                  extraServiceYears: 2,
+                  injury: null
+                }
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false,
+        actionPlan: {
+          status: 'MUSTERING_OUT',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const character = filtered.characters[asCharacterId('char-1')]
+    const creation = character?.creation
+    const term = creation?.terms[0]
+    assert.equal(character?.age, 18)
+    assert.equal(character?.credits, 0)
+    assert.equal(creation?.state.status, 'MISHAP')
+    assert.equal(creation?.pendingDecisions, undefined)
+    assert.equal(creation?.actionPlan, undefined)
+    assert.equal(term?.facts?.mishap, undefined)
+    assert.equal(term?.complete, false)
+    assert.equal(term?.musteringOut, false)
+    assert.equal(term?.canReenlist, true)
+  })
+
+  it('rewinds pre-reveal injury outcomes to the pending injury phase', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: 3,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'MUSTERING_OUT',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Scout',
+            skills: [],
+            skillsAndTraining: ['Vacc Suit-0'],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: true,
+            musteringOut: false,
+            anagathics: false,
+            facts: {
+              basicTrainingSkills: ['Vacc Suit-0'],
+              mishap: {
+                rollEventId: asEventId('mishap-roll'),
+                roll: { expression: '1d6', rolls: [1], total: 1 },
+                outcome: {
+                  career: 'Scout',
+                  roll: 1,
+                  id: 'injured_in_action',
+                  description: 'Injured in action.',
+                  discharge: 'medical',
+                  benefitEffect: 'forfeit_current_term',
+                  debtCredits: 0,
+                  extraServiceYears: 0,
+                  injury: {
+                    type: 'fixed',
+                    injuryRoll: 2,
+                    alternative: 'roll_twice_take_lower'
+                  }
+                }
+              },
+              injury: {
+                rollEventId: asEventId('roll-1'),
+                method: 'fixed_result',
+                outcome: {
+                  career: 'Scout',
+                  roll: 2,
+                  id: 'severely_injured',
+                  description:
+                    'Severely injured. Reduce one physical characteristic by 1D6.',
+                  crisisRisk: true
+                },
+                selectedLosses: [{ characteristic: 'str', modifier: -4 }],
+                characteristicPatch: { str: 3 }
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Scout', rank: 0 }],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false,
+        actionPlan: {
+          status: 'MUSTERING_OUT',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const character = filtered.characters[asCharacterId('char-1')]
+    const creation = character?.creation
+    const term = creation?.terms[0]
+    assert.equal(character?.characteristics.str, 7)
+    assert.equal(creation?.state.status, 'MISHAP')
+    assert.deepEqual(creation?.pendingDecisions, [{ key: 'injuryResolution' }])
+    assert.equal(creation?.actionPlan, undefined)
+    assert.equal(term?.facts?.mishap !== undefined, true)
+    assert.equal(term?.facts?.injury, undefined)
   })
 
   it('keeps roll-dependent creation history visible after reveal', () => {
