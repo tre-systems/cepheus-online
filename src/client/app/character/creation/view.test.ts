@@ -1,11 +1,15 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import {
+  CEPHEUS_SRD_RULESET,
+  type CepheusCareerDefinition
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import { asCharacterId } from '../../../../shared/ids'
 import {
+  type CharacterCreationFlow,
   createCharacterCreationFlow,
-  createInitialCharacterDraft,
-  type CharacterCreationFlow
+  createInitialCharacterDraft
 } from './flow'
 import {
   characterCreationPrimaryCtaLabels,
@@ -415,6 +419,82 @@ describe('character creation view helpers', () => {
     ])
   })
 
+  it('uses injected careers for career roll requirements', () => {
+    const customCareers: CepheusCareerDefinition[] = [
+      {
+        name: 'Merchant',
+        qualification: 'Int 4+',
+        survival: 'End 5+',
+        commission: '-',
+        advancement: 'Edu 8+',
+        serviceSkills: [],
+        specialistSkills: [],
+        personalDevelopment: [],
+        advancedEducation: []
+      }
+    ]
+    const careerFlow = {
+      step: 'career' as const,
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        careerPlan: {
+          career: 'Merchant',
+          qualificationRoll: 7,
+          qualificationPassed: true,
+          survivalRoll: 8,
+          survivalPassed: true,
+          commissionRoll: null,
+          commissionPassed: null,
+          advancementRoll: null,
+          advancementPassed: null,
+          canCommission: false,
+          canAdvance: false,
+          drafted: false
+        }
+      })
+    }
+
+    const errors = deriveCharacterCreationValidationSummary(
+      careerFlow,
+      'career',
+      {
+        careers: customCareers
+      }
+    ).errors
+    assert.equal(errors.includes('Advancement roll is required'), true)
+    assert.equal(errors.includes('Commission roll is required'), false)
+    assert.deepEqual(
+      deriveCharacterCreationFieldViewModels(careerFlow, 'career', {
+        careers: customCareers
+      })
+        .filter(
+          (field) =>
+            field.key === 'commissionRoll' || field.key === 'advancementRoll'
+        )
+        .map((field) => ({
+          key: field.key,
+          required: field.required,
+          errors: field.errors
+        })),
+      [
+        { key: 'commissionRoll', required: false, errors: [] },
+        {
+          key: 'advancementRoll',
+          required: true,
+          errors: ['Advancement roll is required']
+        }
+      ]
+    )
+  })
+
   it('derives only failed qualification fallback options from the shared planner', () => {
     const failedFlow = {
       step: 'career' as const,
@@ -752,6 +832,61 @@ describe('character creation view helpers', () => {
       errors: ['1 cascade skill choice remains'],
       message: '1 cascade skill choice remains'
     })
+  })
+
+  it('uses an injected ruleset for homeworld and cascade options', () => {
+    const customRuleset = {
+      ...CEPHEUS_SRD_RULESET,
+      homeWorldSkillsByLawLevel: { Frontier: 'Survey' },
+      homeWorldSkillsByTradeCode: { Academic: 'Research' },
+      primaryEducationSkillsData: ['Admin'],
+      cascadeSkills: {
+        ...CEPHEUS_SRD_RULESET.cascadeSkills,
+        Discipline: ['Focus', 'Resolve']
+      }
+    }
+    const flow = {
+      step: 'homeworld' as const,
+      draft: {
+        ...createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          characteristics: {
+            str: 7,
+            dex: 8,
+            end: 7,
+            int: 9,
+            edu: 9,
+            soc: 6
+          }
+        }),
+        homeworld: {
+          lawLevel: 'Frontier',
+          tradeCodes: ['Academic']
+        },
+        backgroundSkills: [],
+        pendingCascadeSkills: ['Discipline-0']
+      }
+    }
+
+    const viewModel = deriveCharacterCreationHomeworldViewModel(flow, {
+      ruleset: customRuleset
+    })
+
+    assert.deepEqual(viewModel.lawLevelOptions, [
+      { value: 'Frontier', label: 'Frontier', selected: true }
+    ])
+    assert.deepEqual(viewModel.tradeCodeOptions, [
+      { value: 'Academic', label: 'Academic', selected: true }
+    ])
+    assert.deepEqual(viewModel.pendingCascadeChoice?.options, [
+      { value: 'Focus-0', label: 'Focus', cascade: false },
+      { value: 'Resolve-0', label: 'Resolve', cascade: false }
+    ])
+    assert.deepEqual(viewModel.backgroundSkills.availableSkills, [
+      'Survey',
+      'Research',
+      'Admin'
+    ])
   })
 
   it('derives a compact stat strip from any creation step', () => {

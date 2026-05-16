@@ -1,51 +1,52 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import { CEPHEUS_SRD_RULESET } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import { asCharacterId, asGameId, asUserId } from '../../../../shared/ids'
 import type { GameState } from '../../../../shared/state'
 import {
   advanceCharacterCreationStep,
-  applyCharacterCreationBasicTraining,
-  applyCharacterCreationBackgroundSkillSelection,
-  applyCharacterCreationAnagathicsDecision,
-  applyCharacterCreationCharacteristicRoll,
-  applyCharacterCreationCareerRoll,
-  applyCharacterCreationCareerPlan,
   applyCharacterCreationAgingChange,
   applyCharacterCreationAgingRoll,
+  applyCharacterCreationAnagathicsDecision,
+  applyCharacterCreationBackgroundSkillSelection,
+  applyCharacterCreationBasicTraining,
+  applyCharacterCreationCareerPlan,
+  applyCharacterCreationCareerRoll,
+  applyCharacterCreationCharacteristicRoll,
   applyCharacterCreationMusteringBenefit,
   applyCharacterCreationReenlistmentRoll,
   applyCharacterCreationTermSkillRoll,
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationStep,
   backCharacterCreationWizardStep,
-  canRollCharacterCreationMusteringBenefit,
-  characterCreationMusteringBenefitRollModifier,
   type CharacterCreationFlow,
+  canRollCharacterCreationMusteringBenefit,
   characterCreationCareerNames,
-  completeCharacterCreationCareerTerm,
+  characterCreationMusteringBenefitRollModifier,
   characterCreationSteps,
+  completeCharacterCreationCareerTerm,
   createCharacterCreationFlow,
   createInitialCharacterDraft,
   createManualCharacterCreationFlow,
-  deriveCharacterCreationBasicTrainingAction,
+  deriveCharacterCreationAgingChangeOptions,
   deriveCharacterCreationAnagathicsDecision,
+  deriveCharacterCreationBackgroundSkillPlan,
+  deriveCharacterCreationBasicTrainingAction,
+  deriveCharacterCreationTermSkillTableActions,
   deriveCharacterSheetPatch,
   deriveCreateCharacterCommand,
-  deriveCharacterCreationBackgroundSkillPlan,
   deriveInitialCharacterCreationStateCommands,
-  deriveNextCharacterCreationCharacteristicRoll,
-  deriveNextCharacterCreationCareerRoll,
   deriveNextCharacterCreationAgingRoll,
+  deriveNextCharacterCreationCareerRoll,
+  deriveNextCharacterCreationCharacteristicRoll,
   deriveNextCharacterCreationReenlistmentRoll,
-  deriveCharacterCreationAgingChangeOptions,
-  deriveCharacterCreationTermSkillTableActions,
   deriveStartCharacterCareerTermCommand,
   deriveStartCharacterCreationCommand,
   evaluateCharacterCreationCareerPlan,
-  remainingMusteringBenefits,
-  remainingCharacterCreationTermSkillRolls,
   nextCharacterCreationWizardStep,
+  remainingCharacterCreationTermSkillRolls,
+  remainingMusteringBenefits,
   removeCharacterCreationBackgroundSkillSelection,
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
@@ -159,6 +160,29 @@ describe('character creation flow', () => {
       'Merchant',
       'Marine'
     ])
+  })
+
+  it('derives career names from an injected ruleset', () => {
+    const ruleset = {
+      ...CEPHEUS_SRD_RULESET,
+      careerBasics: {
+        Courier: CEPHEUS_SRD_RULESET.careerBasics.Scout
+      },
+      serviceSkills: {
+        Courier: CEPHEUS_SRD_RULESET.serviceSkills.Scout
+      },
+      specialistSkills: {
+        Courier: CEPHEUS_SRD_RULESET.specialistSkills.Scout
+      },
+      personalDevelopment: {
+        Courier: CEPHEUS_SRD_RULESET.personalDevelopment.Scout
+      },
+      advEducation: {
+        Courier: CEPHEUS_SRD_RULESET.advEducation.Scout
+      }
+    }
+
+    assert.deepEqual(characterCreationCareerNames({ ruleset }), ['Courier'])
   })
 
   it('initializes a manual draft from room state and name defaults', () => {

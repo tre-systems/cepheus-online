@@ -1,16 +1,11 @@
-import type { Command, GameCommand } from '../../../../shared/commands'
+import { resolveAging } from '../../../../shared/character-creation/aging.js'
 import {
-  deriveBasicTrainingPlan,
-  evaluateCareerCheck,
-  parseCareerRankReward,
-  parseCareerCheck,
-  resolveDraftCareer
-} from '../../../../shared/character-creation/career-rules.js'
-import {
-  CEPHEUS_SRD_RULESET,
-  CEPHEUS_SRD_CAREERS,
-  type CepheusCareerDefinition
-} from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+  type BackgroundHomeworld,
+  type BackgroundSkillPlan,
+  deriveBackgroundSkillPlan,
+  deriveTotalBackgroundSkillAllowance,
+  hasBackgroundHomeworld
+} from '../../../../shared/character-creation/background-skills.js'
 import {
   canRollCashBenefit,
   deriveCashBenefitRollModifier,
@@ -18,7 +13,27 @@ import {
   deriveRemainingCareerBenefits,
   resolveCareerBenefit
 } from '../../../../shared/character-creation/benefits.js'
-import { resolveAging } from '../../../../shared/character-creation/aging.js'
+import {
+  deriveBasicTrainingPlan,
+  evaluateCareerCheck,
+  parseCareerCheck,
+  parseCareerRankReward,
+  resolveDraftCareer
+} from '../../../../shared/character-creation/career-rules.js'
+import {
+  CEPHEUS_SRD_RULESET,
+  type CepheusCareerDefinition,
+  type CepheusSrdRuleset,
+  deriveCepheusCareerDefinitions
+} from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+import {
+  careerSkillWithLevel,
+  formatCareerSkill,
+  isCascadeCareerSkill,
+  normalizeCareerSkill,
+  parseCareerSkill,
+  resolveCascadeCareerSkill
+} from '../../../../shared/character-creation/skills.js'
 import {
   canOfferAnagathics,
   createCareerTerm,
@@ -32,21 +47,7 @@ import type {
   BenefitKind,
   DraftTable
 } from '../../../../shared/character-creation/types.js'
-import {
-  deriveBackgroundSkillPlan,
-  deriveTotalBackgroundSkillAllowance,
-  hasBackgroundHomeworld,
-  type BackgroundHomeworld,
-  type BackgroundSkillPlan
-} from '../../../../shared/character-creation/background-skills.js'
-import {
-  careerSkillWithLevel,
-  formatCareerSkill,
-  isCascadeCareerSkill,
-  normalizeCareerSkill,
-  parseCareerSkill,
-  resolveCascadeCareerSkill
-} from '../../../../shared/character-creation/skills.js'
+import type { Command, GameCommand } from '../../../../shared/commands'
 import type { CharacterId } from '../../../../shared/ids'
 import type {
   CharacterCharacteristics,
@@ -72,6 +73,15 @@ export type CharacterCreationStep =
   | 'review'
 
 export const CHARACTER_CREATION_STARTING_AGE = 18
+
+const characterCreationRuleset = (
+  options: CharacterCreationRulesetOptions = {}
+): CepheusSrdRuleset => options.ruleset ?? CEPHEUS_SRD_RULESET
+
+const characterCreationCareerDefinitions = (
+  options: CharacterCreationRulesetOptions = {}
+): CepheusCareerDefinition[] =>
+  deriveCepheusCareerDefinitions(characterCreationRuleset(options))
 
 export interface CharacterCreationCareerPlan {
   career: string
@@ -186,6 +196,11 @@ export interface CharacterCreationDraft {
 export interface CharacterCreationFlow {
   step: CharacterCreationStep
   draft: CharacterCreationDraft
+  ruleset?: CepheusSrdRuleset
+}
+
+export interface CharacterCreationRulesetOptions {
+  ruleset?: CepheusSrdRuleset
 }
 
 export interface CharacterCreationValidation {
@@ -203,6 +218,7 @@ export interface ManualCharacterCreationFlowOptions {
   state?: Pick<GameState, 'characters'> | null
   name?: string | null
   characterType?: CharacterType
+  ruleset?: CepheusSrdRuleset
 }
 
 export interface CharacterCreationWizardResult {
@@ -814,17 +830,21 @@ export const characterCreationSteps = (): CharacterCreationStep[] => [
 
 export const createInitialCharacterDraft = (
   characterId: CharacterId,
-  overrides: Partial<CharacterCreationDraft> = {}
+  overrides: Partial<CharacterCreationDraft> = {},
+  options: CharacterCreationRulesetOptions = {}
 ): CharacterCreationDraft => {
   const characteristics = {
     ...emptyCharacteristics(),
     ...(overrides.characteristics ?? {})
   }
   const homeworld = normalizeHomeworld(overrides.homeworld)
-  const backgroundPlan = deriveCharacterCreationBackgroundSkillPlan({
-    characteristics,
-    homeworld
-  })
+  const backgroundPlan = deriveCharacterCreationBackgroundSkillPlan(
+    {
+      characteristics,
+      homeworld
+    },
+    characterCreationRuleset(options)
+  )
   const completedTerms = cloneCompletedTerms(overrides.completedTerms ?? [])
 
   return {
@@ -862,28 +882,36 @@ export const createInitialCharacterDraft = (
 
 export const createCharacterCreationFlow = (
   characterId: CharacterId,
-  overrides: Partial<CharacterCreationDraft> = {}
+  overrides: Partial<CharacterCreationDraft> = {},
+  options: CharacterCreationRulesetOptions = {}
 ): CharacterCreationFlow => ({
   step: 'basics',
-  draft: createInitialCharacterDraft(characterId, overrides)
+  draft: createInitialCharacterDraft(characterId, overrides, options),
+  ...(options.ruleset ? { ruleset: options.ruleset } : {})
 })
 
 export const createManualCharacterCreationFlow = ({
   state = null,
   name = null,
-  characterType = 'PLAYER'
+  characterType = 'PLAYER',
+  ruleset
 }: ManualCharacterCreationFlowOptions = {}): CharacterCreationFlow => {
   const defaultName = defaultManualCharacterName(state)
   const draftName = name?.trim() || defaultName
-  return createCharacterCreationFlow(uniqueCharacterId(state, draftName), {
-    name: draftName,
-    characterType
-  })
+  return createCharacterCreationFlow(
+    uniqueCharacterId(state, draftName),
+    {
+      name: draftName,
+      characterType
+    },
+    { ruleset }
+  )
 }
 
 export const updateCharacterCreationDraft = (
   draft: CharacterCreationDraft,
-  patch: CharacterCreationDraftPatch
+  patch: CharacterCreationDraftPatch,
+  options: CharacterCreationRulesetOptions = {}
 ): CharacterCreationDraft => {
   const characteristics = {
     ...draft.characteristics,
@@ -900,7 +928,10 @@ export const updateCharacterCreationDraft = (
     patch.characteristics.edu !== draft.characteristics.edu
   const refreshBackgroundPlan = homeworldChanged || eduChanged
   const backgroundPlan = refreshBackgroundPlan
-    ? deriveCharacterCreationBackgroundSkillPlan({ characteristics, homeworld })
+    ? deriveCharacterCreationBackgroundSkillPlan(
+        { characteristics, homeworld },
+        characterCreationRuleset(options)
+      )
     : null
 
   return {
@@ -955,16 +986,19 @@ export const updateCharacterCreationDraft = (
   }
 }
 
-export const characterCreationCareerNames = (): string[] =>
-  CEPHEUS_SRD_CAREERS.map((career) => career.name)
+export const characterCreationCareerNames = (
+  options: CharacterCreationRulesetOptions = {}
+): string[] =>
+  characterCreationCareerDefinitions(options).map((career) => career.name)
 
 export const deriveCharacterCreationBackgroundSkillPlan = (
-  draft: Pick<CharacterCreationDraft, 'characteristics' | 'homeworld'>
+  draft: Pick<CharacterCreationDraft, 'characteristics' | 'homeworld'>,
+  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
 ): BackgroundSkillPlan =>
   deriveBackgroundSkillPlan({
     edu: draft.characteristics.edu,
     homeworld: draft.homeworld,
-    rules: CEPHEUS_SRD_RULESET
+    rules: ruleset
   })
 
 const totalBackgroundSkillSelections = (
@@ -1114,9 +1148,12 @@ export const selectCharacterCreationCareerPlan = (
 ): CharacterCreationCareerPlan => createCareerPlan({ ...overrides, career })
 
 const findCareerDefinition = (
-  careerName: string
+  careerName: string,
+  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
 ): CepheusCareerDefinition | null =>
-  CEPHEUS_SRD_CAREERS.find((career) => career.name === careerName) ?? null
+  deriveCepheusCareerDefinitions(ruleset).find(
+    (career) => career.name === careerName
+  ) ?? null
 
 const evaluateOptionalCareerRoll = ({
   check,
@@ -1133,10 +1170,11 @@ const evaluateOptionalCareerRoll = ({
 
 export const evaluateCharacterCreationCareerPlan = (
   draft: Pick<CharacterCreationDraft, 'characteristics' | 'completedTerms'>,
-  plan: CharacterCreationCareerPlan
+  plan: CharacterCreationCareerPlan,
+  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
 ): CharacterCreationCareerPlan => {
   const normalizedPlan = normalizeCareerPlan(plan) ?? createCareerPlan()
-  const careerDefinition = findCareerDefinition(normalizedPlan.career)
+  const careerDefinition = findCareerDefinition(normalizedPlan.career, ruleset)
   if (!careerDefinition) return normalizedPlan
   const currentRank = currentCharacterCreationCareerRank(
     draft,
@@ -1183,7 +1221,11 @@ export const evaluateCharacterCreationCareerPlan = (
     canCommission,
     canAdvance
   }
-  const reward = characterCreationRankRewardForPlan(draft, evaluatedPlan)
+  const reward = characterCreationRankRewardForPlan(
+    draft,
+    evaluatedPlan,
+    ruleset
+  )
 
   return {
     ...evaluatedPlan,
@@ -1195,7 +1237,8 @@ export const evaluateCharacterCreationCareerPlan = (
 
 const characterCreationRankRewardForPlan = (
   draft: Pick<CharacterCreationDraft, 'completedTerms'>,
-  plan: CharacterCreationCareerPlan
+  plan: CharacterCreationCareerPlan,
+  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
 ) => {
   if (!plan.career) return null
   const currentRank = currentCharacterCreationCareerRank(draft, plan.career)
@@ -1207,7 +1250,7 @@ const characterCreationRankRewardForPlan = (
         : null
   if (nextRank === null) return null
   return parseCareerRankReward({
-    ranksAndSkills: CEPHEUS_SRD_RULESET.ranksAndSkills,
+    ranksAndSkills: ruleset.ranksAndSkills,
     career: plan.career,
     rank: nextRank
   })
@@ -1232,10 +1275,11 @@ const careerRankAfterPlan = (draft: CharacterCreationDraft): number => {
 
 export const applyCharacterCreationCareerPlan = (
   draft: CharacterCreationDraft,
-  plan: CharacterCreationCareerPlan
+  plan: CharacterCreationCareerPlan,
+  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
 ): CharacterCreationDraft =>
   updateCharacterCreationDraft(draft, {
-    careerPlan: evaluateCharacterCreationCareerPlan(draft, plan)
+    careerPlan: evaluateCharacterCreationCareerPlan(draft, plan, ruleset)
   })
 
 export const deriveNextCharacterCreationCareerRoll = (
@@ -1369,7 +1413,8 @@ export const deriveNextCharacterCreationReenlistmentRoll = (
   }
   if (plan.reenlistmentOutcome !== null) return null
   if (flow.draft.completedTerms.length + 1 >= 7) return null
-  const check = CEPHEUS_SRD_RULESET.careerBasics[plan.career]?.ReEnlistment
+  const ruleset = characterCreationRuleset(flow)
+  const check = ruleset.careerBasics[plan.career]?.ReEnlistment
   if (!check) return null
   return {
     label: 'Roll reenlistment',
@@ -1402,7 +1447,9 @@ export const deriveCharacterCreationAnagathicsDecision = (
   if (
     !canOfferAnagathics({
       term: createCareerTerm({ career: plan.career }),
-      hasCareerBasics: Boolean(CEPHEUS_SRD_RULESET.careerBasics[plan.career])
+      hasCareerBasics: Boolean(
+        characterCreationRuleset(flow).careerBasics[plan.career]
+      )
     })
   ) {
     return null
@@ -1495,7 +1542,7 @@ export const applyCharacterCreationAgingRoll = (
 
   const resolution = resolveAging({
     currentAge: flow.draft.age,
-    table: CEPHEUS_SRD_RULESET.aging,
+    table: characterCreationRuleset(flow).aging,
     roll,
     years: 4
   })
@@ -1602,15 +1649,17 @@ export const applyCharacterCreationAgingChange = ({
 const evaluateCharacterCreationReenlistment = ({
   draft,
   career,
-  roll
+  roll,
+  ruleset = CEPHEUS_SRD_RULESET
 }: {
   draft: CharacterCreationDraft
   career: string
   roll: number
+  ruleset?: CepheusSrdRuleset
 }): CharacterCreationReenlistmentOutcome => {
   if (draft.completedTerms.length + 1 >= 7) return 'retire'
   if (roll === 12) return 'forced'
-  const check = CEPHEUS_SRD_RULESET.careerBasics[career]?.ReEnlistment ?? ''
+  const check = ruleset.careerBasics[career]?.ReEnlistment ?? ''
   const result = evaluateCareerCheck({
     check,
     characteristics: draft.characteristics,
@@ -1637,7 +1686,8 @@ export const applyCharacterCreationReenlistmentRoll = (
       reenlistmentOutcome: evaluateCharacterCreationReenlistment({
         draft: flow.draft,
         career: plan.career,
-        roll
+        roll,
+        ruleset: characterCreationRuleset(flow)
       })
     }
   })
@@ -1718,13 +1768,14 @@ const termCharacteristicGain = (
 }
 
 const basicTrainingSkillsForCurrentTerm = (
-  draft: CharacterCreationDraft
+  draft: CharacterCreationDraft,
+  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
 ): string[] => {
   const careerName = draft.careerPlan?.career.trim()
   if (!careerName) return []
   const plan = deriveBasicTrainingPlan({
     career: careerName,
-    serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
+    serviceSkills: ruleset.serviceSkills,
     completedTermCount: draft.completedTerms.length,
     previousCareerNames: draft.completedTerms.map((term) => term.career)
   })
@@ -1758,7 +1809,8 @@ export const applyCharacterCreationTermSkillRoll = ({
     const validation = validateCurrentCharacterCreationStep(flow)
     return { flow, validation, moved: false }
   }
-  const career = findCareerDefinition(plan.career)
+  const ruleset = characterCreationRuleset(flow)
+  const career = findCareerDefinition(plan.career, ruleset)
   if (!career) {
     const validation = validateCurrentCharacterCreationStep(flow)
     return { flow, validation, moved: false }
@@ -1767,7 +1819,7 @@ export const applyCharacterCreationTermSkillRoll = ({
   const termSkillRoll = resolveTermSkillRoll({ career, table, roll })
   const basicTrainingSkills =
     (plan.termSkillRolls?.length ?? 0) === 0
-      ? basicTrainingSkillsForCurrentTerm(flow.draft)
+      ? basicTrainingSkillsForCurrentTerm(flow.draft, ruleset)
       : []
   const characteristicGain = termCharacteristicGain(termSkillRoll.skill)
   const rolledCascadeSkill = isCascadeCareerSkill(termSkillRoll.skill)
@@ -2187,7 +2239,7 @@ export const applyCharacterCreationMusteringBenefit = ({
   }
 
   const benefit = resolveCareerBenefit({
-    tables: CEPHEUS_SRD_RULESET,
+    tables: characterCreationRuleset(flow),
     career: term.career,
     roll,
     kind
@@ -2229,9 +2281,10 @@ export const deriveCharacterCreationBasicTrainingAction = (
   if (flow.step !== 'skills') return null
   const careerName = flow.draft.careerPlan?.career.trim()
   if (!careerName) return null
+  const ruleset = characterCreationRuleset(flow)
   const plan = deriveBasicTrainingPlan({
     career: careerName,
-    serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
+    serviceSkills: ruleset.serviceSkills,
     completedTermCount: flow.draft.completedTerms.length,
     previousCareerNames: flow.draft.completedTerms.map((term) => term.career)
   })
@@ -2295,7 +2348,7 @@ export const updateCharacterCreationFields = (
   patch: CharacterCreationDraftPatch
 ): CharacterCreationFlow => ({
   ...flow,
-  draft: updateCharacterCreationDraft(flow.draft, patch)
+  draft: updateCharacterCreationDraft(flow.draft, patch, flow)
 })
 
 export const validateCurrentCharacterCreationStep = (
