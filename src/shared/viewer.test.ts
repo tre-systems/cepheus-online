@@ -593,6 +593,73 @@ describe('viewer filtering', () => {
     )
   })
 
+  it('keeps pre-reveal creation facts hidden after the source roll leaves the dice log', () => {
+    const state = buildState()
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Scout',
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'HOMEWORLD',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [],
+        careers: [],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        characteristicRolls: {
+          str: {
+            rollEventId: asEventId('evicted-roll'),
+            value: 7
+          }
+        },
+        creationComplete: false,
+        timeline: [
+          {
+            eventId: asEventId('game-1:4'),
+            seq: 4,
+            createdAt: '2026-05-03T00:00:02.000Z',
+            eventType: 'CharacterCreationCharacteristicRolled',
+            rollEventId: asEventId('evicted-roll')
+          }
+        ]
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const character = filtered.characters[asCharacterId('char-1')]
+    assert.equal(character?.characteristics.str, null)
+    assert.equal(character?.creation?.characteristicRolls, undefined)
+  })
+
   it('rewinds pre-reveal survival outcomes to the survival phase', () => {
     for (const scenario of [
       {
@@ -2187,6 +2254,9 @@ describe('viewer filtering', () => {
       assert.equal(creationActivity?.type, 'characterCreation')
       if (creationActivity?.type !== 'characterCreation') return
       assert.equal('details' in creationActivity, false)
+      assert.equal(creationActivity.transition, 'PENDING_REVEAL')
+      assert.equal(creationActivity.status, 'ACTIVE')
+      assert.equal(creationActivity.creationComplete, false)
     }
   })
 
@@ -2227,6 +2297,9 @@ describe('viewer filtering', () => {
     assert.equal(filteredCreationActivity?.type, 'characterCreation')
     if (filteredCreationActivity?.type !== 'characterCreation') return
     assert.equal('details' in filteredCreationActivity, false)
+    assert.equal(filteredCreationActivity.transition, 'PENDING_REVEAL')
+    assert.equal(filteredCreationActivity.status, 'ACTIVE')
+    assert.equal(filteredCreationActivity.creationComplete, false)
     assert.deepEqual(filteredCreationActivity.reveal, {
       rollEventId: asEventId('game-1:3'),
       revealAt: futureRevealAt,
@@ -2265,6 +2338,9 @@ describe('viewer filtering', () => {
     assert.equal(filteredCreationActivity?.type, 'characterCreation')
     if (filteredCreationActivity?.type !== 'characterCreation') return
     assert.equal('details' in filteredCreationActivity, false)
+    assert.equal(filteredCreationActivity.transition, 'PENDING_REVEAL')
+    assert.equal(filteredCreationActivity.status, 'ACTIVE')
+    assert.equal(filteredCreationActivity.creationComplete, false)
     assert.deepEqual(filteredCreationActivity.reveal, {
       rollEventId: asEventId('game-1:3'),
       revealAt: futureRevealAt,
@@ -2306,6 +2382,9 @@ describe('viewer filtering', () => {
     assert.equal(filteredCreationActivity?.type, 'characterCreation')
     if (filteredCreationActivity?.type !== 'characterCreation') return
     assert.equal('details' in filteredCreationActivity, false)
+    assert.equal(filteredCreationActivity.transition, 'PENDING_REVEAL')
+    assert.equal(filteredCreationActivity.status, 'ACTIVE')
+    assert.equal(filteredCreationActivity.creationComplete, false)
   })
 
   it('hides pre-reveal dice and roll-dependent activity details from owners and referees', () => {
@@ -2337,6 +2416,9 @@ describe('viewer filtering', () => {
       assert.equal(creationActivity?.type, 'characterCreation')
       if (creationActivity?.type !== 'characterCreation') return
       assert.equal('details' in creationActivity, false)
+      assert.equal(creationActivity.transition, 'PENDING_REVEAL')
+      assert.equal(creationActivity.status, 'ACTIVE')
+      assert.equal(creationActivity.creationComplete, false)
     }
   })
 

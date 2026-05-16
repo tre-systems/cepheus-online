@@ -7,6 +7,7 @@ import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
 import type { EventId } from '../../../shared/ids'
+import { deriveUnrevealedCreationRollIds } from '../../../shared/character-creation/reveal'
 import { deriveEventRng } from '../../../shared/prng'
 import type { CommandError } from '../../../shared/protocol'
 import { err, ok, type Result } from '../../../shared/result'
@@ -34,26 +35,6 @@ type CharacterCreationFinalizationCommand = Extract<
   { type: 'FinalizeCharacterCreation' | 'CompleteCharacterCreation' }
 >
 
-const collectRollEventIds = (
-  value: unknown,
-  ids: Set<string> = new Set()
-): Set<string> => {
-  if (!value || typeof value !== 'object') return ids
-
-  if (
-    'rollEventId' in value &&
-    typeof (value as { rollEventId?: unknown }).rollEventId === 'string'
-  ) {
-    ids.add((value as { rollEventId: string }).rollEventId)
-  }
-
-  for (const child of Object.values(value)) {
-    collectRollEventIds(child, ids)
-  }
-
-  return ids
-}
-
 const hasUnrevealedCreationDice = (
   state: GameState,
   character: CharacterState,
@@ -61,12 +42,9 @@ const hasUnrevealedCreationDice = (
 ): boolean => {
   const creation = character.creation
   if (!creation) return false
-  const creationRollIds = collectRollEventIds(creation)
-  if (creationRollIds.size === 0) return false
   const nowMs = createdAt ? Date.parse(createdAt) : Date.now()
-
-  return state.diceLog.some(
-    (roll) => creationRollIds.has(roll.id) && Date.parse(roll.revealAt) > nowMs
+  return (
+    deriveUnrevealedCreationRollIds(creation, state.diceLog, nowMs).size > 0
   )
 }
 
@@ -246,7 +224,11 @@ export const deriveCreationFinalizationCommandEvents = (
         )
       }
 
-      return deriveCompletionEvents(command.characterId, character, context.ruleset)
+      return deriveCompletionEvents(
+        command.characterId,
+        character,
+        context.ruleset
+      )
     }
 
     case 'CompleteCharacterCreation': {
@@ -262,7 +244,11 @@ export const deriveCreationFinalizationCommandEvents = (
         )
       }
 
-      return deriveCompletionEvents(command.characterId, character, context.ruleset)
+      return deriveCompletionEvents(
+        command.characterId,
+        character,
+        context.ruleset
+      )
     }
   }
 }

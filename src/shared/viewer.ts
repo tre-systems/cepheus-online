@@ -22,6 +22,7 @@ import {
   deriveCareerCreationActionPlan,
   deriveMaterialBenefitEffect
 } from './characterCreation'
+import { deriveUnrevealedCreationRollIds } from './character-creation/reveal'
 
 export type ViewerRole = PlayerState['role']
 
@@ -88,12 +89,44 @@ const isFutureCharacterCreationReveal = (
 ): boolean =>
   Date.parse(deriveCharacterCreationActivityRevealAt(activity)) > nowMs
 
-const unrevealedDiceRollIds = (state: GameState, nowMs: number): Set<string> =>
-  new Set(
+const redactCharacterCreationActivity = (
+  activity: CharacterCreationActivityDescriptor
+): CharacterCreationActivityDescriptor => {
+  const { details: _details, ...redacted } = activity
+  void _details
+
+  return {
+    ...redacted,
+    transition: 'PENDING_REVEAL',
+    status: 'ACTIVE',
+    creationComplete: false,
+    ...(activity.reveal ? { reveal: structuredClone(activity.reveal) } : {})
+  }
+}
+
+const unrevealedDiceRollIds = (
+  state: GameState,
+  nowMs: number
+): Set<string> => {
+  const hiddenRollIds = new Set(
     state.diceLog
       .filter((roll) => Date.parse(roll.revealAt) > nowMs)
       .map((roll) => roll.id)
   )
+
+  for (const character of Object.values(state.characters)) {
+    if (!character.creation) continue
+    for (const rollId of deriveUnrevealedCreationRollIds(
+      character.creation,
+      state.diceLog,
+      nowMs
+    )) {
+      hiddenRollIds.add(rollId)
+    }
+  }
+
+  return hiddenRollIds
+}
 
 const hasUnrevealedRollFact = (
   fact: object | null | undefined,
@@ -779,7 +812,7 @@ export const filterLiveActivitiesForViewer = (
       delete (filtered as unknown as Record<string, unknown>).total
       delete (filtered as unknown as Record<string, unknown>).rollsOmitted
     } else {
-      delete (filtered as unknown as Record<string, unknown>).details
+      return redactCharacterCreationActivity(filtered)
     }
 
     return filtered

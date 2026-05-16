@@ -2550,6 +2550,58 @@ describe('character creation setup command handlers', () => {
     )
   })
 
+  it('rejects finalization while evicted creation dice are still unrevealed', () => {
+    const rollEventId = asEventId('survival-roll-1')
+    const creation = createCreation('ACTIVE', {
+      terms: [
+        {
+          ...completedTerm(),
+          facts: {
+            survival: {
+              ...survivalFact(true),
+              rollEventId
+            }
+          }
+        }
+      ],
+      careers: [{ name: 'Scout', rank: 0 }],
+      timeline: [
+        {
+          eventId: asEventId('game-1:4'),
+          seq: 4,
+          createdAt: '2026-05-15T00:00:00.000Z',
+          eventType: 'CharacterCreationSurvivalResolved',
+          rollEventId
+        }
+      ]
+    })
+
+    const result = deriveCharacterCreationCommandEvents(
+      {
+        type: 'FinalizeCharacterCreation',
+        gameId,
+        actorId,
+        characterId
+      },
+      {
+        state: createState(creation),
+        currentSeq: 1,
+        nextSeq: 2,
+        gameSeed: 1234,
+        createdAt: '2026-05-15T00:00:01.000Z',
+        ruleset: CEPHEUS_SRD_RULESET
+      }
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'Character creation cannot be finalized while creation dice are unrevealed'
+    )
+  })
+
   it('finalizes term notes from facts-only survival results', () => {
     const result = deriveCharacterCreationCommandEvents(
       {

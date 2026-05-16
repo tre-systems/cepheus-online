@@ -285,6 +285,9 @@ viewer-aware public projection before it leaves the Durable Object. Before
 `revealAt`, public state treats the roll as pending: the browser may receive
 the roll id, expression, reason/activity, actor, and reveal time, but not dice
 values, totals, success/failure text, or roll-derived character sheet fields.
+Character creation reveal checks must not depend only on the capped live
+`diceLog`; use the semantic creation timeline as the fallback reveal source
+when an older source roll is no longer retained in the live log.
 After `revealAt`, the public projection may include the result and derived
 consequences.
 
