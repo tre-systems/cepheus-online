@@ -1,29 +1,32 @@
-import {
-  deriveCharacterCreationTimelineEntry,
-  deriveMaterialBenefitEffect,
-  leaveCareerTerm,
-  startCareerTerm
-} from '../characterCreation'
+import { leaveCareerTerm, startCareerTerm } from '../characterCreation'
 import { requireState } from './state'
 import {
   appendCharacterCreationHistory,
   appendCharacterCreationTimeline,
   applyCareerRank,
-  applyCharacterSheetPatch,
-  backgroundSkillAllowance,
   cloneCareerTerm,
   markLastTermCareerLifecycle,
   recordActiveTermAdvancement,
-  recordActiveTermAnagathics,
   recordActiveTermFacts,
   recordMusteringBenefit,
-  recordTermFactsByIndex,
   requiredTermSkillCount,
   startProjectedCareerTerm,
   withCareerTermFacts,
   withCharacterCreationActionPlans,
   type CharacterCreationProjectionOptions
 } from './character-creation-helpers'
+import {
+  characterCreationMusteringEventHandlers,
+  type CharacterCreationMusteringEventType
+} from './character-creation-mustering-handlers'
+import {
+  characterCreationRiskEventHandlers,
+  type CharacterCreationRiskEventType
+} from './character-creation-risk-handlers'
+import {
+  characterCreationSetupEventHandlers,
+  type CharacterCreationSetupEventType
+} from './character-creation-setup-handlers'
 import {
   characterSheetEventHandlers,
   type CharacterSheetEventType
@@ -34,10 +37,10 @@ export type { CharacterCreationProjectionOptions } from './character-creation-he
 
 type CharacterEventType =
   | CharacterSheetEventType
-  | 'CharacterCreationStarted'
+  | CharacterCreationSetupEventType
+  | CharacterCreationMusteringEventType
+  | CharacterCreationRiskEventType
   | 'CharacterCreationTransitioned'
-  | 'CharacterCreationCharacteristicRolled'
-  | 'CharacterCreationCharacteristicsCompleted'
   | 'CharacterCreationBasicTrainingCompleted'
   | 'CharacterCreationQualificationResolved'
   | 'CharacterCreationDraftResolved'
@@ -47,50 +50,19 @@ type CharacterEventType =
   | 'CharacterCreationCommissionSkipped'
   | 'CharacterCreationAdvancementResolved'
   | 'CharacterCreationAdvancementSkipped'
-  | 'CharacterCreationAgingResolved'
-  | 'CharacterCreationAgingLossesResolved'
-  | 'CharacterCreationMishapResolved'
-  | 'CharacterCreationInjuryResolved'
-  | 'CharacterCreationDeathConfirmed'
-  | 'CharacterCreationAnagathicsDecided'
   | 'CharacterCreationReenlistmentResolved'
   | 'CharacterCreationCareerReenlisted'
   | 'CharacterCreationCareerLeft'
   | 'CharacterCreationTermSkillRolled'
   | 'CharacterCreationTermCascadeSkillResolved'
   | 'CharacterCreationSkillsCompleted'
-  | 'CharacterCreationMusteringBenefitRolled'
-  | 'CharacterCreationAfterMusteringContinued'
-  | 'CharacterCreationMusteringCompleted'
-  | 'CharacterCreationCompleted'
-  | 'CharacterCreationHomeworldSet'
-  | 'CharacterCreationHomeworldCompleted'
-  | 'CharacterCreationBackgroundSkillSelected'
-  | 'CharacterCreationCascadeSkillResolved'
-  | 'CharacterCreationFinalized'
   | 'CharacterCareerTermStarted'
 
 const rawCharacterEventHandlers = {
   ...characterSheetEventHandlers,
-
-  CharacterCreationStarted: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character) return nextState
-
-    const creation = structuredClone(event.creation)
-    const timelineEntry = deriveCharacterCreationTimelineEntry(envelope)
-    character.creation = {
-      ...creation,
-      timeline: timelineEntry
-        ? [...(creation.timeline ?? []), timelineEntry]
-        : [...(creation.timeline ?? [])]
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
+  ...characterCreationSetupEventHandlers,
+  ...characterCreationMusteringEventHandlers,
+  ...characterCreationRiskEventHandlers,
 
   CharacterCreationTransitioned: (state, envelope) => {
     const event = envelope.event
@@ -162,154 +134,6 @@ const rawCharacterEventHandlers = {
       careers,
       timeline: appendCharacterCreationTimeline(character, envelope),
       history: appendCharacterCreationHistory(character, event)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationCharacteristicRolled: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.characteristics = {
-      ...character.characteristics,
-      [event.characteristic]: event.value
-    }
-    character.creation = {
-      ...character.creation,
-      characteristicRolls: {
-        ...(character.creation.characteristicRolls ?? {}),
-        [event.characteristic]: {
-          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
-          value: event.value
-        }
-      },
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationCharacteristicsCompleted: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationMishapResolved: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    const lastTermIndex = character.creation.terms.length - 1
-    const terms = character.creation.terms.map((term, index) =>
-      index === lastTermIndex
-        ? withCareerTermFacts(leaveCareerTerm(term), (facts) => ({
-            ...facts,
-            ...(event.mishap
-              ? {
-                  mishap: {
-                    ...(event.rollEventId
-                      ? { rollEventId: event.rollEventId }
-                      : {}),
-                    roll: structuredClone(event.mishap.roll),
-                    outcome: structuredClone(event.mishap.outcome)
-                  }
-                }
-              : {})
-          }))
-        : structuredClone(term)
-    )
-
-    if ((event.mishap?.outcome.debtCredits ?? 0) > 0) {
-      character.credits -= event.mishap?.outcome.debtCredits ?? 0
-    }
-    if ((event.mishap?.outcome.extraServiceYears ?? 0) > 0) {
-      character.age =
-        (character.age ?? 18) + (event.mishap?.outcome.extraServiceYears ?? 0)
-    }
-
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      pendingDecisions: event.mishap?.outcome.injury
-        ? [{ key: 'injuryResolution' }]
-        : [],
-      terms,
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationInjuryResolved: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    applyCharacterSheetPatch(character, {
-      characteristics: event.characteristicPatch
-    })
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      pendingDecisions: [],
-      terms: recordActiveTermFacts(character.creation.terms, (facts) => ({
-        ...facts,
-        injury: {
-          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
-          ...(event.method ? { method: event.method } : {}),
-          ...(event.injuryRoll
-            ? { injuryRoll: structuredClone(event.injuryRoll) }
-            : {}),
-          ...(event.severityRoll
-            ? { severityRoll: structuredClone(event.severityRoll) }
-            : {}),
-          outcome: structuredClone(event.outcome),
-          selectedLosses: structuredClone(event.selectedLosses),
-          characteristicPatch: structuredClone(event.characteristicPatch)
-        }
-      })),
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationDeathConfirmed: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      pendingDecisions: [],
-      timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
 
@@ -663,111 +487,6 @@ const rawCharacterEventHandlers = {
     return nextState
   },
 
-  CharacterCreationAgingResolved: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.age = event.aging.age
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      terms: recordActiveTermFacts(character.creation.terms, (facts) => ({
-        ...facts,
-        aging: {
-          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
-          ...structuredClone(event.aging)
-        }
-      })),
-      characteristicChanges: event.aging.characteristicChanges.map(
-        (change) => ({ ...change })
-      ),
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationAgingLossesResolved: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    applyCharacterSheetPatch(character, {
-      characteristics: event.characteristicPatch
-    })
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      terms: recordActiveTermFacts(character.creation.terms, (facts) => ({
-        ...facts,
-        agingLosses: {
-          selectedLosses: structuredClone(event.selectedLosses),
-          characteristicPatch: structuredClone(event.characteristicPatch)
-        }
-      })),
-      characteristicChanges: [],
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationAnagathicsDecided: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      terms: recordTermFactsByIndex(
-        recordActiveTermAnagathics(
-          character.creation.terms,
-          event.termIndex,
-          event.useAnagathics,
-          event.passed,
-          event.cost
-        ),
-        event.termIndex,
-        (facts) => ({
-          ...facts,
-          anagathicsDecision: {
-            ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
-            useAnagathics: event.useAnagathics,
-            termIndex: event.termIndex,
-            ...(event.passed !== undefined ? { passed: event.passed } : {}),
-            ...(event.survival
-              ? { survival: structuredClone(event.survival) }
-              : {}),
-            ...(event.cost !== undefined ? { cost: event.cost } : {}),
-            ...(event.costRoll
-              ? { costRoll: structuredClone(event.costRoll) }
-              : {})
-          }
-        })
-      ),
-      pendingDecisions: event.pendingDecisions
-        ? event.pendingDecisions.map((decision) => ({ ...decision }))
-        : character.creation.pendingDecisions,
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    if (event.cost !== undefined) {
-      character.credits -= event.cost
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
   CharacterCreationReenlistmentResolved: (state, envelope) => {
     const event = envelope.event
     const nextState = requireState(state, event.type)
@@ -913,200 +632,6 @@ const rawCharacterEventHandlers = {
       ...character.creation,
       state: structuredClone(event.state),
       creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationMusteringBenefitRolled: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      terms: recordMusteringBenefit(
-        character.creation.terms,
-        event.musteringBenefit.career,
-        event.musteringBenefit.value,
-        {
-          ...(event.rollEventId ? { rollEventId: event.rollEventId } : {}),
-          ...event.musteringBenefit
-        }
-      ),
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    if (event.musteringBenefit.kind === 'cash') {
-      character.credits += event.musteringBenefit.credits
-    } else {
-      const effect = deriveMaterialBenefitEffect(event.musteringBenefit.value)
-      if (effect.kind === 'characteristic') {
-        character.characteristics = {
-          ...character.characteristics,
-          [effect.characteristic]:
-            (character.characteristics[effect.characteristic] ?? 0) +
-            effect.modifier
-        }
-      } else if (effect.kind === 'equipment') {
-        character.equipment = [
-          ...character.equipment,
-          {
-            name: effect.item,
-            quantity: 1,
-            notes: `Mustering benefit: ${event.musteringBenefit.career}`
-          }
-        ]
-      }
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationAfterMusteringContinued: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationMusteringCompleted: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationCompleted: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationHomeworldSet: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      homeworld: structuredClone(event.homeworld),
-      backgroundSkills: [...event.backgroundSkills],
-      backgroundSkillAllowance:
-        event.backgroundSkillAllowance ?? backgroundSkillAllowance(character),
-      pendingCascadeSkills: [...event.pendingCascadeSkills],
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationHomeworldCompleted: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      state: structuredClone(event.state),
-      creationComplete: event.creationComplete,
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationBackgroundSkillSelected: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      backgroundSkills: [...event.backgroundSkills],
-      backgroundSkillAllowance:
-        event.backgroundSkillAllowance ??
-        character.creation.backgroundSkillAllowance ??
-        backgroundSkillAllowance(character),
-      pendingCascadeSkills: [...event.pendingCascadeSkills],
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationCascadeSkillResolved: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    character.creation = {
-      ...character.creation,
-      backgroundSkills: [...event.backgroundSkills],
-      backgroundSkillAllowance:
-        event.backgroundSkillAllowance ??
-        character.creation.backgroundSkillAllowance ??
-        backgroundSkillAllowance(character),
-      pendingCascadeSkills: [...event.pendingCascadeSkills],
-      timeline: appendCharacterCreationTimeline(character, envelope)
-    }
-    nextState.eventSeq = envelope.seq
-
-    return nextState
-  },
-
-  CharacterCreationFinalized: (state, envelope) => {
-    const event = envelope.event
-    const nextState = requireState(state, event.type)
-    const character = nextState.characters[event.characterId]
-    if (!character?.creation) return nextState
-
-    applyCharacterSheetPatch(character, event)
-    character.creation = {
-      ...character.creation,
       timeline: appendCharacterCreationTimeline(character, envelope)
     }
     nextState.eventSeq = envelope.seq
