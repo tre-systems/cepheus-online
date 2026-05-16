@@ -1352,6 +1352,8 @@ Tasks:
   add/update/remove commands/events and ledger-backed credit adjustments.
 - Done: extend the equipment/ledger export path so completed sheets and plain
   export show credit history cleanly.
+- Done: completed sheet skill roll buttons use the server dice path from both
+  token-linked sheets and character-only sheets.
 - Add character action-sheet controls that use skills, equipment, cover, stance,
   fatigue, and status.
 - Add notes and handouts as server-ordered blocks, with CRDTs only if a concrete
