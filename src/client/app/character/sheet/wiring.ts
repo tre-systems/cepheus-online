@@ -1,3 +1,4 @@
+import type { CepheusSrdRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import { asCharacterId } from '../../../../shared/ids'
 import type {
   BoardState,
@@ -18,13 +19,13 @@ import type {
   SheetCommand
 } from '../../core/command-router.js'
 import type { RequiredAppElements } from '../../core/elements.js'
+import { renderCharacterCreationSheetActions } from '../creation/sheet-actions.js'
 import {
-  createCharacterSheetController,
   type CharacterSheetController,
-  type CharacterSheetControllerOptions
+  type CharacterSheetControllerOptions,
+  createCharacterSheetController
 } from './controller.js'
 import { skillRollExpression } from './view.js'
-import { renderCharacterCreationSheetActions } from '../creation/sheet-actions.js'
 
 export interface CharacterSheetWiringOptions {
   document: Document
@@ -41,6 +42,7 @@ export interface CharacterSheetWiringOptions {
   postCharacterCreationCommand: (
     command: CharacterCreationCommand
   ) => Promise<unknown>
+  ruleset?: CepheusSrdRuleset
   reportError: (message: string) => void
   createController?: (
     options: CharacterSheetControllerOptions
@@ -60,6 +62,7 @@ export const createCharacterSheetWiring = ({
   getCommandIdentity,
   postSheetCommand,
   postCharacterCreationCommand,
+  ruleset,
   reportError,
   createController = createCharacterSheetController
 }: CharacterSheetWiringOptions): CharacterSheetController => {
@@ -151,6 +154,7 @@ export const createCharacterSheetWiring = ({
         amount,
         reason
       }),
+    ruleset,
     getCharacterCreationActions: (character) =>
       renderCharacterCreationSheetActions(character, {
         document,

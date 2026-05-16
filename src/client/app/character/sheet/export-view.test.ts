@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import { CEPHEUS_SRD_RULESET } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import { asCharacterId, asUserId } from '../../../../shared/ids'
 import type {
   CharacterCreationProjection,
@@ -404,6 +405,41 @@ describe('character sheet export view', () => {
     assert.equal(
       exportText.includes(
         'Background Skills: Slug Pistol-0 (law Low Law), Zero-G-0 (trade Asteroid), Admin-0 (primary education)'
+      ),
+      true
+    )
+  })
+
+  it('uses an injected ruleset for background skill export sources', () => {
+    const ruleset = {
+      ...CEPHEUS_SRD_RULESET,
+      homeWorldSkillsByLawLevel: {
+        Frontier: 'Discipline*'
+      },
+      homeWorldSkillsByTradeCode: {
+        Research: 'Science'
+      },
+      cascadeSkills: {
+        ...CEPHEUS_SRD_RULESET.cascadeSkills,
+        Discipline: ['Focus', 'Resolve']
+      }
+    }
+    const creation = {
+      ...finalizedCreation(),
+      homeworld: {
+        name: 'Custom Homeworld',
+        lawLevel: 'Frontier',
+        tradeCodes: ['Research']
+      },
+      backgroundSkills: ['Focus-0', 'Science-0', 'Admin-0']
+    }
+
+    const exportText =
+      derivePlainCharacterExport(character({ creation }), { ruleset }) ?? ''
+
+    assert.equal(
+      exportText.includes(
+        'Background Skills: Focus-0 (law Frontier), Science-0 (trade Research), Admin-0 (primary education)'
       ),
       true
     )

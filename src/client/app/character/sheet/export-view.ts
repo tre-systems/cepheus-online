@@ -1,4 +1,8 @@
-import { CEPHEUS_SRD_RULESET } from '../../../../shared/character-creation/cepheus-srd-ruleset'
+import {
+  CEPHEUS_SRD_RULESET,
+  type CepheusSrdRuleset
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
+import { deriveCharacterCreationProjectionReadModel } from '../../../../shared/character-creation/view-state'
 import type {
   CareerCreationCheckFact,
   CareerTerm
@@ -7,13 +11,12 @@ import {
   deriveMaterialBenefitEffect,
   parseCareerSkill
 } from '../../../../shared/characterCreation'
-import { deriveCharacterCreationProjectionReadModel } from '../../../../shared/character-creation/view-state'
 import type {
   CharacterCharacteristics,
   CharacterCreationProjection,
   CharacterEquipmentItem,
-  CharacterLedgerEntry,
   CharacteristicKey,
+  CharacterLedgerEntry,
   CharacterState
 } from '../../../../shared/state'
 
@@ -152,30 +155,30 @@ const sourceSkillName = (skill: string): string =>
 
 const sourceSkillMatches = (
   sourceSkill: string,
-  characterSkill: string
+  characterSkill: string,
+  ruleset: CepheusSrdRuleset
 ): boolean => {
   const sourceName = sourceSkillName(sourceSkill)
   const skillName = skillBaseName(characterSkill)
   if (sourceName === skillName) return true
-  return (
-    CEPHEUS_SRD_RULESET.cascadeSkills[sourceName]?.includes(skillName) ?? false
-  )
+  return ruleset.cascadeSkills[sourceName]?.includes(skillName) ?? false
 }
 
 const backgroundSkillSourceValue = (
-  creation: CharacterCreationProjection | null | undefined
+  creation: CharacterCreationProjection | null | undefined,
+  ruleset: CepheusSrdRuleset
 ): string | null => {
   const skills = creation?.backgroundSkills ?? []
   if (skills.length === 0) return null
 
   const homeworld = creation?.homeworld
   const lawSkill = homeworld?.lawLevel
-    ? CEPHEUS_SRD_RULESET.homeWorldSkillsByLawLevel[homeworld.lawLevel]
+    ? ruleset.homeWorldSkillsByLawLevel[homeworld.lawLevel]
     : null
   const tradeSkillSources = (homeworld?.tradeCodes ?? [])
     .map((tradeCode) => ({
       tradeCode,
-      skill: CEPHEUS_SRD_RULESET.homeWorldSkillsByTradeCode[tradeCode]
+      skill: ruleset.homeWorldSkillsByTradeCode[tradeCode]
     }))
     .filter((entry): entry is { tradeCode: string; skill: string } =>
       Boolean(entry.skill)
@@ -184,11 +187,11 @@ const backgroundSkillSourceValue = (
   return skills
     .map((skill) => {
       const sources: string[] = []
-      if (lawSkill && sourceSkillMatches(lawSkill, skill)) {
+      if (lawSkill && sourceSkillMatches(lawSkill, skill, ruleset)) {
         sources.push(`law ${homeworld?.lawLevel}`)
       }
       for (const { tradeCode, skill: tradeSkill } of tradeSkillSources) {
-        if (sourceSkillMatches(tradeSkill, skill)) {
+        if (sourceSkillMatches(tradeSkill, skill, ruleset)) {
           sources.push(`trade ${tradeCode}`)
         }
       }
@@ -541,11 +544,17 @@ export interface CharacterExportViewModel {
   notes: string | null
 }
 
+export interface CharacterExportRulesetOptions {
+  ruleset?: CepheusSrdRuleset
+}
+
 export const deriveCharacterExportViewModel = (
-  character: CharacterState | null | undefined
+  character: CharacterState | null | undefined,
+  options: CharacterExportRulesetOptions = {}
 ): CharacterExportViewModel | null => {
   if (!character || !isCharacterCreationFinal(character)) return null
 
+  const ruleset = options.ruleset ?? CEPHEUS_SRD_RULESET
   const creation = character.creation
   const homeworld = creation?.homeworld
   return {
@@ -555,7 +564,7 @@ export const deriveCharacterExportViewModel = (
     type: character.type,
     age: character.age == null ? '-' : String(character.age),
     homeworld: `${homeworld?.name || 'Unspecified'}${homeworld?.lawLevel ? `, ${homeworld.lawLevel}` : ''}${homeworld?.tradeCodes?.length ? `, ${homeworld.tradeCodes.join(', ')}` : ''}`,
-    backgroundSkills: backgroundSkillSourceValue(creation),
+    backgroundSkills: backgroundSkillSourceValue(creation, ruleset),
     careers: careerValue(creation),
     terms: creation?.terms.length ?? 0,
     skills: listValue(sortSkillsForExport(character.skills)),
@@ -568,9 +577,10 @@ export const deriveCharacterExportViewModel = (
 }
 
 export const derivePlainCharacterExport = (
-  character: CharacterState | null | undefined
+  character: CharacterState | null | undefined,
+  options: CharacterExportRulesetOptions = {}
 ): string | null => {
-  const view = deriveCharacterExportViewModel(character)
+  const view = deriveCharacterExportViewModel(character, options)
   if (!view) return null
 
   const lines = [

@@ -1,3 +1,4 @@
+import type { CepheusSrdRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   BoardState,
   CharacterCreationProjection,
@@ -10,22 +11,22 @@ import type {
   PieceVisibility
 } from '../../../../shared/state'
 import {
-  characterSheetEmptyLabels,
-  characterSheetTitle,
-  characteristicRows,
-  characterSkills as deriveCharacterSkills,
-  equipmentDisplayItems,
-  selectedCharacter as selectCharacter,
-  skillsFromText,
-  skillRollReason
-} from './view.js'
-import {
   deriveCharacterExportViewModel,
   deriveCharacterUpp,
   derivePlainCharacterExport,
   formatLedgerEntryForExport,
   sortSkillsForExport
 } from './export-view.js'
+import {
+  characteristicRows,
+  characterSheetEmptyLabels,
+  characterSheetTitle,
+  characterSkills as deriveCharacterSkills,
+  equipmentDisplayItems,
+  selectedCharacter as selectCharacter,
+  skillRollReason,
+  skillsFromText
+} from './view.js'
 
 type CharacterSheetTab = 'details' | 'action' | 'items' | 'notes'
 
@@ -98,6 +99,7 @@ export interface CharacterSheetControllerOptions {
     reason: string
   ) => Promise<unknown>
   createEquipmentItemId?: (character: CharacterState) => string
+  ruleset?: CepheusSrdRuleset
   getCharacterCreationActions?: (
     character: CharacterState | null
   ) => CharacterSheetCreationActions | null
@@ -143,6 +145,7 @@ export const createCharacterSheetController = ({
   adjustCredits,
   createEquipmentItemId = (character) =>
     `equipment-${character.id}-${Date.now().toString(36)}`,
+  ruleset,
   getCharacterCreationActions,
   reportError
 }: CharacterSheetControllerOptions): CharacterSheetController => {
@@ -361,7 +364,7 @@ export const createCharacterSheetController = ({
     body: HTMLElement,
     character: CharacterState | null
   ) => {
-    const exportText = derivePlainCharacterExport(character)
+    const exportText = derivePlainCharacterExport(character, { ruleset })
     if (!exportText) return
 
     const block = documentApi.createElement('pre')
@@ -392,7 +395,7 @@ export const createCharacterSheetController = ({
     body: HTMLElement,
     character: CharacterState | null
   ) => {
-    const exportView = deriveCharacterExportViewModel(character)
+    const exportView = deriveCharacterExportViewModel(character, { ruleset })
     if (!exportView) return
 
     const card = documentApi.createElement('div')
