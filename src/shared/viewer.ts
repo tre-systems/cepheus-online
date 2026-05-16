@@ -284,6 +284,21 @@ const redactCreationProgress = (
   delete character.creation.actionPlan
 }
 
+const redactSurvivalProgress = (character: CharacterState): void => {
+  if (!character.creation) return
+
+  character.creation.state = {
+    status: 'SURVIVAL',
+    context: {
+      canCommission: false,
+      canAdvance: false
+    }
+  }
+  delete character.creation.requiredTermSkillCount
+  delete character.creation.pendingDecisions
+  delete character.creation.actionPlan
+}
+
 const removeProjectedCareerTerm = (
   character: CharacterState,
   termIndex: number
@@ -522,6 +537,7 @@ const redactUnrevealedCreationFacts = (
     }
     if (hasUnrevealedRollFact(facts.survival, unrevealedRollIds)) {
       hiddenFinalizedTermNoteNumbers.add(termIndex + 1)
+      redactSurvivalProgress(character)
       delete facts.survival
       delete (term as unknown as { survival?: number }).survival
     }

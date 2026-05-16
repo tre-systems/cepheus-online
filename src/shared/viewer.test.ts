@@ -593,6 +593,119 @@ describe('viewer filtering', () => {
     )
   })
 
+  it('rewinds pre-reveal survival outcomes to the survival phase', () => {
+    for (const scenario of [
+      {
+        passed: true,
+        status: 'SKILLS_TRAINING' as const,
+        canCommission: false,
+        canAdvance: false
+      },
+      {
+        passed: false,
+        status: 'DECEASED' as const,
+        canCommission: false,
+        canAdvance: false
+      }
+    ]) {
+      const state = buildState()
+      addDiceRoll(state, futureRevealAt)
+      state.characters[asCharacterId('char-1')] = {
+        id: asCharacterId('char-1'),
+        ownerId: asUserId('player'),
+        type: 'PLAYER',
+        name: 'Scout',
+        active: true,
+        notes: '',
+        age: 18,
+        characteristics: {
+          str: 7,
+          dex: 7,
+          end: 7,
+          int: 7,
+          edu: 7,
+          soc: 7
+        },
+        skills: [],
+        equipment: [],
+        credits: 0,
+        creation: {
+          state: {
+            status: scenario.status,
+            context: {
+              canCommission: scenario.canCommission,
+              canAdvance: scenario.canAdvance
+            }
+          },
+          terms: [
+            {
+              career: 'Scout',
+              skills: [],
+              skillsAndTraining: ['Vacc Suit-0'],
+              benefits: [],
+              complete: false,
+              canReenlist: true,
+              completedBasicTraining: true,
+              musteringOut: false,
+              anagathics: false,
+              survival: scenario.passed ? 7 : 2,
+              facts: {
+                basicTrainingSkills: ['Vacc Suit-0'],
+                survival: {
+                  rollEventId: asEventId('roll-1'),
+                  passed: scenario.passed,
+                  survival: {
+                    expression: '2d6',
+                    rolls: scenario.passed ? [3, 4] : [1, 1],
+                    total: scenario.passed ? 7 : 2,
+                    characteristic: 'end',
+                    modifier: 0,
+                    target: 7,
+                    success: scenario.passed
+                  },
+                  canCommission: scenario.canCommission,
+                  canAdvance: scenario.canAdvance
+                }
+              }
+            }
+          ],
+          careers: [{ name: 'Scout', rank: 0 }],
+          canEnterDraft: true,
+          failedToQualify: false,
+          characteristicChanges: [],
+          requiredTermSkillCount: scenario.passed ? 2 : undefined,
+          creationComplete: false,
+          actionPlan: {
+            status: scenario.status,
+            pendingDecisions: [],
+            legalActions: []
+          }
+        }
+      }
+
+      const filtered = filterGameStateForViewer(
+        state,
+        {
+          userId: asUserId('spectator'),
+          role: 'SPECTATOR'
+        },
+        { nowMs }
+      )
+
+      const creation = filtered.characters[asCharacterId('char-1')]?.creation
+      const term = creation?.terms[0]
+      assert.equal(creation?.state.status, 'SURVIVAL')
+      assert.deepEqual(creation?.state.context, {
+        canCommission: false,
+        canAdvance: false
+      })
+      assert.equal(creation?.actionPlan, undefined)
+      assert.equal(creation?.requiredTermSkillCount, undefined)
+      assert.equal(term?.facts?.survival, undefined)
+      assert.equal('survival' in (term ?? {}), false)
+    }
+  })
+
   it('redacts pre-reveal final term skill roll progress from top-level creation state', () => {
     const state = buildState()
     addDiceRoll(state, futureRevealAt)
