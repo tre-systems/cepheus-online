@@ -213,9 +213,7 @@ export const createCharacterCreationRenderController = ({
       }
       return fragment
     }
-    const flow = viewModel.flow
-    if (!flow) return fragment
-    if (flow.step === 'career') {
+    if (viewModel.wizard?.step === 'career') {
       if (viewModel.wizard?.death) {
         fragment.append(renderCharacterCreationDeath(viewModel.wizard.death))
         return fragment
@@ -291,6 +289,55 @@ export const createCharacterCreationRenderController = ({
       }
       return fragment
     }
+    if (
+      viewModel.wizard?.step === 'skills' &&
+      (viewModel.wizard.basicTraining ||
+        viewModel.wizard.termSkills ||
+        viewModel.wizard.termCascadeChoices)
+    ) {
+      if (viewModel.wizard.basicTraining) {
+        const basicTraining = renderCharacterCreationBasicTrainingButton(
+          viewModel.wizard.basicTraining
+        )
+        if (basicTraining) fragment.append(basicTraining)
+      }
+      if (viewModel.wizard.termSkills) {
+        fragment.append(
+          renderCharacterCreationTermSkillTables(viewModel.wizard.termSkills)
+        )
+      }
+      if (viewModel.wizard.termCascadeChoices) {
+        fragment.append(
+          renderCharacterCreationTermCascadeChoices(
+            viewModel.wizard.termCascadeChoices
+          )
+        )
+      }
+      if (viewModel.wizard.termHistory) {
+        fragment.append(
+          renderCharacterCreationTermHistory(viewModel.wizard.termHistory)
+        )
+      }
+      return fragment
+    }
+    if (
+      viewModel.wizard?.step === 'equipment' &&
+      viewModel.wizard.musteringOut
+    ) {
+      if (viewModel.wizard.musteringOut) {
+        fragment.append(
+          renderCharacterCreationMusteringOut(viewModel.wizard.musteringOut)
+        )
+      }
+      if (viewModel.wizard.termHistory) {
+        fragment.append(
+          renderCharacterCreationTermHistory(viewModel.wizard.termHistory)
+        )
+      }
+      return fragment
+    }
+    const flow = viewModel.flow
+    if (!flow) return fragment
     fragment.append(
       renderCharacterCreationDraftFieldsView(document, flow, {
         renderCharacteristicRollButton:

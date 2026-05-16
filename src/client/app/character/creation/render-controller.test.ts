@@ -136,6 +136,174 @@ const characterWithHomeworldCreation = (): CharacterState => ({
   }
 })
 
+const characterWithCareerSelectionCreation = (): CharacterState => ({
+  id: asCharacterId('render-controller-1'),
+  ownerId: asUserId('actor-1'),
+  type: 'PLAYER',
+  name: 'Iona Vesh',
+  active: true,
+  notes: '',
+  age: 18,
+  characteristics: {
+    str: 7,
+    dex: 8,
+    end: 7,
+    int: 9,
+    edu: 8,
+    soc: 6
+  },
+  skills: ['Survival-0'],
+  equipment: [],
+  credits: 0,
+  creation: {
+    state: {
+      status: 'CAREER_SELECTION',
+      context: {
+        canCommission: false,
+        canAdvance: false
+      }
+    },
+    terms: [],
+    careers: [],
+    canEnterDraft: true,
+    failedToQualify: false,
+    characteristicChanges: [],
+    creationComplete: false,
+    backgroundSkills: ['Survival-0'],
+    pendingCascadeSkills: [],
+    actionPlan: {
+      status: 'CAREER_SELECTION',
+      pendingDecisions: [],
+      legalActions: [],
+      careerChoiceOptions: {
+        careers: [
+          {
+            key: 'Projected Scout',
+            label: 'Projected Scout',
+            selected: true,
+            qualification: {
+              label: 'Qualification',
+              requirement: 'Int 6+',
+              available: true,
+              characteristic: 'int',
+              target: 6,
+              modifier: 1
+            },
+            survival: {
+              label: 'Survival',
+              requirement: 'End 7+',
+              available: true,
+              characteristic: 'end',
+              target: 7,
+              modifier: 0
+            },
+            commission: {
+              label: 'Commission',
+              requirement: '-',
+              available: false,
+              characteristic: null,
+              target: null,
+              modifier: 0
+            },
+            advancement: {
+              label: 'Advancement',
+              requirement: '-',
+              available: false,
+              characteristic: null,
+              target: null,
+              modifier: 0
+            }
+          }
+        ]
+      }
+    },
+    timeline: []
+  }
+})
+
+const characterWithBasicTrainingCreation = (): CharacterState => ({
+  id: asCharacterId('render-controller-1'),
+  ownerId: asUserId('actor-1'),
+  type: 'PLAYER',
+  name: 'Iona Vesh',
+  active: true,
+  notes: '',
+  age: 18,
+  characteristics: {
+    str: 7,
+    dex: 8,
+    end: 7,
+    int: 9,
+    edu: 8,
+    soc: 6
+  },
+  skills: [],
+  equipment: [],
+  credits: 0,
+  creation: {
+    state: {
+      status: 'BASIC_TRAINING',
+      context: {
+        canCommission: false,
+        canAdvance: false
+      }
+    },
+    terms: [
+      {
+        career: 'Merchant',
+        skills: [],
+        skillsAndTraining: [],
+        benefits: [],
+        complete: false,
+        canReenlist: false,
+        completedBasicTraining: false,
+        musteringOut: false,
+        anagathics: false,
+        facts: {
+          qualification: {
+            career: 'Merchant',
+            passed: true,
+            previousCareerCount: 0,
+            failedQualificationOptions: [],
+            qualification: {
+              expression: '2d6',
+              rolls: [4, 4],
+              total: 8,
+              characteristic: 'int',
+              target: 4,
+              modifier: 1,
+              success: true
+            }
+          }
+        }
+      }
+    ],
+    careers: [],
+    canEnterDraft: true,
+    failedToQualify: false,
+    characteristicChanges: [],
+    creationComplete: false,
+    backgroundSkills: [],
+    pendingCascadeSkills: [],
+    actionPlan: {
+      status: 'BASIC_TRAINING',
+      pendingDecisions: [],
+      legalActions: [
+        {
+          key: 'completeBasicTraining',
+          status: 'BASIC_TRAINING',
+          commandTypes: ['CompleteCharacterCreationBasicTraining'],
+          basicTrainingOptions: {
+            kind: 'choose-one',
+            skills: ['Projected Skill-0']
+          }
+        }
+      ]
+    },
+    timeline: []
+  }
+})
+
 const renderReadOnlyCharacter = (character: CharacterState) => {
   const els = elements()
   const baseViewModel = deriveCharacterCreationViewModel({
@@ -413,7 +581,10 @@ describe('character creation render controller', () => {
 
     assert.equal(els.characterCreationWizard.hidden, false)
     assert.equal(fields.children[0]?.className, 'creation-next-step')
-    assert.equal(fields.children[1]?.children[0]?.className, 'creation-homeworld')
+    assert.equal(
+      fields.children[1]?.children[0]?.className,
+      'creation-homeworld'
+    )
     assert.equal(
       nodes.some((node) => node.textContent === 'Background skills'),
       true
@@ -426,6 +597,127 @@ describe('character creation render controller', () => {
       fields.querySelectorAll('button').every((node) => node.disabled),
       true
     )
+  })
+
+  it('renders read-only career selection without requiring a legacy flow', () => {
+    const els = renderReadOnlyCharacter(characterWithCareerSelectionCreation())
+    const fields = asNode(els.characterCreationFields)
+    const nodes = walk(fields)
+
+    assert.equal(els.characterCreationWizard.hidden, false)
+    assert.equal(fields.children[0]?.className, 'creation-next-step')
+    assert.equal(
+      nodes.some((node) => node.className === 'creation-career-picker'),
+      true
+    )
+    assert.equal(
+      nodes.some((node) => node.textContent === 'Projected Scout'),
+      true
+    )
+    assert.equal(
+      fields.querySelectorAll('button').every((node) => node.disabled),
+      true
+    )
+  })
+
+  it('renders read-only basic training without requiring a legacy flow', () => {
+    const els = renderReadOnlyCharacter(characterWithBasicTrainingCreation())
+    const fields = asNode(els.characterCreationFields)
+    const nodes = walk(fields)
+
+    assert.equal(els.characterCreationWizard.hidden, false)
+    assert.equal(fields.children[0]?.className, 'creation-next-step')
+    assert.equal(
+      nodes.some(
+        (node) =>
+          node.textContent === 'Choose one Merchant service skill at level 0'
+      ),
+      true
+    )
+    assert.equal(
+      nodes.some((node) => node.textContent === 'Projected Skill-0'),
+      true
+    )
+    assert.equal(
+      fields.querySelectorAll('button').every((node) => node.disabled),
+      true
+    )
+  })
+
+  it('renders editable basic training from the projected read model when a flow exists', () => {
+    const els = elements()
+    const character = characterWithBasicTrainingCreation()
+    const currentFlow: CharacterCreationFlow = {
+      step: 'skills',
+      draft: createInitialCharacterDraft(character.id, {
+        name: 'Stale Draft',
+        characteristics: {
+          str: 3,
+          dex: 3,
+          end: 3,
+          int: 3,
+          edu: 3,
+          soc: 3
+        }
+      })
+    }
+    const baseViewModel = deriveCharacterCreationViewModel({
+      flow: currentFlow,
+      projection: character.creation,
+      character,
+      readOnly: false
+    })
+    const controller = createCharacterCreationRenderController({
+      document: renderDocument(),
+      elements: els,
+      controller: {
+        currentProjection: () => character.creation,
+        flow: () => currentFlow,
+        readOnly: () => false,
+        reconcileEditableWithProjection: () => currentFlow,
+        setFlow: (nextFlow) => nextFlow,
+        viewModel: () => baseViewModel
+      },
+      panel: {
+        render: () => true,
+        scrollToTop: () => {}
+      },
+      wizard: {
+        advance: async () => {},
+        autoAdvanceSetup: () => false,
+        startNew: async () => {},
+        syncFields: () => {}
+      },
+      homeworldPublisher: {
+        publishBackgroundCascadeSelection: async () => {},
+        publishProgress: async () => {},
+        publishCascadeResolution: async () => {}
+      },
+      getCommandController: commandController,
+      ensurePublished: async () => {},
+      postCharacterCreationCommand: async () => ({}),
+      commandIdentity: () => ({
+        gameId: asGameId('game-1'),
+        actorId: asUserId('actor-1')
+      }),
+      reportError: () => {}
+    })
+
+    controller.renderWizard()
+
+    const fields = asNode(els.characterCreationFields)
+    const nodes = walk(fields)
+
+    assert.equal(fields.children[0]?.className, 'creation-next-step')
+    assert.equal(
+      nodes.some((node) => node.className === 'character-creation-roll-action'),
+      true
+    )
+    assert.equal(
+      nodes.some((node) => node.textContent === 'Projected Skill-0'),
+      true
+    )
+    assert.equal(fields.querySelectorAll('textarea').length, 0)
   })
 
   it('renders the next-step panel from the controller view model', () => {

@@ -715,6 +715,190 @@ describe('character creation view model', () => {
     )
   })
 
+  it('derives read-only career selection from the shared read model without a legacy flow', () => {
+    const currentProjection = projection('CAREER_SELECTION', {
+      backgroundSkills: ['Survival-0'],
+      actionPlan: {
+        status: 'CAREER_SELECTION',
+        pendingDecisions: [],
+        legalActions: [],
+        careerChoiceOptions: {
+          careers: [
+            {
+              key: 'Projected Scout',
+              label: 'Projected Scout',
+              selected: true,
+              qualification: {
+                label: 'Qualification',
+                requirement: 'Int 6+',
+                available: true,
+                characteristic: 'int',
+                target: 6,
+                modifier: 1
+              },
+              survival: {
+                label: 'Survival',
+                requirement: 'End 7+',
+                available: true,
+                characteristic: 'end',
+                target: 7,
+                modifier: 0
+              },
+              commission: {
+                label: 'Commission',
+                requirement: '-',
+                available: false,
+                characteristic: null,
+                target: null,
+                modifier: 0
+              },
+              advancement: {
+                label: 'Advancement',
+                requirement: '-',
+                available: false,
+                characteristic: null,
+                target: null,
+                modifier: 0
+              }
+            }
+          ]
+        }
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: currentProjection,
+      character: character(currentProjection, {
+        age: 18,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        skills: ['Survival-0']
+      }),
+      readOnly: true
+    })
+
+    assert.equal(viewModel.mode, 'read-only')
+    assert.equal(viewModel.flow, null)
+    assert.equal(viewModel.wizard?.step, 'career')
+    assert.equal(viewModel.wizard?.controlsDisabled, true)
+    assert.equal(viewModel.wizard?.careerSelection?.open, true)
+    assert.deepEqual(viewModel.wizard?.careerSelection?.careerOptions, [
+      {
+        key: 'Projected Scout',
+        label: 'Projected Scout',
+        selected: true,
+        qualification: {
+          label: 'Qualification',
+          requirement: 'Int 6+',
+          available: true,
+          characteristic: 'int',
+          target: 6,
+          modifier: 1
+        },
+        survival: {
+          label: 'Survival',
+          requirement: 'End 7+',
+          available: true,
+          characteristic: 'end',
+          target: 7,
+          modifier: 0
+        },
+        commission: {
+          label: 'Commission',
+          requirement: '-',
+          available: false,
+          characteristic: null,
+          target: null,
+          modifier: 0
+        },
+        advancement: {
+          label: 'Advancement',
+          requirement: '-',
+          available: false,
+          characteristic: null,
+          target: null,
+          modifier: 0
+        }
+      }
+    ])
+  })
+
+  it('derives read-only failed qualification fallback from projected facts without a legacy flow', () => {
+    const currentProjection = projection('CAREER_SELECTION', {
+      failedToQualify: true,
+      failedQualification: {
+        career: 'Scout',
+        passed: false,
+        qualification: {
+          expression: '2d6',
+          rolls: [1, 3],
+          total: 4,
+          characteristic: 'int',
+          target: 6,
+          modifier: -2,
+          success: false
+        },
+        previousCareerCount: 0,
+        failedQualificationOptions: ['Drifter']
+      },
+      actionPlan: {
+        status: 'CAREER_SELECTION',
+        pendingDecisions: [],
+        legalActions: [
+          {
+            key: 'selectCareer',
+            status: 'CAREER_SELECTION',
+            commandTypes: [
+              'ResolveCharacterCreationQualification',
+              'ResolveCharacterCreationDraft',
+              'EnterCharacterCreationDrifter'
+            ],
+            failedQualificationOptions: [{ option: 'Drifter' }]
+          }
+        ]
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: currentProjection,
+      character: character(currentProjection, {
+        age: 18,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }
+      }),
+      readOnly: true
+    })
+
+    assert.equal(viewModel.flow, null)
+    assert.equal(viewModel.wizard?.step, 'career')
+    assert.equal(viewModel.wizard?.careerSelection?.outcomeTitle, 'Scout term')
+    assert.deepEqual(
+      viewModel.wizard?.careerSelection?.failedQualification.options,
+      [
+        {
+          option: 'Drifter',
+          label: 'Drifter',
+          actionLabel: 'Become a Drifter',
+          rollRequirement: null
+        }
+      ]
+    )
+  })
+
   it('includes career selection and roll state for the career step', () => {
     const currentFlow = flow({
       step: 'career',
@@ -1364,6 +1548,495 @@ describe('character creation view model', () => {
     ])
   })
 
+  it('derives read-only basic training from the shared read model without a legacy flow', () => {
+    const currentProjection = projection('BASIC_TRAINING', {
+      terms: [
+        {
+          career: 'Merchant',
+          skills: [],
+          skillsAndTraining: [],
+          benefits: [],
+          complete: false,
+          canReenlist: false,
+          completedBasicTraining: false,
+          musteringOut: false,
+          anagathics: false,
+          facts: {
+            qualification: {
+              career: 'Merchant',
+              passed: true,
+              previousCareerCount: 0,
+              failedQualificationOptions: [],
+              qualification: {
+                expression: '2d6',
+                rolls: [4, 4],
+                total: 8,
+                characteristic: 'int',
+                target: 4,
+                modifier: 1,
+                success: true
+              }
+            }
+          }
+        }
+      ],
+      actionPlan: {
+        status: 'BASIC_TRAINING',
+        pendingDecisions: [],
+        legalActions: [
+          {
+            key: 'completeBasicTraining',
+            status: 'BASIC_TRAINING',
+            commandTypes: ['CompleteCharacterCreationBasicTraining'],
+            basicTrainingOptions: {
+              kind: 'choose-one',
+              skills: ['Projected Skill-0']
+            }
+          }
+        ]
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: currentProjection,
+      character: character(currentProjection, {
+        age: 18,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }
+      }),
+      readOnly: true
+    })
+
+    assert.equal(viewModel.flow, null)
+    assert.equal(viewModel.wizard?.step, 'skills')
+    assert.equal(
+      viewModel.wizard?.basicTraining?.label,
+      'Choose basic training'
+    )
+    assert.deepEqual(viewModel.wizard?.basicTraining?.skills, [
+      'Projected Skill-0'
+    ])
+    assert.equal(viewModel.wizard?.controlsDisabled, true)
+  })
+
+  it('prefers the shared read model for editable projected basic training', () => {
+    const currentProjection = projection('BASIC_TRAINING', {
+      terms: [
+        {
+          career: 'Merchant',
+          skills: [],
+          skillsAndTraining: [],
+          benefits: [],
+          complete: false,
+          canReenlist: false,
+          completedBasicTraining: false,
+          musteringOut: false,
+          anagathics: false,
+          facts: {
+            qualification: {
+              career: 'Merchant',
+              passed: true,
+              previousCareerCount: 0,
+              failedQualificationOptions: [],
+              qualification: {
+                expression: '2d6',
+                rolls: [4, 4],
+                total: 8,
+                characteristic: 'int',
+                target: 4,
+                modifier: 1,
+                success: true
+              }
+            }
+          }
+        }
+      ],
+      actionPlan: {
+        status: 'BASIC_TRAINING',
+        pendingDecisions: [],
+        legalActions: [
+          {
+            key: 'completeBasicTraining',
+            status: 'BASIC_TRAINING',
+            commandTypes: ['CompleteCharacterCreationBasicTraining'],
+            basicTrainingOptions: {
+              kind: 'choose-one',
+              skills: ['Projected Skill-0']
+            }
+          }
+        ]
+      }
+    })
+    const staleFlow = flow({
+      step: 'skills',
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Stale Draft',
+        characteristics: {
+          str: 3,
+          dex: 3,
+          end: 3,
+          int: 3,
+          edu: 3,
+          soc: 3
+        },
+        careerPlan: selectCharacterCreationCareerPlan('Scout')
+      })
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: staleFlow,
+      projection: currentProjection,
+      character: character(currentProjection, {
+        age: 18,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.flow, staleFlow)
+    assert.equal(viewModel.mode, 'editable')
+    assert.equal(viewModel.wizard?.step, 'skills')
+    assert.equal(viewModel.wizard?.controlsDisabled, false)
+    assert.equal(viewModel.wizard?.nextStep.stats[0]?.value, '7')
+    assert.equal(
+      viewModel.wizard?.basicTraining?.label,
+      'Choose basic training'
+    )
+    assert.deepEqual(viewModel.wizard?.basicTraining?.skills, [
+      'Projected Skill-0'
+    ])
+  })
+
+  it('derives read-only term skill training from projected facts without a legacy flow', () => {
+    const currentProjection = projection('SKILLS_TRAINING', {
+      requiredTermSkillCount: 2,
+      pendingCascadeSkills: [],
+      terms: [
+        {
+          career: 'Merchant',
+          skills: [],
+          skillsAndTraining: [],
+          benefits: [],
+          complete: false,
+          canReenlist: false,
+          completedBasicTraining: true,
+          musteringOut: false,
+          anagathics: false,
+          facts: {
+            qualification: {
+              career: 'Merchant',
+              passed: true,
+              previousCareerCount: 0,
+              failedQualificationOptions: [],
+              qualification: {
+                expression: '2d6',
+                rolls: [4, 4],
+                total: 8,
+                characteristic: 'int',
+                target: 4,
+                modifier: 1,
+                success: true
+              }
+            },
+            survival: {
+              passed: true,
+              canCommission: false,
+              canAdvance: false,
+              survival: {
+                expression: '2d6',
+                rolls: [5, 3],
+                total: 8,
+                characteristic: 'int',
+                target: 5,
+                modifier: 1,
+                success: true
+              }
+            },
+            basicTrainingSkills: ['Broker-0'],
+            termSkillRolls: [
+              {
+                career: 'Merchant',
+                table: 'serviceSkills',
+                roll: { expression: '1d6', rolls: [1], total: 1 },
+                tableRoll: 1,
+                rawSkill: 'Admin',
+                skill: 'Admin-1',
+                characteristic: null,
+                pendingCascadeSkill: null
+              }
+            ]
+          }
+        }
+      ],
+      actionPlan: {
+        status: 'SKILLS_TRAINING',
+        pendingDecisions: [{ key: 'skillTrainingSelection' }],
+        legalActions: [
+          {
+            key: 'rollTermSkill',
+            status: 'SKILLS_TRAINING',
+            commandTypes: ['RollCharacterCreationTermSkill'],
+            rollRequirement: { key: 'termSkill', dice: '1d6' },
+            termSkillTableOptions: [
+              { table: 'serviceSkills', label: 'Service skills' }
+            ]
+          }
+        ]
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: currentProjection,
+      character: character(currentProjection, {
+        age: 22,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        skills: ['Broker-0', 'Admin-1']
+      }),
+      readOnly: true
+    })
+
+    assert.equal(viewModel.flow, null)
+    assert.equal(viewModel.wizard?.step, 'career')
+    assert.deepEqual(viewModel.wizard?.termSkills?.rolled, [
+      { label: 'Admin-1', detail: '1 on serviceSkills' }
+    ])
+    assert.deepEqual(viewModel.wizard?.termSkills?.actions, [
+      {
+        table: 'serviceSkills',
+        label: 'Service skills',
+        reason: 'Iona Vesh Merchant service skills',
+        disabled: false
+      }
+    ])
+    assert.equal(viewModel.wizard?.controlsDisabled, true)
+  })
+
+  it('prefers projected facts for editable term skill training with a stale flow', () => {
+    const currentProjection = projection('SKILLS_TRAINING', {
+      requiredTermSkillCount: 2,
+      pendingCascadeSkills: [],
+      terms: [
+        {
+          career: 'Merchant',
+          skills: [],
+          skillsAndTraining: [],
+          benefits: [],
+          complete: false,
+          canReenlist: false,
+          completedBasicTraining: true,
+          musteringOut: false,
+          anagathics: false,
+          facts: {
+            qualification: {
+              career: 'Merchant',
+              passed: true,
+              previousCareerCount: 0,
+              failedQualificationOptions: [],
+              qualification: {
+                expression: '2d6',
+                rolls: [4, 4],
+                total: 8,
+                characteristic: 'int',
+                target: 4,
+                modifier: 1,
+                success: true
+              }
+            },
+            survival: {
+              passed: true,
+              canCommission: false,
+              canAdvance: false,
+              survival: {
+                expression: '2d6',
+                rolls: [5, 3],
+                total: 8,
+                characteristic: 'int',
+                target: 5,
+                modifier: 1,
+                success: true
+              }
+            },
+            basicTrainingSkills: ['Broker-0'],
+            termSkillRolls: [
+              {
+                career: 'Merchant',
+                table: 'serviceSkills',
+                roll: { expression: '1d6', rolls: [1], total: 1 },
+                tableRoll: 1,
+                rawSkill: 'Admin',
+                skill: 'Admin-1',
+                characteristic: null,
+                pendingCascadeSkill: null
+              }
+            ]
+          }
+        }
+      ],
+      actionPlan: {
+        status: 'SKILLS_TRAINING',
+        pendingDecisions: [{ key: 'skillTrainingSelection' }],
+        legalActions: [
+          {
+            key: 'rollTermSkill',
+            status: 'SKILLS_TRAINING',
+            commandTypes: ['RollCharacterCreationTermSkill'],
+            rollRequirement: { key: 'termSkill', dice: '1d6' },
+            termSkillTableOptions: [
+              { table: 'serviceSkills', label: 'Service skills' }
+            ]
+          }
+        ]
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow({ termSkillRolls: [] }),
+      projection: currentProjection,
+      character: character(currentProjection, {
+        age: 22,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        },
+        skills: ['Broker-0', 'Admin-1']
+      }),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.mode, 'editable')
+    assert.equal(viewModel.wizard?.step, 'career')
+    assert.deepEqual(viewModel.wizard?.termSkills?.rolled, [
+      { label: 'Admin-1', detail: '1 on serviceSkills' }
+    ])
+    assert.deepEqual(
+      viewModel.wizard?.termSkills?.actions.map((action) => action.table),
+      ['serviceSkills']
+    )
+  })
+
+  it('derives read-only mustering from projected benefits without a legacy flow', () => {
+    const currentProjection = projection('MUSTERING_OUT', {
+      terms: [
+        {
+          career: 'Merchant',
+          skills: [],
+          skillsAndTraining: [],
+          benefits: [],
+          complete: true,
+          canReenlist: false,
+          completedBasicTraining: true,
+          musteringOut: true,
+          anagathics: false,
+          facts: {
+            survival: {
+              passed: true,
+              canCommission: false,
+              canAdvance: false,
+              survival: {
+                expression: '2d6',
+                rolls: [5, 3],
+                total: 8,
+                characteristic: 'int',
+                target: 5,
+                modifier: 1,
+                success: true
+              }
+            },
+            musteringBenefits: [
+              {
+                career: 'Merchant',
+                kind: 'material',
+                roll: { expression: '2d6', rolls: [3, 3], total: 6 },
+                modifier: 0,
+                tableRoll: 6,
+                value: 'Blade',
+                credits: 0,
+                materialItem: 'Blade'
+              }
+            ]
+          }
+        }
+      ],
+      actionPlan: {
+        status: 'MUSTERING_OUT',
+        pendingDecisions: [{ key: 'musteringBenefitSelection' }],
+        legalActions: [
+          {
+            key: 'resolveMusteringBenefit',
+            status: 'MUSTERING_OUT',
+            commandTypes: ['RollCharacterCreationMusteringBenefit'],
+            rollRequirement: { key: 'musteringBenefit', dice: '1d6' },
+            musteringBenefitOptions: [{ career: 'Merchant', kind: 'cash' }]
+          }
+        ]
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: currentProjection,
+      character: character(currentProjection, {
+        age: 22,
+        characteristics: {
+          str: 7,
+          dex: 8,
+          end: 7,
+          int: 9,
+          edu: 8,
+          soc: 6
+        }
+      }),
+      readOnly: true
+    })
+
+    assert.equal(viewModel.flow, null)
+    assert.equal(viewModel.wizard?.step, 'equipment')
+    assert.deepEqual(viewModel.wizard?.musteringOut?.benefits, [
+      {
+        label: 'Merchant Material',
+        valueLabel: 'Blade',
+        rollLabel: 'Roll 6',
+        metaLabel: 'Blade'
+      }
+    ])
+    assert.deepEqual(viewModel.wizard?.musteringOut?.actions, [
+      {
+        career: 'Merchant',
+        kind: 'cash',
+        label: 'Roll cash',
+        disabled: false,
+        title: ''
+      }
+    ])
+    assert.equal(viewModel.wizard?.controlsDisabled, true)
+  })
+
   it('includes aging and reenlistment prompt state for career terms', () => {
     const reenlistment = deriveCharacterCreationViewModel({
       flow: resolvedCareerFlow(),
@@ -1732,6 +2405,54 @@ describe('character creation view model', () => {
     })
   })
 
+  it('recovers pending aging choices from projected term facts after refresh', () => {
+    const currentProjection = projection('REENLISTMENT', {
+      terms: [
+        projectedCompletedTerm({
+          complete: false,
+          musteringOut: false,
+          facts: {
+            aging: {
+              roll: { expression: '2d6', rolls: [1, 1], total: 2 },
+              modifier: -1,
+              age: 34,
+              characteristicChanges: [{ type: 'PHYSICAL', modifier: -1 }]
+            }
+          }
+        })
+      ],
+      actionPlan: {
+        status: 'REENLISTMENT',
+        pendingDecisions: [{ key: 'agingResolution' }],
+        legalActions: [
+          {
+            key: 'resolveAging',
+            status: 'REENLISTMENT',
+            commandTypes: [
+              'ResolveCharacterCreationAging',
+              'ResolveCharacterCreationAgingLosses'
+            ],
+            rollRequirement: { key: 'aging', dice: '2d6' }
+          }
+        ]
+      }
+    })
+
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: resolvedCareerFlow(),
+      projection: currentProjection,
+      character: character(currentProjection),
+      readOnly: false
+    })
+
+    assert.equal(viewModel.wizard?.agingChoices?.title, 'Aging effects')
+    assert.deepEqual(viewModel.wizard?.agingChoices?.choices[0]?.options, [
+      { characteristic: 'str', label: 'STR' },
+      { characteristic: 'dex', label: 'DEX' },
+      { characteristic: 'end', label: 'END' }
+    ])
+  })
+
   it('includes mustering out state for the equipment step', () => {
     const viewModel = deriveCharacterCreationViewModel({
       flow: flow({
@@ -1792,6 +2513,61 @@ describe('character creation view model', () => {
         { kind: 'material', label: 'Roll benefit', disabled: false }
       ]
     )
+  })
+
+  it('keeps the owner local review step after projected mustering completes', () => {
+    const currentProjection = projection('MUSTERING_OUT', {
+      terms: [
+        projectedCompletedTerm({
+          career: 'Scout',
+          musteringOut: true,
+          facts: {
+            musteringBenefits: [
+              {
+                career: 'Scout',
+                kind: 'material',
+                roll: { expression: '1d6', rolls: [4], total: 4 },
+                modifier: 0,
+                tableRoll: 4,
+                value: 'Gun',
+                credits: 0,
+                materialItem: 'Gun'
+              }
+            ]
+          }
+        })
+      ],
+      actionPlan: {
+        status: 'MUSTERING_OUT',
+        pendingDecisions: [],
+        legalActions: []
+      }
+    })
+    const reviewFlow = flow({
+      step: 'review',
+      draft: createInitialCharacterDraft(characterId, {
+        name: 'Iona Vesh',
+        completedTerms: [completedTerm()]
+      })
+    })
+
+    const owner = deriveCharacterCreationViewModel({
+      flow: reviewFlow,
+      projection: currentProjection,
+      character: character(currentProjection),
+      readOnly: false
+    })
+    const spectator = deriveCharacterCreationViewModel({
+      flow: reviewFlow,
+      projection: currentProjection,
+      character: character(currentProjection),
+      readOnly: true
+    })
+
+    assert.equal(owner.wizard?.step, 'review')
+    assert.equal(owner.wizard?.review?.title, 'Iona Vesh')
+    assert.equal(spectator.wizard?.step, 'equipment')
+    assert.equal(spectator.wizard?.musteringOut?.title, 'Mustering out')
   })
 
   it('includes term history and review summaries', () => {

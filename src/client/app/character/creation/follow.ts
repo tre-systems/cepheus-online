@@ -6,7 +6,7 @@ import type {
 } from '../../../../shared/state'
 import type { CharacterCreationFlow } from './flow.js'
 import { createInitialCharacterDraft } from './flow.js'
-import { legacyFlowFromProjectedCharacter } from './projection.js'
+import { compatibilityFlowFromProjectedCharacter } from './projection.js'
 
 export const projectedCharacterCreation = (
   state: GameState | null,
@@ -53,6 +53,32 @@ export const readModelFollowFlowFromCharacter = (
   return null
 }
 
+const readModelFollowStatuses = new Set([
+  'CHARACTERISTICS',
+  'HOMEWORLD',
+  'CAREER_SELECTION',
+  'BASIC_TRAINING',
+  'SURVIVAL',
+  'MISHAP',
+  'COMMISSION',
+  'ADVANCEMENT',
+  'SKILLS_TRAINING',
+  'AGING',
+  'REENLISTMENT',
+  'MUSTERING_OUT',
+  'ACTIVE',
+  'PLAYABLE',
+  'DECEASED'
+])
+
+export const canRenderReadOnlyFollowFromReadModel = (
+  character: CharacterState
+): boolean =>
+  Boolean(
+    character.creation &&
+      readModelFollowStatuses.has(character.creation.state.status)
+  )
+
 export const syncCharacterCreationFlowFromRoomState = ({
   currentFlow,
   roomState,
@@ -66,7 +92,7 @@ export const syncCharacterCreationFlowFromRoomState = ({
 }): CharacterCreationFlow | null => {
   const projectedCharacter = roomState?.characters?.[characterId] ?? null
   const projectedFlow = projectedCharacter
-    ? legacyFlowFromProjectedCharacter(projectedCharacter)
+    ? compatibilityFlowFromProjectedCharacter(projectedCharacter)
     : null
 
   return projectedFlow ?? fallbackFlow ?? currentFlow
@@ -110,12 +136,9 @@ export const refreshFollowedCharacterCreationFlowFromState = ({
       shouldRender: false
     }
   }
-  if (
-    character.creation.state.status === 'CHARACTERISTICS' ||
-    character.creation.state.status === 'HOMEWORLD'
-  ) {
+  if (canRenderReadOnlyFollowFromReadModel(character)) {
     return {
-      flow: readModelFollowFlowFromCharacter(character),
+      flow: null,
       readOnly,
       shouldClose: false,
       shouldRender: panelOpen

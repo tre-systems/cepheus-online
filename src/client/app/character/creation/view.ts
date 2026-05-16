@@ -1241,7 +1241,7 @@ const deriveCharacterCreationBackgroundSkillSummary = (
   const pendingCascadeSkills = [...(fields.pendingCascadeSkills ?? [])]
   const selected = new Set([...selectedSkills, ...pendingCascadeSkills])
   const projectedSkillOptions = options.homeworldChoiceOptions?.backgroundSkills
-  const legacySkillOptions = () =>
+  const localFallbackSkillOptions = () =>
     derivePrimaryEducationSkillOptions({
       edu: flow.draft.characteristics.edu,
       homeworld,
@@ -1255,12 +1255,12 @@ const deriveCharacterCreationBackgroundSkillSummary = (
         cascade: isCascadeCareerSkill(option.name)
       }
     })
-  const skillOptions = (projectedSkillOptions ?? legacySkillOptions()).map(
-    (option) => ({
-      ...option,
-      selected: selected.has(option.value)
-    })
-  )
+  const skillOptions = (
+    projectedSkillOptions ?? localFallbackSkillOptions()
+  ).map((option) => ({
+    ...option,
+    selected: selected.has(option.value)
+  }))
   const cascadeSkillChoices =
     deriveCharacterCreationCascadeSkillChoiceViewModels(
       pendingCascadeSkills,

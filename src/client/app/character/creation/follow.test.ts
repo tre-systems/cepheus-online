@@ -8,12 +8,13 @@ import type {
 } from '../../../../shared/state'
 import { type CharacterCreationFlow, createInitialCharacterDraft } from './flow'
 import {
+  canRenderReadOnlyFollowFromReadModel,
   projectedCharacterCreation,
   refreshFollowedCharacterCreationFlowFromState,
   shouldRefreshEditableCharacterCreationFlow,
   syncCharacterCreationFlowFromRoomState
 } from './follow'
-import { deriveCharacterCreationReviewSummary } from './view'
+import { deriveCharacterCreationViewModel } from './model'
 
 const gameId = asGameId('demo-room')
 const actorId = asUserId('local-user')
@@ -239,7 +240,7 @@ describe('character creation follow helpers', () => {
       panelOpen: true
     })
 
-    assert.equal(refreshed.flow?.step, 'skills')
+    assert.equal(refreshed.flow, null)
     assert.equal(refreshed.readOnly, true)
     assert.equal(refreshed.shouldRender, true)
     assert.equal(refreshed.shouldClose, false)
@@ -257,6 +258,37 @@ describe('character creation follow helpers', () => {
     assert.equal(missing.shouldClose, true)
   })
 
+  it('keeps early read-only follow statuses on the shared read model without legacy flow', () => {
+    for (const status of [
+      'CHARACTERISTICS',
+      'HOMEWORLD',
+      'CAREER_SELECTION',
+      'BASIC_TRAINING',
+      'SKILLS_TRAINING',
+      'MUSTERING_OUT',
+      'PLAYABLE',
+      'DECEASED'
+    ] as const) {
+      const characterState = stateWithCreation(creation(status)).characters[
+        characterId
+      ]
+      assert.equal(canRenderReadOnlyFollowFromReadModel(characterState), true)
+
+      const refreshed = refreshFollowedCharacterCreationFlowFromState({
+        state: stateWithCreation(creation(status)),
+        currentFlow: fallbackFlow,
+        selectedCharacterId: characterId,
+        readOnly: true,
+        panelOpen: true
+      })
+
+      assert.equal(refreshed.flow, null)
+      assert.equal(refreshed.readOnly, true)
+      assert.equal(refreshed.shouldRender, true)
+      assert.equal(refreshed.shouldClose, false)
+    }
+  })
+
   it('refreshes followed mustering equipment setup from the projection', () => {
     const equipmentFlow = {
       ...fallbackFlow,
@@ -271,8 +303,7 @@ describe('character creation follow helpers', () => {
     })
 
     assert.equal(refreshed.flow === equipmentFlow, false)
-    assert.equal(refreshed.flow?.step, 'equipment')
-    assert.equal(refreshed.flow?.draft.name, 'Scout')
+    assert.equal(refreshed.flow, null)
     assert.equal(refreshed.shouldRender, true)
   })
 
@@ -370,16 +401,23 @@ describe('character creation follow helpers', () => {
     ]
     projected.careers = [{ name: 'Scout', rank: 1 }]
 
+    const roomState = stateWithCreation(projected)
     const refreshed = refreshFollowedCharacterCreationFlowFromState({
-      state: stateWithCreation(projected),
+      state: roomState,
       currentFlow: fallbackFlow,
       selectedCharacterId: characterId,
       readOnly: true,
       panelOpen: true
     })
-    if (!refreshed.flow) throw new Error('Expected followed final flow')
+    assert.equal(refreshed.flow, null)
 
-    const summary = deriveCharacterCreationReviewSummary(refreshed.flow)
+    const summary = deriveCharacterCreationViewModel({
+      flow: null,
+      projection: projected,
+      character: roomState.characters[characterId],
+      readOnly: true
+    }).wizard?.review
+    if (!summary) throw new Error('Expected followed final summary')
     const career = summary.sections.find((section) => section.key === 'career')
     const careerHistory = summary.sections.find(
       (section) => section.key === 'career-history'

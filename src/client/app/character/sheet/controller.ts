@@ -395,8 +395,22 @@ export const createCharacterSheetController = ({
     const exportView = deriveCharacterExportViewModel(character)
     if (!exportView) return
 
+    const card = documentApi.createElement('div')
+    card.className = 'sheet-final-card'
+    const title = documentApi.createElement('strong')
+    title.textContent = exportView.title
+    const upp = documentApi.createElement('span')
+    upp.className = 'sheet-final-upp'
+    upp.textContent = exportView.upp
+    const meta = documentApi.createElement('small')
+    meta.textContent = `${exportView.type} - Age ${exportView.age} - ${exportView.terms} ${exportView.terms === 1 ? 'term' : 'terms'}`
+    const career = documentApi.createElement('p')
+    career.textContent = exportView.careers
+    card.append(title, upp, meta, career)
+
     body.append(
       sheetSectionTitle('Final Character'),
+      card,
       sheetRow('UPP', exportView.upp),
       sheetRow('Characteristics', exportView.characteristics),
       sheetRow('Homeworld', exportView.homeworld),
@@ -422,6 +436,7 @@ export const createCharacterSheetController = ({
       history.className = 'sheet-career-history'
       for (const term of exportView.careerHistory) {
         const entry = documentApi.createElement('p')
+        entry.className = 'sheet-career-term-card'
         entry.textContent = term
         history.append(entry)
       }

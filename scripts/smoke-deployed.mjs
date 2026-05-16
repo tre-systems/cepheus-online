@@ -54,6 +54,9 @@ const assert = (condition, message) => {
   if (!condition) fail(message)
 }
 
+const delay = (milliseconds) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds))
+
 const fetchText = async (pathname, init = {}) => {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
@@ -159,6 +162,13 @@ const commandBase = (type, extra = {}) => ({
   actorId: ACTOR_ID,
   ...extra
 })
+
+const waitForLatestDiceReveal = async (state) => {
+  const latestRoll = state?.diceLog?.at(-1)
+  if (!latestRoll?.revealAt) return
+  const waitMs = Date.parse(latestRoll.revealAt) - Date.now()
+  if (waitMs > 0) await delay(waitMs + 150)
+}
 
 const openWebSocket = async () => {
   assert(
@@ -379,18 +389,27 @@ await step('character creation lifecycle', async () => {
     'character creation did not start at characteristics'
   )
 
-  const advanced = await requireAccepted(
-    commandBase('AdvanceCharacterCreation', {
-      expectedSeq: eventSeq,
-      characterId: CHARACTER_ID,
-      creationEvent: { type: 'SET_CHARACTERISTICS' }
-    }),
-    'advance-character-creation-characteristics'
+  let latestCreationState = started.state
+  for (const characteristic of ['str', 'dex', 'end', 'int', 'edu', 'soc']) {
+    const rolled = await requireAccepted(
+      commandBase('RollCharacterCreationCharacteristic', {
+        expectedSeq: eventSeq,
+        characterId: CHARACTER_ID,
+        characteristic
+      }),
+      `roll-characteristic-${characteristic}`
+    )
+    eventSeq = rolled.eventSeq
+    latestCreationState = rolled.state
+  }
+
+  await waitForLatestDiceReveal(latestCreationState)
+  const { json: revealedCreation } = await fetchJson(
+    `/rooms/${GAME_ID}/state?viewer=referee&user=${ACTOR_ID}`
   )
-  eventSeq = advanced.eventSeq
   assert(
-    advanced.state?.characters?.[CHARACTER_ID]?.creation?.state?.status ===
-      'HOMEWORLD',
+    revealedCreation?.state?.characters?.[CHARACTER_ID]?.creation?.state
+      ?.status === 'HOMEWORLD',
     'character creation did not advance to homeworld'
   )
 })

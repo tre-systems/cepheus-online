@@ -137,13 +137,16 @@ describe('character creation controller', () => {
       }
     })
 
-    assert.equal(controller.openFollow(characterId)?.step, 'skills')
+    assert.equal(controller.openFollow(characterId), null)
+    assert.equal(controller.flow(), null)
     assert.equal(controller.readOnly(), true)
     assert.equal(controller.selectedCharacterId(), characterId)
+    assert.equal(controller.viewModel().wizard?.step, 'skills')
 
     currentState = stateWithCreation(creation('SKILLS_TRAINING'))
     assert.equal(controller.refreshFollowed(), true)
-    assert.equal(controller.flow()?.step, 'career')
+    assert.equal(controller.flow(), null)
+    assert.equal(controller.viewModel().wizard?.step, 'career')
 
     currentState = stateWithCreation(null)
     assert.equal(controller.refreshFollowed(), false)
@@ -161,8 +164,8 @@ describe('character creation controller', () => {
       closePanel: () => {}
     })
 
-    assert.equal(controller.openFollow(characterId)?.step, 'characteristics')
-    assert.equal(controller.flow()?.step, 'characteristics')
+    assert.equal(controller.openFollow(characterId), null)
+    assert.equal(controller.flow(), null)
     assert.equal(controller.readOnly(), true)
     assert.equal(controller.selectedCharacterId(), characterId)
     assert.equal(controller.currentProjection(), projected)
@@ -183,8 +186,8 @@ describe('character creation controller', () => {
       closePanel: () => {}
     })
 
-    assert.equal(controller.openFollow(characterId)?.step, 'homeworld')
-    assert.equal(controller.flow()?.step, 'homeworld')
+    assert.equal(controller.openFollow(characterId), null)
+    assert.equal(controller.flow(), null)
     assert.equal(controller.readOnly(), true)
     assert.equal(controller.selectedCharacterId(), characterId)
     assert.equal(controller.currentProjection(), projected)
@@ -193,9 +196,76 @@ describe('character creation controller', () => {
     assert.equal(controller.viewModel().wizard?.step, 'homeworld')
 
     assert.equal(controller.refreshFollowed(), true)
-    assert.equal(controller.flow()?.step, 'homeworld')
+    assert.equal(controller.flow(), null)
     assert.equal(controller.selectedCharacterId(), characterId)
     assert.equal(controller.viewModel().wizard?.step, 'homeworld')
+  })
+
+  it('opens read-only career selection from the shared read model without legacy flow', () => {
+    const projected = creation('CAREER_SELECTION')
+    projected.actionPlan = {
+      status: 'CAREER_SELECTION',
+      pendingDecisions: [],
+      legalActions: [],
+      careerChoiceOptions: {
+        careers: [
+          {
+            key: 'Scout',
+            label: 'Scout',
+            selected: true,
+            qualification: {
+              label: 'Qualification',
+              requirement: 'Int 6+',
+              available: true,
+              characteristic: 'int',
+              target: 6,
+              modifier: 0
+            },
+            survival: {
+              label: 'Survival',
+              requirement: 'End 7+',
+              available: true,
+              characteristic: 'end',
+              target: 7,
+              modifier: 0
+            },
+            commission: {
+              label: 'Commission',
+              requirement: '-',
+              available: false,
+              characteristic: null,
+              target: null,
+              modifier: 0
+            },
+            advancement: {
+              label: 'Advancement',
+              requirement: '-',
+              available: false,
+              characteristic: null,
+              target: null,
+              modifier: 0
+            }
+          }
+        ]
+      }
+    }
+    const controller = createCharacterCreationController({
+      getState: () => stateWithCreation(projected),
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+
+    assert.equal(controller.openFollow(characterId), null)
+    assert.equal(controller.flow(), null)
+    assert.equal(controller.readOnly(), true)
+    assert.equal(controller.selectedCharacterId(), characterId)
+    assert.equal(controller.currentProjection(), projected)
+    assert.equal(controller.viewModel().mode, 'read-only')
+    assert.equal(controller.viewModel().wizard?.step, 'career')
+    assert.equal(
+      controller.viewModel().wizard?.careerSelection?.careerOptions[0]?.label,
+      'Scout'
+    )
   })
 
   it('updates multi-signal follow state atomically', () => {
@@ -221,7 +291,7 @@ describe('character creation controller', () => {
 
     assert.deepEqual(observed, [
       { flowStep: null, readOnly: false, selected: null },
-      { flowStep: 'skills', readOnly: true, selected: characterId }
+      { flowStep: null, readOnly: true, selected: characterId }
     ])
 
     dispose()
@@ -241,9 +311,10 @@ describe('character creation controller', () => {
 
     assert.equal(controller.viewModel().mode, 'editable')
     assert.equal(controller.viewModel().characterId, characterId)
-    assert.equal(controller.viewModel().wizard?.step, 'characteristics')
+    assert.equal(controller.viewModel().wizard?.step, 'skills')
     assert.equal(controller.viewModel().projection.status, 'BASIC_TRAINING')
     assert.equal(controller.viewModel().wizard?.projectedStep, 'skills')
+    assert.equal(controller.flow(), localFlow)
 
     controller.setReadOnly(true)
 
@@ -268,7 +339,7 @@ describe('character creation controller', () => {
       const viewModel = controller.viewModelSignal.value
       observed.push({
         mode: viewModel.mode,
-        step: viewModel.flow?.step ?? null,
+        step: viewModel.wizard?.step ?? null,
         readOnly: viewModel.readOnly,
         status: viewModel.projection.status
       })

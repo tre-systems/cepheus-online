@@ -11,13 +11,13 @@ import {
 } from '../../../reactive.js'
 import type { CharacterCreationFlow } from './flow.js'
 import {
+  canRenderReadOnlyFollowFromReadModel,
   projectedCharacterCreation,
   refreshFollowedCharacterCreationFlowFromState,
-  readModelFollowFlowFromCharacter,
   shouldRefreshEditableCharacterCreationFlow,
   syncCharacterCreationFlowFromRoomState
 } from './follow.js'
-import { legacyFlowFromProjectedCharacter } from './projection.js'
+import { compatibilityFlowFromProjectedCharacter } from './projection.js'
 import { shouldSyncEditableCharacterCreationFlowWithProjection } from './sync.js'
 import {
   deriveCharacterCreationViewModel,
@@ -136,12 +136,11 @@ export const createCharacterCreationController = ({
       const character = getState()?.characters[characterId] ?? null
       if (!character?.creation) return null
       const flowlessReadModelFollow = nextReadOnly
-        ? character.creation.state.status === 'CHARACTERISTICS' ||
-          character.creation.state.status === 'HOMEWORLD'
+        ? canRenderReadOnlyFollowFromReadModel(character)
         : false
       const nextFlow = flowlessReadModelFollow
-        ? readModelFollowFlowFromCharacter(character)
-        : legacyFlowFromProjectedCharacter(character)
+        ? null
+        : compatibilityFlowFromProjectedCharacter(character)
       if (!flowlessReadModelFollow && !nextFlow) {
         return null
       }

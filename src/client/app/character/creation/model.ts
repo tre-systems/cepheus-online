@@ -9,6 +9,11 @@ import type {
   CareerCreationActionKey,
   LegalCareerCreationAction
 } from '../../../../shared/character-creation/types.js'
+import {
+  deriveCareerTermSkillRollSummaries,
+  deriveCareerTermTrainingSkillsFromFacts,
+  hasProjectedCareerTermFacts
+} from '../../../../shared/character-creation/term-skills.js'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -16,8 +21,11 @@ import type {
 import type { CharacterCreationActionPlan } from './actions.js'
 import {
   createInitialCharacterDraft,
+  normalizeSkillList,
+  type CharacterCreationCareerPlan,
   type CharacterCreationCompletedTerm,
   type CharacterCreationFlow,
+  type CharacterCreationMusteringBenefit,
   type CharacterCreationStep
 } from './flow.js'
 import {
@@ -546,6 +554,508 @@ const readModelHomeworldStepViewModel = ({
   }
 }
 
+const failedQualificationCareerPlan = (
+  projectedCreation: CharacterCreationProjection
+): CharacterCreationCareerPlan | null => {
+  const failedQualification = projectedCreation.failedQualification
+  if (!failedQualification || failedQualification.passed) return null
+
+  return {
+    career: failedQualification.career,
+    qualificationRoll: failedQualification.qualification.total,
+    qualificationPassed: false,
+    survivalRoll: null,
+    survivalPassed: null,
+    commissionRoll: null,
+    commissionPassed: null,
+    advancementRoll: null,
+    advancementPassed: null,
+    canCommission: null,
+    canAdvance: null,
+    drafted: false,
+    rank: null,
+    rankTitle: null,
+    rankBonusSkill: null,
+    termSkillRolls: [],
+    anagathics: null,
+    agingRoll: null,
+    agingMessage: null,
+    agingSelections: [],
+    reenlistmentRoll: null,
+    reenlistmentOutcome: null
+  }
+}
+
+const activeTermCareerPlan = (
+  readModel: CharacterCreationReadModel
+): CharacterCreationCareerPlan | null => {
+  const term = readModel.activeTerm
+  if (!term) return null
+  const qualification = term.facts?.qualification
+  const survival = term.facts?.survival
+  const commission = term.facts?.commission
+  const advancement = term.facts?.advancement
+  const aging = term.facts?.aging
+
+  return {
+    career: term.career,
+    qualificationRoll: qualification?.qualification.total ?? null,
+    qualificationPassed: qualification?.passed ?? true,
+    survivalRoll: survival?.survival.total ?? null,
+    survivalPassed: survival?.passed ?? null,
+    commissionRoll:
+      commission?.skipped === true
+        ? -1
+        : (commission?.commission.total ?? null),
+    commissionPassed:
+      commission?.skipped === true ? false : (commission?.passed ?? null),
+    advancementRoll:
+      advancement?.skipped === true
+        ? -1
+        : (advancement?.advancement.total ?? null),
+    advancementPassed:
+      advancement?.skipped === true ? false : (advancement?.passed ?? null),
+    canCommission: survival?.canCommission ?? null,
+    canAdvance: survival?.canAdvance ?? null,
+    drafted: term.facts?.draft !== undefined,
+    rank:
+      advancement && !advancement.skipped
+        ? (advancement.rank?.newRank ?? null)
+        : null,
+    rankTitle:
+      advancement && !advancement.skipped
+        ? (advancement.rank?.title ?? null)
+        : null,
+    rankBonusSkill:
+      advancement && !advancement.skipped
+        ? (advancement.rank?.bonusSkill ?? null)
+        : null,
+    termSkillRolls: deriveCareerTermSkillRollSummaries(term),
+    anagathics: term.facts?.anagathicsDecision?.useAnagathics ?? null,
+    agingRoll: aging?.roll.total ?? null,
+    agingMessage:
+      (aging?.characteristicChanges.length ?? 0) > 0
+        ? `${aging?.characteristicChanges.length ?? 0} characteristic changes`
+        : aging
+          ? 'No aging effects.'
+          : null,
+    agingSelections:
+      term.facts?.agingLosses?.selectedLosses.map((selection) => ({
+        type: selection.type,
+        modifier: selection.modifier,
+        characteristic: selection.characteristic
+      })) ?? [],
+    benefitForfeiture: term.facts?.mishap?.outcome.benefitEffect ?? null,
+    reenlistmentRoll: term.facts?.reenlistment?.reenlistment.total ?? null,
+    reenlistmentOutcome: term.facts?.reenlistment?.outcome ?? null
+  }
+}
+
+const activeCreationStep = (
+  readModel: CharacterCreationReadModel
+): CharacterCreationStep =>
+  readModel.status === 'MUSTERING_OUT' ? 'equipment' : readModel.step
+
+const musteringBenefitsFromReadModel = (
+  readModel: CharacterCreationProjectionReadModel
+): CharacterCreationMusteringBenefit[] =>
+  readModel.terms.flatMap((term) =>
+    (term.facts?.musteringBenefits ?? []).map((benefit) => ({
+      career: benefit.career,
+      kind: benefit.kind,
+      roll: benefit.tableRoll,
+      diceRoll: benefit.roll.total,
+      modifier: benefit.modifier,
+      tableRoll: benefit.tableRoll,
+      value: benefit.value,
+      credits: benefit.credits,
+      ...(benefit.materialItem != null
+        ? { materialItem: benefit.materialItem }
+        : {})
+    }))
+  )
+
+const pendingAgingChangesFromReadModel = (
+  readModel: CharacterCreationReadModel
+): CharacterCreationProjection['characteristicChanges'] => {
+  if (readModel.activeTerm?.facts?.agingLosses) return []
+  if (readModel.characteristicChanges.length > 0) {
+    return readModel.characteristicChanges
+  }
+  return readModel.activeTerm?.facts?.aging?.characteristicChanges ?? []
+}
+
+const projectedTermTrainingSkills = (
+  readModel: CharacterCreationProjectionReadModel
+): string[] =>
+  readModel.terms.flatMap((term) =>
+    hasProjectedCareerTermFacts(term)
+      ? deriveCareerTermTrainingSkillsFromFacts(term)
+      : []
+  )
+
+const flowFromReadModel = ({
+  readModel,
+  projectedCreation,
+  step
+}: {
+  readModel: CharacterCreationReadModel
+  projectedCreation: CharacterCreationProjection
+  step: CharacterCreationStep
+}): CharacterCreationFlow => ({
+  step,
+  draft: createInitialCharacterDraft(readModel.characterId, {
+    name: readModel.name,
+    age: readModel.sheet.age,
+    characteristics: readModel.sheet.characteristics,
+    homeworld: projectedCreation.homeworld ?? undefined,
+    backgroundSkills: readModel.backgroundSkills,
+    pendingCascadeSkills:
+      readModel.status === 'HOMEWORLD' ? readModel.pendingCascadeSkills : [],
+    pendingTermCascadeSkills:
+      readModel.status === 'SKILLS_TRAINING'
+        ? readModel.pendingCascadeSkills
+        : [],
+    pendingAgingChanges: pendingAgingChangesFromReadModel(readModel),
+    careerPlan: activeTermCareerPlan(readModel),
+    completedTerms: completedTermsFromReadModel(readModel),
+    musteringBenefits: musteringBenefitsFromReadModel(readModel),
+    skills: normalizeSkillList([
+      ...readModel.sheet.skills,
+      ...projectedTermTrainingSkills(readModel)
+    ]),
+    equipment: readModel.sheet.equipment,
+    credits: readModel.sheet.credits
+  })
+})
+
+const readModelCareerSelectionStepViewModel = ({
+  readModel,
+  projectedCreation,
+  readOnly
+}: {
+  readModel: CharacterCreationReadModel
+  projectedCreation: CharacterCreationProjection
+  readOnly: boolean
+}): CharacterCreationWizardViewModel | null => {
+  if (readModel.status !== 'CAREER_SELECTION') return null
+
+  const actionSection =
+    deriveCharacterCreationProjectedActionSection(projectedCreation)
+  const flow: CharacterCreationFlow = {
+    step: 'career',
+    draft: createInitialCharacterDraft(readModel.characterId, {
+      name: readModel.name,
+      age: readModel.sheet.age,
+      characteristics: readModel.sheet.characteristics,
+      homeworld: projectedCreation.homeworld ?? undefined,
+      backgroundSkills: readModel.backgroundSkills,
+      pendingCascadeSkills: readModel.pendingCascadeSkills,
+      careerPlan: failedQualificationCareerPlan(projectedCreation),
+      completedTerms: completedTermsFromReadModel(readModel),
+      skills: readModel.sheet.skills,
+      equipment: readModel.sheet.equipment,
+      credits: readModel.sheet.credits
+    })
+  }
+
+  return {
+    step: 'career',
+    projectedStep: 'career',
+    projectedStepCurrent: true,
+    controlsDisabled: readOnly,
+    progress: [],
+    buttons: deriveCharacterCreationButtonStates(flow),
+    validation: deriveCharacterCreationValidationSummary(flow),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, {}),
+    careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow, {
+      careerChoiceOptions: actionSection.careerChoiceOptions ?? { careers: [] },
+      failedQualificationOptions:
+        actionSection.legalAction('selectCareer')?.failedQualificationOptions ??
+        []
+    }),
+    careerRoll: null,
+    reenlistmentRoll: null,
+    agingRoll: null,
+    agingChoices: null,
+    anagathicsDecision: null,
+    mishapResolution: null,
+    injuryResolution: null,
+    termCascadeChoices: null,
+    termResolution: null,
+    termSkills: null,
+    basicTraining: null,
+    musteringOut: null,
+    death: null,
+    termHistory: projectedTermHistoryViewModel(readModel),
+    review: null,
+    characteristics: null,
+    homeworld: null
+  }
+}
+
+const readModelBasicTrainingStepViewModel = ({
+  readModel,
+  projectedCreation,
+  readOnly
+}: {
+  readModel: CharacterCreationReadModel
+  projectedCreation: CharacterCreationProjection
+  readOnly: boolean
+}): CharacterCreationWizardViewModel | null => {
+  if (readModel.status !== 'BASIC_TRAINING') return null
+
+  const actionSection =
+    deriveCharacterCreationProjectedActionSection(projectedCreation)
+  const basicTrainingOptions = actionSection.legalAction(
+    'completeBasicTraining'
+  )?.basicTrainingOptions
+  const flow: CharacterCreationFlow = {
+    step: 'skills',
+    draft: createInitialCharacterDraft(readModel.characterId, {
+      name: readModel.name,
+      age: readModel.sheet.age,
+      characteristics: readModel.sheet.characteristics,
+      homeworld: projectedCreation.homeworld ?? undefined,
+      backgroundSkills: readModel.backgroundSkills,
+      pendingCascadeSkills: readModel.pendingCascadeSkills,
+      careerPlan: activeTermCareerPlan(readModel),
+      completedTerms: completedTermsFromReadModel(readModel),
+      skills: readModel.sheet.skills,
+      equipment: readModel.sheet.equipment,
+      credits: readModel.sheet.credits
+    })
+  }
+
+  return {
+    step: 'skills',
+    projectedStep: 'skills',
+    projectedStepCurrent: true,
+    controlsDisabled: readOnly,
+    progress: [],
+    buttons: deriveCharacterCreationButtonStates(flow),
+    validation: deriveCharacterCreationValidationSummary(flow),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, {}),
+    careerSelection: null,
+    careerRoll: null,
+    reenlistmentRoll: null,
+    agingRoll: null,
+    agingChoices: null,
+    anagathicsDecision: null,
+    mishapResolution: null,
+    injuryResolution: null,
+    termCascadeChoices: null,
+    termResolution: null,
+    termSkills: null,
+    basicTraining: deriveCharacterCreationBasicTrainingButton(flow, {
+      basicTrainingOptions
+    }),
+    musteringOut: null,
+    death: null,
+    termHistory: projectedTermHistoryViewModel(readModel),
+    review: null,
+    characteristics: null,
+    homeworld: null
+  }
+}
+
+const readModelCareerStatusStepViewModel = ({
+  readModel,
+  projectedCreation,
+  readOnly
+}: {
+  readModel: CharacterCreationReadModel
+  projectedCreation: CharacterCreationProjection
+  readOnly: boolean
+}): CharacterCreationWizardViewModel | null => {
+  const step = activeCreationStep(readModel)
+  if (step !== 'career') return null
+
+  const actionSection =
+    deriveCharacterCreationProjectedActionSection(projectedCreation)
+  const flow = flowFromReadModel({
+    readModel,
+    projectedCreation,
+    step
+  })
+  const termCascadeChoices =
+    readModel.status === 'SKILLS_TRAINING'
+      ? actionSection.cascadeSkillChoices
+      : []
+  const termSkillTableOptions =
+    readModel.status === 'SKILLS_TRAINING'
+      ? (actionSection.legalAction('rollTermSkill')?.termSkillTableOptions ??
+        [])
+      : []
+
+  return {
+    step,
+    projectedStep: step,
+    projectedStepCurrent: true,
+    controlsDisabled: readOnly,
+    progress: [],
+    buttons: deriveCharacterCreationButtonStates(flow),
+    validation: deriveCharacterCreationValidationSummary(flow),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, {}),
+    careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow, {
+      careerChoiceOptions: { careers: [] },
+      failedQualificationOptions: []
+    }),
+    careerRoll: deriveCharacterCreationCareerRollButton(flow, {
+      availableActionKeys: actionSection.legalActionKeys ?? undefined
+    }),
+    reenlistmentRoll: deriveCharacterCreationReenlistmentRollViewModel(flow, {
+      available: actionSection.isLegalActionAvailable('rollReenlistment')
+    }),
+    agingRoll: deriveCharacterCreationAgingRollViewModel(flow, {
+      available: actionSection.isLegalActionAvailable('resolveAging')
+    }),
+    agingChoices: deriveCharacterCreationAgingChoicesViewModel(flow),
+    anagathicsDecision: deriveCharacterCreationAnagathicsDecisionViewModel(
+      flow,
+      {
+        available: actionSection.isLegalActionAvailable('decideAnagathics')
+      }
+    ),
+    mishapResolution: deriveCharacterCreationMishapResolutionViewModel(flow, {
+      available: actionSection.isLegalActionAvailable('resolveMishap')
+    }),
+    injuryResolution: deriveCharacterCreationInjuryResolutionViewModel(flow, {
+      available: actionSection.isLegalActionAvailable('resolveInjury'),
+      projection: projectedCreation
+    }),
+    termCascadeChoices: deriveCharacterCreationTermCascadeChoicesViewModel(
+      flow,
+      {
+        termCascadeChoices
+      }
+    ),
+    termResolution: deriveCharacterCreationTermResolutionViewModel(flow, {
+      availableActionKeys: actionSection.legalActionKeys ?? undefined
+    }),
+    termSkills: deriveCharacterCreationTermSkillTrainingViewModel(flow, {
+      termSkillTableOptions
+    }),
+    basicTraining: null,
+    musteringOut: null,
+    death: deriveCharacterCreationDeathViewModel(flow, {
+      available:
+        projectedCreation.state.status === 'DECEASED'
+          ? true
+          : actionSection.isLegalActionAvailable('confirmDeath')
+    }),
+    termHistory: projectedTermHistoryViewModel(readModel),
+    review: null,
+    characteristics: null,
+    homeworld: null
+  }
+}
+
+const readModelMusteringOutStepViewModel = ({
+  readModel,
+  projectedCreation,
+  readOnly
+}: {
+  readModel: CharacterCreationReadModel
+  projectedCreation: CharacterCreationProjection
+  readOnly: boolean
+}): CharacterCreationWizardViewModel | null => {
+  if (readModel.status !== 'MUSTERING_OUT') return null
+
+  const step: CharacterCreationStep = 'equipment'
+  const actionSection =
+    deriveCharacterCreationProjectedActionSection(projectedCreation)
+  const flow = flowFromReadModel({
+    readModel,
+    projectedCreation,
+    step
+  })
+  const musteringBenefitOptions =
+    actionSection.legalAction('resolveMusteringBenefit')
+      ?.musteringBenefitOptions ?? []
+
+  return {
+    step,
+    projectedStep: step,
+    projectedStepCurrent: true,
+    controlsDisabled: readOnly,
+    progress: [],
+    buttons: deriveCharacterCreationButtonStates(flow),
+    validation: deriveCharacterCreationValidationSummary(flow),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, {}),
+    careerSelection: null,
+    careerRoll: null,
+    reenlistmentRoll: null,
+    agingRoll: null,
+    agingChoices: null,
+    anagathicsDecision: null,
+    mishapResolution: null,
+    injuryResolution: null,
+    termCascadeChoices: null,
+    termResolution: null,
+    termSkills: null,
+    basicTraining: null,
+    musteringOut: deriveCharacterCreationMusteringOutViewModel(flow, {
+      musteringBenefitOptions
+    }),
+    death: null,
+    termHistory: projectedTermHistoryViewModel(readModel),
+    review: null,
+    characteristics: null,
+    homeworld: null
+  }
+}
+
+const readModelReviewStepViewModel = ({
+  readModel,
+  projectedCreation,
+  readOnly
+}: {
+  readModel: CharacterCreationReadModel
+  projectedCreation: CharacterCreationProjection
+  readOnly: boolean
+}): CharacterCreationWizardViewModel | null => {
+  if (readModel.step !== 'review') return null
+
+  const step: CharacterCreationStep = 'review'
+  const flow = flowFromReadModel({
+    readModel,
+    projectedCreation,
+    step
+  })
+
+  return {
+    step,
+    projectedStep: step,
+    projectedStepCurrent: true,
+    controlsDisabled: readOnly,
+    progress: [],
+    buttons: deriveCharacterCreationButtonStates(flow),
+    validation: deriveCharacterCreationValidationSummary(flow),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, {}),
+    careerSelection: null,
+    careerRoll: null,
+    reenlistmentRoll: null,
+    agingRoll: null,
+    agingChoices: null,
+    anagathicsDecision: null,
+    mishapResolution: null,
+    injuryResolution: null,
+    termCascadeChoices: null,
+    termResolution: null,
+    termSkills: null,
+    basicTraining: null,
+    musteringOut: null,
+    death: null,
+    termHistory: projectedTermHistoryViewModel(readModel),
+    review: deriveCharacterCreationReviewSummary(flow, {
+      completedTerms: completedTermsFromReadModel(readModel)
+    }),
+    characteristics: null,
+    homeworld: null
+  }
+}
+
 const wizardViewModel = ({
   flow,
   projectedCreation,
@@ -561,21 +1071,62 @@ const wizardViewModel = ({
   characterReadModel: CharacterCreationReadModel | null
   readOnly: boolean
 }): CharacterCreationWizardViewModel | null => {
-  if (!flow) {
-    if (readOnly && characterReadModel?.status === 'CHARACTERISTICS') {
+  const preferLocalReviewFlow = !readOnly && flow?.step === 'review'
+
+  if (characterReadModel && projectedCreation) {
+    if (characterReadModel.status === 'CHARACTERISTICS') {
       return readModelCharacteristicStepViewModel(characterReadModel, readOnly)
     }
-    if (
-      readOnly &&
-      characterReadModel?.status === 'HOMEWORLD' &&
-      projectedCreation
-    ) {
+
+    if (readOnly && characterReadModel.status === 'HOMEWORLD') {
       return readModelHomeworldStepViewModel({
         readModel: characterReadModel,
         projectedCreation,
         readOnly
       })
     }
+
+    if (characterReadModel.status === 'CAREER_SELECTION') {
+      return readModelCareerSelectionStepViewModel({
+        readModel: characterReadModel,
+        projectedCreation,
+        readOnly
+      })
+    }
+
+    if (characterReadModel.status === 'BASIC_TRAINING') {
+      return readModelBasicTrainingStepViewModel({
+        readModel: characterReadModel,
+        projectedCreation,
+        readOnly
+      })
+    }
+
+    if (!preferLocalReviewFlow) {
+      const musteringOut = readModelMusteringOutStepViewModel({
+        readModel: characterReadModel,
+        projectedCreation,
+        readOnly
+      })
+      if (musteringOut) return musteringOut
+    }
+
+    const review = readModelReviewStepViewModel({
+      readModel: characterReadModel,
+      projectedCreation,
+      readOnly
+    })
+    if (review) return review
+
+    const career = readModelCareerStatusStepViewModel({
+      readModel: characterReadModel,
+      projectedCreation,
+      readOnly
+    })
+    if (career) return career
+  }
+
+  if (!flow) {
     return null
   }
 

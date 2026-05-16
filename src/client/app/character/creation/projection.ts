@@ -310,10 +310,10 @@ export const musteringBenefitsFromProjection = (
   return legacyMusteringBenefitsFromProjectedTerms(creation)
 }
 
-// Compatibility adapter for the current wizard renderer. New UI/rules logic
-// should consume CharacterCreationReadModel and projected legal actions instead
-// of reconstructing mutable draft flow from the server projection.
-export const legacyFlowFromProjectedCharacter = (
+// Editable owner flows still need a mutable draft for unpublished form input.
+// Hydrate that draft from projected semantic facts first, with aggregate
+// fallbacks only for old persisted projections.
+export const compatibilityFlowFromProjectedCharacter = (
   character: CharacterState
 ): CharacterCreationFlow | null => {
   const creation = character.creation
@@ -362,3 +362,7 @@ export const legacyFlowFromProjectedCharacter = (
     })
   }
 }
+
+// Historical tests and old replay compatibility use this explicit adapter name.
+export const legacyFlowFromProjectedCharacter =
+  compatibilityFlowFromProjectedCharacter
