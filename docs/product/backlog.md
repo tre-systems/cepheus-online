@@ -1469,6 +1469,11 @@ The next batch should run like this, in this order:
    and compact activity descriptors.
 10. Finish live following on top of semantic facts: follower cards, dice reveal
     timing, refresh recovery, and future Discord-consumable event details.
+    Done: spectator transient follower cards now include the early and
+    mid-creation semantic facts that were previously suppressed, including
+    characteristics, homeworld/background choices, cascade resolutions,
+    mishaps/injuries, commission/advancement outcomes, anagathics, term skills,
+    skills completion, and semantic reenlistment outcomes.
 11. Run PWA/release work continuously when it does not compete with the core
    architecture path; make it a hard gate before public play.
 

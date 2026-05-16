@@ -80,7 +80,7 @@ const diceActivity = (
 })
 
 describe('creation activity view model', () => {
-  it('derives cards only for milestone character creation activities', () => {
+  it('derives cards for semantic character creation milestones', () => {
     const activities: readonly LiveActivityDescriptor[] = [
       diceActivity({ seq: 10 }),
       characterActivity({
@@ -100,6 +100,12 @@ describe('creation activity view model', () => {
 
     assert.deepEqual(deriveCreationActivityCards(activities), [
       {
+        title: 'Homeworld selected',
+        detail: 'Homeworld: Regina; trade codes Hi; 3 background skills',
+        tone: 'neutral',
+        seq: 11
+      },
+      {
         title: 'Career term started',
         detail: 'Term started; Scout',
         tone: 'neutral',
@@ -108,11 +114,11 @@ describe('creation activity view model', () => {
     ])
   })
 
-  it('suppresses routine setup cards that duplicate the active creation panel', () => {
+  it('derives follower setup cards from semantic creation facts', () => {
     const activities: readonly LiveActivityDescriptor[] = [
       characterActivity({
         seq: 20,
-        transition: 'CharacterCreationCharacteristicsCompleted',
+        transition: 'SET_CHARACTERISTICS',
         details: 'Characteristics assigned',
         status: 'HOMEWORLD'
       }),
@@ -124,7 +130,20 @@ describe('creation activity view model', () => {
       })
     ]
 
-    assert.deepEqual(deriveCreationActivityCards(activities), [])
+    assert.deepEqual(deriveCreationActivityCards(activities), [
+      {
+        title: 'Characteristics assigned',
+        detail: 'Characteristics assigned',
+        tone: 'neutral',
+        seq: 20
+      },
+      {
+        title: 'Background skill selected',
+        detail: 'Background skill selected',
+        tone: 'neutral',
+        seq: 21
+      }
+    ])
   })
 
   it('labels semantic characteristic completion as assigned characteristics', () => {
@@ -151,9 +170,9 @@ describe('creation activity view model', () => {
       characterActivity({
         seq: 30,
         actorId: asUserId('local-user'),
-        transition: 'SURVIVAL_PASSED',
-        details: 'Survival passed',
-        status: 'COMMISSION'
+        transition: 'SET_CHARACTERISTICS',
+        details: 'Characteristics assigned',
+        status: 'HOMEWORLD'
       }),
       characterActivity({
         seq: 31,
@@ -331,6 +350,11 @@ describe('creation activity view model', () => {
     assert.deepEqual(
       cards.map((card) => card.title),
       [
+        'Characteristics assigned',
+        'Homeworld selected',
+        'Homeworld complete',
+        'Background skill selected',
+        'Cascade skill resolved',
         'Career selected',
         'Qualification passed',
         'Qualification failed',
@@ -340,11 +364,24 @@ describe('creation activity view model', () => {
         'Basic training complete',
         'Survival passed',
         'Killed in service',
+        'Mishap resolved',
+        'Injury resolved',
+        'Commission earned',
+        'Commission missed',
         'Commission earned',
         'Commission skipped',
         'Advancement earned',
+        'Advancement missed',
+        'Advancement earned',
         'Advancement skipped',
         'Aging resolved',
+        'Aging losses resolved',
+        'Anagathics decided',
+        'Term skill gained',
+        'Term cascade resolved',
+        'Skills complete',
+        'Reenlistment allowed',
+        'Reenlistment forced',
         'Reenlisted',
         'Left career',
         'Reenlistment blocked',
@@ -359,6 +396,11 @@ describe('creation activity view model', () => {
       cards.map((card) => card.tone),
       [
         'neutral',
+        'neutral',
+        'neutral',
+        'neutral',
+        'neutral',
+        'neutral',
         'success',
         'warning',
         'success',
@@ -367,11 +409,24 @@ describe('creation activity view model', () => {
         'success',
         'success',
         'warning',
+        'warning',
+        'warning',
+        'success',
+        'warning',
         'success',
         'neutral',
         'success',
+        'warning',
+        'success',
         'neutral',
         'neutral',
+        'neutral',
+        'neutral',
+        'neutral',
+        'neutral',
+        'neutral',
+        'neutral',
+        'warning',
         'neutral',
         'neutral',
         'warning',
