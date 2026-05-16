@@ -4,7 +4,7 @@ import {
   type CharacterCreationFlow,
   type CharacterCreationStep
 } from './flow.js'
-import { creationStepFromStatus } from './projection.js'
+import { creationStepFromStatus } from './steps.js'
 
 const characterCreationStepOrder = [
   'basics',

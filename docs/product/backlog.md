@@ -631,13 +631,15 @@ Done when:
 
 ### Slice 0E: PWA And Release Hygiene
 
-Status: partially done. PWA assets and service worker support exist, PWA shell
-composition is extracted behind `app-shell`, docs link checking is in
-`verify:quick`, quick/full verification gates exist, Cloudflare deploy
-validation runs in CI, and deployed smoke covers the Worker shell, static
-bundle, room commands, and WebSocket dice path. Remaining work is mostly
-installed-PWA update behavior, connectivity UX, and mobile install/reload
-checks.
+Status: mostly done. PWA assets and service worker support exist, PWA shell
+composition is extracted behind `app-shell`, installed-PWA update checks run
+after registration and on focus/online/visibility/interval triggers, room
+connectivity handles browser offline/online and reconnect feedback, docs link
+checking is in `verify:quick`, quick/full verification gates exist, Cloudflare
+deploy validation runs in CI, and deployed smoke covers the Worker shell,
+static bundle, room commands, and WebSocket dice path. Remaining work is mostly
+real-device mobile install/reload/update validation on candidate builds and any
+follow-up UX polish found there.
 
 Primary write ownership:
 
@@ -648,17 +650,23 @@ Primary write ownership:
 - `.github/workflows/`
 - engineering docs
 
-Tasks:
+Implemented:
 
-- Add a dependency-free version/update check so installed PWA users can refresh
+- Dependency-free version/update checks let installed PWA users refresh
   when the Worker and static assets move to a new build.
-- Add a small connectivity controller for offline/online state and failed
+- A small connectivity controller tracks offline/online state and failed
   reconnect feedback.
-- Keep the service worker conservative: cache shell assets, serve an offline
+- The service worker stays conservative: cache shell assets, serve an offline
   shell fallback, and never cache room commands, state reads, health checks, or
   auth/session routes.
-- Add mobile PWA manual checks to the testing docs: install, reload, offline
+- Mobile PWA manual checks are in the testing docs: install, reload, offline
   shell, update, and reconnect.
+
+Remaining:
+
+- Run the mobile PWA manual checks against a deployed candidate or local HTTPS
+  tunnel and record any install/reload/update UX fixes that fall out of real
+  device testing.
 
 Done when:
 

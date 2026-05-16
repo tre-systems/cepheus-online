@@ -12,7 +12,7 @@ import {
 } from './flow.js'
 import type { CharacterCreationHomeworldPublisher } from './homeworld-publisher.js'
 import type { CharacterCreationPanelController } from './panel.js'
-import { creationStepFromStatus } from './projection.js'
+import { creationStepFromStatus } from './steps.js'
 import { characterCreationStepIndex } from './sync.js'
 import type { CharacterCreationController } from './controller.js'
 import {

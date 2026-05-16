@@ -1,5 +1,4 @@
 import type {
-  CareerCreationStatus,
   CareerTermQualificationFact,
   CareerTerm
 } from '../../../../shared/character-creation/types'
@@ -9,7 +8,6 @@ import {
   hasProjectedCareerTermFacts
 } from '../../../../shared/character-creation/term-skills.js'
 import {
-  characterCreationStepFromStatus,
   deriveCharacterCreationCompletedTermReadModel,
   type CharacterCreationCompletedTermReadModel
 } from '../../../../shared/character-creation/view-state.js'
@@ -24,15 +22,8 @@ import {
   type CharacterCreationCompletedTerm,
   type CharacterCreationFlow,
   type CharacterCreationMusteringBenefit,
-  type CharacterCreationStep
 } from './flow.js'
-
-export const creationStepFromStatus = (
-  status: CareerCreationStatus | string
-): CharacterCreationStep =>
-  status === 'MUSTERING_OUT'
-    ? 'equipment'
-    : characterCreationStepFromStatus(status)
+import { creationStepFromStatus } from './steps.js'
 
 export const completedTermFromProjection = (
   term: CareerTerm
