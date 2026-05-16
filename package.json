@@ -21,7 +21,7 @@
     "test:e2e": "playwright test",
     "test:e2e:character-creation": "playwright test e2e/character-creation-smoke.spec.ts",
     "test:e2e:character-creation:death": "playwright test e2e/character-creation-smoke.spec.ts --grep \"killed-in-service|survival death\"",
-    "test:e2e:character-creation:finalization": "playwright test e2e/character-creation-smoke.spec.ts --grep \"mustering finalization|seeded multi-career|finalization controls\"",
+    "test:e2e:character-creation:finalization": "playwright test e2e/character-creation-smoke.spec.ts --grep \"mustering finalization|seeded multi-career|finalization controls|same-seed finalized\"",
     "test:e2e:character-creation:multi-career": "playwright test e2e/character-creation-smoke.spec.ts --grep \"seeded multi-career\"",
     "test:e2e:character-creation:reveal": "playwright test e2e/character-creation-smoke.spec.ts --grep \"without early reveal|hidden until reveal|reload and join a term skill roll\"",
     "test:e2e:tactical": "playwright test e2e/tactical-board-smoke.spec.ts",
