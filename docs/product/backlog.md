@@ -1293,7 +1293,8 @@ Tasks:
 - Add a referee asset picker that can create boards from geomorph defaults and
   pieces from counter defaults. Initial metadata paste/load and form-prefill
   support is in place; local metadata can also attach reviewed LOS sidecars to
-  new boards. Next steps are asset upload/preview and composition.
+  new boards, and the picker now summarizes reviewed wall/door counts. Next
+  steps are asset upload/preview and composition.
 - Expand the current LOS sidecar path from validation and persisted board state
   into referee correction tools. Walls, doors, bounds, duplicate ids, and
   zero-length segment validation are in place; the missing work is extraction,

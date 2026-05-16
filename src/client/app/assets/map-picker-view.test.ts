@@ -1,11 +1,15 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import type { LocalMapAssetMetadata } from '../../../shared/mapAssets'
+import type {
+  LocalMapAssetMetadata,
+  MapLosSidecar
+} from '../../../shared/mapAssets'
 import {
   buildLocalMapAssetRef,
   deriveCounterPieceCommandDefaults,
   deriveGeomorphBoardCommandDefaults,
+  deriveMapAssetLosSidecarSummary,
   deriveMapAssetPickerEmptyState,
   deriveMapAssetPickerItemViewModel,
   deriveMapAssetPickerSections,
@@ -83,16 +87,24 @@ describe('map asset picker view helpers', () => {
   })
 
   it('attaches validated LOS sidecars to matching asset refs', () => {
-    const sidecar = {
+    const sidecar: MapLosSidecar = {
       assetRef: 'Geomorphs/standard/deck-01.jpg',
       width: 1000,
       height: 1000,
       gridScale: 50,
       occluders: [
-        {
-          type: 'door',
-          id: 'iris-1',
-          x1: 400,
+            {
+              type: 'wall',
+              id: 'bulkhead-1',
+              x1: 100,
+              y1: 100,
+              x2: 300,
+              y2: 100
+            },
+            {
+              type: 'door',
+              id: 'iris-1',
+              x1: 400,
           y1: 300,
           x2: 480,
           y2: 300,
@@ -108,6 +120,16 @@ describe('map asset picker view helpers', () => {
 
     const item = viewModel.sections[0]?.items[0]
     assert.deepEqual(item?.losSidecar, sidecar)
+    assert.deepEqual(item?.losSummary, {
+      wallCount: 1,
+      doorCount: 1,
+      label: '1 wall(s), 1 door(s)'
+    })
+    assert.deepEqual(deriveMapAssetLosSidecarSummary(sidecar), {
+      wallCount: 1,
+      doorCount: 1,
+      label: '1 wall(s), 1 door(s)'
+    })
   })
 
   it('summarizes malformed LOS sidecar candidates', () => {

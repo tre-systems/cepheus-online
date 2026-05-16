@@ -25,6 +25,12 @@ export interface MapAssetDimensionsViewModel {
   label: string
 }
 
+export interface MapAssetLosSidecarSummary {
+  wallCount: number
+  doorCount: number
+  label: string
+}
+
 export interface GeomorphBoardCommandDefaults {
   name: string
   imageAssetId: string
@@ -51,6 +57,7 @@ export interface MapAssetPickerItemViewModel {
   dimensions: MapAssetDimensionsViewModel
   tileKind: GeomorphTileKind | null
   losSidecar: MapLosSidecar | null
+  losSummary: MapAssetLosSidecarSummary | null
   boardDefaults: GeomorphBoardCommandDefaults | null
   pieceDefaults: CounterPieceCommandDefaults | null
 }
@@ -110,6 +117,24 @@ export const deriveMapAssetDimensionsViewModel = (
   gridScale: asset.gridScale,
   label: `${asset.width} x ${asset.height} px, ${asset.gridScale} px grid`
 })
+
+export const deriveMapAssetLosSidecarSummary = (
+  sidecar: MapLosSidecar | null
+): MapAssetLosSidecarSummary | null => {
+  if (!sidecar) return null
+  const wallCount = sidecar.occluders.filter(
+    (occluder) => occluder.type === 'wall'
+  ).length
+  const doorCount = sidecar.occluders.filter(
+    (occluder) => occluder.type === 'door'
+  ).length
+
+  return {
+    wallCount,
+    doorCount,
+    label: `${wallCount} wall(s), ${doorCount} door(s)`
+  }
+}
 
 export const deriveGeomorphBoardCommandDefaults = (
   asset: LocalMapAssetMetadata
@@ -176,6 +201,9 @@ export const deriveMapAssetPickerItemViewModel = (
   dimensions: deriveMapAssetDimensionsViewModel(asset),
   tileKind: asset.tileKind,
   losSidecar: sidecarByAssetRef.get(buildLocalMapAssetRef(asset)) ?? null,
+  losSummary: deriveMapAssetLosSidecarSummary(
+    sidecarByAssetRef.get(buildLocalMapAssetRef(asset)) ?? null
+  ),
   boardDefaults: deriveGeomorphBoardCommandDefaults(asset),
   pieceDefaults: deriveCounterPieceCommandDefaults(asset)
 })

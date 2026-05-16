@@ -359,7 +359,7 @@ describe('room asset creation controller', () => {
     assert.equal(harness.elements.boardScaleInput.value, '50')
     assert.equal(
       harness.elements.localAssetStatus.textContent,
-      '1 board asset(s), 0 counter asset(s)'
+      'deck 01: no LOS sidecar'
     )
   })
 
@@ -398,8 +398,19 @@ describe('room asset creation controller', () => {
     })
 
     harness.elements.loadLocalAssets.dispatch('click')
+    const boardOption = harness.elements.boardAssetSelect.children[1] as {
+      textContent?: string
+    }
+    assert.equal(
+      boardOption.textContent,
+      'deck 01 (1000 x 1000 px, 50 px grid, 0 wall(s), 1 door(s))'
+    )
     harness.elements.boardAssetSelect.value = 'Geomorphs/standard/deck-01.jpg'
     harness.elements.useBoardAsset.dispatch('click')
+    assert.equal(
+      harness.elements.localAssetStatus.textContent,
+      'deck 01: 0 wall(s), 1 door(s)'
+    )
 
     harness.elements.createBoard.dispatch('click')
     await flushAsyncListeners()

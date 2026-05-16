@@ -139,7 +139,12 @@ const renderAssetOptions = (
             return createSelectOption(
               select,
               item.assetRef,
-              `${item.label} (${item.dimensions.label})`
+              `${item.label} (${[
+                item.dimensions.label,
+                item.losSummary?.label
+              ]
+                .filter(Boolean)
+                .join(', ')})`
             )
           })
         ]
@@ -382,6 +387,9 @@ export const createRoomAssetCreationController = ({
     elements.boardWidthInput.value = String(defaults.width)
     elements.boardHeightInput.value = String(defaults.height)
     elements.boardScaleInput.value = String(defaults.scale)
+    elements.localAssetStatus.textContent = item.losSummary
+      ? `${defaults.name}: ${item.losSummary.label}`
+      : `${defaults.name}: no LOS sidecar`
     reportError('')
   }
 
