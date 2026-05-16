@@ -1,6 +1,6 @@
 import {
   CEPHEUS_SRD_RULESET,
-  type CepheusSrdRuleset
+  type CepheusRuleset
 } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import { deriveCharacterCreationProjectionReadModel } from '../../../../shared/character-creation/view-state'
 import type {
@@ -156,7 +156,7 @@ const sourceSkillName = (skill: string): string =>
 const sourceSkillMatches = (
   sourceSkill: string,
   characterSkill: string,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): boolean => {
   const sourceName = sourceSkillName(sourceSkill)
   const skillName = skillBaseName(characterSkill)
@@ -166,7 +166,7 @@ const sourceSkillMatches = (
 
 const backgroundSkillSourceValue = (
   creation: CharacterCreationProjection | null | undefined,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): string | null => {
   const skills = creation?.backgroundSkills ?? []
   if (skills.length === 0) return null
@@ -545,7 +545,7 @@ export interface CharacterExportViewModel {
 }
 
 export interface CharacterExportRulesetOptions {
-  ruleset?: CepheusSrdRuleset | null
+  ruleset?: CepheusRuleset | null
 }
 
 export const deriveCharacterExportViewModel = (

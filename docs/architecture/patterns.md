@@ -120,6 +120,13 @@ Rulesets are data, not application structure. Bundled rulesets live as JSON in
 ruleset is `cepheus-engine-srd`; future custom rulesets should follow the same
 load-decode-select path rather than being compiled into TypeScript.
 
+The bundled default is the Cepheus Engine SRD data file. A missing or unknown
+ruleset is not permission to fall back to that SRD file, except when a command
+or legacy event omitted `rulesetId` entirely and the room is therefore using the
+documented default. Once a room records a non-default `rulesetId`, every
+projection, legal-action derivation, viewer redaction, and client creation view
+should use the resolved ruleset data for that ID.
+
 A room records its ruleset choice through the event stream:
 
 - `CreateGame.rulesetId` selects the ruleset, defaulting to
@@ -136,6 +143,20 @@ Projected action plans must fail closed when the room ruleset cannot be
 resolved. Do not silently substitute the default SRD ruleset for a room that
 selected another ruleset; leave legal actions empty until the selected ruleset
 data is available and decoded.
+
+Ruleset coverage should prove both the default and non-default paths:
+
+- decoder tests load JSON, reject malformed shapes, and confirm the bundled SRD
+  ruleset is the default `cepheus-engine-srd`;
+- legal-action tests use a non-SRD JSON fixture for homeworld, cascade, career,
+  benefit, or aging data whenever that behavior is ruleset-dependent;
+- projection tests inject a resolver for non-SRD room rulesets and assert that
+  projected action plans use the resolved data, while unresolved rulesets produce
+  empty legal actions;
+- viewer tests cover redaction and revealed fallback states without substituting
+  SRD data for an unresolved custom ruleset;
+- client model/view/controller tests consume projection-supplied legal actions
+  and decoded fixture ruleset data rather than duplicating SRD tables locally.
 
 ## Viewer-Aware Filtering
 

@@ -3,7 +3,7 @@ import type {
   CharacterCreationProjection,
   GameState
 } from '../../../../shared/state'
-import type { CepheusSrdRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import {
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationWizardStep,
@@ -38,7 +38,7 @@ export interface CharacterCreationWizardControllerDeps {
     'isOpen' | 'show' | 'open' | 'scrollToTop'
   >
   getState: () => GameState | null
-  getRuleset: () => CepheusSrdRuleset | null
+  getRuleset: () => CepheusRuleset | null
   getSeed: () => Pick<
     CharacterCreationDraft,
     'name' | 'credits' | 'equipment' | 'notes'

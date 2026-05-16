@@ -12,7 +12,7 @@ import {
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
 import type { CareerCreationTermSkillTable } from '../../../shared/characterCreation'
-import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -53,7 +53,7 @@ type CharacterCreationSkillCommand = Extract<
 >
 
 const termSkillTables = (
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Record<
   CareerCreationTermSkillTable,
   Record<string, Record<string, string>>
@@ -122,7 +122,7 @@ export const activeTermSkillCount = (
 
 const requireNoUnrelatedTermCascadeDecisions = (
   creation: CharacterCreationProjection,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<void, CommandError> => {
   const actionContext = deriveCareerCreationActionContext(creation, ruleset)
   const blockingDecision = actionContext.pendingDecisions?.find(
@@ -145,7 +145,7 @@ const requireNoUnrelatedTermCascadeDecisions = (
 export const validateTermSkillRoll = (
   character: CharacterState,
   table: string,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -202,7 +202,7 @@ export const validateTermSkillRoll = (
 
 export const validateSkillsCompletion = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -254,7 +254,7 @@ export const resolveTermSkillCreationEvent = ({
 }: {
   creation: CharacterCreationProjection
   table: CareerCreationTermSkillTable
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
   roll: { expression: '1d6'; rolls: number[]; total: number }
 }): Result<
   Pick<

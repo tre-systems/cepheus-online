@@ -4,7 +4,7 @@ import {
   hasProjectedCareerTermFacts,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameEvent } from '../../../shared/events'
 import type { CharacterId } from '../../../shared/ids'
 import type { CommandError } from '../../../shared/protocol'
@@ -118,7 +118,7 @@ const validateCharacterCreationSheet = (
 
 const validateCreationCompletion = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -140,7 +140,7 @@ const validateCreationCompletion = (
 export const deriveCompletionEvents = (
   characterId: CharacterId,
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<GameEvent[], CommandError> => {
   const creation = validateCreationCompletion(character, ruleset)
   if (!creation.ok) return creation

@@ -1,4 +1,4 @@
-import type { CepheusSrdRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   BoardState,
   CharacterCreationProjection,
@@ -99,8 +99,8 @@ export interface CharacterSheetControllerOptions {
     reason: string
   ) => Promise<unknown>
   createEquipmentItemId?: (character: CharacterState) => string
-  ruleset?: CepheusSrdRuleset
-  getRuleset?: () => CepheusSrdRuleset | null | undefined
+  ruleset?: CepheusRuleset
+  getRuleset?: () => CepheusRuleset | null | undefined
   getCharacterCreationActions?: (
     character: CharacterState | null
   ) => CharacterSheetCreationActions | null

@@ -1,10 +1,11 @@
 import * as assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 
 import { asCharacterId } from '../../../../shared/ids'
 import {
-  CEPHEUS_SRD_RULESET,
-  type CepheusSrdRuleset
+  decodeCepheusRuleset,
+  type CepheusRuleset
 } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type { CareerTerm } from '../../../../shared/character-creation/types'
 import type {
@@ -26,15 +27,24 @@ import {
 
 const characterId = asCharacterId('view-model-traveller')
 
-const customRuleset: CepheusSrdRuleset = {
-  ...CEPHEUS_SRD_RULESET,
-  homeWorldSkillsByLawLevel: {
-    'Frontier Law': 'Survey-0'
-  },
-  homeWorldSkillsByTradeCode: {
-    Frontier: 'Survey-0'
+const loadCustomRulesetFixture = (): CepheusRuleset => {
+  const decoded = decodeCepheusRuleset(
+    JSON.parse(
+      readFileSync(
+        'src/shared/character-creation/__fixtures__/custom-ruleset.json',
+        'utf8'
+      )
+    )
+  )
+
+  if (!decoded.ok) {
+    throw new Error(decoded.error.join('; '))
   }
+
+  return decoded.value
 }
+
+const customRuleset = loadCustomRulesetFixture()
 
 const flow = (
   overrides: Partial<CharacterCreationFlow> = {}
@@ -314,9 +324,9 @@ describe('character creation view model', () => {
           },
           homeworld: {
             lawLevel: 'Frontier Law',
-            tradeCodes: ['Frontier']
+            tradeCodes: ['Deep Space']
           },
-          backgroundSkills: ['Survey-0'],
+          backgroundSkills: ['Vacc Suit-0'],
           pendingCascadeSkills: []
         })
       }),
@@ -328,7 +338,7 @@ describe('character creation view model', () => {
       { value: 'Frontier Law', label: 'Frontier Law', selected: true }
     ])
     assert.deepEqual(viewModel.wizard?.homeworld?.tradeCodeOptions, [
-      { value: 'Frontier', label: 'Frontier', selected: true }
+      { value: 'Deep Space', label: 'Deep Space', selected: true }
     ])
   })
 

@@ -40,6 +40,9 @@ const legacyCreationHistoryReadAllowed = new Set([
 const legacyCreationFlowAdapterAllowed = new Set([
   'src/client/app/character/creation/projection.ts'
 ])
+const defaultRulesetHelperDefinitionAllowed = new Set([
+  'src/shared/character-creation/legal-actions.ts'
+])
 
 const failures = []
 
@@ -142,6 +145,17 @@ for (const path of sourceFiles) {
       lines,
       pattern: /\bconsole\.(log|warn|error)\b/,
       message: 'shared code must not log as a side effect'
+    })
+  }
+
+  if (!isTestFile(path) && !defaultRulesetHelperDefinitionAllowed.has(path)) {
+    checkLinePattern({
+      path,
+      lines,
+      pattern:
+        /\b(deriveDefaultCareerCreation(?:PendingDecisions|ActionContext|CascadeSkillChoices|ActionPlan)|deriveDefaultLegalCareerCreation(?:Actions|ActionKeysForProjection)|projectDefaultCareerCreationActionPlan)\b/,
+      message:
+        'production code must pass the resolved room ruleset into character creation planners'
     })
   }
 }

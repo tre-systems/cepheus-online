@@ -1,6 +1,10 @@
 import * as assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
-import { DEFAULT_RULESET_ID } from './character-creation/cepheus-srd-ruleset'
+import {
+  DEFAULT_RULESET_ID,
+  decodeCepheusRuleset
+} from './character-creation/cepheus-srd-ruleset'
 import type {
   CareerCreationEvent,
   CareerCreationStatus
@@ -63,6 +67,23 @@ const creationProjectionState = (
     canAdvance
   }
 })
+
+const loadCustomRulesetFixture = () => {
+  const decoded = decodeCepheusRuleset(
+    JSON.parse(
+      readFileSync(
+        'src/shared/character-creation/__fixtures__/custom-ruleset.json',
+        'utf8'
+      )
+    )
+  )
+
+  if (!decoded.ok) {
+    throw new Error(decoded.error.join('; '))
+  }
+
+  return decoded.value
+}
 
 describe('game state projection', () => {
   it('rejects unknown event types instead of ignoring them', () => {
@@ -160,6 +181,73 @@ describe('game state projection', () => {
       pendingDecisions: [],
       legalActions: []
     })
+  })
+
+  it('uses resolved non-SRD ruleset fixture data in projected action plans', () => {
+    const characterId = asCharacterId('char-custom-ruleset')
+    const customRuleset = loadCustomRulesetFixture()
+
+    const state = projectGameState(
+      [
+        envelope(1, {
+          type: 'GameCreated',
+          slug: 'game-1',
+          name: 'Spinward Test',
+          ownerId: actorId,
+          rulesetId: 'custom-rules'
+        }),
+        envelope(2, {
+          type: 'CharacterCreated',
+          characterId,
+          ownerId: actorId,
+          characterType: 'PLAYER',
+          name: 'Fixture Courier'
+        }),
+        envelope(3, {
+          type: 'CharacterCreationStarted',
+          characterId,
+          creation: {
+            state: creationProjectionState('HOMEWORLD'),
+            terms: [],
+            careers: [],
+            canEnterDraft: true,
+            failedToQualify: false,
+            characteristicChanges: [],
+            creationComplete: false,
+            homeworld: null,
+            backgroundSkills: [],
+            pendingCascadeSkills: ['Survey-0'],
+            history: []
+          }
+        })
+      ],
+      null,
+      {
+        resolveRulesetById: (rulesetId) =>
+          rulesetId === 'custom-rules'
+            ? { ok: true, value: customRuleset }
+            : err([`Unknown ruleset id "${rulesetId}"`])
+      }
+    )
+
+    const actionPlan = state?.characters[characterId]?.creation?.actionPlan
+    assert.deepEqual(actionPlan?.homeworldChoiceOptions?.lawLevels, [
+      'Frontier Law'
+    ])
+    assert.deepEqual(actionPlan?.homeworldChoiceOptions?.tradeCodes, [
+      'Deep Space'
+    ])
+    assert.deepEqual(actionPlan?.cascadeSkillChoices, [
+      {
+        cascadeSkill: 'Survey-0',
+        label: 'Survey',
+        level: 0,
+        options: [
+          { value: 'Prospecting-0', label: 'Prospecting', cascade: false },
+          { value: 'Sensors-0', label: 'Sensors', cascade: false }
+        ]
+      }
+    ])
   })
 
   it('projects explicit board selection over the first created board', () => {

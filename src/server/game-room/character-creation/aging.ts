@@ -2,7 +2,7 @@ import {
   deriveAgingRollModifier,
   resolveAging
 } from '../../../shared/characterCreation'
-import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameEvent } from '../../../shared/events'
 import type { CommandError } from '../../../shared/protocol'
 import { err, ok, type Result } from '../../../shared/result'
@@ -23,7 +23,7 @@ type CharacterCreationAgingResolvedEvent = Extract<
 
 export const validateAgingResolution = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -50,7 +50,7 @@ export const validateAgingResolution = (
 
 export const validateAgingLossResolution = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -76,7 +76,7 @@ export const validateAgingLossResolution = (
 
 export const validateAnagathicsDecision = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -119,7 +119,7 @@ export const resolveAgingCreationEvent = ({
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Pick<CharacterCreationAgingResolvedEvent, 'aging'> => {
   const modifier = deriveAgingRollModifier(creation.terms)

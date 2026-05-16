@@ -1,19 +1,21 @@
 import * as assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 
+import { decodeCepheusRuleset } from './cepheus-srd-ruleset'
 import {
   createCareerCreationState,
   createCareerTerm,
   deriveSurvivalFailurePendingDecision,
-  deriveCareerCreationActionContext,
-  deriveCareerCreationActionPlan,
-  deriveCareerCreationPendingDecisions,
+  deriveDefaultCareerCreationActionContext as deriveCareerCreationActionContext,
+  deriveDefaultCareerCreationActionPlan as deriveCareerCreationActionPlan,
+  deriveDefaultCareerCreationPendingDecisions as deriveCareerCreationPendingDecisions,
   deriveCareerCreationReenlistmentOutcome,
   deriveLegalCareerCreationActionKeys,
-  deriveLegalCareerCreationActionKeysForProjection,
-  deriveLegalCareerCreationActions,
+  deriveDefaultLegalCareerCreationActionKeysForProjection as deriveLegalCareerCreationActionKeysForProjection,
+  deriveDefaultLegalCareerCreationActions as deriveLegalCareerCreationActions,
   deriveRemainingCareerCreationBenefits,
-  projectCareerCreationActionPlan,
+  projectDefaultCareerCreationActionPlan as projectCareerCreationActionPlan,
   resolveSurvivalFailureOutcome
 } from './index'
 import type {
@@ -84,6 +86,23 @@ const termSkillFact = (
   pendingCascadeSkill: null,
   ...overrides
 })
+
+const loadCustomRulesetFixture = () => {
+  const decoded = decodeCepheusRuleset(
+    JSON.parse(
+      readFileSync(
+        'src/shared/character-creation/__fixtures__/custom-ruleset.json',
+        'utf8'
+      )
+    )
+  )
+
+  if (!decoded.ok) {
+    throw new Error(decoded.error.join('; '))
+  }
+
+  return decoded.value
+}
 
 const mishapFact = (
   benefitEffect: 'forfeit_current_term' | 'lose_all'
@@ -760,6 +779,61 @@ describe('career creation legal action planner', () => {
         }
       ]
     )
+  })
+
+  it('projects homeworld and cascade options from a non-SRD ruleset fixture', () => {
+    const customRuleset = loadCustomRulesetFixture()
+    const creation = projection('HOMEWORLD', {
+      homeworld: {
+        lawLevel: 'Frontier Law',
+        tradeCodes: ['Deep Space']
+      },
+      pendingCascadeSkills: ['Survey-0']
+    })
+    const plan = deriveCareerCreationActionPlan(creation, {
+      characteristics: { edu: 12 },
+      ruleset: customRuleset
+    })
+
+    assert.deepEqual(plan.homeworldChoiceOptions?.lawLevels, ['Frontier Law'])
+    assert.deepEqual(plan.homeworldChoiceOptions?.tradeCodes, ['Deep Space'])
+    assert.deepEqual(plan.homeworldChoiceOptions?.backgroundSkills, [
+      {
+        value: 'Survey-0',
+        label: 'Survey*',
+        preselected: true,
+        cascade: true
+      },
+      {
+        value: 'Vacc Suit-0',
+        label: 'Vacc Suit',
+        preselected: true,
+        cascade: false
+      },
+      {
+        value: 'Survey-0',
+        label: 'Survey',
+        preselected: false,
+        cascade: false
+      },
+      {
+        value: 'Admin-0',
+        label: 'Admin',
+        preselected: false,
+        cascade: false
+      }
+    ])
+    assert.deepEqual(plan.cascadeSkillChoices, [
+      {
+        cascadeSkill: 'Survey-0',
+        label: 'Survey',
+        level: 0,
+        options: [
+          { value: 'Prospecting-0', label: 'Prospecting', cascade: false },
+          { value: 'Sensors-0', label: 'Sensors', cascade: false }
+        ]
+      }
+    ])
   })
 
   it('projects career selection choices and check modifiers', () => {

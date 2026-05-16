@@ -1,5 +1,5 @@
 import type { Command, GameCommand } from '../../shared/commands'
-import type { CepheusSrdRuleset } from '../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../shared/character-creation/cepheus-srd-ruleset'
 import type { PieceId } from '../../shared/ids'
 import type { CommandError } from '../../shared/protocol'
 import { err, ok, type Result } from '../../shared/result'
@@ -10,7 +10,7 @@ export interface CommandContext {
   currentSeq: number
   nextSeq: number
   gameSeed: number
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
   createdAt?: string
 }
 

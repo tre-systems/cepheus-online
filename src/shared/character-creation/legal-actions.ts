@@ -7,7 +7,7 @@ import { derivePrimaryEducationSkillOptions } from './background-skills'
 import {
   CEPHEUS_SRD_RULESET,
   deriveCepheusCareerDefinitions,
-  type CepheusSrdRuleset,
+  type CepheusRuleset,
   type CepheusCareerDefinition
 } from './cepheus-srd-ruleset'
 import {
@@ -43,6 +43,11 @@ import type {
   InjuryResolutionActionOption,
   LegalCareerCreationAction
 } from './types'
+
+type RequiredCareerCreationActionPlanOptions =
+  CareerCreationActionPlanOptions & {
+    ruleset: CepheusRuleset
+  }
 
 const defaultActionContext = {
   requiredTermSkillCount: 1,
@@ -180,7 +185,7 @@ const hasUnresolvedInjuryForActiveTerm = (
 
 const shouldDecideAnagathics = (
   creation: CareerCreationActionProjection,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): boolean => {
   if (creation.state.status !== 'AGING') return false
   if ((creation.characteristicChanges?.length ?? 0) > 0) return false
@@ -196,7 +201,7 @@ const shouldDecideAnagathics = (
 const canResolveBasicTrainingSelection = (
   creation: CareerCreationActionProjection,
   pendingDecisions: readonly CareerCreationPendingDecision[],
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): boolean => {
   if (
     creation.state.status !== 'BASIC_TRAINING' ||
@@ -260,7 +265,7 @@ export const deriveRemainingCareerCreationBenefits = (
 
 export const deriveCareerCreationPendingDecisions = (
   creation: CareerCreationActionProjection,
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset
 ): CareerCreationPendingDecision[] => {
   const decisions: CareerCreationPendingDecision[] = [
     ...(creation.pendingDecisions ?? []).map((decision) => ({ ...decision }))
@@ -338,6 +343,12 @@ export const deriveCareerCreationPendingDecisions = (
   return decisions
 }
 
+export const deriveDefaultCareerCreationPendingDecisions = (
+  creation: CareerCreationActionProjection,
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
+): CareerCreationPendingDecision[] =>
+  deriveCareerCreationPendingDecisions(creation, ruleset)
+
 export const deriveCareerCreationReenlistmentOutcome = (
   creation: CareerCreationActionProjection
 ): CareerCreationReenlistmentOutcome => {
@@ -358,7 +369,7 @@ export const deriveCareerCreationReenlistmentOutcome = (
 
 export const deriveCareerCreationActionContext = (
   creation: CareerCreationActionProjection,
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset
 ): CareerCreationActionContext => {
   const pendingDecisions = deriveCareerCreationPendingDecisions(
     creation,
@@ -401,6 +412,12 @@ export const deriveCareerCreationActionContext = (
   }
 }
 
+export const deriveDefaultCareerCreationActionContext = (
+  creation: CareerCreationActionProjection,
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
+): CareerCreationActionContext =>
+  deriveCareerCreationActionContext(creation, ruleset)
+
 const deriveTermSkillTableOptions = (
   creation: CareerCreationActionProjection | undefined,
   context: CareerCreationActionContext,
@@ -432,7 +449,7 @@ const deriveTermSkillTableOptions = (
 
 const deriveBasicTrainingOptions = (
   creation: CareerCreationActionProjection | undefined,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): BasicTrainingActionOption | undefined => {
   if (!creation || creation.state.status !== 'BASIC_TRAINING') return undefined
   const term = lastTerm(creation)
@@ -542,7 +559,7 @@ const deriveInjuryResolutionOptions = (
 
 export const deriveCareerCreationCascadeSkillChoices = (
   pendingCascadeSkills: readonly string[],
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset
 ): CascadeSkillChoice[] => {
   const choices: CascadeSkillChoice[] = []
 
@@ -568,10 +585,16 @@ export const deriveCareerCreationCascadeSkillChoices = (
   return choices
 }
 
+export const deriveDefaultCareerCreationCascadeSkillChoices = (
+  pendingCascadeSkills: readonly string[],
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
+): CascadeSkillChoice[] =>
+  deriveCareerCreationCascadeSkillChoices(pendingCascadeSkills, ruleset)
+
 const deriveHomeworldChoiceOptions = (
   creation: CareerCreationActionProjection,
   { characteristics }: CareerCreationActionPlanOptions,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): HomeworldChoiceOptions | null => {
   if (creation.state.status !== 'HOMEWORLD') return null
 
@@ -623,7 +646,7 @@ const deriveCareerChoiceCheckOption = ({
 const deriveCareerChoiceOptions = (
   creation: CareerCreationActionProjection,
   { characteristics = {} }: CareerCreationActionPlanOptions,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): CareerChoiceOptions | null => {
   if (creation.state.status !== 'CAREER_SELECTION') return null
   const activeCareer = lastTerm(creation)?.career ?? null
@@ -907,11 +930,11 @@ const actionDefinitions = {
 export const deriveLegalCareerCreationActions = (
   state: CareerCreationState,
   context: CareerCreationActionContext = {},
-  actionOptions: CareerCreationActionPlanOptions & {
+  actionOptions: RequiredCareerCreationActionPlanOptions & {
     creation?: CareerCreationActionProjection
-  } = {}
+  }
 ): LegalCareerCreationAction[] => {
-  const ruleset = actionOptions.ruleset ?? CEPHEUS_SRD_RULESET
+  const ruleset = actionOptions.ruleset
   const options = {
     ...defaultActionContext,
     ...context
@@ -986,20 +1009,38 @@ export const deriveLegalCareerCreationActions = (
   })
 }
 
+export const deriveDefaultLegalCareerCreationActions = (
+  state: CareerCreationState,
+  context: CareerCreationActionContext = {},
+  actionOptions: CareerCreationActionPlanOptions & {
+    creation?: CareerCreationActionProjection
+  } = {}
+): LegalCareerCreationAction[] =>
+  deriveLegalCareerCreationActions(state, context, {
+    ...actionOptions,
+    ruleset: actionOptions.ruleset ?? CEPHEUS_SRD_RULESET
+  })
+
 export const deriveLegalCareerCreationActionKeysForProjection = (
   creation: CareerCreationActionProjection,
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset
 ): CareerCreationActionKey[] =>
   deriveLegalCareerCreationActionKeys(
     creation.state,
     deriveCareerCreationActionContext(creation, ruleset)
   )
 
+export const deriveDefaultLegalCareerCreationActionKeysForProjection = (
+  creation: CareerCreationActionProjection,
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
+): CareerCreationActionKey[] =>
+  deriveLegalCareerCreationActionKeysForProjection(creation, ruleset)
+
 export const deriveCareerCreationActionPlan = (
   creation: CareerCreationActionProjection,
-  options: CareerCreationActionPlanOptions = {}
+  options: RequiredCareerCreationActionPlanOptions
 ): CareerCreationActionPlan => {
-  const ruleset = options.ruleset ?? CEPHEUS_SRD_RULESET
+  const ruleset = options.ruleset
   const context = deriveCareerCreationActionContext(creation, ruleset)
   const cascadeSkillChoices = deriveCareerCreationCascadeSkillChoices(
     creation.pendingCascadeSkills ?? [],
@@ -1029,12 +1070,32 @@ export const deriveCareerCreationActionPlan = (
   }
 }
 
+export const deriveDefaultCareerCreationActionPlan = (
+  creation: CareerCreationActionProjection,
+  options: CareerCreationActionPlanOptions = {}
+): CareerCreationActionPlan =>
+  deriveCareerCreationActionPlan(creation, {
+    ...options,
+    ruleset: options.ruleset ?? CEPHEUS_SRD_RULESET
+  })
+
 export const projectCareerCreationActionPlan = <
   TCreation extends CareerCreationActionProjection
 >(
   creation: TCreation,
-  options: CareerCreationActionPlanOptions = {}
+  options: RequiredCareerCreationActionPlanOptions
 ): TCreation & { actionPlan: CareerCreationActionPlan } => ({
   ...creation,
   actionPlan: deriveCareerCreationActionPlan(creation, options)
 })
+
+export const projectDefaultCareerCreationActionPlan = <
+  TCreation extends CareerCreationActionProjection
+>(
+  creation: TCreation,
+  options: CareerCreationActionPlanOptions = {}
+): TCreation & { actionPlan: CareerCreationActionPlan } =>
+  projectCareerCreationActionPlan(creation, {
+    ...options,
+    ruleset: options.ruleset ?? CEPHEUS_SRD_RULESET
+  })

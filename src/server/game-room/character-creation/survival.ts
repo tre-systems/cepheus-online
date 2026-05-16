@@ -9,7 +9,7 @@ import {
   type SurvivalMishapInjuryRequirement,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -47,7 +47,7 @@ type CharacterCreationSurvivalResolvedEvent = Extract<
 
 const validateMishapResolution = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -74,7 +74,7 @@ const validateMishapResolution = (
 
 const validateInjuryResolution = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -101,7 +101,7 @@ const validateInjuryResolution = (
 
 const validateDeathConfirmation = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -128,7 +128,7 @@ const validateDeathConfirmation = (
 
 const validateSurvivalResolution = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -161,7 +161,7 @@ const resolveSurvivalCreationEvent = ({
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
   Pick<

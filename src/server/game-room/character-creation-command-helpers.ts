@@ -7,7 +7,7 @@ import {
   deriveCareerCreationActionContext,
   deriveLegalCareerCreationActionKeysForProjection
 } from '../../shared/characterCreation'
-import type { CepheusSrdRuleset } from '../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../shared/character-creation/cepheus-srd-ruleset'
 import type { CharacterId } from '../../shared/ids'
 import type { CommandError } from '../../shared/protocol'
 import { err, ok, type Result } from '../../shared/result'
@@ -78,7 +78,7 @@ export const requireLegalCharacterCreationAction = (
   creation: CharacterCreationProjection,
   actionKeys: readonly CareerCreationActionKey[],
   blockedMessage: string,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<void, CommandError> => {
   const legalActions = deriveLegalCareerCreationActionKeysForProjection(
     creation,
@@ -95,7 +95,7 @@ export const requireNoBlockingCharacterCreationDecisions = (
   creation: CharacterCreationProjection,
   allowedDecisionKey: CareerCreationPendingDecisionKey,
   blockedMessage: string,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<void, CommandError> => {
   const actionContext = deriveCareerCreationActionContext(creation, ruleset)
   const blockingDecision = actionContext.pendingDecisions?.find(
@@ -111,7 +111,7 @@ export const requireNoBlockingCharacterCreationDecisions = (
 export const requireNoPendingCharacterCreationDecisions = (
   creation: CharacterCreationProjection,
   blockedMessage: string,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<void, CommandError> => {
   const actionContext = deriveCareerCreationActionContext(creation, ruleset)
   if ((actionContext.pendingDecisions?.length ?? 0) > 0) {

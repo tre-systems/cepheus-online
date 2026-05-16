@@ -2,10 +2,7 @@ import * as assert from 'node:assert/strict'
 import * as fs from 'node:fs'
 import { describe, it } from 'node:test'
 
-import {
-  CEPHEUS_SRD_RULESET,
-  type CepheusSrdRuleset
-} from './cepheus-srd-ruleset'
+import { CEPHEUS_SRD_RULESET, type CepheusRuleset } from './cepheus-srd-ruleset'
 import {
   availableCareerNames,
   deriveBasicTrainingPlan,
@@ -36,10 +33,10 @@ import {
   resolveCareerBenefit
 } from './benefits'
 
-const loadSrdRuleset = (): CepheusSrdRuleset =>
+const loadSrdRuleset = (): CepheusRuleset =>
   JSON.parse(
     fs.readFileSync('data/rulesets/cepheus-engine-srd.json', 'utf8')
-  ) as CepheusSrdRuleset
+  ) as CepheusRuleset
 
 const relevantRulesetKeys = [
   'careerBasics',
@@ -51,7 +48,7 @@ const relevantRulesetKeys = [
   'advEducation',
   'materialBenefits',
   'cashBenefits'
-] satisfies readonly (keyof CepheusSrdRuleset)[]
+] satisfies readonly (keyof CepheusRuleset)[]
 
 const skillTableKeys = [
   'serviceSkills',
@@ -59,7 +56,7 @@ const skillTableKeys = [
   'personalDevelopment',
   'advEducation'
 ] satisfies readonly (keyof Pick<
-  CepheusSrdRuleset,
+  CepheusRuleset,
   'serviceSkills' | 'specialistSkills' | 'personalDevelopment' | 'advEducation'
 >)[]
 

@@ -4,7 +4,7 @@ import {
   normalizeCareerSkill,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import type { GameEvent } from '../../../shared/events'
 import type { CommandError } from '../../../shared/protocol'
@@ -27,7 +27,7 @@ type CharacterCreationBasicTrainingCommand = Extract<
 
 const validateBasicTrainingCompletion = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -54,7 +54,7 @@ const validateBasicTrainingCompletion = (
 
 const deriveBasicTrainingSkills = (
   creation: CharacterCreationProjection,
-  ruleset: CepheusSrdRuleset,
+  ruleset: CepheusRuleset,
   selectedSkill?: string
 ): Result<string[], CommandError> => {
   const currentTerm = creation.terms.at(-1)

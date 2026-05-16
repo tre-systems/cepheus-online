@@ -404,10 +404,11 @@ const completeCurrentScoutTermFromReenlistmentAndFinalize = async ({
 
 const characterCreationCareerButton = (page: Page, career: string) =>
   page
-    .locator('#characterCreationFields .creation-career-list button')
+    .locator('#characterCreationFields .creation-career-card')
     .filter({
       has: page.locator('.creation-career-title').filter({ hasText: career })
     })
+    .locator('button')
 
 const creatorSkillStrip = (page: Page) =>
   page.locator('#characterCreationFields .creation-skill-strip')
@@ -2408,9 +2409,7 @@ test.describe('character creation smoke', () => {
         '#characterCreationFields .creation-career-outcome'
       )
       await expect(
-        spectator
-          .locator('#characterCreationFields .creation-career-list button')
-          .filter({ hasText: 'Scout' })
+        characterCreationCareerButton(spectator, 'Scout')
       ).toBeDisabled()
       await expect(
         spectator.locator('[data-character-creation-field="career"]')

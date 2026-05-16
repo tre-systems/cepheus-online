@@ -1,11 +1,13 @@
 import * as assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 
 import {
   CEPHEUS_SRD_CAREERS,
   CEPHEUS_SRD_RULESET,
   DEFAULT_RULESET_ID,
-  decodeCepheusSrdRuleset,
+  createRulesetRegistry,
+  decodeCepheusRuleset,
   resolveRulesetById,
   type CepheusCareerDefinition
 } from './cepheus-srd-ruleset'
@@ -34,6 +36,14 @@ const requiredChecks = [
   'qualification' | 'survival' | 'commission' | 'advancement'
 >)[]
 
+const loadCustomRulesetFixture = (): unknown =>
+  JSON.parse(
+    readFileSync(
+      'src/shared/character-creation/__fixtures__/custom-ruleset.json',
+      'utf8'
+    )
+  )
+
 describe('Cepheus SRD career ruleset', () => {
   it('loads the bundled default ruleset from JSON data', () => {
     const resolved = resolveRulesetById(DEFAULT_RULESET_ID)
@@ -45,7 +55,7 @@ describe('Cepheus SRD career ruleset', () => {
   })
 
   it('rejects malformed ruleset data at the data boundary', () => {
-    const decoded = decodeCepheusSrdRuleset({
+    const decoded = decodeCepheusRuleset({
       careerBasics: {},
       serviceSkills: {}
     })
@@ -54,6 +64,52 @@ describe('Cepheus SRD career ruleset', () => {
     if (decoded.ok) return
     assert.equal(decoded.error.includes('gender must be an object'), true)
     assert.equal(decoded.error.includes('theDraft must be an array'), true)
+  })
+
+  it('decodes a non-SRD ruleset JSON fixture without using bundled defaults', () => {
+    const decoded = decodeCepheusRuleset(loadCustomRulesetFixture())
+
+    assert.equal(decoded.ok, true)
+    if (!decoded.ok) return
+    assert.deepEqual(Object.keys(decoded.value.careerBasics), ['Courier'])
+    assert.equal(decoded.value.careerBasics.Courier.Survival, 'End 6+')
+    assert.deepEqual(decoded.value.cascadeSkills.Survey, [
+      'Prospecting',
+      'Sensors'
+    ])
+  })
+
+  it('creates validated registries from JSON-compatible ruleset records', () => {
+    const registry = createRulesetRegistry({
+      [DEFAULT_RULESET_ID]: CEPHEUS_SRD_RULESET,
+      'custom-courier': loadCustomRulesetFixture()
+    })
+
+    assert.deepEqual(registry.supportedRulesetIds, [
+      DEFAULT_RULESET_ID,
+      'custom-courier'
+    ])
+    const resolved = registry.resolveRulesetById('custom-courier')
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    assert.deepEqual(Object.keys(resolved.value.careerBasics), ['Courier'])
+  })
+
+  it('fails closed for unknown or malformed registry entries', () => {
+    const registry = createRulesetRegistry({
+      [DEFAULT_RULESET_ID]: CEPHEUS_SRD_RULESET,
+      broken: { careerBasics: {} }
+    })
+
+    const unknown = registry.resolveRulesetById('missing')
+    assert.equal(unknown.ok, false)
+    if (unknown.ok) return
+    assert.deepEqual(unknown.error, ['Unknown ruleset id "missing"'])
+
+    const malformed = registry.resolveRulesetById('broken')
+    assert.equal(malformed.ok, false)
+    if (malformed.ok) return
+    assert.equal(malformed.error.includes('gender must be an object'), true)
   })
 
   it('includes the expected SRD careers with the legacy defaults first', () => {

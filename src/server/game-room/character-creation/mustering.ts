@@ -11,7 +11,7 @@ import {
   resolveCareerBenefit,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -78,7 +78,7 @@ const hasGamblingSkill = (character: CharacterState): boolean => {
 const validateMusteringBenefitRoll = (
   character: CharacterState,
   career: string,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -119,7 +119,7 @@ const validateMusteringBenefitRoll = (
 
 const validateMusteringCompletion = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -146,7 +146,7 @@ const validateMusteringCompletion = (
 
 const validateMusteringContinuation = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -183,7 +183,7 @@ const resolveMusteringBenefitCreationEvent = ({
   creation: CharacterCreationProjection
   career: string
   kind: CharacterCreationMusteringBenefitRolledEvent['musteringBenefit']['kind']
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
   Pick<CharacterCreationMusteringBenefitRolledEvent, 'musteringBenefit'>,

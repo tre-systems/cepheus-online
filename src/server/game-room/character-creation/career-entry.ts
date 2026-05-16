@@ -7,7 +7,7 @@ import {
   resolveDraftCareer,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -56,7 +56,7 @@ type CharacterCreationDraftResolvedEvent = Extract<
 
 const validateCareerSelection = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -91,7 +91,7 @@ const validateCareerSelection = (
 
 const validateQualificationResolution = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   const creation = validateCareerSelection(character, ruleset)
   if (!creation.ok) return creation
@@ -121,7 +121,7 @@ const previousCareerCount = (
 
 const validateCareerCanBeSelected = (
   creation: CharacterCreationProjection,
-  ruleset: CepheusSrdRuleset,
+  ruleset: CepheusRuleset,
   career: string
 ): Result<void, CommandError> => {
   if (!ruleset.careerBasics[career]) {
@@ -154,7 +154,7 @@ const resolveQualificationCreationEvent = ({
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
   career: string
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
@@ -216,7 +216,7 @@ const resolveDraftCreationEvent = ({
   ruleset,
   roll
 }: {
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
   roll: { expression: '1d6'; rolls: number[]; total: number }
 }): Result<
   Pick<CharacterCreationDraftResolvedEvent, 'draft'>,
@@ -256,7 +256,10 @@ export const deriveCareerEntryCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateQualificationResolution(character, context.ruleset)
+      const creation = validateQualificationResolution(
+        character,
+        context.ruleset
+      )
       if (!creation.ok) return creation
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career

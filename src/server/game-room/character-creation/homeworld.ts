@@ -10,7 +10,7 @@ import {
   resolveCascadeCareerSkill,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import type { GameEvent } from '../../../shared/events'
 import type { CommandError } from '../../../shared/protocol'
@@ -126,7 +126,7 @@ const hasCompleteBackgroundChoices = (character: CharacterState): boolean => {
 
 const requireNoHomeworldResetBlockers = (
   creation: CharacterCreationProjection,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<void, CommandError> => {
   const actionContext = deriveCareerCreationActionContext(creation, ruleset)
   if ((actionContext.pendingDecisions?.length ?? 0) > 0) {
@@ -144,7 +144,7 @@ const requireNoHomeworldResetBlockers = (
 const requireOnlyHomeworldPendingDecisions = (
   creation: CharacterCreationProjection,
   blockedMessage: string,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<void, CommandError> => {
   const allowed = new Set(['homeworldSkillSelection', 'cascadeSkillResolution'])
   const actionContext = deriveCareerCreationActionContext(creation, ruleset)
@@ -198,7 +198,7 @@ export const normalizeBackgroundSkill = (
 
 export const validateHomeworldCompletion = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(

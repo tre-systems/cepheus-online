@@ -14,7 +14,7 @@ export interface CepheusCareerDefinition {
   advancedEducation: readonly string[]
 }
 
-export interface CepheusSrdRuleset {
+export interface CepheusRuleset {
   gender: Record<string, string>
   careerBasics: CareerBasicsTable
   serviceSkills: CareerSkillTable
@@ -30,6 +30,13 @@ export interface CepheusSrdRuleset {
   cascadeSkills: Record<string, readonly string[]>
   theDraft: readonly string[]
   aging: readonly AgingEffect[]
+}
+
+export type CepheusSrdRuleset = CepheusRuleset
+
+export interface CepheusRulesetRegistry {
+  supportedRulesetIds: readonly string[]
+  resolveRulesetById: (rulesetId?: string) => Result<CepheusRuleset, string[]>
 }
 
 const ROLL_TABLE_KEYS = ['1', '2', '3', '4', '5', '6'] as const
@@ -62,13 +69,13 @@ const requiredRecordKeys = [
   'homeWorldSkillsByLawLevel',
   'homeWorldSkillsByTradeCode',
   'cascadeSkills'
-] satisfies readonly (keyof CepheusSrdRuleset)[]
+] satisfies readonly (keyof CepheusRuleset)[]
 
 const requiredArrayKeys = [
   'primaryEducationSkillsData',
   'theDraft',
   'aging'
-] satisfies readonly (keyof CepheusSrdRuleset)[]
+] satisfies readonly (keyof CepheusRuleset)[]
 
 const validateCareerSkillTables = (
   ruleset: Record<string, unknown>,
@@ -83,7 +90,7 @@ const validateCareerSkillTables = (
     'specialistSkills',
     'personalDevelopment',
     'advEducation'
-  ] satisfies readonly (keyof CepheusSrdRuleset)[]) {
+  ] satisfies readonly (keyof CepheusRuleset)[]) {
     const table = ruleset[tableKey]
     if (!isRecord(table)) continue
 
@@ -103,9 +110,9 @@ const validateCareerSkillTables = (
   }
 }
 
-export const decodeCepheusSrdRuleset = (
+export const decodeCepheusRuleset = (
   raw: unknown
-): Result<CepheusSrdRuleset, string[]> => {
+): Result<CepheusRuleset, string[]> => {
   const errors: string[] = []
 
   if (!isRecord(raw)) {
@@ -127,22 +134,41 @@ export const decodeCepheusSrdRuleset = (
   validateCareerSkillTables(raw, errors)
 
   return errors.length === 0
-    ? ok(raw as unknown as CepheusSrdRuleset)
+    ? ok(raw as unknown as CepheusRuleset)
     : err(errors)
 }
 
-export const resolveRulesetById = (
-  rulesetId: string = DEFAULT_RULESET_ID
-): Result<CepheusSrdRuleset, string[]> => {
-  const raw = bundledRulesets[rulesetId]
-  if (raw === undefined) {
-    return err([`Unknown ruleset id "${rulesetId}"`])
-  }
+export const decodeCepheusSrdRuleset = decodeCepheusRuleset
 
-  return decodeCepheusSrdRuleset(raw)
+export const createRulesetRegistry = (
+  rulesets: Record<string, unknown>,
+  defaultRulesetId: string = DEFAULT_RULESET_ID
+): CepheusRulesetRegistry => {
+  const supportedRulesetIds = Object.keys(rulesets)
+
+  return {
+    supportedRulesetIds,
+    resolveRulesetById: (
+      rulesetId: string = defaultRulesetId
+    ): Result<CepheusRuleset, string[]> => {
+      const raw = rulesets[rulesetId]
+      if (raw === undefined) {
+        return err([`Unknown ruleset id "${rulesetId}"`])
+      }
+
+      return decodeCepheusRuleset(raw)
+    }
+  }
 }
 
-export const loadDefaultRuleset = (): CepheusSrdRuleset => {
+const bundledRulesetRegistry = createRulesetRegistry(bundledRulesets)
+
+export const resolveRulesetById = (
+  rulesetId: string = DEFAULT_RULESET_ID
+): Result<CepheusRuleset, string[]> =>
+  bundledRulesetRegistry.resolveRulesetById(rulesetId)
+
+export const loadDefaultRuleset = (): CepheusRuleset => {
   const decoded = resolveRulesetById(DEFAULT_RULESET_ID)
   if (!decoded.ok) {
     throw new Error(decoded.error.join('; '))
@@ -171,7 +197,7 @@ const PREFERRED_CAREER_ORDER = [
   'Drifter'
 ] as const
 
-const careerNamesForRuleset = (ruleset: CepheusSrdRuleset): string[] => [
+const careerNamesForRuleset = (ruleset: CepheusRuleset): string[] => [
   ...PREFERRED_CAREER_ORDER.filter((name) => ruleset.careerBasics[name]),
   ...Object.keys(ruleset.careerBasics).filter(
     (name) => !(PREFERRED_CAREER_ORDER as readonly string[]).includes(name)
@@ -179,7 +205,7 @@ const careerNamesForRuleset = (ruleset: CepheusSrdRuleset): string[] => [
 ]
 
 export const deriveCepheusCareerDefinitions = (
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): CepheusCareerDefinition[] =>
   careerNamesForRuleset(ruleset).map((name) => {
     const basics = ruleset.careerBasics[name]

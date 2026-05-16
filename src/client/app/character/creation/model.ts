@@ -1,7 +1,7 @@
 import type { CharacterId } from '../../../../shared/ids'
 import {
   deriveCepheusCareerDefinitions,
-  type CepheusSrdRuleset
+  type CepheusRuleset
 } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
 import {
   deriveCharacterCreationReadModel,
@@ -84,7 +84,7 @@ import {
 } from './view.js'
 
 type CharacterCreationFlowRulesOptions = {
-  ruleset?: CepheusSrdRuleset
+  ruleset?: CepheusRuleset
   careers?: ReturnType<typeof deriveCepheusCareerDefinitions>
 }
 

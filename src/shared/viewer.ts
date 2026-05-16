@@ -1,5 +1,5 @@
 import {
-  type CepheusSrdRuleset,
+  type CepheusRuleset,
   resolveRulesetById
 } from './character-creation/cepheus-srd-ruleset'
 import { deriveUnrevealedCreationRollIds } from './character-creation/reveal'
@@ -422,7 +422,7 @@ const failClosedActionPlan = ({
 
 const deriveVisibleActionPlan = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset | null
+  ruleset: CepheusRuleset | null
 ): CareerCreationActionPlan | null => {
   const creation = character.creation
   if (!creation) return null
@@ -439,7 +439,7 @@ const redactDraftOutcome = (
   character: CharacterState,
   termIndex: number,
   restoreFailedQualificationFallback: boolean,
-  ruleset: CepheusSrdRuleset | null
+  ruleset: CepheusRuleset | null
 ): void => {
   const creation = character.creation
   if (!creation) return
@@ -574,7 +574,7 @@ const redactFinalizedTermOutcomeNotes = (
 const redactUnrevealedCreationFacts = (
   character: CharacterState,
   unrevealedRollIds: ReadonlySet<string>,
-  ruleset: CepheusSrdRuleset | null
+  ruleset: CepheusRuleset | null
 ): void => {
   const creation = character.creation
   if (!creation || unrevealedRollIds.size === 0) return

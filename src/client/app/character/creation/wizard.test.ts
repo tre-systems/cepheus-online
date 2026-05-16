@@ -5,7 +5,7 @@ import { asCharacterId } from '../../../../shared/ids'
 import type { CharacterCreationProjection } from '../../../../shared/state'
 import {
   CEPHEUS_SRD_RULESET,
-  type CepheusSrdRuleset
+  type CepheusRuleset
 } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import { createInitialCharacterDraft } from './flow'
 import { createCharacterCreationController } from './controller'
@@ -40,7 +40,7 @@ const homeworldProjection = (): CharacterCreationProjection => ({
   history: []
 })
 
-const customRuleset: CepheusSrdRuleset = {
+const customRuleset: CepheusRuleset = {
   ...CEPHEUS_SRD_RULESET,
   homeWorldSkillsByLawLevel: {
     'Frontier Law': 'Survey-0'
@@ -68,7 +68,7 @@ const createHarness = ({
 }: {
   fields?: Array<{ key: string; value: string }>
   projection?: CharacterCreationProjection | null
-  ruleset?: CepheusSrdRuleset | null
+  ruleset?: CepheusRuleset | null
 } = {}) => {
   let panelOpen = false
   let sheetClosed = false

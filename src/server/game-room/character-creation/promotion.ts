@@ -4,7 +4,7 @@ import {
   parseCareerRankReward,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -47,7 +47,7 @@ type CharacterCreationAdvancementResolvedEvent = Extract<
 
 const validateCommissionResolution = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -74,7 +74,7 @@ const validateCommissionResolution = (
 
 const validateCommissionSkip = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -101,7 +101,7 @@ const validateCommissionSkip = (
 
 const validateAdvancementResolution = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -128,7 +128,7 @@ const validateAdvancementResolution = (
 
 const validateAdvancementSkip = (
   character: CharacterState,
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -161,7 +161,7 @@ const resolveCommissionCreationEvent = ({
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
   Pick<CharacterCreationCommissionResolvedEvent, 'passed' | 'commission'>,
@@ -217,7 +217,7 @@ const resolveAdvancementCreationEvent = ({
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
-  ruleset: CepheusSrdRuleset
+  ruleset: CepheusRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
   Pick<

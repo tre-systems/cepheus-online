@@ -11,7 +11,7 @@ import {
   CEPHEUS_SRD_CAREERS,
   CEPHEUS_SRD_RULESET,
   type CepheusCareerDefinition,
-  type CepheusSrdRuleset
+  type CepheusRuleset
 } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
 import {
   careerSkillWithLevel,
@@ -211,7 +211,7 @@ export type CharacterCreationFormValues = Partial<
 >
 
 export interface CharacterCreationViewRulesOptions {
-  ruleset?: CepheusSrdRuleset
+  ruleset?: CepheusRuleset
   careers?: readonly CepheusCareerDefinition[]
 }
 
@@ -1175,7 +1175,7 @@ const backgroundSkillValue = (skill: string): string =>
 
 const cascadeChoiceOptions = (
   cascadeSkill: string,
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
 ): CharacterCreationCascadeSkillChoiceOptionViewModel[] => {
   const parsed = parseCareerSkill(cascadeSkill)
   if (!parsed) return []

@@ -1,0 +1,87 @@
+{
+  "gender": {},
+  "careerBasics": {
+    "Courier": {
+      "Qualifications": "Int 5+",
+      "Survival": "End 6+",
+      "Commission": "-",
+      "Advancement": "Edu 8+",
+      "ReEnlistment": "6+"
+    }
+  },
+  "serviceSkills": {
+    "Courier": {
+      "1": "Survey",
+      "2": "Comms",
+      "3": "Pilot",
+      "4": "Vacc Suit",
+      "5": "Navigation",
+      "6": "Broker"
+    }
+  },
+  "specialistSkills": {
+    "Courier": {
+      "1": "Sensors",
+      "2": "Prospecting",
+      "3": "Steward",
+      "4": "Gunnery",
+      "5": "Admin",
+      "6": "Streetwise"
+    }
+  },
+  "personalDevelopment": {
+    "Courier": {
+      "1": "+1 End",
+      "2": "+1 Int",
+      "3": "Jack-of-all-Trades",
+      "4": "Carousing",
+      "5": "Melee Combat",
+      "6": "Liaison"
+    }
+  },
+  "advEducation": {
+    "Courier": {
+      "1": "Computer",
+      "2": "Science",
+      "3": "Medic",
+      "4": "Engineering",
+      "5": "Navigation",
+      "6": "Leader"
+    }
+  },
+  "ranksAndSkills": {},
+  "cashBenefits": {
+    "Courier": {
+      "1": 1000,
+      "2": 5000,
+      "3": 10000,
+      "4": 20000,
+      "5": 30000,
+      "6": 40000,
+      "7": 50000
+    }
+  },
+  "materialBenefits": {
+    "Courier": {
+      "1": "Ship Share",
+      "2": "Low Passage",
+      "3": "Weapon",
+      "4": "Travellers' Aid Society",
+      "5": "High Passage",
+      "6": "Scout Ship",
+      "7": "Scout Ship"
+    }
+  },
+  "primaryEducationSkillsData": ["Survey", "Admin"],
+  "homeWorldSkillsByLawLevel": {
+    "Frontier Law": "Survey*"
+  },
+  "homeWorldSkillsByTradeCode": {
+    "Deep Space": "Vacc Suit"
+  },
+  "cascadeSkills": {
+    "Survey": ["Prospecting", "Sensors"]
+  },
+  "theDraft": ["Courier"],
+  "aging": []
+}

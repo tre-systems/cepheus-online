@@ -23,7 +23,7 @@ import {
 import {
   CEPHEUS_SRD_RULESET,
   type CepheusCareerDefinition,
-  type CepheusSrdRuleset,
+  type CepheusRuleset,
   deriveCepheusCareerDefinitions
 } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
 import {
@@ -76,7 +76,7 @@ export const CHARACTER_CREATION_STARTING_AGE = 18
 
 const characterCreationRuleset = (
   options: CharacterCreationRulesetOptions = {}
-): CepheusSrdRuleset => options.ruleset ?? CEPHEUS_SRD_RULESET
+): CepheusRuleset => options.ruleset ?? CEPHEUS_SRD_RULESET
 
 const characterCreationCareerDefinitions = (
   options: CharacterCreationRulesetOptions = {}
@@ -196,11 +196,11 @@ export interface CharacterCreationDraft {
 export interface CharacterCreationFlow {
   step: CharacterCreationStep
   draft: CharacterCreationDraft
-  ruleset?: CepheusSrdRuleset
+  ruleset?: CepheusRuleset
 }
 
 export interface CharacterCreationRulesetOptions {
-  ruleset?: CepheusSrdRuleset
+  ruleset?: CepheusRuleset
 }
 
 export interface CharacterCreationValidation {
@@ -218,7 +218,7 @@ export interface ManualCharacterCreationFlowOptions {
   state?: Pick<GameState, 'characters'> | null
   name?: string | null
   characterType?: CharacterType
-  ruleset?: CepheusSrdRuleset
+  ruleset?: CepheusRuleset
 }
 
 export interface CharacterCreationWizardResult {
@@ -993,7 +993,7 @@ export const characterCreationCareerNames = (
 
 export const deriveCharacterCreationBackgroundSkillPlan = (
   draft: Pick<CharacterCreationDraft, 'characteristics' | 'homeworld'>,
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
 ): BackgroundSkillPlan =>
   deriveBackgroundSkillPlan({
     edu: draft.characteristics.edu,
@@ -1149,7 +1149,7 @@ export const selectCharacterCreationCareerPlan = (
 
 const findCareerDefinition = (
   careerName: string,
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
 ): CepheusCareerDefinition | null =>
   deriveCepheusCareerDefinitions(ruleset).find(
     (career) => career.name === careerName
@@ -1171,7 +1171,7 @@ const evaluateOptionalCareerRoll = ({
 export const evaluateCharacterCreationCareerPlan = (
   draft: Pick<CharacterCreationDraft, 'characteristics' | 'completedTerms'>,
   plan: CharacterCreationCareerPlan,
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
 ): CharacterCreationCareerPlan => {
   const normalizedPlan = normalizeCareerPlan(plan) ?? createCareerPlan()
   const careerDefinition = findCareerDefinition(normalizedPlan.career, ruleset)
@@ -1238,7 +1238,7 @@ export const evaluateCharacterCreationCareerPlan = (
 const characterCreationRankRewardForPlan = (
   draft: Pick<CharacterCreationDraft, 'completedTerms'>,
   plan: CharacterCreationCareerPlan,
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
 ) => {
   if (!plan.career) return null
   const currentRank = currentCharacterCreationCareerRank(draft, plan.career)
@@ -1276,7 +1276,7 @@ const careerRankAfterPlan = (draft: CharacterCreationDraft): number => {
 export const applyCharacterCreationCareerPlan = (
   draft: CharacterCreationDraft,
   plan: CharacterCreationCareerPlan,
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
 ): CharacterCreationDraft =>
   updateCharacterCreationDraft(draft, {
     careerPlan: evaluateCharacterCreationCareerPlan(draft, plan, ruleset)
@@ -1655,7 +1655,7 @@ const evaluateCharacterCreationReenlistment = ({
   draft: CharacterCreationDraft
   career: string
   roll: number
-  ruleset?: CepheusSrdRuleset
+  ruleset?: CepheusRuleset
 }): CharacterCreationReenlistmentOutcome => {
   if (draft.completedTerms.length + 1 >= 7) return 'retire'
   if (roll === 12) return 'forced'
@@ -1769,7 +1769,7 @@ const termCharacteristicGain = (
 
 const basicTrainingSkillsForCurrentTerm = (
   draft: CharacterCreationDraft,
-  ruleset: CepheusSrdRuleset = CEPHEUS_SRD_RULESET
+  ruleset: CepheusRuleset = CEPHEUS_SRD_RULESET
 ): string[] => {
   const careerName = draft.careerPlan?.career.trim()
   if (!careerName) return []
