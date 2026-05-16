@@ -12,9 +12,6 @@ import type {
 } from '../../../../shared/state'
 import type { CharacterCreationCommand } from '../../core/command-router.js'
 import {
-  applyCharacterCreationAnagathicsDecision,
-  applyCharacterCreationBasicTraining,
-  applyParsedCharacterCreationDraftPatch,
   deriveCharacterCreationAgingChangeOptions,
   deriveNextCharacterCreationCharacteristicRoll,
   nextCharacterCreationMusteringBenefitCareer,
@@ -23,10 +20,7 @@ import {
   type CharacterCreationFlow,
   type CharacterCreationTermSkillTable
 } from './flow.js'
-import {
-  deriveCharacterCreationCharacteristicRollButton,
-  parseCharacterCreationDraftPatch
-} from './view.js'
+import { deriveCharacterCreationCharacteristicRollButton } from './view.js'
 
 export interface CharacterCreationCommandResponse {
   state: GameState | null
@@ -36,8 +30,7 @@ export interface CharacterCreationCommandController {
   publishTermCascadeResolution: (
     flow: CharacterCreationFlow | null,
     cascadeSkill: string,
-    selection: string,
-    fallbackFlow: CharacterCreationFlow
+    selection: string
   ) => Promise<void>
   rollCharacteristic: (
     characteristicKey?: CharacteristicKey | null
@@ -103,25 +96,27 @@ const latestDiceRoll = (
 const diceRollHasVisibleResult = (roll: DiceRollState): boolean =>
   Array.isArray(roll.rolls) && typeof roll.total === 'number'
 
-const syncAndRender = (
+const syncAcceptedProjectionAndRender = (
   {
     syncFlowFromRoomState,
+    setError,
     renderWizard,
     scrollToTop
   }: Pick<
     CharacterCreationCommandControllerDeps,
-    'syncFlowFromRoomState' | 'renderWizard' | 'scrollToTop'
+    'syncFlowFromRoomState' | 'setError' | 'renderWizard' | 'scrollToTop'
   >,
   response: CharacterCreationCommandResponse,
-  fallbackFlow: CharacterCreationFlow
-): void => {
-  syncFlowFromRoomState(
-    response.state,
-    fallbackFlow.draft.characterId,
-    fallbackFlow
-  )
+  characterId: CharacterCreationFlow['draft']['characterId']
+): boolean => {
+  const syncedFlow = syncFlowFromRoomState(response.state, characterId, null)
+  if (!syncedFlow) {
+    setError('Waiting for character projection; refresh and try again')
+    return false
+  }
   renderWizard()
   scrollToTop()
+  return true
 }
 
 const shouldCompleteSkillsAfterTermCascade = (
@@ -244,8 +239,7 @@ export const createCharacterCreationCommandController = (
     publishTermCascadeResolution: async (
       flow,
       cascadeSkill,
-      selection,
-      fallbackFlow
+      selection
     ) => {
       if (isReadOnly() || !flow || flow.step !== 'career') return
       await ensurePublished()
@@ -272,10 +266,10 @@ export const createCharacterCreationCommandController = (
             requestId('complete-character-skills')
           )
         : response
-      syncAndRender(
-        { syncFlowFromRoomState, renderWizard, scrollToTop },
+      syncAcceptedProjectionAndRender(
+        { syncFlowFromRoomState, setError, renderWizard, scrollToTop },
         nextResponse,
-        fallbackFlow
+        flow.draft.characterId
       )
     },
 
@@ -327,15 +321,6 @@ export const createCharacterCreationCommandController = (
       setError('')
       syncFields()
 
-      const flowWithCareer = applyParsedCharacterCreationDraftPatch(
-        flow,
-        parseCharacterCreationDraftPatch({
-          career,
-          qualificationRoll: null,
-          qualificationPassed: null
-        })
-      ).flow
-
       await flushHomeworldProgress()
       await ensurePublished()
 
@@ -345,7 +330,7 @@ export const createCharacterCreationCommandController = (
           {
             type: 'ResolveCharacterCreationQualification',
             ...commandIdentity(),
-            characterId: flowWithCareer.draft.characterId,
+            characterId: flow.draft.characterId,
             career
           },
           requestId('resolve-character-qualification')
@@ -353,7 +338,7 @@ export const createCharacterCreationCommandController = (
       } catch (error) {
         syncFlowFromRoomState(
           getState(),
-          flowWithCareer.draft.characterId,
+          flow.draft.characterId,
           flow
         )
         renderWizard()
@@ -368,13 +353,11 @@ export const createCharacterCreationCommandController = (
       }
 
       const revealedState = await stateAfterDiceReveal(response, roll)
-      syncFlowFromRoomState(
-        revealedState,
-        flowWithCareer.draft.characterId,
-        flowWithCareer
+      syncAcceptedProjectionAndRender(
+        { syncFlowFromRoomState, setError, renderWizard, scrollToTop },
+        { state: revealedState },
+        flow.draft.characterId
       )
-      renderWizard()
-      scrollToTop()
     },
 
     resolveFailedQualificationOption: async (option) => {
@@ -386,22 +369,6 @@ export const createCharacterCreationCommandController = (
       await ensurePublished()
 
       if (option === 'Drifter') {
-        const fallbackFlow = applyParsedCharacterCreationDraftPatch(flow, {
-          careerPlan: {
-            career: 'Drifter',
-            qualificationRoll: null,
-            qualificationPassed: true,
-            survivalRoll: null,
-            survivalPassed: null,
-            commissionRoll: null,
-            commissionPassed: null,
-            advancementRoll: null,
-            advancementPassed: null,
-            canCommission: null,
-            canAdvance: null,
-            drafted: false
-          }
-        }).flow
         const response = await postCharacterCreationCommand(
           {
             type: 'EnterCharacterCreationDrifter',
@@ -411,10 +378,10 @@ export const createCharacterCreationCommandController = (
           },
           requestId('enter-character-drifter')
         )
-        syncAndRender(
-          { syncFlowFromRoomState, renderWizard, scrollToTop },
+        syncAcceptedProjectionAndRender(
+          { syncFlowFromRoomState, setError, renderWizard, scrollToTop },
           response,
-          fallbackFlow
+          flow.draft.characterId
         )
         return
       }
@@ -433,15 +400,16 @@ export const createCharacterCreationCommandController = (
         return
       }
       const revealedState = await stateAfterDiceReveal(response, roll)
-      syncFlowFromRoomState(revealedState, flow.draft.characterId, flow)
-      renderWizard()
-      scrollToTop()
+      syncAcceptedProjectionAndRender(
+        { syncFlowFromRoomState, setError, renderWizard, scrollToTop },
+        { state: revealedState },
+        flow.draft.characterId
+      )
     },
 
     completeBasicTraining: async (skill) => {
       const flow = guardEditableFlow()
       if (!flow) return
-      const fallbackFlow = applyCharacterCreationBasicTraining(flow, skill).flow
 
       await ensurePublished()
       const response = await postCharacterCreationCommand(
@@ -453,10 +421,10 @@ export const createCharacterCreationCommandController = (
         },
         requestId('complete-character-basic-training')
       )
-      syncAndRender(
-        { syncFlowFromRoomState, renderWizard, scrollToTop },
+      syncAcceptedProjectionAndRender(
+        { syncFlowFromRoomState, setError, renderWizard, scrollToTop },
         response,
-        fallbackFlow
+        flow.draft.characterId
       )
     },
 
@@ -567,10 +535,10 @@ export const createCharacterCreationCommandController = (
             : 'leave-character-career'
         )
       )
-      syncAndRender(
-        { syncFlowFromRoomState, renderWizard, scrollToTop },
+      syncAcceptedProjectionAndRender(
+        { syncFlowFromRoomState, setError, renderWizard, scrollToTop },
         response,
-        flow
+        flow.draft.characterId
       )
     },
 
@@ -579,11 +547,6 @@ export const createCharacterCreationCommandController = (
       if (!flow) return
       setError('')
       syncFields()
-
-      const fallbackFlow = applyCharacterCreationAnagathicsDecision({
-        flow,
-        useAnagathics
-      }).flow
 
       await ensurePublished()
       const response = await postCharacterCreationCommand(
@@ -595,10 +558,10 @@ export const createCharacterCreationCommandController = (
         },
         requestId('anagathics-decision')
       )
-      syncAndRender(
-        { syncFlowFromRoomState, renderWizard, scrollToTop },
+      syncAcceptedProjectionAndRender(
+        { syncFlowFromRoomState, setError, renderWizard, scrollToTop },
         response,
-        fallbackFlow
+        flow.draft.characterId
       )
     },
 
@@ -722,10 +685,10 @@ export const createCharacterCreationCommandController = (
         },
         requestId('aging-losses')
       )
-      syncAndRender(
-        { syncFlowFromRoomState, renderWizard, scrollToTop },
+      syncAcceptedProjectionAndRender(
+        { syncFlowFromRoomState, setError, renderWizard, scrollToTop },
         response,
-        flow
+        flow.draft.characterId
       )
     },
 

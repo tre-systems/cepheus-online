@@ -259,9 +259,16 @@ export const createCharacterCreationFeature = ({
   const openCharacterCreationFollow = (
     characterId: Parameters<typeof lifecycleController.openFollow>[0],
     options: Parameters<typeof lifecycleController.openFollow>[1],
-    _fallbackState: ReturnType<typeof getState>
+    fallbackState: ReturnType<typeof getState>
   ): boolean => {
-    if (lifecycleController.openFollow(characterId, options)) return true
+    if (
+      lifecycleController.openFollow(characterId, {
+        ...options,
+        state: fallbackState
+      })
+    ) {
+      return true
+    }
     return false
   }
 

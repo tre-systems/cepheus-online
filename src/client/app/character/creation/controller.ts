@@ -21,6 +21,7 @@ import { compatibilityFlowFromProjectedCharacter } from './projection.js'
 import { shouldSyncEditableCharacterCreationFlowWithProjection } from './sync.js'
 import {
   deriveCharacterCreationViewModel,
+  flowFromProjectedCharacterReadModel,
   type CharacterCreationViewModel
 } from './model.js'
 
@@ -41,7 +42,7 @@ export interface CharacterCreationController {
   viewModel: () => CharacterCreationViewModel
   openFollow: (
     characterId: CharacterId,
-    options?: { readOnly?: boolean }
+    options?: { readOnly?: boolean; state?: GameState | null }
   ) => CharacterCreationFlow | null
   syncFlowFromRoomState: (
     roomState: GameState | null,
@@ -132,15 +133,19 @@ export const createCharacterCreationController = ({
     currentProjection,
     viewModel: () => viewModel.value,
 
-    openFollow: (characterId, { readOnly: nextReadOnly = true } = {}) => {
-      const character = getState()?.characters[characterId] ?? null
+    openFollow: (
+      characterId,
+      { readOnly: nextReadOnly = true, state: sourceState = getState() } = {}
+    ) => {
+      const character = sourceState?.characters[characterId] ?? null
       if (!character?.creation) return null
       if (nextReadOnly && !canRenderReadOnlyFollowFromReadModel(character)) {
         return null
       }
       const nextFlow = nextReadOnly
         ? null
-        : compatibilityFlowFromProjectedCharacter(character)
+        : (flowFromProjectedCharacterReadModel(character) ??
+          compatibilityFlowFromProjectedCharacter(character))
       if (!nextReadOnly && !nextFlow) return null
 
       batch(() => {

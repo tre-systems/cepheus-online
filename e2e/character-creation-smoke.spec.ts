@@ -1856,7 +1856,7 @@ test.describe('character creation smoke', () => {
       await expect(spectatorTitle).toHaveText(secondCharacterName)
       await expect(spectatorStrValue).toHaveCount(0, { timeout: 100 })
 
-      await waitForDiceReveal(page)
+      await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
     } finally {
       await spectator.close()
     }
@@ -4875,18 +4875,10 @@ test.describe('character creation smoke', () => {
         timeout: 100
       })
 
-      await secondTermSpectator.reload({ waitUntil: 'domcontentloaded' })
-      await openRoom(secondTermLateSpectator, {
-        roomId,
-        userId: secondTermLateSpectatorId,
-        viewer: 'spectator'
-      })
-      await openOrExpectFollowedCreation(secondTermSpectator, characterName)
-      await openOrExpectFollowedCreation(secondTermLateSpectator, characterName)
-      for (const [spectatorPage, spectatorId] of [
-        [secondTermSpectator, secondTermSpectatorId],
-        [secondTermLateSpectator, secondTermLateSpectatorId]
-      ] as const) {
+      const expectPendingScoutTermSkillState = async (
+        spectatorPage: Page,
+        spectatorId: string
+      ): Promise<boolean> => {
         const state = await fetchRoomState(
           spectatorPage,
           roomId,
@@ -4894,6 +4886,11 @@ test.describe('character creation smoke', () => {
           'spectator'
         )
         const latestRoll = state.state?.diceLog?.at(-1)
+        const revealAtMs = Date.parse(latestRoll?.revealAt ?? '')
+        const stillPending =
+          Number.isFinite(revealAtMs) && Date.now() < revealAtMs
+        if (!stillPending) return false
+
         expect(latestRoll?.rolls).toBeUndefined()
         expect(latestRoll?.total).toBeUndefined()
         expect(
@@ -4906,9 +4903,32 @@ test.describe('character creation smoke', () => {
             (activity) => activity.type === 'characterCreation'
           )?.details
         ).toBeUndefined()
+        return true
       }
 
-      await waitForDiceReveal(page)
+      expect(
+        await expectPendingScoutTermSkillState(
+          secondTermSpectator,
+          secondTermSpectatorId
+        )
+      ).toBe(true)
+
+      await secondTermSpectator.reload({ waitUntil: 'domcontentloaded' })
+      await openRoom(secondTermLateSpectator, {
+        roomId,
+        userId: secondTermLateSpectatorId,
+        viewer: 'spectator'
+      })
+      await openOrExpectFollowedCreation(secondTermSpectator, characterName)
+      await openOrExpectFollowedCreation(secondTermLateSpectator, characterName)
+      for (const [spectatorPage, spectatorId] of [
+        [secondTermSpectator, secondTermSpectatorId],
+        [secondTermLateSpectator, secondTermLateSpectatorId]
+      ] as const) {
+        await expectPendingScoutTermSkillState(spectatorPage, spectatorId)
+      }
+
+      await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
       const scoutTermSkill = await latestProjectedTermSkill(
         page,
         roomId,

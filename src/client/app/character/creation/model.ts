@@ -617,7 +617,7 @@ const activeTermCareerPlan = (
       advancement?.skipped === true ? false : (advancement?.passed ?? null),
     canCommission: survival?.canCommission ?? null,
     canAdvance: survival?.canAdvance ?? null,
-    drafted: term.facts?.draft !== undefined,
+    drafted: term.facts?.draft !== undefined || term.draft !== undefined,
     rank:
       advancement && !advancement.skipped
         ? (advancement.rank?.newRank ?? null)
@@ -717,7 +717,10 @@ const flowFromReadModel = ({
         ? readModel.pendingCascadeSkills
         : [],
     pendingAgingChanges: pendingAgingChangesFromReadModel(readModel),
-    careerPlan: activeTermCareerPlan(readModel),
+    careerPlan:
+      readModel.status === 'CAREER_SELECTION'
+        ? failedQualificationCareerPlan(projectedCreation)
+        : activeTermCareerPlan(readModel),
     completedTerms: completedTermsFromReadModel(readModel),
     musteringBenefits: musteringBenefitsFromReadModel(readModel),
     skills: normalizeSkillList([
@@ -728,6 +731,20 @@ const flowFromReadModel = ({
     credits: readModel.sheet.credits
   })
 })
+
+export const flowFromProjectedCharacterReadModel = (
+  character: CharacterState
+): CharacterCreationFlow | null => {
+  if (!character.creation) return null
+  const readModel = deriveCharacterCreationReadModel(character)
+  if (!readModel) return null
+
+  return flowFromReadModel({
+    readModel,
+    projectedCreation: character.creation,
+    step: activeCreationStep(readModel)
+  })
+}
 
 const readModelCareerSelectionStepViewModel = ({
   readModel,

@@ -204,10 +204,11 @@ export const createCreationPresenceDock = ({
 
         item.append(name, detail, owner)
         item.addEventListener('click', () => {
+          const readOnly = summary.ownerId !== getActorId()
           openCharacterCreationFollow(
             summary.id,
             {
-              readOnly: summary.ownerId !== getActorId()
+              readOnly
             },
             state
           )

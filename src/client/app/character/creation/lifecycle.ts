@@ -22,7 +22,7 @@ export interface CharacterCreationStateRefreshPlan {
 export interface CharacterCreationLifecycleController {
   openFollow: (
     characterId: CharacterId,
-    options?: { readOnly?: boolean }
+    options?: Parameters<CharacterCreationController['openFollow']>[1]
   ) => boolean
   planStateRefresh: (options?: {
     deferFollowedCreationRolls?: readonly ClientDiceRollActivity[]
@@ -40,8 +40,9 @@ export const createCharacterCreationLifecycleController = ({
   let refreshGeneration = 0
 
   return {
-    openFollow: (characterId, { readOnly = true } = {}) => {
-      const flow = controller.openFollow(characterId, { readOnly })
+    openFollow: (characterId, options = {}) => {
+      const { readOnly = true } = options
+      const flow = controller.openFollow(characterId, options)
       if (!flow && !controller.viewModel().wizard) return false
 
       if (!readOnly) {

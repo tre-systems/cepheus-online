@@ -156,6 +156,71 @@ describe('character creation controller', () => {
     assert.equal(panelClosed, true)
   })
 
+  it('opens editable projected creations from the shared read model after reload', () => {
+    const projected = creation('BASIC_TRAINING')
+    projected.terms = [
+      {
+        career: 'Navy',
+        skills: [],
+        skillsAndTraining: [],
+        benefits: [],
+        complete: false,
+        canReenlist: true,
+        completedBasicTraining: false,
+        musteringOut: false,
+        anagathics: false
+      }
+    ]
+    const controller = createCharacterCreationController({
+      getState: () => stateWithCreation(projected),
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+
+    const openedFlow = controller.openFollow(characterId, { readOnly: false })
+
+    assert.equal(openedFlow?.step, 'skills')
+    assert.equal(controller.flow(), openedFlow)
+    assert.equal(controller.readOnly(), false)
+    assert.equal(controller.selectedCharacterId(), characterId)
+    assert.equal(controller.viewModel().mode, 'editable')
+    assert.equal(
+      controller.viewModel().wizard?.basicTraining?.label,
+      'Apply basic training'
+    )
+  })
+
+  it('opens followed creations from the supplied projection snapshot', () => {
+    const projected = creation('BASIC_TRAINING')
+    projected.terms = [
+      {
+        career: 'Navy',
+        skills: [],
+        skillsAndTraining: [],
+        benefits: [],
+        complete: false,
+        canReenlist: true,
+        completedBasicTraining: false,
+        musteringOut: false,
+        anagathics: false
+      }
+    ]
+    const controller = createCharacterCreationController({
+      getState: () => null,
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+
+    const openedFlow = controller.openFollow(characterId, {
+      readOnly: false,
+      state: stateWithCreation(projected)
+    })
+
+    assert.equal(openedFlow?.step, 'skills')
+    assert.equal(controller.viewModel().wizard?.step, 'skills')
+    assert.equal(controller.selectedCharacterId(), characterId)
+  })
+
   it('opens read-only characteristics from the shared read model without legacy flow', () => {
     const projected = creation('CHARACTERISTICS')
     const controller = createCharacterCreationController({

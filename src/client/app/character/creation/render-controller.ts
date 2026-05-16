@@ -505,12 +505,7 @@ export const createCharacterCreationRenderController = ({
     renderWizard()
     if (scope === 'term') {
       getCommandController()
-        .publishTermCascadeResolution(
-          nextFlow,
-          cascadeSkill,
-          selection,
-          nextFlow
-        )
+        .publishTermCascadeResolution(nextFlow, cascadeSkill, selection)
         .catch((error) => reportError(error.message))
     } else {
       homeworldPublisher.publishCascadeResolution(
