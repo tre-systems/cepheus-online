@@ -38,7 +38,7 @@ import {
 
 const loadSrdRuleset = (): CepheusSrdRuleset =>
   JSON.parse(
-    fs.readFileSync('data/rulesets/srd/cepheus-engine-srd.json', 'utf8')
+    fs.readFileSync('data/rulesets/cepheus-engine-srd.json', 'utf8')
   ) as CepheusSrdRuleset
 
 const relevantRulesetKeys = [
@@ -64,7 +64,7 @@ const skillTableKeys = [
 >)[]
 
 describe('SRD career term rules alignment', () => {
-  it('keeps the embedded SRD career data aligned with the source JSON', () => {
+  it('keeps the loaded SRD career data aligned with the source JSON', () => {
     const source = loadSrdRuleset()
 
     for (const key of relevantRulesetKeys) {

@@ -12,7 +12,7 @@ import {
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
 import type { CareerCreationTermSkillTable } from '../../../shared/characterCreation'
-import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -52,15 +52,17 @@ type CharacterCreationSkillCommand = Extract<
   }
 >
 
-const termSkillTables = {
-  personalDevelopment: CEPHEUS_SRD_RULESET.personalDevelopment,
-  serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
-  specialistSkills: CEPHEUS_SRD_RULESET.specialistSkills,
-  advancedEducation: CEPHEUS_SRD_RULESET.advEducation
-} satisfies Record<
+const termSkillTables = (
+  ruleset: CepheusSrdRuleset
+): Record<
   CareerCreationTermSkillTable,
   Record<string, Record<string, string>>
->
+> => ({
+  personalDevelopment: ruleset.personalDevelopment,
+  serviceSkills: ruleset.serviceSkills,
+  specialistSkills: ruleset.specialistSkills,
+  advancedEducation: ruleset.advEducation
+})
 
 const isCareerCreationTermSkillTable = (
   value: string
@@ -119,9 +121,10 @@ export const activeTermSkillCount = (
 }
 
 const requireNoUnrelatedTermCascadeDecisions = (
-  creation: CharacterCreationProjection
+  creation: CharacterCreationProjection,
+  ruleset: CepheusSrdRuleset
 ): Result<void, CommandError> => {
-  const actionContext = deriveCareerCreationActionContext(creation)
+  const actionContext = deriveCareerCreationActionContext(creation, ruleset)
   const blockingDecision = actionContext.pendingDecisions?.find(
     (decision) =>
       decision.key !== 'cascadeSkillResolution' &&
@@ -141,7 +144,8 @@ const requireNoUnrelatedTermCascadeDecisions = (
 
 export const validateTermSkillRoll = (
   character: CharacterState,
-  table: string
+  table: string,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -188,7 +192,8 @@ export const validateTermSkillRoll = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['rollTermSkill'],
-    'TERM_SKILL is blocked by unresolved character creation decisions'
+    'TERM_SKILL is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -196,7 +201,8 @@ export const validateTermSkillRoll = (
 }
 
 export const validateSkillsCompletion = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -232,7 +238,8 @@ export const validateSkillsCompletion = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['completeSkills'],
-    'COMPLETE_SKILLS is blocked by unresolved character creation decisions'
+    'COMPLETE_SKILLS is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -242,10 +249,12 @@ export const validateSkillsCompletion = (
 export const resolveTermSkillCreationEvent = ({
   creation,
   table,
+  ruleset,
   roll
 }: {
   creation: CharacterCreationProjection
   table: CareerCreationTermSkillTable
+  ruleset: CepheusSrdRuleset
   roll: { expression: '1d6'; rolls: number[]; total: number }
 }): Result<
   Pick<
@@ -262,7 +271,7 @@ export const resolveTermSkillCreationEvent = ({
   }
 
   const rawSkill = resolveCareerSkillTableRoll({
-    table: termSkillTables[table],
+    table: termSkillTables(ruleset)[table],
     career,
     roll: roll.total
   })
@@ -348,7 +357,11 @@ export const deriveSkillCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateTermSkillRoll(character, command.table)
+      const creation = validateTermSkillRoll(
+        character,
+        command.table,
+        context.ruleset
+      )
       if (!creation.ok) return creation
 
       const rolled = rollDiceExpression(
@@ -362,6 +375,7 @@ export const deriveSkillCommandEvents = (
       const resolved = resolveTermSkillCreationEvent({
         creation: creation.value,
         table: command.table,
+        ruleset: context.ruleset,
         roll: {
           expression: '1d6',
           rolls: rolled.value.rolls,
@@ -405,7 +419,7 @@ export const deriveSkillCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateSkillsCompletion(character)
+      const creation = validateSkillsCompletion(character, context.ruleset)
       if (!creation.ok) return creation
 
       const nextState = transitionCareerCreationState(creation.value.state, {
@@ -438,7 +452,8 @@ export const deriveSkillCommandEvents = (
         )
       }
       const noBlockingDecision = requireNoUnrelatedTermCascadeDecisions(
-        character.creation
+        character.creation,
+        context.ruleset
       )
       if (!noBlockingDecision.ok) return noBlockingDecision
 

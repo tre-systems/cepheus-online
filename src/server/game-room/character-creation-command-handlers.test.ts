@@ -5,6 +5,7 @@ import {
   createCareerCreationState,
   type CareerCreationStatus
 } from '../../shared/characterCreation'
+import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
 import { asCharacterId, asEventId, asGameId, asUserId } from '../../shared/ids'
 import type {
   CharacterCreationProjection,
@@ -91,6 +92,7 @@ const context = (
   currentSeq: 1,
   nextSeq: 2,
   gameSeed: 1234,
+  ruleset: CEPHEUS_SRD_RULESET,
   ...overrides
 })
 
@@ -611,7 +613,8 @@ describe('character creation setup command handlers', () => {
         state,
         currentSeq: 1,
         nextSeq: 2,
-        gameSeed: 1234
+        gameSeed: 1234,
+        ruleset: CEPHEUS_SRD_RULESET
       }
     )
 
@@ -2533,7 +2536,8 @@ describe('character creation setup command handlers', () => {
         state,
         currentSeq: 1,
         nextSeq: 2,
-        gameSeed: 1234
+        gameSeed: 1234,
+        ruleset: CEPHEUS_SRD_RULESET
       }
     )
 

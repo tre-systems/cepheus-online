@@ -11,7 +11,7 @@ import {
   resolveCareerBenefit,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -77,7 +77,8 @@ const hasGamblingSkill = (character: CharacterState): boolean => {
 
 const validateMusteringBenefitRoll = (
   character: CharacterState,
-  career: string
+  career: string,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -94,7 +95,8 @@ const validateMusteringBenefitRoll = (
   const decisions = requireNoBlockingCharacterCreationDecisions(
     character.creation,
     'musteringBenefitSelection',
-    'MUSTERING_BENEFIT is blocked by unresolved character creation decisions'
+    'MUSTERING_BENEFIT is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!decisions.ok) return decisions
 
@@ -116,7 +118,8 @@ const validateMusteringBenefitRoll = (
 }
 
 const validateMusteringCompletion = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -133,7 +136,8 @@ const validateMusteringCompletion = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['finishMustering'],
-    'FINISH_MUSTERING is blocked by unresolved character creation decisions'
+    'FINISH_MUSTERING is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -141,7 +145,8 @@ const validateMusteringCompletion = (
 }
 
 const validateMusteringContinuation = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -158,7 +163,8 @@ const validateMusteringContinuation = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['continueCareer'],
-    'CONTINUE_CAREER is blocked by unresolved character creation decisions'
+    'CONTINUE_CAREER is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -170,12 +176,14 @@ const resolveMusteringBenefitCreationEvent = ({
   creation,
   career,
   kind,
+  ruleset,
   roll
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
   career: string
   kind: CharacterCreationMusteringBenefitRolledEvent['musteringBenefit']['kind']
+  ruleset: CepheusSrdRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
   Pick<CharacterCreationMusteringBenefitRolledEvent, 'musteringBenefit'>,
@@ -205,7 +213,7 @@ const resolveMusteringBenefitCreationEvent = ({
       : deriveMaterialBenefitRollModifier({ currentRank: rank })
   const tableRoll = roll.total + modifier
   const benefit = resolveCareerBenefit({
-    tables: CEPHEUS_SRD_RULESET,
+    tables: ruleset,
     career,
     kind,
     roll: tableRoll
@@ -247,7 +255,11 @@ export const deriveMusteringCommandEvents = (
       const { character } = loaded.value
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career
-      const creation = validateMusteringBenefitRoll(character, career.value)
+      const creation = validateMusteringBenefitRoll(
+        character,
+        career.value,
+        context.ruleset
+      )
       if (!creation.ok) return creation
 
       const rolled = rollDiceExpression(
@@ -263,6 +275,7 @@ export const deriveMusteringCommandEvents = (
         creation: creation.value,
         career: career.value,
         kind: command.kind,
+        ruleset: context.ruleset,
         roll: {
           expression: '2d6',
           rolls: rolled.value.rolls,
@@ -302,7 +315,7 @@ export const deriveMusteringCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateMusteringContinuation(character)
+      const creation = validateMusteringContinuation(character, context.ruleset)
       if (!creation.ok) return creation
 
       const nextState = transitionCareerCreationState(creation.value.state, {
@@ -326,7 +339,7 @@ export const deriveMusteringCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateMusteringCompletion(character)
+      const creation = validateMusteringCompletion(character, context.ruleset)
       if (!creation.ok) return creation
 
       const nextState = transitionCareerCreationState(creation.value.state, {

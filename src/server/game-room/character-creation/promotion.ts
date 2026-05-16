@@ -4,7 +4,7 @@ import {
   parseCareerRankReward,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -46,7 +46,8 @@ type CharacterCreationAdvancementResolvedEvent = Extract<
 >
 
 const validateCommissionResolution = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -63,7 +64,8 @@ const validateCommissionResolution = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['rollCommission'],
-    'COMMISSION is blocked by unresolved character creation decisions'
+    'COMMISSION is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -71,7 +73,8 @@ const validateCommissionResolution = (
 }
 
 const validateCommissionSkip = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -88,7 +91,8 @@ const validateCommissionSkip = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['skipCommission'],
-    'SKIP_COMMISSION is blocked by unresolved character creation decisions'
+    'SKIP_COMMISSION is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -96,7 +100,8 @@ const validateCommissionSkip = (
 }
 
 const validateAdvancementResolution = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -113,7 +118,8 @@ const validateAdvancementResolution = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['rollAdvancement'],
-    'ADVANCEMENT is blocked by unresolved character creation decisions'
+    'ADVANCEMENT is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -121,7 +127,8 @@ const validateAdvancementResolution = (
 }
 
 const validateAdvancementSkip = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -138,7 +145,8 @@ const validateAdvancementSkip = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['skipAdvancement'],
-    'SKIP_ADVANCEMENT is blocked by unresolved character creation decisions'
+    'SKIP_ADVANCEMENT is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -148,10 +156,12 @@ const validateAdvancementSkip = (
 const resolveCommissionCreationEvent = ({
   character,
   creation,
+  ruleset,
   roll
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
+  ruleset: CepheusSrdRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
   Pick<CharacterCreationCommissionResolvedEvent, 'passed' | 'commission'>,
@@ -164,7 +174,7 @@ const resolveCommissionCreationEvent = ({
     )
   }
 
-  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  const basics = ruleset.careerBasics[career]
   if (!basics) {
     return err(
       commandError('invalid_command', `Career ${career} is not supported`)
@@ -202,10 +212,12 @@ const resolveCommissionCreationEvent = ({
 const resolveAdvancementCreationEvent = ({
   character,
   creation,
+  ruleset,
   roll
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
+  ruleset: CepheusSrdRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
   Pick<
@@ -221,7 +233,7 @@ const resolveAdvancementCreationEvent = ({
     )
   }
 
-  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  const basics = ruleset.careerBasics[career]
   if (!basics) {
     return err(
       commandError('invalid_command', `Career ${career} is not supported`)
@@ -245,7 +257,7 @@ const resolveAdvancementCreationEvent = ({
   const previousRank = deriveProjectedCareerRank(creation, career)
   const newRank = outcome.success ? Math.min(previousRank + 1, 6) : previousRank
   const reward = parseCareerRankReward({
-    ranksAndSkills: CEPHEUS_SRD_RULESET.ranksAndSkills,
+    ranksAndSkills: ruleset.ranksAndSkills,
     career,
     rank: newRank
   })
@@ -286,7 +298,7 @@ export const derivePromotionCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateCommissionResolution(character)
+      const creation = validateCommissionResolution(character, context.ruleset)
       if (!creation.ok) return creation
 
       const rolled = rollDiceExpression(
@@ -300,6 +312,7 @@ export const derivePromotionCommandEvents = (
       const resolved = resolveCommissionCreationEvent({
         character,
         creation: creation.value,
+        ruleset: context.ruleset,
         roll: {
           expression: '2d6',
           rolls: rolled.value.rolls,
@@ -341,7 +354,7 @@ export const derivePromotionCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateCommissionSkip(character)
+      const creation = validateCommissionSkip(character, context.ruleset)
       if (!creation.ok) return creation
 
       const nextState = transitionCareerCreationState(creation.value.state, {
@@ -365,7 +378,7 @@ export const derivePromotionCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateAdvancementResolution(character)
+      const creation = validateAdvancementResolution(character, context.ruleset)
       if (!creation.ok) return creation
 
       const rolled = rollDiceExpression(
@@ -379,6 +392,7 @@ export const derivePromotionCommandEvents = (
       const resolved = resolveAdvancementCreationEvent({
         character,
         creation: creation.value,
+        ruleset: context.ruleset,
         roll: {
           expression: '2d6',
           rolls: rolled.value.rolls,
@@ -421,7 +435,7 @@ export const derivePromotionCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateAdvancementSkip(character)
+      const creation = validateAdvancementSkip(character, context.ruleset)
       if (!creation.ok) return creation
 
       const nextState = transitionCareerCreationState(creation.value.state, {

@@ -54,6 +54,7 @@ export type GameEvent =
       slug: string
       name: string
       ownerId: UserId
+      rulesetId?: string
     }
   | {
       type: 'CharacterCreated'

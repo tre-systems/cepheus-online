@@ -9,7 +9,7 @@ import {
   type SurvivalMishapInjuryRequirement,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -46,7 +46,8 @@ type CharacterCreationSurvivalResolvedEvent = Extract<
 >
 
 const validateMishapResolution = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -63,7 +64,8 @@ const validateMishapResolution = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['resolveMishap'],
-    'MISHAP_RESOLVED is blocked by unresolved character creation decisions'
+    'MISHAP_RESOLVED is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -71,7 +73,8 @@ const validateMishapResolution = (
 }
 
 const validateInjuryResolution = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -88,7 +91,8 @@ const validateInjuryResolution = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['resolveInjury'],
-    'INJURY_RESOLVED is blocked by unresolved character creation decisions'
+    'INJURY_RESOLVED is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -96,7 +100,8 @@ const validateInjuryResolution = (
 }
 
 const validateDeathConfirmation = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -113,7 +118,8 @@ const validateDeathConfirmation = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['confirmDeath'],
-    'DEATH_CONFIRMED is blocked by unresolved character creation decisions'
+    'DEATH_CONFIRMED is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -121,7 +127,8 @@ const validateDeathConfirmation = (
 }
 
 const validateSurvivalResolution = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -138,7 +145,8 @@ const validateSurvivalResolution = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['rollSurvival'],
-    'SURVIVAL is blocked by unresolved character creation decisions'
+    'SURVIVAL is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -148,10 +156,12 @@ const validateSurvivalResolution = (
 const resolveSurvivalCreationEvent = ({
   character,
   creation,
+  ruleset,
   roll
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
+  ruleset: CepheusSrdRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
   Pick<
@@ -167,7 +177,7 @@ const resolveSurvivalCreationEvent = ({
     )
   }
 
-  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  const basics = ruleset.careerBasics[career]
   if (!basics) {
     return err(
       commandError('invalid_command', `Career ${career} is not supported`)
@@ -298,7 +308,7 @@ export const deriveSurvivalCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateSurvivalResolution(character)
+      const creation = validateSurvivalResolution(character, context.ruleset)
       if (!creation.ok) return creation
 
       const rolled = rollDiceExpression(
@@ -312,6 +322,7 @@ export const deriveSurvivalCommandEvents = (
       const resolved = resolveSurvivalCreationEvent({
         character,
         creation: creation.value,
+        ruleset: context.ruleset,
         roll: {
           expression: '2d6',
           rolls: rolled.value.rolls,
@@ -364,7 +375,7 @@ export const deriveSurvivalCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateMishapResolution(character)
+      const creation = validateMishapResolution(character, context.ruleset)
       if (!creation.ok) return creation
       const activeTerm = creation.value.terms.at(-1)
       if (!activeTerm) {
@@ -422,7 +433,7 @@ export const deriveSurvivalCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateInjuryResolution(character)
+      const creation = validateInjuryResolution(character, context.ruleset)
       if (!creation.ok) return creation
 
       const activeTerm = creation.value.terms.at(-1)
@@ -521,7 +532,7 @@ export const deriveSurvivalCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateDeathConfirmation(character)
+      const creation = validateDeathConfirmation(character, context.ruleset)
       if (!creation.ok) return creation
       const creationEvent = { type: 'DEATH_CONFIRMED' } as const
 

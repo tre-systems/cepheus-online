@@ -14,10 +14,11 @@ import type {
   InjurySecondaryChoice
 } from './characterCreation'
 import type { GameCommand } from './commands'
-import { asBoardId, asCharacterId, asGameId, asPieceId, asUserId } from './ids'
+import { asBoardId, asCharacterId, asPieceId } from './ids'
 import type { LiveActivityDescriptor } from './live-activity'
 import { validateMapLosSidecar } from './mapAssets.js'
 import type { MapLosSidecar } from './mapAssets'
+import { parseBaseCommandFields } from './protocol/command-base'
 import { err, ok, type Result } from './result'
 import type {
   CharacterCreationHomeworld,
@@ -219,18 +220,6 @@ const parseNullableNumber = (
   if (raw === null) return ok(null)
 
   return parseNumber(raw, label)
-}
-
-const parseOptionalSeq = (
-  raw: unknown,
-  label: string
-): Result<number | undefined, CommandError> => {
-  if (raw === undefined) return ok(undefined)
-  if (typeof raw !== 'number' || !Number.isInteger(raw) || raw < 0) {
-    return err(invalidCommand(`${label} must be a non-negative integer`))
-  }
-
-  return ok(raw)
 }
 
 const parseStringArray = (
@@ -1113,30 +1102,6 @@ const semanticCharacterCreationCommandForGenericEvent = (
   }
 }
 
-const parseBaseCommand = (
-  raw: Record<string, unknown>
-): Result<
-  Pick<GameCommand, 'gameId' | 'actorId' | 'expectedSeq'>,
-  CommandError
-> => {
-  const gameId = parseId(raw.gameId, 'gameId', asGameId)
-  if (!gameId.ok) return gameId
-
-  const actorId = parseId(raw.actorId, 'actorId', asUserId)
-  if (!actorId.ok) return actorId
-
-  const expectedSeq = parseOptionalSeq(raw.expectedSeq, 'expectedSeq')
-  if (!expectedSeq.ok) return expectedSeq
-
-  return ok({
-    gameId: gameId.value,
-    actorId: actorId.value,
-    ...(expectedSeq.value === undefined
-      ? {}
-      : { expectedSeq: expectedSeq.value })
-  })
-}
-
 export const decodeCommand = (
   raw: unknown
 ): Result<GameCommand, CommandError> => {
@@ -1144,7 +1109,7 @@ export const decodeCommand = (
     return err(invalidCommand('Command must be an object with a type'))
   }
 
-  const base = parseBaseCommand(raw)
+  const base = parseBaseCommandFields(raw)
   if (!base.ok) return base
 
   switch (raw.type) {
@@ -1153,12 +1118,15 @@ export const decodeCommand = (
       if (!slug.ok) return slug
       const name = parseString(raw.name, 'name')
       if (!name.ok) return name
+      const rulesetId = parseOptionalString(raw.rulesetId, 'rulesetId')
+      if (!rulesetId.ok) return rulesetId
 
       return ok({
         type: 'CreateGame',
         ...base.value,
         slug: slug.value,
-        name: name.value
+        name: name.value,
+        ...(rulesetId.value === null ? {} : { rulesetId: rulesetId.value })
       })
     }
 

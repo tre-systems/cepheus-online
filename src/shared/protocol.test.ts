@@ -311,6 +311,23 @@ describe('protocol validation', () => {
     assert.equal(result.value.command.type, 'CreateGame')
   })
 
+  it('accepts an optional ruleset id on game creation commands', () => {
+    const result = decodeCommand({
+      type: 'CreateGame',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      slug: 'game-1',
+      name: 'Spinward Test',
+      rulesetId: 'cepheus-engine-srd'
+    })
+
+    assert.equal(result.ok, true)
+    if (!result.ok) return
+    assert.equal(result.value.type, 'CreateGame')
+    if (result.value.type !== 'CreateGame') return
+    assert.equal(result.value.rulesetId, 'cepheus-engine-srd')
+  })
+
   it('accepts optional piece image asset references', () => {
     const result = decodeClientMessage({
       type: 'command',

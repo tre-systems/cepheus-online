@@ -4,6 +4,7 @@ import {
   hasProjectedCareerTermFacts,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
+import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameEvent } from '../../../shared/events'
 import type { CharacterId } from '../../../shared/ids'
 import type { CommandError } from '../../../shared/protocol'
@@ -116,7 +117,8 @@ const validateCharacterCreationSheet = (
 }
 
 const validateCreationCompletion = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -127,7 +129,8 @@ const validateCreationCompletion = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['completeCreation'],
-    'CREATION_COMPLETE is blocked by unresolved character creation decisions'
+    'CREATION_COMPLETE is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -136,9 +139,10 @@ const validateCreationCompletion = (
 
 export const deriveCompletionEvents = (
   characterId: CharacterId,
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<GameEvent[], CommandError> => {
-  const creation = validateCreationCompletion(character)
+  const creation = validateCreationCompletion(character, ruleset)
   if (!creation.ok) return creation
 
   const nextState = transitionCareerCreationState(creation.value.state, {

@@ -2,7 +2,7 @@ import {
   deriveAgingRollModifier,
   resolveAging
 } from '../../../shared/characterCreation'
-import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameEvent } from '../../../shared/events'
 import type { CommandError } from '../../../shared/protocol'
 import { err, ok, type Result } from '../../../shared/result'
@@ -22,7 +22,8 @@ type CharacterCreationAgingResolvedEvent = Extract<
 >
 
 export const validateAgingResolution = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -39,7 +40,8 @@ export const validateAgingResolution = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['resolveAging'],
-    'AGING is blocked by unresolved character creation decisions'
+    'AGING is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -47,7 +49,8 @@ export const validateAgingResolution = (
 }
 
 export const validateAgingLossResolution = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -63,7 +66,8 @@ export const validateAgingLossResolution = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['resolveAging'],
-    'AGING_LOSSES are blocked by unresolved character creation decisions'
+    'AGING_LOSSES are blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -71,7 +75,8 @@ export const validateAgingLossResolution = (
 }
 
 export const validateAnagathicsDecision = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -88,7 +93,8 @@ export const validateAnagathicsDecision = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['decideAnagathics'],
-    'ANAGATHICS_DECISION is blocked by unresolved character creation decisions'
+    'ANAGATHICS_DECISION is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -108,16 +114,18 @@ const currentAgingAge = (
 export const resolveAgingCreationEvent = ({
   character,
   creation,
+  ruleset,
   roll
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
+  ruleset: CepheusSrdRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Pick<CharacterCreationAgingResolvedEvent, 'aging'> => {
   const modifier = deriveAgingRollModifier(creation.terms)
   const aging = resolveAging({
     currentAge: currentAgingAge(character, creation),
-    table: CEPHEUS_SRD_RULESET.aging,
+    table: ruleset.aging,
     roll: roll.total + modifier,
     years: 4
   })

@@ -7,7 +7,7 @@ import {
   resolveReenlistment,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -66,7 +66,8 @@ type CharacterCreationCareerLeftEvent = Extract<
 >
 
 const validateReenlistmentResolution = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -83,7 +84,8 @@ const validateReenlistmentResolution = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['rollReenlistment'],
-    'REENLISTMENT is blocked by unresolved character creation decisions'
+    'REENLISTMENT is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -91,7 +93,8 @@ const validateReenlistmentResolution = (
 }
 
 const validateCareerReenlistment = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -108,7 +111,8 @@ const validateCareerReenlistment = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['reenlist', 'forcedReenlist'],
-    'REENLIST is blocked by unresolved character creation decisions'
+    'REENLIST is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -116,7 +120,8 @@ const validateCareerReenlistment = (
 }
 
 const validateCareerLeave = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -133,7 +138,8 @@ const validateCareerLeave = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['leaveCareer'],
-    'LEAVE_CAREER is blocked by unresolved character creation decisions'
+    'LEAVE_CAREER is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -143,10 +149,12 @@ const validateCareerLeave = (
 const resolveReenlistmentCreationEvent = ({
   character,
   creation,
+  ruleset,
   roll
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
+  ruleset: CepheusSrdRuleset
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
   Pick<CharacterCreationReenlistmentResolvedEvent, 'outcome' | 'reenlistment'>,
@@ -160,7 +168,7 @@ const resolveReenlistmentCreationEvent = ({
     )
   }
 
-  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  const basics = ruleset.careerBasics[career]
   if (!basics) {
     return err(
       commandError('invalid_command', `Career ${career} is not supported`)
@@ -225,7 +233,7 @@ export const deriveLifecycleCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateAgingResolution(character)
+      const creation = validateAgingResolution(character, context.ruleset)
       if (!creation.ok) return creation
 
       const rolled = rollDiceExpression(
@@ -239,6 +247,7 @@ export const deriveLifecycleCommandEvents = (
       const resolved = resolveAgingCreationEvent({
         character,
         creation: creation.value,
+        ruleset: context.ruleset,
         roll: {
           expression: '2d6',
           rolls: rolled.value.rolls,
@@ -278,7 +287,7 @@ export const deriveLifecycleCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateAgingLossResolution(character)
+      const creation = validateAgingLossResolution(character, context.ruleset)
       if (!creation.ok) return creation
 
       const resolved = resolveAgingLosses({
@@ -314,7 +323,7 @@ export const deriveLifecycleCommandEvents = (
           'Only the character owner or referee can decide anagathics'
         )
       }
-      const creation = validateAnagathicsDecision(character)
+      const creation = validateAnagathicsDecision(character, context.ruleset)
       if (!creation.ok) return creation
       const termIndex = creation.value.terms.length - 1
       const activeTerm = creation.value.terms[termIndex]
@@ -322,7 +331,7 @@ export const deriveLifecycleCommandEvents = (
         return err(commandError('missing_entity', 'Career term does not exist'))
       }
 
-      const basics = CEPHEUS_SRD_RULESET.careerBasics[activeTerm.career]
+      const basics = context.ruleset.careerBasics[activeTerm.career]
       if (command.useAnagathics && !basics) {
         return err(
           commandError(
@@ -468,7 +477,10 @@ export const deriveLifecycleCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateReenlistmentResolution(character)
+      const creation = validateReenlistmentResolution(
+        character,
+        context.ruleset
+      )
       if (!creation.ok) return creation
 
       const rolled = rollDiceExpression(
@@ -482,6 +494,7 @@ export const deriveLifecycleCommandEvents = (
       const resolved = resolveReenlistmentCreationEvent({
         character,
         creation: creation.value,
+        ruleset: context.ruleset,
         roll: {
           expression: '2d6',
           rolls: rolled.value.rolls,
@@ -523,7 +536,7 @@ export const deriveLifecycleCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateCareerReenlistment(character)
+      const creation = validateCareerReenlistment(character, context.ruleset)
       if (!creation.ok) return creation
 
       const outcome = deriveCareerCreationReenlistmentOutcome(creation.value)
@@ -571,7 +584,7 @@ export const deriveLifecycleCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateCareerLeave(character)
+      const creation = validateCareerLeave(character, context.ruleset)
       if (!creation.ok) return creation
 
       const outcome = deriveCareerCreationReenlistmentOutcome(creation.value)

@@ -141,7 +141,8 @@ export const deriveCreationSetupCommandEvents = (
       const legalAction = requireLegalCharacterCreationAction(
         character.creation,
         ['setCharacteristics'],
-        'CHARACTERISTIC_ROLL is blocked by unresolved character creation decisions'
+        'CHARACTERISTIC_ROLL is blocked by unresolved character creation decisions',
+        context.ruleset
       )
       if (!legalAction.ok) return legalAction
 
@@ -245,7 +246,7 @@ export const deriveCreationFinalizationCommandEvents = (
         )
       }
 
-      return deriveCompletionEvents(command.characterId, character)
+      return deriveCompletionEvents(command.characterId, character, context.ruleset)
     }
 
     case 'CompleteCharacterCreation': {
@@ -261,7 +262,7 @@ export const deriveCreationFinalizationCommandEvents = (
         )
       }
 
-      return deriveCompletionEvents(command.characterId, character)
+      return deriveCompletionEvents(command.characterId, character, context.ruleset)
     }
   }
 }

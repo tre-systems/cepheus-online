@@ -4,7 +4,7 @@ import {
   normalizeCareerSkill,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import type { GameEvent } from '../../../shared/events'
 import type { CommandError } from '../../../shared/protocol'
@@ -26,7 +26,8 @@ type CharacterCreationBasicTrainingCommand = Extract<
 >
 
 const validateBasicTrainingCompletion = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -43,7 +44,8 @@ const validateBasicTrainingCompletion = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['completeBasicTraining'],
-    'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions'
+    'COMPLETE_BASIC_TRAINING is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -52,6 +54,7 @@ const validateBasicTrainingCompletion = (
 
 const deriveBasicTrainingSkills = (
   creation: CharacterCreationProjection,
+  ruleset: CepheusSrdRuleset,
   selectedSkill?: string
 ): Result<string[], CommandError> => {
   const currentTerm = creation.terms.at(-1)
@@ -71,7 +74,7 @@ const deriveBasicTrainingSkills = (
   const previousTerms = creation.terms.slice(0, -1)
   const plan = deriveBasicTrainingPlan({
     career: currentTerm.career,
-    serviceSkills: CEPHEUS_SRD_RULESET.serviceSkills,
+    serviceSkills: ruleset.serviceSkills,
     completedTermCount: previousTerms.length,
     previousCareerNames: previousTerms.map((term) => term.career)
   })
@@ -134,10 +137,11 @@ export const deriveBasicTrainingCommandEvents = (
   )
   if (!loaded.ok) return loaded
   const { character } = loaded.value
-  const creation = validateBasicTrainingCompletion(character)
+  const creation = validateBasicTrainingCompletion(character, context.ruleset)
   if (!creation.ok) return creation
   const trainingSkills = deriveBasicTrainingSkills(
     creation.value,
+    context.ruleset,
     command.skill
   )
   if (!trainingSkills.ok) return trainingSkills

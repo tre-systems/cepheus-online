@@ -1,4 +1,5 @@
 import type { EventHandlerMap } from './types'
+import { DEFAULT_RULESET_ID } from '../character-creation/cepheus-srd-ruleset'
 
 type GameEventType = 'GameCreated'
 
@@ -8,6 +9,7 @@ export const gameEventHandlers = {
 
     return {
       id: envelope.gameId,
+      rulesetId: event.rulesetId ?? DEFAULT_RULESET_ID,
       slug: event.slug,
       name: event.name,
       ownerId: event.ownerId,

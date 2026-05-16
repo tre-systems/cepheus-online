@@ -3,6 +3,10 @@ import { describe, it } from 'node:test'
 
 import {
   CEPHEUS_SRD_CAREERS,
+  CEPHEUS_SRD_RULESET,
+  DEFAULT_RULESET_ID,
+  decodeCepheusSrdRuleset,
+  resolveRulesetById,
   type CepheusCareerDefinition
 } from './cepheus-srd-ruleset'
 import { parseCareerCheck } from './career-rules'
@@ -31,6 +35,27 @@ const requiredChecks = [
 >)[]
 
 describe('Cepheus SRD career ruleset', () => {
+  it('loads the bundled default ruleset from JSON data', () => {
+    const resolved = resolveRulesetById(DEFAULT_RULESET_ID)
+
+    assert.equal(resolved.ok, true)
+    if (!resolved.ok) return
+    assert.equal(resolved.value, CEPHEUS_SRD_RULESET)
+    assert.equal(resolved.value.careerBasics.Scout.Survival, 'End 7+')
+  })
+
+  it('rejects malformed ruleset data at the data boundary', () => {
+    const decoded = decodeCepheusSrdRuleset({
+      careerBasics: {},
+      serviceSkills: {}
+    })
+
+    assert.equal(decoded.ok, false)
+    if (decoded.ok) return
+    assert.equal(decoded.error.includes('gender must be an object'), true)
+    assert.equal(decoded.error.includes('theDraft must be an array'), true)
+  })
+
   it('includes the expected SRD careers with the legacy defaults first', () => {
     const careerNames = CEPHEUS_SRD_CAREERS.map((career) => career.name)
 

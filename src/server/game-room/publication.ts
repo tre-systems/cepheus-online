@@ -1,5 +1,9 @@
 import type { GameId } from '../../shared/ids'
 import {
+  DEFAULT_RULESET_ID,
+  resolveRulesetById
+} from '../../shared/character-creation/cepheus-srd-ruleset'
+import {
   isDeprecatedGameCommand,
   metadataForCommand
 } from '../../shared/command-metadata'
@@ -104,11 +108,21 @@ export const runCommandPublication = async (
     usesSeededDice && currentState
       ? await getOrCreateGameSeed(storage, gameId)
       : 0
+  const rulesetId =
+    currentState?.rulesetId ??
+    (message.command.type === 'CreateGame'
+      ? (message.command.rulesetId ?? DEFAULT_RULESET_ID)
+      : DEFAULT_RULESET_ID)
+  const ruleset = resolveRulesetById(rulesetId)
+  if (!ruleset.ok) {
+    return err(commandError('invalid_command', ruleset.error.join('; ')))
+  }
   const events = deriveEventsForCommand(message.command, {
     state: currentState,
     currentSeq,
     nextSeq: currentSeq + 1,
     gameSeed,
+    ruleset: ruleset.value,
     createdAt
   })
 

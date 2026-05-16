@@ -29,6 +29,10 @@ Rules, validation, projection, and data transforms live in `src/shared`.
 Cloudflare APIs live in `src/server`. DOM, Canvas, CSS, browser storage, and
 WebSocket client code live in `src/client`.
 
+Ruleset tables live in `data/rulesets/` as JSON. `src/shared` may import bundled
+ruleset JSON through a decoder module, but rules helpers should accept ruleset
+data explicitly when the active room rules affect behavior.
+
 ## Function Shape
 
 Prefer plain functions and `createXxx()` factories. Use classes only when the
@@ -81,6 +85,9 @@ invariants once a test runner is introduced. Keep protocol fixtures in
 
 Use data-driven tests for tables: skills, careers, equipment, dice modifiers,
 movement ranges, visibility transitions, and permission matrices.
+
+Ruleset tests should validate the JSON decode boundary and compare table-driven
+behavior against the canonical `data/rulesets/cepheus-engine-srd.json` source.
 
 ## Documentation
 

@@ -102,6 +102,7 @@ export interface CharacterCreationProjection {
 
 export interface GameState {
   id: GameId
+  rulesetId?: string
   slug: string
   name: string
   ownerId: UserId

@@ -27,6 +27,7 @@ export type Command =
       expectedSeq?: number
       slug: string
       name: string
+      rulesetId?: string
     }
   | {
       type: 'CreateCharacter'

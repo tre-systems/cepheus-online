@@ -113,6 +113,25 @@ Tooling support:
 - Biome import restrictions stop `src/shared` from importing client or server
   code.
 
+## Rulesets As Data
+
+Rulesets are data, not application structure. Bundled rulesets live as JSON in
+`data/rulesets/` and are decoded at the shared rules boundary. The default
+ruleset is `cepheus-engine-srd`; future custom rulesets should follow the same
+load-decode-select path rather than being compiled into TypeScript.
+
+A room records its ruleset choice through the event stream:
+
+- `CreateGame.rulesetId` selects the ruleset, defaulting to
+  `cepheus-engine-srd`.
+- `GameCreated.rulesetId` stores the chosen ID.
+- `GameState.rulesetId` lets command publication and projected action plans use
+  the correct rules data.
+
+Shared rules helpers should accept a ruleset object when behavior depends on
+tables, careers, cascade skills, homeworld options, or aging data. Keep default
+ruleset imports for convenience wrappers and legacy tests only.
+
 ## Viewer-Aware Filtering
 
 Referee state is not just UI chrome. Hidden pieces, unrevealed maps, secret

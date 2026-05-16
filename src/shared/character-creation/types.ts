@@ -5,6 +5,7 @@ import type {
   CharacterSheetPatch
 } from '../state'
 import type { BackgroundHomeworld } from './background-skills'
+import type { CepheusSrdRuleset } from './cepheus-srd-ruleset'
 
 export type CareerCreationStatus =
   | 'CHARACTERISTICS'
@@ -501,6 +502,7 @@ export interface CareerCreationActionPlan {
 
 export interface CareerCreationActionPlanOptions {
   characteristics?: Partial<CharacterCharacteristics>
+  ruleset?: CepheusSrdRuleset
 }
 
 export interface CareerCreationActionProjection {

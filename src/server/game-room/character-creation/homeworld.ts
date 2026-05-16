@@ -10,7 +10,7 @@ import {
   resolveCascadeCareerSkill,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import type { GameEvent } from '../../../shared/events'
 import type { CommandError } from '../../../shared/protocol'
@@ -125,9 +125,10 @@ const hasCompleteBackgroundChoices = (character: CharacterState): boolean => {
 }
 
 const requireNoHomeworldResetBlockers = (
-  creation: CharacterCreationProjection
+  creation: CharacterCreationProjection,
+  ruleset: CepheusSrdRuleset
 ): Result<void, CommandError> => {
-  const actionContext = deriveCareerCreationActionContext(creation)
+  const actionContext = deriveCareerCreationActionContext(creation, ruleset)
   if ((actionContext.pendingDecisions?.length ?? 0) > 0) {
     return err(
       commandError(
@@ -142,10 +143,11 @@ const requireNoHomeworldResetBlockers = (
 
 const requireOnlyHomeworldPendingDecisions = (
   creation: CharacterCreationProjection,
-  blockedMessage: string
+  blockedMessage: string,
+  ruleset: CepheusSrdRuleset
 ): Result<void, CommandError> => {
   const allowed = new Set(['homeworldSkillSelection', 'cascadeSkillResolution'])
-  const actionContext = deriveCareerCreationActionContext(creation)
+  const actionContext = deriveCareerCreationActionContext(creation, ruleset)
   const blockingDecision = actionContext.pendingDecisions?.find(
     (decision) => !allowed.has(decision.key)
   )
@@ -195,7 +197,8 @@ export const normalizeBackgroundSkill = (
 }
 
 export const validateHomeworldCompletion = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -221,7 +224,8 @@ export const validateHomeworldCompletion = (
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['completeHomeworld'],
-    'COMPLETE_HOMEWORLD is blocked by unresolved character creation decisions'
+    'COMPLETE_HOMEWORLD is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
 
@@ -246,7 +250,8 @@ export const deriveHomeworldCommandEvents = (
         )
       }
       const noResetBlockers = requireNoHomeworldResetBlockers(
-        character.creation
+        character.creation,
+        context.ruleset
       )
       if (!noResetBlockers.ok) return noResetBlockers
 
@@ -255,7 +260,7 @@ export const deriveHomeworldCommandEvents = (
       const backgroundPlan = deriveBackgroundSkillPlan({
         edu: character.characteristics.edu,
         homeworld: homeworld.value,
-        rules: CEPHEUS_SRD_RULESET
+        rules: context.ruleset
       })
       const allowance = backgroundSkillAllowance(character)
 
@@ -282,7 +287,8 @@ export const deriveHomeworldCommandEvents = (
       if (!creation.ok) return creation
       const noUnrelatedDecision = requireOnlyHomeworldPendingDecisions(
         creation.value,
-        'Background skills are blocked by unresolved character creation decisions'
+        'Background skills are blocked by unresolved character creation decisions',
+        context.ruleset
       )
       if (!noUnrelatedDecision.ok) return noUnrelatedDecision
 
@@ -332,7 +338,8 @@ export const deriveHomeworldCommandEvents = (
       if (!creation.ok) return creation
       const noUnrelatedDecision = requireOnlyHomeworldPendingDecisions(
         creation.value,
-        'Background cascade skills are blocked by unresolved character creation decisions'
+        'Background cascade skills are blocked by unresolved character creation decisions',
+        context.ruleset
       )
       if (!noUnrelatedDecision.ok) return noUnrelatedDecision
 
@@ -380,7 +387,7 @@ export const deriveHomeworldCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateHomeworldCompletion(character)
+      const creation = validateHomeworldCompletion(character, context.ruleset)
       if (!creation.ok) return creation
 
       const nextState = transitionCareerCreationState(creation.value.state, {

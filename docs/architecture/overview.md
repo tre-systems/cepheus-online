@@ -9,7 +9,7 @@ browser client and server-authoritative game rooms.
 src/shared/      domain types, commands, events, projectors, rules, schemas
 src/server/      Cloudflare Worker routes and Durable Objects
 src/client/      browser app, Canvas board, CSS, local reactive state
-data/            rulesets and imported SRD-derived data
+data/            JSON rulesets and imported SRD-derived data
 docs/            design, migration, and operating notes
 ```
 
@@ -43,6 +43,12 @@ Expected classes:
 
 The room should be small and focused. Game rules live in `src/shared`, not in
 the Durable Object class.
+
+Ruleset selection is room state. `CreateGame` may carry a `rulesetId`,
+`GameCreated` persists it, and `GameState.rulesetId` is projected from the
+event stream. Bundled Cepheus rules live as JSON under `data/rulesets/` and are
+decoded by shared rules code; do not convert rules tables into hand-maintained
+TypeScript constants.
 
 ## Persistence
 

@@ -1,7 +1,10 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
+import {
+  CEPHEUS_SRD_RULESET,
+  DEFAULT_RULESET_ID
+} from '../../shared/character-creation/cepheus-srd-ruleset'
 import { commandMetadataByType } from '../../shared/command-metadata'
 import type { Command, GameCommand } from '../../shared/commands'
 import {
@@ -499,6 +502,31 @@ describe('room publication flow', () => {
     ])
     assert.equal(accepted.value.eventSeq, accepted.value.state.eventSeq)
     assert.deepEqual(accepted.value.liveActivities, [])
+  })
+
+  it('persists the selected ruleset id when creating a game', async () => {
+    const storage = createMemoryStorage()
+
+    const accepted = await publish(storage, {
+      type: 'CreateGame',
+      gameId,
+      actorId,
+      slug: 'game-1',
+      name: 'Spinward Test',
+      rulesetId: DEFAULT_RULESET_ID
+    })
+
+    assert.equal(accepted.ok, true)
+    if (!accepted.ok) return
+    assert.equal(accepted.value.state.rulesetId, DEFAULT_RULESET_ID)
+    assert.equal(
+      (await readEventStream(storage, gameId))[0]?.event.type,
+      'GameCreated'
+    )
+    const event = (await readEventStream(storage, gameId))[0]?.event
+    assert.equal(event?.type, 'GameCreated')
+    if (event?.type !== 'GameCreated') return
+    assert.equal(event.rulesetId, DEFAULT_RULESET_ID)
   })
 
   it('exposes derived dice activity for accepted dice commands', async () => {

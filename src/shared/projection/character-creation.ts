@@ -7,6 +7,10 @@ import {
   projectCareerCreationActionPlan,
   startCareerTerm
 } from '../characterCreation'
+import {
+  CEPHEUS_SRD_RULESET,
+  resolveRulesetById
+} from '../character-creation/cepheus-srd-ruleset'
 import type { GameEvent } from '../events'
 import type {
   CareerCreationBenefitFact,
@@ -235,10 +239,15 @@ const refreshCharacterCreationActionPlans = (
 ): GameState | null => {
   if (!state) return state
 
+  const resolvedRuleset = resolveRulesetById(state.rulesetId)
+  const ruleset = resolvedRuleset.ok
+    ? resolvedRuleset.value
+    : CEPHEUS_SRD_RULESET
   for (const character of Object.values(state.characters)) {
     if (!character.creation) continue
     character.creation = projectCareerCreationActionPlan(character.creation, {
-      characteristics: character.characteristics
+      characteristics: character.characteristics,
+      ruleset
     })
   }
 

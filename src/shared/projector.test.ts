@@ -5,6 +5,7 @@ import type {
   CareerCreationEvent,
   CareerCreationStatus
 } from './characterCreation'
+import { DEFAULT_RULESET_ID } from './character-creation/cepheus-srd-ruleset'
 import type { EventEnvelope } from './events'
 import {
   asBoardId,
@@ -69,6 +70,29 @@ describe('game state projection', () => {
       throw new Error('Expected unknown event projection to throw')
     }
     assert.equal(/Unhandled event UnknownEvent/.test(thrown.message), true)
+  })
+
+  it('projects default and explicit ruleset ids for game creation', () => {
+    const defaultState = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      })
+    ])
+    const explicitState = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId,
+        rulesetId: 'cepheus-engine-srd'
+      })
+    ])
+
+    assert.equal(defaultState?.rulesetId, DEFAULT_RULESET_ID)
+    assert.equal(explicitState?.rulesetId, 'cepheus-engine-srd')
   })
 
   it('projects explicit board selection over the first created board', () => {

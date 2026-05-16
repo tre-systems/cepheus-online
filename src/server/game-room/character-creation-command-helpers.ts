@@ -7,6 +7,7 @@ import {
   deriveCareerCreationActionContext,
   deriveLegalCareerCreationActionKeysForProjection
 } from '../../shared/characterCreation'
+import type { CepheusSrdRuleset } from '../../shared/character-creation/cepheus-srd-ruleset'
 import type { CharacterId } from '../../shared/ids'
 import type { CommandError } from '../../shared/protocol'
 import { err, ok, type Result } from '../../shared/result'
@@ -76,10 +77,13 @@ export const requireCharacterCreationStatus = (
 export const requireLegalCharacterCreationAction = (
   creation: CharacterCreationProjection,
   actionKeys: readonly CareerCreationActionKey[],
-  blockedMessage: string
+  blockedMessage: string,
+  ruleset: CepheusSrdRuleset
 ): Result<void, CommandError> => {
-  const legalActions =
-    deriveLegalCareerCreationActionKeysForProjection(creation)
+  const legalActions = deriveLegalCareerCreationActionKeysForProjection(
+    creation,
+    ruleset
+  )
   if (!actionKeys.some((actionKey) => legalActions.includes(actionKey))) {
     return err(commandError('invalid_command', blockedMessage))
   }
@@ -90,9 +94,10 @@ export const requireLegalCharacterCreationAction = (
 export const requireNoBlockingCharacterCreationDecisions = (
   creation: CharacterCreationProjection,
   allowedDecisionKey: CareerCreationPendingDecisionKey,
-  blockedMessage: string
+  blockedMessage: string,
+  ruleset: CepheusSrdRuleset
 ): Result<void, CommandError> => {
-  const actionContext = deriveCareerCreationActionContext(creation)
+  const actionContext = deriveCareerCreationActionContext(creation, ruleset)
   const blockingDecision = actionContext.pendingDecisions?.find(
     (decision) => decision.key !== allowedDecisionKey
   )
@@ -105,9 +110,10 @@ export const requireNoBlockingCharacterCreationDecisions = (
 
 export const requireNoPendingCharacterCreationDecisions = (
   creation: CharacterCreationProjection,
-  blockedMessage: string
+  blockedMessage: string,
+  ruleset: CepheusSrdRuleset
 ): Result<void, CommandError> => {
-  const actionContext = deriveCareerCreationActionContext(creation)
+  const actionContext = deriveCareerCreationActionContext(creation, ruleset)
   if ((actionContext.pendingDecisions?.length ?? 0) > 0) {
     return err(commandError('invalid_command', blockedMessage))
   }

@@ -4,80 +4,39 @@ import {
   isDeprecatedGameCommand,
   metadataForCommand,
   type CommandRoute,
+  type CommandTypeForRoute,
   type NonDeprecatedGameCommandType
 } from '../../../shared/command-metadata'
 
-export type BoardCommand = Extract<
+type CommandForRoute<TRoute extends CommandRoute> = Extract<
   Command,
-  {
-    type:
-      | 'CreateBoard'
-      | 'SelectBoard'
-      | 'CreatePiece'
-      | 'MovePiece'
-      | 'SetPieceVisibility'
-      | 'SetPieceFreedom'
-  }
+  { type: CommandTypeForRoute<TRoute> }
 >
 
-export type DiceCommand = Extract<Command, { type: 'RollDice' }>
+export type BoardCommand = CommandForRoute<'board'>
 
-export type DoorCommand = Extract<Command, { type: 'SetDoorOpen' }>
+export type DiceCommand = CommandForRoute<'dice'>
+
+export type DoorCommand = CommandForRoute<'door'>
+
+type SheetAuxiliaryCommandType =
+  | Extract<
+      CommandTypeForRoute<'board'>,
+      'SetPieceVisibility' | 'SetPieceFreedom'
+    >
+  | CommandTypeForRoute<'dice'>
 
 export type SheetCommand = Extract<
   Command,
   {
-    type:
-      | 'UpdateCharacterSheet'
-      | 'AddCharacterEquipmentItem'
-      | 'UpdateCharacterEquipmentItem'
-      | 'RemoveCharacterEquipmentItem'
-      | 'AdjustCharacterCredits'
-      | 'SetPieceVisibility'
-      | 'SetPieceFreedom'
-      | 'RollDice'
+    type: CommandTypeForRoute<'sheet'> | SheetAuxiliaryCommandType
   }
 >
 
 export type CharacterCreationCommand = Extract<
   GameCommand,
   {
-    type:
-      | 'CreateCharacter'
-      | 'StartCharacterCreation'
-      | 'SetCharacterCreationHomeworld'
-      | 'SelectCharacterCreationBackgroundSkill'
-      | 'ResolveCharacterCreationCascadeSkill'
-      | 'FinalizeCharacterCreation'
-      | 'StartCharacterCareerTerm'
-      | 'CompleteCharacterCreationHomeworld'
-      | 'ResolveCharacterCreationQualification'
-      | 'ResolveCharacterCreationDraft'
-      | 'EnterCharacterCreationDrifter'
-      | 'CompleteCharacterCreationBasicTraining'
-      | 'ResolveCharacterCreationSurvival'
-      | 'ResolveCharacterCreationMishap'
-      | 'ResolveCharacterCreationInjury'
-      | 'ConfirmCharacterCreationDeath'
-      | 'ResolveCharacterCreationCommission'
-      | 'SkipCharacterCreationCommission'
-      | 'ResolveCharacterCreationAdvancement'
-      | 'SkipCharacterCreationAdvancement'
-      | 'ResolveCharacterCreationAging'
-      | 'ResolveCharacterCreationAgingLosses'
-      | 'DecideCharacterCreationAnagathics'
-      | 'ResolveCharacterCreationReenlistment'
-      | 'ReenlistCharacterCreationCareer'
-      | 'LeaveCharacterCreationCareer'
-      | 'RollCharacterCreationCharacteristic'
-      | 'RollCharacterCreationTermSkill'
-      | 'CompleteCharacterCreationSkills'
-      | 'ResolveCharacterCreationTermCascadeSkill'
-      | 'RollCharacterCreationMusteringBenefit'
-      | 'ContinueCharacterCreationAfterMustering'
-      | 'CompleteCharacterCreationMustering'
-      | 'CompleteCharacterCreation'
-      | 'CreatePiece'
+    type: CommandTypeForRoute<'characterCreation'> | 'CreatePiece'
   }
 >
 

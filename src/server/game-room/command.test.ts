@@ -7,6 +7,7 @@ import {
   type CareerCreationStatus,
   type CareerTerm
 } from '../../shared/characterCreation'
+import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
 import { asCharacterId, asEventId, asGameId, asUserId } from '../../shared/ids'
 import type {
   CharacterCreationHomeworld,
@@ -135,6 +136,7 @@ const runCommand = (
     currentSeq: 1,
     nextSeq: 2,
     gameSeed: 1234,
+    ruleset: CEPHEUS_SRD_RULESET,
     ...contextOverrides
   }
 
@@ -186,7 +188,8 @@ describe('deriveEventsForCommand error categories', () => {
         state,
         currentSeq: 1,
         nextSeq: 2,
-        gameSeed: 1234
+        gameSeed: 1234,
+        ruleset: CEPHEUS_SRD_RULESET
       }
     )
 
@@ -1335,7 +1338,8 @@ describe('deriveEventsForCommand error categories', () => {
         state,
         currentSeq: 1,
         nextSeq: 2,
-        gameSeed: 1234
+        gameSeed: 1234,
+        ruleset: CEPHEUS_SRD_RULESET
       }
     )
 
@@ -3658,7 +3662,8 @@ describe('deriveEventsForCommand error categories', () => {
         state,
         currentSeq: 1,
         nextSeq: 2,
-        gameSeed: 1234
+        gameSeed: 1234,
+        ruleset: CEPHEUS_SRD_RULESET
       }
     )
 

@@ -7,7 +7,7 @@ import {
   resolveDraftCareer,
   transitionCareerCreationState
 } from '../../../shared/characterCreation'
-import { CEPHEUS_SRD_RULESET } from '../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CepheusSrdRuleset } from '../../../shared/character-creation/cepheus-srd-ruleset'
 import type { GameCommand } from '../../../shared/commands'
 import { rollDiceExpression } from '../../../shared/dice'
 import type { GameEvent } from '../../../shared/events'
@@ -55,7 +55,8 @@ type CharacterCreationDraftResolvedEvent = Extract<
 >
 
 const validateCareerSelection = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
   if (!character.creation) {
     return err(
@@ -70,13 +71,15 @@ const validateCareerSelection = (
   if (!status.ok) return status
   const decisions = requireNoPendingCharacterCreationDecisions(
     character.creation,
-    'CAREER_SELECTION is blocked by unresolved character creation decisions'
+    'CAREER_SELECTION is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!decisions.ok) return decisions
   const legalAction = requireLegalCharacterCreationAction(
     character.creation,
     ['selectCareer'],
-    'CAREER_SELECTION is blocked by unresolved character creation decisions'
+    'CAREER_SELECTION is blocked by unresolved character creation decisions',
+    ruleset
   )
   if (!legalAction.ok) return legalAction
   if (character.creation.terms.length >= 7) {
@@ -87,9 +90,10 @@ const validateCareerSelection = (
 }
 
 const validateQualificationResolution = (
-  character: CharacterState
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset
 ): Result<CharacterCreationProjection, CommandError> => {
-  const creation = validateCareerSelection(character)
+  const creation = validateCareerSelection(character, ruleset)
   if (!creation.ok) return creation
   if (creation.value.failedToQualify) {
     return err(
@@ -117,15 +121,16 @@ const previousCareerCount = (
 
 const validateCareerCanBeSelected = (
   creation: CharacterCreationProjection,
+  ruleset: CepheusSrdRuleset,
   career: string
 ): Result<void, CommandError> => {
-  if (!CEPHEUS_SRD_RULESET.careerBasics[career]) {
+  if (!ruleset.careerBasics[career]) {
     return err(
       commandError('invalid_command', `Career ${career} is not supported`)
     )
   }
   const available = availableCareerNames(
-    CEPHEUS_SRD_RULESET.careerBasics,
+    ruleset.careerBasics,
     previousCareerNames(creation)
   )
   if (!available.includes(career)) {
@@ -143,11 +148,13 @@ const validateCareerCanBeSelected = (
 const resolveQualificationCreationEvent = ({
   character,
   creation,
+  ruleset,
   career,
   roll
 }: {
   character: CharacterState
   creation: CharacterCreationProjection
+  ruleset: CepheusSrdRuleset
   career: string
   roll: { expression: '2d6'; rolls: number[]; total: number }
 }): Result<
@@ -161,7 +168,7 @@ const resolveQualificationCreationEvent = ({
   >,
   CommandError
 > => {
-  const basics = CEPHEUS_SRD_RULESET.careerBasics[career]
+  const basics = ruleset.careerBasics[career]
   if (!basics) {
     return err(
       commandError('invalid_command', `Career ${career} is not supported`)
@@ -206,15 +213,17 @@ const resolveQualificationCreationEvent = ({
 }
 
 const resolveDraftCreationEvent = ({
+  ruleset,
   roll
 }: {
+  ruleset: CepheusSrdRuleset
   roll: { expression: '1d6'; rolls: number[]; total: number }
 }): Result<
   Pick<CharacterCreationDraftResolvedEvent, 'draft'>,
   CommandError
 > => {
   const draft = resolveDraftCareer({
-    table: CEPHEUS_SRD_RULESET.theDraft,
+    table: ruleset.theDraft,
     roll: roll.total
   })
   if (!draft) {
@@ -247,12 +256,13 @@ export const deriveCareerEntryCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateQualificationResolution(character)
+      const creation = validateQualificationResolution(character, context.ruleset)
       if (!creation.ok) return creation
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career
       const selectable = validateCareerCanBeSelected(
         creation.value,
+        context.ruleset,
         career.value
       )
       if (!selectable.ok) return selectable
@@ -268,6 +278,7 @@ export const deriveCareerEntryCommandEvents = (
       const resolved = resolveQualificationCreationEvent({
         character,
         creation: creation.value,
+        ruleset: context.ruleset,
         career: career.value,
         roll: {
           expression: '2d6',
@@ -311,7 +322,7 @@ export const deriveCareerEntryCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateCareerSelection(character)
+      const creation = validateCareerSelection(character, context.ruleset)
       if (!creation.ok) return creation
       if (!creation.value.failedToQualify) {
         return err(
@@ -336,6 +347,7 @@ export const deriveCareerEntryCommandEvents = (
       }
 
       const resolved = resolveDraftCreationEvent({
+        ruleset: context.ruleset,
         roll: {
           expression: '1d6',
           rolls: rolled.value.rolls,
@@ -376,7 +388,7 @@ export const deriveCareerEntryCommandEvents = (
       )
       if (!loaded.ok) return loaded
       const { character } = loaded.value
-      const creation = validateCareerSelection(character)
+      const creation = validateCareerSelection(character, context.ruleset)
       if (!creation.ok) return creation
       if (!creation.value.failedToQualify) {
         return err(
@@ -418,7 +430,7 @@ export const deriveCareerEntryCommandEvents = (
           'Only the referee can start character career terms directly'
         )
       }
-      const creation = validateCareerSelection(character)
+      const creation = validateCareerSelection(character, context.ruleset)
       if (!creation.ok) return creation
       const career = requireNonEmptyString(command.career, 'career')
       if (!career.ok) return career
