@@ -757,8 +757,10 @@ inventing results, waits until the server reveal boundary, then refetches or
 accepts the revealed projection instead of applying stale pre-reveal command
 state. Roll-bearing semantic character creation events carry optional
 `rollEventId` correlation, and character creation live activities can expose
-explicit reveal metadata while keeping the previous timestamp fallback for
-legacy events. The remaining risk is narrower: old undo-style redaction helpers
+explicit reveal metadata. Legacy `CharacterCreationTransitioned` activity now
+gets explicit timestamp reveal metadata for roll-dependent compatibility
+transitions, so viewer filtering no longer needs transition-name activity
+redaction. The remaining risk is narrower: old undo-style redaction helpers
 still exist for compatibility and should keep shrinking as every read model is
 derived from reveal-aware projected facts.
 

@@ -246,6 +246,10 @@ describe('live activity derivation', () => {
       characterId,
       transition: 'SELECT_CAREER',
       details: 'Career selected; new career; qualified',
+      reveal: {
+        revealAt: '2026-05-03T00:00:05.500Z',
+        delayMs: LIVE_DICE_RESULT_REVEAL_DELAY_MS
+      },
       status: 'BASIC_TRAINING',
       creationComplete: false
     })
@@ -1727,6 +1731,7 @@ describe('live activity derivation', () => {
       'eventId',
       'gameId',
       'id',
+      'reveal',
       'seq',
       'status',
       'transition',

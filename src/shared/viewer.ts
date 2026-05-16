@@ -57,36 +57,9 @@ const canViewerSeeUnrevealedDice = (
   return false
 }
 
-const legacyRollDependentCreationTransitions = new Set<string>([
-  'SELECT_CAREER',
-  'SET_CHARACTERISTICS',
-  'SURVIVAL_PASSED',
-  'SURVIVAL_FAILED',
-  'COMPLETE_COMMISSION',
-  'COMMISSION_PASSED',
-  'COMMISSION_FAILED',
-  'COMPLETE_ADVANCEMENT',
-  'ADVANCEMENT_PASSED',
-  'ADVANCEMENT_FAILED',
-  'ROLL_TERM_SKILL',
-  'TERM_SKILL_ROLLED',
-  'COMPLETE_AGING',
-  'RESOLVE_REENLISTMENT',
-  'REENLIST_FORCED',
-  'REENLIST_ALLOWED',
-  'REENLIST_BLOCKED',
-  'FINISH_MUSTERING',
-  'CAREER_QUALIFICATION_PASSED',
-  'CAREER_QUALIFICATION_FAILED',
-  'DRAFT_RESOLVED'
-])
-
-const hasRollDependentCreationDetails = (
+const hasRevealDependentCreationDetails = (
   activity: CharacterCreationActivityDescriptor
-): boolean =>
-  activity.reveal !== undefined ||
-  (activity.details !== undefined &&
-    legacyRollDependentCreationTransitions.has(activity.transition))
+): boolean => activity.reveal !== undefined
 
 const isFutureCharacterCreationReveal = (
   activity: CharacterCreationActivityDescriptor,
@@ -832,7 +805,7 @@ export const filterLiveActivitiesForViewer = (
       (activity.type === 'diceRoll' &&
         Date.parse(activity.reveal.revealAt) <= nowMs) ||
       (activity.type === 'characterCreation' &&
-        (!hasRollDependentCreationDetails(activity) ||
+        (!hasRevealDependentCreationDetails(activity) ||
           !isFutureCharacterCreationReveal(activity, nowMs)))
     ) {
       return activity

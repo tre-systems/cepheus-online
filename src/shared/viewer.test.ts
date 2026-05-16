@@ -118,6 +118,11 @@ const buildLiveActivities = (
     transition: 'SURVIVAL_PASSED',
     details:
       'Survival passed; total 7; target 7+; DM 0; commission unavailable; advancement unavailable',
+    reveal: {
+      rollEventId: asEventId('game-1:3'),
+      revealAt,
+      delayMs: 2500
+    },
     status: 'SKILLS_TRAINING',
     creationComplete: false
   }
@@ -2503,7 +2508,7 @@ describe('viewer filtering', () => {
     })
   })
 
-  it('keeps legacy characteristic completion details safe before fallback reveal', () => {
+  it('keeps legacy characteristic completion details safe before reveal', () => {
     const state = buildState()
     const activities = buildLiveActivities(
       '2026-05-03T00:00:02.000Z',
@@ -2516,6 +2521,10 @@ describe('viewer filtering', () => {
 
     creationActivity.transition = 'SET_CHARACTERISTICS'
     creationActivity.details = 'Characteristics assigned'
+    creationActivity.reveal = {
+      revealAt: futureRevealAt,
+      delayMs: 2500
+    }
 
     const filtered = filterLiveActivitiesForViewer(
       activities,

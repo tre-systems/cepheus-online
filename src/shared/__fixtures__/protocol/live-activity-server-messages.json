@@ -76,6 +76,10 @@
           "characterId": "char-1",
           "transition": "SELECT_CAREER",
           "details": "Career selected; new career; draft resolved",
+          "reveal": {
+            "revealAt": "2026-05-03T00:00:05.500Z",
+            "delayMs": 2500
+          },
           "status": "BASIC_TRAINING",
           "creationComplete": false
         }

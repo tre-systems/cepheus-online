@@ -43,7 +43,7 @@ export interface LiveDiceRollRevealTarget {
 }
 
 export interface CharacterCreationActivityRevealMetadata {
-  rollEventId: EventId
+  rollEventId?: EventId
   revealAt: string
   delayMs: number
 }
@@ -416,6 +416,43 @@ const characterCreationRevealMetadata = (
       }
     : {}
 
+const legacyRollDependentCreationTransitions = new Set<string>([
+  'SELECT_CAREER',
+  'SET_CHARACTERISTICS',
+  'SURVIVAL_PASSED',
+  'SURVIVAL_FAILED',
+  'COMPLETE_COMMISSION',
+  'COMMISSION_PASSED',
+  'COMMISSION_FAILED',
+  'COMPLETE_ADVANCEMENT',
+  'ADVANCEMENT_PASSED',
+  'ADVANCEMENT_FAILED',
+  'ROLL_TERM_SKILL',
+  'TERM_SKILL_ROLLED',
+  'COMPLETE_AGING',
+  'RESOLVE_REENLISTMENT',
+  'REENLIST_FORCED',
+  'REENLIST_ALLOWED',
+  'REENLIST_BLOCKED',
+  'FINISH_MUSTERING',
+  'CAREER_QUALIFICATION_PASSED',
+  'CAREER_QUALIFICATION_FAILED',
+  'DRAFT_RESOLVED'
+])
+
+const legacyCharacterCreationRevealMetadata = (
+  transition: string,
+  createdAt: string
+): { reveal?: CharacterCreationActivityRevealMetadata } =>
+  legacyRollDependentCreationTransitions.has(transition)
+    ? {
+        reveal: {
+          revealAt: deriveLiveActivityRevealAt(createdAt),
+          delayMs: LIVE_DICE_RESULT_REVEAL_DELAY_MS
+        }
+      }
+    : {}
+
 export const deriveLiveActivity = (
   envelope: EventEnvelope
 ): LiveActivityDescriptor | null => {
@@ -449,6 +486,10 @@ export const deriveLiveActivity = (
         transition: event.creationEvent.type,
         ...compactCharacterCreationDetails(
           describeCareerCreationEvent(event.creationEvent)
+        ),
+        ...legacyCharacterCreationRevealMetadata(
+          event.creationEvent.type,
+          envelope.createdAt
         ),
         status: event.state.status,
         creationComplete: event.creationComplete
