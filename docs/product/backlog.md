@@ -141,6 +141,9 @@ preserve them rather than re-plan them.
 - Character creation view type contracts live in `view-types.ts` and are
   re-exported from `view.ts`; keep renderer and model code importing the public
   `view.ts` surface unless they are extending the type boundary itself.
+- Character creation display constants and formatters live in `view-format.ts`
+  and are also re-exported from `view.ts`; keep workflow-specific derivation in
+  focused modules as the remaining `view.ts` helpers are split.
 - Architecture diagrams live in `docs/diagrams/` as Graphviz/DOT sources with
   committed PNG renders, and ADR 0007 owns event/ruleset version policy.
 
