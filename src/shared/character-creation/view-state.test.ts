@@ -237,6 +237,16 @@ describe('character creation shared view state', () => {
                   bonusSkill: 'Pilot-1'
                 }
               },
+              anagathicsDecision: {
+                useAnagathics: true,
+                termIndex: 0,
+                cost: 7500,
+                costRoll: {
+                  expression: '1d6',
+                  rolls: [3],
+                  total: 3
+                }
+              },
               termSkillRolls: [
                 {
                   career: 'Scout',
@@ -276,8 +286,9 @@ describe('character creation shared view state', () => {
       {
         career: 'Scout',
         drafted: false,
-        anagathics: false,
-        anagathicsCost: null,
+        anagathics: true,
+        anagathicsCost: 7500,
+        anagathicsCostRoll: 3,
         age: null,
         rank: 1,
         rankTitle: 'Courier',
@@ -330,6 +341,7 @@ describe('character creation shared view state', () => {
         drafted: false,
         anagathics: false,
         anagathicsCost: null,
+        anagathicsCostRoll: null,
         age: null,
         rank: null,
         rankTitle: null,

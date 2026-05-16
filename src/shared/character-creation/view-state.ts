@@ -57,6 +57,7 @@ export interface CharacterCreationCompletedTermReadModel {
   drafted: boolean
   anagathics: boolean
   anagathicsCost: number | null
+  anagathicsCostRoll: number | null
   age: number | null
   rank: number | null
   rankTitle: string | null
@@ -101,13 +102,11 @@ export interface CharacterCreationFollowerTermReadModel {
 export interface CharacterCreationFollowerReadModel {
   statusLabel: string
   progressLabel: string
-  latestEvent:
-    | {
-        eventType: string
-        seq: number
-        rollEventId: string | null
-      }
-    | null
+  latestEvent: {
+    eventType: string
+    seq: number
+    rollEventId: string | null
+  } | null
   activeCareer: string | null
   term: CharacterCreationFollowerTermReadModel | null
   creationComplete: boolean
@@ -180,6 +179,7 @@ const completedTermFromSemanticFacts = (
     drafted: facts?.draft !== undefined,
     anagathics: facts?.anagathicsDecision?.useAnagathics ?? false,
     anagathicsCost: facts?.anagathicsDecision?.cost ?? null,
+    anagathicsCostRoll: facts?.anagathicsDecision?.costRoll?.total ?? null,
     age: facts?.aging?.age ?? null,
     rank: rank?.newRank ?? null,
     rankTitle: rank?.title ?? null,
@@ -221,6 +221,7 @@ const completedTermFromLegacyAggregate = (
   drafted: term.draft === 1,
   anagathics: term.anagathics,
   anagathicsCost: term.anagathicsCost ?? null,
+  anagathicsCostRoll: null,
   age: null,
   rank: null,
   rankTitle: null,

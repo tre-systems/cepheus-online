@@ -132,6 +132,7 @@ export interface CharacterCreationCompletedTerm {
   drafted: boolean
   anagathics?: boolean
   anagathicsCost?: number | null
+  anagathicsCostRoll?: number | null
   age: number | null
   rank?: number | null
   rankTitle?: string | null

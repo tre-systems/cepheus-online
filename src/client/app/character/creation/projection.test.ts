@@ -415,23 +415,28 @@ describe('character creation projection helpers', () => {
     ])
   })
 
-  it('keeps anagathics cost on completed projected terms', () => {
-    assert.equal(
-      completedTermFromProjection({
-        ...agingProjection().terms[0],
-        complete: true,
-        anagathics: true,
-        anagathicsCost: 20000,
-        facts: {
-          anagathicsDecision: {
-            useAnagathics: true,
-            termIndex: 0,
-            cost: 20000
+  it('keeps anagathics cost provenance on completed projected terms', () => {
+    const completedTerm = completedTermFromProjection({
+      ...agingProjection().terms[0],
+      complete: true,
+      anagathics: true,
+      anagathicsCost: 20000,
+      facts: {
+        anagathicsDecision: {
+          useAnagathics: true,
+          termIndex: 0,
+          cost: 20000,
+          costRoll: {
+            expression: '1d6',
+            rolls: [5],
+            total: 5
           }
         }
-      }).anagathicsCost,
-      20000
-    )
+      }
+    })
+
+    assert.equal(completedTerm.anagathicsCost, 20000)
+    assert.equal(completedTerm.anagathicsCostRoll, 5)
   })
 
   it('hydrates an active career plan from facts before stale aggregate fields', () => {
@@ -638,6 +643,7 @@ describe('character creation projection helpers', () => {
         drafted: false,
         anagathics: false,
         anagathicsCost: null,
+        anagathicsCostRoll: null,
         age: null,
         rank: 1,
         rankTitle: 'Courier',

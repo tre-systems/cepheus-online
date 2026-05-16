@@ -21,7 +21,7 @@ import {
   type CharacterCreationCareerPlan,
   type CharacterCreationCompletedTerm,
   type CharacterCreationFlow,
-  type CharacterCreationMusteringBenefit,
+  type CharacterCreationMusteringBenefit
 } from './flow.js'
 import { creationStepFromStatus } from './steps.js'
 
@@ -52,6 +52,7 @@ const completedTermFromReadModel = (
     drafted: term.drafted,
     anagathics: term.anagathics,
     anagathicsCost: term.anagathicsCost,
+    anagathicsCostRoll: term.anagathicsCostRoll,
     age: term.age,
     rank: term.rank,
     rankTitle: term.rankTitle,

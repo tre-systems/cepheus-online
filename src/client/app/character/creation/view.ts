@@ -393,10 +393,18 @@ export const formatCharacterCreationCompletedTermSummary = (
           term.agingMessage ? ` ${term.agingMessage}` : ''
         }`
       : ''
+  const anagathicsDetails = [
+    term.anagathicsCost != null ? `Cr${term.anagathicsCost}` : null,
+    term.anagathicsCostRoll != null
+      ? `cost roll ${term.anagathicsCostRoll}`
+      : null
+  ].filter(Boolean)
   const anagathics =
     term.anagathics === true
       ? `; anagathics${
-          term.anagathicsCost != null ? ` (Cr${term.anagathicsCost})` : ''
+          anagathicsDetails.length > 0
+            ? ` (${anagathicsDetails.join('; ')})`
+            : ''
         }`
       : ''
   const reenlistment =
