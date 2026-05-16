@@ -3,6 +3,10 @@ import { describe, it } from 'node:test'
 
 import { asCharacterId } from '../../../../shared/ids'
 import type { CharacterCreationProjection } from '../../../../shared/state'
+import {
+  CEPHEUS_SRD_RULESET,
+  type CepheusSrdRuleset
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import { createInitialCharacterDraft } from './flow'
 import { createCharacterCreationController } from './controller'
 import { createCharacterCreationWizardController } from './wizard'
@@ -36,6 +40,16 @@ const homeworldProjection = (): CharacterCreationProjection => ({
   history: []
 })
 
+const customRuleset: CepheusSrdRuleset = {
+  ...CEPHEUS_SRD_RULESET,
+  homeWorldSkillsByLawLevel: {
+    'Frontier Law': 'Survey-0'
+  },
+  homeWorldSkillsByTradeCode: {
+    Frontier: 'Survey-0'
+  }
+}
+
 const fieldsRoot = (
   fields: Array<{ key: string; value: string }> = []
 ): HTMLElement =>
@@ -49,10 +63,12 @@ const fieldsRoot = (
 
 const createHarness = ({
   fields = [],
-  projection = homeworldProjection()
+  projection = homeworldProjection(),
+  ruleset = CEPHEUS_SRD_RULESET
 }: {
   fields?: Array<{ key: string; value: string }>
   projection?: CharacterCreationProjection | null
+  ruleset?: CepheusSrdRuleset | null
 } = {}) => {
   let panelOpen = false
   let sheetClosed = false
@@ -88,6 +104,7 @@ const createHarness = ({
       }
     },
     getState: () => null,
+    getRuleset: () => ruleset,
     getSeed: () => ({
       name: 'Scout',
       credits: 0,
@@ -146,6 +163,7 @@ describe('character creation wizard controller', () => {
     assert.equal(controller.readOnly(), false)
     assert.equal(controller.flow()?.step, 'characteristics')
     assert.equal(controller.flow()?.draft.name, 'Scout')
+    assert.equal(controller.flow()?.ruleset, CEPHEUS_SRD_RULESET)
     assert.deepEqual(stats(), {
       panelOpen: true,
       sheetClosed: true,
@@ -154,6 +172,37 @@ describe('character creation wizard controller', () => {
       rendered: 1,
       scrolled: 1,
       error: '',
+      homeworldProgress: 0,
+      finished: 0
+    })
+  })
+
+  it('starts local creation with the resolved room ruleset data', async () => {
+    const { controller, wizard, stats } = createHarness({
+      ruleset: customRuleset
+    })
+
+    await wizard.startNew()
+
+    assert.equal(controller.flow()?.ruleset, customRuleset)
+    assert.equal(stats().published, 1)
+    assert.equal(stats().error, '')
+  })
+
+  it('fails closed when the selected ruleset is unavailable', async () => {
+    const { controller, wizard, stats } = createHarness({ ruleset: null })
+
+    await wizard.startNew()
+
+    assert.equal(controller.flow(), null)
+    assert.deepEqual(stats(), {
+      panelOpen: true,
+      sheetClosed: true,
+      selectedPiece: null,
+      published: 0,
+      rendered: 1,
+      scrolled: 1,
+      error: 'Selected ruleset is unavailable.',
       homeworldProgress: 0,
       finished: 0
     })

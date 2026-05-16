@@ -43,6 +43,7 @@ export interface CharacterSheetWiringOptions {
     command: CharacterCreationCommand
   ) => Promise<unknown>
   ruleset?: CepheusSrdRuleset
+  getRuleset?: () => CepheusSrdRuleset | null | undefined
   reportError: (message: string) => void
   createController?: (
     options: CharacterSheetControllerOptions
@@ -63,6 +64,7 @@ export const createCharacterSheetWiring = ({
   postSheetCommand,
   postCharacterCreationCommand,
   ruleset,
+  getRuleset,
   reportError,
   createController = createCharacterSheetController
 }: CharacterSheetWiringOptions): CharacterSheetController => {
@@ -155,6 +157,7 @@ export const createCharacterSheetWiring = ({
         reason
       }),
     ruleset,
+    getRuleset,
     getCharacterCreationActions: (character) =>
       renderCharacterCreationSheetActions(character, {
         document,

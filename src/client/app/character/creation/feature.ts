@@ -4,6 +4,7 @@ import type {
   GameState,
   PieceState
 } from '../../../../shared/state.js'
+import { resolveRulesetById } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
 import type {
   ClientDiceRollActivity,
   ClientIdentity
@@ -214,6 +215,11 @@ export const createCharacterCreationFeature = ({
 
   const ensurePublished = () => publicationController.ensurePublished()
 
+  const currentRuleset = () => {
+    const resolved = resolveRulesetById(getState()?.rulesetId)
+    return resolved.ok ? resolved.value : null
+  }
+
   const homeworldPublisher = createCharacterCreationHomeworldPublisher({
     getState,
     isReadOnly: () => controller.readOnly(),
@@ -294,6 +300,7 @@ export const createCharacterCreationFeature = ({
     fieldsRoot: elements.characterCreationFields,
     panel,
     getState,
+    getRuleset: currentRuleset,
     getSeed: characterCreationSeed,
     currentProjection: () => controller.currentProjection(),
     homeworldPublisher,

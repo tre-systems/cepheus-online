@@ -3,6 +3,7 @@ import type {
   CharacterCreationProjection,
   GameState
 } from '../../../../shared/state'
+import type { CepheusSrdRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import {
   applyParsedCharacterCreationDraftPatch,
   backCharacterCreationWizardStep,
@@ -21,7 +22,7 @@ import {
 } from './view.js'
 
 export interface CharacterCreationWizardController {
-  start: () => void
+  start: () => boolean
   startNew: () => Promise<void>
   autoAdvanceSetup: () => boolean
   syncFields: () => void
@@ -37,6 +38,7 @@ export interface CharacterCreationWizardControllerDeps {
     'isOpen' | 'show' | 'open' | 'scrollToTop'
   >
   getState: () => GameState | null
+  getRuleset: () => CepheusSrdRuleset | null
   getSeed: () => Pick<
     CharacterCreationDraft,
     'name' | 'credits' | 'equipment' | 'notes'
@@ -59,6 +61,7 @@ export const createCharacterCreationWizardController = ({
   fieldsRoot,
   panel,
   getState,
+  getRuleset,
   getSeed,
   currentProjection,
   homeworldPublisher,
@@ -69,20 +72,29 @@ export const createCharacterCreationWizardController = ({
   renderWizard,
   setError
 }: CharacterCreationWizardControllerDeps): CharacterCreationWizardController => {
-  const start = () => {
+  const start = (): boolean => {
     controller.setReadOnly(false)
     if (!panel.isOpen()) panel.show()
     if (controller.flow()) {
       renderWizard()
       panel.scrollToTop()
-      return
+      return true
+    }
+
+    const ruleset = getRuleset()
+    if (!ruleset) {
+      setError('Selected ruleset is unavailable.')
+      renderWizard()
+      panel.scrollToTop()
+      return false
     }
 
     const seed = getSeed()
     const flow = createManualCharacterCreationFlow({
       state: getState(),
       name: seed.name || null,
-      characterType: 'PLAYER'
+      characterType: 'PLAYER',
+      ruleset
     })
     controller.setFlow({
       ...flow,
@@ -101,6 +113,7 @@ export const createCharacterCreationWizardController = ({
     }
     renderWizard()
     panel.scrollToTop()
+    return true
   }
 
   const startNew = async () => {
@@ -108,8 +121,9 @@ export const createCharacterCreationWizardController = ({
     selectPiece(null)
     closeCharacterSheet()
     panel.open()
-    start()
-    await ensurePublished()
+    if (start()) {
+      await ensurePublished()
+    }
   }
 
   const autoAdvanceSetup = () => {

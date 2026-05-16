@@ -1,5 +1,9 @@
 import type { CharacterId } from '../../../../shared/ids'
 import {
+  deriveCepheusCareerDefinitions,
+  type CepheusSrdRuleset
+} from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+import {
   deriveCharacterCreationReadModel,
   deriveCharacterCreationProjectionReadModel,
   type CharacterCreationReadModel,
@@ -78,6 +82,11 @@ import {
   type CharacterCreationTermSkillTrainingViewModel,
   type CharacterCreationValidationSummary
 } from './view.js'
+
+type CharacterCreationFlowRulesOptions = {
+  ruleset?: CepheusSrdRuleset
+  careers?: ReturnType<typeof deriveCepheusCareerDefinitions>
+}
 
 export type CharacterCreationViewModelMode = 'empty' | 'editable' | 'read-only'
 
@@ -409,6 +418,16 @@ const completedTermsForFlow = ({
     ? completedTermsFromReadModel(readModel)
     : flow.draft.completedTerms
 }
+
+const flowRulesOptions = (
+  flow: CharacterCreationFlow
+): CharacterCreationFlowRulesOptions =>
+  flow.ruleset
+    ? {
+        ruleset: flow.ruleset,
+        careers: deriveCepheusCareerDefinitions(flow.ruleset)
+      }
+    : {}
 
 const readModelCharacteristicStepViewModel = (
   readModel: CharacterCreationReadModel,
@@ -1194,19 +1213,26 @@ const wizardViewModel = ({
       ? (actionSection.legalAction('resolveMusteringBenefit')
           ?.musteringBenefitOptions ?? [])
       : []
+  const rulesOptions = flowRulesOptions(flow)
 
   return {
     step: flow.step,
     projectedStep: projection.step,
     projectedStepCurrent: projection.step === flow.step,
     controlsDisabled: readOnly,
-    progress: deriveCharacterCreationStepProgressItems(flow),
-    buttons: deriveCharacterCreationButtonStates(flow),
-    validation: deriveCharacterCreationValidationSummary(flow),
+    progress: deriveCharacterCreationStepProgressItems(flow, rulesOptions),
+    buttons: deriveCharacterCreationButtonStates(flow, rulesOptions),
+    validation: deriveCharacterCreationValidationSummary(
+      flow,
+      flow.step,
+      rulesOptions
+    ),
     nextStep: deriveCharacterCreationNextStepViewModel(flow, {
+      ...rulesOptions,
       backgroundCascadeChoices
     }),
     careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow, {
+      ...rulesOptions,
       careerChoiceOptions,
       failedQualificationOptions
     }),
@@ -1236,6 +1262,7 @@ const wizardViewModel = ({
     termCascadeChoices: deriveCharacterCreationTermCascadeChoicesViewModel(
       flow,
       {
+        ...rulesOptions,
         termCascadeChoices
       }
     ),
@@ -1288,6 +1315,7 @@ const wizardViewModel = ({
     homeworld:
       flow.step === 'homeworld'
         ? deriveCharacterCreationHomeworldViewModel(flow, {
+            ...rulesOptions,
             backgroundCascadeChoices,
             homeworldChoiceOptions
           })

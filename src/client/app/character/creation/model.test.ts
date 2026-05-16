@@ -2,6 +2,10 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import { asCharacterId } from '../../../../shared/ids'
+import {
+  CEPHEUS_SRD_RULESET,
+  type CepheusSrdRuleset
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type { CareerTerm } from '../../../../shared/character-creation/types'
 import type {
   CharacterCreationProjection,
@@ -21,6 +25,16 @@ import {
 } from './model'
 
 const characterId = asCharacterId('view-model-traveller')
+
+const customRuleset: CepheusSrdRuleset = {
+  ...CEPHEUS_SRD_RULESET,
+  homeWorldSkillsByLawLevel: {
+    'Frontier Law': 'Survey-0'
+  },
+  homeWorldSkillsByTradeCode: {
+    Frontier: 'Survey-0'
+  }
+}
 
 const flow = (
   overrides: Partial<CharacterCreationFlow> = {}
@@ -282,6 +296,40 @@ describe('character creation view model', () => {
       viewModel.pending.summary,
       '1 background cascade choice pending'
     )
+  })
+
+  it('derives local editable choices from the flow ruleset data', () => {
+    const viewModel = deriveCharacterCreationViewModel({
+      flow: flow({
+        ruleset: customRuleset,
+        draft: createInitialCharacterDraft(characterId, {
+          name: 'Iona Vesh',
+          characteristics: {
+            str: 7,
+            dex: 8,
+            end: 7,
+            int: 9,
+            edu: 8,
+            soc: 6
+          },
+          homeworld: {
+            lawLevel: 'Frontier Law',
+            tradeCodes: ['Frontier']
+          },
+          backgroundSkills: ['Survey-0'],
+          pendingCascadeSkills: []
+        })
+      }),
+      projection: projection('HOMEWORLD'),
+      readOnly: false
+    })
+
+    assert.deepEqual(viewModel.wizard?.homeworld?.lawLevelOptions, [
+      { value: 'Frontier Law', label: 'Frontier Law', selected: true }
+    ])
+    assert.deepEqual(viewModel.wizard?.homeworld?.tradeCodeOptions, [
+      { value: 'Frontier', label: 'Frontier', selected: true }
+    ])
   })
 
   it('includes characteristic grid state for the characteristics step', () => {

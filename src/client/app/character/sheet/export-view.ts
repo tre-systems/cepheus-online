@@ -545,7 +545,7 @@ export interface CharacterExportViewModel {
 }
 
 export interface CharacterExportRulesetOptions {
-  ruleset?: CepheusSrdRuleset
+  ruleset?: CepheusSrdRuleset | null
 }
 
 export const deriveCharacterExportViewModel = (
@@ -554,7 +554,8 @@ export const deriveCharacterExportViewModel = (
 ): CharacterExportViewModel | null => {
   if (!character || !isCharacterCreationFinal(character)) return null
 
-  const ruleset = options.ruleset ?? CEPHEUS_SRD_RULESET
+  const ruleset =
+    options.ruleset === undefined ? CEPHEUS_SRD_RULESET : options.ruleset
   const creation = character.creation
   const homeworld = creation?.homeworld
   return {
@@ -564,7 +565,9 @@ export const deriveCharacterExportViewModel = (
     type: character.type,
     age: character.age == null ? '-' : String(character.age),
     homeworld: `${homeworld?.name || 'Unspecified'}${homeworld?.lawLevel ? `, ${homeworld.lawLevel}` : ''}${homeworld?.tradeCodes?.length ? `, ${homeworld.tradeCodes.join(', ')}` : ''}`,
-    backgroundSkills: backgroundSkillSourceValue(creation, ruleset),
+    backgroundSkills: ruleset
+      ? backgroundSkillSourceValue(creation, ruleset)
+      : null,
     careers: careerValue(creation),
     terms: creation?.terms.length ?? 0,
     skills: listValue(sortSkillsForExport(character.skills)),

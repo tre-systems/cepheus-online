@@ -7,6 +7,7 @@ import {
   asPieceId,
   asUserId
 } from '../../../../shared/ids'
+import { CEPHEUS_SRD_RULESET } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   BoardState,
   CharacterSheetPatch,
@@ -95,6 +96,7 @@ describe('character sheet wiring', () => {
       postCharacterCreationCommand: async (command) => {
         characterCreationCommands.push(command)
       },
+      getRuleset: () => CEPHEUS_SRD_RULESET,
       reportError: (message) => {
         errors.push(message)
       },
@@ -122,6 +124,7 @@ describe('character sheet wiring', () => {
     assert.equal(options.getCharacterState(), state)
     assert.equal(options.canEditSheetFields?.(character), true)
     assert.deepEqual(options.getBoardDoorActions(), { actions })
+    assert.equal(options.getRuleset?.(), CEPHEUS_SRD_RULESET)
 
     const patch: CharacterSheetPatch = { notes: 'Updated' }
     await options.sendPatch(character.id, patch)

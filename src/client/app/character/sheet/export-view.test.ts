@@ -445,6 +445,25 @@ describe('character sheet export view', () => {
     )
   })
 
+  it('omits ruleset-specific background sources when the ruleset is unresolved', () => {
+    const creation = {
+      ...finalizedCreation(),
+      homeworld: {
+        name: 'Custom Homeworld',
+        lawLevel: 'Frontier',
+        tradeCodes: ['Research']
+      },
+      backgroundSkills: ['Focus-0', 'Science-0', 'Admin-0']
+    }
+
+    const exportText =
+      derivePlainCharacterExport(character({ creation }), {
+        ruleset: null
+      }) ?? ''
+
+    assert.equal(exportText.includes('Background Skills:'), false)
+  })
+
   it('includes career-entry penalties and draft table provenance', () => {
     const creation = finalizedCreation()
     const firstTerm = creation.terms[0]

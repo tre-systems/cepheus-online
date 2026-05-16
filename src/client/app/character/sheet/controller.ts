@@ -100,6 +100,7 @@ export interface CharacterSheetControllerOptions {
   ) => Promise<unknown>
   createEquipmentItemId?: (character: CharacterState) => string
   ruleset?: CepheusSrdRuleset
+  getRuleset?: () => CepheusSrdRuleset | null | undefined
   getCharacterCreationActions?: (
     character: CharacterState | null
   ) => CharacterSheetCreationActions | null
@@ -146,6 +147,7 @@ export const createCharacterSheetController = ({
   createEquipmentItemId = (character) =>
     `equipment-${character.id}-${Date.now().toString(36)}`,
   ruleset,
+  getRuleset,
   getCharacterCreationActions,
   reportError
 }: CharacterSheetControllerOptions): CharacterSheetController => {
@@ -168,6 +170,9 @@ export const createCharacterSheetController = ({
     }
     return sendPatch(characterId, patch)
   }
+
+  const characterExportRuleset = () =>
+    getRuleset ? getRuleset() : (ruleset ?? undefined)
 
   const sheetRow = (label: string, value: string) => {
     const row = documentApi.createElement('div')
@@ -364,7 +369,9 @@ export const createCharacterSheetController = ({
     body: HTMLElement,
     character: CharacterState | null
   ) => {
-    const exportText = derivePlainCharacterExport(character, { ruleset })
+    const exportText = derivePlainCharacterExport(character, {
+      ruleset: characterExportRuleset()
+    })
     if (!exportText) return
 
     const block = documentApi.createElement('pre')
@@ -395,7 +402,9 @@ export const createCharacterSheetController = ({
     body: HTMLElement,
     character: CharacterState | null
   ) => {
-    const exportView = deriveCharacterExportViewModel(character, { ruleset })
+    const exportView = deriveCharacterExportViewModel(character, {
+      ruleset: characterExportRuleset()
+    })
     if (!exportView) return
 
     const card = documentApi.createElement('div')

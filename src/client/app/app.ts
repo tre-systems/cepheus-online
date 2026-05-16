@@ -1,4 +1,5 @@
 import { asGameId, asUserId, type PieceId } from '../../shared/ids'
+import { resolveRulesetById } from '../../shared/character-creation/cepheus-srd-ruleset.js'
 import type { LiveDiceRollRevealTarget } from '../../shared/live-activity'
 import type { ServerMessage } from '../../shared/protocol'
 import type {
@@ -358,6 +359,11 @@ const selectedPiece = (): PieceState | null => {
   return boardController?.selectedPiece() || null
 }
 
+const currentRuleset = () => {
+  const resolvedRuleset = resolveRulesetById(state?.rulesetId)
+  return resolvedRuleset.ok ? resolvedRuleset.value : null
+}
+
 const boardDoorActions = createBoardDoorActions({
   document,
   identity: clientIdentity,
@@ -381,6 +387,7 @@ const characterSheetController = createCharacterSheetWiring({
   getCommandIdentity: commandIdentity,
   postSheetCommand,
   postCharacterCreationCommand,
+  getRuleset: currentRuleset,
   reportError: setError
 })
 
