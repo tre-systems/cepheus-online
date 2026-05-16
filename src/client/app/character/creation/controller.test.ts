@@ -268,6 +268,23 @@ describe('character creation controller', () => {
     )
   })
 
+  it('does not open read-only follow when the shared read model cannot render it', () => {
+    const unsupportedCreation = creation('HOMEWORLD')
+    unsupportedCreation.state.status =
+      'LEGACY_COMPATIBILITY_ONLY' as CharacterCreationProjection['state']['status']
+    const controller = createCharacterCreationController({
+      getState: () => stateWithCreation(unsupportedCreation),
+      isPanelOpen: () => true,
+      closePanel: () => {}
+    })
+
+    assert.equal(controller.openFollow(characterId), null)
+    assert.equal(controller.flow(), null)
+    assert.equal(controller.readOnly(), false)
+    assert.equal(controller.selectedCharacterId(), null)
+    assert.equal(controller.viewModel().mode, 'empty')
+  })
+
   it('updates multi-signal follow state atomically', () => {
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(creation('BASIC_TRAINING')),

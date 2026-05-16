@@ -289,6 +289,29 @@ describe('character creation follow helpers', () => {
     }
   })
 
+  it('fails closed for read-only follow statuses that are not read-model backed', () => {
+    const unsupportedCreation = creation('HOMEWORLD')
+    unsupportedCreation.state.status =
+      'LEGACY_COMPATIBILITY_ONLY' as CharacterCreationProjection['state']['status']
+
+    const characterState =
+      stateWithCreation(unsupportedCreation).characters[characterId]
+    assert.equal(canRenderReadOnlyFollowFromReadModel(characterState), false)
+
+    const refreshed = refreshFollowedCharacterCreationFlowFromState({
+      state: stateWithCreation(unsupportedCreation),
+      currentFlow: fallbackFlow,
+      selectedCharacterId: characterId,
+      readOnly: true,
+      panelOpen: true
+    })
+
+    assert.equal(refreshed.flow, null)
+    assert.equal(refreshed.readOnly, false)
+    assert.equal(refreshed.shouldRender, false)
+    assert.equal(refreshed.shouldClose, true)
+  })
+
   it('refreshes followed mustering equipment setup from the projection', () => {
     const equipmentFlow = {
       ...fallbackFlow,

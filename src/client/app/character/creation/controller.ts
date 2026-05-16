@@ -135,15 +135,13 @@ export const createCharacterCreationController = ({
     openFollow: (characterId, { readOnly: nextReadOnly = true } = {}) => {
       const character = getState()?.characters[characterId] ?? null
       if (!character?.creation) return null
-      const flowlessReadModelFollow = nextReadOnly
-        ? canRenderReadOnlyFollowFromReadModel(character)
-        : false
-      const nextFlow = flowlessReadModelFollow
-        ? null
-        : compatibilityFlowFromProjectedCharacter(character)
-      if (!flowlessReadModelFollow && !nextFlow) {
+      if (nextReadOnly && !canRenderReadOnlyFollowFromReadModel(character)) {
         return null
       }
+      const nextFlow = nextReadOnly
+        ? null
+        : compatibilityFlowFromProjectedCharacter(character)
+      if (!nextReadOnly && !nextFlow) return null
 
       batch(() => {
         bumpProjectionRevision()

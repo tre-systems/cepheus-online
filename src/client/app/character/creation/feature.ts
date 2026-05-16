@@ -259,20 +259,10 @@ export const createCharacterCreationFeature = ({
   const openCharacterCreationFollow = (
     characterId: Parameters<typeof lifecycleController.openFollow>[0],
     options: Parameters<typeof lifecycleController.openFollow>[1],
-    fallbackState: ReturnType<typeof getState>
+    _fallbackState: ReturnType<typeof getState>
   ): boolean => {
     if (lifecycleController.openFollow(characterId, options)) return true
-    const fallbackFlow = controller.syncFlowFromRoomState(
-      fallbackState,
-      characterId
-    )
-    if (!fallbackFlow) return false
-    controller.setSelectedCharacterId(characterId)
-    controller.setReadOnly(options?.readOnly ?? true)
-    panel.open()
-    renderWizard()
-    panel.scrollToTop()
-    return true
+    return false
   }
 
   const presenceDock = createCreationPresenceDock({

@@ -2615,7 +2615,7 @@ test.describe('character creation smoke', () => {
         lateSpectatorFields.locator('.creation-draft-fallback')
       ).toHaveCount(0, { timeout: 100 })
 
-      await waitForDiceReveal(page)
+      await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
       await expect(spectatorFields).toContainText(/Apply basic training/, {
         timeout: 15_000
       })
@@ -3605,7 +3605,7 @@ test.describe('character creation smoke', () => {
         '.creation-term-skill-rolls span'
       )
 
-      await waitForDiceReveal(page)
+      await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
 
       let termSkill: ProjectedTermSkill | null = null
       await expect
