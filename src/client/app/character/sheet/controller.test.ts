@@ -525,6 +525,12 @@ describe('character sheet controller', () => {
         failedToQualify: false,
         characteristicChanges: [],
         creationComplete: true,
+        homeworld: {
+          name: 'Regina',
+          lawLevel: 'Low Law',
+          tradeCodes: ['Asteroid']
+        },
+        backgroundSkills: ['Slug Pistol-0', 'Zero-G-0'],
         timeline: [
           {
             eventId: asEventId('event-1'),
@@ -575,7 +581,12 @@ describe('character sheet controller', () => {
       ['Broker-2', 'Recon-0', 'Vacc Suit-0']
     )
     findByText(harness.elements.sheetBody, 'Homeworld')
-    findByText(harness.elements.sheetBody, 'Unspecified')
+    findByText(harness.elements.sheetBody, 'Regina, Low Law, Asteroid')
+    findByText(harness.elements.sheetBody, 'Background Skills')
+    findByText(
+      harness.elements.sheetBody,
+      'Slug Pistol-0 (law Low Law), Zero-G-0 (trade Asteroid)'
+    )
     findByText(harness.elements.sheetBody, 'Characteristics')
     findByText(
       harness.elements.sheetBody,
@@ -604,7 +615,8 @@ describe('character sheet controller', () => {
         'Characteristics: Str 6, Dex 8, End 7, Int 9 (+1), Edu 10 (+1), Soc 6',
         'Type: PLAYER',
         'Age: 34',
-        'Homeworld: Unspecified',
+        'Homeworld: Regina, Low Law, Asteroid',
+        'Background Skills: Slug Pistol-0 (law Low Law), Zero-G-0 (trade Asteroid)',
         'Careers: Scout rank 0',
         'Terms: 1',
         'Skills: Broker-2, Recon-0, Vacc Suit-0',

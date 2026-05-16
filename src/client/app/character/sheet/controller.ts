@@ -450,6 +450,9 @@ export const createCharacterSheetController = ({
       sheetRow('UPP', exportView.upp),
       sheetRow('Characteristics', exportView.characteristics),
       sheetRow('Homeworld', exportView.homeworld),
+      ...(exportView.backgroundSkills
+        ? [sheetRow('Background Skills', exportView.backgroundSkills)]
+        : []),
       sheetRow('Careers', exportView.careers),
       sheetRow('Terms', String(exportView.terms)),
       sheetRow('Skills', exportView.skills),

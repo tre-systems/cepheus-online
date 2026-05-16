@@ -1238,6 +1238,9 @@ Tasks:
   terms, credits, and equipment before the plain export block.
 - Done: final sheet and plain export presentation now share a structured export
   view model so later review/export polish has one client read model to extend.
+- Done: the visible final sheet now surfaces projected homeworld/background
+  skill provenance from the structured export view model instead of leaving it
+  only in the plain export block.
 - Done: semantic term facts are authoritative for finalization/export when they
   are present, including facts-only terms and conflicting legacy aggregate
   fields. Finalization notes derive survival summaries from projected term
