@@ -643,6 +643,27 @@ const musteringBenefitMetaLabel = (
   return 'No material benefit'
 }
 
+const musteringBenefitActionTitle = ({
+  career,
+  kind,
+  modifier
+}: {
+  career: string
+  kind: BenefitKind
+  modifier: number
+}): string => {
+  const target = [
+    career.trim(),
+    musteringBenefitKindLabel(kind).toLowerCase(),
+    'benefit'
+  ]
+    .filter(Boolean)
+    .join(' ')
+  const rollModifier = modifier === 0 ? '' : `${signedModifier(modifier)} DM`
+
+  return [target, rollModifier].filter(Boolean).join('; ')
+}
+
 export const formatCharacterCreationMusteringBenefitSummary = (
   benefit: CharacterCreationMusteringBenefit
 ): string =>
@@ -1995,7 +2016,7 @@ export const deriveCharacterCreationMusteringOutViewModel = (
         kind,
         label,
         disabled,
-        title: modifier === 0 ? '' : `${modifier > 0 ? '+' : ''}${modifier} DM`
+        title: musteringBenefitActionTitle({ career, kind, modifier })
       }
     })
   }

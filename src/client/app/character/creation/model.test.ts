@@ -2231,7 +2231,7 @@ describe('character creation view model', () => {
         kind: 'cash',
         label: 'Roll cash',
         disabled: false,
-        title: ''
+        title: 'Merchant cash benefit'
       }
     ])
     assert.equal(viewModel.wizard?.controlsDisabled, true)

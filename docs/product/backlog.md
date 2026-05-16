@@ -1193,6 +1193,8 @@ Tasks:
   place. Done: mustering benefit cards now classify material results as
   equipment items, characteristic gains, or no material benefit using the
   shared material benefit parser rather than raw label display alone.
+  Mustering action titles also now preserve career, benefit kind, and DM
+  provenance without changing the compact button labels.
 - Keep continuing into a new career after mustering out covered as new edge
   cases are added.
 - Keep regression coverage proving remaining benefit counts are projection-fed,

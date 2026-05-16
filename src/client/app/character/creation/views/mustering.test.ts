@@ -99,6 +99,7 @@ describe('character creation mustering view', () => {
     const actions = node.children[3]
     assert.equal(actions?.children.length, 1)
     assert.equal(actions?.children[0]?.textContent, 'Roll cash')
+    assert.equal(actions?.children[0]?.title, 'Merchant cash benefit')
 
     actions?.children[0]?.click()
     await Promise.resolve()
