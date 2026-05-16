@@ -1446,6 +1446,9 @@ The next batch should run like this, in this order:
    grow the repeat runner when new SRD branches are added, keep later-term
    two-tab spectator follow checks healthy, add mobile viewport assertions for
    new controls, and keep reveal timing coverage for every roll-bearing action.
+   Done: repeat-run and phone-width character creation smoke paths have focused
+   npm scripts so high-risk UX regressions can be isolated without running the
+   full browser smoke.
 6. Finish the remaining projection/read-model consolidation: expose compact
    follower view models from semantic timeline plus per-term facts, keep
    extending the structured final-sheet/export model as provenance matures,

@@ -31,6 +31,10 @@ test plan should continue to grow in layers as implementation expands.
   traveller browser checks.
 - `npm run test:e2e:character-creation:multi-career`: targeted multi-career
   browser coverage.
+- `npm run test:e2e:character-creation:repeat`: targeted disposable traveller
+  repeat-run coverage with failure artifacts.
+- `npm run test:e2e:character-creation:mobile`: targeted phone-width creator
+  control coverage.
 - `npm run test:e2e:character-creation:finalization`: targeted mustering and
   final-sheet browser coverage.
 - `npm run test:e2e:tactical`: focused Playwright coverage for board creation,
@@ -117,9 +121,9 @@ The browser-test slice follows the Delta-V pattern, adapted for this Worker
 app:
 
 - an executable character creation smoke that drives the real app shell
-- named character-creation scripts for reveal, death, multi-career, and
-  finalization checks so local failures can be isolated before running the full
-  smoke
+- named character-creation scripts for reveal, death, repeat-run, mobile,
+  multi-career, and finalization checks so local failures can be isolated before
+  running the full smoke
 - repeat runs that create several disposable travellers and leave screenshots
   or DOM snapshots on failure
 - two-tab owner/spectator tests for live character creation follow mode
