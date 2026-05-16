@@ -1554,6 +1554,118 @@ describe('viewer filtering', () => {
     }
   })
 
+  it('fails closed when redacted draft fallback ruleset is unavailable', () => {
+    const state = buildState()
+    state.rulesetId = 'custom-rules'
+    addDiceRoll(state, pastRevealAt)
+    state.diceLog.push({
+      id: 'roll-2',
+      actorId: asUserId('player'),
+      createdAt: '2026-05-03T00:00:02.000Z',
+      revealAt: futureRevealAt,
+      expression: '1d6',
+      reason: 'Draft',
+      rolls: [4],
+      total: 4
+    })
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Traveller',
+      active: true,
+      notes: '',
+      age: 22,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'BASIC_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Navy',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false,
+            draft: 1,
+            facts: {
+              draft: {
+                rollEventId: asEventId('roll-2'),
+                roll: { expression: '1d6', rolls: [4], total: 4 },
+                tableRoll: 4,
+                acceptedCareer: 'Navy'
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Navy', rank: 0 }],
+        canEnterDraft: false,
+        failedToQualify: false,
+        failedQualification: null,
+        characteristicChanges: [],
+        creationComplete: false,
+        timeline: [
+          {
+            eventId: asEventId('game-1:3'),
+            seq: 3,
+            createdAt: '2026-05-03T00:00:01.000Z',
+            eventType: 'CharacterCreationQualificationResolved',
+            rollEventId: asEventId('roll-1')
+          },
+          {
+            eventId: asEventId('game-1:4'),
+            seq: 4,
+            createdAt: '2026-05-03T00:00:02.000Z',
+            eventType: 'CharacterCreationDraftResolved',
+            rollEventId: asEventId('roll-2')
+          }
+        ],
+        actionPlan: {
+          status: 'BASIC_TRAINING',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('player'),
+        role: 'PLAYER'
+      },
+      { nowMs }
+    )
+
+    const creation = filtered.characters[asCharacterId('char-1')]?.creation
+    assert.equal(creation?.state.status, 'CAREER_SELECTION')
+    assert.equal(creation?.failedToQualify, true)
+    assert.deepEqual(creation?.actionPlan, {
+      status: 'CAREER_SELECTION',
+      pendingDecisions: [],
+      legalActions: []
+    })
+  })
+
   it('does not expose failed qualification fallback when qualification and draft are hidden', () => {
     const state = buildState()
     addDiceRoll(state, futureRevealAt)

@@ -1,17 +1,10 @@
-import type { UserId } from './ids'
 import {
-  deriveCharacterCreationActivityRevealAt,
-  type CharacterCreationActivityDescriptor,
-  type LiveActivityDescriptor
-} from './live-activity'
+  type CepheusSrdRuleset,
+  resolveRulesetById
+} from './character-creation/cepheus-srd-ruleset'
+import { deriveUnrevealedCreationRollIds } from './character-creation/reveal'
 import type {
-  CharacterState,
-  CharacteristicKey,
-  GameState,
-  PlayerState,
-  PieceState
-} from './state'
-import type {
+  CareerCreationActionPlan,
   CareerCreationBenefitFact,
   CareerCreationEvent,
   CareerCreationStatus,
@@ -22,7 +15,19 @@ import {
   deriveCareerCreationActionPlan,
   deriveMaterialBenefitEffect
 } from './characterCreation'
-import { deriveUnrevealedCreationRollIds } from './character-creation/reveal'
+import type { UserId } from './ids'
+import {
+  type CharacterCreationActivityDescriptor,
+  deriveCharacterCreationActivityRevealAt,
+  type LiveActivityDescriptor
+} from './live-activity'
+import type {
+  CharacteristicKey,
+  CharacterState,
+  GameState,
+  PieceState,
+  PlayerState
+} from './state'
 
 export type ViewerRole = PlayerState['role']
 
@@ -406,10 +411,35 @@ const redactQualificationOutcome = (
   redactCreationProgress(character, 'CAREER_SELECTION')
 }
 
+const failClosedActionPlan = ({
+  state,
+  pendingDecisions
+}: NonNullable<CharacterState['creation']>): CareerCreationActionPlan => ({
+  status: state.status,
+  pendingDecisions: [...(pendingDecisions ?? [])],
+  legalActions: []
+})
+
+const deriveVisibleActionPlan = (
+  character: CharacterState,
+  ruleset: CepheusSrdRuleset | null
+): CareerCreationActionPlan | null => {
+  const creation = character.creation
+  if (!creation) return null
+
+  return ruleset
+    ? deriveCareerCreationActionPlan(creation, {
+        characteristics: character.characteristics,
+        ruleset
+      })
+    : failClosedActionPlan(creation)
+}
+
 const redactDraftOutcome = (
   character: CharacterState,
   termIndex: number,
-  restoreFailedQualificationFallback: boolean
+  restoreFailedQualificationFallback: boolean,
+  ruleset: CepheusSrdRuleset | null
 ): void => {
   const creation = character.creation
   if (!creation) return
@@ -421,9 +451,7 @@ const redactDraftOutcome = (
   if (!restoreFailedQualificationFallback) return
 
   creation.failedToQualify = true
-  creation.actionPlan = deriveCareerCreationActionPlan(creation, {
-    characteristics: character.characteristics
-  })
+  creation.actionPlan = deriveVisibleActionPlan(character, ruleset) ?? undefined
 }
 
 const hasVisiblePrecedingQualificationResolution = (
@@ -545,7 +573,8 @@ const redactFinalizedTermOutcomeNotes = (
 
 const redactUnrevealedCreationFacts = (
   character: CharacterState,
-  unrevealedRollIds: ReadonlySet<string>
+  unrevealedRollIds: ReadonlySet<string>,
+  ruleset: CepheusSrdRuleset | null
 ): void => {
   const creation = character.creation
   if (!creation || unrevealedRollIds.size === 0) return
@@ -600,7 +629,8 @@ const redactUnrevealedCreationFacts = (
           creation,
           facts.draft?.rollEventId,
           unrevealedRollIds
-        )
+        ),
+        ruleset
       )
       delete facts.draft
     }
@@ -773,13 +803,15 @@ export const filterGameStateForViewer = (
   )
   if (!canViewerSeeUnrevealedDice(state, resolvedViewer)) {
     const unrevealedRollIds = unrevealedDiceRollIds(state, nowMs)
+    const resolvedRuleset = resolveRulesetById(state.rulesetId)
+    const ruleset = resolvedRuleset.ok ? resolvedRuleset.value : null
     for (const roll of filtered.diceLog) {
       if (Date.parse(roll.revealAt) <= nowMs) continue
       delete (roll as unknown as Record<string, unknown>).rolls
       delete (roll as unknown as Record<string, unknown>).total
     }
     for (const character of Object.values(filtered.characters)) {
-      redactUnrevealedCreationFacts(character, unrevealedRollIds)
+      redactUnrevealedCreationFacts(character, unrevealedRollIds, ruleset)
     }
   }
 
