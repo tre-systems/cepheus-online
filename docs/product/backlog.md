@@ -1454,6 +1454,10 @@ The next batch should run like this, in this order:
    extending the structured final-sheet/export model as provenance matures,
    reduce compatibility fallbacks for older aggregate term fields, and reject
    commands that are not legal from the current projection.
+   Done: the shared character-creation read model now exposes a compact
+   follower summary derived from semantic timeline entries and per-term facts,
+   including latest event metadata, active career, term status, rank, skill
+   count, and benefit count.
 7. Harden the SRD term loop in browser automation: repeated refreshes, mobile
    layouts, and multi-term continuation.
 8. Keep optional mishap tables behind an explicit variant; default failed

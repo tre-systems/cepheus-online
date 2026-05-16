@@ -49,6 +49,7 @@ export interface CharacterCreationProjectionReadModel {
   pendingDecisions: CareerCreationActionContext['pendingDecisions']
   actionContext: CareerCreationActionContext
   actionPlan: CareerCreationActionPlan
+  follower: CharacterCreationFollowerReadModel
 }
 
 export interface CharacterCreationCompletedTermReadModel {
@@ -84,6 +85,34 @@ export interface CharacterCreationSheetPreview {
   skills: string[]
   equipment: CharacterEquipmentItem[]
   credits: number
+}
+
+export interface CharacterCreationFollowerTermReadModel {
+  termNumber: number
+  career: string
+  status: 'active' | 'completed' | 'failed'
+  survivalPassed: boolean | null
+  rankTitle: string | null
+  skillCount: number
+  benefitCount: number
+  legacyProjection: boolean
+}
+
+export interface CharacterCreationFollowerReadModel {
+  statusLabel: string
+  progressLabel: string
+  latestEvent:
+    | {
+        eventType: string
+        seq: number
+        rollEventId: string | null
+      }
+    | null
+  activeCareer: string | null
+  term: CharacterCreationFollowerTermReadModel | null
+  creationComplete: boolean
+  isPlayable: boolean
+  isDeceased: boolean
 }
 
 export interface CharacterCreationReadModel
@@ -248,6 +277,79 @@ const actionContextFromPlan = ({
   ...(canEnterDraft === undefined ? {} : { canEnterDraft })
 })
 
+const followerTermStatus = (
+  term: CareerTerm
+): CharacterCreationFollowerTermReadModel['status'] => {
+  if (term.facts?.survival?.passed === false) return 'failed'
+  if (term.complete || term.musteringOut) return 'completed'
+  return 'active'
+}
+
+const followerTermReadModel = (
+  term: CareerTerm,
+  index: number
+): CharacterCreationFollowerTermReadModel => {
+  const advancement = term.facts?.advancement
+  const rank = advancement && !advancement.skipped ? advancement.rank : null
+
+  return {
+    termNumber: index + 1,
+    career: term.career,
+    status: followerTermStatus(term),
+    survivalPassed:
+      term.facts?.survival?.passed ?? (term.survival == null ? null : true),
+    rankTitle: rank?.title ?? null,
+    skillCount:
+      term.facts?.termSkillRolls?.length ?? term.skillsAndTraining.length,
+    benefitCount: term.facts?.musteringBenefits?.length ?? term.benefits.length,
+    legacyProjection: !hasProjectedCareerTermFacts(term)
+  }
+}
+
+const deriveFollowerReadModel = ({
+  statusLabel,
+  timeline,
+  terms,
+  creationComplete,
+  isPlayable,
+  isDeceased
+}: {
+  statusLabel: string
+  timeline: readonly CharacterCreationTimelineEntry[]
+  terms: readonly CareerTerm[]
+  creationComplete: boolean
+  isPlayable: boolean
+  isDeceased: boolean
+}): CharacterCreationFollowerReadModel => {
+  const latestEvent = timeline.at(-1) ?? null
+  const activeTermIndex = terms.length - 1
+  const activeTerm = terms.at(-1) ?? null
+  const term =
+    activeTerm && activeTermIndex >= 0
+      ? followerTermReadModel(activeTerm, activeTermIndex)
+      : null
+  const progressLabel = term
+    ? `${statusLabel}; term ${term.termNumber}: ${term.career}`
+    : statusLabel
+
+  return {
+    statusLabel,
+    progressLabel,
+    latestEvent: latestEvent
+      ? {
+          eventType: latestEvent.eventType,
+          seq: latestEvent.seq,
+          rollEventId: latestEvent.rollEventId ?? null
+        }
+      : null,
+    activeCareer: term?.career ?? null,
+    term,
+    creationComplete,
+    isPlayable,
+    isDeceased
+  }
+}
+
 export const deriveCharacterCreationProjectionReadModel = (
   creation: CharacterCreationProjection
 ): CharacterCreationProjectionReadModel => {
@@ -258,24 +360,27 @@ export const deriveCharacterCreationProjectionReadModel = (
   })
   const terms = creation.terms.map(cloneTerm)
   const status = creation.state.status
+  const statusLabel = characterCreationStatusLabel(status)
+  const timeline = (creation.timeline ?? []).map(cloneTimelineEntry)
+  const isActive =
+    !creation.creationComplete && status !== 'PLAYABLE' && status !== 'DECEASED'
+  const isPlayable = status === 'PLAYABLE'
+  const isDeceased = status === 'DECEASED'
 
   return {
     status,
-    statusLabel: characterCreationStatusLabel(status),
+    statusLabel,
     step: characterCreationStepFromStatus(status),
     creationComplete: creation.creationComplete,
-    isActive:
-      !creation.creationComplete &&
-      status !== 'PLAYABLE' &&
-      status !== 'DECEASED',
-    isPlayable: status === 'PLAYABLE',
-    isDeceased: status === 'DECEASED',
+    isActive,
+    isPlayable,
+    isDeceased,
     termCount: terms.length,
     completedTermCount: terms.filter(
       (term) => term.complete || term.musteringOut
     ).length,
-    timelineCount: creation.timeline?.length ?? 0,
-    timeline: (creation.timeline ?? []).map(cloneTimelineEntry),
+    timelineCount: timeline.length,
+    timeline,
     activeTerm: terms.at(-1) ?? null,
     terms,
     completedTerms: terms
@@ -289,7 +394,15 @@ export const deriveCharacterCreationProjectionReadModel = (
     })),
     pendingDecisions: [...(actionContext.pendingDecisions ?? [])],
     actionContext,
-    actionPlan
+    actionPlan,
+    follower: deriveFollowerReadModel({
+      statusLabel,
+      timeline,
+      terms,
+      creationComplete: creation.creationComplete,
+      isPlayable,
+      isDeceased
+    })
   }
 }
 

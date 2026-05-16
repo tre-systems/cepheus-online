@@ -360,6 +360,125 @@ describe('character creation shared view state', () => {
     ])
   })
 
+  it('derives compact follower state from timeline and semantic term facts', () => {
+    const readModel = deriveCharacterCreationProjectionReadModel(
+      projection({
+        state: createCareerCreationState('MUSTERING_OUT', creationContext),
+        timeline: [
+          {
+            eventId: asEventId('event-1'),
+            seq: 11,
+            createdAt: '2026-05-14T10:00:00.000Z',
+            eventType: 'CharacterCreationSurvivalResolved',
+            rollEventId: asEventId('roll-1')
+          },
+          {
+            eventId: asEventId('event-2'),
+            seq: 12,
+            createdAt: '2026-05-14T10:00:04.000Z',
+            eventType: 'CharacterCreationMusteringBenefitRolled',
+            rollEventId: asEventId('roll-2')
+          }
+        ],
+        terms: [
+          completedTerm({
+            facts: {
+              survival: {
+                passed: true,
+                canCommission: false,
+                canAdvance: true,
+                survival: {
+                  expression: '2d6',
+                  rolls: [5, 4],
+                  total: 9,
+                  characteristic: 'end',
+                  modifier: 1,
+                  target: 7,
+                  success: true
+                }
+              },
+              advancement: {
+                skipped: false,
+                passed: true,
+                advancement: {
+                  expression: '2d6',
+                  rolls: [6, 4],
+                  total: 10,
+                  characteristic: 'edu',
+                  modifier: 1,
+                  target: 8,
+                  success: true
+                },
+                rank: {
+                  career: 'Scout',
+                  previousRank: 0,
+                  newRank: 1,
+                  title: 'Courier',
+                  bonusSkill: 'Pilot-1'
+                }
+              },
+              termSkillRolls: [
+                {
+                  career: 'Scout',
+                  table: 'serviceSkills',
+                  roll: {
+                    expression: '1d6',
+                    rolls: [3],
+                    total: 3
+                  },
+                  tableRoll: 3,
+                  rawSkill: 'Pilot-1',
+                  skill: 'Pilot-1',
+                  characteristic: null,
+                  pendingCascadeSkill: null
+                }
+              ],
+              musteringBenefits: [
+                {
+                  career: 'Scout',
+                  kind: 'cash',
+                  roll: {
+                    expression: '1d6',
+                    rolls: [4],
+                    total: 4
+                  },
+                  modifier: 0,
+                  tableRoll: 4,
+                  value: '20000',
+                  credits: 20000
+                }
+              ]
+            }
+          })
+        ]
+      })
+    )
+
+    assert.deepEqual(readModel.follower, {
+      statusLabel: 'Mustering Out',
+      progressLabel: 'Mustering Out; term 1: Scout',
+      latestEvent: {
+        eventType: 'CharacterCreationMusteringBenefitRolled',
+        seq: 12,
+        rollEventId: asEventId('roll-2')
+      },
+      activeCareer: 'Scout',
+      term: {
+        termNumber: 1,
+        career: 'Scout',
+        status: 'completed',
+        survivalPassed: true,
+        rankTitle: 'Courier',
+        skillCount: 1,
+        benefitCount: 1,
+        legacyProjection: false
+      },
+      creationComplete: false,
+      isPlayable: false,
+      isDeceased: false
+    })
+  })
+
   it('derives sheet preview and progress counters from a character', () => {
     const readModel = deriveCharacterCreationReadModel(
       character(
