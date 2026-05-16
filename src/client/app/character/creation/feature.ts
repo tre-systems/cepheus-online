@@ -4,7 +4,7 @@ import type {
   GameState,
   PieceState
 } from '../../../../shared/state.js'
-import { resolveRulesetReference } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
 import type {
   ClientDiceRollActivity,
   ClientIdentity
@@ -112,6 +112,7 @@ export interface CreateCharacterCreationFeatureOptions {
   resolveDiceReveal: Parameters<
     typeof createDiceOverlayWiring
   >[0]['resolveDiceReveal']
+  getRuleset: () => CepheusRuleset | null
   reportError: (message: string) => void
 }
 
@@ -148,6 +149,7 @@ export const createCharacterCreationFeature = ({
   waitForDiceRevealOrDelay,
   refreshStateAfterDiceReveal,
   resolveDiceReveal,
+  getRuleset,
   reportError
 }: CreateCharacterCreationFeatureOptions): CharacterCreationFeature => {
   let commandController: CharacterCreationCommandController
@@ -186,6 +188,7 @@ export const createCharacterCreationFeature = ({
 
   const controller = createCharacterCreationController({
     getState,
+    getRuleset,
     isPanelOpen: () => panel.isOpen(),
     closePanel: () => panel.close()
   })
@@ -214,11 +217,6 @@ export const createCharacterCreationFeature = ({
   })
 
   const ensurePublished = () => publicationController.ensurePublished()
-
-  const currentRuleset = () => {
-    const resolved = resolveRulesetReference(getState()?.rulesetId)
-    return resolved.ok ? resolved.value.ruleset : null
-  }
 
   const homeworldPublisher = createCharacterCreationHomeworldPublisher({
     getState,
@@ -300,7 +298,7 @@ export const createCharacterCreationFeature = ({
     fieldsRoot: elements.characterCreationFields,
     panel,
     getState,
-    getRuleset: currentRuleset,
+    getRuleset,
     getSeed: characterCreationSeed,
     currentProjection: () => controller.currentProjection(),
     homeworldPublisher,

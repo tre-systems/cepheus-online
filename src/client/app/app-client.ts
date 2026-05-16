@@ -1,5 +1,4 @@
 import { asGameId, asUserId, type PieceId } from '../../shared/ids'
-import { resolveRulesetReference } from '../../shared/character-creation/cepheus-srd-ruleset.js'
 import type { LiveDiceRollRevealTarget } from '../../shared/live-activity'
 import type { ServerMessage } from '../../shared/protocol'
 import type {
@@ -61,6 +60,7 @@ import { createAppLifecycleWiring } from './core/lifecycle.js'
 import { createCharacterSheetControlsWiring } from './character/sheet/controls-wiring.js'
 import { createRoomBootstrapScene } from './room/bootstrap-scene.js'
 import { createBoardDoorActions } from './board/doors.js'
+import { rulesetFromState } from './ruleset-provider.js'
 
 export interface AppClient {
   start: () => void
@@ -406,10 +406,7 @@ export const createAppClient = ({
     return boardController?.selectedPiece() || null
   }
 
-  const currentRuleset = () => {
-    const resolvedRuleset = resolveRulesetReference(state?.rulesetId)
-    return resolvedRuleset.ok ? resolvedRuleset.value.ruleset : null
-  }
+  const currentRuleset = () => rulesetFromState(state)
 
   const boardDoorActions = createBoardDoorActions({
     document,
@@ -462,6 +459,7 @@ export const createAppClient = ({
     waitForDiceRevealOrDelay,
     refreshStateAfterDiceReveal: fetchState,
     resolveDiceReveal,
+    getRuleset: currentRuleset,
     reportError: setError
   })
 

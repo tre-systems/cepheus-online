@@ -82,6 +82,7 @@ const createHarness = ({
 
   const controller = createCharacterCreationController({
     getState: () => null,
+    getRuleset: () => ruleset ?? null,
     isPanelOpen: () => panelOpen,
     closePanel: () => {
       panelOpen = false

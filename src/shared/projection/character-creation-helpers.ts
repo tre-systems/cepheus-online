@@ -1,7 +1,5 @@
-import {
-  resolveRulesetReference,
-  type CepheusRuleset
-} from '../character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from '../character-creation/cepheus-srd-ruleset'
+import { resolveDefaultRulesetData } from '../character-creation/default-ruleset-provider'
 import type { CareerCreationActionPlan } from '../character-creation/types'
 import type { Result } from '../result'
 import type {
@@ -44,15 +42,6 @@ export const defaultCharacteristics = (): CharacterCharacteristics => ({
   edu: null,
   soc: null
 })
-
-const resolveRulesetByProvider: CharacterCreationRulesetResolver = (
-  rulesetId
-) => {
-  const resolved = resolveRulesetReference(rulesetId)
-  return resolved.ok
-    ? { ok: true, value: resolved.value.ruleset }
-    : { ok: false, error: resolved.error }
-}
 
 export const applyCharacterSheetPatch = (
   character: CharacterState,
@@ -303,7 +292,7 @@ const refreshCharacterCreationActionPlans = (
   if (creationCharacters.length === 0) return state
 
   const resolvedRuleset = (
-    options.resolveRulesetById ?? resolveRulesetByProvider
+    options.resolveRulesetById ?? resolveDefaultRulesetData
   )(state.rulesetId)
   const ruleset = resolvedRuleset.ok ? resolvedRuleset.value : null
   for (const character of creationCharacters) {

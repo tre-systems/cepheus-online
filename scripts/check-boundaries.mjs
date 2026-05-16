@@ -44,6 +44,10 @@ const legacyCreationFlowAdapterAllowed = new Set([
 const defaultRulesetHelperDefinitionAllowed = new Set([
   'src/shared/character-creation/legal-actions.ts'
 ])
+const rulesetResolverImportAllowed = new Set([
+  'src/shared/character-creation/cepheus-srd-ruleset.ts',
+  'src/shared/character-creation/default-ruleset-provider.ts'
+])
 
 const failures = []
 
@@ -160,17 +164,14 @@ for (const path of sourceFiles) {
     })
   }
 
-  if (
-    !isTestFile(path) &&
-    path !== 'src/shared/character-creation/cepheus-srd-ruleset.ts'
-  ) {
+  if (!isTestFile(path) && !rulesetResolverImportAllowed.has(path)) {
     checkLinePattern({
       path,
       lines,
       pattern:
-        /import\s+\{[^}]*\bresolveRulesetById\b[^}]*\}\s+from\s+['"].*cepheus-srd-ruleset(?:\.js)?['"]/,
+        /import\s+\{[^}]*\b(resolveRulesetById|resolveRulesetReference)\b[^}]*\}\s+from\s+['"].*cepheus-srd-ruleset(?:\.js)?['"]/,
       message:
-        'production code must use the ruleset provider boundary instead of importing resolveRulesetById directly'
+        'production code must use the ruleset provider boundary instead of importing bundled ruleset resolvers directly'
     })
   }
 }

@@ -98,6 +98,7 @@ describe('character creation controller', () => {
   it('stores local flow, read-only mode, and selected character through signals', () => {
     const controller = createCharacterCreationController({
       getState: () => null,
+      getRuleset: () => null,
       isPanelOpen: () => false,
       closePanel: () => {}
     })
@@ -131,6 +132,7 @@ describe('character creation controller', () => {
     let panelClosed = false
     const controller = createCharacterCreationController({
       getState: () => currentState,
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {
         panelClosed = true
@@ -173,6 +175,7 @@ describe('character creation controller', () => {
     ]
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(projected),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -207,6 +210,7 @@ describe('character creation controller', () => {
     ]
     const controller = createCharacterCreationController({
       getState: () => null,
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -225,6 +229,7 @@ describe('character creation controller', () => {
     const projected = creation('CHARACTERISTICS')
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(projected),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -247,6 +252,7 @@ describe('character creation controller', () => {
     const projected = creation('CHARACTERISTICS')
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(projected),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -265,6 +271,7 @@ describe('character creation controller', () => {
     const projected = creation('HOMEWORLD')
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(projected),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -334,6 +341,7 @@ describe('character creation controller', () => {
     }
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(projected),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -357,6 +365,7 @@ describe('character creation controller', () => {
       'LEGACY_COMPATIBILITY_ONLY' as CharacterCreationProjection['state']['status']
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(unsupportedCreation),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -371,6 +380,7 @@ describe('character creation controller', () => {
   it('updates multi-signal follow state atomically', () => {
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(creation('BASIC_TRAINING')),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -400,6 +410,7 @@ describe('character creation controller', () => {
   it('derives a projection-fed view model from controller state', () => {
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(creation('BASIC_TRAINING')),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -426,6 +437,7 @@ describe('character creation controller', () => {
   it('publishes a coherent view model for batched follow updates', () => {
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(creation('BASIC_TRAINING')),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -468,6 +480,7 @@ describe('character creation controller', () => {
   it('does not clear editable flow when room state changes', () => {
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(creation('BASIC_TRAINING')),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -495,6 +508,7 @@ describe('character creation controller', () => {
     } satisfies CharacterCreationFlow
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(creation('BASIC_TRAINING')),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -516,6 +530,7 @@ describe('character creation controller', () => {
     const projected = creation('BASIC_TRAINING')
     const controller = createCharacterCreationController({
       getState: () => stateWithCreation(projected),
+      getRuleset: () => null,
       isPanelOpen: () => true,
       closePanel: () => {}
     })
@@ -530,6 +545,7 @@ describe('character creation controller', () => {
   it('clears read-only follow state without discarding editable flows', () => {
     const controller = createCharacterCreationController({
       getState: () => null,
+      getRuleset: () => null,
       isPanelOpen: () => false,
       closePanel: () => {}
     })

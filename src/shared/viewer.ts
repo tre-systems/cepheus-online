@@ -1,7 +1,5 @@
-import {
-  type CepheusRuleset,
-  resolveRulesetReference
-} from './character-creation/cepheus-srd-ruleset'
+import type { CepheusRuleset } from './character-creation/cepheus-srd-ruleset'
+import { resolveDefaultRulesetData } from './character-creation/default-ruleset-provider'
 import { deriveUnrevealedCreationRollIds } from './character-creation/reveal'
 import type {
   CareerCreationActionPlan,
@@ -808,8 +806,8 @@ export const toViewerGameState = (
 
   if (!canViewerSeeUnrevealedDice(state, resolvedViewer)) {
     const unrevealedRollIds = filterUnrevealedDiceForViewer(filtered, nowMs)
-    const resolvedRuleset = resolveRulesetReference(state.rulesetId)
-    const ruleset = resolvedRuleset.ok ? resolvedRuleset.value.ruleset : null
+    const resolvedRuleset = resolveDefaultRulesetData(state.rulesetId)
+    const ruleset = resolvedRuleset.ok ? resolvedRuleset.value : null
     filterCharacterCreationForViewer(filtered, unrevealedRollIds, ruleset)
   }
 
