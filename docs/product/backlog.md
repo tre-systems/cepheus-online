@@ -111,6 +111,36 @@ This is the short active checklist after the 2026-05-16 cleanup pass. Detailed
 slice context remains below, but new work should start here unless a later
 review replaces this section.
 
+### Completed Architecture Baseline
+
+These are no longer open architecture-hardening tasks; future work should
+preserve them rather than re-plan them.
+
+- `app.ts` is a thin boot entrypoint over `createAppClient()`. Room identity,
+  transport, command routing, dice reveal coordination, room switching, render,
+  and disposal now live behind the app-client runtime boundary.
+- `GameRoomDO` is a lifecycle shell over focused room helpers for command
+  service, publication, broadcast, reveal scheduling, storage, and queries.
+- Server command handling is split by domain while `runCommandPublication()`
+  remains the single persistence, projection, checkpoint, parity, telemetry,
+  and response path.
+- Rulesets resolve through the JSON data provider boundary with id, version,
+  content hash, and source metadata. Bundled SRD JSON remains the default
+  provider; custom ruleset upload/storage is a product task, not an architecture
+  precondition.
+- Viewer-facing state leaves the room through the named public projection
+  boundary, `toViewerGameState()`, with dice and character creation reveal
+  coverage.
+- Character creation projection keeps `createCharacterEventHandlers()` as the
+  public export while lifecycle handlers are split into setup/homeworld, career,
+  risk, mustering, finalization, and sheet-fact modules.
+- The client character creation view-model boundary keeps
+  `deriveCharacterCreationViewModel()` as the public export while model types,
+  projection/action helpers, and read-model step builders live in focused
+  modules.
+- Architecture diagrams live in `docs/diagrams/` as Graphviz/DOT sources with
+  committed PNG renders, and ADR 0007 owns event/ruleset version policy.
+
 ### Manual Release Checks
 
 These require operator access, a deployed candidate, real device behavior, or
@@ -135,20 +165,21 @@ Cloudflare/GitHub settings. They cannot be proven fully by local tests alone.
 
 ### Immediate Code Priorities
 
-1. Finish the client architecture cleanup:
-   create a `createAppClient()` composition root, keep shrinking `app.ts`, and
-   keep all feature commands behind the existing router.
+1. Keep expanding the projection-fed creator view model until step views read
+   one coherent shape for phase, prompt, legal actions, pending choices,
+   progress, roll facts, button state, and sheet preview.
 2. Continue reducing character creation compatibility paths:
    keep historical `CharacterCreationTransitioned` replay working, but move
    new read models, activity cards, and UI provenance onto semantic facts.
-3. Keep expanding the projection-fed creator view model until step views read
-   one coherent shape for phase, prompt, legal actions, pending choices,
-   progress, roll facts, button state, and sheet preview.
-4. Polish character creation presentation where the rules are now server-backed:
+3. Polish character creation presentation where the rules are now server-backed:
    injury choices, commission/advancement rank and bonus-skill provenance,
    term-history cards, mustering benefit copy, and completed-sheet layout.
-5. Keep reveal/filtering coverage current for every new roll-bearing semantic
+4. Keep reveal/filtering coverage current for every new roll-bearing semantic
    event, including future replay/activity history and Discord logging.
+5. Preserve the architecture guardrails while adding features: do not grow
+   `app.ts` or `GameRoomDO` back into feature modules, do not bypass
+   `runCommandPublication()`, and do not import bundled ruleset defaults outside
+   provider setup or tests.
 
 ### Near-Term Product Work
 
@@ -172,9 +203,10 @@ Cloudflare/GitHub settings. They cannot be proven fully by local tests alone.
    views from the event stream. Use CRDTs only if document-like collaboration
    proves necessary.
 6. SRD/ruleset data:
-   keep rulesets as JSON data, add validation for custom ruleset loading, and
-   plan a pinned SRD importer with attribution/license handling before copying
-   more upstream text by hand.
+   keep rulesets as JSON data, add custom ruleset upload/storage behind the
+   provider boundary, add validation and moderation for custom ruleset loading,
+   and plan a pinned SRD importer with attribution/license handling before
+   copying more upstream text by hand.
 
 ## Parallel Workstreams
 

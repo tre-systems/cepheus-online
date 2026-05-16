@@ -30,16 +30,19 @@ Larger runtime diagrams live in [docs/diagrams](../diagrams/README.md):
 
 ## Durable Objects
 
-Expected classes:
+`GameRoomDO` is the Cloudflare lifecycle shell for one live campaign/game room.
+It owns platform entrypoints, but ordered command processing, accepted/rejected
+response shaping, viewer-safe broadcasts, reveal scheduling, event storage,
+checkpoints, and state queries live in focused helpers under
+`src/server/game-room/`.
 
-- `GameRoomDO`: one live campaign/game room, ordered command processing,
-  WebSockets, event stream, checkpoints, presence.
-- `DiscordInstallDO` or D1-backed routes: Discord install/session bookkeeping if
-  needed.
+Keep the room class small. New room behavior should extend the command,
+publication, broadcast, reveal-scheduling, storage, or query helpers rather than
+adding feature logic directly to `GameRoomDO`. Game rules live in `src/shared`,
+not in the Durable Object class.
 
-The room should be small and focused. Cloudflare lifecycle methods should
-delegate to command, broadcast, reveal-scheduling, and route/socket helpers. Game
-rules live in `src/shared`, not in the Durable Object class.
+`DiscordInstallDO` or D1-backed routes may be added later for Discord
+install/session bookkeeping if needed.
 
 Ruleset selection is room state. `CreateGame` may carry a `rulesetId`,
 `GameCreated` persists it, and `GameState.rulesetId` is projected from the
@@ -95,6 +98,13 @@ Separate state into:
 - optional collaborative document state for notes
 
 These must not be blurred into one mutable object.
+
+Character creation projection has a stable public boundary in
+`createCharacterEventHandlers()`. The handlers behind that boundary are split by
+creation lifecycle area: setup/homeworld, career entry and term flow, risk
+events, mustering, finalization, and character-sheet facts. Keep future
+projection changes behind that composition point so replay, legality, viewer
+filtering, and client read models keep one source of truth.
 
 ## Source Boundaries
 

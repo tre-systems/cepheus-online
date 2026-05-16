@@ -21,6 +21,12 @@ term facts, legal actions, timeline entries, and final-sheet/export views;
 legacy `creation.history` is compatibility-only for replaying old
 `CharacterCreationTransitioned` streams.
 
+The public character creation projector export is `createCharacterEventHandlers()`.
+It composes lifecycle-focused modules for setup/homeworld, career entry,
+risk/aging/injury, mustering, and character sheet/finalization facts. Keep that
+export stable so new rules work can split internally without changing replay,
+publication, or client read-model call sites.
+
 See [Command publication flow](../diagrams/command-publication-flow.png) for the
 full service boundary diagram.
 
