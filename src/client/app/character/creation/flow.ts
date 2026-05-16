@@ -2439,7 +2439,8 @@ export const applyParsedCharacterCreationDraftPatch = (
           ...updatedFlow,
           draft: applyCharacterCreationCareerPlan(
             updatedFlow.draft,
-            updatedFlow.draft.careerPlan
+            updatedFlow.draft.careerPlan,
+            characterCreationRuleset(updatedFlow)
           )
         }
       : updatedFlow

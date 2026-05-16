@@ -1829,6 +1829,30 @@ describe('character creation flow', () => {
     ])
   })
 
+  it('evaluates parsed career plan patches with the active flow ruleset', () => {
+    const flow = {
+      ...createCharacterCreationFlow(
+        characterId,
+        {
+          name: 'Iona Vesh',
+          characteristics: completeDraft().characteristics
+        },
+        { ruleset: customRuleset }
+      ),
+      step: 'career' as const
+    }
+
+    const result = applyParsedCharacterCreationDraftPatch(flow, {
+      careerPlan: selectCharacterCreationCareerPlan('Courier', {
+        qualificationRoll: 5
+      })
+    })
+
+    assert.equal(result.flow.draft.careerPlan?.career, 'Courier')
+    assert.equal(result.flow.draft.careerPlan?.qualificationRoll, 5)
+    assert.equal(result.flow.draft.careerPlan?.qualificationPassed, true)
+  })
+
   it('requires a career before the skills step can be reached', () => {
     const homeworldFlow = {
       step: 'homeworld' as const,
