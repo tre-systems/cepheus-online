@@ -1603,13 +1603,24 @@ h1 {
 }
 
 .sheet-career-term-card {
-  margin: 0;
+  display: grid;
+  gap: 4px;
   border: 1px solid rgba(72, 255, 173, 0.28);
   background: rgba(0, 0, 0, 0.26);
   padding: 8px 9px;
   color: var(--text);
   font-size: 12px;
   line-height: 1.38;
+}
+
+.sheet-career-term-card strong {
+  color: var(--accent);
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.sheet-career-term-card span {
+  color: var(--text);
 }
 
 .sheet-items-editor {

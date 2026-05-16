@@ -459,9 +459,18 @@ export const createCharacterSheetController = ({
       const history = documentApi.createElement('div')
       history.className = 'sheet-career-history'
       for (const term of exportView.careerHistory) {
-        const entry = documentApi.createElement('p')
+        const entry = documentApi.createElement('article')
         entry.className = 'sheet-career-term-card'
-        entry.textContent = term
+        const [heading, ...detailParts] = term.split(' - ')
+        const title = documentApi.createElement('strong')
+        title.textContent = heading
+        entry.append(title)
+        const detail = detailParts.join(' - ')
+        if (detail) {
+          const body = documentApi.createElement('span')
+          body.textContent = detail
+          entry.append(body)
+        }
         history.append(entry)
       }
       body.append(sheetSectionTitle('Career History'), history)

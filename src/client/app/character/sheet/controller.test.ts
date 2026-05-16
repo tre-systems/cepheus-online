@@ -569,7 +569,11 @@ describe('character sheet controller', () => {
     findByText(harness.elements.sheetBody, 'Career History')
     findByText(
       harness.elements.sheetBody,
-      'Term 1: Scout - benefits High Passage (Scout material benefit; roll 8; DM 0; table 8); term complete'
+      'Term 1: Scout'
+    )
+    findByText(
+      harness.elements.sheetBody,
+      'benefits High Passage (Scout material benefit; roll 8; DM 0; table 8); term complete'
     )
     findByText(harness.elements.sheetBody, 'Plain Export')
     findByText(
