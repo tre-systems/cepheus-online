@@ -35,6 +35,14 @@ export interface DiceRevealApplication {
   wasFirstStateApplied: boolean
 }
 
+export interface DiceRevealAnimationDecisionInput {
+  latestRoll: DiceRevealRoll | null
+  animateLatestDiceLog: boolean
+  previousDiceId: string | null
+  wasFirstStateApplied: boolean
+  revealedDiceIds: ReadonlySet<string>
+}
+
 interface DiceRevealCoordinatorOptions {
   nowMs?: () => number
   setTimer?: (callback: () => void, delayMs: number) => unknown
@@ -43,8 +51,26 @@ interface DiceRevealCoordinatorOptions {
 
 const DEFAULT_REVEAL_FALLBACK_BUFFER_MS = 1_420
 
-const rollHasVisibleResult = (roll: DiceRevealRoll): boolean =>
-  Array.isArray(roll.rolls) && typeof roll.total === 'number'
+export const rollHasVisibleResult = (
+  roll: DiceRevealRoll | null | undefined
+): roll is DiceRevealRoll & { rolls: readonly number[]; total: number } =>
+  Array.isArray(roll?.rolls) && typeof roll?.total === 'number'
+
+export const shouldAnimateLatestDiceRoll = ({
+  latestRoll,
+  animateLatestDiceLog,
+  previousDiceId,
+  wasFirstStateApplied,
+  revealedDiceIds
+}: DiceRevealAnimationDecisionInput): boolean =>
+  Boolean(
+    latestRoll &&
+      animateLatestDiceLog &&
+      wasFirstStateApplied &&
+      latestRoll.id !== previousDiceId &&
+      (rollHasVisibleResult(latestRoll) ||
+        !revealedDiceIds.has(latestRoll.id))
+  )
 
 export const createDiceRevealCoordinator = ({
   nowMs = Date.now,

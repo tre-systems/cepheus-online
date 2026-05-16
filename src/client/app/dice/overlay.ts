@@ -148,7 +148,7 @@ export const animatePendingRoll = ({
   row.append(total)
   stage.replaceChildren(row)
   setTimeout(() => {
-    total.textContent = '?'
+    total.textContent = '...'
     for (const die of Array.from(row.querySelectorAll('.die'))) {
       die.classList.remove('rolling')
     }

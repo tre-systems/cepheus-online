@@ -34,7 +34,10 @@ import {
 import { createAppSession } from './core/session.js'
 import { resolveActorSessionSecret } from './core/actor-session.js'
 import { createCharacterSheetWiring } from './character/sheet/wiring.js'
-import { createDiceRevealCoordinator } from './dice/reveal-coordinator.js'
+import {
+  createDiceRevealCoordinator,
+  shouldAnimateLatestDiceRoll
+} from './dice/reveal-coordinator.js'
 import {
   DEFAULT_APP_LOCATION,
   isRefereeViewer,
@@ -332,10 +335,13 @@ const applyState = (
   creationRefreshPlan.renderAfterAppRender()
   if (
     latestRoll &&
-    animateLatestDiceLog &&
-    diceRevealApplication.wasFirstStateApplied &&
-    latestRoll.id !== diceRevealApplication.previousDiceId &&
-    !diceRevealCoordinator.revealedDiceIds.has(latestRoll.id)
+    shouldAnimateLatestDiceRoll({
+      latestRoll,
+      animateLatestDiceLog,
+      wasFirstStateApplied: diceRevealApplication.wasFirstStateApplied,
+      previousDiceId: diceRevealApplication.previousDiceId,
+      revealedDiceIds: diceRevealCoordinator.revealedDiceIds
+    })
   ) {
     animateRoll(latestRoll)
   } else if (

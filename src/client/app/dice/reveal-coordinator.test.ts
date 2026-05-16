@@ -4,7 +4,10 @@ import { describe, it } from 'node:test'
 import { asGameId, asUserId } from '../../../shared/ids'
 import type { DiceRollState, GameState } from '../../../shared/state'
 import type { ClientDiceRollActivity } from '../../game-commands'
-import { createDiceRevealCoordinator } from './reveal-coordinator'
+import {
+  createDiceRevealCoordinator,
+  shouldAnimateLatestDiceRoll
+} from './reveal-coordinator'
 
 const flushMicrotasks = () => Promise.resolve()
 
@@ -69,6 +72,32 @@ const gameState = (
 })
 
 describe('dice reveal coordinator', () => {
+  it('animates a revealed result even after the pending placeholder resolved', () => {
+    assert.equal(
+      shouldAnimateLatestDiceRoll({
+        latestRoll: diceRoll('roll-1'),
+        animateLatestDiceLog: true,
+        previousDiceId: 'roll-0',
+        wasFirstStateApplied: true,
+        revealedDiceIds: new Set(['roll-1'])
+      }),
+      true
+    )
+  })
+
+  it('does not replay an already-resolved redacted placeholder', () => {
+    assert.equal(
+      shouldAnimateLatestDiceRoll({
+        latestRoll: redactedDiceRoll('roll-1'),
+        animateLatestDiceLog: true,
+        previousDiceId: 'roll-0',
+        wasFirstStateApplied: true,
+        revealedDiceIds: new Set(['roll-1'])
+      }),
+      false
+    )
+  })
+
   it('marks rolls revealed and resolves pending waiters', async () => {
     const coordinator = createDiceRevealCoordinator()
     let resolved = false
