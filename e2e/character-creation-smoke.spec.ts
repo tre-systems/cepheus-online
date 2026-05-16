@@ -93,6 +93,14 @@ const cascadeSelectionFor = (cascadeSkill: string): string => {
   }
 }
 
+const expectedSkillRollExpression = (skill: string): string => {
+  const parsed = /-(-?\d+)$/.exec(skill.trim())
+  if (!parsed) return '2d6'
+  const level = Number(parsed[1])
+  if (!Number.isFinite(level) || level === 0) return '2d6'
+  return level > 0 ? `2d6+${level}` : `2d6${level}`
+}
+
 const resolveProjectedTermCascadeSkills = async ({
   page,
   roomId,
@@ -5978,6 +5986,31 @@ test.describe('character creation smoke', () => {
     await expect(sheetBody).toContainText('Career History')
     await expect(sheetBody).toContainText(/Term 1: Scout/)
     await expect(sheetBody).toContainText('Skills:')
+
+    await page.locator('[data-sheet-tab="action"]').click()
+    const skillRollAccepted = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes(`/rooms/${roomId}/command`) &&
+        (response.request().postData() ?? '').includes('RollDice') &&
+        (response.request().postData() ?? '').includes(firstSkill)
+    )
+    await page
+      .locator('#sheetBody .sheet-skill-actions')
+      .getByRole('button', { name: firstSkill })
+      .click()
+    const skillRollResponse = await skillRollAccepted
+    expect(skillRollResponse.ok()).toBe(true)
+    const skillRollPayload = JSON.parse(
+      skillRollResponse.request().postData() ?? '{}'
+    ) as { command?: { expression?: string; reason?: string } }
+    expect(skillRollPayload.command?.expression).toBe(
+      expectedSkillRollExpression(firstSkill)
+    )
+    expect(skillRollPayload.command?.reason).toBe(
+      `${characterName}: ${firstSkill}`
+    )
+    await waitForDiceReveal(page)
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('#boardCanvas')).toBeVisible()
