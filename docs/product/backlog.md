@@ -5,7 +5,7 @@ into ordered implementation slices while preserving clear ownership for parallel
 agents. Shipped work belongs in `git log`; this file is for active or future
 work that still needs a named home.
 
-Last reviewed: 2026-05-15.
+Last reviewed: 2026-05-16.
 
 ## North Star
 
@@ -104,6 +104,77 @@ Each wave should make later work simpler, safer, or more testable.
 
 Work should pause before a later wave if the earlier wave reveals an
 architecture issue that would make the next features harder to reason about.
+
+## Current Remaining Work
+
+This is the short active checklist after the 2026-05-16 cleanup pass. Detailed
+slice context remains below, but new work should start here unless a later
+review replaces this section.
+
+### Manual Release Checks
+
+These require operator access, a deployed candidate, real device behavior, or
+Cloudflare/GitHub settings. They cannot be proven fully by local tests alone.
+
+- Run the deployed smoke after the next candidate deploy:
+  `npm run smoke:deployed` or
+  `npm run smoke:deployed -- https://your-preview.workers.dev`.
+- Run `npm run deploy:dry-run` before publishing a release candidate so
+  Wrangler validates the bundled Worker without deploying it.
+- Run the mobile PWA manual checklist on a real phone against a deployed Worker
+  URL or local HTTPS tunnel:
+  install, reload, offline shell fallback, update activation after a newer
+  build, and reconnect recovery after offline/online.
+- Confirm GitHub/Cloudflare deployment secrets are present and current:
+  `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`.
+- Decide when to add a production custom domain or route in `wrangler.jsonc`;
+  the current deployment can keep using the workers.dev host until then.
+- Before opening public rooms to real campaigns, decide operational retention
+  policy for event streams, uploaded assets, Discord account links, telemetry,
+  and exports.
+
+### Immediate Code Priorities
+
+1. Finish the client architecture cleanup:
+   create a `createAppClient()` composition root, keep shrinking `app.ts`, and
+   keep all feature commands behind the existing router.
+2. Continue reducing character creation compatibility paths:
+   keep historical `CharacterCreationTransitioned` replay working, but move
+   new read models, activity cards, and UI provenance onto semantic facts.
+3. Keep expanding the projection-fed creator view model until step views read
+   one coherent shape for phase, prompt, legal actions, pending choices,
+   progress, roll facts, button state, and sheet preview.
+4. Polish character creation presentation where the rules are now server-backed:
+   injury choices, commission/advancement rank and bonus-skill provenance,
+   term-history cards, mustering benefit copy, and completed-sheet layout.
+5. Keep reveal/filtering coverage current for every new roll-bearing semantic
+   event, including future replay/activity history and Discord logging.
+
+### Near-Term Product Work
+
+1. Tactical table:
+   build the production asset pipeline from local files to durable uploaded
+   asset ids, add board composition, add referee LOS extraction/review/editing,
+   and expand prep/admin plus board-management controls.
+2. Public play and security:
+   add command/WebSocket rate-limit policy, expand viewer-filtering tests for
+   notes/handouts/secret map layers, add diagnostics that summarize without
+   leaking secrets, and add data export/delete paths when retention is decided.
+3. Discord/session:
+   implement Discord OAuth, internal app sessions, room authorization,
+   invites, and optional Discord event logging. Do not add in-app chat.
+4. Broader Cepheus rules:
+   add action-sheet skill rolls, combat/damage/healing/armor/initiative/status
+   helpers, equipment totals, range/measurement helpers, and rules tests.
+5. Notes and audit:
+   add notes and handouts as server-ordered blocks, add presence/awareness
+   semantics, show conflict/rejection recovery in UI, and add replay/audit
+   views from the event stream. Use CRDTs only if document-like collaboration
+   proves necessary.
+6. SRD/ruleset data:
+   keep rulesets as JSON data, add validation for custom ruleset loading, and
+   plan a pinned SRD importer with attribution/license handling before copying
+   more upstream text by hand.
 
 ## Parallel Workstreams
 
@@ -1410,9 +1481,11 @@ Done when:
 - Tactical combat helpers match the old app's expected behavior and are covered
   by rules tests.
 
-## Immediate Execution Plan
+## Recent Execution History
 
-The next batch should run like this, in this order:
+This records the batch that has just been executed. It is retained so future
+work can see what landed and why; the current remaining work snapshot near the
+top of this file is the active checklist.
 
 1. Remove or fence the remaining generic character creation transition bridge.
    Done: generic reenlist, forced-reenlist, leave-career, blocked-reenlist,

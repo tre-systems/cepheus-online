@@ -12,8 +12,9 @@ grouped by purpose so each future change has an obvious home.
   skeleton to playable vertical slice.
 - [Implementation plan](product/backlog.md): ordered slices, parallel work
   streams, and current priorities.
-- [Character creation backlog](product/character-creation-backlog.md): active
-  task queue for the guided Cepheus character creation flow.
+- [Character creation backlog](product/character-creation-backlog.md):
+  historical legacy-review notes for the guided Cepheus character creation
+  flow; active tasks live in the implementation plan.
 - [Architecture Decision Records](adr/README.md): accepted technical decisions
   and open decision points.
 - [Contributor workflow](../CONTRIBUTING.md): local setup, verification gates,
@@ -25,6 +26,7 @@ grouped by purpose so each future change has an obvious home.
 - [Migration plan](product/migration-plan.md)
 - [Implementation plan](product/backlog.md)
 - [Character creation backlog](product/character-creation-backlog.md)
+  (historical review notes)
 
 ## Architecture
 

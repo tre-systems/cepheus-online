@@ -3,14 +3,18 @@
 This is not a line-by-line port. The old app should remain as a reference while
 the new app proves one vertical slice at a time.
 
+The active task list and manual release checklist live in
+[Implementation Plan](backlog.md). This document is a staged product path, not
+the source of truth for current engineering tasks.
+
 ## Near-Term Queue
 
 The current implementation queue should keep tightening the playable vertical
 slice before widening into rules depth:
 
-For ordered implementation slices, active parallel work streams, and write
-ownership, use the [implementation plan](backlog.md). This migration plan stays
-as the staged product path.
+For ordered implementation slices, active parallel work streams, manual tasks,
+and write ownership, use the [implementation plan](backlog.md). This migration
+plan stays as the staged product path.
 
 1. Complete the `app.ts` extraction so client modules stay small, testable, and
    separated by feature.

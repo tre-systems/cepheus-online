@@ -1,5 +1,11 @@
 # Character Creation Backlog
 
+Status: historical source review and feature notes. The active task list,
+remaining work snapshot, and execution order now live in
+[Implementation Plan](./backlog.md). Keep this file as provenance for the
+legacy character-creation review; do not treat its older "remaining gaps" or
+"next slice" sections as fresher than the main backlog.
+
 This backlog is based on a deep review of the active
 `~/Source/cepheus-amplify` character creation code and tests. The rewrite should
 preserve the rules flow, pacing, and useful UX from that app, while continuing
