@@ -184,8 +184,8 @@ Cloudflare/GitHub settings. They cannot be proven fully by local tests alone.
    event, including future replay/activity history and Discord logging.
 5. Preserve the architecture guardrails while adding features: do not grow
    `app.ts` or `GameRoomDO` back into feature modules, do not bypass
-   `runCommandPublication()`, and do not import bundled ruleset defaults outside
-   provider setup or tests.
+   `runCommandPublication()`, and do not import bundled ruleset resolver
+   functions outside provider setup or tests.
 
 ### Near-Term Product Work
 

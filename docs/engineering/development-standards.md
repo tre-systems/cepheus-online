@@ -1,8 +1,10 @@
 # Development Standards
 
-This document owns dependency, boundary, and architecture standards. Day-to-day
-code style, naming, CQRS/event-sourcing conventions, and formatting rules live
-in [Coding Standards](coding-standards.md).
+This document owns dependency and source-boundary standards. System shape and
+implementation patterns live in [Architecture](../architecture/overview.md) and
+[Patterns](../architecture/patterns.md). Day-to-day code style, naming,
+CQRS/event-sourcing conventions, and formatting rules live in
+[Coding Standards](coding-standards.md).
 
 ## Dependency Policy
 

@@ -217,12 +217,18 @@ Avoid tiny factories that only rename a callback or wrap one call site. Keep
 that wiring inline until the helper owns lifecycle, policy, validation, or
 reuse.
 
-Near-term target:
+Current target:
 
-- `src/client/app/app.ts` becomes the boot/composition shell.
-- Character creation orchestration moves into a controller.
-- Board, sheet, room menu, socket, PWA, dice, and creator modules are wired in
-  one visible place.
+- `src/client/app/app.ts` remains a boot entrypoint.
+- `createAppClient()` remains the browser runtime boundary for room identity,
+  fetch/socket flow, command dispatch, dice reveal coordination, and render
+  orchestration.
+- Character creation orchestration stays behind the creation feature and
+  controller APIs, with ruleset data, state, command, and reveal dependencies
+  injected from the app client.
+- Board, sheet, room menu, socket, PWA, dice, and creator modules should keep
+  narrow manager APIs and expose `dispose()` when they own listeners, timers, or
+  effects.
 
 ## Dependency Injection
 

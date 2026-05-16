@@ -36,7 +36,11 @@ server-derived deterministic RNG.
 
 ## CQRS and Event Sourcing
 
-The room model is CQRS-style:
+The architecture owner docs define the full room model; see
+[Architecture](../architecture/overview.md),
+[Patterns](../architecture/patterns.md), and
+[ADR 0007](../adr/0007-version-events-and-ruleset-data.md). The coding rules
+for feature work are:
 
 - commands are the only mutation path
 - commands validate against current projection
@@ -64,7 +68,7 @@ The event envelope owns ordering and schema metadata:
 
 ```ts
 {
-  version: 1,
+  version: EVENT_ENVELOPE_VERSION,
   gameId,
   seq,
   actorId,
