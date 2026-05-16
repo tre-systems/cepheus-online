@@ -75,30 +75,6 @@ const assertPreRevealDiceDetailsHidden = (rawMessage: unknown) => {
   assert.equal('total' in activity, false, 'pre-reveal activity omits total')
 }
 
-const assertPreRevealDiceDetailsVisible = (rawMessage: unknown) => {
-  const message = asRecord(rawMessage)
-  assert.equal(
-    message.type === 'commandAccepted' || message.type === 'roomState',
-    true
-  )
-  const state = asRecord(message.state)
-  const diceLog = state.diceLog
-
-  assert.equal(Array.isArray(diceLog), true)
-  const roll = asRecord((diceLog as unknown[])[0])
-
-  assert.equal(Array.isArray(roll.rolls), true)
-  assert.equal(typeof roll.total, 'number')
-
-  const liveActivities = message.liveActivities
-
-  assert.equal(Array.isArray(liveActivities), true)
-  const activity = asRecord((liveActivities as unknown[])[0])
-  assert.equal(activity?.type, 'diceRoll')
-  assert.deepEqual(activity.rolls, roll.rolls)
-  assert.equal(activity.total, roll.total)
-}
-
 const assertRoomStateDiceDetailsHidden = (rawMessage: unknown) => {
   const message = asRecord(rawMessage)
   assert.equal(message.type, 'roomState')
@@ -770,7 +746,7 @@ describe('GameRoomDO HTTP skeleton', () => {
     }
   })
 
-  it('keeps pre-reveal dice details visible in owner and referee activity messages', async () => {
+  it('keeps pre-reveal dice details out of owner and referee activity messages', async () => {
     const referee = createSocket()
     const tags = new Map<WebSocket, string[]>([
       [referee, roomSocketTags('referee', 'user-4')]
@@ -791,9 +767,74 @@ describe('GameRoomDO HTTP skeleton', () => {
     const responseMessage = await response.json()
 
     assert.equal(response.status, 200)
-    assertPreRevealDiceDetailsVisible(responseMessage)
+    assertPreRevealDiceDetailsHidden(responseMessage)
     for (const message of parseMessages(referee)) {
-      assertPreRevealDiceDetailsVisible(message)
+      assertPreRevealDiceDetailsHidden(message)
+    }
+  })
+
+  it('rebroadcasts socket state with dice details after the server reveal time', async () => {
+    const originalSetTimeout = globalThis.setTimeout
+    const originalDateNow = Date.now
+    const scheduledCallbacks: (() => void)[] = []
+    const nowMs = Date.parse('2026-05-16T10:00:00.000Z')
+
+    globalThis.setTimeout = ((callback: TimerHandler) => {
+      scheduledCallbacks.push(() => {
+        if (typeof callback === 'function') {
+          callback()
+        }
+      })
+      return { unref() {} } as unknown as ReturnType<typeof setTimeout>
+    }) as typeof setTimeout
+    Date.now = () => nowMs
+
+    try {
+      const player = createSocket()
+      const tags = new Map<WebSocket, string[]>([
+        [player, roomSocketTags('player', 'user-2')]
+      ])
+      const room = createRoom([player], tags)
+      await postCommand(room, createGameBody())
+      player.sent.length = 0
+
+      const response = await postCommand(
+        room,
+        commandBody('roll-dice-player', {
+          type: 'RollDice',
+          actorId: 'user-2',
+          expression: '2d6',
+          reason: 'Table roll'
+        })
+      )
+
+      assert.equal(response.status, 200)
+      assert.equal(player.sent.length, 1)
+      assertPreRevealDiceDetailsHidden(parseMessages(player)[0])
+      assert.equal(scheduledCallbacks.length, 1)
+
+      Date.now = () => nowMs + LIVE_DICE_RESULT_REVEAL_DELAY_MS + 100
+      scheduledCallbacks[0]?.()
+      await new Promise<void>((resolve) => originalSetTimeout(resolve, 0))
+
+      const messages = parseMessages(player)
+      assert.equal(messages.length, 2)
+      const revealed = asRecord(messages[1])
+      assert.equal(revealed.type, 'roomState')
+      const state = asRecord(revealed.state)
+      const roll = asRecord((state.diceLog as unknown[])[0])
+      assert.equal(roll.reason, 'Table roll')
+      assert.equal(Array.isArray(roll.rolls), true)
+      assert.equal(typeof roll.total, 'number')
+      const activities = revealed.liveActivities
+      assert.equal(Array.isArray(activities), true)
+      const activity = asRecord((activities as unknown[])[0])
+      assert.equal(activity.type, 'diceRoll')
+      assert.deepEqual(activity.rolls, roll.rolls)
+      assert.equal(activity.total, roll.total)
+    } finally {
+      globalThis.setTimeout = originalSetTimeout
+      Date.now = originalDateNow
     }
   })
 

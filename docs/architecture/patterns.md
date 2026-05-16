@@ -259,12 +259,24 @@ Roll-bearing commands have a stricter presentation contract than normal
 commands: players and spectators should not see roll-dependent results until
 the shared dice reveal point.
 
-The client should enforce this through one dice reveal coordinator:
+The server owns the observable boundary. It may persist the full dice result
+immediately for ordering and recovery, but every HTTP state read, command
+response, WebSocket broadcast, and live activity must pass through the same
+viewer-aware public projection before it leaves the Durable Object. Before
+`revealAt`, public state treats the roll as pending: the browser may receive
+the roll id, expression, reason/activity, actor, and reveal time, but not dice
+values, totals, success/failure text, or roll-derived character sheet fields.
+After `revealAt`, the public projection may include the result and derived
+consequences.
+
+The client should consume that public projection through one dice reveal
+coordinator:
 
 - accept live dice activity or the latest dice log entry
 - start the shared dice animation
-- defer result rendering until the reveal boundary
-- unblock the triggering action after the reveal is applied
+- avoid applying pre-reveal command responses as if they were final results
+- refetch or accept a post-reveal room-state broadcast after the reveal boundary
+- unblock the triggering action after the revealed public projection is applied
 - resolve refresh/recovery without losing authoritative state
 
 Feature views should not each implement their own reveal timers. They should

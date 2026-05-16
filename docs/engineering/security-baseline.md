@@ -73,6 +73,10 @@ High-risk hidden data:
 - NPC stats and referee notes
 - viewer-safe character creation and finalization payloads, especially private
   notes and unrevealed roll-dependent outcomes
+- dice rolls and roll-derived consequences before `revealAt`; public browser
+  responses should expose only pending-roll metadata until the shared reveal
+  boundary, even for owners and referees unless a deliberately separate
+  diagnostic path is added
 - private handouts
 - secret map layers
 - pending encounters

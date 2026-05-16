@@ -187,6 +187,7 @@ const completeProjectedTermSkills = async ({
       characterId,
       table: 'serviceSkills'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
   }
 
   throw new Error('Projected term skills did not reach completion')
@@ -275,6 +276,7 @@ const completeCurrentScoutTermToAging = async ({
       characterId,
       table
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
     await resolveProjectedTermCascadeSkills({
       page,
       roomId,
@@ -283,10 +285,18 @@ const completeCurrentScoutTermToAging = async ({
       characterId
     })
   }
-  await postCommand(page, roomId, actorId, actorSession, {
-    type: 'CompleteCharacterCreationSkills',
+  legalActions = await legalCreationActionKeys({
+    page,
+    roomId,
+    actorId,
     characterId
   })
+  if (legalActions.includes('completeSkills')) {
+    await postCommand(page, roomId, actorId, actorSession, {
+      type: 'CompleteCharacterCreationSkills',
+      characterId
+    })
+  }
 
   legalActions = await legalCreationActionKeys({
     page,
@@ -320,6 +330,7 @@ const completeCurrentScoutTermFromReenlistmentAndFinalize = async ({
     type: 'ResolveCharacterCreationReenlistment',
     characterId
   })
+  await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
   const legalActions = await legalCreationActionKeys({
     page,
     roomId,
@@ -350,6 +361,7 @@ const completeCurrentScoutTermFromReenlistmentAndFinalize = async ({
       career: 'Scout',
       kind: 'material'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
   }
   const musteringActions = await legalCreationActionKeys({
     page,
@@ -374,7 +386,7 @@ const completeCurrentScoutTermFromReenlistmentAndFinalize = async ({
       `Expected creation completion to be legal; legal actions were ${completionActions.join(', ')}`
     )
   }
-  await waitForLatestDiceRevealBoundary(page, roomId, actorId)
+  await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
   await postCommand(page, roomId, actorId, actorSession, {
     type: 'FinalizeCharacterCreation',
     characterId
@@ -677,7 +689,26 @@ const postRepeatCommand = async (
   })
   expect(response.ok(), responseText).toBe(true)
   expect(JSON.parse(responseText).type, responseText).toBe('commandAccepted')
+  if (repeatCommandHasRevealBoundary(commandType)) {
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
+  }
 }
+
+const repeatCommandHasRevealBoundary = (commandType: string): boolean =>
+  new Set([
+    'RollCharacterCreationCharacteristic',
+    'ResolveCharacterCreationQualification',
+    'ResolveCharacterCreationDraft',
+    'ResolveCharacterCreationSurvival',
+    'ResolveCharacterCreationMishap',
+    'ResolveCharacterCreationInjury',
+    'ResolveCharacterCreationCommission',
+    'ResolveCharacterCreationAdvancement',
+    'ResolveCharacterCreationAging',
+    'ResolveCharacterCreationReenlistment',
+    'RollCharacterCreationTermSkill',
+    'RollCharacterCreationMusteringBenefit'
+  ]).has(commandType)
 
 const postRepeatCommandIfAccepted = async (
   page: Page,
@@ -716,6 +747,9 @@ const postRepeatCommandIfAccepted = async (
   })
   if (response.ok()) {
     expect(JSON.parse(responseText).type, responseText).toBe('commandAccepted')
+    if (repeatCommandHasRevealBoundary(commandType)) {
+      await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
+    }
     return true
   }
   if (allowedRejection.test(responseText)) return false
@@ -992,6 +1026,7 @@ const seedCreationToReenlistmentDecision = async (
     characterId: context.characterId,
     career: 'Scout'
   })
+  await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
   await postCommand(page, roomId, actorId, actorSession, {
     type: 'CompleteCharacterCreationBasicTraining',
     characterId: context.characterId
@@ -1000,6 +1035,7 @@ const seedCreationToReenlistmentDecision = async (
     type: 'ResolveCharacterCreationSurvival',
     characterId: context.characterId
   })
+  await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
   await completeRepeatRequiredTermSkills(
     page,
     roomId,
@@ -1016,6 +1052,7 @@ const seedCreationToReenlistmentDecision = async (
     type: 'ResolveCharacterCreationAging',
     characterId: context.characterId
   })
+  await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
 }
 
 test.describe('character creation smoke', () => {
@@ -1365,10 +1402,7 @@ test.describe('character creation smoke', () => {
 
     await expect(page.locator('#diceOverlay.visible')).toBeVisible()
     await expect(strValue).toHaveCount(0)
-    await expect(page.locator('#diceStage .roll-total')).not.toHaveText(
-      'Rolling...',
-      { timeout: 5_000 }
-    )
+    await waitForDiceReveal(page)
     await expect(strValue).toHaveText(/\d+/, { timeout: 5_000 })
     const rolledStr = (await strValue.textContent()) ?? ''
     expect(rolledStr).toMatch(/\d+/)
@@ -1397,6 +1431,7 @@ test.describe('character creation smoke', () => {
         )
       })
     ).toHaveLength(1)
+    await waitForDiceReveal(page)
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('#boardCanvas')).toBeVisible()
@@ -1514,6 +1549,7 @@ test.describe('character creation smoke', () => {
         type: 'ResolveCharacterCreationReenlistment',
         characterId: context.characterId
       })
+      await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
       await postCommand(page, roomId, actorId, actorSession, {
         type: 'LeaveCharacterCreationCareer',
         characterId: context.characterId
@@ -1524,6 +1560,7 @@ test.describe('character creation smoke', () => {
         career: 'Scout',
         kind: 'material'
       })
+      await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
       await postCommand(page, roomId, actorId, actorSession, {
         type: 'ContinueCharacterCreationAfterMustering',
         characterId: context.characterId
@@ -1539,10 +1576,17 @@ test.describe('character creation smoke', () => {
         characterId: context.characterId,
         skill: 'Broker-0'
       })
+      await setSeedForNextRoll(
+        page,
+        roomId,
+        await nextEventSeq(page, roomId, actorId),
+        [6, 6]
+      )
       await postCommand(page, roomId, actorId, actorSession, {
         type: 'ResolveCharacterCreationSurvival',
         characterId: context.characterId
       })
+      await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
 
       const state = await fetchRoomState(page, roomId, actorId)
       return {
@@ -2052,6 +2096,7 @@ test.describe('character creation smoke', () => {
       characterId,
       career: 'Aerospace'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'CompleteCharacterCreationBasicTraining',
       characterId
@@ -2066,6 +2111,7 @@ test.describe('character creation smoke', () => {
       type: 'ResolveCharacterCreationSurvival',
       characterId
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
 
     for (;;) {
       const legalKeys = await legalCreationActionKeys({
@@ -2509,7 +2555,6 @@ test.describe('character creation smoke', () => {
       ).toHaveCount(0, { timeout: 100 })
 
       await waitForDiceReveal(page)
-      await waitForDiceReveal(spectator)
       await expect(spectatorFields).toContainText(/Apply basic training/, {
         timeout: 15_000
       })
@@ -2828,6 +2873,7 @@ test.describe('character creation smoke', () => {
       characterId,
       career: 'Merchant'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'CompleteCharacterCreationBasicTraining',
       characterId
@@ -2919,6 +2965,7 @@ test.describe('character creation smoke', () => {
       characterId,
       career: 'Hunter'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'CompleteCharacterCreationBasicTraining',
       characterId
@@ -3056,6 +3103,7 @@ test.describe('character creation smoke', () => {
       characterId,
       career: 'Hunter'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'CompleteCharacterCreationBasicTraining',
       characterId
@@ -3130,7 +3178,6 @@ test.describe('character creation smoke', () => {
       await expect(ownerDeathCard).toContainText('Hunter')
       await expect(ownerDeathCard).toContainText('Killed in service')
       await expect(ownerDeathCard).toContainText('Survival roll')
-      await waitForDiceReveal(spectator)
       await expect(spectatorDeathCard).toBeVisible({ timeout: 8_000 })
       await expect(spectatorDeathCard).toContainText('Hunter')
       await expect(spectatorDeathCard).toContainText('Killed in service')
@@ -3253,6 +3300,7 @@ test.describe('character creation smoke', () => {
       characterId,
       career: 'Merchant'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('#boardCanvas')).toBeVisible()
@@ -3352,6 +3400,7 @@ test.describe('character creation smoke', () => {
       characterId,
       career: 'Merchant'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('#boardCanvas')).toBeVisible()
@@ -3878,6 +3927,7 @@ test.describe('character creation smoke', () => {
       characterId,
       career: 'Merchant'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('#boardCanvas')).toBeVisible()
@@ -4655,10 +4705,17 @@ test.describe('character creation smoke', () => {
       characterId,
       skill: 'Comms-0'
     })
+    await setSeedForNextRoll(
+      page,
+      roomId,
+      await nextEventSeq(page, roomId, actorId),
+      [6, 6]
+    )
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'ResolveCharacterCreationSurvival',
       characterId
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
 
     const roomState = await fetchRoomState(page, roomId, actorId)
     const creationJson = JSON.stringify(
@@ -5451,6 +5508,7 @@ test.describe('character creation smoke', () => {
       characterId: context.characterId,
       career: 'Scout'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'CompleteCharacterCreationBasicTraining',
       characterId: context.characterId
@@ -5459,6 +5517,7 @@ test.describe('character creation smoke', () => {
       type: 'ResolveCharacterCreationSurvival',
       characterId: context.characterId
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
     await completeRepeatRequiredTermSkills(
       page,
       roomId,
@@ -5475,10 +5534,12 @@ test.describe('character creation smoke', () => {
       type: 'ResolveCharacterCreationAging',
       characterId: context.characterId
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
     await postCommand(page, roomId, actorId, actorSession, {
       type: 'ResolveCharacterCreationReenlistment',
       characterId: context.characterId
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.locator('#boardCanvas')).toBeVisible()
@@ -5636,6 +5697,25 @@ test.describe('character creation smoke', () => {
       await action.click()
       if (!/complete/i.test(label)) await waitForDiceReveal(page)
       await resolveVisibleCascadeChoices(page)
+    }
+
+    if (
+      await page
+        .getByRole('button', { name: /^(Roll aging|Roll reenlistment)$/ })
+        .isVisible()
+        .then((visible) => !visible)
+        .catch(() => true)
+    ) {
+      await completeProjectedTermSkills({
+        page,
+        roomId,
+        actorId,
+        actorSession,
+        characterId: context.characterId
+      })
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.locator('#boardCanvas')).toBeVisible()
+      await openOrExpectFollowedCreation(page, characterName)
     }
 
     const skipAnagathics = page.getByRole('button', {

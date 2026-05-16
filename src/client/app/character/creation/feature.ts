@@ -107,6 +107,7 @@ export interface CreateCharacterCreationFeatureOptions {
   waitForDiceRevealOrDelay: (
     roll: ClientDiceRollActivity | CharacterCreationCommandRevealRoll
   ) => Promise<void>
+  refreshStateAfterDiceReveal?: () => Promise<void>
   resolveDiceReveal: Parameters<
     typeof createDiceOverlayWiring
   >[0]['resolveDiceReveal']
@@ -144,6 +145,7 @@ export const createCharacterCreationFeature = ({
   postCharacterCreationCommand,
   postCharacterCreationCommands,
   waitForDiceRevealOrDelay,
+  refreshStateAfterDiceReveal,
   resolveDiceReveal,
   reportError
 }: CreateCharacterCreationFeatureOptions): CharacterCreationFeature => {
@@ -361,6 +363,7 @@ export const createCharacterCreationFeature = ({
     commandIdentity,
     requestId,
     waitForDiceRevealOrDelay,
+    refreshStateAfterDiceReveal,
     syncFlowFromRoomState: controller.syncFlowFromRoomState,
     autoAdvanceSetup,
     renderWizard,

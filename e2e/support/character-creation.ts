@@ -766,6 +766,7 @@ export const seedCreationToHomeworld = async (
       characteristic
     })
   }
+  await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
   await postCommand(page, roomId, actorId, actorSession, {
     type: 'UpdateCharacterSheet',
     characterId,
@@ -907,6 +908,7 @@ export const seedCreationToAnagathicsDecision = async (
     characterId,
     career
   })
+  await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
   const basicTraining = await projectedLegalAction(
     page,
     roomId,
@@ -936,6 +938,7 @@ export const seedCreationToAnagathicsDecision = async (
     type: 'ResolveCharacterCreationSurvival',
     characterId
   })
+  await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
 
   for (let index = 0; index < 8; index += 1) {
     const action = await projectedLegalAction(
@@ -956,6 +959,7 @@ export const seedCreationToAnagathicsDecision = async (
       characterId,
       table: table ?? 'serviceSkills'
     })
+    await waitForLatestDiceRevealBoundary(page, roomId, actorId, 'player')
     await resolvePendingProjectionCascadeSkills(
       page,
       roomId,

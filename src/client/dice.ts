@@ -81,13 +81,9 @@ export const deriveDiceRollTiming = ({
   revealedHoldMs?: number
 }): DiceRollTiming => {
   const revealAtMs = Date.parse(revealAt ?? '')
-  const timeUntilReveal = Number.isFinite(revealAtMs)
-    ? revealAtMs - nowMs
+  const rollDurationMs = Number.isFinite(revealAtMs)
+    ? Math.max(minRollDurationMs, revealAtMs - nowMs)
     : maxRollDurationMs
-  const rollDurationMs = Math.max(
-    minRollDurationMs,
-    Math.min(maxRollDurationMs, timeUntilReveal)
-  )
 
   return {
     rollDurationMs,

@@ -84,6 +84,7 @@ export interface CharacterCreationCommandControllerDeps {
   waitForDiceRevealOrDelay: (
     roll: LiveDiceRollRevealTarget | DiceRollState
   ) => Promise<void>
+  refreshStateAfterDiceReveal?: () => Promise<void>
   syncFlowFromRoomState: (
     roomState: GameState | null,
     characterId: CharacterCreationFlow['draft']['characterId'],
@@ -98,6 +99,9 @@ const latestDiceRoll = (
   response: CharacterCreationCommandResponse
 ): DiceRollState | null =>
   response.state?.diceLog?.[response.state.diceLog.length - 1] ?? null
+
+const diceRollHasVisibleResult = (roll: DiceRollState): boolean =>
+  Array.isArray(roll.rolls) && typeof roll.total === 'number'
 
 const syncAndRender = (
   {
@@ -186,6 +190,7 @@ export const createCharacterCreationCommandController = (
     commandIdentity,
     requestId,
     waitForDiceRevealOrDelay,
+    refreshStateAfterDiceReveal = async () => {},
     syncFlowFromRoomState,
     autoAdvanceSetup,
     renderWizard,
@@ -199,6 +204,17 @@ export const createCharacterCreationCommandController = (
     return flow
   }
 
+  const stateAfterDiceReveal = async (
+    response: CharacterCreationCommandResponse,
+    roll: DiceRollState
+  ): Promise<GameState | null> => {
+    await waitForDiceRevealOrDelay(roll)
+    if (diceRollHasVisibleResult(roll)) return response.state
+
+    await refreshStateAfterDiceReveal()
+    return getState()
+  }
+
   const syncDiceFlow = async (
     response: CharacterCreationCommandResponse,
     missingRollMessage: string
@@ -209,11 +225,11 @@ export const createCharacterCreationCommandController = (
       return false
     }
 
-    await waitForDiceRevealOrDelay(roll)
+    const revealedState = await stateAfterDiceReveal(response, roll)
     const flow = getFlow()
     if (!flow) return false
     const syncedFlow = syncFlowFromRoomState(
-      response.state,
+      revealedState,
       flow.draft.characterId,
       null
     )
@@ -351,9 +367,9 @@ export const createCharacterCreationCommandController = (
         return
       }
 
-      await waitForDiceRevealOrDelay(roll)
+      const revealedState = await stateAfterDiceReveal(response, roll)
       syncFlowFromRoomState(
-        response.state,
+        revealedState,
         flowWithCareer.draft.characterId,
         flowWithCareer
       )
@@ -416,12 +432,10 @@ export const createCharacterCreationCommandController = (
         setError('Draft roll did not return a dice result')
         return
       }
-      await waitForDiceRevealOrDelay(roll)
-      syncAndRender(
-        { syncFlowFromRoomState, renderWizard, scrollToTop },
-        response,
-        flow
-      )
+      const revealedState = await stateAfterDiceReveal(response, roll)
+      syncFlowFromRoomState(revealedState, flow.draft.characterId, flow)
+      renderWizard()
+      scrollToTop()
     },
 
     completeBasicTraining: async (skill) => {

@@ -145,7 +145,7 @@ describe('viewer filtering', () => {
     assert.deepEqual(Object.keys(state.pieces).sort(), ['hidden', 'visible'])
   })
 
-  it('keeps pre-reveal dice rolls and totals visible to referees', () => {
+  it('hides pre-reveal dice rolls and totals from referees', () => {
     const state = buildState()
     addDiceRoll(state, futureRevealAt)
 
@@ -158,11 +158,11 @@ describe('viewer filtering', () => {
       { nowMs }
     )
 
-    assert.deepEqual(filtered.diceLog[0]?.rolls, [3, 4])
-    assert.equal(filtered.diceLog[0]?.total, 7)
+    assert.equal('rolls' in (filtered.diceLog[0] ?? {}), false)
+    assert.equal('total' in (filtered.diceLog[0] ?? {}), false)
   })
 
-  it('keeps pre-reveal dice rolls and totals visible to the game owner', () => {
+  it('hides pre-reveal dice rolls and totals from the game owner', () => {
     const state = buildState()
     state.ownerId = asUserId('owner')
     state.players[asUserId('owner')] = {
@@ -180,8 +180,8 @@ describe('viewer filtering', () => {
       { nowMs }
     )
 
-    assert.deepEqual(filtered.diceLog[0]?.rolls, [3, 4])
-    assert.equal(filtered.diceLog[0]?.total, 7)
+    assert.equal('rolls' in (filtered.diceLog[0] ?? {}), false)
+    assert.equal('total' in (filtered.diceLog[0] ?? {}), false)
   })
 
   it('redacts pre-reveal dice rolls and totals from players and spectators', () => {
@@ -969,18 +969,17 @@ describe('viewer filtering', () => {
       state,
       {
         userId: asUserId('referee'),
-        role: 'PLAYER'
+        role: 'REFEREE'
       },
       { nowMs }
     )
     assert.equal(
       refereeView.characters[asCharacterId('char-1')]?.creation?.state.status,
-      'BASIC_TRAINING'
+      'CAREER_SELECTION'
     )
-    assert.equal(
-      refereeView.characters[asCharacterId('char-1')]?.creation?.terms[0]
-        ?.career,
-      'Agent'
+    assert.deepEqual(
+      refereeView.characters[asCharacterId('char-1')]?.creation?.terms,
+      []
     )
   })
 
@@ -1137,6 +1136,245 @@ describe('viewer filtering', () => {
 
     const creation = filtered.characters[asCharacterId('char-1')]?.creation
     assert.equal(creation?.state.status, 'CAREER_SELECTION')
+    assert.equal(creation?.actionPlan, undefined)
+    assert.deepEqual(creation?.terms, [])
+    assert.deepEqual(creation?.careers, [])
+  })
+
+  it('keeps revealed failed qualification fallback while draft outcome is hidden', () => {
+    const state = buildState()
+    addDiceRoll(state, pastRevealAt)
+    state.diceLog.push({
+      id: 'roll-2',
+      actorId: asUserId('player'),
+      createdAt: '2026-05-03T00:00:02.000Z',
+      revealAt: futureRevealAt,
+      expression: '1d6',
+      reason: 'Draft',
+      rolls: [4],
+      total: 4
+    })
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Draftee',
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'BASIC_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Navy',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false,
+            draft: 1,
+            facts: {
+              draft: {
+                rollEventId: asEventId('roll-2'),
+                roll: { expression: '1d6', rolls: [4], total: 4 },
+                tableRoll: 4,
+                acceptedCareer: 'Navy'
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Navy', rank: 0 }],
+        canEnterDraft: false,
+        failedToQualify: false,
+        failedQualification: null,
+        characteristicChanges: [],
+        creationComplete: false,
+        timeline: [
+          {
+            eventId: asEventId('game-1:3'),
+            seq: 3,
+            createdAt: '2026-05-03T00:00:01.000Z',
+            eventType: 'CharacterCreationQualificationResolved',
+            rollEventId: asEventId('roll-1')
+          },
+          {
+            eventId: asEventId('game-1:4'),
+            seq: 4,
+            createdAt: '2026-05-03T00:00:02.000Z',
+            eventType: 'CharacterCreationDraftResolved',
+            rollEventId: asEventId('roll-2')
+          }
+        ],
+        actionPlan: {
+          status: 'BASIC_TRAINING',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    for (const role of ['PLAYER', 'SPECTATOR'] as const) {
+      const filtered = filterGameStateForViewer(
+        state,
+        {
+          userId: asUserId(role.toLowerCase()),
+          role
+        },
+        { nowMs }
+      )
+
+      const creation = filtered.characters[asCharacterId('char-1')]?.creation
+      assert.equal(creation?.state.status, 'CAREER_SELECTION')
+      assert.equal(creation?.canEnterDraft, true)
+      assert.equal(creation?.failedToQualify, true)
+      assert.deepEqual(creation?.terms, [])
+      assert.deepEqual(creation?.careers, [])
+      assert.deepEqual(creation?.actionPlan?.legalActions, [
+        {
+          key: 'selectCareer',
+          status: 'CAREER_SELECTION',
+          commandTypes: [
+            'ResolveCharacterCreationQualification',
+            'ResolveCharacterCreationDraft',
+            'EnterCharacterCreationDrifter'
+          ],
+          failedQualificationOptions: [
+            { option: 'Drifter' },
+            {
+              option: 'Draft',
+              rollRequirement: { key: 'draft', dice: '1d6' }
+            }
+          ]
+        }
+      ])
+    }
+  })
+
+  it('does not expose failed qualification fallback when qualification and draft are hidden', () => {
+    const state = buildState()
+    addDiceRoll(state, futureRevealAt)
+    state.diceLog.push({
+      id: 'roll-2',
+      actorId: asUserId('player'),
+      createdAt: '2026-05-03T00:00:02.000Z',
+      revealAt: futureRevealAt,
+      expression: '1d6',
+      reason: 'Draft',
+      rolls: [4],
+      total: 4
+    })
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Draftee',
+      active: true,
+      notes: '',
+      age: 18,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'BASIC_TRAINING',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [
+          {
+            career: 'Navy',
+            skills: [],
+            skillsAndTraining: [],
+            benefits: [],
+            complete: false,
+            canReenlist: true,
+            completedBasicTraining: false,
+            musteringOut: false,
+            anagathics: false,
+            draft: 1,
+            facts: {
+              draft: {
+                rollEventId: asEventId('roll-2'),
+                roll: { expression: '1d6', rolls: [4], total: 4 },
+                tableRoll: 4,
+                acceptedCareer: 'Navy'
+              }
+            }
+          }
+        ],
+        careers: [{ name: 'Navy', rank: 0 }],
+        canEnterDraft: false,
+        failedToQualify: false,
+        failedQualification: null,
+        characteristicChanges: [],
+        creationComplete: false,
+        timeline: [
+          {
+            eventId: asEventId('game-1:3'),
+            seq: 3,
+            createdAt: '2026-05-03T00:00:01.000Z',
+            eventType: 'CharacterCreationQualificationResolved',
+            rollEventId: asEventId('roll-1')
+          },
+          {
+            eventId: asEventId('game-1:4'),
+            seq: 4,
+            createdAt: '2026-05-03T00:00:02.000Z',
+            eventType: 'CharacterCreationDraftResolved',
+            rollEventId: asEventId('roll-2')
+          }
+        ],
+        actionPlan: {
+          status: 'BASIC_TRAINING',
+          pendingDecisions: [],
+          legalActions: []
+        }
+      }
+    }
+
+    const filtered = filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      { nowMs }
+    )
+
+    const creation = filtered.characters[asCharacterId('char-1')]?.creation
+    assert.equal(creation?.state.status, 'CAREER_SELECTION')
+    assert.equal(creation?.canEnterDraft, true)
+    assert.equal(creation?.failedToQualify, false)
     assert.equal(creation?.actionPlan, undefined)
     assert.deepEqual(creation?.terms, [])
     assert.deepEqual(creation?.careers, [])
@@ -1547,7 +1785,7 @@ describe('viewer filtering', () => {
     assert.equal('details' in filteredCreationActivity, false)
   })
 
-  it('keeps pre-reveal dice and roll-dependent activity details visible to owners and referees', () => {
+  it('hides pre-reveal dice and roll-dependent activity details from owners and referees', () => {
     const state = buildState()
     state.ownerId = asUserId('owner')
     state.players[asUserId('owner')] = {
@@ -1571,14 +1809,11 @@ describe('viewer filtering', () => {
 
       assert.equal(diceActivity?.type, 'diceRoll')
       if (diceActivity?.type !== 'diceRoll') return
-      assert.deepEqual(diceActivity.rolls, [3, 4])
-      assert.equal(diceActivity.total, 7)
+      assert.equal('rolls' in diceActivity, false)
+      assert.equal('total' in diceActivity, false)
       assert.equal(creationActivity?.type, 'characterCreation')
       if (creationActivity?.type !== 'characterCreation') return
-      assert.equal(
-        creationActivity.details,
-        'Survival passed; total 7; target 7+; DM 0; commission unavailable; advancement unavailable'
-      )
+      assert.equal('details' in creationActivity, false)
     }
   })
 

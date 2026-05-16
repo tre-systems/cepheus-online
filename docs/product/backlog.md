@@ -733,25 +733,23 @@ Done when:
 
 ### Slice 0G: Viewer Filtering And Reveal Timing Contract
 
-Status: partially done. Viewer-aware filtering exists as a principle and some
-protocol fixtures cover viewer-filtered messages, while `diceRevealCoordinator`
-defers client-visible roll results for several creation paths. State-bearing
-HTTP command responses, WebSocket broadcasts, and room state refreshes now
-redact pre-reveal dice `rolls` and `total` for player/spectator viewers while
-preserving reveal metadata. Live activity filtering now also strips unrevealed
-dice results and roll-dependent character creation activity details from
-player/spectator views. Owner and referee views retain unrevealed dice details,
-player/spectator views reveal them after the boundary, and the client
-coordinator can schedule reveal fallback from redacted targets. Roll-bearing
-semantic character creation events now carry optional `rollEventId`
-correlation, and character creation live activities can expose explicit reveal
-metadata while keeping the previous timestamp fallback for legacy events. The
-remaining risk is narrower: roll-bearing semantic creation events now project
-onto per-term `facts`, and new legal-action/client projection code consumes
-those facts instead of legacy `creation.history`. The legacy history model
-still exists only for historical replay compatibility of old
-`CharacterCreationTransitioned` streams, so future work should remove remaining
-compatibility reads rather than adding new ones.
+Status: in progress. Viewer-aware filtering exists as a principle and protocol
+fixtures cover viewer-filtered messages. State-bearing HTTP command responses,
+WebSocket broadcasts, room state refreshes, and live activities now use a
+server-side reveal boundary: before `revealAt`, browser-visible projections for
+owners, referees, players, and spectators expose pending-roll metadata but hide
+dice values, totals, roll-dependent character creation facts, and derived
+top-level sheet/projection consequences. The Durable Object schedules a
+post-reveal room-state broadcast, and HTTP refresh remains correct if that
+timer is missed. The client dice coordinator now animates pending dice without
+inventing results, waits until the server reveal boundary, then refetches or
+accepts the revealed projection instead of applying stale pre-reveal command
+state. Roll-bearing semantic character creation events carry optional
+`rollEventId` correlation, and character creation live activities can expose
+explicit reveal metadata while keeping the previous timestamp fallback for
+legacy events. The remaining risk is narrower: old undo-style redaction helpers
+still exist for compatibility and should keep shrinking as every read model is
+derived from reveal-aware projected facts.
 
 Primary write ownership:
 
@@ -766,21 +764,23 @@ Primary write ownership:
 
 Tasks:
 
-- Extend the viewer-filtering contract from state-bearing HTTP responses,
-  WebSocket broadcasts, room state refreshes, and live activities to future
-  replay/activity history.
-- Extend the current owner/referee/player/spectator dice fixtures to creation
-  projection details while roll-dependent details are unrevealed, revealed
-  live, and recovered after refresh.
-- Keep roll-dependent details hidden from spectators until the local reveal
-  boundary, without weakening server-side viewer filtering or refresh recovery.
+- Extend the reveal-aware public projection contract from current state-bearing
+  responses and live activities to future replay/activity history and Discord
+  logging.
+- Extend owner/referee/player/spectator dice fixtures to every remaining
+  roll-bearing creation projection detail while the roll is unrevealed,
+  revealed live, and recovered after refresh.
+- Keep roll-dependent details hidden from every browser viewer until the server
+  reveal boundary, without weakening server-side viewer filtering or refresh
+  recovery.
 - Add regression coverage for each new semantic roll-bearing creation event so
   the persisted fact, filtered state, live activity, and reveal timing agree.
 - Continue replacing transition-name-based creation activity redaction with
   explicit reveal metadata for any remaining legacy or compatibility-only
   roll-dependent activity paths.
-- Keep reveal timing on `diceRevealCoordinator`; feature modules should consume
-  revealed view models instead of running local timers for outcome text.
+- Keep client timing on `diceRevealCoordinator`; feature modules should consume
+  pending or revealed public projections instead of running local timers for
+  outcome text.
 
 Done when:
 

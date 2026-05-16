@@ -196,6 +196,17 @@ const stateHasRedactedDiceResults = (nextState: GameState | null): boolean =>
     })
   )
 
+const activityHasRedactedDiceResults = (
+  activity: ClientDiceRollActivity | DiceRollState
+): boolean => {
+  const projectedActivity = activity as unknown as Record<string, unknown>
+
+  return (
+    !Array.isArray(projectedActivity.rolls) ||
+    projectedActivity.total === undefined
+  )
+}
+
 const refetchStateSoon = (): void => {
   if (diceRevealRefetchTimer !== null) {
     window.clearTimeout(diceRevealRefetchTimer)
@@ -212,7 +223,10 @@ const shouldRefetchStateAfterDiceReveal = (
 ): boolean => {
   if (!nextState || diceRollActivities.length === 0) return false
 
-  return stateHasRedactedDiceResults(nextState)
+  return (
+    stateHasRedactedDiceResults(nextState) ||
+    diceRollActivities.some(activityHasRedactedDiceResults)
+  )
 }
 
 const applyStateAfterDiceReveal = (
@@ -316,7 +330,8 @@ const applyState = (
     latestRoll &&
     animateLatestDiceLog &&
     diceRevealApplication.wasFirstStateApplied &&
-    latestRoll.id !== diceRevealApplication.previousDiceId
+    latestRoll.id !== diceRevealApplication.previousDiceId &&
+    !diceRevealCoordinator.revealedDiceIds.has(latestRoll.id)
   ) {
     animateRoll(latestRoll)
   } else if (
@@ -388,6 +403,7 @@ characterCreationFeature = createCharacterCreationFeature({
   postCharacterCreationCommands,
   waitForDiceReveal,
   waitForDiceRevealOrDelay,
+  refreshStateAfterDiceReveal: fetchState,
   resolveDiceReveal,
   reportError: setError
 })

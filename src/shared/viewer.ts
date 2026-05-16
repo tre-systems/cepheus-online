@@ -18,7 +18,10 @@ import type {
   CareerCreationTermSkillFact,
   CareerTerm
 } from './characterCreation'
-import { deriveMaterialBenefitEffect } from './characterCreation'
+import {
+  deriveCareerCreationActionPlan,
+  deriveMaterialBenefitEffect
+} from './characterCreation'
 
 export type ViewerRole = PlayerState['role']
 
@@ -41,7 +44,12 @@ const isPieceVisibleToRole = (piece: PieceState, role: ViewerRole): boolean => {
 const canViewerSeeUnrevealedDice = (
   state: Pick<GameState, 'ownerId'>,
   viewer: GameViewer
-): boolean => viewer.role === 'REFEREE' || viewer.userId === state.ownerId
+): boolean => {
+  void state
+  void viewer
+
+  return false
+}
 
 const legacyRollDependentCreationTransitions = new Set<string>([
   'SELECT_CAREER',
@@ -316,10 +324,51 @@ const redactQualificationOutcome = (
 
 const redactDraftOutcome = (
   character: CharacterState,
-  termIndex: number
+  termIndex: number,
+  restoreFailedQualificationFallback: boolean
 ): void => {
+  const creation = character.creation
+  if (!creation) return
+
   removeProjectedCareerTerm(character, termIndex)
   redactCreationProgress(character, 'CAREER_SELECTION')
+  creation.canEnterDraft = true
+
+  if (!restoreFailedQualificationFallback) return
+
+  creation.failedToQualify = true
+  creation.actionPlan = deriveCareerCreationActionPlan(creation, {
+    characteristics: character.characteristics
+  })
+}
+
+const hasVisiblePrecedingQualificationResolution = (
+  creation: NonNullable<CharacterState['creation']>,
+  draftRollEventId: string | undefined,
+  unrevealedRollIds: ReadonlySet<string>
+): boolean => {
+  const timeline = creation.timeline ?? []
+  const draftIndex =
+    draftRollEventId === undefined
+      ? -1
+      : timeline.findIndex(
+          (entry) =>
+            entry.eventType === 'CharacterCreationDraftResolved' &&
+            entry.rollEventId === draftRollEventId
+        )
+  const precedingTimeline =
+    draftIndex === -1 ? timeline : timeline.slice(0, draftIndex)
+  const qualificationEntry = [...precedingTimeline]
+    .reverse()
+    .find(
+      (entry) => entry.eventType === 'CharacterCreationQualificationResolved'
+    )
+
+  return Boolean(
+    qualificationEntry &&
+      (!qualificationEntry.rollEventId ||
+        !unrevealedRollIds.has(qualificationEntry.rollEventId))
+  )
 }
 
 const rollDependentCreationHistoryTypes = new Set<string>([
@@ -460,7 +509,15 @@ const redactUnrevealedCreationFacts = (
       delete facts.qualification
     }
     if (hasUnrevealedRollFact(facts.draft, unrevealedRollIds)) {
-      redactDraftOutcome(character, termIndex)
+      redactDraftOutcome(
+        character,
+        termIndex,
+        hasVisiblePrecedingQualificationResolution(
+          creation,
+          facts.draft?.rollEventId,
+          unrevealedRollIds
+        )
+      )
       delete facts.draft
     }
     if (hasUnrevealedRollFact(facts.survival, unrevealedRollIds)) {

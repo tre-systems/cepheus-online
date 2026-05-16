@@ -21,6 +21,7 @@ import {
   noopPublicationTelemetrySink,
   type PublicationTelemetrySink
 } from './publication-telemetry'
+import { getProjectedGameState } from './projection'
 import {
   buildRoomStateMessage,
   parseViewerFromUrl,
@@ -113,6 +114,35 @@ const encoder = new TextEncoder()
 
 const byteLength = (value: string): number => encoder.encode(value).length
 
+const revealAtMsForActivity = (
+  activity: LiveActivityDescriptor
+): number | null => {
+  const revealAt =
+    activity.type === 'diceRoll'
+      ? activity.reveal.revealAt
+      : activity.reveal?.revealAt
+  if (!revealAt) return null
+
+  const parsed = Date.parse(revealAt)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const nextRevealBroadcastAtMs = (
+  state: GameState,
+  liveActivities: readonly LiveActivityDescriptor[],
+  nowMs = Date.now()
+): number | null => {
+  const candidates = [
+    ...state.diceLog.map((roll) => Date.parse(roll.revealAt)),
+    ...liveActivities.flatMap((activity) => {
+      const revealAt = revealAtMsForActivity(activity)
+      return revealAt === null ? [] : [revealAt]
+    })
+  ].filter((revealAt) => Number.isFinite(revealAt) && revealAt > nowMs)
+
+  return candidates.length === 0 ? null : Math.min(...candidates)
+}
+
 const isLocalTestHost = (hostname: string): boolean =>
   hostname === 'localhost' ||
   hostname === '127.0.0.1' ||
@@ -134,6 +164,10 @@ export class GameRoomDO {
     string,
     { count: number; resetAt: number }
   >()
+  private readonly revealBroadcastTimers = new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >()
 
   constructor(
     private readonly state: DurableObjectState,
@@ -151,6 +185,44 @@ export class GameRoomDO {
 
   private send(socket: WebSocket, message: ServerMessage): void {
     socket.send(serializeMessage(message))
+  }
+
+  private scheduleRevealBroadcast(
+    state: GameState,
+    liveActivities: readonly LiveActivityDescriptor[] = []
+  ): void {
+    const revealAtMs = nextRevealBroadcastAtMs(state, liveActivities)
+    if (revealAtMs === null) return
+
+    const key = `${state.id}:${revealAtMs}`
+    if (this.revealBroadcastTimers.has(key)) return
+
+    const timer = setTimeout(
+      () => {
+        this.revealBroadcastTimers.delete(key)
+        void getProjectedGameState(this.state.storage, state.id).then(
+          (projectedState) => {
+            if (projectedState) {
+              this.broadcastState(projectedState, liveActivities)
+            }
+          }
+        )
+      },
+      Math.max(0, revealAtMs - Date.now() + 20)
+    )
+
+    ;(timer as { unref?: () => void }).unref?.()
+    this.revealBroadcastTimers.set(key, timer)
+  }
+
+  private async scheduleRevealBroadcastForGame(gameId: GameId): Promise<void> {
+    const projectedState = await getProjectedGameState(
+      this.state.storage,
+      gameId
+    )
+    if (projectedState) {
+      this.scheduleRevealBroadcast(projectedState)
+    }
   }
 
   private checkRateLimit(key: string): Result<void, CommandError> {
@@ -282,6 +354,8 @@ export class GameRoomDO {
         ...activityPayload(liveActivities, state, viewer)
       })
     }
+
+    this.scheduleRevealBroadcast(state, liveActivities)
   }
 
   private async handleCommandMessage(
@@ -569,6 +643,7 @@ export class GameRoomDO {
 
       this.state.acceptWebSocket(server, tags)
       this.send(server, await this.buildRoomStateMessage(route.gameId, viewer))
+      await this.scheduleRevealBroadcastForGame(route.gameId)
 
       return new Response(null, {
         status: 101,

@@ -54,7 +54,7 @@ describe('client dice helpers', () => {
     })
   })
 
-  it('clamps roll animation timing to the visible reveal window', () => {
+  it('keeps roll animation timing behind the server reveal boundary', () => {
     const nowMs = Date.parse('2026-05-03T12:00:00.000Z')
 
     assert.deepEqual(
@@ -72,7 +72,7 @@ describe('client dice helpers', () => {
         revealAt: '2026-05-03T12:00:10.000Z',
         nowMs
       }).rollDurationMs,
-      2200
+      10000
     )
     assert.equal(
       deriveDiceRollTiming({
