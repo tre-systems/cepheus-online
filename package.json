@@ -45,6 +45,6 @@
     "esbuild": "^0.28.0",
     "husky": "^9.1.7",
     "typescript": "^5.9.3",
-    "wrangler": "^4.87.0"
+    "wrangler": "^4.92.0"
   }
 }
