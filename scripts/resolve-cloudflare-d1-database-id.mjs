@@ -5,7 +5,15 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const configPath = resolve('wrangler.jsonc')
+const allowMissing = process.argv.includes('--allow-missing')
 const config = JSON.parse(readFileSync(configPath, 'utf8'))
+
+function setGitHubOutput(name, value) {
+  const outputPath = process.env.GITHUB_OUTPUT
+  if (typeof outputPath === 'string' && outputPath.length > 0) {
+    writeFileSync(outputPath, `${name}=${value}\n`, { flag: 'a' })
+  }
+}
 
 const databaseBindings = Array.isArray(config.d1_databases)
   ? config.d1_databases
@@ -18,6 +26,7 @@ const unresolvedBindings = databaseBindings.filter(
 
 if (unresolvedBindings.length === 0) {
   console.log('Cloudflare D1 database ids are already resolved.')
+  setGitHubOutput('ready', 'true')
   process.exit(0)
 }
 
@@ -42,6 +51,14 @@ for (const binding of unresolvedBindings) {
     database?.uuid ?? database?.id ?? database?.database_id ?? null
 
   if (typeof databaseId !== 'string' || databaseId.length === 0) {
+    if (allowMissing) {
+      console.log(
+        `::warning::Could not resolve D1 database id for ${binding.database_name}. Create the database or set database_id in wrangler.jsonc to enable deployment.`
+      )
+      setGitHubOutput('ready', 'false')
+      process.exit(0)
+    }
+
     throw new Error(
       `Could not resolve D1 database id for ${binding.database_name}. Create the database or set database_id in wrangler.jsonc.`
     )
@@ -54,3 +71,4 @@ for (const binding of unresolvedBindings) {
 }
 
 writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`)
+setGitHubOutput('ready', 'true')
