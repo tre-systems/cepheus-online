@@ -52,8 +52,6 @@ The current application has the private-beta spine in place:
 
 ## MVP Follow-Up Before Invites
 
-- Add a private-beta E2E for owner export/delete after a disposable uploaded
-  asset and note are created.
 - Add deployed smoke coverage for protected auth/session failures once the
   smoke script can operate against configured private-beta credentials.
 - Review client role affordances after authenticated state hydration so player
