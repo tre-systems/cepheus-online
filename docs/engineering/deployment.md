@@ -16,16 +16,20 @@ bucket. The browser shell is embedded during the deploy build.
 | `APP_BASE_URL` | Public app origin used for OAuth redirects and invite URLs. |
 | `DISCORD_CLIENT_ID` | Discord OAuth client id. |
 
-Required secrets:
+Required for private-beta room/session routes:
 
-- `DISCORD_CLIENT_SECRET`
 - `SESSION_SECRET`
+
+Required for Discord OAuth sign-in:
+
+- `DISCORD_CLIENT_ID`
+- `DISCORD_CLIENT_SECRET`
 
 Set secrets with Wrangler:
 
 ```bash
-wrangler secret put DISCORD_CLIENT_SECRET
 wrangler secret put SESSION_SECRET
+wrangler secret put DISCORD_CLIENT_SECRET
 ```
 
 Apply D1 migrations before a private-beta deploy:
@@ -94,14 +98,23 @@ Required repository or environment secrets:
   Workers Routes edit if custom routes are added, Durable Objects edit, D1
   edit, and R2 edit permissions for the account.
 - `CLOUDFLARE_ACCOUNT_ID`: Cloudflare account id.
-- `DISCORD_CLIENT_SECRET`: Discord OAuth client secret for the Worker
-  environment.
 - `SESSION_SECRET`: high-entropy app session signing secret for the Worker
   environment.
+- `DISCORD_CLIENT_SECRET`: Discord OAuth client secret for the Worker
+  environment. This may be left unset until Discord OAuth is ready; room/session
+  routes still require `SESSION_SECRET`.
+
+Optional repository or environment variables:
+
+- `DISCORD_CLIENT_ID`: Discord OAuth client id. When unset, the deploy keeps a
+  placeholder and Discord OAuth remains disabled.
 
 The deploy workflow creates or resolves a Cloudflare D1 database named
 `cepheus-online-private-beta`; it resolves the database UUID from that name at
 deploy time.
+
+Before deployment, the workflow uploads `SESSION_SECRET` to the Worker secrets.
+It uploads `DISCORD_CLIENT_SECRET` only when that GitHub secret is configured.
 
 The workflow deploys with:
 
@@ -124,8 +137,9 @@ Set them with GitHub CLI:
 ```bash
 gh secret set CLOUDFLARE_ACCOUNT_ID --repo tre-systems/cepheus-online
 gh secret set CLOUDFLARE_API_TOKEN --repo tre-systems/cepheus-online
-gh secret set DISCORD_CLIENT_SECRET --repo tre-systems/cepheus-online
 gh secret set SESSION_SECRET --repo tre-systems/cepheus-online
+gh secret set DISCORD_CLIENT_SECRET --repo tre-systems/cepheus-online
+gh variable set DISCORD_CLIENT_ID --repo tre-systems/cepheus-online
 ```
 
 The production hostname is managed as a Worker route in the deploy workflow.

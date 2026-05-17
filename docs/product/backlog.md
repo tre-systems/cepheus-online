@@ -36,8 +36,10 @@ The current application has the private-beta spine in place:
 
 - Confirm the `cepheus-online-assets` R2 bucket exists before exercising asset
   uploads in production.
-- Configure `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and `SESSION_SECRET`
-  for the target environment.
+- Configure `SESSION_SECRET` for the target environment. This is required before
+  protected room, invite, asset, export, and delete routes are usable.
+- Configure `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` when the Discord app
+  is ready.
 - Add the Discord redirect URL `${APP_BASE_URL}/auth/discord/callback`.
 - Run `npm run verify:full`.
 - Run `npm run deploy:dry-run`.
