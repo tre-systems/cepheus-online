@@ -78,7 +78,7 @@ describe('board controls wiring', () => {
     const wiring = createBoardControlsWiring({
       elements,
       getState: () => state,
-      canSelectBoards: true,
+      canSelectBoards: () => true,
       getSelectedBoardId: () => asBoardId('board-1'),
       getCurrentZoom: () => 2,
       setCameraZoom: (nextZoom) => {
@@ -153,7 +153,7 @@ describe('board controls wiring', () => {
     createBoardControlsWiring({
       elements,
       getState: () => null,
-      canSelectBoards: true,
+      canSelectBoards: () => true,
       getSelectedBoardId: () => null,
       getCurrentZoom: () => 1,
       setCameraZoom: () => undefined,
@@ -180,5 +180,40 @@ describe('board controls wiring', () => {
 
     assert.deepEqual(errors, ['denied'])
     assert.deepEqual(rendered, ['render'])
+  })
+
+  it('does not post board selection while selection is not authorized', async () => {
+    const { elements, boardSelect } = createElements()
+    const postedBoardCommands: BoardCommand[] = []
+    const renderCalls: Array<{ canSelectBoards: boolean }> = []
+
+    const wiring = createBoardControlsWiring({
+      elements,
+      getState: () => null,
+      canSelectBoards: () => false,
+      getSelectedBoardId: () => asBoardId('board-1'),
+      getCurrentZoom: () => 1,
+      setCameraZoom: () => undefined,
+      resetCamera: () => undefined,
+      clearBoardDrag: () => undefined,
+      selectPiece: () => undefined,
+      getCommandIdentity: () => ({ gameId, actorId }),
+      postBoardCommand: async (command) => {
+        postedBoardCommands.push(command)
+      },
+      requestRender: () => undefined,
+      reportError: () => undefined,
+      renderControls: (options) => {
+        renderCalls.push({ canSelectBoards: options.canSelectBoards })
+      }
+    })
+
+    wiring.render()
+    boardSelect.value = 'board-2'
+    boardSelect.listeners.change?.()
+    await Promise.resolve()
+
+    assert.deepEqual(renderCalls, [{ canSelectBoards: false }])
+    assert.deepEqual(postedBoardCommands, [])
   })
 })

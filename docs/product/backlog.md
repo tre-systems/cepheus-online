@@ -54,8 +54,6 @@ The current application has the private-beta spine in place:
 
 - Add deployed smoke coverage for protected auth/session failures once the
   smoke script can operate against configured private-beta credentials.
-- Review client role affordances after authenticated state hydration so player
-  tabs do not display referee-only controls before the first room state arrives.
 
 ## Post-MVP Product Work
 

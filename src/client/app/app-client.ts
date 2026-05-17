@@ -112,7 +112,6 @@ export const createAppClient = ({
   let actorSessionSecret = resolveActorSessionSecret({ roomId, actorId })
   let state: GameState | null = null
   const viewerRole = initialIdentity.viewerRole
-  const canSelectBoards = isRefereeViewer(viewerRole)
   const appSession = createAppSession({ roomId, actorId, viewerRole })
   let boardController: BoardController | null = null
   let boardControlsWiring: ReturnType<typeof createBoardControlsWiring> | null =
@@ -553,7 +552,10 @@ export const createAppClient = ({
   boardControlsWiring = createBoardControlsWiring({
     elements: els,
     getState: () => state,
-    canSelectBoards,
+    canSelectBoards: () =>
+      state
+        ? isActorRefereeOrOwner(state, asUserId(actorId))
+        : !privateBetaSessionActive && isRefereeViewer(viewerRole),
     getSelectedBoardId: () => selectSelectedBoardId(state),
     getCurrentZoom: () => boardController?.currentZoom() || 1,
     setCameraZoom: (nextZoom) => {
@@ -617,7 +619,7 @@ export const createAppClient = ({
     requestRender: render,
     reportError: setError,
     getCanPickLocalAssets: () =>
-      !state || isActorRefereeOrOwner(state, asUserId(actorId)),
+      Boolean(state && isActorRefereeOrOwner(state, asUserId(actorId))),
     listUploadedAssets: async (nextRoomId) =>
       listRoomAssets({ roomId: nextRoomId }),
     uploadAsset: (input) => uploadRoomAsset(input),

@@ -13,7 +13,7 @@ export interface BoardControlsWiring extends Disposable {
 export interface BoardControlsWiringOptions {
   elements: RequiredAppElements
   getState: () => GameState | null
-  canSelectBoards: boolean
+  canSelectBoards: () => boolean
   getSelectedBoardId: () => string | null
   getCurrentZoom: () => number
   setCameraZoom: (nextZoom: number) => void
@@ -59,7 +59,7 @@ export const createBoardControlsWiring = ({
 
   disposer.listen(elements.boardSelect, 'change', () => {
     const boardId = elements.boardSelect.value
-    if (!boardId || boardId === getSelectedBoardId() || !canSelectBoards) {
+    if (!boardId || boardId === getSelectedBoardId() || !canSelectBoards()) {
       return
     }
     selectPiece(null)
@@ -92,7 +92,7 @@ export const createBoardControlsWiring = ({
       renderControls({
         elements: boardControlElements,
         state: getState(),
-        canSelectBoards,
+        canSelectBoards: canSelectBoards(),
         currentZoom: getCurrentZoom()
       })
     },
