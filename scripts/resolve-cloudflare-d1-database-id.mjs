@@ -6,6 +6,7 @@ import { resolve } from 'node:path'
 
 const configPath = resolve('wrangler.jsonc')
 const allowMissing = process.argv.includes('--allow-missing')
+const createMissing = process.argv.includes('--create-missing')
 const config = JSON.parse(readFileSync(configPath, 'utf8'))
 
 function setGitHubOutput(name, value) {
@@ -31,22 +32,51 @@ if (unresolvedBindings.length === 0) {
 }
 
 const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-const rawList = execFileSync(npxCommand, ['wrangler', 'd1', 'list', '--json'], {
-  encoding: 'utf8',
-  stdio: ['ignore', 'pipe', 'inherit']
-})
-const databases = JSON.parse(rawList)
 
-if (!Array.isArray(databases)) {
-  throw new Error('wrangler d1 list --json did not return an array')
+function listDatabases() {
+  const rawList = execFileSync(
+    npxCommand,
+    ['wrangler', 'd1', 'list', '--json'],
+    {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'inherit']
+    }
+  )
+  const databases = JSON.parse(rawList)
+
+  if (!Array.isArray(databases)) {
+    throw new Error('wrangler d1 list --json did not return an array')
+  }
+
+  return databases
 }
 
-for (const binding of unresolvedBindings) {
-  const database = databases.find(
+function findDatabase(databases, databaseName) {
+  return databases.find(
     (candidate) =>
-      candidate.name === binding.database_name ||
-      candidate.database_name === binding.database_name
+      candidate.name === databaseName ||
+      candidate.database_name === databaseName
   )
+}
+
+let databases = listDatabases()
+
+for (const binding of unresolvedBindings) {
+  let database = findDatabase(databases, binding.database_name)
+
+  if (!database && createMissing) {
+    console.log(`Creating D1 database ${binding.database_name}.`)
+    execFileSync(
+      npxCommand,
+      ['wrangler', 'd1', 'create', binding.database_name],
+      {
+        stdio: 'inherit'
+      }
+    )
+    databases = listDatabases()
+    database = findDatabase(databases, binding.database_name)
+  }
+
   const databaseId =
     database?.uuid ?? database?.id ?? database?.database_id ?? null
 

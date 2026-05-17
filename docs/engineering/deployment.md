@@ -35,10 +35,9 @@ wrangler d1 migrations apply cepheus-online-private-beta --remote
 ```
 
 The committed `wrangler.jsonc` keeps a placeholder D1 `database_id`; GitHub
-Actions resolves it from the Cloudflare database name before deployment. If the
-database does not exist yet, CI still verifies the build and Worker dry run, then
-skips publishing with an explicit warning. Manual deploys can either replace the
-placeholder locally or run:
+Actions creates the D1 database if needed, resolves the UUID from the Cloudflare
+database name, and applies remote migrations before deployment. Manual deploys
+can either replace the placeholder locally or run:
 
 ```bash
 node scripts/resolve-cloudflare-d1-database-id.mjs
@@ -100,9 +99,9 @@ Required repository or environment secrets:
 - `SESSION_SECRET`: high-entropy app session signing secret for the Worker
   environment.
 
-The deploy workflow publishes only when it can resolve a Cloudflare D1 database
-named `cepheus-online-private-beta`; it resolves the database UUID from that name
-at deploy time.
+The deploy workflow creates or resolves a Cloudflare D1 database named
+`cepheus-online-private-beta`; it resolves the database UUID from that name at
+deploy time.
 
 Set them with GitHub CLI:
 
