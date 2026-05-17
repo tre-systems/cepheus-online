@@ -1,10 +1,10 @@
-import { bindAsyncActionButton } from '../../../core/async-button.js'
+import { bindAsyncActionButton } from '../../../core/async-button'
 import {
   type CharacterCreationCareerRollButton,
   type CharacterCreationCareerSelectionViewModel,
   type CharacterCreationFailedQualificationViewModel,
   formatCharacterCreationCareerCheckShort
-} from '../view.js'
+} from '../view'
 
 export interface CharacterCreationCareerSelectionDocument {
   createElement(tagName: 'button'): HTMLButtonElement

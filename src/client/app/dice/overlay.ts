@@ -1,11 +1,11 @@
-import type { LiveDiceRollRevealTarget } from '../../../shared/live-activity.js'
+import type { LiveDiceRollRevealTarget } from '../../../shared/live-activity'
 import {
   type DicePipSlot,
   deriveDicePipSlots,
   deriveDiceRollTiming,
   deriveDieFaces,
   deriveDieTilt
-} from '../../dice.js'
+} from '../../dice'
 
 export type DiceFaceValueContent =
   | { kind: 'pips'; slots: readonly DicePipSlot[] }

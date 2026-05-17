@@ -1,4 +1,4 @@
-import { createDisposer } from '../core/disposable.js'
+import { createDisposer } from '../core/disposable'
 
 export interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>

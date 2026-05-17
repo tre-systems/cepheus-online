@@ -5,16 +5,16 @@ import type {
   GameState,
   PieceState
 } from '../../../../shared/state'
-import type { ClientIdentity } from '../../../game-commands.js'
-import type { BoardCommand } from '../../core/command-router.js'
-import type { RequiredAppElements } from '../../core/elements.js'
-import type { UploadedRoomAsset } from '../api.js'
-import type { BootstrapCommandContext } from '../bootstrap-flow.js'
+import type { ClientIdentity } from '../../../game-commands'
+import type { BoardCommand } from '../../core/command-router'
+import type { RequiredAppElements } from '../../core/elements'
+import type { UploadedRoomAsset } from '../api'
+import type { BootstrapCommandContext } from '../bootstrap-flow'
 import {
   createRoomAssetCreationController,
   type RoomAssetCreationController,
   type RoomAssetCreationOptions
-} from './controller.js'
+} from './controller'
 
 export interface RoomAssetCreationWiringOptions {
   elements: RequiredAppElements

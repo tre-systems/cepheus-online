@@ -1,7 +1,7 @@
-import type { CharacterId } from '../../../../shared/ids.js'
-import type { ClientDiceRollActivity } from '../../../game-commands.js'
-import type { CharacterCreationController } from './controller.js'
-import type { CharacterCreationPanelController } from './panel.js'
+import type { CharacterId } from '../../../../shared/ids'
+import type { ClientDiceRollActivity } from '../../../game-commands'
+import type { CharacterCreationController } from './controller'
+import type { CharacterCreationPanelController } from './panel'
 
 export interface CharacterCreationLifecycleControllerDeps {
   controller: Pick<

@@ -1,9 +1,6 @@
-import {
-  buildRollDiceCommand,
-  type ClientIdentity
-} from '../../game-commands.js'
-import type { DiceCommand } from '../core/command-router.js'
-import { createDisposer, type Disposable } from '../core/disposable.js'
+import { buildRollDiceCommand, type ClientIdentity } from '../../game-commands'
+import type { DiceCommand } from '../core/command-router'
+import { createDisposer, type Disposable } from '../core/disposable'
 
 export interface DiceCommandWiringOptions {
   rollButton: EventTarget

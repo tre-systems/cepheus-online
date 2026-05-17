@@ -1,9 +1,9 @@
 import {
   resolveDefaultRulesetData,
   type RulesetDataResolver
-} from '../../shared/character-creation/default-ruleset-provider.js'
-import type { CepheusRuleset } from '../../shared/character-creation/cepheus-srd-ruleset.js'
-import type { GameState } from '../../shared/state.js'
+} from '../../shared/character-creation/default-ruleset-provider'
+import type { CepheusRuleset } from '../../shared/character-creation/cepheus-srd-ruleset'
+import type { GameState } from '../../shared/state'
 
 export type ClientRulesetResolver = RulesetDataResolver
 

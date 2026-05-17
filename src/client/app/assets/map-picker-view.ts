@@ -5,11 +5,8 @@ import type {
   MapLosSidecar,
   MapAssetKind
 } from '../../../shared/mapAssets'
-import { validateMapLosSidecar } from '../../../shared/mapAssets.js'
-import {
-  deriveMapAssetLabel,
-  validateMapAssetCandidates
-} from './map-library.js'
+import { validateMapLosSidecar } from '../../../shared/mapAssets'
+import { deriveMapAssetLabel, validateMapAssetCandidates } from './map-library'
 
 export type MapAssetPickerSectionId =
   | 'geomorph-standard'

@@ -3,7 +3,7 @@ import type { GameState } from '../../../shared/state'
 import {
   type BootstrapCommandContext,
   nextBootstrapCommand
-} from './bootstrap-flow.js'
+} from './bootstrap-flow'
 
 export interface RoomBootstrapScene {
   run: () => Promise<void>

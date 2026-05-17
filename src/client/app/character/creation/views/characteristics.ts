@@ -1,6 +1,6 @@
-import type { CharacterCreationCharacteristicRollKey } from '../flow.js'
-import { bindAsyncActionButton } from '../../../core/async-button.js'
-import type { CharacterCreationCharacteristicGridViewModel } from '../view.js'
+import type { CharacterCreationCharacteristicRollKey } from '../flow'
+import { bindAsyncActionButton } from '../../../core/async-button'
+import type { CharacterCreationCharacteristicGridViewModel } from '../view'
 
 export interface CharacterCreationCharacteristicsDocument {
   createElement(tagName: 'button'): HTMLButtonElement

@@ -1,13 +1,13 @@
-import { characteristicModifier } from '../../../../shared/character-creation/career-rules.js'
-import type { BenefitKind } from '../../../../shared/character-creation/types.js'
+import { characteristicModifier } from '../../../../shared/character-creation/career-rules'
+import type { BenefitKind } from '../../../../shared/character-creation/types'
 import type { CharacteristicKey } from '../../../../shared/state'
 import type {
   CharacterCreationCareerPlan,
   CharacterCreationCompletedTerm,
   CharacterCreationMusteringBenefit,
   CharacterCreationStep
-} from './flow.js'
-import type { CharacterCreationCareerCheckViewModel } from './view-types.js'
+} from './flow'
+import type { CharacterCreationCareerCheckViewModel } from './view-types'
 
 export const formatCredits = (credits: number): string => `Cr${credits}`
 

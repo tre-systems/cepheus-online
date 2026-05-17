@@ -1,5 +1,5 @@
 import type { GameState } from '../../../shared/state'
-import type { ClientDiceRollActivity } from '../../game-commands.js'
+import type { ClientDiceRollActivity } from '../../game-commands'
 
 export interface DiceRevealRoll {
   id: string

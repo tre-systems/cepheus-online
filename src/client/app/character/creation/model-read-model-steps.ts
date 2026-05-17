@@ -1,25 +1,25 @@
-import type { CharacterCreationReadModel } from '../../../../shared/character-creation/view-state.js'
-import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+import type { CharacterCreationReadModel } from '../../../../shared/character-creation/view-state'
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type { CharacterCreationProjection } from '../../../../shared/state'
 import {
   createInitialCharacterDraft,
   type CharacterCreationFlow,
   type CharacterCreationStep
-} from './flow.js'
-import type { CharacterCreationWizardViewModel } from './model-types.js'
+} from './flow'
+import type { CharacterCreationWizardViewModel } from './model-types'
 import {
   deriveCharacterCreationProjectedActionSection,
   emptyHomeworldChoiceOptions,
   projectedCharacteristicGridViewModel,
   projectedTermHistoryViewModel
-} from './model-projection.js'
+} from './model-projection'
 import {
   activeCreationStep,
   activeTermCareerPlan,
   completedTermsFromReadModel,
   failedQualificationCareerPlan,
   flowFromReadModel
-} from './read-model-flow.js'
+} from './read-model-flow'
 import {
   characterCreationStepLabels,
   deriveCharacterCreationAgingChoicesViewModel,
@@ -42,7 +42,7 @@ import {
   deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary,
   type CharacterCreationValidationSummary
-} from './view.js'
+} from './view'
 
 const readModelCharacteristicStepViewModel = (
   readModel: CharacterCreationReadModel,

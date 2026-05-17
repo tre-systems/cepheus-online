@@ -1,50 +1,50 @@
-import type { CharacterId } from '../../../../shared/ids.js'
+import type { CharacterId } from '../../../../shared/ids'
 import type {
   BoardState,
   GameState,
   PieceState
-} from '../../../../shared/state.js'
-import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+} from '../../../../shared/state'
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   ClientDiceRollActivity,
   ClientIdentity
-} from '../../../game-commands.js'
-import type { RequiredAppElements } from '../../core/elements.js'
+} from '../../../game-commands'
+import type { RequiredAppElements } from '../../core/elements'
 import type {
   BoardCommand,
   CharacterCreationCommand
-} from '../../core/command-router.js'
-import type { BootstrapCommandContext } from '../../room/bootstrap-flow.js'
-import { createGameCommand } from '../../room/bootstrap-flow.js'
+} from '../../core/command-router'
+import type { BootstrapCommandContext } from '../../room/bootstrap-flow'
+import { createGameCommand } from '../../room/bootstrap-flow'
 import {
   createCharacterCreationCommandController,
   type CharacterCreationCommandController
-} from './command-controller.js'
-import { createCharacterCreationController } from './controller.js'
-import { createCharacterCreationDomController } from './dom.js'
-import type { CharacterCreationDraft } from './flow.js'
-import { createCharacterCreationFinalizationController } from './finalization.js'
-import { createCharacterCreationHomeworldPublisher } from './homeworld-publisher.js'
-import { createCharacterCreationLifecycleController } from './lifecycle.js'
-import { createCharacterCreationPanel } from './panel.js'
-import { createCharacterCreationPublicationController } from './publication.js'
+} from './command-controller'
+import { createCharacterCreationController } from './controller'
+import { createCharacterCreationDomController } from './dom'
+import type { CharacterCreationDraft } from './flow'
+import { createCharacterCreationFinalizationController } from './finalization'
+import { createCharacterCreationHomeworldPublisher } from './homeworld-publisher'
+import { createCharacterCreationLifecycleController } from './lifecycle'
+import { createCharacterCreationPanel } from './panel'
+import { createCharacterCreationPublicationController } from './publication'
 import {
   createCharacterCreationRenderController,
   type CharacterCreationRenderController
-} from './render-controller.js'
-import { createCharacterCreationWizardController } from './wizard.js'
+} from './render-controller'
+import { createCharacterCreationWizardController } from './wizard'
 import {
   createCreationActivityFeedController,
   creationActivityRevealDelayMs,
   type CreationActivityFeedController
-} from '../../activity/feed.js'
-import { createCreationPresenceDock } from '../../activity/presence-dock.js'
+} from '../../activity/feed'
+import { createCreationPresenceDock } from '../../activity/presence-dock'
 import {
   createDiceOverlayWiring,
   type DiceOverlayWiring
-} from '../../dice/overlay-wiring.js'
-import type { RequestIdFactory } from '../../core/request-id.js'
-import type { CommandAcceptedMessage } from '../../room/command-dispatch.js'
+} from '../../dice/overlay-wiring'
+import type { RequestIdFactory } from '../../core/request-id'
+import type { CommandAcceptedMessage } from '../../room/command-dispatch'
 
 export interface CharacterCreationFeature {
   animateRoll: DiceOverlayWiring['animateRoll']

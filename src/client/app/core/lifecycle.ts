@@ -2,8 +2,8 @@ import {
   createAppBootstrap,
   type AppBootstrapController,
   type AppBootstrapOptions
-} from './bootstrap.js'
-import { createDisposer, type Disposable } from './disposable.js'
+} from './bootstrap'
+import { createDisposer, type Disposable } from './disposable'
 
 export interface AppLifecycleWiring {
   appBootstrap: AppBootstrapController

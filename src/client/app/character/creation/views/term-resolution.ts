@@ -1,5 +1,5 @@
-import { bindAsyncActionButton } from '../../../core/async-button.js'
-import type { CharacterCreationTermResolutionViewModel } from '../view.js'
+import { bindAsyncActionButton } from '../../../core/async-button'
+import type { CharacterCreationTermResolutionViewModel } from '../view'
 
 export interface CharacterCreationTermResolutionDocument {
   createElement(tagName: 'button'): HTMLButtonElement

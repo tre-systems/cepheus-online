@@ -1,4 +1,4 @@
-import { createAppClient } from './app-client.js'
+import { createAppClient } from './app-client'
 
 createAppClient({
   document,

@@ -1,19 +1,19 @@
 import type {
   CareerCreationActionKey,
   LegalCareerCreationAction
-} from '../../../../shared/character-creation/types.js'
+} from '../../../../shared/character-creation/types'
 import type {
   CharacterCreationReadModel,
   CharacterCreationProjectionReadModel
-} from '../../../../shared/character-creation/view-state.js'
+} from '../../../../shared/character-creation/view-state'
 import type { CharacterId } from '../../../../shared/ids'
 import type {
   CharacterCreationProjection,
   CharacterState
 } from '../../../../shared/state'
-import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
-import type { CharacterCreationActionPlan } from './actions.js'
-import type { CharacterCreationFlow, CharacterCreationStep } from './flow.js'
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CharacterCreationActionPlan } from './actions'
+import type { CharacterCreationFlow, CharacterCreationStep } from './flow'
 import type {
   CharacterCreationAgingChoicesViewModel,
   CharacterCreationAgingRollViewModel,
@@ -37,7 +37,7 @@ import type {
   CharacterCreationTermResolutionViewModel,
   CharacterCreationTermSkillTrainingViewModel,
   CharacterCreationValidationSummary
-} from './view.js'
+} from './view'
 
 export type CharacterCreationViewModelMode = 'empty' | 'editable' | 'read-only'
 

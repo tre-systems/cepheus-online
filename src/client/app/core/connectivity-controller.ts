@@ -2,7 +2,7 @@ import {
   createConnectivityModel,
   type ConnectivityState,
   type CreateConnectivityOptions
-} from './connectivity.js'
+} from './connectivity'
 
 export interface ConnectivityEventTarget {
   addEventListener: (

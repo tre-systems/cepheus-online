@@ -3,7 +3,7 @@ import type {
   MapOccluder,
   MapVisibilityTarget
 } from '../../../shared/mapAssets'
-import { filterVisibleMapTargets } from '../../../shared/mapAssets.js'
+import { filterVisibleMapTargets } from '../../../shared/mapAssets'
 import type { PieceId } from '../../../shared/ids'
 import type { BoardState, PieceState } from '../../../shared/state'
 

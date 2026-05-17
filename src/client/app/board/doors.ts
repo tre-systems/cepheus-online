@@ -1,10 +1,10 @@
-import type { Command } from '../../../shared/commands.js'
-import type { BoardState, GameState } from '../../../shared/state.js'
+import type { Command } from '../../../shared/commands'
+import type { BoardState, GameState } from '../../../shared/state'
 import {
   buildSetDoorOpenCommand,
   type ClientIdentity
-} from '../../game-commands.js'
-import { deriveDoorToggleViewModels } from './los-view.js'
+} from '../../game-commands'
+import { deriveDoorToggleViewModels } from './los-view'
 
 type DoorCommand = Extract<Command, { type: 'SetDoorOpen' }>
 

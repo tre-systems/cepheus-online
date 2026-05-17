@@ -1,24 +1,24 @@
-import { CEPHEUS_SRD_RULESET } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+import { CEPHEUS_SRD_RULESET } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   CascadeSkillChoice,
   HomeworldChoiceOptions
-} from '../../../../shared/character-creation/types.js'
-import type { CharacterCreationFlow } from './flow.js'
-import { deriveCharacterCreationFieldViewModels } from './view-fields-model.js'
+} from '../../../../shared/character-creation/types'
+import type { CharacterCreationFlow } from './flow'
+import { deriveCharacterCreationFieldViewModels } from './view-fields-model'
 import {
   deriveCharacterCreationBackgroundSkillSummary,
   homeworldSummaryViewModel,
   pendingCascadeChoiceViewModel,
   selectedHomeworld,
   selectedTradeCodes
-} from './view-homeworld-model.js'
+} from './view-homeworld-model'
 import type {
   CharacterCreationHomeworldOptionViewModel,
   CharacterCreationHomeworldViewModel,
   CharacterCreationViewRulesOptions
-} from './view-types.js'
+} from './view-types'
 
-export type * from './view-types.js'
+export type * from './view-types'
 export {
   characterCreationPrimaryCtaLabels,
   characterCreationStepLabels,
@@ -29,12 +29,12 @@ export {
   formatCharacterCreationCompletedTermSummary,
   formatCharacterCreationMusteringBenefitSummary,
   formatCharacterCreationReenlistmentOutcome
-} from './view-format.js'
+} from './view-format'
 export {
   deriveCharacterCreationFieldViewModels,
   equipmentText,
   parseCharacterCreationDraftPatch
-} from './view-fields-model.js'
+} from './view-fields-model'
 export {
   characterCreationViewSteps,
   deriveCharacterCreationBasicTrainingButton,
@@ -48,12 +48,12 @@ export {
   deriveCharacterCreationStatStrip,
   deriveCharacterCreationStepProgressItems,
   deriveCharacterCreationValidationSummary
-} from './view-flow-model.js'
+} from './view-flow-model'
 export {
   deriveCharacterCreationCareerOptionViewModels,
   deriveCharacterCreationCareerSelectionViewModel,
   deriveCharacterCreationFailedQualificationViewModel
-} from './view-career-model.js'
+} from './view-career-model'
 export {
   deriveCharacterCreationAgingChoicesViewModel,
   deriveCharacterCreationAgingRollViewModel,
@@ -65,13 +65,13 @@ export {
   deriveCharacterCreationTermCascadeChoicesViewModel,
   deriveCharacterCreationTermResolutionViewModel,
   deriveCharacterCreationTermSkillTrainingViewModel
-} from './view-career-lifecycle-model.js'
+} from './view-career-lifecycle-model'
 export {
   deriveCharacterCreationMusteringOutViewModel,
   deriveCharacterCreationReviewSummary,
   deriveCharacterCreationTermHistoryViewModel
-} from './view-mustering-review-model.js'
-export { deriveCharacterCreationCascadeSkillChoiceViewModels } from './view-homeworld-model.js'
+} from './view-mustering-review-model'
+export { deriveCharacterCreationCascadeSkillChoiceViewModels } from './view-homeworld-model'
 
 const optionViewModels = (
   values: readonly string[],

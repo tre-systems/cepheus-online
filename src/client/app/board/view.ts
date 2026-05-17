@@ -1,8 +1,8 @@
 import type { BoardId } from '../../../shared/ids'
 import type { PieceId } from '../../../shared/ids'
 import type { BoardState, GameState, PieceState } from '../../../shared/state'
-import { browserImageUrl } from '../assets/images.js'
-import { deriveVisiblePieceIds } from './los-view.js'
+import { browserImageUrl } from '../assets/images'
+import { deriveVisiblePieceIds } from './los-view'
 
 export const boardList = (
   state: Pick<GameState, 'boards'> | null | undefined

@@ -2,13 +2,13 @@ import {
   deriveCareerTermSkillRollSummaries,
   deriveCareerTermTrainingSkillsFromFacts,
   hasProjectedCareerTermFacts
-} from '../../../../shared/character-creation/term-skills.js'
+} from '../../../../shared/character-creation/term-skills'
 import {
   deriveCharacterCreationReadModel,
   type CharacterCreationReadModel,
   type CharacterCreationProjectionReadModel
-} from '../../../../shared/character-creation/view-state.js'
-import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+} from '../../../../shared/character-creation/view-state'
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -21,7 +21,7 @@ import {
   type CharacterCreationFlow,
   type CharacterCreationMusteringBenefit,
   type CharacterCreationStep
-} from './flow.js'
+} from './flow'
 
 export const completedTermsFromReadModel = (
   readModel: Pick<CharacterCreationProjectionReadModel, 'completedTerms'>

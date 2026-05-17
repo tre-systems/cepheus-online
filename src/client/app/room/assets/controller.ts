@@ -12,7 +12,7 @@ import type {
   GameState,
   PieceState
 } from '../../../../shared/state'
-import type { ClientIdentity } from '../../../game-commands.js'
+import type { ClientIdentity } from '../../../game-commands'
 import {
   createGameCommand,
   parseNonNegativeIntegerValue,
@@ -20,7 +20,7 @@ import {
   parsePositiveNumberValue,
   type BootstrapCommandContext,
   uniqueBoardId
-} from '../bootstrap-flow.js'
+} from '../bootstrap-flow'
 import {
   browserImageUrl,
   readImageDimensions as readImageDimensionsFromFile,
@@ -28,20 +28,20 @@ import {
   readSelectedImageFileAsDataUrl,
   type ImageDimensions,
   type ImageFileInput
-} from '../../assets/images.js'
+} from '../../assets/images'
 import {
   deriveMapAssetDimensionsViewModel,
   deriveMapAssetLosSidecarSummary,
   deriveMapAssetPickerViewModel,
   type MapAssetPickerItemViewModel,
   type MapAssetPickerViewModel
-} from '../../assets/map-picker-view.js'
-import { planCreatePieceCommands } from '../../piece/command-plan.js'
-import type { UploadedRoomAsset } from '../api.js'
+} from '../../assets/map-picker-view'
+import { planCreatePieceCommands } from '../../piece/command-plan'
+import type { UploadedRoomAsset } from '../api'
 import {
   parseLocalAssetLosSidecarCandidates,
   parseLocalAssetMetadataCandidates
-} from './local-metadata.js'
+} from './local-metadata'
 
 export interface RoomAssetCreationElements {
   createPiece: HTMLButtonElement

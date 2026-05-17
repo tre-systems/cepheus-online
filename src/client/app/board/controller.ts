@@ -11,27 +11,21 @@ import {
   deriveCameraZoom,
   findHitPiece,
   screenToBoard
-} from './geometry.js'
-import {
-  buildMovePieceCommand,
-  type ClientIdentity
-} from '../../game-commands.js'
+} from './geometry'
+import { buildMovePieceCommand, type ClientIdentity } from '../../game-commands'
 import {
   boardImageUrl,
   pieceImageUrl,
   selectedBoard,
   selectedBoardPiecesForViewer
-} from './view.js'
-import {
-  type BrowserImageCacheEntry,
-  loadBrowserImage
-} from '../assets/images.js'
+} from './view'
+import { type BrowserImageCacheEntry, loadBrowserImage } from '../assets/images'
 import {
   deriveLosOverlaySegments,
   type LosOverlaySegmentViewModel
-} from './los-view.js'
-import type { BoardCommand } from '../core/command-router.js'
-import { createDisposer, type Disposable } from '../core/disposable.js'
+} from './los-view'
+import type { BoardCommand } from '../core/command-router'
+import { createDisposer, type Disposable } from '../core/disposable'
 
 const DRAG_START_SLOP_PX = 6
 

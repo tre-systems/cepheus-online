@@ -1,8 +1,8 @@
 import type { PieceId } from '../../../../shared/ids'
 import type { PieceState } from '../../../../shared/state'
-import { createDisposer, type Disposable } from '../../core/disposable.js'
-import type { RequiredAppElements } from '../../core/elements.js'
-import type { CharacterSheetController } from './controller.js'
+import { createDisposer, type Disposable } from '../../core/disposable'
+import type { RequiredAppElements } from '../../core/elements'
+import type { CharacterSheetController } from './controller'
 
 export interface CharacterSheetControlsWiringOptions {
   elements: Pick<

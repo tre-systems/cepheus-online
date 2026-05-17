@@ -14,7 +14,7 @@ import {
 import {
   deriveLiveDiceRollRevealTarget,
   type LiveActivityDescriptor
-} from '../shared/live-activity.js'
+} from '../shared/live-activity'
 import type { ClientMessage, ServerMessage } from '../shared/protocol'
 import type {
   CharacterCharacteristics,

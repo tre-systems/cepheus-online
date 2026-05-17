@@ -1,22 +1,22 @@
-import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import {
   deriveCharacterCreationReadModel,
   type CharacterCreationReadModel,
   type CharacterCreationProjectionReadModel
-} from '../../../../shared/character-creation/view-state.js'
+} from '../../../../shared/character-creation/view-state'
 import type { CharacterCreationProjection } from '../../../../shared/state'
-import type { CharacterCreationFlow } from './flow.js'
-import { localFlowWizardViewModel } from './model-local-flow.js'
-import { readModelWizardViewModel } from './model-read-model-steps.js'
-import { pendingViewModel, projectionViewModel } from './model-projection.js'
+import type { CharacterCreationFlow } from './flow'
+import { localFlowWizardViewModel } from './model-local-flow'
+import { readModelWizardViewModel } from './model-read-model-steps'
+import { pendingViewModel, projectionViewModel } from './model-projection'
 import type {
   CharacterCreationProjectionViewModel,
   CharacterCreationViewModel,
   CharacterCreationWizardViewModel,
   DeriveCharacterCreationViewModelOptions
-} from './model-types.js'
+} from './model-types'
 
-export { flowFromProjectedCharacterReadModel } from './read-model-flow.js'
+export { flowFromProjectedCharacterReadModel } from './read-model-flow'
 export type {
   CharacterCreationPendingViewModel,
   CharacterCreationProjectedActionSection,
@@ -25,8 +25,8 @@ export type {
   CharacterCreationViewModelMode,
   CharacterCreationWizardViewModel,
   DeriveCharacterCreationViewModelOptions
-} from './model-types.js'
-export { deriveCharacterCreationProjectedActionSection } from './model-projection.js'
+} from './model-types'
+export { deriveCharacterCreationProjectedActionSection } from './model-projection'
 
 const wizardViewModel = ({
   flow,

@@ -4,10 +4,10 @@ import type {
   CharacterCreationProjection,
   GameState
 } from '../../../../shared/state'
-import type { CharacterCreationCommand } from '../../core/command-router.js'
-import type { CharacterCreationDraft, CharacterCreationFlow } from './flow.js'
-import { projectedCharacterCreation } from './follow.js'
-import { deriveCharacterCreationValidationSummary } from './view.js'
+import type { CharacterCreationCommand } from '../../core/command-router'
+import type { CharacterCreationDraft, CharacterCreationFlow } from './flow'
+import { projectedCharacterCreation } from './follow'
+import { deriveCharacterCreationValidationSummary } from './view'
 
 export interface CharacterCreationHomeworldPublisher {
   publishProgress: (flow: CharacterCreationFlow | null) => Promise<void>

@@ -1,20 +1,20 @@
 import type {
   CharacterCreationReadModel,
   CharacterCreationProjectionReadModel
-} from '../../../../shared/character-creation/view-state.js'
+} from '../../../../shared/character-creation/view-state'
 import type { CharacterCreationProjection } from '../../../../shared/state'
-import type { CharacterCreationFlow } from './flow.js'
-import { completedTermsForFlow } from './read-model-flow.js'
+import type { CharacterCreationFlow } from './flow'
+import { completedTermsForFlow } from './read-model-flow'
 import type {
   CharacterCreationProjectionViewModel,
   CharacterCreationWizardViewModel
-} from './model-types.js'
+} from './model-types'
 import {
   deriveCharacterCreationProjectedActionSection,
   flowRulesOptions,
   projectedCharacteristicGridViewModel,
   projectedTermHistoryViewModel
-} from './model-projection.js'
+} from './model-projection'
 import {
   deriveCharacterCreationAgingChoicesViewModel,
   deriveCharacterCreationAgingRollViewModel,
@@ -38,7 +38,7 @@ import {
   deriveCharacterCreationTermResolutionViewModel,
   deriveCharacterCreationTermSkillTrainingViewModel,
   deriveCharacterCreationValidationSummary
-} from './view.js'
+} from './view'
 
 export const localFlowWizardViewModel = ({
   flow,

@@ -1,4 +1,4 @@
-import { buildRoomPath, buildViewerSocketQuery } from '../room/api.js'
+import { buildRoomPath, buildViewerSocketQuery } from '../room/api'
 
 export interface AppLocationIdentity {
   roomId: string

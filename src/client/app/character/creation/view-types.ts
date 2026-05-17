@@ -1,18 +1,15 @@
 import type {
   CepheusCareerDefinition,
   CepheusRuleset
-} from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   BenefitKind,
   FailedQualificationOption,
   InjuryResolutionActionOption
-} from '../../../../shared/character-creation/types.js'
-import type { InjurySecondaryChoice } from '../../../../shared/characterCreation.js'
+} from '../../../../shared/character-creation/types'
+import type { InjurySecondaryChoice } from '../../../../shared/characterCreation'
 import type { CharacteristicKey } from '../../../../shared/state'
-import type {
-  CharacterCreationStep,
-  CharacterCreationValidation
-} from './flow.js'
+import type { CharacterCreationStep, CharacterCreationValidation } from './flow'
 
 export type CharacterCreationViewStep = CharacterCreationStep
 

@@ -16,7 +16,7 @@ import {
   derivePlainCharacterExport,
   formatLedgerEntryForExport,
   sortSkillsForExport
-} from './export-view.js'
+} from './export-view'
 import {
   characteristicRows,
   characterSheetEmptyLabels,
@@ -26,7 +26,7 @@ import {
   selectedCharacter as selectCharacter,
   skillRollReason,
   skillsFromText
-} from './view.js'
+} from './view'
 
 type CharacterSheetTab = 'details' | 'action' | 'items' | 'notes'
 

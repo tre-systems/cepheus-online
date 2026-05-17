@@ -3,8 +3,8 @@ import {
   remainingMusteringBenefits,
   type CharacterCreationFlow,
   type CharacterCreationStep
-} from './flow.js'
-import { creationStepFromStatus } from './steps.js'
+} from './flow'
+import { creationStepFromStatus } from './steps'
 
 const characterCreationStepOrder = [
   'basics',

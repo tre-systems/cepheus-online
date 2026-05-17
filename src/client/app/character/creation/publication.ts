@@ -1,11 +1,11 @@
-import type { GameState } from '../../../../shared/state.js'
-import type { ClientIdentity } from '../../../game-commands.js'
-import type { CharacterCreationCommand } from '../../core/command-router.js'
+import type { GameState } from '../../../../shared/state'
+import type { ClientIdentity } from '../../../game-commands'
+import type { CharacterCreationCommand } from '../../core/command-router'
 import {
   deriveCreateCharacterCommand,
   deriveStartCharacterCreationCommand,
   type CharacterCreationFlow
-} from './flow.js'
+} from './flow'
 
 export interface CharacterCreationPublicationControllerDeps {
   getFlow: () => CharacterCreationFlow | null

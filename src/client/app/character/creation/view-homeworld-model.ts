@@ -1,23 +1,23 @@
 import {
   derivePrimaryEducationSkillOptions,
   deriveTotalBackgroundSkillAllowance
-} from '../../../../shared/character-creation/background-skills.js'
+} from '../../../../shared/character-creation/background-skills'
 import {
   CEPHEUS_SRD_RULESET,
   type CepheusRuleset
-} from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import {
   careerSkillWithLevel,
   formatCareerSkill,
   isCascadeCareerSkill,
   parseCareerSkill
-} from '../../../../shared/character-creation/skills.js'
+} from '../../../../shared/character-creation/skills'
 import type {
   CascadeSkillChoice,
   HomeworldChoiceOptions
-} from '../../../../shared/character-creation/types.js'
-import type { CharacterCreationFlow } from './flow.js'
-import { plural } from './view-common.js'
+} from '../../../../shared/character-creation/types'
+import type { CharacterCreationFlow } from './flow'
+import { plural } from './view-common'
 import type {
   CharacterCreationBackgroundSkillSummary,
   CharacterCreationCascadeSkillChoiceOptionViewModel,
@@ -25,7 +25,7 @@ import type {
   CharacterCreationHomeworldSummaryViewModel,
   CharacterCreationPendingCascadeChoiceViewModel,
   CharacterCreationViewRulesOptions
-} from './view-types.js'
+} from './view-types'
 
 interface CharacterCreationHomeworldDraftFields {
   homeworld?: {

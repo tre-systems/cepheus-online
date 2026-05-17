@@ -85,6 +85,15 @@ for (const path of sourceFiles) {
     })
   }
 
+  checkLinePattern({
+    path,
+    lines,
+    pattern:
+      /\b(?:from\s+|import\s*)['"]\.{1,2}\/[^'"]+\.js['"]|import\(\s*['"]\.{1,2}\/[^'"]+\.js['"]\s*\)/,
+    message:
+      'TypeScript source uses extensionless relative imports; reserve .js specifiers for runtime JavaScript assets'
+  })
+
   if (path.startsWith('src/client/') && path !== 'src/client/dom.ts') {
     checkLinePattern({
       path,

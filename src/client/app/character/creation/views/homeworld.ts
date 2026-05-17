@@ -5,7 +5,7 @@ import type {
   CharacterCreationHomeworldViewModel,
   CharacterCreationPendingCascadeChoiceViewModel,
   CharacterCreationTermCascadeChoicesViewModel
-} from '../view.js'
+} from '../view'
 
 export interface CharacterCreationHomeworldDocument {
   createElement(tagName: 'button'): HTMLButtonElement

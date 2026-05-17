@@ -1,11 +1,11 @@
 import type { PieceId } from '../../../../shared/ids'
-import type { Disposable } from '../../core/disposable.js'
-import type { RequiredAppElements } from '../../core/elements.js'
+import type { Disposable } from '../../core/disposable'
+import type { RequiredAppElements } from '../../core/elements'
 import {
   createRoomMenuController,
   type RoomIdentity,
   type RoomMenuControllerOptions
-} from './controller.js'
+} from './controller'
 
 export interface RoomMenuWiringOptions {
   elements: RequiredAppElements

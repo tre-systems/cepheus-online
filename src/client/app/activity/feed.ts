@@ -1,12 +1,12 @@
 import type {
   ClientDiceRollActivity,
   ClientMessageApplication
-} from '../../game-commands.js'
+} from '../../game-commands'
 import {
   deriveCreationActivityCardsFromApplication,
   type CreationActivityCardViewModel
-} from './view.js'
-import { hasRedactedCreationActivityDetails } from './client.js'
+} from './view'
+import { hasRedactedCreationActivityDetails } from './client'
 
 export interface CreationActivityFeedElements {
   feed: HTMLElement

@@ -1,10 +1,10 @@
 import type {
   CharacterCreationCharacteristicRollKey,
   CharacterCreationFlow
-} from './flow.js'
-import { characterCreationCareerNames } from './flow.js'
-import { bindAsyncActionButton } from '../../core/async-button.js'
-import { renderCharacterCreationCascadeChoice as renderCharacterCreationCascadeChoiceView } from './views/homeworld.js'
+} from './flow'
+import { characterCreationCareerNames } from './flow'
+import { bindAsyncActionButton } from '../../core/async-button'
+import { renderCharacterCreationCascadeChoice as renderCharacterCreationCascadeChoiceView } from './views/homeworld'
 import {
   deriveCharacterCreationCharacteristicRollButton,
   type CharacterCreationBasicTrainingButton,
@@ -14,7 +14,7 @@ import {
   type CharacterCreationMusteringOutViewModel,
   type CharacterCreationNextStepViewModel,
   type CharacterCreationPendingCascadeChoiceViewModel
-} from './view.js'
+} from './view'
 
 export interface CharacterCreationRendererDocument {
   createElement(tagName: 'button'): HTMLButtonElement

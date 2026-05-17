@@ -1,6 +1,6 @@
-import type { ServiceWorkerController } from './service-worker.js'
-import type { PwaUpdateState } from './update-state.js'
-import { createDisposer } from '../core/disposable.js'
+import type { ServiceWorkerController } from './service-worker'
+import type { PwaUpdateState } from './update-state'
+import { createDisposer } from '../core/disposable'
 
 export interface PwaUpdatePromptElements {
   prompt: HTMLElement | null

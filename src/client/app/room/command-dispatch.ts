@@ -8,8 +8,8 @@ import {
   type DiceCommand,
   type DoorCommand,
   type SheetCommand
-} from '../core/command-router.js'
-import type { postRoomCommand } from './api.js'
+} from '../core/command-router'
+import type { postRoomCommand } from './api'
 
 export type CommandAcceptedMessage = Extract<
   ServerMessage,

@@ -8,23 +8,20 @@ import type {
   GameState,
   PieceState
 } from '../../shared/state'
-import { isActorRefereeOrOwner } from '../../shared/viewer.js'
-import { setReactiveErrorReporter } from '../reactive.js'
+import { isActorRefereeOrOwner } from '../../shared/viewer'
+import { setReactiveErrorReporter } from '../reactive'
 import {
   selectedBoard as selectSelectedBoard,
   selectedBoardId as selectSelectedBoardId,
   selectedBoardPieces
-} from './board/view.js'
-import { getAppElements, requireAppElements } from './core/elements.js'
-import {
-  createBoardController,
-  type BoardController
-} from './board/controller.js'
+} from './board/view'
+import { getAppElements, requireAppElements } from './core/elements'
+import { createBoardController, type BoardController } from './board/controller'
 import {
   createCharacterCreationFeature,
   type CharacterCreationFeature
-} from './character/creation/feature.js'
-import { createCharacterRailController } from './character/rail/controller.js'
+} from './character/creation/feature'
+import { createCharacterRailController } from './character/rail/controller'
 import {
   acceptRoomInvite,
   createAppRoom,
@@ -34,44 +31,44 @@ import {
   listRoomAssets,
   postRoomCommand,
   uploadRoomAsset
-} from './room/api.js'
+} from './room/api'
 import {
   applyServerMessage as applyClientServerMessage,
   type ClientDiceRollActivity,
   type ClientIdentity
-} from '../game-commands.js'
-import { createAppSession } from './core/session.js'
-import { resolveActorSessionSecret } from './core/actor-session.js'
-import { createCharacterSheetWiring } from './character/sheet/wiring.js'
+} from '../game-commands'
+import { createAppSession } from './core/session'
+import { resolveActorSessionSecret } from './core/actor-session'
+import { createCharacterSheetWiring } from './character/sheet/wiring'
 import {
   createDiceRevealCoordinator,
   shouldAnimateLatestDiceRoll
-} from './dice/reveal-coordinator.js'
+} from './dice/reveal-coordinator'
 import {
   DEFAULT_APP_LOCATION,
   type AppLocationIdentity,
   isRefereeViewer,
   resolveAppLocationIdentity
-} from './core/location.js'
-import { createRoomConnectionController } from './room/connection.js'
+} from './core/location'
+import { createRoomConnectionController } from './room/connection'
 import {
   prepareLiveActivityApplication,
   suppressTransientLiveActivities
-} from './activity/client.js'
-import { createRequestIdFactory } from './core/request-id.js'
-import { createRoomCommandDispatch } from './room/command-dispatch.js'
-import { createRoomAssetCreationWiring } from './room/assets/wiring.js'
-import { createRoomMenuWiring } from './room/menu/wiring.js'
-import { createAppShell, registerAppShellServiceWorker } from './core/shell.js'
-import { createBoardControlsWiring } from './board/controls-wiring.js'
-import { createAppRefreshWiring } from './core/refresh.js'
-import { createDiceCommandWiring } from './dice/commands.js'
-import { createAppLifecycleWiring } from './core/lifecycle.js'
-import { createCharacterSheetControlsWiring } from './character/sheet/controls-wiring.js'
-import { createRoomBootstrapScene } from './room/bootstrap-scene.js'
-import { createBoardDoorActions } from './board/doors.js'
-import { createNotesPanelController } from './notes/controller.js'
-import { rulesetFromState } from './ruleset-provider.js'
+} from './activity/client'
+import { createRequestIdFactory } from './core/request-id'
+import { createRoomCommandDispatch } from './room/command-dispatch'
+import { createRoomAssetCreationWiring } from './room/assets/wiring'
+import { createRoomMenuWiring } from './room/menu/wiring'
+import { createAppShell, registerAppShellServiceWorker } from './core/shell'
+import { createBoardControlsWiring } from './board/controls-wiring'
+import { createAppRefreshWiring } from './core/refresh'
+import { createDiceCommandWiring } from './dice/commands'
+import { createAppLifecycleWiring } from './core/lifecycle'
+import { createCharacterSheetControlsWiring } from './character/sheet/controls-wiring'
+import { createRoomBootstrapScene } from './room/bootstrap-scene'
+import { createBoardDoorActions } from './board/doors'
+import { createNotesPanelController } from './notes/controller'
+import { rulesetFromState } from './ruleset-provider'
 
 export interface AppClient {
   start: () => void
@@ -619,7 +616,9 @@ export const createAppClient = ({
     requestRender: render,
     reportError: setError,
     getCanPickLocalAssets: () =>
-      Boolean(state && isActorRefereeOrOwner(state, asUserId(actorId))),
+      state
+        ? isActorRefereeOrOwner(state, asUserId(actorId))
+        : !privateBetaSessionActive && isRefereeViewer(viewerRole),
     listUploadedAssets: async (nextRoomId) =>
       listRoomAssets({ roomId: nextRoomId }),
     uploadAsset: (input) => uploadRoomAsset(input),

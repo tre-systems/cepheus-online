@@ -1,7 +1,7 @@
 import type {
   ClientDiceRollActivity,
   ClientMessageApplication
-} from '../../game-commands.js'
+} from '../../game-commands'
 
 export interface LiveActivityClientState {
   animatedDiceRollActivityIds: ReadonlySet<string>

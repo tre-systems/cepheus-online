@@ -74,6 +74,7 @@ limit so dependency maintenance stays reviewable.
 - no raw room HTTP helper imports from feature modules
 - no legacy character-creation history reads outside the compatibility adapter
 - no direct bundled-ruleset resolver imports outside provider setup
+- no `.js` relative import specifiers in TypeScript source
 - no new `// @ts-nocheck` files
 
 Biome also enforces import-direction rules for `src/shared`, `src/server`, and
@@ -84,6 +85,8 @@ Biome also enforces import-direction rules for `src/shared`, `src/server`, and
 - `src/shared` imports only `src/shared`.
 - `src/server` imports `src/shared` and `src/server`.
 - `src/client` imports `src/shared` and `src/client`.
+- TypeScript source uses extensionless relative imports and `import type` for
+  type-only dependencies.
 - Runtime dependencies remain zero unless an architectural decision explicitly
   accepts one.
 - Development-only tooling is allowed when it improves consistency without

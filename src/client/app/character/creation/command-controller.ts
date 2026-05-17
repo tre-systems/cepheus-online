@@ -1,16 +1,16 @@
 import type { GameId, UserId } from '../../../../shared/ids'
 import type { LiveDiceRollRevealTarget } from '../../../../shared/live-activity'
-import type { BenefitKind } from '../../../../shared/character-creation/types.js'
+import type { BenefitKind } from '../../../../shared/character-creation/types'
 import type {
   InjuryResolutionMethod,
   InjurySecondaryChoice
-} from '../../../../shared/characterCreation.js'
+} from '../../../../shared/characterCreation'
 import type {
   CharacteristicKey,
   DiceRollState,
   GameState
 } from '../../../../shared/state'
-import type { CharacterCreationCommand } from '../../core/command-router.js'
+import type { CharacterCreationCommand } from '../../core/command-router'
 import {
   deriveCharacterCreationAgingChangeOptions,
   deriveNextCharacterCreationCharacteristicRoll,
@@ -19,11 +19,11 @@ import {
   type CharacterCreationAgingSelection,
   type CharacterCreationFlow,
   type CharacterCreationTermSkillTable
-} from './flow.js'
+} from './flow'
 import {
   characteristicDefinitions,
   deriveCharacterCreationCharacteristicRollButton
-} from './view.js'
+} from './view'
 
 export interface CharacterCreationCommandResponse {
   state: GameState | null

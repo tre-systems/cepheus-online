@@ -1,4 +1,4 @@
-import type { CharacterCreationViewModel } from './model.js'
+import type { CharacterCreationViewModel } from './model'
 
 export interface CharacterCreationPanelElements {
   panel: HTMLElement

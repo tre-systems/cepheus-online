@@ -3,14 +3,14 @@ import {
   createConnectivityController,
   type ConnectivityController,
   type ConnectivityControllerOptions
-} from '../core/connectivity-controller.js'
-import type { ConnectivityState } from '../core/connectivity.js'
+} from '../core/connectivity-controller'
+import type { ConnectivityState } from '../core/connectivity'
 import {
   createRoomSocketController,
   type RoomSocketConstructor,
   type RoomSocketController,
   type RoomSocketControllerOptions
-} from './socket.js'
+} from './socket'
 
 export interface RoomConnectionControllerOptions {
   webSocketConstructor: RoomSocketConstructor

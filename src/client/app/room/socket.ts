@@ -1,5 +1,5 @@
-import type { RoomWebSocketUrlOptions } from '../core/location.js'
-import { buildRoomWebSocketUrl } from '../core/location.js'
+import type { RoomWebSocketUrlOptions } from '../core/location'
+import { buildRoomWebSocketUrl } from '../core/location'
 
 export interface RoomSocketLike {
   addEventListener(type: 'open', listener: () => void): void

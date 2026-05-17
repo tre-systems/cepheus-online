@@ -1,4 +1,4 @@
-import { createDisposer, type Disposable } from './disposable.js'
+import { createDisposer, type Disposable } from './disposable'
 
 export interface AppRefreshWiringOptions {
   refreshButton: EventTarget

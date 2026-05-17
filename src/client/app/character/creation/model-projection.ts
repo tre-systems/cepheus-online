@@ -1,28 +1,28 @@
 import type {
   CharacterCreationReadModel,
   CharacterCreationProjectionReadModel
-} from '../../../../shared/character-creation/view-state.js'
-import { deriveCharacterCreationProjectionReadModel } from '../../../../shared/character-creation/view-state.js'
+} from '../../../../shared/character-creation/view-state'
+import { deriveCharacterCreationProjectionReadModel } from '../../../../shared/character-creation/view-state'
 import {
   deriveCepheusCareerDefinitions,
   type CepheusRuleset
-} from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
-import type { CareerCreationActionKey } from '../../../../shared/character-creation/types.js'
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
+import type { CareerCreationActionKey } from '../../../../shared/character-creation/types'
 import type { CharacterCreationProjection } from '../../../../shared/state'
-import type { CharacterCreationFlow } from './flow.js'
-import { completedTermsFromReadModel } from './read-model-flow.js'
+import type { CharacterCreationFlow } from './flow'
+import { completedTermsFromReadModel } from './read-model-flow'
 import type {
   CharacterCreationPendingViewModel,
   CharacterCreationProjectedActionSection,
   CharacterCreationProjectionViewModel
-} from './model-types.js'
+} from './model-types'
 import {
   characteristicDefinitions,
   formatCharacterCreationCharacteristicModifier,
   formatCharacterCreationCompletedTermSummary,
   type CharacterCreationCharacteristicGridViewModel,
   type CharacterCreationTermHistoryViewModel
-} from './view.js'
+} from './view'
 
 export type CharacterCreationFlowRulesOptions = {
   ruleset?: CepheusRuleset

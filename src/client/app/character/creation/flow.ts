@@ -1,31 +1,31 @@
-import { resolveAging } from '../../../../shared/character-creation/aging.js'
+import { resolveAging } from '../../../../shared/character-creation/aging'
 import {
   type BackgroundHomeworld,
   type BackgroundSkillPlan,
   deriveBackgroundSkillPlan,
   deriveTotalBackgroundSkillAllowance,
   hasBackgroundHomeworld
-} from '../../../../shared/character-creation/background-skills.js'
+} from '../../../../shared/character-creation/background-skills'
 import {
   canRollCashBenefit,
   deriveCashBenefitRollModifier,
   deriveMaterialBenefitRollModifier,
   deriveRemainingCareerBenefits,
   resolveCareerBenefit
-} from '../../../../shared/character-creation/benefits.js'
+} from '../../../../shared/character-creation/benefits'
 import {
   deriveBasicTrainingPlan,
   evaluateCareerCheck,
   parseCareerCheck,
   parseCareerRankReward,
   resolveDraftCareer
-} from '../../../../shared/character-creation/career-rules.js'
+} from '../../../../shared/character-creation/career-rules'
 import {
   CEPHEUS_SRD_RULESET,
   type CepheusCareerDefinition,
   type CepheusRuleset,
   deriveCepheusCareerDefinitions
-} from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import {
   careerSkillWithLevel,
   formatCareerSkill,
@@ -33,21 +33,21 @@ import {
   normalizeCareerSkill,
   parseCareerSkill,
   resolveCascadeCareerSkill
-} from '../../../../shared/character-creation/skills.js'
+} from '../../../../shared/character-creation/skills'
 import {
   canOfferAnagathics,
   createCareerTerm,
   deriveAgingRollModifier,
   mustResolveAging,
   resolveAnagathicsUse
-} from '../../../../shared/character-creation/term-lifecycle.js'
+} from '../../../../shared/character-creation/term-lifecycle'
 import type {
   AgingChange,
   AgingChangeType,
   BenefitKind,
   CareerTermCareerLifecycleFact,
   DraftTable
-} from '../../../../shared/character-creation/types.js'
+} from '../../../../shared/character-creation/types'
 import type { Command, GameCommand } from '../../../../shared/commands'
 import type { CharacterId } from '../../../../shared/ids'
 import type {
@@ -61,8 +61,8 @@ import type {
 import {
   buildSequencedCommand,
   type ClientIdentity
-} from '../../../game-commands.js'
-import { uniqueCharacterId } from '../../room/bootstrap-flow.js'
+} from '../../../game-commands'
+import { uniqueCharacterId } from '../../room/bootstrap-flow'
 
 export type CharacterCreationStep =
   | 'basics'

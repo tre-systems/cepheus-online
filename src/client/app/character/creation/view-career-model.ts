@@ -2,25 +2,25 @@ import {
   characteristicModifier,
   deriveFailedQualificationOptions,
   parseCareerCheck
-} from '../../../../shared/character-creation/career-rules.js'
+} from '../../../../shared/character-creation/career-rules'
 import {
   CEPHEUS_SRD_CAREERS,
   type CepheusCareerDefinition
-} from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   CareerChoiceOptions,
   FailedQualificationActionOption
-} from '../../../../shared/character-creation/types.js'
+} from '../../../../shared/character-creation/types'
 import type { CharacterCharacteristics } from '../../../../shared/state'
-import type { CharacterCreationFlow } from './flow.js'
-import { formatCharacterCreationCareerOutcome } from './view-format.js'
+import type { CharacterCreationFlow } from './flow'
+import { formatCharacterCreationCareerOutcome } from './view-format'
 import type {
   CharacterCreationCareerCheckViewModel,
   CharacterCreationCareerOptionViewModel,
   CharacterCreationCareerSelectionViewModel,
   CharacterCreationFailedQualificationViewModel,
   CharacterCreationViewRulesOptions
-} from './view-types.js'
+} from './view-types'
 
 const careerCheckViewModel = ({
   label,

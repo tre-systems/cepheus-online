@@ -1,7 +1,7 @@
 import type { CharacterState } from '../../../../shared/state'
-import type { ClientIdentity } from '../../../game-commands.js'
-import type { CharacterCreationCommand } from '../../core/command-router.js'
-import { deriveCharacterCreationActionPlan } from './actions.js'
+import type { ClientIdentity } from '../../../game-commands'
+import type { CharacterCreationCommand } from '../../core/command-router'
+import { deriveCharacterCreationActionPlan } from './actions'
 
 export interface CharacterCreationSheetActionsDocument {
   createElement(tagName: 'button'): HTMLButtonElement

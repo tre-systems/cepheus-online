@@ -5,7 +5,7 @@ import {
   boardSelectTitle,
   boardStatusLabel,
   selectedBoard
-} from './view.js'
+} from './view'
 
 export interface BoardControlsElements {
   boardStatus: Pick<HTMLElement, 'textContent'>

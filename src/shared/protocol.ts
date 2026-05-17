@@ -16,7 +16,7 @@ import type {
 import type { GameCommand } from './commands'
 import { asBoardId, asCharacterId, asNoteId, asPieceId } from './ids'
 import type { LiveActivityDescriptor } from './live-activity'
-import { validateMapLosSidecar } from './mapAssets.js'
+import { validateMapLosSidecar } from './mapAssets'
 import type { MapLosSidecar } from './mapAssets'
 import { parseBaseCommandFields } from './protocol/command-base'
 import { err, ok, type Result } from './result'

@@ -1,5 +1,5 @@
-import { bindAsyncActionButton } from '../../../core/async-button.js'
-import type { CharacterCreationMishapResolutionViewModel } from '../view.js'
+import { bindAsyncActionButton } from '../../../core/async-button'
+import type { CharacterCreationMishapResolutionViewModel } from '../view'
 
 export interface CharacterCreationMishapResolutionDocument {
   createElement(tagName: 'button'): HTMLButtonElement

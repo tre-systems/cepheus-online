@@ -1,5 +1,5 @@
-import { buildRoomUrl } from '../../core/location.js'
-import { createDisposer, type Disposable } from '../../core/disposable.js'
+import { buildRoomUrl } from '../../core/location'
+import { createDisposer, type Disposable } from '../../core/disposable'
 
 export interface RoomMenuElements {
   roomForm: HTMLFormElement

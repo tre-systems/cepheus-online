@@ -1,35 +1,35 @@
-import { tallyCareerSkills } from '../../../../shared/character-creation/skills.js'
+import { tallyCareerSkills } from '../../../../shared/character-creation/skills'
 import type {
   BasicTrainingActionOption,
   CareerCreationActionKey,
   CascadeSkillChoice
-} from '../../../../shared/character-creation/types.js'
+} from '../../../../shared/character-creation/types'
 import type { CharacteristicKey } from '../../../../shared/state'
-import type { CharacterCreationFlow } from './flow.js'
+import type { CharacterCreationFlow } from './flow'
 import {
   characterCreationSteps,
   deriveCharacterCreationBasicTrainingAction,
   deriveCharacterCreationCareerSkipAction,
   deriveNextCharacterCreationCareerRoll,
   deriveNextCharacterCreationCharacteristicRoll
-} from './flow.js'
-import { deriveCharacterCreationDeathViewModel } from './view-career-lifecycle-model.js'
-import { plural } from './view-common.js'
+} from './flow'
+import { deriveCharacterCreationDeathViewModel } from './view-career-lifecycle-model'
+import { plural } from './view-common'
 import {
   deriveCharacterCreationFieldViewModels,
   validationForStep
-} from './view-fields-model.js'
+} from './view-fields-model'
 import {
   characterCreationCharacteristicModifier,
   characterCreationPrimaryCtaLabels,
   characterCreationStepLabels,
   characteristicDefinitions,
   formatCharacterCreationCharacteristicModifier
-} from './view-format.js'
+} from './view-format'
 import {
   deriveCharacterCreationBackgroundSkillSummary,
   pendingCascadeChoiceViewModel
-} from './view-homeworld-model.js'
+} from './view-homeworld-model'
 import type {
   CharacterCreationBasicTrainingButton,
   CharacterCreationButtonStates,
@@ -44,7 +44,7 @@ import type {
   CharacterCreationValidationSummary,
   CharacterCreationViewRulesOptions,
   CharacterCreationViewStep
-} from './view-types.js'
+} from './view-types'
 
 export const deriveCharacterCreationCtaLabels = (
   step: CharacterCreationViewStep

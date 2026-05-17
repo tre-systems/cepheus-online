@@ -1,24 +1,24 @@
-import type { PieceId } from '../../../../shared/ids.js'
+import type { PieceId } from '../../../../shared/ids'
 import type {
   BoardState,
   GameState,
   PieceState
-} from '../../../../shared/state.js'
-import type { ClientIdentity } from '../../../game-commands.js'
+} from '../../../../shared/state'
+import type { ClientIdentity } from '../../../game-commands'
 import type {
   BoardCommand,
   CharacterCreationCommand
-} from '../../core/command-router.js'
+} from '../../core/command-router'
 import {
   createBoardCommand,
   createGameCommand,
   type BootstrapCommandContext
-} from '../../room/bootstrap-flow.js'
+} from '../../room/bootstrap-flow'
 import {
   deriveFinalizeCharacterCreationCommand,
   type CharacterCreationFlow
-} from './flow.js'
-import { planCreateCharacterTokenCommand } from '../../piece/command-plan.js'
+} from './flow'
+import { planCreateCharacterTokenCommand } from '../../piece/command-plan'
 
 export interface CharacterCreationFinalizationControllerDeps {
   getFlow: () => CharacterCreationFlow | null

@@ -10,16 +10,16 @@ import {
   createManualCharacterCreationFlow,
   nextCharacterCreationWizardStep,
   type CharacterCreationDraft
-} from './flow.js'
-import type { CharacterCreationHomeworldPublisher } from './homeworld-publisher.js'
-import type { CharacterCreationPanelController } from './panel.js'
-import { creationStepFromStatus } from './steps.js'
-import { characterCreationStepIndex } from './sync.js'
-import type { CharacterCreationController } from './controller.js'
+} from './flow'
+import type { CharacterCreationHomeworldPublisher } from './homeworld-publisher'
+import type { CharacterCreationPanelController } from './panel'
+import { creationStepFromStatus } from './steps'
+import { characterCreationStepIndex } from './sync'
+import type { CharacterCreationController } from './controller'
 import {
   deriveCharacterCreationValidationSummary,
   parseCharacterCreationDraftPatch
-} from './view.js'
+} from './view'
 
 export interface CharacterCreationWizardController {
   start: () => boolean

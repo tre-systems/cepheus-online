@@ -1,7 +1,7 @@
-import type { PieceId } from '../../../../shared/ids.js'
-import type { PieceState } from '../../../../shared/state.js'
-import { pieceImageUrl } from '../../board/view.js'
-import { cssUrl } from '../../assets/images.js'
+import type { PieceId } from '../../../../shared/ids'
+import type { PieceState } from '../../../../shared/state'
+import { pieceImageUrl } from '../../board/view'
+import { cssUrl } from '../../assets/images'
 
 export interface CharacterRailControllerOptions {
   document: Document

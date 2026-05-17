@@ -6,11 +6,11 @@ import {
   deriveCareerTermSkillRollSummaries,
   deriveCareerTermTrainingSkillsFromFacts,
   hasProjectedCareerTermFacts
-} from '../../../../shared/character-creation/term-skills.js'
+} from '../../../../shared/character-creation/term-skills'
 import {
   deriveCharacterCreationCompletedTermReadModel,
   type CharacterCreationCompletedTermReadModel
-} from '../../../../shared/character-creation/view-state.js'
+} from '../../../../shared/character-creation/view-state'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -22,8 +22,8 @@ import {
   type CharacterCreationCompletedTerm,
   type CharacterCreationFlow,
   type CharacterCreationMusteringBenefit
-} from './flow.js'
-import { creationStepFromStatus } from './steps.js'
+} from './flow'
+import { creationStepFromStatus } from './steps'
 
 export const completedTermFromProjection = (
   term: CareerTerm

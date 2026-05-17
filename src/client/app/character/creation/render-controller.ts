@@ -4,31 +4,31 @@ import {
   resolveCharacterCreationCascadeSkill,
   resolveCharacterCreationTermCascadeSkill,
   type CharacterCreationFlow
-} from './flow.js'
-import type { RequiredAppElements } from '../../core/elements.js'
-import type { CharacterCreationCommandController } from './command-controller.js'
-import { renderCharacterCreationCharacteristicGrid as renderCharacterCreationCharacteristicGridView } from './views/characteristics.js'
+} from './flow'
+import type { RequiredAppElements } from '../../core/elements'
+import type { CharacterCreationCommandController } from './command-controller'
+import { renderCharacterCreationCharacteristicGrid as renderCharacterCreationCharacteristicGridView } from './views/characteristics'
 import {
   renderCharacterCreationAgingChoices as renderCharacterCreationAgingChoicesView,
   renderCharacterCreationAgingRollButton as renderCharacterCreationAgingRollButtonView,
   renderCharacterCreationAnagathicsDecision as renderCharacterCreationAnagathicsDecisionView,
   renderCharacterCreationReenlistmentRollButton as renderCharacterCreationReenlistmentRollButtonView,
   renderCharacterCreationTermSkillTables as renderCharacterCreationTermSkillTablesView
-} from './views/career-support.js'
+} from './views/career-support'
 import {
   renderCharacterCreationCareerPicker as renderCharacterCreationCareerPickerView,
   renderCharacterCreationCareerRollButton as renderCharacterCreationCareerRollButtonView
-} from './views/career-selection.js'
-import type { CharacterCreationController } from './controller.js'
+} from './views/career-selection'
+import type { CharacterCreationController } from './controller'
 import {
   renderCharacterCreationHomeworld as renderCharacterCreationHomeworldView,
   renderCharacterCreationTermCascadeChoices as renderCharacterCreationTermCascadeChoicesView
-} from './views/homeworld.js'
-import type { CharacterCreationHomeworldPublisher } from './homeworld-publisher.js'
-import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './views/mustering.js'
-import { renderCharacterCreationMishapResolution as renderCharacterCreationMishapResolutionView } from './views/mishap-resolution.js'
-import { renderCharacterCreationInjuryResolution as renderCharacterCreationInjuryResolutionView } from './views/injury-resolution.js'
-import type { CharacterCreationPanelController } from './panel.js'
+} from './views/homeworld'
+import type { CharacterCreationHomeworldPublisher } from './homeworld-publisher'
+import { renderCharacterCreationMusteringOut as renderCharacterCreationMusteringOutView } from './views/mustering'
+import { renderCharacterCreationMishapResolution as renderCharacterCreationMishapResolutionView } from './views/mishap-resolution'
+import { renderCharacterCreationInjuryResolution as renderCharacterCreationInjuryResolutionView } from './views/injury-resolution'
+import type { CharacterCreationPanelController } from './panel'
 import type {
   CharacterCreationAgingChoicesViewModel,
   CharacterCreationAgingRollViewModel,
@@ -47,8 +47,8 @@ import type {
   CharacterCreationTermHistoryViewModel,
   CharacterCreationTermResolutionViewModel,
   CharacterCreationTermSkillTrainingViewModel
-} from './view.js'
-import type { CharacterCreationViewModel } from './model.js'
+} from './view'
+import type { CharacterCreationViewModel } from './model'
 import {
   renderCharacterCreationBasicTrainingButton as renderCharacterCreationBasicTrainingButtonView,
   renderCharacterCreationCharacteristicRollButton as renderCharacterCreationCharacteristicRollButtonView,
@@ -56,12 +56,12 @@ import {
   renderCharacterCreationDraftFields as renderCharacterCreationDraftFieldsView,
   renderCharacterCreationNextStep as renderCharacterCreationNextStepView,
   type CharacterCreationRendererDocument
-} from './renderer.js'
+} from './renderer'
 import {
   renderCharacterCreationReview as renderCharacterCreationReviewView,
   renderCharacterCreationTermHistory as renderCharacterCreationTermHistoryView
-} from './views/review.js'
-import { renderCharacterCreationTermResolution as renderCharacterCreationTermResolutionView } from './views/term-resolution.js'
+} from './views/review'
+import { renderCharacterCreationTermResolution as renderCharacterCreationTermResolutionView } from './views/term-resolution'
 
 export type CharacterCreationRenderControllerElements = Pick<
   RequiredAppElements,

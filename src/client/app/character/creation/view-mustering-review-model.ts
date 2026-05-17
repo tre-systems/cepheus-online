@@ -1,18 +1,18 @@
-import { deriveMaterialBenefitEffect } from '../../../../shared/character-creation/benefits.js'
+import { deriveMaterialBenefitEffect } from '../../../../shared/character-creation/benefits'
 import type {
   BenefitKind,
   MusteringBenefitActionOption
-} from '../../../../shared/character-creation/types.js'
+} from '../../../../shared/character-creation/types'
 import type {
   CharacterCreationCompletedTerm,
   CharacterCreationFlow,
   CharacterCreationMusteringBenefit
-} from './flow.js'
+} from './flow'
 import {
   canRollCharacterCreationMusteringBenefit,
   characterCreationMusteringBenefitRollModifier,
   remainingMusteringBenefits
-} from './flow.js'
+} from './flow'
 import {
   characterCreationStepLabels,
   characteristicDefinitions,
@@ -21,13 +21,13 @@ import {
   musteringBenefitKindLabel,
   musteringBenefitValueLabel,
   signedModifier
-} from './view-format.js'
+} from './view-format'
 import type {
   CharacterCreationMusteringOutViewModel,
   CharacterCreationReviewItem,
   CharacterCreationReviewSummary,
   CharacterCreationTermHistoryViewModel
-} from './view-types.js'
+} from './view-types'
 
 const musteringBenefitRollLabel = (
   benefit: CharacterCreationMusteringBenefit

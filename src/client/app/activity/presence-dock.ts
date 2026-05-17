@@ -1,6 +1,6 @@
 import type { CharacterId } from '../../../shared/ids'
 import type { CharacterState, GameState } from '../../../shared/state'
-import { deriveCharacterCreationReadModel } from '../../../shared/character-creation/view-state.js'
+import { deriveCharacterCreationReadModel } from '../../../shared/character-creation/view-state'
 
 export interface ActiveCreationSummary {
   id: CharacterId

@@ -1,7 +1,7 @@
 import type {
   CharacterCreationReviewSummary,
   CharacterCreationTermHistoryViewModel
-} from '../view.js'
+} from '../view'
 
 export type CharacterCreationReviewDocument = Pick<
   Document,

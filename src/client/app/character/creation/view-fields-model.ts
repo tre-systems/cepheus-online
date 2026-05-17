@@ -1,8 +1,8 @@
-import { parseCareerCheck } from '../../../../shared/character-creation/career-rules.js'
+import { parseCareerCheck } from '../../../../shared/character-creation/career-rules'
 import {
   CEPHEUS_SRD_CAREERS,
   type CepheusCareerDefinition
-} from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+} from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   CharacterEquipmentItem,
   CharacteristicKey
@@ -12,19 +12,16 @@ import type {
   CharacterCreationDraftPatch,
   CharacterCreationFlow,
   CharacterCreationValidation
-} from './flow.js'
-import { validateCurrentCharacterCreationStep } from './flow.js'
-import { characteristicDefinitions } from './view-format.js'
-import {
-  selectedHomeworld,
-  selectedTradeCodes
-} from './view-homeworld-model.js'
+} from './flow'
+import { validateCurrentCharacterCreationStep } from './flow'
+import { characteristicDefinitions } from './view-format'
+import { selectedHomeworld, selectedTradeCodes } from './view-homeworld-model'
 import type {
   CharacterCreationFieldViewModel,
   CharacterCreationFormValues,
   CharacterCreationViewRulesOptions,
   CharacterCreationViewStep
-} from './view-types.js'
+} from './view-types'
 
 const valueText = (value: string | number | null | undefined): string => {
   if (value === null || value === undefined) return ''

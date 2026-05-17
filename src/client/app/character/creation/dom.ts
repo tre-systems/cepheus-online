@@ -1,9 +1,9 @@
-import type { RequiredAppElements } from '../../core/elements.js'
-import type { CharacterCreationController } from './controller.js'
-import type { CharacterCreationFlow } from './flow.js'
-import type { CharacterCreationHomeworldPublisher } from './homeworld-publisher.js'
-import type { CharacterCreationPanelController } from './panel.js'
-import type { CharacterCreationWizardController } from './wizard.js'
+import type { RequiredAppElements } from '../../core/elements'
+import type { CharacterCreationController } from './controller'
+import type { CharacterCreationFlow } from './flow'
+import type { CharacterCreationHomeworldPublisher } from './homeworld-publisher'
+import type { CharacterCreationPanelController } from './panel'
+import type { CharacterCreationWizardController } from './wizard'
 
 export type CharacterCreationDomControllerElements = Pick<
   RequiredAppElements,

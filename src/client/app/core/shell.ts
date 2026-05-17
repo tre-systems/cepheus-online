@@ -1,17 +1,17 @@
-import type { RequiredAppElements } from './elements.js'
+import type { RequiredAppElements } from './elements'
 import {
   createPwaInstallController,
   type PwaInstallController
-} from '../pwa/install.js'
+} from '../pwa/install'
 import {
   registerClientServiceWorker,
   type ServiceWorkerController,
   type ServiceWorkerControllerOptions
-} from '../pwa/service-worker.js'
+} from '../pwa/service-worker'
 import {
   createPwaUpdatePromptController,
   type PwaUpdatePromptController
-} from '../pwa/update-prompt.js'
+} from '../pwa/update-prompt'
 
 export type AppShellElements = Pick<
   RequiredAppElements,

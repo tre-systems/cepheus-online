@@ -4,7 +4,7 @@ export interface ActorSessionStorage {
 }
 
 export interface ActorSessionCrypto {
-  getRandomValues<T extends ArrayBufferView>(array: T): T
+  getRandomValues<T extends Exclude<BufferSource, ArrayBuffer>>(array: T): T
 }
 
 export interface ResolveActorSessionSecretOptions {

@@ -4,8 +4,8 @@ import type {
   CharacterState,
   GameState
 } from '../../../../shared/state'
-import type { CharacterCreationFlow } from './flow.js'
-import { flowFromProjectedCharacterReadModel } from './model.js'
+import type { CharacterCreationFlow } from './flow'
+import { flowFromProjectedCharacterReadModel } from './model'
 
 export const projectedCharacterCreation = (
   state: GameState | null,

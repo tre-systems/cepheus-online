@@ -12,20 +12,20 @@ import type {
 import {
   buildRollDiceCommand,
   type ClientIdentity
-} from '../../../game-commands.js'
+} from '../../../game-commands'
 import type {
   CharacterCreationCommand,
   DiceCommand,
   SheetCommand
-} from '../../core/command-router.js'
-import type { RequiredAppElements } from '../../core/elements.js'
-import { renderCharacterCreationSheetActions } from '../creation/sheet-actions.js'
+} from '../../core/command-router'
+import type { RequiredAppElements } from '../../core/elements'
+import { renderCharacterCreationSheetActions } from '../creation/sheet-actions'
 import {
   type CharacterSheetController,
   type CharacterSheetControllerOptions,
   createCharacterSheetController
-} from './controller.js'
-import { skillRollExpression } from './view.js'
+} from './controller'
+import { skillRollExpression } from './view'
 
 export interface CharacterSheetWiringOptions {
   document: Document

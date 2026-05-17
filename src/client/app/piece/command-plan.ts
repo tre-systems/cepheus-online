@@ -1,8 +1,8 @@
 import type { Command, GameCommand } from '../../../shared/commands'
 import type { CharacterId, PieceId } from '../../../shared/ids'
 import type { BoardState, GameState } from '../../../shared/state'
-import type { ClientIdentity } from '../../game-commands.js'
-import { uniqueCharacterId, uniquePieceId } from '../room/bootstrap-flow.js'
+import type { ClientIdentity } from '../../game-commands'
+import { uniqueCharacterId, uniquePieceId } from '../room/bootstrap-flow'
 
 type CreateCharacterCommand = Extract<Command, { type: 'CreateCharacter' }>
 type CreatePieceCommand = Extract<Command, { type: 'CreatePiece' }>

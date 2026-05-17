@@ -3,15 +3,15 @@ import type {
   CareerChoiceOption,
   CareerCreationActionKey,
   LegalCareerCreationAction
-} from '../../../../shared/character-creation/types.js'
-import type { CareerCreationTermSkillTable } from '../../../../shared/characterCreation.js'
+} from '../../../../shared/character-creation/types'
+import type { CareerCreationTermSkillTable } from '../../../../shared/characterCreation'
 import type { GameCommand } from '../../../../shared/commands'
 import type {
   CharacterCreationProjection,
   CharacteristicKey,
   CharacterState
 } from '../../../../shared/state'
-import type { ClientIdentity } from '../../../game-commands.js'
+import type { ClientIdentity } from '../../../game-commands'
 
 type CharacterCreationFairnessCommand = Extract<
   GameCommand,

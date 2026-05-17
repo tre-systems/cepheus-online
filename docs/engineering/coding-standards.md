@@ -113,6 +113,18 @@ small purpose-built interface.
 - Client-local UI/event variants may use `kind` when they are not wire shapes.
 - Exhaustively handle discriminated unions with `switch` and a `never` fallback.
 
+## Imports
+
+- Use extensionless relative imports in TypeScript source:
+  `import { projectGameState } from './projector'`.
+- Use `import type` for type-only dependencies. `verbatimModuleSyntax` keeps the
+  runtime import graph honest.
+- Do not use path aliases. Relative imports make source ownership and
+  client/shared/server boundaries visible in review.
+- Use `node:` for Node built-ins in scripts and tests.
+- Runtime JavaScript assets may use real `.js` specifiers, such as the served
+  `/client/app/app.js` compatibility route.
+
 ## Results and Errors
 
 Use the local `Result<T, E>` style for parsing, validation, and command
@@ -205,6 +217,7 @@ review:
 - no raw room HTTP helper imports from feature modules
 - no legacy character-creation history reads outside the compatibility adapter
 - no direct bundled-ruleset resolver imports outside provider setup
+- no `.js` relative import specifiers in TypeScript source
 - no new `// @ts-nocheck` files
 
 Formatting defaults:

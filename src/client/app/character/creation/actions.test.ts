@@ -6,7 +6,7 @@ import type {
   CharacterCreationProjection,
   CharacterState
 } from '../../../../shared/state'
-import { projectDefaultCareerCreationActionPlan as projectCareerCreationActionPlan } from '../../../../shared/character-creation/legal-actions.js'
+import { projectDefaultCareerCreationActionPlan as projectCareerCreationActionPlan } from '../../../../shared/character-creation/legal-actions'
 import { deriveCharacterCreationActionPlan } from './actions'
 
 const identity = {

@@ -1,6 +1,6 @@
-import type { BenefitKind } from '../../../../../shared/character-creation/types.js'
-import { bindAsyncActionButton } from '../../../core/async-button.js'
-import type { CharacterCreationMusteringOutViewModel } from '../view.js'
+import type { BenefitKind } from '../../../../../shared/character-creation/types'
+import { bindAsyncActionButton } from '../../../core/async-button'
+import type { CharacterCreationMusteringOutViewModel } from '../view'
 
 export interface CharacterCreationMusteringDocument {
   createElement(tagName: 'button'): HTMLButtonElement

@@ -12,12 +12,11 @@ const REQUEST_TIMEOUT_MS = Number(process.env.CEPHEUS_SMOKE_TIMEOUT_MS ?? 15000)
 const SMOKE_SESSION_COOKIE =
   process.env.CEPHEUS_SMOKE_SESSION_COOKIE ?? process.env.CEPHEUS_SMOKE_COOKIE
 const AUTHENTICATED_SMOKE = Boolean(SMOKE_SESSION_COOKIE)
-const AUTH_COOKIE_HEADER =
-  SMOKE_SESSION_COOKIE?.includes('=')
-    ? SMOKE_SESSION_COOKIE
-    : SMOKE_SESSION_COOKIE
-      ? `cepheus_session=${SMOKE_SESSION_COOKIE}`
-      : ''
+const AUTH_COOKIE_HEADER = SMOKE_SESSION_COOKIE?.includes('=')
+  ? SMOKE_SESSION_COOKIE
+  : SMOKE_SESSION_COOKIE
+    ? `cepheus_session=${SMOKE_SESSION_COOKIE}`
+    : ''
 const RUN_ID = randomUUID().slice(0, 8)
 const GAME_ID = `smoke-${Date.now().toString(36)}-${RUN_ID}`
 let actorId = `smoke-ref-${RUN_ID}`

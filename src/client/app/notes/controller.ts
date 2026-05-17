@@ -1,5 +1,5 @@
-import type { NoteCommand } from '../core/command-router.js'
-import type { ClientIdentity } from '../../game-commands.js'
+import type { NoteCommand } from '../core/command-router'
+import type { ClientIdentity } from '../../game-commands'
 import { asNoteId, type NoteId } from '../../../shared/ids'
 import type {
   GameState,

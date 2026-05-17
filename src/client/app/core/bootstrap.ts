@@ -1,4 +1,4 @@
-import type { ConnectivityStatus } from './connectivity.js'
+import type { ConnectivityStatus } from './connectivity'
 
 export interface AppBootstrapOptions {
   connectivityStatus: ConnectivityStatus

@@ -1,10 +1,10 @@
 import { asBoardId } from '../../../shared/ids'
 import type { GameState } from '../../../shared/state'
-import type { ClientIdentity } from '../../game-commands.js'
-import type { BoardCommand } from '../core/command-router.js'
-import { createDisposer, type Disposable } from '../core/disposable.js'
-import type { RequiredAppElements } from '../core/elements.js'
-import { renderBoardControls, type BoardControlsElements } from './controls.js'
+import type { ClientIdentity } from '../../game-commands'
+import type { BoardCommand } from '../core/command-router'
+import { createDisposer, type Disposable } from '../core/disposable'
+import type { RequiredAppElements } from '../core/elements'
+import { renderBoardControls, type BoardControlsElements } from './controls'
 
 export interface BoardControlsWiring extends Disposable {
   render: () => void

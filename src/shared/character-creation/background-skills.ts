@@ -1,9 +1,9 @@
-import { characteristicModifier } from './career-rules.js'
+import { characteristicModifier } from './career-rules'
 import {
   careerSkillWithLevel,
   formatCareerSkill,
   isCascadeCareerSkill
-} from './skills.js'
+} from './skills'
 
 export interface BackgroundHomeworld {
   lawLevel?: string | null

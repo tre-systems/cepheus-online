@@ -1,13 +1,13 @@
-import type { CharacteristicKey } from '../../../../../shared/state.js'
-import type { CharacterCreationTermSkillTable } from '../flow.js'
-import { bindAsyncActionButton } from '../../../core/async-button.js'
+import type { CharacteristicKey } from '../../../../../shared/state'
+import type { CharacterCreationTermSkillTable } from '../flow'
+import { bindAsyncActionButton } from '../../../core/async-button'
 import type {
   CharacterCreationAgingChoicesViewModel,
   CharacterCreationAgingRollViewModel,
   CharacterCreationAnagathicsDecisionViewModel,
   CharacterCreationReenlistmentRollViewModel,
   CharacterCreationTermSkillTrainingViewModel
-} from '../view.js'
+} from '../view'
 
 export interface CharacterCreationCareerSupportDocument {
   createElement(tagName: 'button'): HTMLButtonElement

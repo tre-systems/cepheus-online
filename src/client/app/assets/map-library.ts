@@ -4,7 +4,7 @@ import {
   type LocalMapAssetRoot,
   type MapAssetKind,
   validateLocalMapAssetMetadata
-} from '../../../shared/mapAssets.js'
+} from '../../../shared/mapAssets'
 
 export interface MapAssetCandidateFilters {
   kind?: MapAssetKind

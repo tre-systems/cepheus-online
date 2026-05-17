@@ -2,12 +2,12 @@ import type {
   CareerCreationActionKey,
   CascadeSkillChoice,
   TermSkillTableActionOption
-} from '../../../../shared/character-creation/types.js'
+} from '../../../../shared/character-creation/types'
 import type {
   CharacterCreationProjection,
   CharacteristicKey
 } from '../../../../shared/state'
-import type { CharacterCreationFlow } from './flow.js'
+import type { CharacterCreationFlow } from './flow'
 import {
   deriveCharacterCreationAgingChangeOptions,
   deriveCharacterCreationAnagathicsDecision,
@@ -17,14 +17,14 @@ import {
   isCharacterCreationCareerTermResolved,
   remainingCharacterCreationTermSkillRolls,
   requiredCharacterCreationTermSkillRolls
-} from './flow.js'
-import { plural } from './view-common.js'
+} from './flow'
+import { plural } from './view-common'
 import {
   characteristicDefinitions,
   formatCharacterCreationCharacteristicModifier,
   formatCharacterCreationReenlistmentOutcome
-} from './view-format.js'
-import { deriveCharacterCreationCascadeSkillChoiceViewModels } from './view-homeworld-model.js'
+} from './view-format'
+import { deriveCharacterCreationCascadeSkillChoiceViewModels } from './view-homeworld-model'
 import type {
   CharacterCreationAgingChoicesViewModel,
   CharacterCreationAgingRollViewModel,
@@ -38,7 +38,7 @@ import type {
   CharacterCreationTermResolutionViewModel,
   CharacterCreationTermSkillTrainingViewModel,
   CharacterCreationViewRulesOptions
-} from './view-types.js'
+} from './view-types'
 
 export const deriveCharacterCreationDeathViewModel = (
   flow: Pick<CharacterCreationFlow, 'step' | 'draft'>,

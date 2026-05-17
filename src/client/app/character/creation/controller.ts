@@ -1,5 +1,5 @@
 import type { CharacterId } from '../../../../shared/ids'
-import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset'
 import type {
   CharacterCreationProjection,
   GameState
@@ -9,21 +9,21 @@ import {
   createDisposalScope,
   type ReadonlySignal,
   signal
-} from '../../../reactive.js'
-import type { CharacterCreationFlow } from './flow.js'
+} from '../../../reactive'
+import type { CharacterCreationFlow } from './flow'
 import {
   canRenderReadOnlyFollowFromReadModel,
   projectedCharacterCreation,
   refreshFollowedCharacterCreationFlowFromState,
   shouldRefreshEditableCharacterCreationFlow,
   syncCharacterCreationFlowFromRoomState
-} from './follow.js'
-import { shouldSyncEditableCharacterCreationFlowWithProjection } from './sync.js'
+} from './follow'
+import { shouldSyncEditableCharacterCreationFlowWithProjection } from './sync'
 import {
   deriveCharacterCreationViewModel,
   flowFromProjectedCharacterReadModel,
   type CharacterCreationViewModel
-} from './model.js'
+} from './model'
 
 export interface CharacterCreationController {
   flowSignal: ReadonlySignal<CharacterCreationFlow | null>

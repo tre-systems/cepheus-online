@@ -22,7 +22,9 @@ const createStorage = (): ActorSessionStorage & {
 }
 
 const deterministicCrypto = (start = 0): ActorSessionCrypto => ({
-  getRandomValues: <T extends ArrayBufferView>(array: T): T => {
+  getRandomValues: <T extends Exclude<BufferSource, ArrayBuffer>>(
+    array: T
+  ): T => {
     const bytes = new Uint8Array(
       array.buffer,
       array.byteOffset,

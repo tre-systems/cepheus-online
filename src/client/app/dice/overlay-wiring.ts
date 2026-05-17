@@ -1,14 +1,14 @@
-import type { LiveDiceRollRevealTarget } from '../../../shared/live-activity.js'
-import type { DiceRollState } from '../../../shared/state.js'
-import type { ClientDiceRollActivity } from '../../game-commands.js'
+import type { LiveDiceRollRevealTarget } from '../../../shared/live-activity'
+import type { DiceRollState } from '../../../shared/state'
+import type { ClientDiceRollActivity } from '../../game-commands'
 import {
   animatePendingRoll as animatePendingDiceOverlayRoll,
   animateRoll as animateDiceOverlayRoll,
   hasDiceRollResult,
   type AnimatePendingRollOptions,
   type AnimateRollOptions
-} from './overlay.js'
-import type { CharacterCreationPanelController } from '../character/creation/panel.js'
+} from './overlay'
+import type { CharacterCreationPanelController } from '../character/creation/panel'
 
 export interface DiceOverlayWiringOptions {
   elements: {

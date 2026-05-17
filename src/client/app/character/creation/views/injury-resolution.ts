@@ -3,8 +3,8 @@ import type {
   InjuryResolutionMethod,
   InjurySecondaryChoice
 } from '../../../../../shared/characterCreation'
-import { bindAsyncActionButton } from '../../../core/async-button.js'
-import type { CharacterCreationInjuryResolutionViewModel } from '../view.js'
+import { bindAsyncActionButton } from '../../../core/async-button'
+import type { CharacterCreationInjuryResolutionViewModel } from '../view'
 
 export interface CharacterCreationInjuryResolutionDocument {
   createElement(tagName: 'button'): HTMLButtonElement
