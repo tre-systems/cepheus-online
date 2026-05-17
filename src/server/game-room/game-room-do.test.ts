@@ -286,11 +286,7 @@ describe('GameRoomDO HTTP skeleton', () => {
     const storage = createMemoryStorage()
     const room = createRoom([], new Map(), storage)
 
-    const response = await postTestSeed(
-      room,
-      12345,
-      'cepheus-online.rob-gilks.workers.dev'
-    )
+    const response = await postTestSeed(room, 12345, 'cepheus.tre.systems')
     const message = await response.json()
 
     assert.equal(response.status, 403)

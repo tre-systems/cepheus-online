@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import process from 'node:process'
 
-const DEFAULT_TARGET_URL = 'https://cepheus-online.rob-gilks.workers.dev'
+const DEFAULT_TARGET_URL = 'https://cepheus.tre.systems'
 const TARGET_URL =
   process.argv.slice(2).find((arg) => !arg.startsWith('-')) ??
   process.env.CEPHEUS_SMOKE_URL ??

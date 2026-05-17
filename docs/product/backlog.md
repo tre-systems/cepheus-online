@@ -34,12 +34,10 @@ The current application has the private-beta spine in place:
 
 ## Active Release Checklist
 
-- Create or confirm the `cepheus-online-private-beta` D1 database and
-  `cepheus-online-assets` R2 bucket. CI resolves the D1 database id by name
-  before deploy.
-- Apply `migrations/0001_private_beta.sql` in Cloudflare.
-- Configure `APP_BASE_URL`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and
-  `SESSION_SECRET` for the target environment.
+- Confirm the `cepheus-online-assets` R2 bucket exists before exercising asset
+  uploads in production.
+- Configure `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and `SESSION_SECRET`
+  for the target environment.
 - Add the Discord redirect URL `${APP_BASE_URL}/auth/discord/callback`.
 - Run `npm run verify:full`.
 - Run `npm run deploy:dry-run`.

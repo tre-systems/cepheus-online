@@ -1,12 +1,13 @@
 # Deployment
 
-Cepheus Online deploys as a Cloudflare Worker with a `GameRoomDO` Durable
-Object binding, a D1 database, and an R2 asset bucket. The browser shell is
-embedded during the deploy build.
+Cepheus Online deploys to `https://cepheus.tre.systems` as a Cloudflare Worker
+with a `GameRoomDO` Durable Object binding, a D1 database, and an R2 asset
+bucket. The browser shell is embedded during the deploy build.
 
 ## Cloudflare Bindings
 
-`wrangler.jsonc` defines these runtime bindings:
+`wrangler.jsonc` defines the `cepheus.tre.systems` custom domain and these
+runtime bindings:
 
 | Binding | Purpose |
 | --- | --- |
@@ -64,8 +65,8 @@ After a deploy, run the dependency-free deployed Worker smoke:
 CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed
 ```
 
-The script defaults to `https://cepheus-online.rob-gilks.workers.dev`. Override
-the target with a positional URL, `CEPHEUS_SMOKE_URL`, or `WORKER_URL`:
+The script defaults to `https://cepheus.tre.systems`. Override the target with a
+positional URL, `CEPHEUS_SMOKE_URL`, or `WORKER_URL`:
 
 ```bash
 CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- https://your-preview.workers.dev
@@ -112,6 +113,6 @@ gh secret set DISCORD_CLIENT_SECRET --repo tre-systems/cepheus-online
 gh secret set SESSION_SECRET --repo tre-systems/cepheus-online
 ```
 
-The initial deployment uses the default workers.dev host from
-`wrangler.jsonc`. Add a route or custom domain to `wrangler.jsonc` when the
-production hostname is ready.
+The production hostname is managed as a Worker custom domain in
+`wrangler.jsonc`. Keep `APP_BASE_URL` aligned with that hostname so OAuth
+redirects and invite URLs use the public origin.
