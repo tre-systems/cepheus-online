@@ -9,9 +9,18 @@ const TARGET_URL =
   process.env.WORKER_URL ??
   DEFAULT_TARGET_URL
 const REQUEST_TIMEOUT_MS = Number(process.env.CEPHEUS_SMOKE_TIMEOUT_MS ?? 15000)
+const SMOKE_SESSION_COOKIE =
+  process.env.CEPHEUS_SMOKE_SESSION_COOKIE ?? process.env.CEPHEUS_SMOKE_COOKIE
+const AUTHENTICATED_SMOKE = Boolean(SMOKE_SESSION_COOKIE)
+const AUTH_COOKIE_HEADER =
+  SMOKE_SESSION_COOKIE?.includes('=')
+    ? SMOKE_SESSION_COOKIE
+    : SMOKE_SESSION_COOKIE
+      ? `cepheus_session=${SMOKE_SESSION_COOKIE}`
+      : ''
 const RUN_ID = randomUUID().slice(0, 8)
 const GAME_ID = `smoke-${Date.now().toString(36)}-${RUN_ID}`
-const ACTOR_ID = `smoke-ref-${RUN_ID}`
+let actorId = `smoke-ref-${RUN_ID}`
 const ACTOR_SESSION = `smoke-session-${RUN_ID}-123456`
 const BOARD_ID = `smoke-board-${RUN_ID}`
 const PIECE_ID = `smoke-piece-${RUN_ID}`
@@ -26,6 +35,8 @@ Environment:
   CEPHEUS_SMOKE_URL          target Worker URL (default: ${DEFAULT_TARGET_URL})
   WORKER_URL                 fallback target Worker URL
   CEPHEUS_SMOKE_TIMEOUT_MS   per-request timeout (default: ${REQUEST_TIMEOUT_MS})
+  CEPHEUS_SMOKE_SESSION_COOKIE
+                             optional cepheus_session cookie for private-beta smoke
 `
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -58,12 +69,18 @@ const delay = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds))
 
 const fetchText = async (pathname, init = {}) => {
+  const { auth = true, headers: rawHeaders = {}, ...fetchInit } = init
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const headers = {
+    ...rawHeaders,
+    ...(auth && AUTH_COOKIE_HEADER ? { cookie: AUTH_COOKIE_HEADER } : {})
+  }
 
   try {
     const response = await fetch(target(pathname), {
-      ...init,
+      ...fetchInit,
+      headers,
       signal: controller.signal
     })
     const body = await response.text()
@@ -74,11 +91,13 @@ const fetchText = async (pathname, init = {}) => {
 }
 
 const fetchJson = async (pathname, init = {}) => {
+  const { auth = true, headers: rawHeaders = {}, ...fetchInit } = init
   const { response, body } = await fetchText(pathname, {
-    ...init,
+    ...fetchInit,
+    auth,
     headers: {
       accept: 'application/json',
-      ...(init.headers ?? {})
+      ...rawHeaders
     }
   })
 
@@ -159,7 +178,7 @@ const requireAccepted = async (command, requestId) => {
 const commandBase = (type, extra = {}) => ({
   type,
   gameId: GAME_ID,
-  actorId: ACTOR_ID,
+  actorId,
   ...extra
 })
 
@@ -248,6 +267,8 @@ const openWebSocket = async () => {
   }
 }
 
+let unauthenticatedRoomStatus = null
+
 await step('health endpoints', async () => {
   for (const pathname of ['/health', '/api/health']) {
     const { response, json } = await fetchJson(pathname)
@@ -319,6 +340,81 @@ await step('manifest, icons, and service worker', async () => {
     'service worker must support accepted updates'
   )
 })
+
+await step('unauthenticated private-beta failures', async () => {
+  const { response: sessionResponse, json: session } = await fetchJson(
+    '/api/session',
+    { auth: false }
+  )
+  assert(
+    sessionResponse.ok,
+    `/api/session returned HTTP ${sessionResponse.status}`
+  )
+  assert(
+    session?.authenticated === false,
+    '/api/session should report unauthenticated without a cookie'
+  )
+
+  const { response: roomCreateResponse } = await fetchJson('/api/rooms', {
+    auth: false,
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ roomId: GAME_ID, name: `Smoke ${RUN_ID}` })
+  })
+  assert(
+    [401, 501].includes(roomCreateResponse.status),
+    `/api/rooms unauthenticated status mismatch: ${roomCreateResponse.status}`
+  )
+
+  const { response: stateResponse } = await fetchJson(
+    `/rooms/${GAME_ID}/state`,
+    { auth: false }
+  )
+  unauthenticatedRoomStatus = stateResponse.status
+  assert(
+    [401, 501].includes(stateResponse.status),
+    `/rooms/:id/state unauthenticated status mismatch: ${stateResponse.status}`
+  )
+})
+
+if (!AUTHENTICATED_SMOKE) {
+  fail(
+    `Target requires private-beta authentication for room smoke (unauthenticated room state returned HTTP ${unauthenticatedRoomStatus}); set CEPHEUS_SMOKE_SESSION_COOKIE to a valid cepheus_session cookie.`
+  )
+}
+
+if (AUTHENTICATED_SMOKE) {
+  await step('private-beta smoke session', async () => {
+    const { response: sessionResponse, json: session } =
+      await fetchJson('/api/session')
+    assert(
+      sessionResponse.ok,
+      `/api/session returned HTTP ${sessionResponse.status}`
+    )
+    assert(
+      session?.authenticated === true && session.user?.id,
+      '/api/session did not return an authenticated user'
+    )
+    actorId = session.user.id
+
+    const { response: createRoomResponse, json: createRoom } = await fetchJson(
+      '/api/rooms',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          roomId: GAME_ID,
+          name: `Smoke ${RUN_ID}`
+        })
+      }
+    )
+    assert(
+      createRoomResponse.status === 201,
+      `/api/rooms returned HTTP ${createRoomResponse.status}: ${JSON.stringify(createRoom)}`
+    )
+    assert(createRoom?.room?.id === GAME_ID, 'created room id mismatch')
+  })
+}
 
 let eventSeq = 0
 
@@ -419,7 +515,7 @@ await step('character creation lifecycle', async () => {
 
   await waitForLatestDiceReveal(latestCreationState)
   const { json: revealedCreation } = await fetchJson(
-    `/rooms/${GAME_ID}/state?viewer=referee&user=${ACTOR_ID}`
+    `/rooms/${GAME_ID}/state?viewer=referee&user=${actorId}`
   )
   assert(
     revealedCreation?.state?.characters?.[CHARACTER_ID]?.creation?.state
@@ -458,7 +554,7 @@ await step('hidden-piece viewer filtering', async () => {
   eventSeq = hidden.eventSeq
 
   const { json: refereeState } = await fetchJson(
-    `/rooms/${GAME_ID}/state?viewer=referee&user=${ACTOR_ID}`
+    `/rooms/${GAME_ID}/state?viewer=referee&user=${actorId}`
   )
   const { json: playerState } = await fetchJson(
     `/rooms/${GAME_ID}/state?viewer=player&user=smoke-player-${RUN_ID}`
@@ -484,6 +580,12 @@ await step('hidden-piece viewer filtering', async () => {
 await step('WebSocket broadcast', async () => {
   if (typeof WebSocket !== 'function') {
     process.stdout.write('skipped (Node built-in WebSocket unavailable) ')
+    return
+  }
+  if (AUTHENTICATED_SMOKE) {
+    process.stdout.write(
+      'skipped (authenticated smoke requires browser-managed cookies) '
+    )
     return
   }
 

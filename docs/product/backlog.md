@@ -44,16 +44,12 @@ The current application has the private-beta spine in place:
 - Add the Discord redirect URL `${APP_BASE_URL}/auth/discord/callback`.
 - Run `npm run verify:full`.
 - Run `npm run deploy:dry-run`.
-- Deploy a candidate and run `npm run smoke:deployed -- <candidate-url>`.
+- Deploy a candidate and run
+  `CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- <candidate-url>`.
 - Complete the mobile PWA manual checklist on a real phone: install, reload,
   offline shell fallback, update activation, and reconnect recovery.
 - Run the private-beta manual checks in
   [testing strategy](../engineering/testing-strategy.md#private-beta-manual-checks).
-
-## MVP Follow-Up Before Invites
-
-- Add deployed smoke coverage for protected auth/session failures once the
-  smoke script can operate against configured private-beta credentials.
 
 ## Post-MVP Product Work
 
