@@ -1,7 +1,5 @@
 # Source Layout
 
-The source tree starts intentionally small.
-
 ```text
 src/shared/  deterministic domain types, commands, events, projectors, rules
 src/server/  Cloudflare Worker routes, static client fallback, Durable Objects
@@ -15,11 +13,11 @@ src/client/  browser DOM, Canvas, CSS, WebSocket client, and local UI state
 - `src/server` may import `src/shared`, but must not import `src/client`.
 - `src/client` may import `src/shared`, but must not import `src/server`.
 
-## Current Skeleton
+## Key Entry Points
 
 - `src/shared/commands.ts`: command union for room state changes.
 - `src/shared/events.ts`: event union and event envelope.
-- `src/shared/projector.ts`: event-to-state projection, including recent dice.
+- `src/shared/projector.ts`: event-to-state projection.
 - `src/shared/protocol.ts`: client/server message validation and wire types.
 - `src/server/index.ts`: Worker entrypoint, health route, room routing, and
   static browser fallback.

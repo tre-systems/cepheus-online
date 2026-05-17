@@ -2,6 +2,11 @@
 
 Date: 2026-05-03
 
+This is a historical review snapshot. It records the state and extraction plan
+on 2026-05-03; do not treat the "missing pieces" section as the current
+backlog. Current work lives in
+[Implementation Plan](../product/backlog.md).
+
 This review compares `cepheus-online` with local `cepheus-amplify`, local
 `delta-v`, and upstream `orffen/cepheus-srd`.
 
@@ -18,7 +23,7 @@ Zustand, Immer, Three.js, and Amplify model types. The right next step is to
 extract domain behavior into pure `src/shared` modules as each vertical slice is
 implemented.
 
-## Cepheus Online Current State
+## Cepheus Online State At Review Date
 
 Already in place:
 
@@ -130,7 +135,7 @@ We should build a pinned importer rather than manually copying SRD text into the
 runtime. Preserve attribution, Open Game Content notices, product identity
 language, and source-code license notes.
 
-## Concrete Missing Pieces
+## Missing Pieces At Review Date
 
 These are not blockers for starting, but they are the next real work:
 

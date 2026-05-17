@@ -78,5 +78,4 @@ Do not copy these blindly. Extract the domain logic and tests:
 See [readiness-review.md](readiness-review.md) for the reviewed extraction
 backlog, and
 [`../product/backlog.md`](../product/backlog.md) for the active implementation
-queue. [`../product/character-creation-backlog.md`](../product/character-creation-backlog.md)
-is retained as historical character-creation review provenance.
+queue.

@@ -4,9 +4,8 @@ The upstream Cepheus Engine SRD source is:
 
 [orffen/cepheus-srd](https://github.com/orffen/cepheus-srd)
 
-The default branch is currently `mdbook`.
-The latest release observed during the 2026-05-03 readiness review was `v9.1`,
-published 2025-07-06.
+Verified 2026-05-17: the default branch is `mdbook`, and the latest GitHub
+release is `v9.1`, published 2025-07-06.
 
 Useful upstream files include:
 

@@ -1,8 +1,8 @@
 # Coding Standards
 
 These conventions fit the current Cepheus Online codebase. They borrow the
-useful Delta-V patterns, but keep the rules smaller until this repo has a real
-client build and deployment pipeline.
+useful Delta-V patterns while staying focused on this Worker, Durable Object,
+and dependency-light browser app.
 
 ## Core Principles
 
@@ -30,6 +30,10 @@ src/client/  imports src/shared and src/client
 - no Cloudflare storage APIs
 - no `Math.random`
 - no `console.log`, `console.warn`, or `console.error`
+
+Non-test source outside `src/shared` also avoids `console.log`, `console.warn`,
+and `console.error`; use explicit UI error surfaces, command responses, test
+seams, or platform telemetry instead of ambient logging.
 
 Any random game result must use an injected `rng: () => number` or a
 server-derived deterministic RNG.
@@ -183,7 +187,8 @@ The local gate is split by cost:
 
 - `npm run verify:quick`: generated client assets, lint, docs, source-boundary
   checks, and TypeScript.
-- `npm run verify:full`: `verify:quick` plus the unit test suite.
+- `npm run verify:full`: `verify:quick`, unit tests, character-creation E2E,
+  and tactical-board E2E.
 - `npm run smoke:deployed -- <url>`: deployed Worker smoke after a production
   deploy or deployment-sensitive change.
 
@@ -196,9 +201,11 @@ review:
 
 - `innerHTML` writes only in `src/client/dom.ts`
 - no `Math.random` in non-test `src/shared`
-- no console logging in non-test `src/shared`
-- no new `// @ts-nocheck` files while the existing client shell is being
-  decomposed
+- no console logging in non-test `src`
+- no raw room HTTP helper imports from feature modules
+- no legacy character-creation history reads outside the compatibility adapter
+- no direct bundled-ruleset resolver imports outside provider setup
+- no new `// @ts-nocheck` files
 
 Formatting defaults:
 

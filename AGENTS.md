@@ -21,10 +21,9 @@ It points to the canonical owner docs rather than repeating their full content.
 | CQRS, events, projections, client patterns | [docs/architecture/patterns.md](./docs/architecture/patterns.md) |
 | Conflict and stale command handling | [docs/architecture/conflict-model.md](./docs/architecture/conflict-model.md) |
 | Coding conventions | [docs/engineering/coding-standards.md](./docs/engineering/coding-standards.md) |
-| Dependency and source boundary rules | [docs/engineering/development-standards.md](./docs/engineering/development-standards.md) |
 | Test strategy | [docs/engineering/testing-strategy.md](./docs/engineering/testing-strategy.md) |
 | Security and abuse baseline | [docs/engineering/security-baseline.md](./docs/engineering/security-baseline.md) |
-| Product direction and active plan | [docs/product/vision.md](./docs/product/vision.md), [docs/product/migration-plan.md](./docs/product/migration-plan.md), [docs/product/backlog.md](./docs/product/backlog.md) |
+| Product direction and active plan | [docs/product/vision.md](./docs/product/vision.md), [docs/product/backlog.md](./docs/product/backlog.md) |
 | Delta-V transfer notes | [docs/provenance/delta-v-transfer.md](./docs/provenance/delta-v-transfer.md) |
 
 ## Project Shape

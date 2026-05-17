@@ -4,10 +4,9 @@ A lightweight real-time virtual tabletop for Cepheus Engine and Traveller-style
 science fiction RPGs.
 
 This is a clean rewrite of the original `cepheus-amplify` app. The new project
-keeps the useful product ideas, rules data, and legacy entity-schema provenance,
-but deliberately
-does not carry forward AWS Amplify DataStore, Material UI, RJSF, or the old
-whole-object optimistic sync model.
+keeps the useful product ideas, rules data, and legacy entity-schema
+provenance, but deliberately does not carry forward AWS Amplify DataStore,
+Material UI, RJSF, or the old whole-object optimistic sync model.
 
 ## Goals
 
@@ -77,9 +76,9 @@ The most important starting points are:
 - [Contributing](CONTRIBUTING.md)
 - [Agent guide](AGENTS.md)
 - [Product vision](docs/product/vision.md)
+- [Implementation plan](docs/product/backlog.md)
 - [Architecture](docs/architecture/overview.md)
 - [Coding standards](docs/engineering/coding-standards.md)
-- [Migration plan](docs/product/migration-plan.md)
 - [Architecture Decision Records](docs/adr/README.md)
 - [Discussion record](docs/provenance/discussion-record.md)
 

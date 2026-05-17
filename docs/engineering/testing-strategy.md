@@ -1,181 +1,90 @@
 # Testing Strategy
 
-The current repo has a TypeScript check and a Node-based unit test gate. The
-test plan should continue to grow in layers as implementation expands.
+Tests should prove the cheapest boundary that can catch the bug. Shared rules,
+protocols, and projections belong in unit tests. Browser tests are for browser
+contracts such as layout, Canvas input, PWA behavior, two-tab sync, and reveal
+timing.
 
-## Current Gate
+## Current Gates
 
-- `npm run check`: TypeScript compile check for `src/**/*.ts`.
-- `npm run check:docs`: dependency-free internal Markdown link check for
-  root docs, `data/`, and `docs/`.
-- `npm run check:boundaries`: dependency-free source-boundary checks for
-  direct HTML writes, accidental shared-layer randomness/logging, raw room HTTP
-  imports from feature modules, legacy character creation history reads or
-  compatibility-flow adapter use outside the compatibility projection helper,
-  and new `ts-nocheck` files.
-- `npm test`: compiles source and co-located `*.test.ts` files to a temporary
-  CommonJS build and runs Node's built-in test runner.
-- `npm run verify:quick`: rebuilds served client assets, then runs lint,
-  documentation checks, boundary checks, and TypeScript.
-- `npm run verify:full`: runs `verify:quick`, the unit test suite, the current
-  character creation browser smoke, and the focused tactical board smoke.
-- `npm run test:e2e`: Playwright browser tests against a local Wrangler dev
-  Worker. Run `npm run build:client` first when client assets changed.
-- `npm run test:e2e:character-creation`: focused Playwright coverage for
-  deterministic character creation flows in disposable rooms, including
-  owner/spectator follow, failed-qualification Draft/Drifter paths, refresh
-  recovery, mobile controls, and failure artifacts.
-- `npm run test:e2e:character-creation:reveal`: targeted reveal-boundary
-  browser checks for owner/spectator creation rolls.
-- `npm run test:e2e:character-creation:death`: targeted death and replacement
-  traveller browser checks.
-- `npm run test:e2e:character-creation:multi-career`: targeted multi-career
-  browser coverage.
-- `npm run test:e2e:character-creation:repeat`: targeted disposable traveller
-  repeat-run coverage with failure artifacts.
-- `npm run test:e2e:character-creation:mobile`: targeted phone-width creator
-  control coverage.
-- `npm run test:e2e:character-creation:finalization`: targeted mustering and
-  final-sheet browser coverage.
-- `npm run test:e2e:tactical`: focused Playwright coverage for board creation,
-  linked tactical pieces, sequenced movement, door state, refresh recovery, and
-  hidden-piece viewer filtering.
-- Current tests cover shared protocol/dice/projection behavior, event envelope
-  versioning, chunk-boundary storage, import boundaries, stale `expectedSeq`
-  rejection, Durable Object HTTP flow, Worker static fallback including PWA
-  assets and the bundled browser client, and dependency-free client command
-  helpers.
-- `npm run smoke:deployed`: dependency-free production smoke for a deployed
-  Worker URL. It creates a disposable room and verifies health, shell/PWA
-  assets, the self-contained `/client/app/app.js` browser bundle, room commands,
-  stale command rejection, viewer filtering, and WebSocket broadcasts.
+| Command | Coverage |
+| --- | --- |
+| `npm run check` | TypeScript compile check. |
+| `npm run check:docs` | Internal Markdown file and anchor links for root docs, `data/`, and `docs/`. |
+| `npm run check:boundaries` | Source-boundary rules for HTML writes, shared randomness, source logging, raw room APIs, legacy creation reads, ruleset resolver imports, and `ts-nocheck`. |
+| `npm test` | Co-located `*.test.ts` files through Node's built-in test runner. |
+| `npm run test:e2e:character-creation` | Playwright coverage for deterministic character creation flows, owner/spectator follow, reveal timing, mobile controls, refresh recovery, and finalization. |
+| `npm run test:e2e:tactical` | Playwright coverage for board creation, linked pieces, movement, doors, refresh recovery, and hidden-piece filtering. |
+| `npm run verify:quick` | Generated client freshness, client rebuild, lint, docs, boundaries, diagrams, and TypeScript. |
+| `npm run verify:full` | `verify:quick`, unit tests, character-creation E2E, and tactical-board E2E. |
+| `npm run verify` | Alias for `verify:full`; CI uses this. |
+| `npm run smoke:deployed -- <url>` | Deployed Worker smoke for health, shell/PWA assets, commands, stale rejection, viewer filtering, and WebSocket broadcasts. |
 
-## First Gate
+Use focused E2E scripts when debugging a branch:
 
-- TypeScript compile check for `src/**/*.ts`.
-- Unit tests for `src/shared` projectors, command validation, dice parsing, and
-  ruleset loading.
-- Unit tests for `src/client/reactive.ts` and `src/client/dom.ts` before UI
-  code depends on them heavily.
+- `npm run test:e2e:character-creation:reveal`
+- `npm run test:e2e:character-creation:death`
+- `npm run test:e2e:character-creation:multi-career`
+- `npm run test:e2e:character-creation:repeat`
+- `npm run test:e2e:character-creation:mobile`
+- `npm run test:e2e:character-creation:finalization`
 
-## Shared Rules
+## What To Test Where
 
-Rules code gets the strictest coverage because it is the replay contract.
+Use unit tests for:
 
-Use direct example tests for:
+- command validation and typed error categories
+- event envelope versioning and protocol fixtures
+- projector replay, checkpoint-plus-tail recovery, and parity
+- viewer filtering and reveal-safe projections
+- ruleset JSON decoding and non-default ruleset fixtures
+- dice expressions, deterministic RNG, and rules-table helpers
+- client view models, command builders, DOM-free controllers, and disposal
 
-- character generation steps
-- career qualification and advancement
-- equipment and encumbrance calculations
-- damage and healing
-- dice notation
-- board permissions and visibility
+Use browser tests for:
 
-Use property-style tests for invariants:
+- app boot from Worker-served assets
+- mobile layout and reachable primary controls
+- Canvas pointer input and command dispatch
+- two-tab owner/spectator synchronization
+- dice reveal timing and redacted pre-reveal text
+- refresh/reconnect recovery
+- PWA install/update/offline shell behavior
+- failure artifacts that make regressions debuggable
 
-- projection from events is deterministic
-- replaying an event stream twice gives the same state
-- dice rolls stay within expected ranges
-- equipment totals never go negative after valid commands
-- hidden player projections never contain referee-only fields
+Use deployed smoke after publishing or changing Worker/deploy behavior. It
+creates a disposable room and does not depend on Playwright.
 
-## Protocol Contracts
+## Deterministic Browser Runs
 
-Keep canonical JSON fixtures for:
-
-- client-to-server messages
-- server-to-client state-bearing messages
-- event envelopes
-- filtered player/referee/spectator projections
-
-Fixtures should assert wire compatibility, not just TypeScript compatibility.
-
-## Durable Object Tests
-
-Durable Object persistence should be tested with a small in-memory storage fake
-before Wrangler integration tests are introduced.
-
-Core cases:
-
-- append events across chunk boundaries
-- load latest checkpoint plus event tail
-- reject stale commands with `expectedSeq`
-- broadcast viewer-safe projections
-- recover room state after a simulated hibernation wake
-
-## Browser Tests
-
-Use browser tests only for browser-specific contracts:
-
-- app boots
-- Discord login redirect/start page renders
-- create/join campaign flows
-- multi-tab board sync
-- reconnect behavior
-- mobile character sheet and board interactions
-
-Game rules and state machines belong in unit tests, not in broad browser
-scenarios.
-
-The browser-test slice follows the Delta-V pattern, adapted for this Worker
-app:
-
-- an executable character creation smoke that drives the real app shell
-- named character-creation scripts for reveal, death, repeat-run, mobile,
-  multi-career, and finalization checks so local failures can be isolated before
-  running the full smoke
-- repeat runs that create several disposable travellers and leave screenshots
-  or DOM snapshots on failure
-- two-tab owner/spectator tests for live character creation follow mode
-- mobile viewport checks for the high-risk creator screens
-- a tactical board smoke that exercises the server-ordered board/piece/door
-  command path and viewer-filtered projections
-- explicit assertions that roll-dependent results are hidden until the dice
-  reveal boundary
-
-Deterministic browser journeys may seed a disposable local room before the first
-command with:
+Local browser tests may seed a disposable room before the first command:
 
 ```text
 POST /rooms/:gameId/test/seed
 { "seed": 12345 }
 ```
 
-That route is only accepted on local/test hosts such as `localhost`,
-`127.0.0.1`, and `*.test`; deployed Worker hosts reject it. Use it for
-repeatable end-to-end creation paths, including multi-term characters, career
-changes, and owner/spectator synchronization.
-
-Playwright is a development dependency only. That does not change the runtime
-dependency budget for the shipped app.
+That route is accepted only on local/test hosts such as `localhost`,
+`127.0.0.1`, and `*.test`; deployed Worker hosts reject it.
 
 ## Mobile PWA Manual Checks
 
-Run these against a deployed Worker URL, or a local HTTPS tunnel when testing a
-candidate build on a real phone:
+Run these on a real phone against a deployed Worker URL or local HTTPS tunnel:
 
-- Install the app from the browser and confirm the installed app opens the room
-  shell without browser chrome.
-- Reload the installed app and confirm the room shell, PWA icons, manifest, and
-  service worker continue to load.
-- Put the device offline, reopen or reload the installed app, and confirm the
-  offline shell fallback appears while room commands and state reads fail
-  instead of being cached.
-- Deploy or switch to a newer build, return the installed app online, then
-  foreground it and confirm it refreshes onto the newer Worker/static build.
-- While offline, attempt a room reconnect; return online and confirm reconnect
-  feedback clears after the WebSocket and room state recover.
+- Install the app and confirm it opens the room shell without browser chrome.
+- Reload the installed app and confirm the shell, icons, manifest, and service
+  worker still load.
+- Go offline, reopen or reload, and confirm the offline shell appears while
+  room commands and state reads fail instead of being cached.
+- Deploy or switch to a newer build, return online, foreground the app, and
+  confirm it refreshes onto the newer Worker/static build.
+- While offline, attempt reconnect; return online and confirm reconnect
+  feedback clears after WebSocket and room state recovery.
 
-## Local Verification
+## Change Guidance
 
-The target local gate once implementation starts:
-
-```bash
-npm run verify:quick
-npm run verify:full
-npm run test:e2e
-```
-
-Keep the fast gate cheap. Full verification is allowed to run slower browser
-coverage, and CI should run `npm run verify` so those checks become the default
-hosted safety net.
+- Docs only: `npm run check:docs`.
+- Client shell or generated assets: `npm run build:client && npm run verify:quick && npm test`.
+- Shared rules, protocol, server, or projection: `npm run verify:full`.
+- Deployment-sensitive changes: `npm run verify:full && npm run deploy:dry-run`.
+- Release confidence after deploy: `npm run smoke:deployed -- <url>`.

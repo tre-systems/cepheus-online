@@ -9,8 +9,8 @@ client and server-authoritative game rooms.
 src/shared/      domain types, commands, events, projectors, rules
 src/server/      Cloudflare Worker routes and Durable Objects
 src/client/      browser app, Canvas board, CSS, local reactive state
-data/            canonical bundled ruleset JSON and non-runtime SRD data
-docs/            design, migration, and operating notes
+data/            canonical bundled ruleset JSON
+docs/            design, architecture, engineering, and provenance notes
 ```
 
 ## Runtime Model
@@ -47,10 +47,10 @@ install/session bookkeeping if needed.
 Ruleset selection is room state. `CreateGame` may carry a `rulesetId`,
 `GameCreated` persists it, and `GameState.rulesetId` is projected from the
 event stream. Rulesets are resolved through a provider boundary that returns
-decoded JSON data plus id, version, content hash, and source metadata. Bundled
-The canonical bundled ruleset is `data/rulesets/cepheus-engine-srd.json`.
-Cepheus rules live as JSON under `data/rulesets/`; do not convert rules tables
-into hand-maintained TypeScript constants.
+decoded JSON data plus id, version, content hash, and source metadata. The
+canonical bundled ruleset is `data/rulesets/cepheus-engine-srd.json`. Cepheus
+rules live as JSON under `data/rulesets/`; do not convert rules tables into
+hand-maintained TypeScript constants.
 
 ## Persistence
 
@@ -114,6 +114,6 @@ Cloudflare bindings and persistence. `src/client` owns DOM, Canvas, CSS,
 browser storage, and WebSocket client behavior.
 
 See [patterns.md](patterns.md) and
-[development standards](../engineering/development-standards.md). See
+[coding standards](../engineering/coding-standards.md). See
 [map assets and line of sight](map-assets-and-los.md) for the local-only
-geomorph asset policy and the planned occlusion sidecar model.
+geomorph asset policy and occlusion sidecar model.

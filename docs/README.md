@@ -8,13 +8,8 @@ grouped by purpose so each future change has an obvious home.
 - [Product vision](product/vision.md): what the application is trying to be.
 - [Architecture overview](architecture/overview.md): target stack, runtime
   model, and source boundaries.
-- [Migration plan](product/migration-plan.md): staged implementation path from
-  skeleton to playable vertical slice.
-- [Implementation plan](product/backlog.md): ordered slices, parallel work
-  streams, and current priorities.
-- [Character creation backlog](product/character-creation-backlog.md):
-  historical legacy-review notes for the guided Cepheus character creation
-  flow; active tasks live in the implementation plan.
+- [Implementation plan](product/backlog.md): current MVP baseline, active
+  priorities, release checks, and guardrails.
 - [Architecture Decision Records](adr/README.md): accepted technical decisions
   and open decision points.
 - [Contributor workflow](../CONTRIBUTING.md): local setup, verification gates,
@@ -23,10 +18,7 @@ grouped by purpose so each future change has an obvious home.
 ## Product
 
 - [Product vision](product/vision.md)
-- [Migration plan](product/migration-plan.md)
 - [Implementation plan](product/backlog.md)
-- [Character creation backlog](product/character-creation-backlog.md)
-  (historical review notes)
 
 ## Architecture
 
@@ -37,7 +29,6 @@ grouped by purpose so each future change has an obvious home.
 
 ## Engineering
 
-- [Development standards](engineering/development-standards.md)
 - [Coding standards](engineering/coding-standards.md)
 - [Contributor workflow](../CONTRIBUTING.md)
 - [Deployment](engineering/deployment.md)

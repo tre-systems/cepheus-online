@@ -26,7 +26,7 @@ Use the narrowest command that proves the change.
 | `npm run check` | Runs TypeScript with `noEmit` for app source. |
 | `npm test` | Compiles colocated tests and runs Node's built-in test runner. |
 | `npm run verify:quick` | Fast non-test gate: build client, lint, docs, boundary checks, typecheck. |
-| `npm run verify:full` | Full local gate: `verify:quick` plus `npm test`. |
+| `npm run verify:full` | Full local gate: `verify:quick`, unit tests, character-creation E2E, and tactical-board E2E. |
 | `npm run verify` | Alias for `verify:full`. |
 | `npm run smoke:deployed -- <url>` | Production Worker smoke for routes, static assets, commands, viewer filtering, and WebSocket broadcasts. |
 
@@ -60,9 +60,9 @@ GitHub Actions runs `npm run verify` and a Cloudflare deploy dry-run for pushes
 and pull requests targeting `main`. Pushes to `main` deploy only after that
 verification job passes.
 
-A scheduled dependency audit runs weekly with `npm audit --omit=dev
---audit-level=high`. Dependabot is configured for weekly npm patch updates with
-a small pull request limit so dependency maintenance stays reviewable.
+A scheduled dependency audit runs weekly with `npm audit --audit-level=high`.
+Dependabot is configured for weekly npm patch updates with a small pull request
+limit so dependency maintenance stays reviewable.
 
 ## Boundary Checks
 
@@ -70,10 +70,11 @@ a small pull request limit so dependency maintenance stays reviewable.
 
 - no direct `innerHTML =` writes outside `src/client/dom.ts`
 - no `Math.random` in non-test `src/shared`
-- no `console.log`, `console.warn`, or `console.error` in non-test
-  `src/shared`
-- no new `// @ts-nocheck` files; the existing large client shell remains a
-  known migration debt until the client kernel refactor removes it
+- no `console.log`, `console.warn`, or `console.error` in non-test `src`
+- no raw room HTTP helper imports from feature modules
+- no legacy character-creation history reads outside the compatibility adapter
+- no direct bundled-ruleset resolver imports outside provider setup
+- no new `// @ts-nocheck` files
 
 Biome also enforces import-direction rules for `src/shared`, `src/server`, and
 `src/client`.
@@ -92,11 +93,10 @@ Biome also enforces import-direction rules for `src/shared`, `src/server`, and
 
 ## Browser Testing Direction
 
-The current automated gate is mostly unit and protocol oriented. Before the
-character creation UX refactor, the backlog calls for a Delta-V-style browser
-smoke harness that drives the real app, captures console errors and screenshots
-on failure, and tests two-tab follow behavior. Keep browser tests focused on
-browser-only contracts; rules and state machines belong in unit tests.
+Playwright E2E coverage is part of `npm run verify:full`. Keep browser tests
+focused on browser-only contracts: boot, layout, two-tab follow behavior, dice
+reveal timing, Canvas input, reconnect, PWA behavior, and failure artifacts.
+Rules and state machines belong in unit tests.
 
 ## Documentation
 

@@ -1,8 +1,7 @@
 # Patterns
 
-These are the implementation patterns to use when the skeleton becomes a real
-application. They are adapted from Delta-V for a Cepheus campaign tool rather
-than copied as-is.
+These are the implementation patterns to use as the MVP grows. They are adapted
+from Delta-V for a Cepheus campaign tool rather than copied as-is.
 
 Each durable pattern should answer three questions:
 
