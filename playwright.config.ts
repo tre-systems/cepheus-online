@@ -26,7 +26,7 @@ const devServerCommand = [
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: false,
+  fullyParallel: true,
   workers: 1,
   timeout: 30_000,
   expect: {

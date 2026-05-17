@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  quick:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -30,11 +30,66 @@ jobs:
       - name: Install Graphviz
         run: sudo apt-get update && sudo apt-get install -y graphviz
 
+      - name: Quick checks
+        run: npm run verify:quick
+
+      - name: Unit tests
+        run: npm test
+
+  e2e-character-creation:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Verify
-        run: npm run verify
+      - name: Character creation E2E shard ${{ matrix.shard }}/4
+        run: npx playwright test e2e/character-creation-smoke.spec.ts --shard=${{ matrix.shard }}/4
+
+  e2e-table:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Tactical board E2E
+        run: npm run test:e2e:tactical
+
+      - name: Private-beta E2E
+        run: npm run test:e2e:private-beta
+
+  deploy-dry-run:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
 
       - name: Validate Cloudflare deploy bundle
         run: npm run deploy:dry-run
@@ -48,8 +103,8 @@ jobs:
             --var DISCORD_CLIENT_ID:set-with-wrangler-secret-or-env
 
   deploy:
-    needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quick, e2e-character-creation, e2e-table, deploy-dry-run]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     environment:
       name: production
@@ -122,9 +177,10 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          DISCORD_CLIENT_ID: ${{ vars.DISCORD_CLIENT_ID }}
+          DISCORD_CLIENT_ID_VAR: ${{ vars.DISCORD_CLIENT_ID }}
+          DISCORD_CLIENT_ID_SECRET: ${{ secrets.DISCORD_CLIENT_ID }}
         run: |
-          DISCORD_CLIENT_ID_VALUE="${DISCORD_CLIENT_ID:-set-with-wrangler-secret-or-env}"
+          DISCORD_CLIENT_ID_VALUE="${DISCORD_CLIENT_ID_VAR:-${DISCORD_CLIENT_ID_SECRET:-set-with-wrangler-secret-or-env}}"
           npm run build:client
           npx wrangler deploy \
             --route 'cepheus.tre.systems/*' \

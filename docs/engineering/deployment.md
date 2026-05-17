@@ -96,9 +96,10 @@ are required for protected deployed WebSockets.
 
 The `Deploy` workflow runs on pull requests and pushes to `main`.
 
-- Pull requests run verification and a Wrangler dry run.
+- Pull requests run parallel verification and a Wrangler dry run.
 - Pushes to `main` run the same checks and then deploy to Cloudflare.
-- Manual deploys can be started with `workflow_dispatch`.
+- Manual deploys can be started with `workflow_dispatch`; they also deploy
+  after the parallel verification jobs pass.
 
 Required repository or environment secrets:
 
@@ -114,8 +115,10 @@ Required repository or environment secrets:
 
 Optional repository or environment variables:
 
-- `DISCORD_CLIENT_ID`: Discord OAuth client id. When unset, the deploy keeps a
-  placeholder and Discord OAuth remains disabled.
+- `DISCORD_CLIENT_ID`: Discord OAuth client id. This can also be set as a
+  secret if the beta operator prefers to keep all Discord values under GitHub
+  secrets. When unset, the deploy keeps a placeholder and Discord OAuth remains
+  disabled.
 
 The deploy workflow creates or resolves a Cloudflare D1 database named
 `cepheus-online-private-beta`; it resolves the database UUID from that name at

@@ -18,8 +18,12 @@ timing.
 | `npm run test:e2e:private-beta` | Playwright coverage for local-stubbed sign-in, room creation, invite acceptance, protected room access, and two authenticated tabs. |
 | `npm run verify:quick` | Generated client freshness, client rebuild, lint, docs, boundaries, diagrams, and TypeScript. |
 | `npm run verify:full` | `verify:quick`, unit tests, character-creation E2E, tactical-board E2E, and private-beta E2E. |
-| `npm run verify` | Alias for `verify:full`; CI uses this. |
+| `npm run verify` | Alias for `verify:full`; use for local release-level confidence. |
 | `npm run smoke:deployed -- <url>` | Public deployed Worker smoke for health, shell/PWA assets, and unauthenticated auth failures. Add `CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...'` for protected room creation, commands, stale rejection, and viewer filtering. |
+
+GitHub Actions runs the same coverage as `verify:full`, but splits it across
+parallel jobs. The long character-creation E2E file is sharded so deploys are
+not blocked by a single serial browser job.
 
 Use focused E2E scripts when debugging a branch:
 
