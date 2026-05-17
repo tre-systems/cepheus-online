@@ -158,7 +158,7 @@ describe('board door actions', () => {
     }).render(board({ iris: { id: 'iris', open: true } }))
 
     asNode(actionsWithoutState as HTMLElement).children[0]?.click()
-    assert.deepEqual(errors, [])
+    assert.equal(errors.length, 0)
 
     const failingActions = createBoardDoorActions({
       document,

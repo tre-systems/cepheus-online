@@ -27,12 +27,14 @@ describe('app shell composition', () => {
   it('wires PWA install and update prompt elements', () => {
     const pwaInstall: PwaInstallController = {
       refresh: () => {},
-      hide: () => {}
+      hide: () => {},
+      dispose: () => {}
     }
     const pwaUpdate: PwaUpdatePromptController = {
       render: () => {},
       setServiceWorker: () => {},
-      hide: () => {}
+      hide: () => {},
+      dispose: () => {}
     }
     const prompt = {} as HTMLElement
     const installButton = {} as HTMLButtonElement

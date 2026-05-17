@@ -1,5 +1,6 @@
 import type { ServiceWorkerController } from './service-worker.js'
 import type { PwaUpdateState } from './update-state.js'
+import { createDisposer } from '../core/disposable.js'
 
 export interface PwaUpdatePromptElements {
   prompt: HTMLElement | null
@@ -16,6 +17,7 @@ export interface PwaUpdatePromptController {
   render: (state: PwaUpdateState) => void
   setServiceWorker: (serviceWorker: ServiceWorkerController | null) => void
   hide: () => void
+  dispose: () => void
 }
 
 const promptMessage = (state: PwaUpdateState): string => {
@@ -41,6 +43,7 @@ export const createPwaUpdatePromptController = ({
   elements,
   serviceWorker = null
 }: PwaUpdatePromptControllerOptions): PwaUpdatePromptController => {
+  const disposer = createDisposer()
   let currentServiceWorker = serviceWorker
   let currentState: PwaUpdateState = { status: 'idle' }
   let dismissed = false
@@ -76,25 +79,28 @@ export const createPwaUpdatePromptController = ({
     elements.prompt.hidden = dismissed && state.status !== 'refreshFailed'
   }
 
-  elements.updateButton?.addEventListener('click', () => {
-    dismissed = false
-    if (currentState.status === 'refreshFailed') {
-      currentServiceWorker?.checkForUpdate?.()
-      return
-    }
-    currentServiceWorker?.acceptUpdate?.()
-  })
+  if (elements.updateButton)
+    disposer.listen(elements.updateButton, 'click', () => {
+      dismissed = false
+      if (currentState.status === 'refreshFailed') {
+        currentServiceWorker?.checkForUpdate?.()
+        return
+      }
+      currentServiceWorker?.acceptUpdate?.()
+    })
 
-  elements.dismissButton?.addEventListener('click', () => {
-    dismissed = true
-    hide()
-  })
+  if (elements.dismissButton)
+    disposer.listen(elements.dismissButton, 'click', () => {
+      dismissed = true
+      hide()
+    })
 
   return {
     render,
     setServiceWorker: (nextServiceWorker) => {
       currentServiceWorker = nextServiceWorker
     },
-    hide
+    hide,
+    dispose: disposer.dispose
   }
 }

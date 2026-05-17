@@ -283,7 +283,7 @@ export class GameRoomDO {
       )
     }
 
-    const storedSeed = seed | 0
+    const storedSeed = seed >>> 0
     await this.state.storage.put(gameSeedKey(gameId), storedSeed)
 
     return jsonResponse({
@@ -409,8 +409,23 @@ export class GameRoomDO {
     )
   }
 
-  async webSocketMessage(socket: WebSocket, message: string): Promise<void> {
+  async webSocketMessage(
+    socket: WebSocket,
+    message: string | ArrayBuffer
+  ): Promise<void> {
     let raw: unknown
+
+    if (typeof message !== 'string') {
+      this.send(socket, {
+        type: 'error',
+        error: commandError(
+          'invalid_message',
+          'Binary WebSocket messages are not supported'
+        )
+      })
+      socket.close(1003, 'Unsupported message type')
+      return
+    }
 
     if (byteLength(message) > MAX_WEBSOCKET_MESSAGE_BYTES) {
       this.send(socket, {

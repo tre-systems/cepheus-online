@@ -13,13 +13,18 @@ import { appendEvents, gameSeedKey, readEventStream } from './storage'
 
 type TestSocket = WebSocket & {
   sent: string[]
+  closeCalls: Array<{ code?: number; reason?: string }>
 }
 
 const createSocket = (): TestSocket => {
   const socket = {
     sent: [] as string[],
+    closeCalls: [] as Array<{ code?: number; reason?: string }>,
     send(message: string) {
       socket.sent.push(message)
+    },
+    close(code?: number, reason?: string) {
+      socket.closeCalls.push({ code, reason })
     }
   }
 
@@ -262,6 +267,19 @@ describe('GameRoomDO HTTP skeleton', () => {
     assert.equal(message.gameId, 'game-1')
     assert.equal(message.seed, 12345)
     assert.equal(await storage.get(gameSeedKey(asGameId('game-1'))), 12345)
+  })
+
+  it('preserves unsigned local test seed values', async () => {
+    const storage = createMemoryStorage()
+    const room = createRoom([], new Map(), storage)
+
+    const response = await postTestSeed(room, 0xffffffff)
+    const message = await response.json()
+
+    assert.equal(response.status, 200)
+    assert.equal(message.ok, true)
+    assert.equal(message.seed, 0xffffffff)
+    assert.equal(await storage.get(gameSeedKey(asGameId('game-1'))), 0xffffffff)
   })
 
   it('rejects the test seed route on production hosts', async () => {
@@ -786,7 +804,7 @@ describe('GameRoomDO HTTP skeleton', () => {
         }
       })
       return { unref() {} } as unknown as ReturnType<typeof setTimeout>
-    }) as typeof setTimeout
+    }) as unknown as typeof setTimeout
     Date.now = () => nowMs
 
     try {
@@ -946,5 +964,20 @@ describe('GameRoomDO HTTP skeleton', () => {
     assert.equal(peerMessages[0].liveActivities.length, 1)
     assert.equal(peerMessages[0].liveActivities[0].type, 'diceRoll')
     assert.equal(peerMessages[0].liveActivities[0].reason, 'Table roll')
+  })
+
+  it('rejects binary WebSocket messages before JSON decoding', async () => {
+    const socket = createSocket()
+    const room = createRoom([socket])
+
+    await room.webSocketMessage(socket, new ArrayBuffer(1))
+
+    const messages = parseMessages(socket)
+    assert.equal(messages.length, 1)
+    assert.equal(messages[0].type, 'error')
+    assert.equal(messages[0].error.code, 'invalid_message')
+    assert.deepEqual(socket.closeCalls, [
+      { code: 1003, reason: 'Unsupported message type' }
+    ])
   })
 })

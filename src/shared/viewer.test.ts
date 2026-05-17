@@ -2055,8 +2055,67 @@ describe('viewer filtering', () => {
     const term = creation?.terms[0]
     assert.equal(creation?.state.status, 'AGING')
     assert.equal(creation?.actionPlan, undefined)
-    assert.equal(creation?.pendingDecisions, undefined)
+    assert.deepEqual(creation?.pendingDecisions, [{ key: 'mishapResolution' }])
     assert.equal(term?.facts?.anagathicsDecision, undefined)
+  })
+
+  it('uses the injected ruleset resolver while filtering hidden creation facts', () => {
+    const state = buildState()
+    state.rulesetId = 'custom-courier'
+    addDiceRoll(state, futureRevealAt)
+    state.characters[asCharacterId('char-1')] = {
+      id: asCharacterId('char-1'),
+      ownerId: asUserId('player'),
+      type: 'PLAYER',
+      name: 'Courier',
+      active: true,
+      notes: '',
+      age: 22,
+      characteristics: {
+        str: 7,
+        dex: 7,
+        end: 7,
+        int: 7,
+        edu: 7,
+        soc: 7
+      },
+      skills: [],
+      equipment: [],
+      credits: 0,
+      creation: {
+        state: {
+          status: 'CAREER_SELECTION',
+          context: {
+            canCommission: false,
+            canAdvance: false
+          }
+        },
+        terms: [],
+        careers: [],
+        canEnterDraft: true,
+        failedToQualify: false,
+        characteristicChanges: [],
+        creationComplete: false
+      }
+    }
+    const resolvedRulesetIds: Array<string | undefined> = []
+
+    filterGameStateForViewer(
+      state,
+      {
+        userId: asUserId('spectator'),
+        role: 'SPECTATOR'
+      },
+      {
+        nowMs,
+        resolveRulesetById: (rulesetId) => {
+          resolvedRulesetIds.push(rulesetId)
+          return { ok: false, error: ['missing fixture'] }
+        }
+      }
+    )
+
+    assert.deepEqual(resolvedRulesetIds, ['custom-courier'])
   })
 
   it('rewinds pre-reveal mishap outcomes to the mishap phase', () => {

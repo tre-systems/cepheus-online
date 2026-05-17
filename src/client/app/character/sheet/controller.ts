@@ -237,7 +237,8 @@ export const createCharacterSheetController = ({
     piece: PieceState | null,
     character: CharacterState | null
   ) => {
-    if (!piece?.characterId || !character || !canEditSheetFields(character)) {
+    const characterId = piece?.characterId ?? character?.id ?? null
+    if (!characterId || !character || !canEditSheetFields(character)) {
       return null
     }
 
@@ -277,7 +278,7 @@ export const createCharacterSheetController = ({
     save.addEventListener('click', () => {
       handleAsyncError(
         sendCharacterSheetPatch(
-          { characterId: piece.characterId },
+          { characterId },
           {
             age: nullableNumberFromInput(ageInput),
             characteristics: {

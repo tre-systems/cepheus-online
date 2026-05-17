@@ -5,7 +5,7 @@ into ordered implementation slices while preserving clear ownership for parallel
 agents. Shipped work belongs in `git log`; this file is for active or future
 work that still needs a named home.
 
-Last reviewed: 2026-05-16.
+Last reviewed: 2026-05-17.
 
 ## North Star
 
@@ -146,6 +146,23 @@ preserve them rather than re-plan them.
   focused modules as the remaining `view.ts` helpers are split.
 - Architecture diagrams live in `docs/diagrams/` as Graphviz/DOT sources with
   committed PNG renders, and ADR 0007 owns event/ruleset version policy.
+- The 2026-05-17 remediation pass fixed viewer redaction regressions, routed
+  server projection/filtering through the room ruleset provider, hardened local
+  test seed handling, WebSocket frame validation, reveal scheduling, command
+  rate-limit pruning, and character-creation dice fact validation.
+- Client runtime wiring now has a small disposable helper and top-level
+  `createAppClient().dispose()` tears down lifecycle, board, menu, refresh,
+  dice, sheet, asset, PWA, socket, and reveal timer resources.
+- Canonical bundled runtime ruleset data is now unambiguous:
+  `data/rulesets/cepheus-engine-srd.json`. Duplicate and non-runtime salvage
+  copies/scripts were removed from runnable data paths and preserved only as
+  provenance where useful.
+- Inactive entity JSON schema salvage moved out of `src/shared` and into
+  `legacy/cepheus-amplify/schema-salvage/`; active shared code no longer carries
+  schema-only tests or types.
+- Tooling now uses real Node types, records Node/package-manager expectations,
+  audits dev dependencies, installs Graphviz in CI, checks generated client
+  freshness, and keeps Husky docs-only detection in one script.
 
 ### Manual Release Checks
 
@@ -186,6 +203,13 @@ Cloudflare/GitHub settings. They cannot be proven fully by local tests alone.
    `app.ts` or `GameRoomDO` back into feature modules, do not bypass
    `runCommandPublication()`, and do not import bundled ruleset resolver
    functions outside provider setup or tests.
+6. Continue module-size reduction where it lowers risk: split shared protocol
+   decoding by command/domain, split live activity derivation into dice,
+   character creation, and board modules, and break the sheet controller into
+   tab rendering, editable details, action rendering, and controller state.
+7. Add custom ruleset upload/storage only after the provider contract has a
+   durable storage source, validation policy, moderation limits, and migration
+   story for ruleset id/version/hash references.
 
 ### Near-Term Product Work
 

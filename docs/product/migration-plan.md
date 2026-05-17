@@ -51,8 +51,9 @@ dice, refresh, and recover from the event stream.
 
 ## Phase 2: Character Basics
 
-- Port entity schemas into hand-built forms. In progress with the dependency-free
-  character sheet tabs.
+- Replace legacy entity-schema forms with hand-built forms. In progress with the
+  dependency-free character sheet tabs; the old schemas are provenance only
+  under `legacy/cepheus-amplify/schema-salvage/`.
 - Add character create/edit events. Basic create/edit events are in place for
   notes, age, characteristics, skills, and referee corrections.
 - Add equipment add/update/remove events. Done for item-level equipment

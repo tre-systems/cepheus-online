@@ -107,6 +107,16 @@ export const createAppClient = ({
   let boardControlsWiring: ReturnType<typeof createBoardControlsWiring> | null =
     null
   let lifecycleWiring: ReturnType<typeof createAppLifecycleWiring> | null = null
+  let roomMenuWiring: ReturnType<typeof createRoomMenuWiring> | null = null
+  let roomAssetCreationWiring: ReturnType<
+    typeof createRoomAssetCreationWiring
+  > | null = null
+  let characterSheetControlsWiring: ReturnType<
+    typeof createCharacterSheetControlsWiring
+  > | null = null
+  let refreshWiring: ReturnType<typeof createAppRefreshWiring> | null = null
+  let diceCommandWiring: ReturnType<typeof createDiceCommandWiring> | null =
+    null
   const diceRevealCoordinator = createDiceRevealCoordinator()
   const animatedDiceRollActivityIds = new Set<string>()
   let diceRevealRefetchTimer: number | null = null
@@ -527,7 +537,7 @@ export const createAppClient = ({
     reportError: setError
   })
 
-  createRoomMenuWiring({
+  roomMenuWiring = createRoomMenuWiring({
     elements: els,
     initialRoomId: roomId,
     initialActorId: actorId,
@@ -551,7 +561,7 @@ export const createAppClient = ({
     reportError: setError
   })
 
-  createRoomAssetCreationWiring({
+  roomAssetCreationWiring = createRoomAssetCreationWiring({
     elements: els,
     getState: () => state,
     getSelectedBoard: selectedBoard,
@@ -569,7 +579,7 @@ export const createAppClient = ({
       !state || isActorRefereeOrOwner(state, asUserId(actorId))
   })
 
-  createCharacterSheetControlsWiring({
+  characterSheetControlsWiring = createCharacterSheetControlsWiring({
     elements: els,
     controller: characterSheetController,
     getCurrentSelectedPieceId: currentSelectedPieceId,
@@ -579,13 +589,13 @@ export const createAppClient = ({
     requestRender: render
   })
 
-  createAppRefreshWiring({
+  refreshWiring = createAppRefreshWiring({
     refreshButton: els.refresh,
     fetchState,
     reportError: setError
   })
 
-  createDiceCommandWiring({
+  diceCommandWiring = createDiceCommandWiring({
     rollButton: els.roll,
     diceExpression: els.diceExpression,
     getClientIdentity: clientIdentity,
@@ -633,13 +643,30 @@ export const createAppClient = ({
     },
     render,
     dispose: () => {
+      appShell.pwaInstall.dispose()
+      appShell.pwaUpdate.dispose()
       serviceWorkerController?.dispose?.()
-      lifecycleWiring?.appBootstrap.dispose()
+      lifecycleWiring?.dispose()
       roomConnectionController.dispose()
+      boardController?.dispose()
+      boardControlsWiring?.dispose()
+      roomMenuWiring?.dispose()
+      roomAssetCreationWiring?.dispose()
+      characterSheetControlsWiring?.dispose()
+      refreshWiring?.dispose()
+      diceCommandWiring?.dispose()
       if (diceRevealRefetchTimer !== null) {
         window.clearTimeout(diceRevealRefetchTimer)
         diceRevealRefetchTimer = null
       }
+      lifecycleWiring = null
+      boardController = null
+      boardControlsWiring = null
+      roomMenuWiring = null
+      roomAssetCreationWiring = null
+      characterSheetControlsWiring = null
+      refreshWiring = null
+      diceCommandWiring = null
     }
   }
 }

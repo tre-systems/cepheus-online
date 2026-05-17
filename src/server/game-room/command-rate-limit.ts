@@ -18,6 +18,12 @@ export const createCommandRateLimiter = ({
   return {
     check: (key) => {
       const now = Date.now()
+      for (const [windowKey, window] of windows.entries()) {
+        if (window.resetAt <= now) {
+          windows.delete(windowKey)
+        }
+      }
+
       const current = windows.get(key)
       if (!current || current.resetAt <= now) {
         windows.set(key, {

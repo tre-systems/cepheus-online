@@ -73,8 +73,8 @@ describe('character creation injury resolution view', () => {
         severeInjuryViewModel(),
         {
           readOnly: false,
-          resolveInjury: async (characteristic, method) => {
-            resolved.push(`${method}:${characteristic}`)
+          resolveInjury: async (characteristic, secondaryChoice, method) => {
+            resolved.push(`${method}:${secondaryChoice.mode}:${characteristic}`)
           }
         }
       )
@@ -83,6 +83,8 @@ describe('character creation injury resolution view', () => {
     node.children[3]?.children[4]?.click()
     await Promise.resolve()
 
-    assert.deepEqual(resolved, ['roll_twice_take_lower:dex'])
+    assert.deepEqual(resolved, [
+      'roll_twice_take_lower:both_other_physical:dex'
+    ])
   })
 })

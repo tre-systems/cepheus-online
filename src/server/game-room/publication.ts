@@ -1,6 +1,5 @@
 import type { GameId } from '../../shared/ids'
 import { DEFAULT_RULESET_ID } from '../../shared/character-creation/cepheus-srd-ruleset'
-import { resolveDefaultRulesetData } from '../../shared/character-creation/default-ruleset-provider'
 import {
   isDeprecatedGameCommand,
   metadataForCommand
@@ -29,6 +28,7 @@ import {
   getOrCreateGameSeed,
   saveCheckpoint
 } from './storage'
+import { resolveRoomRulesetData } from './ruleset-provider'
 
 export interface CommandPublication {
   requestId: string
@@ -111,7 +111,7 @@ export const runCommandPublication = async (
     (message.command.type === 'CreateGame'
       ? (message.command.rulesetId ?? DEFAULT_RULESET_ID)
       : DEFAULT_RULESET_ID)
-  const ruleset = resolveDefaultRulesetData(rulesetId)
+  const ruleset = resolveRoomRulesetData(rulesetId)
   if (!ruleset.ok) {
     return err(commandError('invalid_command', ruleset.error.join('; ')))
   }
@@ -148,7 +148,9 @@ export const runCommandPublication = async (
     events.value,
     createdAt
   )
-  const nextState = projectGameState(envelopes, currentState)
+  const nextState = projectGameState(envelopes, currentState, {
+    resolveRulesetById: resolveRoomRulesetData
+  })
 
   if (!nextState) {
     const error = internalPublicationError('Command did not project game state')

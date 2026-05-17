@@ -1,5 +1,8 @@
 import type { CharacteristicKey } from '../../../../../shared/state'
-import type { InjuryResolutionMethod } from '../../../../../shared/characterCreation'
+import type {
+  InjuryResolutionMethod,
+  InjurySecondaryChoice
+} from '../../../../../shared/characterCreation'
 import { bindAsyncActionButton } from '../../../core/async-button.js'
 import type { CharacterCreationInjuryResolutionViewModel } from '../view.js'
 
@@ -12,6 +15,7 @@ export interface CharacterCreationInjuryResolutionViewDeps {
   readOnly: boolean
   resolveInjury: (
     characteristic: CharacteristicKey,
+    secondaryChoice: InjurySecondaryChoice,
     method?: InjuryResolutionMethod
   ) => Promise<void> | void
 }
@@ -56,7 +60,11 @@ export const renderCharacterCreationInjuryResolution = (
         .filter(Boolean)
         .join(': ')
       bindAsyncActionButton(button, () =>
-        resolveInjury(target.characteristic, method.method)
+        resolveInjury(
+          target.characteristic,
+          viewModel.secondaryChoice,
+          method.method
+        )
       )
       actions.append(button)
     }

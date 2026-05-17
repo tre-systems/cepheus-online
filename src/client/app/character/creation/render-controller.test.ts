@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { asCharacterId, asGameId, asUserId } from '../../../../shared/ids'
+import { asCharacterId, asUserId } from '../../../../shared/ids'
 import type { CharacterState } from '../../../../shared/state'
 import type { CharacterCreationCommandController } from './command-controller'
 import { createInitialCharacterDraft, type CharacterCreationFlow } from './flow'
@@ -339,12 +339,6 @@ const renderReadOnlyCharacter = (character: CharacterState) => {
       publishCascadeResolution: async () => {}
     },
     getCommandController: commandController,
-    ensurePublished: async () => {},
-    postCharacterCreationCommand: async () => ({}),
-    commandIdentity: () => ({
-      gameId: asGameId('game-1'),
-      actorId: asUserId('actor-1')
-    }),
     reportError: () => {}
   })
 
@@ -424,12 +418,6 @@ describe('character creation render controller', () => {
         publishCascadeResolution: async () => {}
       },
       getCommandController: commandController,
-      ensurePublished: async () => {},
-      postCharacterCreationCommand: async () => ({}),
-      commandIdentity: () => ({
-        gameId: asGameId('game-1'),
-        actorId: asUserId('actor-1')
-      }),
       reportError: () => {}
     })
 
@@ -487,12 +475,6 @@ describe('character creation render controller', () => {
         publishCascadeResolution: async () => {}
       },
       getCommandController: commandController,
-      ensurePublished: async () => {},
-      postCharacterCreationCommand: async () => ({}),
-      commandIdentity: () => ({
-        gameId: asGameId('game-1'),
-        actorId: asUserId('actor-1')
-      }),
       reportError: () => {}
     })
 
@@ -548,12 +530,6 @@ describe('character creation render controller', () => {
         publishCascadeResolution: async () => {}
       },
       getCommandController: commandController,
-      ensurePublished: async () => {},
-      postCharacterCreationCommand: async () => ({}),
-      commandIdentity: () => ({
-        gameId: asGameId('game-1'),
-        actorId: asUserId('actor-1')
-      }),
       reportError: () => {}
     })
 
@@ -694,12 +670,6 @@ describe('character creation render controller', () => {
         publishCascadeResolution: async () => {}
       },
       getCommandController: commandController,
-      ensurePublished: async () => {},
-      postCharacterCreationCommand: async () => ({}),
-      commandIdentity: () => ({
-        gameId: asGameId('game-1'),
-        actorId: asUserId('actor-1')
-      }),
       reportError: () => {}
     })
 
@@ -768,12 +738,6 @@ describe('character creation render controller', () => {
         publishCascadeResolution: async () => {}
       },
       getCommandController: commandController,
-      ensurePublished: async () => {},
-      postCharacterCreationCommand: async () => ({}),
-      commandIdentity: () => ({
-        gameId: asGameId('game-1'),
-        actorId: asUserId('actor-1')
-      }),
       reportError: () => {}
     })
 
@@ -863,12 +827,6 @@ describe('character creation render controller', () => {
           completedTerms.push(continueCareer)
         }
       }),
-      ensurePublished: async () => {},
-      postCharacterCreationCommand: async () => ({}),
-      commandIdentity: () => ({
-        gameId: asGameId('game-1'),
-        actorId: asUserId('actor-1')
-      }),
       reportError: () => {}
     })
 
@@ -952,12 +910,6 @@ describe('character creation render controller', () => {
         publishCascadeResolution: async () => {}
       },
       getCommandController: commandController,
-      ensurePublished: async () => {},
-      postCharacterCreationCommand: async () => ({}),
-      commandIdentity: () => ({
-        gameId: asGameId('game-1'),
-        actorId: asUserId('actor-1')
-      }),
       reportError: () => {}
     })
 
@@ -1055,12 +1007,6 @@ describe('character creation render controller', () => {
         publishCascadeResolution: async () => {}
       },
       getCommandController: commandController,
-      ensurePublished: async () => {},
-      postCharacterCreationCommand: async () => ({}),
-      commandIdentity: () => ({
-        gameId: asGameId('game-1'),
-        actorId: asUserId('actor-1')
-      }),
       reportError: () => {}
     })
 
@@ -1224,12 +1170,6 @@ describe('character creation render controller', () => {
         publishCascadeResolution: async () => {}
       },
       getCommandController: commandController,
-      ensurePublished: async () => {},
-      postCharacterCreationCommand: async () => ({}),
-      commandIdentity: () => ({
-        gameId: asGameId('game-1'),
-        actorId: asUserId('actor-1')
-      }),
       reportError: () => {}
     })
 
@@ -1306,12 +1246,6 @@ describe('character creation render controller', () => {
         publishCascadeResolution: async () => {}
       },
       getCommandController: commandController,
-      ensurePublished: async () => {},
-      postCharacterCreationCommand: async () => ({}),
-      commandIdentity: () => ({
-        gameId: asGameId('game-1'),
-        actorId: asUserId('actor-1')
-      }),
       reportError: () => {}
     })
 

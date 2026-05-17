@@ -31,6 +31,7 @@ import {
   type LosOverlaySegmentViewModel
 } from './los-view.js'
 import type { BoardCommand } from '../core/command-router.js'
+import { createDisposer, type Disposable } from '../core/disposable.js'
 
 const DRAG_START_SLOP_PX = 6
 
@@ -95,7 +96,7 @@ export interface BoardControllerOptions {
   devicePixelRatio?: () => number
 }
 
-export interface BoardController {
+export interface BoardController extends Disposable {
   clearDrag: () => void
   currentZoom: () => number
   selectedPiece: () => PieceState | null
@@ -192,6 +193,7 @@ export const createBoardController = ({
   requestRender,
   devicePixelRatio = () => window.devicePixelRatio || 1
 }: BoardControllerOptions): BoardController => {
+  const disposer = createDisposer()
   let drag: BoardDrag | null = null
   let boardCamera: BoardCamera = { ...DEFAULT_BOARD_CAMERA }
   let cameraBoardId: BoardId | null = null
@@ -432,10 +434,11 @@ export const createBoardController = ({
     requestRender()
   }
 
-  canvas.addEventListener('pointerdown', (event) => {
-    if (event.button !== 0) return
-    event.preventDefault()
-    const screen = screenPoint(event)
+  disposer.listen(canvas, 'pointerdown', (event) => {
+    const pointerEvent = event as PointerEvent
+    if (pointerEvent.button !== 0) return
+    pointerEvent.preventDefault()
+    const screen = screenPoint(pointerEvent)
     const board = currentBoard()
     const size = canvasCssSize()
     const transform = board
@@ -443,7 +446,7 @@ export const createBoardController = ({
       : null
     const point =
       board && transform ? screenToBoard(screen, transform) : { x: 0, y: 0 }
-    const piece = hitPiece(point, transform, event.pointerType)
+    const piece = hitPiece(point, transform, pointerEvent.pointerType)
     setSelectedPieceId(piece?.id || null)
     if (piece) {
       drag = {
@@ -471,14 +474,15 @@ export const createBoardController = ({
         panY: boardCamera.panY
       }
     }
-    canvas.setPointerCapture(event.pointerId)
+    canvas.setPointerCapture(pointerEvent.pointerId)
     requestRender()
   })
 
-  canvas.addEventListener('pointermove', (event) => {
+  disposer.listen(canvas, 'pointermove', (event) => {
+    const pointerEvent = event as PointerEvent
     if (!drag) return
-    event.preventDefault()
-    const screen = screenPoint(event)
+    pointerEvent.preventDefault()
+    const screen = screenPoint(pointerEvent)
     if (!drag.moved) {
       drag.moved =
         Math.hypot(
@@ -492,7 +496,7 @@ export const createBoardController = ({
       requestRender()
       return
     }
-    const point = canvasPoint(event)
+    const point = canvasPoint(pointerEvent)
     const next = clampDraggedPiecePosition(
       getState()?.pieces?.[drag.pieceId] || { width: 0, height: 0, scale: 1 },
       point.x - drag.offsetX,
@@ -503,12 +507,13 @@ export const createBoardController = ({
     requestRender()
   })
 
-  canvas.addEventListener('pointerup', (event) => {
+  disposer.listen(canvas, 'pointerup', (event) => {
+    const pointerEvent = event as PointerEvent
     if (!drag) return
-    event.preventDefault()
+    pointerEvent.preventDefault()
     const completed = drag
     drag = null
-    releaseCanvasPointer(event.pointerId)
+    releaseCanvasPointer(pointerEvent.pointerId)
     if (completed.kind !== 'piece') {
       requestRender()
       return
@@ -529,18 +534,21 @@ export const createBoardController = ({
       .finally(requestRender)
   })
 
-  canvas.addEventListener('pointercancel', (event) => {
+  disposer.listen(canvas, 'pointercancel', (event) => {
+    const pointerEvent = event as PointerEvent
     drag = null
-    releaseCanvasPointer(event.pointerId)
+    releaseCanvasPointer(pointerEvent.pointerId)
     requestRender()
   })
 
-  canvas.addEventListener(
+  disposer.listen(
+    canvas,
     'wheel',
     (event) => {
-      event.preventDefault()
-      const zoomFactor = event.deltaY < 0 ? 1.12 : 1 / 1.12
-      setCameraZoom(boardCamera.zoom * zoomFactor, screenPoint(event))
+      const wheelEvent = event as WheelEvent
+      wheelEvent.preventDefault()
+      const zoomFactor = wheelEvent.deltaY < 0 ? 1.12 : 1 / 1.12
+      setCameraZoom(boardCamera.zoom * zoomFactor, screenPoint(wheelEvent))
     },
     { passive: false }
   )
@@ -561,6 +569,7 @@ export const createBoardController = ({
     },
     render,
     resetCamera,
-    setCameraZoom
+    setCameraZoom,
+    dispose: disposer.dispose
   }
 }

@@ -12,6 +12,7 @@ const outputPath = join(
   'server',
   'static-client-assets.generated.ts'
 )
+const checkOnly = process.argv.includes('--check')
 
 const bundleClient = async () => {
   const result = await build({
@@ -209,5 +210,24 @@ lines.push(
   ''
 )
 
-await mkdir(dirname(outputPath), { recursive: true })
-await writeFile(outputPath, lines.join('\n'))
+const output = lines.join('\n')
+
+if (checkOnly) {
+  let currentOutput = ''
+  try {
+    currentOutput = await readFile(outputPath, 'utf8')
+  } catch {
+    console.error(`${outputPath} is missing. Run npm run build:client.`)
+    process.exit(1)
+  }
+
+  if (currentOutput !== output) {
+    console.error(`${outputPath} is stale. Run npm run build:client.`)
+    process.exit(1)
+  }
+
+  console.log('Generated client asset is fresh.')
+} else {
+  await mkdir(dirname(outputPath), { recursive: true })
+  await writeFile(outputPath, output)
+}

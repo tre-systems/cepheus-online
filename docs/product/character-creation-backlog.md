@@ -132,11 +132,10 @@ Important remaining gaps:
 ## SRD Procedure Audit Checklist
 
 Audit date: 2026-05-06. Source artifacts checked:
-`data/rulesets/cepheus-engine-srd.json`,
-`data/rulesets/srd/cepheus-engine-srd.json`, and
-[SRD Source](../integrations/srd-source.md). The character creation table groups
-match between both local SRD JSON files; their current differences are in
-equipment data, not creation procedure data.
+`data/rulesets/cepheus-engine-srd.json`, the historical duplicate now removed,
+and [SRD Source](../integrations/srd-source.md). The character creation table
+groups matched between both local SRD JSON files at audit time; their
+differences were in equipment data, not creation procedure data.
 
 Use this as the executable checklist for bringing the shared state machine and
 legal-action planner up to the SRD procedure. Each item should have shared

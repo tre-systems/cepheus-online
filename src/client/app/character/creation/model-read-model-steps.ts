@@ -203,11 +203,13 @@ const readModelHomeworldStepViewModel = ({
 const readModelCareerSelectionStepViewModel = ({
   readModel,
   projectedCreation,
-  readOnly
+  readOnly,
+  ruleset
 }: {
   readModel: CharacterCreationReadModel
   projectedCreation: CharacterCreationProjection
   readOnly: boolean
+  ruleset?: CepheusRuleset | null
 }): CharacterCreationWizardViewModel | null => {
   if (readModel.status !== 'CAREER_SELECTION') return null
 
@@ -215,20 +217,25 @@ const readModelCareerSelectionStepViewModel = ({
     deriveCharacterCreationProjectedActionSection(projectedCreation)
   const flow: CharacterCreationFlow = {
     step: 'career',
-    draft: createInitialCharacterDraft(readModel.characterId, {
-      name: readModel.name,
-      age: readModel.sheet.age,
-      characteristics: readModel.sheet.characteristics,
-      homeworld: projectedCreation.homeworld ?? undefined,
-      backgroundSkills: readModel.backgroundSkills,
-      pendingCascadeSkills: readModel.pendingCascadeSkills,
-      careerPlan: failedQualificationCareerPlan(projectedCreation),
-      completedTerms: completedTermsFromReadModel(readModel),
-      skills: readModel.sheet.skills,
-      equipment: readModel.sheet.equipment,
-      credits: readModel.sheet.credits
-    })
+    draft: createInitialCharacterDraft(
+      readModel.characterId,
+      {
+        name: readModel.name,
+        age: readModel.sheet.age,
+        characteristics: readModel.sheet.characteristics,
+        homeworld: projectedCreation.homeworld ?? undefined,
+        backgroundSkills: readModel.backgroundSkills,
+        pendingCascadeSkills: readModel.pendingCascadeSkills,
+        careerPlan: failedQualificationCareerPlan(projectedCreation),
+        completedTerms: completedTermsFromReadModel(readModel),
+        skills: readModel.sheet.skills,
+        equipment: readModel.sheet.equipment,
+        credits: readModel.sheet.credits
+      },
+      ruleset ? { ruleset } : {}
+    )
   }
+  const rulesOptions = ruleset ? { ruleset } : {}
 
   return {
     step: 'career',
@@ -236,9 +243,9 @@ const readModelCareerSelectionStepViewModel = ({
     projectedStepCurrent: true,
     controlsDisabled: readOnly,
     progress: [],
-    buttons: deriveCharacterCreationButtonStates(flow),
+    buttons: deriveCharacterCreationButtonStates(flow, rulesOptions),
     validation: deriveCharacterCreationValidationSummary(flow),
-    nextStep: deriveCharacterCreationNextStepViewModel(flow, {}),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, rulesOptions),
     careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow, {
       careerChoiceOptions: actionSection.careerChoiceOptions ?? { careers: [] },
       failedQualificationOptions:
@@ -268,11 +275,13 @@ const readModelCareerSelectionStepViewModel = ({
 const readModelBasicTrainingStepViewModel = ({
   readModel,
   projectedCreation,
-  readOnly
+  readOnly,
+  ruleset
 }: {
   readModel: CharacterCreationReadModel
   projectedCreation: CharacterCreationProjection
   readOnly: boolean
+  ruleset?: CepheusRuleset | null
 }): CharacterCreationWizardViewModel | null => {
   if (readModel.status !== 'BASIC_TRAINING') return null
 
@@ -283,20 +292,25 @@ const readModelBasicTrainingStepViewModel = ({
   )?.basicTrainingOptions
   const flow: CharacterCreationFlow = {
     step: 'skills',
-    draft: createInitialCharacterDraft(readModel.characterId, {
-      name: readModel.name,
-      age: readModel.sheet.age,
-      characteristics: readModel.sheet.characteristics,
-      homeworld: projectedCreation.homeworld ?? undefined,
-      backgroundSkills: readModel.backgroundSkills,
-      pendingCascadeSkills: readModel.pendingCascadeSkills,
-      careerPlan: activeTermCareerPlan(readModel),
-      completedTerms: completedTermsFromReadModel(readModel),
-      skills: readModel.sheet.skills,
-      equipment: readModel.sheet.equipment,
-      credits: readModel.sheet.credits
-    })
+    draft: createInitialCharacterDraft(
+      readModel.characterId,
+      {
+        name: readModel.name,
+        age: readModel.sheet.age,
+        characteristics: readModel.sheet.characteristics,
+        homeworld: projectedCreation.homeworld ?? undefined,
+        backgroundSkills: readModel.backgroundSkills,
+        pendingCascadeSkills: readModel.pendingCascadeSkills,
+        careerPlan: activeTermCareerPlan(readModel),
+        completedTerms: completedTermsFromReadModel(readModel),
+        skills: readModel.sheet.skills,
+        equipment: readModel.sheet.equipment,
+        credits: readModel.sheet.credits
+      },
+      ruleset ? { ruleset } : {}
+    )
   }
+  const rulesOptions = ruleset ? { ruleset } : {}
 
   return {
     step: 'skills',
@@ -304,9 +318,9 @@ const readModelBasicTrainingStepViewModel = ({
     projectedStepCurrent: true,
     controlsDisabled: readOnly,
     progress: [],
-    buttons: deriveCharacterCreationButtonStates(flow),
+    buttons: deriveCharacterCreationButtonStates(flow, rulesOptions),
     validation: deriveCharacterCreationValidationSummary(flow),
-    nextStep: deriveCharacterCreationNextStepViewModel(flow, {}),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, rulesOptions),
     careerSelection: null,
     careerRoll: null,
     reenlistmentRoll: null,
@@ -333,11 +347,13 @@ const readModelBasicTrainingStepViewModel = ({
 const readModelCareerStatusStepViewModel = ({
   readModel,
   projectedCreation,
-  readOnly
+  readOnly,
+  ruleset
 }: {
   readModel: CharacterCreationReadModel
   projectedCreation: CharacterCreationProjection
   readOnly: boolean
+  ruleset?: CepheusRuleset | null
 }): CharacterCreationWizardViewModel | null => {
   const step = activeCreationStep(readModel)
   if (step !== 'career') return null
@@ -347,8 +363,10 @@ const readModelCareerStatusStepViewModel = ({
   const flow = flowFromReadModel({
     readModel,
     projectedCreation,
-    step
+    step,
+    ruleset
   })
+  const rulesOptions = ruleset ? { ruleset } : {}
   const termCascadeChoices =
     readModel.status === 'SKILLS_TRAINING'
       ? actionSection.cascadeSkillChoices
@@ -365,9 +383,9 @@ const readModelCareerStatusStepViewModel = ({
     projectedStepCurrent: true,
     controlsDisabled: readOnly,
     progress: [],
-    buttons: deriveCharacterCreationButtonStates(flow),
+    buttons: deriveCharacterCreationButtonStates(flow, rulesOptions),
     validation: deriveCharacterCreationValidationSummary(flow),
-    nextStep: deriveCharacterCreationNextStepViewModel(flow, {}),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, rulesOptions),
     careerSelection: deriveCharacterCreationCareerSelectionViewModel(flow, {
       careerChoiceOptions: { careers: [] },
       failedQualificationOptions: []
@@ -425,11 +443,13 @@ const readModelCareerStatusStepViewModel = ({
 const readModelMusteringOutStepViewModel = ({
   readModel,
   projectedCreation,
-  readOnly
+  readOnly,
+  ruleset
 }: {
   readModel: CharacterCreationReadModel
   projectedCreation: CharacterCreationProjection
   readOnly: boolean
+  ruleset?: CepheusRuleset | null
 }): CharacterCreationWizardViewModel | null => {
   if (readModel.status !== 'MUSTERING_OUT') return null
 
@@ -439,8 +459,10 @@ const readModelMusteringOutStepViewModel = ({
   const flow = flowFromReadModel({
     readModel,
     projectedCreation,
-    step
+    step,
+    ruleset
   })
+  const rulesOptions = ruleset ? { ruleset } : {}
   const musteringBenefitOptions =
     actionSection.legalAction('resolveMusteringBenefit')
       ?.musteringBenefitOptions ?? []
@@ -451,9 +473,9 @@ const readModelMusteringOutStepViewModel = ({
     projectedStepCurrent: true,
     controlsDisabled: readOnly,
     progress: [],
-    buttons: deriveCharacterCreationButtonStates(flow),
+    buttons: deriveCharacterCreationButtonStates(flow, rulesOptions),
     validation: deriveCharacterCreationValidationSummary(flow),
-    nextStep: deriveCharacterCreationNextStepViewModel(flow, {}),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, rulesOptions),
     careerSelection: null,
     careerRoll: null,
     reenlistmentRoll: null,
@@ -480,11 +502,13 @@ const readModelMusteringOutStepViewModel = ({
 const readModelReviewStepViewModel = ({
   readModel,
   projectedCreation,
-  readOnly
+  readOnly,
+  ruleset
 }: {
   readModel: CharacterCreationReadModel
   projectedCreation: CharacterCreationProjection
   readOnly: boolean
+  ruleset?: CepheusRuleset | null
 }): CharacterCreationWizardViewModel | null => {
   if (readModel.step !== 'review') return null
 
@@ -492,8 +516,10 @@ const readModelReviewStepViewModel = ({
   const flow = flowFromReadModel({
     readModel,
     projectedCreation,
-    step
+    step,
+    ruleset
   })
+  const rulesOptions = ruleset ? { ruleset } : {}
 
   return {
     step,
@@ -501,9 +527,9 @@ const readModelReviewStepViewModel = ({
     projectedStepCurrent: true,
     controlsDisabled: readOnly,
     progress: [],
-    buttons: deriveCharacterCreationButtonStates(flow),
+    buttons: deriveCharacterCreationButtonStates(flow, rulesOptions),
     validation: deriveCharacterCreationValidationSummary(flow),
-    nextStep: deriveCharacterCreationNextStepViewModel(flow, {}),
+    nextStep: deriveCharacterCreationNextStepViewModel(flow, rulesOptions),
     careerSelection: null,
     careerRoll: null,
     reenlistmentRoll: null,
@@ -557,7 +583,8 @@ export const readModelWizardViewModel = ({
     return readModelCareerSelectionStepViewModel({
       readModel,
       projectedCreation,
-      readOnly
+      readOnly,
+      ruleset
     })
   }
 
@@ -565,7 +592,8 @@ export const readModelWizardViewModel = ({
     return readModelBasicTrainingStepViewModel({
       readModel,
       projectedCreation,
-      readOnly
+      readOnly,
+      ruleset
     })
   }
 
@@ -573,7 +601,8 @@ export const readModelWizardViewModel = ({
     const musteringOut = readModelMusteringOutStepViewModel({
       readModel,
       projectedCreation,
-      readOnly
+      readOnly,
+      ruleset
     })
     if (musteringOut) return musteringOut
   }
@@ -581,13 +610,15 @@ export const readModelWizardViewModel = ({
   const review = readModelReviewStepViewModel({
     readModel,
     projectedCreation,
-    readOnly
+    readOnly,
+    ruleset
   })
   if (review) return review
 
   return readModelCareerStatusStepViewModel({
     readModel,
     projectedCreation,
-    readOnly
+    readOnly,
+    ruleset
   })
 }

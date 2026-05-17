@@ -1,4 +1,3 @@
-import type { GameId, UserId } from '../../../../shared/ids.js'
 import {
   applyCharacterCreationBackgroundSkillSelection,
   removeCharacterCreationBackgroundSkillSelection,
@@ -7,7 +6,6 @@ import {
   type CharacterCreationFlow
 } from './flow.js'
 import type { RequiredAppElements } from '../../core/elements.js'
-import type { CharacterCreationCommand } from '../../core/command-router.js'
 import type { CharacterCreationCommandController } from './command-controller.js'
 import { renderCharacterCreationCharacteristicGrid as renderCharacterCreationCharacteristicGridView } from './views/characteristics.js'
 import {
@@ -105,12 +103,6 @@ export interface CharacterCreationRenderControllerDeps {
     | 'publishCascadeResolution'
   >
   getCommandController: () => CharacterCreationCommandController
-  ensurePublished: () => Promise<void>
-  postCharacterCreationCommand: (
-    command: CharacterCreationCommand,
-    requestId?: string
-  ) => Promise<unknown>
-  commandIdentity: () => { gameId: GameId; actorId: UserId }
   reportError: (message: string) => void
 }
 
@@ -560,12 +552,10 @@ export const createCharacterCreationRenderController = ({
   ): HTMLElement =>
     renderCharacterCreationInjuryResolutionView(document, viewModel, {
       readOnly: controller.readOnly(),
-      resolveInjury: (primaryCharacteristic, method) =>
+      resolveInjury: (primaryCharacteristic, secondaryChoice, method) =>
         getCommandController().resolveInjury(
           primaryCharacteristic,
-          {
-            mode: 'both_other_physical'
-          },
+          secondaryChoice,
           method
         )
     })

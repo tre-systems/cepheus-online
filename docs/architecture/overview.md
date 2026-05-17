@@ -1,15 +1,15 @@
 # Architecture
 
-Cepheus Online is planned as a full-stack TypeScript application with a small
-browser client and server-authoritative game rooms.
+Cepheus Online is a full-stack TypeScript application with a small browser
+client and server-authoritative game rooms.
 
 ## Layers
 
 ```text
-src/shared/      domain types, commands, events, projectors, rules, schemas
+src/shared/      domain types, commands, events, projectors, rules
 src/server/      Cloudflare Worker routes and Durable Objects
 src/client/      browser app, Canvas board, CSS, local reactive state
-data/            JSON rulesets and imported SRD-derived data
+data/            canonical bundled ruleset JSON and non-runtime SRD data
 docs/            design, migration, and operating notes
 ```
 
@@ -48,15 +48,16 @@ Ruleset selection is room state. `CreateGame` may carry a `rulesetId`,
 `GameCreated` persists it, and `GameState.rulesetId` is projected from the
 event stream. Rulesets are resolved through a provider boundary that returns
 decoded JSON data plus id, version, content hash, and source metadata. Bundled
+The canonical bundled ruleset is `data/rulesets/cepheus-engine-srd.json`.
 Cepheus rules live as JSON under `data/rulesets/`; do not convert rules tables
 into hand-maintained TypeScript constants.
 
 ## Persistence
 
 - Durable Object storage: live event stream, checkpoints, active room metadata.
-- R2: uploaded board images, token images, final archived game bundles.
-- D1: user records, Discord account links, game index, public listings, audit
-  metadata.
+- Future R2: uploaded board images, token images, final archived game bundles.
+- Future D1: user records, Discord account links, game index, public listings,
+  audit metadata.
 
 Event streams should be chunked in Durable Object storage rather than kept as
 one large array. Checkpoints should be saved at natural boundaries so reconnect

@@ -74,6 +74,7 @@ describe('room menu wiring', () => {
       },
       createController: (options) => {
         capturedOptions.push(options)
+        return { dispose: () => {} }
       }
     })
 

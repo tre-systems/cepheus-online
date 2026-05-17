@@ -8,6 +8,7 @@ import {
   type CharacterCreationReadModel,
   type CharacterCreationProjectionReadModel
 } from '../../../../shared/character-creation/view-state.js'
+import type { CepheusRuleset } from '../../../../shared/character-creation/cepheus-srd-ruleset.js'
 import type {
   CharacterCreationProjection,
   CharacterState
@@ -212,39 +213,45 @@ export const projectedTermTrainingSkills = (
 export const flowFromReadModel = ({
   readModel,
   projectedCreation,
-  step
+  step,
+  ruleset
 }: {
   readModel: CharacterCreationReadModel
   projectedCreation: CharacterCreationProjection
   step: CharacterCreationStep
+  ruleset?: CepheusRuleset | null
 }): CharacterCreationFlow => ({
   step,
-  draft: createInitialCharacterDraft(readModel.characterId, {
-    name: readModel.name,
-    age: readModel.sheet.age,
-    characteristics: readModel.sheet.characteristics,
-    homeworld: projectedCreation.homeworld ?? undefined,
-    backgroundSkills: readModel.backgroundSkills,
-    pendingCascadeSkills:
-      readModel.status === 'HOMEWORLD' ? readModel.pendingCascadeSkills : [],
-    pendingTermCascadeSkills:
-      readModel.status === 'SKILLS_TRAINING'
-        ? readModel.pendingCascadeSkills
-        : [],
-    pendingAgingChanges: pendingAgingChangesFromReadModel(readModel),
-    careerPlan:
-      readModel.status === 'CAREER_SELECTION'
-        ? failedQualificationCareerPlan(projectedCreation)
-        : activeTermCareerPlan(readModel),
-    completedTerms: completedTermsFromReadModel(readModel),
-    musteringBenefits: musteringBenefitsFromReadModel(readModel),
-    skills: normalizeSkillList([
-      ...readModel.sheet.skills,
-      ...projectedTermTrainingSkills(readModel)
-    ]),
-    equipment: readModel.sheet.equipment,
-    credits: readModel.sheet.credits
-  })
+  draft: createInitialCharacterDraft(
+    readModel.characterId,
+    {
+      name: readModel.name,
+      age: readModel.sheet.age,
+      characteristics: readModel.sheet.characteristics,
+      homeworld: projectedCreation.homeworld ?? undefined,
+      backgroundSkills: readModel.backgroundSkills,
+      pendingCascadeSkills:
+        readModel.status === 'HOMEWORLD' ? readModel.pendingCascadeSkills : [],
+      pendingTermCascadeSkills:
+        readModel.status === 'SKILLS_TRAINING'
+          ? readModel.pendingCascadeSkills
+          : [],
+      pendingAgingChanges: pendingAgingChangesFromReadModel(readModel),
+      careerPlan:
+        readModel.status === 'CAREER_SELECTION'
+          ? failedQualificationCareerPlan(projectedCreation)
+          : activeTermCareerPlan(readModel),
+      completedTerms: completedTermsFromReadModel(readModel),
+      musteringBenefits: musteringBenefitsFromReadModel(readModel),
+      skills: normalizeSkillList([
+        ...readModel.sheet.skills,
+        ...projectedTermTrainingSkills(readModel)
+      ]),
+      equipment: readModel.sheet.equipment,
+      credits: readModel.sheet.credits
+    },
+    ruleset ? { ruleset } : {}
+  )
 })
 
 export const flowFromProjectedCharacterReadModel = (

@@ -1,4 +1,5 @@
 import { buildRoomUrl } from '../../core/location.js'
+import { createDisposer, type Disposable } from '../../core/disposable.js'
 
 export interface RoomMenuElements {
   roomForm: HTMLFormElement
@@ -53,11 +54,12 @@ export const createRoomMenuController = ({
   locationLike,
   historyLike,
   onOpenRoom
-}: RoomMenuControllerOptions) => {
+}: RoomMenuControllerOptions): Disposable => {
+  const disposer = createDisposer()
   elements.roomInput.value = initialRoomId
   elements.userInput.value = initialActorId
 
-  elements.roomForm.addEventListener('submit', (event) => {
+  disposer.listen(elements.roomForm, 'submit', (event) => {
     event.preventDefault()
     const identity = resolveRoomIdentity(
       elements.roomInput.value,
@@ -74,11 +76,13 @@ export const createRoomMenuController = ({
     onOpenRoom(identity)
   })
 
-  elements.menuButton.addEventListener('click', () => {
+  disposer.listen(elements.menuButton, 'click', () => {
     elements.roomDialog.showModal()
   })
 
-  elements.roomCancelButton.addEventListener('click', () => {
+  disposer.listen(elements.roomCancelButton, 'click', () => {
     elements.roomDialog.close()
   })
+
+  return disposer
 }

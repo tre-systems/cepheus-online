@@ -336,9 +336,6 @@ export const createCharacterCreationFeature = ({
     wizard: wizardController,
     homeworldPublisher,
     getCommandController: () => commandController,
-    ensurePublished,
-    postCharacterCreationCommand,
-    commandIdentity,
     reportError
   })
 

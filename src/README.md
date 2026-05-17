@@ -3,7 +3,7 @@
 The source tree starts intentionally small.
 
 ```text
-src/shared/  deterministic domain types, commands, events, projectors, schemas
+src/shared/  deterministic domain types, commands, events, projectors, rules
 src/server/  Cloudflare Worker routes, static client fallback, Durable Objects
 src/client/  browser DOM, Canvas, CSS, WebSocket client, and local UI state
 ```
@@ -21,7 +21,6 @@ src/client/  browser DOM, Canvas, CSS, WebSocket client, and local UI state
 - `src/shared/events.ts`: event union and event envelope.
 - `src/shared/projector.ts`: event-to-state projection, including recent dice.
 - `src/shared/protocol.ts`: client/server message validation and wire types.
-- `src/shared/schemas/`: salvaged entity JSON schema definitions.
 - `src/server/index.ts`: Worker entrypoint, health route, room routing, and
   static browser fallback.
 - `src/client/app/`: dependency-free browser shell, mobile-first PWA metadata,

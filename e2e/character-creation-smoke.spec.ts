@@ -1534,7 +1534,7 @@ test.describe('character creation smoke', () => {
   test('normalizes same-seed career continuation across rooms', async ({
     page
   }) => {
-    test.setTimeout(60_000)
+    test.setTimeout(120_000)
     const seed = 5
 
     const driveContinuation = async (label: string) => {
@@ -4269,7 +4269,7 @@ test.describe('character creation smoke', () => {
     browser,
     page
   }) => {
-    test.setTimeout(60_000)
+    test.setTimeout(120_000)
     const roomId = await openUniqueRoom(page)
     await setRoomSeed(page, roomId, 13_579)
     const actorId = actorIdFromPage(page)

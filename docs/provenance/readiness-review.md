@@ -25,7 +25,8 @@ Already in place:
 - ADRs for the major architectural choices.
 - Product, architecture, engineering, integration, and provenance doc folders.
 - Salvaged rules JSON and legacy ruleset working files.
-- Salvaged JSON schemas and schema type helpers.
+- Legacy JSON schemas and schema type helpers preserved under
+  `legacy/cepheus-amplify/schema-salvage/`.
 - Initial shared ids, commands, events, state, and projector.
 - Zero-dependency reactive and DOM helpers transferred from Delta-V.
 - Deterministic PRNG and generic shared utilities.
@@ -61,8 +62,8 @@ Still to implement from the pattern, not copy:
 
 Already salvaged:
 
-- Entity JSON schemas.
-- Shared schema types.
+- Entity JSON schema provenance.
+- Shared schema type provenance.
 - Ruleset JSON and rule working data.
 - Project review findings.
 - High-level UX lessons from the walkthrough.
@@ -141,8 +142,9 @@ These are not blockers for starting, but they are the next real work:
 5. Viewer filtering: player/referee/spectator projections before any broadcast.
 6. Rules extraction: start with dice, range bands, combat damage, and character
    creation state transitions.
-7. Ruleset canonicalization: resolve the two similar `cepheus-engine-srd.json`
-   files and define a single canonical ruleset output.
+7. Ruleset canonicalization: resolved after this review by promoting
+   `data/rulesets/cepheus-engine-srd.json` as the canonical bundled runtime
+   ruleset and moving non-runtime salvage copies under provenance.
 8. SRD importer: pin upstream version/commit and turn Markdown/table content
    into typed data where needed.
 9. UI vertical slice: browser shell, create/join game, Canvas board, move piece,
@@ -160,4 +162,3 @@ The important caution is sequencing: do not start with the whole character
 sheet. Start with the room/event/projection spine, then add board movement and
 dice. Once that spine works, the old app's character creation and combat logic
 can be extracted safely into the shared rules layer.
-

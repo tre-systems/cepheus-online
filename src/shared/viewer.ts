@@ -1,5 +1,8 @@
 import type { CepheusRuleset } from './character-creation/cepheus-srd-ruleset'
-import { resolveDefaultRulesetData } from './character-creation/default-ruleset-provider'
+import {
+  resolveDefaultRulesetData,
+  type RulesetDataResolver
+} from './character-creation/default-ruleset-provider'
 import { deriveUnrevealedCreationRollIds } from './character-creation/reveal'
 import type {
   CareerCreationActionPlan,
@@ -36,6 +39,7 @@ export interface GameViewer {
 
 export interface ViewerFilterOptions {
   nowMs?: number
+  resolveRulesetById?: RulesetDataResolver
 }
 
 const isPieceVisibleToRole = (piece: PieceState, role: ViewerRole): boolean => {
@@ -635,15 +639,6 @@ const redactUnrevealedCreationFacts = (
         term,
         facts.anagathicsDecision?.cost
       )
-      if (character.creation?.pendingDecisions) {
-        character.creation.pendingDecisions =
-          character.creation.pendingDecisions.filter(
-            (decision) => decision.key !== 'mishapResolution'
-          )
-        if (character.creation.pendingDecisions.length === 0) {
-          delete character.creation.pendingDecisions
-        }
-      }
       delete facts.anagathicsDecision
     }
     const hiddenMishap = hasUnrevealedRollFact(facts.mishap, unrevealedRollIds)
@@ -797,7 +792,10 @@ const filterCharacterCreationForViewer = (
 export const toViewerGameState = (
   state: GameState,
   viewer: GameViewer,
-  { nowMs = Date.now() }: ViewerFilterOptions = {}
+  {
+    nowMs = Date.now(),
+    resolveRulesetById = resolveDefaultRulesetData
+  }: ViewerFilterOptions = {}
 ): GameState => {
   const resolvedViewer = resolveViewerForState(state, viewer)
   const filtered = structuredClone(state)
@@ -806,7 +804,7 @@ export const toViewerGameState = (
 
   if (!canViewerSeeUnrevealedDice(state, resolvedViewer)) {
     const unrevealedRollIds = filterUnrevealedDiceForViewer(filtered, nowMs)
-    const resolvedRuleset = resolveDefaultRulesetData(state.rulesetId)
+    const resolvedRuleset = resolveRulesetById(state.rulesetId)
     const ruleset = resolvedRuleset.ok ? resolvedRuleset.value : null
     filterCharacterCreationForViewer(filtered, unrevealedRollIds, ruleset)
   }

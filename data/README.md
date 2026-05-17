@@ -6,40 +6,42 @@ not application logic.
 ## Current Layout
 
 ```text
-data/ruleset/
-  cepheus-engine-srd.json
-
 data/rulesets/
+  cepheus-engine-srd.json
   csc_*.txt / csc_*.json
-  parse-*.js / parse-*.ts
   srd/
-    cepheus-engine-srd.json
     robs-cepheus-ruleset.json
     wip/
+
+docs/provenance/data-salvage/
+  cepheus-engine-srd-legacy-import.json
+  parse-armour.js
+  parse-weapons.ts
 ```
 
 ## Meaning
 
-- `data/ruleset/` is the single ruleset JSON copied from the old application
-  import path.
+- `data/rulesets/cepheus-engine-srd.json` is the canonical bundled runtime
+  ruleset. Production code must consume this file only through the ruleset
+  provider boundary.
 - `data/rulesets/` is the broader legacy working area copied from
   `cepheus-amplify`, including SRD experiments, Central Supply Catalogue parser
-  inputs/outputs, and work-in-progress generation files.
-- `data/rulesets/srd/` contains SRD-derived ruleset files and WIP source data.
-
-The two `cepheus-engine-srd.json` files are similar but not identical. Keep both
-for now as provenance until an importer or normalization script defines the
-canonical output.
+  inputs/outputs, and work-in-progress generation files. It is not a second
+  runtime ruleset source.
+- `data/rulesets/srd/` contains non-runtime SRD-derived ruleset experiments and
+  WIP source data.
+- `docs/provenance/data-salvage/` contains historical salvage artifacts that are
+  preserved for traceability but are not runtime inputs or runnable importers.
 
 ## Organization Target
 
-Before runtime code consumes this data, normalize it into:
+Runtime code should continue to read canonical ruleset JSON files through the
+provider boundary:
 
 ```text
 data/rulesets/<slug>.json
-data/importers/<source-name>/
 ```
 
-At that point, application code should read only canonical ruleset JSON files.
-Raw parser inputs, temporary WIP files, and generated experiments should stay out
-of the runtime path.
+Future importers should live outside the runtime data path. Raw parser inputs,
+temporary WIP files, and generated experiments should stay out of production
+consumption.

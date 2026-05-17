@@ -7,6 +7,7 @@ import {
   type GameViewer
 } from '../../shared/viewer'
 import { parseViewerRole, parseViewerUserId } from './queries'
+import { resolveRoomRulesetData } from './ruleset-provider'
 
 export const serializeMessage = (message: ServerMessage): string =>
   JSON.stringify(message)
@@ -62,7 +63,9 @@ export const broadcastRoomState = ({
 }): void => {
   for (const socket of sockets) {
     const viewer = viewerFromSocketTags(getTags(socket))
-    const filtered = filterGameStateForViewer(state, viewer)
+    const filtered = filterGameStateForViewer(state, viewer, {
+      resolveRulesetById: resolveRoomRulesetData
+    })
 
     if (accepted && socket === accepted.socket) {
       send(socket, {

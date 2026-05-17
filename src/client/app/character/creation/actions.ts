@@ -1,5 +1,6 @@
 import type {
   BenefitKind,
+  CareerChoiceOption,
   CareerCreationActionKey,
   LegalCareerCreationAction
 } from '../../../../shared/character-creation/types.js'
@@ -123,6 +124,26 @@ const deriveTermSkillRollActions = (
 const musteringBenefitActionKey = (career: string, kind: BenefitKind): string =>
   `roll-mustering-${kind}-${career.toLowerCase().replaceAll(' ', '-')}`
 
+const careerChoiceActionKey = (career: string): string =>
+  `qualify-${career.toLowerCase().replaceAll(' ', '-')}`
+
+const deriveCareerChoiceRollActions = (
+  identity: ClientIdentity,
+  character: CharacterState,
+  creation: CharacterCreationProjection
+): CharacterCreationActionViewModel[] =>
+  (creation.actionPlan?.careerChoiceOptions?.careers ?? [])
+    .filter((option: CareerChoiceOption) => option.qualification.available)
+    .map((option) =>
+      action(careerChoiceActionKey(option.key), `Qualify for ${option.label}`, {
+        type: 'ResolveCharacterCreationQualification',
+        gameId: identity.gameId,
+        actorId: identity.actorId,
+        characterId: character.id,
+        career: option.key
+      })
+    )
+
 const deriveMusteringBenefitRollActions = (
   identity: ClientIdentity,
   character: CharacterState,
@@ -195,26 +216,7 @@ const actionsForLegalKey = (
         }
         return actions
       }
-      if (character.creation?.terms.length === 0) {
-        return [
-          action('qualify-scout', 'Qualify for Scout', {
-            type: 'ResolveCharacterCreationQualification',
-            gameId: identity.gameId,
-            actorId: identity.actorId,
-            characterId: character.id,
-            career: 'Scout'
-          })
-        ]
-      }
-      return [
-        action('select-career', 'Qualify for Scout', {
-          type: 'ResolveCharacterCreationQualification',
-          gameId: identity.gameId,
-          actorId: identity.actorId,
-          characterId: character.id,
-          career: 'Scout'
-        })
-      ]
+      return deriveCareerChoiceRollActions(identity, character, creation)
     case 'completeBasicTraining':
       return [
         action('complete-basic-training', 'Complete basic training', {

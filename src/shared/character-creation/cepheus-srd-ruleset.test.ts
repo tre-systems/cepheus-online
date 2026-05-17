@@ -68,6 +68,73 @@ describe('Cepheus SRD career ruleset', () => {
     assert.equal(decoded.error.includes('theDraft must be an array'), true)
   })
 
+  it('rejects malformed nested ruleset tables at the data boundary', () => {
+    const raw = structuredClone(loadCustomRulesetFixture()) as Record<
+      string,
+      unknown
+    >
+    const careerBasics = raw.careerBasics as Record<
+      string,
+      Record<string, unknown>
+    >
+    const serviceSkills = raw.serviceSkills as Record<
+      string,
+      Record<string, unknown>
+    >
+    const ranksAndSkills = raw.ranksAndSkills as Record<
+      string,
+      Record<string, unknown>
+    >
+    const cashBenefits = raw.cashBenefits as Record<
+      string,
+      Record<string, unknown>
+    >
+    const cascadeSkills = raw.cascadeSkills as Record<string, unknown>
+    const aging = raw.aging as Array<Record<string, unknown>>
+
+    careerBasics.Courier.Survival = 7
+    serviceSkills.Courier['3'] = null
+    ranksAndSkills.Courier = {}
+    ranksAndSkills.Courier['0'] = null
+    cashBenefits.Courier['1'] = '1000'
+    cascadeSkills.Survey = ['Prospecting', 7]
+    aging.push({ Roll: '0-', Effects: 'Fixture row', Changes: [] })
+    aging[0].Changes = [{ type: 'BODY', modifier: 'minus one' }]
+
+    const decoded = decodeCepheusRuleset(raw)
+
+    assert.equal(decoded.ok, false)
+    if (decoded.ok) return
+    assert.equal(
+      decoded.error.includes('careerBasics.Courier.Survival must be a string'),
+      true
+    )
+    assert.equal(
+      decoded.error.includes('serviceSkills.Courier.3 must be a string'),
+      true
+    )
+    assert.equal(
+      decoded.error.includes('ranksAndSkills.Courier.0 must be a string'),
+      true
+    )
+    assert.equal(
+      decoded.error.includes('cashBenefits.Courier.1 must be a number'),
+      true
+    )
+    assert.equal(
+      decoded.error.includes(
+        'cascadeSkills.Survey must be an array of strings'
+      ),
+      true
+    )
+    assert.equal(
+      decoded.error.includes(
+        'aging[0].Changes[0].type must be PHYSICAL or MENTAL'
+      ),
+      true
+    )
+  })
+
   it('decodes a non-SRD ruleset JSON fixture without using bundled defaults', () => {
     const decoded = decodeCepheusRuleset(loadCustomRulesetFixture())
 

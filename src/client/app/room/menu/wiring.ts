@@ -1,4 +1,5 @@
 import type { PieceId } from '../../../../shared/ids'
+import type { Disposable } from '../../core/disposable.js'
 import type { RequiredAppElements } from '../../core/elements.js'
 import {
   createRoomMenuController,
@@ -24,7 +25,7 @@ export interface RoomMenuWiringOptions {
   connectSocket: () => void
   fetchState: () => Promise<unknown>
   reportError: (message: string) => void
-  createController?: (options: RoomMenuControllerOptions) => void
+  createController?: (options: RoomMenuControllerOptions) => Disposable
 }
 
 export const createRoomMenuWiring = ({
@@ -46,8 +47,8 @@ export const createRoomMenuWiring = ({
   fetchState,
   reportError,
   createController = createRoomMenuController
-}: RoomMenuWiringOptions): void => {
-  createController({
+}: RoomMenuWiringOptions): Disposable => {
+  return createController({
     elements: {
       roomForm: elements.roomForm,
       roomInput: elements.roomInput,

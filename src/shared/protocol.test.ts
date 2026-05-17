@@ -947,6 +947,66 @@ describe('protocol validation', () => {
     assert.equal(result.value.expectedSeq, 7)
   })
 
+  it('rejects client-authored creation dice facts whose totals do not match rolls', () => {
+    const result = decodeCommand({
+      type: 'AdvanceCharacterCreation',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      creationEvent: {
+        type: 'SELECT_CAREER',
+        isNewCareer: true,
+        qualification: {
+          expression: '2d6',
+          rolls: [3, 4],
+          total: 8,
+          characteristic: 'int',
+          modifier: 0,
+          target: 6,
+          success: true
+        }
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'qualification.total must equal the sum of rolls'
+    )
+  })
+
+  it('rejects client-authored creation dice facts with impossible die values', () => {
+    const result = decodeCommand({
+      type: 'AdvanceCharacterCreation',
+      gameId: 'game-1',
+      actorId: 'user-1',
+      characterId: 'char-1',
+      creationEvent: {
+        type: 'SELECT_CAREER',
+        isNewCareer: true,
+        qualification: {
+          expression: '2d6',
+          rolls: [0, 7],
+          total: 7,
+          characteristic: 'int',
+          modifier: 0,
+          target: 6,
+          success: true
+        }
+      }
+    })
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'invalid_command')
+    assert.equal(
+      result.error.message,
+      'qualification.rolls[0] must be an integer from 1 to 6'
+    )
+  })
+
   it('accepts semantic anagathics decision commands', () => {
     for (const useAnagathics of [true, false]) {
       const result = decodeCommand({

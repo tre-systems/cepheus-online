@@ -701,11 +701,25 @@ const parseCareerCreationDiceFact = (
   for (const [index, item] of raw.rolls.entries()) {
     const roll = parseNumber(item, `${label}.rolls[${index}]`)
     if (!roll.ok) return roll
+    if (!Number.isInteger(roll.value) || roll.value < 1 || roll.value > 6) {
+      return err(
+        invalidCommand(
+          `${label}.rolls[${index}] must be an integer from 1 to 6`
+        )
+      )
+    }
     rolls.push(roll.value)
   }
 
   const total = parseNumber(raw.total, `${label}.total`)
   if (!total.ok) return total
+  if (!Number.isInteger(total.value)) {
+    return err(invalidCommand(`${label}.total must be an integer`))
+  }
+  const expectedTotal = rolls.reduce((sum, roll) => sum + roll, 0)
+  if (total.value !== expectedTotal) {
+    return err(invalidCommand(`${label}.total must equal the sum of rolls`))
+  }
 
   return ok({
     expression,

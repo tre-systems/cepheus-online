@@ -8,6 +8,7 @@ import {
 } from '../../shared/viewer'
 import type { DurableObjectStorage } from '../cloudflare'
 import { getProjectedGameState } from './projection'
+import { resolveRoomRulesetData } from './ruleset-provider'
 import { getEventSeq } from './storage'
 
 const isLocalDevHost = (url: URL): boolean =>
@@ -59,7 +60,12 @@ export const viewerFromCommand = (
 export const filterStateForViewer = (
   state: GameState | null,
   viewer: GameViewer
-): GameState | null => (state ? filterGameStateForViewer(state, viewer) : null)
+): GameState | null =>
+  state
+    ? filterGameStateForViewer(state, viewer, {
+        resolveRulesetById: resolveRoomRulesetData
+      })
+    : null
 
 export const buildRoomStateMessage = async (
   storage: DurableObjectStorage,

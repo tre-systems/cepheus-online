@@ -2,10 +2,11 @@ import { asBoardId } from '../../../shared/ids'
 import type { GameState } from '../../../shared/state'
 import type { ClientIdentity } from '../../game-commands.js'
 import type { BoardCommand } from '../core/command-router.js'
+import { createDisposer, type Disposable } from '../core/disposable.js'
 import type { RequiredAppElements } from '../core/elements.js'
 import { renderBoardControls, type BoardControlsElements } from './controls.js'
 
-export interface BoardControlsWiring {
+export interface BoardControlsWiring extends Disposable {
   render: () => void
 }
 
@@ -47,6 +48,7 @@ export const createBoardControlsWiring = ({
   reportError,
   renderControls = renderBoardControls
 }: BoardControlsWiringOptions): BoardControlsWiring => {
+  const disposer = createDisposer()
   const boardControlElements = {
     boardStatus: elements.boardStatus,
     boardSelect: elements.boardSelect,
@@ -55,7 +57,7 @@ export const createBoardControlsWiring = ({
     zoomIn: elements.zoomIn
   }
 
-  elements.boardSelect.addEventListener('change', () => {
+  disposer.listen(elements.boardSelect, 'change', () => {
     const boardId = elements.boardSelect.value
     if (!boardId || boardId === getSelectedBoardId() || !canSelectBoards) {
       return
@@ -72,16 +74,16 @@ export const createBoardControlsWiring = ({
     })
   })
 
-  elements.zoomOut.addEventListener('click', () => {
+  disposer.listen(elements.zoomOut, 'click', () => {
     setCameraZoom(getCurrentZoom() / 1.25)
   })
 
-  elements.zoomReset.addEventListener('click', () => {
+  disposer.listen(elements.zoomReset, 'click', () => {
     resetCamera()
     requestRender()
   })
 
-  elements.zoomIn.addEventListener('click', () => {
+  disposer.listen(elements.zoomIn, 'click', () => {
     setCameraZoom(getCurrentZoom() * 1.25)
   })
 
@@ -93,6 +95,7 @@ export const createBoardControlsWiring = ({
         canSelectBoards,
         currentZoom: getCurrentZoom()
       })
-    }
+    },
+    dispose: disposer.dispose
   }
 }

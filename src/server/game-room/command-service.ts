@@ -16,6 +16,7 @@ import { commandError } from './command-helpers'
 import type { CommandRateLimiter } from './command-rate-limit'
 import { CommandPublicationError, runCommandPublication } from './publication'
 import type { PublicationTelemetrySink } from './publication-telemetry'
+import { resolveRoomRulesetData } from './ruleset-provider'
 import { getEventSeq } from './storage'
 import { viewerFromCommand } from './queries'
 
@@ -138,7 +139,9 @@ export const handleRoomCommandMessage = async ({
   }
 
   const viewer = viewerFromCommand(message)
-  const filtered = filterGameStateForViewer(publication.value.state, viewer)
+  const filtered = filterGameStateForViewer(publication.value.state, viewer, {
+    resolveRulesetById: resolveRoomRulesetData
+  })
   const liveActivities = filterLiveActivitiesForViewer(
     publication.value.liveActivities,
     publication.value.state,

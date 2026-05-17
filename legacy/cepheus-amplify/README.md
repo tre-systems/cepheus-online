@@ -8,6 +8,8 @@ runtime and should not be imported from `src`.
 
 - `schema.graphql`: old Amplify/AppSync model shape. Use as entity provenance,
   not as the new persistence model.
+- `schema-salvage/`: old entity JSON schemas and schema helper types. Use as
+  form/reference provenance, not as active runtime code.
 - `extract-candidates/characterCreationMachine.ts`: guided character creation
   state transitions.
 - `extract-candidates/boardInteractionMachine.ts`: board interaction modes.
@@ -23,4 +25,3 @@ runtime and should not be imported from `src`.
 Extract behavior into side-effect-free modules under `src/shared`. Do not copy
 React, XState, DataStore, Zustand, Immer, Three.js, or Amplify assumptions into
 the new runtime.
-

@@ -98,14 +98,7 @@ export const createCreationActivityFeedController = ({
     clear,
     show(application, delayMs = 0) {
       if (shouldSuppressCards()) return
-      if (
-        hasRedactedCreationActivityDetails(application) &&
-        application.diceRollActivities.some(
-          (activity) => activity.total === undefined
-        )
-      ) {
-        return
-      }
+      if (hasRedactedCreationActivityDetails(application)) return
 
       const cards = deriveCreationActivityCardsFromApplication(application, {
         viewerActorId: getViewerActorId()

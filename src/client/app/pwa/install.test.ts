@@ -17,6 +17,13 @@ class FakeTarget {
     this.listeners.set(type, listeners)
   }
 
+  removeEventListener(type: string, listener: EventListener): void {
+    this.listeners.set(
+      type,
+      (this.listeners.get(type) || []).filter((entry) => entry !== listener)
+    )
+  }
+
   matchMedia(): MediaQueryList {
     return { matches: false } as MediaQueryList
   }
@@ -48,6 +55,13 @@ class FakeElement {
     const listeners = this.listeners.get(type) || []
     listeners.push(listener as (event: Event) => void)
     this.listeners.set(type, listeners)
+  }
+
+  removeEventListener(type: string, listener: EventListener): void {
+    this.listeners.set(
+      type,
+      (this.listeners.get(type) || []).filter((entry) => entry !== listener)
+    )
   }
 
   click(): void {
@@ -88,10 +102,8 @@ describe('PWA install prompt controller', () => {
         installButton: new FakeElement() as unknown as HTMLElement,
         dismissButton: null
       },
-      windowTarget: target as unknown as Pick<
-        Window,
-        'addEventListener' | 'matchMedia'
-      >,
+      windowTarget: target as unknown as EventTarget &
+        Pick<Window, 'matchMedia'>,
       localStorage: storage,
       navigatorLike: {} as Navigator
     })
@@ -115,10 +127,8 @@ describe('PWA install prompt controller', () => {
         installButton: installButton as unknown as HTMLElement,
         dismissButton: null
       },
-      windowTarget: target as unknown as Pick<
-        Window,
-        'addEventListener' | 'matchMedia'
-      >,
+      windowTarget: target as unknown as EventTarget &
+        Pick<Window, 'matchMedia'>,
       localStorage: storage,
       navigatorLike: {} as Navigator
     })
@@ -146,10 +156,8 @@ describe('PWA install prompt controller', () => {
         installButton: new FakeElement() as unknown as HTMLElement,
         dismissButton: dismissButton as unknown as HTMLElement
       },
-      windowTarget: target as unknown as Pick<
-        Window,
-        'addEventListener' | 'matchMedia'
-      >,
+      windowTarget: target as unknown as EventTarget &
+        Pick<Window, 'matchMedia'>,
       localStorage: storage,
       navigatorLike: {} as Navigator
     })

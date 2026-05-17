@@ -3,6 +3,8 @@ import { defineConfig } from '@playwright/test'
 const PORT = Number(process.env.E2E_PORT) || 8787
 const BASE_URL = `http://127.0.0.1:${PORT}`
 const forceFreshServer = process.env.CEPHEUS_E2E_FRESH_SERVER === '1'
+const reuseExistingServer =
+  process.env.CEPHEUS_E2E_REUSE_EXISTING_SERVER === '1'
 const devServerCommand = [
   'npm run build:client &&',
   'wrangler dev',
@@ -39,7 +41,8 @@ export default defineConfig({
   webServer: {
     command: devServerCommand,
     url: BASE_URL,
-    reuseExistingServer: !process.env.CI && !forceFreshServer,
+    reuseExistingServer:
+      reuseExistingServer && !process.env.CI && !forceFreshServer,
     timeout: 120_000
   }
 })

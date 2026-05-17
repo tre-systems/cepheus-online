@@ -1,3 +1,5 @@
+import { createDisposer, type Disposable } from './disposable.js'
+
 export interface AppRefreshWiringOptions {
   refreshButton: EventTarget
   fetchState: () => Promise<unknown>
@@ -8,8 +10,11 @@ export const createAppRefreshWiring = ({
   refreshButton,
   fetchState,
   reportError
-}: AppRefreshWiringOptions): void => {
-  refreshButton.addEventListener('click', () => {
+}: AppRefreshWiringOptions): Disposable => {
+  const disposer = createDisposer()
+  disposer.listen(refreshButton, 'click', () => {
     fetchState().catch((error) => reportError(error.message))
   })
+
+  return disposer
 }

@@ -1,5 +1,6 @@
 import type { PieceId } from '../../../../shared/ids'
 import type { PieceState } from '../../../../shared/state'
+import { createDisposer, type Disposable } from '../../core/disposable.js'
 import type { RequiredAppElements } from '../../core/elements.js'
 import type { CharacterSheetController } from './controller.js'
 
@@ -27,8 +28,9 @@ export const createCharacterSheetControlsWiring = ({
   selectPiece,
   openCharacterCreationPanel,
   requestRender
-}: CharacterSheetControlsWiringOptions): void => {
-  elements.sheetButton.addEventListener('click', () => {
+}: CharacterSheetControlsWiringOptions): Disposable => {
+  const disposer = createDisposer()
+  disposer.listen(elements.sheetButton, 'click', () => {
     const piece = getSelectedPiece()
     if (!getCurrentSelectedPieceId() && piece) {
       selectPiece(piece.id)
@@ -41,13 +43,15 @@ export const createCharacterSheetControlsWiring = ({
     requestRender()
   })
 
-  elements.sheetClose.addEventListener('click', () => {
+  disposer.listen(elements.sheetClose, 'click', () => {
     controller.setOpen(false)
   })
 
   for (const tab of elements.sheetTabs) {
-    tab.addEventListener('click', () => {
+    disposer.listen(tab, 'click', () => {
       controller.selectTab(tab.dataset.sheetTab)
     })
   }
+
+  return disposer
 }

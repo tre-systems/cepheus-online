@@ -3,9 +3,11 @@ import {
   type AppBootstrapController,
   type AppBootstrapOptions
 } from './bootstrap.js'
+import { createDisposer, type Disposable } from './disposable.js'
 
 export interface AppLifecycleWiring {
   appBootstrap: AppBootstrapController
+  dispose(): void
 }
 
 export interface AppLifecycleWiringOptions {
@@ -27,13 +29,18 @@ export const createAppLifecycleWiring = ({
   appBootstrap,
   startAppBootstrap = createAppBootstrap
 }: AppLifecycleWiringOptions): AppLifecycleWiring => {
-  bootstrapButton.addEventListener('click', () => {
+  const disposer = createDisposer()
+  const handleBootstrapClick = () => {
     bootstrapScene().catch((error) => reportError(error.message))
-  })
+  }
 
-  windowTarget.addEventListener('resize', render)
+  disposer.listen(bootstrapButton, 'click', handleBootstrapClick)
+  disposer.listen(windowTarget, 'resize', render)
+  const appBootstrapController = startAppBootstrap(appBootstrap)
+  disposer.add(appBootstrapController.dispose)
 
   return {
-    appBootstrap: startAppBootstrap(appBootstrap)
-  }
+    appBootstrap: appBootstrapController,
+    dispose: disposer.dispose
+  } satisfies AppLifecycleWiring & Disposable
 }

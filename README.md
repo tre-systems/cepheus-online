@@ -4,7 +4,8 @@ A lightweight real-time virtual tabletop for Cepheus Engine and Traveller-style
 science fiction RPGs.
 
 This is a clean rewrite of the original `cepheus-amplify` app. The new project
-keeps the useful product ideas, rules data, and entity schemas, but deliberately
+keeps the useful product ideas, rules data, and legacy entity-schema provenance,
+but deliberately
 does not carry forward AWS Amplify DataStore, Material UI, RJSF, or the old
 whole-object optimistic sync model.
 
@@ -25,11 +26,11 @@ This repository now has the first playable spine in place. It contains:
 
 - design docs under `docs/`
 - salvaged rules data under `data/`
-- salvaged entity schemas under `src/shared/schemas/`
 - shared TypeScript commands, events, protocol validation, projections, dice,
-  and viewer filtering under `src/shared/`
-- Cloudflare Worker routes and a Durable Object room skeleton under
-  `src/server/`
+  ruleset providers, and viewer filtering under `src/shared/`
+- Cloudflare Worker routes and Durable Object game rooms under `src/server/`,
+  with server-ordered command publication, event storage, checkpoints, and
+  viewer-safe broadcasts
 - a dependency-free browser shell served by the Worker with Canvas board play,
   local asset import, synced dice reveals, mobile-first PWA metadata, and
   editable basic character sheets
@@ -37,14 +38,15 @@ This repository now has the first playable spine in place. It contains:
 
 ## Architecture Direction
 
-The target stack is:
+The active stack is:
 
 - Cloudflare Workers for HTTP routes and static assets.
 - Durable Objects for live game rooms and ordered command processing.
-- R2 for uploaded images and archived game assets.
-- D1 for user, Discord link, game index, and operational metadata.
 - Browser client with plain TypeScript, Canvas, CSS, and a tiny local reactive
   layer.
+
+Planned storage additions remain R2 for uploaded images/archives and D1 for
+user, Discord link, game index, and operational metadata.
 
 See [docs/architecture/overview.md](docs/architecture/overview.md).
 
@@ -85,10 +87,9 @@ The most important starting points are:
 
 The old app had useful domain work. This repo currently salvages:
 
-- `data/ruleset/cepheus-engine-srd.json`
 - `data/rulesets/**`
-- `src/shared/schemas/**`
-- `src/shared/types/schema.ts`
+- `docs/provenance/data-salvage/**`
+- `legacy/cepheus-amplify/schema-salvage/**`
 - legacy review notes in `legacy/`
 
 See [docs/provenance/data-salvage.md](docs/provenance/data-salvage.md).

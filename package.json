@@ -3,12 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=25.0.0"
+  },
   "scripts": {
     "build:client": "node scripts/build-client.mjs",
     "check": "tsc --noEmit",
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:diagrams": "node scripts/check-diagrams.mjs",
     "check:docs": "node scripts/check-doc-links.mjs",
+    "check:generated-client": "node scripts/check-generated-client.mjs",
     "deploy": "npm run build:client && wrangler deploy",
     "deploy:dry-run": "npm run build:client && wrangler deploy --dry-run",
     "dev": "npm run build:client && wrangler dev",
@@ -29,13 +34,14 @@
     "test:e2e:character-creation:reveal": "playwright test e2e/character-creation-smoke.spec.ts --grep \"without early reveal|hidden until reveal|reload and join a term skill roll\"",
     "test:e2e:tactical": "playwright test e2e/tactical-board-smoke.spec.ts",
     "verify": "npm run verify:full",
-    "verify:quick": "npm run build:client && npm run lint && npm run check:docs && npm run check:boundaries && npm run check:diagrams && npm run check",
+    "verify:quick": "npm run check:generated-client && npm run build:client && npm run lint && npm run check:docs && npm run check:boundaries && npm run check:diagrams && npm run check",
     "verify:full": "npm run verify:quick && npm test && npm run test:e2e:character-creation && npm run test:e2e:tactical",
-    "list:salvage": "find data src/shared/schemas docs legacy -maxdepth 3 -type f | sort"
+    "list:salvage": "find data docs legacy -maxdepth 3 -type f | sort"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.14",
     "@playwright/test": "^1.59.1",
+    "@types/node": "^25.8.0",
     "esbuild": "^0.28.0",
     "husky": "^9.1.7",
     "typescript": "^5.9.3",

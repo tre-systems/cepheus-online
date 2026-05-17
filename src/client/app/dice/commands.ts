@@ -3,6 +3,7 @@ import {
   type ClientIdentity
 } from '../../game-commands.js'
 import type { DiceCommand } from '../core/command-router.js'
+import { createDisposer, type Disposable } from '../core/disposable.js'
 
 export interface DiceCommandWiringOptions {
   rollButton: EventTarget
@@ -18,8 +19,9 @@ export const createDiceCommandWiring = ({
   getClientIdentity,
   postDiceCommand,
   reportError
-}: DiceCommandWiringOptions): void => {
-  rollButton.addEventListener('click', () => {
+}: DiceCommandWiringOptions): Disposable => {
+  const disposer = createDisposer()
+  disposer.listen(rollButton, 'click', () => {
     postDiceCommand(
       buildRollDiceCommand({
         identity: getClientIdentity(),
@@ -28,4 +30,6 @@ export const createDiceCommandWiring = ({
       }) as DiceCommand
     ).catch((error) => reportError(error.message))
   })
+
+  return disposer
 }

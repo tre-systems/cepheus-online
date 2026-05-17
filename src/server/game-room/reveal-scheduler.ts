@@ -44,13 +44,15 @@ export interface RevealBroadcastScheduler {
 
 export const createRevealBroadcastScheduler = ({
   storage,
-  broadcastState
+  broadcastState,
+  reportError = () => {}
 }: {
   storage: DurableObjectStorage
   broadcastState: (
     state: GameState,
     liveActivities?: readonly LiveActivityDescriptor[]
   ) => void
+  reportError?: (error: unknown) => void
 }): RevealBroadcastScheduler => {
   const timers = new Map<string, ReturnType<typeof setTimeout>>()
 
@@ -67,11 +69,13 @@ export const createRevealBroadcastScheduler = ({
     const timer = setTimeout(
       () => {
         timers.delete(key)
-        void getProjectedGameState(storage, state.id).then((projectedState) => {
-          if (projectedState) {
-            broadcastState(projectedState, liveActivities)
-          }
-        })
+        void getProjectedGameState(storage, state.id)
+          .then((projectedState) => {
+            if (projectedState) {
+              broadcastState(projectedState, liveActivities)
+            }
+          })
+          .catch(reportError)
       },
       Math.max(0, revealAtMs - Date.now() + 20)
     )

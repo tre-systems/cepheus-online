@@ -2,6 +2,7 @@ import { projectGameState } from '../../shared/projector'
 import type { GameId } from '../../shared/ids'
 import type { GameState } from '../../shared/state'
 import type { DurableObjectStorage } from '../cloudflare'
+import { resolveRoomRulesetData } from './ruleset-provider'
 import { readCheckpoint, readEventStreamTail } from './storage'
 
 export const getProjectedGameState = async (
@@ -15,5 +16,7 @@ export const getProjectedGameState = async (
     checkpoint?.seq ?? 0
   )
 
-  return projectGameState(eventTail, checkpoint?.state ?? null)
+  return projectGameState(eventTail, checkpoint?.state ?? null, {
+    resolveRulesetById: resolveRoomRulesetData
+  })
 }
