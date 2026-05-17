@@ -34,8 +34,13 @@ Apply D1 migrations before a private-beta deploy:
 wrangler d1 migrations apply cepheus-online-private-beta --remote
 ```
 
-The local placeholder D1 `database_id` in `wrangler.jsonc` must be replaced
-with the Cloudflare-created database id before deploying outside local dev.
+The committed `wrangler.jsonc` keeps a placeholder D1 `database_id`; GitHub
+Actions resolves it from the Cloudflare database name before deployment. Manual
+deploys can either replace the placeholder locally or run:
+
+```bash
+node scripts/resolve-cloudflare-d1-database-id.mjs
+```
 
 ## Local Checks
 
@@ -92,6 +97,10 @@ Required repository or environment secrets:
   environment.
 - `SESSION_SECRET`: high-entropy app session signing secret for the Worker
   environment.
+
+The deploy workflow also requires a Cloudflare D1 database named
+`cepheus-online-private-beta`; it resolves the database UUID from that name at
+deploy time.
 
 Set them with GitHub CLI:
 

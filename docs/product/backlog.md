@@ -34,10 +34,9 @@ The current application has the private-beta spine in place:
 
 ## Active Release Checklist
 
-- Replace the placeholder D1 `database_id` in `wrangler.jsonc` with the real
-  Cloudflare D1 database id.
 - Create or confirm the `cepheus-online-private-beta` D1 database and
-  `cepheus-online-assets` R2 bucket.
+  `cepheus-online-assets` R2 bucket. CI resolves the D1 database id by name
+  before deploy.
 - Apply `migrations/0001_private_beta.sql` in Cloudflare.
 - Configure `APP_BASE_URL`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and
   `SESSION_SECRET` for the target environment.
