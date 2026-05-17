@@ -12,6 +12,9 @@ const REQUEST_TIMEOUT_MS = Number(process.env.CEPHEUS_SMOKE_TIMEOUT_MS ?? 15000)
 const SMOKE_SESSION_COOKIE =
   process.env.CEPHEUS_SMOKE_SESSION_COOKIE ?? process.env.CEPHEUS_SMOKE_COOKIE
 const AUTHENTICATED_SMOKE = Boolean(SMOKE_SESSION_COOKIE)
+const REQUIRE_AUTHENTICATED_SMOKE =
+  process.env.CEPHEUS_SMOKE_REQUIRE_AUTH === '1' ||
+  process.env.CEPHEUS_SMOKE_REQUIRE_AUTH === 'true'
 const AUTH_COOKIE_HEADER = SMOKE_SESSION_COOKIE?.includes('=')
   ? SMOKE_SESSION_COOKIE
   : SMOKE_SESSION_COOKIE
@@ -35,7 +38,8 @@ Environment:
   WORKER_URL                 fallback target Worker URL
   CEPHEUS_SMOKE_TIMEOUT_MS   per-request timeout (default: ${REQUEST_TIMEOUT_MS})
   CEPHEUS_SMOKE_SESSION_COOKIE
-                             optional cepheus_session cookie for private-beta smoke
+                             optional cepheus_session cookie for private-beta room smoke
+  CEPHEUS_SMOKE_REQUIRE_AUTH require an authenticated room smoke; use 1 or true
 `
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
@@ -376,10 +380,17 @@ await step('unauthenticated private-beta failures', async () => {
   )
 })
 
-if (!AUTHENTICATED_SMOKE) {
+if (!AUTHENTICATED_SMOKE && REQUIRE_AUTHENTICATED_SMOKE) {
   fail(
     `Target requires private-beta authentication for room smoke (unauthenticated room state returned HTTP ${unauthenticatedRoomStatus}); set CEPHEUS_SMOKE_SESSION_COOKIE to a valid cepheus_session cookie.`
   )
+}
+
+if (!AUTHENTICATED_SMOKE) {
+  process.stdout.write(
+    `smoke: completed ${baseUrl.origin} public checks; authenticated room smoke skipped because CEPHEUS_SMOKE_SESSION_COOKIE is not set\n`
+  )
+  process.exit(0)
 }
 
 if (AUTHENTICATED_SMOKE) {

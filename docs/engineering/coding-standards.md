@@ -201,8 +201,8 @@ The local gate is split by cost:
   checks, and TypeScript.
 - `npm run verify:full`: `verify:quick`, unit tests, character-creation E2E,
   and tactical-board E2E.
-- `npm run smoke:deployed -- <url>`: deployed Worker smoke after a production
-  deploy or deployment-sensitive change.
+- `npm run smoke:deployed -- <url>`: public deployed Worker smoke after a
+  production deploy or deployment-sensitive change.
 
 Husky runs a doc-only fast path for Markdown-only changes and `verify:quick`
 for code changes. Set `CEPHEUS_FULL_PRE_PUSH=1` before pushing when you want

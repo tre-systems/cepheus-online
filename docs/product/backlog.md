@@ -32,23 +32,30 @@ The current application has the private-beta spine in place:
   TypeScript, unit tests, character-creation E2E, tactical-board E2E, and
   Cloudflare deploy dry runs.
 
-## Active Release Checklist
+## Current MVP Blockers
 
-- Confirm the `cepheus-online-assets` R2 bucket exists before exercising asset
-  uploads in production.
-- Configure `SESSION_SECRET` for the target environment. This is required before
-  protected room, invite, asset, export, and delete routes are usable.
 - Configure `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` when the Discord app
   is ready.
-- Add the Discord redirect URL `${APP_BASE_URL}/auth/discord/callback`.
-- Run `npm run verify:full`.
-- Run `npm run deploy:dry-run`.
-- Deploy a candidate and run
-  `CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- <candidate-url>`.
+- Add the Discord redirect URL
+  `https://cepheus.tre.systems/auth/discord/callback`.
+- Run a real Discord sign-in/logout check on `https://cepheus.tre.systems` and
+  confirm `/api/session` reports the signed-in user.
+- Run authenticated deployed smoke:
+  `CEPHEUS_SMOKE_REQUIRE_AUTH=1 CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- https://cepheus.tre.systems`.
 - Complete the mobile PWA manual checklist on a real phone: install, reload,
   offline shell fallback, update activation, and reconnect recovery.
 - Run the private-beta manual checks in
   [testing strategy](../engineering/testing-strategy.md#private-beta-manual-checks).
+
+## Per-Candidate Release Gate
+
+- Run `npm run verify:full`.
+- Run `npm run deploy:dry-run`.
+- Deploy the candidate with the GitHub Actions `Deploy` workflow on `main`.
+- Run public deployed smoke:
+  `npm run smoke:deployed -- https://cepheus.tre.systems`.
+- After Discord credentials are configured, run authenticated deployed smoke:
+  `CEPHEUS_SMOKE_REQUIRE_AUTH=1 CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- https://cepheus.tre.systems`.
 
 ## Post-MVP Product Work
 

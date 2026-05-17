@@ -19,7 +19,7 @@ timing.
 | `npm run verify:quick` | Generated client freshness, client rebuild, lint, docs, boundaries, diagrams, and TypeScript. |
 | `npm run verify:full` | `verify:quick`, unit tests, character-creation E2E, tactical-board E2E, and private-beta E2E. |
 | `npm run verify` | Alias for `verify:full`; CI uses this. |
-| `CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- <url>` | Deployed Worker smoke for health, shell/PWA assets, unauthenticated auth failures, protected room creation, commands, stale rejection, and viewer filtering. |
+| `npm run smoke:deployed -- <url>` | Public deployed Worker smoke for health, shell/PWA assets, and unauthenticated auth failures. Add `CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...'` for protected room creation, commands, stale rejection, and viewer filtering. |
 
 Use focused E2E scripts when debugging a branch:
 
@@ -93,7 +93,8 @@ Run these on a real phone against a deployed Worker URL or local HTTPS tunnel:
 - Client shell or generated assets: `npm run build:client && npm run verify:quick && npm test`.
 - Shared rules, protocol, server, or projection: `npm run verify:full`.
 - Deployment-sensitive changes: `npm run verify:full && npm run deploy:dry-run`.
-- Release confidence after deploy: `CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- <url>`.
+- Public smoke after deploy: `npm run smoke:deployed -- <url>`.
+- Release confidence after Discord sign-in is configured: `CEPHEUS_SMOKE_REQUIRE_AUTH=1 CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- <url>`.
 
 ## Private-Beta Manual Checks
 

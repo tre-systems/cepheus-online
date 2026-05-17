@@ -65,24 +65,32 @@ operating docs do not drift to missing local files or anchors.
 After a deploy, run the dependency-free deployed Worker smoke:
 
 ```bash
-CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed
+npm run smoke:deployed
 ```
 
 The script defaults to `https://cepheus.tre.systems`. Override the target with a
 positional URL, `CEPHEUS_SMOKE_URL`, or `WORKER_URL`:
 
 ```bash
-CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- https://your-preview.workers.dev
+npm run smoke:deployed -- https://your-preview.workers.dev
 ```
 
-Use a private-beta owner session cookie copied from the deployed origin after
-Discord sign-in; either the full `cepheus_session=...` pair or only the cookie
-value is accepted. The smoke checks health endpoints, shell assets, PWA
-manifest/icon/service worker assets, unauthenticated auth failures, protected
-room creation, a disposable room command flow, stale `expectedSeq` rejection,
-and viewer filtering for hidden pieces. The WebSocket broadcast check runs only
-when the smoke can use unauthenticated local room access; browser-managed
-cookies are required for protected deployed WebSockets.
+Without a session cookie, the smoke checks health endpoints, shell assets, PWA
+manifest/icon/service worker assets, and unauthenticated private-beta failures.
+After Discord sign-in is configured, run the authenticated room smoke with a
+private-beta owner session cookie copied from the deployed origin:
+
+```bash
+CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed
+```
+
+Either the full `cepheus_session=...` pair or only the cookie value is accepted.
+The authenticated smoke also checks protected room creation, a disposable room
+command flow, stale `expectedSeq` rejection, and viewer filtering for hidden
+pieces. Set `CEPHEUS_SMOKE_REQUIRE_AUTH=1` when a release gate must fail instead
+of skipping the authenticated room flow. The WebSocket broadcast check runs only
+when the smoke can use unauthenticated local room access; browser-managed cookies
+are required for protected deployed WebSockets.
 
 ## GitHub Actions
 
