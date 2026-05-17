@@ -72,6 +72,9 @@ or notes, not a UI framework.
 
 See the [documentation index](docs/README.md).
 
+For local environment variables and deployed smoke cookies, copy
+[.env.example](.env.example) to `.env`; the real `.env` file is ignored by git.
+
 The most important starting points are:
 
 - [Contributing](CONTRIBUTING.md)

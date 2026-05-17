@@ -49,6 +49,16 @@ node scripts/resolve-cloudflare-d1-database-id.mjs
 
 ## Local Checks
 
+Copy the environment template when you need local smoke or deployment
+variables:
+
+```bash
+cp .env.example .env
+```
+
+`.env` is ignored by git. Keep real `SESSION_SECRET`, Discord secrets,
+Cloudflare tokens, and `cepheus_session` cookies out of committed files.
+
 ```bash
 npm run verify
 npm run deploy:dry-run
@@ -82,6 +92,15 @@ private-beta owner session cookie copied from the deployed origin:
 
 ```bash
 CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed
+```
+
+If the cookie values are stored in `.env`, load them into the shell first:
+
+```bash
+set -a
+source .env
+set +a
+CEPHEUS_SMOKE_REQUIRE_AUTH=1 npm run smoke:deployed
 ```
 
 Either the full `cepheus_session=...` pair or only the cookie value is accepted.

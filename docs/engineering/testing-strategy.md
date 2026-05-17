@@ -21,6 +21,17 @@ timing.
 | `npm run verify` | Alias for `verify:full`; use for local release-level confidence. |
 | `npm run smoke:deployed -- <url>` | Public deployed Worker smoke for health, shell/PWA assets, and unauthenticated auth failures. Add `CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...'` for protected room creation, commands, and stale rejection. Add distinct `CEPHEUS_SMOKE_PLAYER_SESSION_COOKIE` and `CEPHEUS_SMOKE_SPECTATOR_SESSION_COOKIE` values for automated cross-role viewer filtering. |
 
+Use `.env.example` as the safe template for local deployed-smoke credentials.
+Copy it to `.env`, fill the cookie placeholders, then load it before running
+the smoke command:
+
+```bash
+set -a
+source .env
+set +a
+npm run smoke:deployed
+```
+
 GitHub Actions runs the same coverage as `verify:full`, but splits it across
 parallel jobs. The long character-creation E2E file is sharded so deploys are
 not blocked by a single serial browser job.
