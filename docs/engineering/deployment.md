@@ -115,6 +115,10 @@ wrangler deploy \
 Keeping the production URL in the workflow avoids breaking local `wrangler dev`
 and Playwright runs, which rely on localhost-only test routes.
 
+Before deployment, the workflow removes any stale `cepheus.tre.systems/*`
+Worker route assigned to an older prototype Worker. It leaves the route alone
+when it is already assigned to `cepheus-online`.
+
 Set them with GitHub CLI:
 
 ```bash
