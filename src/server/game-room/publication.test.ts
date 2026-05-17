@@ -3100,10 +3100,17 @@ describe('room publication flow', () => {
     assert.equal(finalizedEvent.credits !== 1200, true)
     assert.equal(finalizedEvent.notes.includes('Final scout.'), false)
 
-    const refreshMessage = await buildRoomStateMessage(storage, gameId, {
-      userId: asUserId('player-2'),
-      role: 'PLAYER'
-    })
+    const refreshMessage = await buildRoomStateMessage(
+      storage,
+      gameId,
+      {
+        userId: asUserId('player-2'),
+        role: 'PLAYER'
+      },
+      {
+        nowMs: 0
+      }
+    )
     assert.equal(refreshMessage.type, 'roomState')
     if (refreshMessage.type !== 'roomState') return
     assert.equal(refreshMessage.eventSeq, finalized.value.state.eventSeq)

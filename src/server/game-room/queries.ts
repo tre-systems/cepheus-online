@@ -4,6 +4,7 @@ import type { GameState } from '../../shared/state'
 import {
   filterGameStateForViewer,
   type GameViewer,
+  type ViewerFilterOptions,
   type ViewerRole
 } from '../../shared/viewer'
 import type { DurableObjectStorage } from '../cloudflare'
@@ -66,24 +67,27 @@ export const viewerFromCommand = (
 
 export const filterStateForViewer = (
   state: GameState | null,
-  viewer: GameViewer
+  viewer: GameViewer,
+  options: ViewerFilterOptions = {}
 ): GameState | null =>
   state
     ? filterGameStateForViewer(state, viewer, {
-        resolveRulesetById: resolveRoomRulesetData
+        ...options,
+        resolveRulesetById: options.resolveRulesetById ?? resolveRoomRulesetData
       })
     : null
 
 export const buildRoomStateMessage = async (
   storage: DurableObjectStorage,
   gameId: GameId,
-  viewer: GameViewer
+  viewer: GameViewer,
+  options: ViewerFilterOptions = {}
 ): Promise<ServerMessage> => {
   const state = await getProjectedGameState(storage, gameId)
 
   return {
     type: 'roomState',
-    state: filterStateForViewer(state, viewer),
+    state: filterStateForViewer(state, viewer, options),
     eventSeq: state?.eventSeq ?? (await getEventSeq(storage, gameId))
   }
 }
