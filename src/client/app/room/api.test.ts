@@ -4,6 +4,9 @@ import { describe, it } from 'node:test'
 import type { Command } from '../../../shared/commands'
 import { asGameId, asUserId } from '../../../shared/ids'
 import {
+  acceptRoomInvite,
+  createAppRoom,
+  createRoomInvite,
   fetchAppSession,
   fetchRoomState,
   listRoomAssets,
@@ -39,6 +42,110 @@ describe('room API helpers', () => {
     assert.equal(requests[0]?.input, '/api/session')
     assert.equal(requests[0]?.init, undefined)
     assert.equal(session.user?.id, 'discord:1234')
+  })
+
+  it('creates private beta rooms through the app API', async () => {
+    const requests: Array<{ input: string; init?: RequestInit }> = []
+    const fetcher = async (input: string, init?: RequestInit) => {
+      requests.push({ input, init })
+      return {
+        ok: true,
+        json: async () => ({
+          room: {
+            id: 'room_123',
+            slug: 'room_123',
+            name: 'Spinward Table',
+            ownerId: 'discord:1234',
+            rulesetId: null,
+            deletedAt: null,
+            createdAt: '2026-05-17T00:00:00.000Z',
+            updatedAt: '2026-05-17T00:00:00.000Z'
+          }
+        })
+      }
+    }
+
+    const room = await createAppRoom({
+      name: 'Spinward Table',
+      fetch: fetcher
+    })
+
+    assert.equal(room.id, 'room_123')
+    assert.equal(requests[0]?.input, '/api/rooms')
+    assert.deepEqual(requests[0]?.init, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Spinward Table' })
+    })
+  })
+
+  it('creates room invites through the app API', async () => {
+    const requests: Array<{ input: string; init?: RequestInit }> = []
+    const fetcher = async (input: string, init?: RequestInit) => {
+      requests.push({ input, init })
+      return {
+        ok: true,
+        json: async () => ({
+          invite: {
+            token: 'invite_token',
+            roomId: 'demo-room',
+            createdBy: 'discord:1234',
+            role: 'PLAYER',
+            expiresAt: '2026-06-16T00:00:00.000Z',
+            acceptedAt: null,
+            createdAt: '2026-05-17T00:00:00.000Z'
+          },
+          inviteUrl: 'https://cepheus.example/?invite=invite_token'
+        })
+      }
+    }
+
+    const response = await createRoomInvite({
+      roomId: 'demo room',
+      role: 'PLAYER',
+      fetch: fetcher
+    })
+
+    assert.equal(response.invite.token, 'invite_token')
+    assert.equal(
+      response.inviteUrl,
+      'https://cepheus.example/?invite=invite_token'
+    )
+    assert.equal(requests[0]?.input, '/api/rooms/demo%20room/invites')
+    assert.deepEqual(requests[0]?.init, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ role: 'PLAYER' })
+    })
+  })
+
+  it('accepts private beta invites through the app API', async () => {
+    const requests: Array<{ input: string; init?: RequestInit }> = []
+    const fetcher = async (input: string, init?: RequestInit) => {
+      requests.push({ input, init })
+      return {
+        ok: true,
+        json: async () => ({
+          ok: true,
+          roomId: 'demo-room',
+          role: 'PLAYER'
+        })
+      }
+    }
+
+    const accepted = await acceptRoomInvite('invite token', fetcher)
+
+    assert.deepEqual(accepted, {
+      ok: true,
+      roomId: 'demo-room',
+      role: 'PLAYER'
+    })
+    assert.deepEqual(requests, [
+      {
+        input: '/api/invites/invite%20token/accept',
+        init: { method: 'POST' }
+      }
+    ])
   })
 
   it('constructs the viewer-scoped room state request', async () => {

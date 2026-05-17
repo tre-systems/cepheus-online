@@ -13,6 +13,14 @@ const createElements = (): RequiredAppElements =>
     roomForm: fakeElement<HTMLFormElement>(),
     roomInput: fakeElement<HTMLInputElement>(),
     userInput: fakeElement<HTMLInputElement>(),
+    betaRoomNameInput: fakeElement<HTMLInputElement>(),
+    betaCreateRoom: fakeElement<HTMLButtonElement>(),
+    betaInviteRole: fakeElement<HTMLSelectElement>(),
+    betaCreateInvite: fakeElement<HTMLButtonElement>(),
+    betaInviteLink: fakeElement<HTMLInputElement>(),
+    betaInviteToken: fakeElement<HTMLInputElement>(),
+    betaAcceptInvite: fakeElement<HTMLButtonElement>(),
+    betaRoomStatus: fakeElement<HTMLElement>(),
     menu: fakeElement<HTMLButtonElement>(),
     roomDialog: fakeElement<HTMLDialogElement>(),
     roomCancel: fakeElement<HTMLButtonElement>()
@@ -35,6 +43,12 @@ describe('room menu wiring', () => {
       initialActorId: 'actor-1',
       defaultRoomId: 'default-room',
       defaultActorId: 'default-actor',
+      getCurrentActorId: () => 'actor-current',
+      createRoom: async ({ name }) => ({ id: name }),
+      createInvite: async ({ roomId, role }) => ({
+        inviteUrl: `${roomId}:${role}`
+      }),
+      acceptInvite: async (token) => ({ roomId: token }),
       onOpenRoomIdentity: (nextIdentity) => {
         calls.push(`identity:${nextIdentity.roomId}:${nextIdentity.actorId}`)
       },
@@ -83,6 +97,23 @@ describe('room menu wiring', () => {
     assert.equal(options.elements.roomForm, elements.roomForm)
     assert.equal(options.elements.roomInput, elements.roomInput)
     assert.equal(options.elements.userInput, elements.userInput)
+    assert.equal(options.elements.betaRoomNameInput, elements.betaRoomNameInput)
+    assert.equal(options.elements.betaCreateRoomButton, elements.betaCreateRoom)
+    assert.equal(options.elements.betaInviteRoleSelect, elements.betaInviteRole)
+    assert.equal(
+      options.elements.betaCreateInviteButton,
+      elements.betaCreateInvite
+    )
+    assert.equal(options.elements.betaInviteLinkInput, elements.betaInviteLink)
+    assert.equal(
+      options.elements.betaInviteTokenInput,
+      elements.betaInviteToken
+    )
+    assert.equal(
+      options.elements.betaAcceptInviteButton,
+      elements.betaAcceptInvite
+    )
+    assert.equal(options.elements.betaRoomStatus, elements.betaRoomStatus)
     assert.equal(options.elements.menuButton, elements.menu)
     assert.equal(options.elements.roomDialog, elements.roomDialog)
     assert.equal(options.elements.roomCancelButton, elements.roomCancel)
@@ -90,6 +121,14 @@ describe('room menu wiring', () => {
     assert.equal(options.initialActorId, 'actor-1')
     assert.equal(options.defaultRoomId, 'default-room')
     assert.equal(options.defaultActorId, 'default-actor')
+    assert.equal(options.getCurrentActorId?.(), 'actor-current')
+    assert.equal((await options.createRoom?.({ name: 'room-x' }))?.id, 'room-x')
+    assert.equal(
+      (await options.createInvite?.({ roomId: 'room-x', role: 'PLAYER' }))
+        ?.inviteUrl,
+      'room-x:PLAYER'
+    )
+    assert.equal((await options.acceptInvite?.('token-x'))?.roomId, 'token-x')
 
     options.onOpenRoom(identity)
     await Promise.resolve()

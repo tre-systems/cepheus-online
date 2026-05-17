@@ -8,6 +8,14 @@ export interface AppElements {
   roomForm: HTMLFormElement | null
   roomInput: HTMLInputElement | null
   userInput: HTMLInputElement | null
+  betaRoomNameInput: HTMLInputElement | null
+  betaCreateRoom: HTMLButtonElement | null
+  betaInviteRole: HTMLSelectElement | null
+  betaCreateInvite: HTMLButtonElement | null
+  betaInviteLink: HTMLInputElement | null
+  betaInviteToken: HTMLInputElement | null
+  betaAcceptInvite: HTMLButtonElement | null
+  betaRoomStatus: HTMLElement | null
   bootstrap: HTMLButtonElement | null
   refresh: HTMLButtonElement | null
   createCharacterRail: HTMLButtonElement | null
@@ -112,6 +120,14 @@ export const getAppElements = (document: AppElementsDocument): AppElements => ({
   roomForm: getElement(document, 'roomForm'),
   roomInput: getElement(document, 'roomInput'),
   userInput: getElement(document, 'userInput'),
+  betaRoomNameInput: getElement(document, 'betaRoomNameInput'),
+  betaCreateRoom: getElement(document, 'betaCreateRoomButton'),
+  betaInviteRole: getElement(document, 'betaInviteRoleSelect'),
+  betaCreateInvite: getElement(document, 'betaCreateInviteButton'),
+  betaInviteLink: getElement(document, 'betaInviteLinkInput'),
+  betaInviteToken: getElement(document, 'betaInviteTokenInput'),
+  betaAcceptInvite: getElement(document, 'betaAcceptInviteButton'),
+  betaRoomStatus: getElement(document, 'betaRoomStatus'),
   bootstrap: getElement(document, 'bootstrapButton'),
   refresh: getElement(document, 'refreshButton'),
   createCharacterRail: getElement(document, 'createCharacterRailButton'),

@@ -25,6 +25,7 @@ class FakeElement {
 
 class FakeInput extends FakeElement {
   value = ''
+  disabled = false
 }
 
 class FakeDialog {
@@ -39,6 +40,37 @@ class FakeDialog {
     this.showModalCount += 1
   }
 }
+
+const createElements = ({
+  roomForm = new FakeElement(),
+  menuButton = new FakeElement(),
+  roomCancelButton = new FakeElement(),
+  roomDialog = new FakeDialog(),
+  roomInput = new FakeInput(),
+  userInput = new FakeInput()
+}: Partial<{
+  roomForm: FakeElement
+  menuButton: FakeElement
+  roomCancelButton: FakeElement
+  roomDialog: FakeDialog
+  roomInput: FakeInput
+  userInput: FakeInput
+}> = {}) => ({
+  roomForm,
+  roomInput,
+  userInput,
+  betaRoomNameInput: new FakeInput(),
+  betaCreateRoomButton: new FakeInput(),
+  betaInviteRoleSelect: new FakeInput(),
+  betaCreateInviteButton: new FakeInput(),
+  betaInviteLinkInput: new FakeInput(),
+  betaInviteTokenInput: new FakeInput(),
+  betaAcceptInviteButton: new FakeInput(),
+  betaRoomStatus: { textContent: '' },
+  menuButton,
+  roomDialog,
+  roomCancelButton
+})
 
 const submitEvent = (): Event & { prevented: boolean } => {
   const event = new Event('submit') as Event & { prevented: boolean }
@@ -67,16 +99,18 @@ describe('room menu controller', () => {
     const roomDialog = new FakeDialog()
     const roomInput = new FakeInput()
     const userInput = new FakeInput()
+    const elements = createElements({
+      menuButton,
+      roomCancelButton,
+      roomDialog,
+      roomInput,
+      userInput
+    })
 
     createRoomMenuController({
-      elements: {
-        roomForm: new FakeElement() as unknown as HTMLFormElement,
-        roomInput: roomInput as unknown as HTMLInputElement,
-        userInput: userInput as unknown as HTMLInputElement,
-        menuButton: menuButton as unknown as HTMLElement,
-        roomDialog: roomDialog as unknown as HTMLDialogElement,
-        roomCancelButton: roomCancelButton as unknown as HTMLElement
-      },
+      elements: elements as unknown as Parameters<
+        typeof createRoomMenuController
+      >[0]['elements'],
       initialRoomId: 'demo-room',
       initialActorId: 'local-user',
       defaultRoomId: 'fallback-room',
@@ -103,16 +137,17 @@ describe('room menu controller', () => {
     const replacementUrls: string[] = []
     const roomInput = new FakeInput()
     const userInput = new FakeInput()
+    const elements = createElements({
+      roomForm,
+      roomDialog,
+      roomInput,
+      userInput
+    })
 
     createRoomMenuController({
-      elements: {
-        roomForm: roomForm as unknown as HTMLFormElement,
-        roomInput: roomInput as unknown as HTMLInputElement,
-        userInput: userInput as unknown as HTMLInputElement,
-        menuButton: new FakeElement() as unknown as HTMLElement,
-        roomDialog: roomDialog as unknown as HTMLDialogElement,
-        roomCancelButton: new FakeElement() as unknown as HTMLElement
-      },
+      elements: elements as unknown as Parameters<
+        typeof createRoomMenuController
+      >[0]['elements'],
       initialRoomId: 'demo-room',
       initialActorId: 'local-user',
       defaultRoomId: 'fallback-room',
@@ -146,5 +181,114 @@ describe('room menu controller', () => {
       replacementUrls[0],
       'https://cepheus.test/?viewer=referee&game=new+room&user=scout%2Fuser'
     )
+  })
+
+  it('creates a private beta room and opens it with the current actor id', async () => {
+    const roomDialog = new FakeDialog()
+    const opened: RoomIdentity[] = []
+    const replacementUrls: string[] = []
+    const elements = createElements({ roomDialog })
+
+    createRoomMenuController({
+      elements: elements as unknown as Parameters<
+        typeof createRoomMenuController
+      >[0]['elements'],
+      initialRoomId: 'demo-room',
+      initialActorId: 'local-user',
+      defaultRoomId: 'fallback-room',
+      defaultActorId: 'fallback-user',
+      locationLike: { href: 'https://cepheus.test/' } as Location,
+      historyLike: {
+        replaceState: (
+          _state: unknown,
+          _unused: string,
+          url?: string | URL | null
+        ) => replacementUrls.push(String(url))
+      } as unknown as History,
+      getCurrentActorId: () => 'discord:1234',
+      createRoom: async ({ name }) => ({ id: `room-${name}` }),
+      onOpenRoom: (identity) => opened.push(identity)
+    })
+
+    elements.betaRoomNameInput.value = 'Spinward'
+    elements.betaCreateRoomButton.dispatch('click')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.deepEqual(opened, [
+      { roomId: 'room-Spinward', actorId: 'discord:1234' }
+    ])
+    assert.equal(elements.roomInput.value, 'room-Spinward')
+    assert.equal(elements.betaRoomStatus.textContent, 'Room created')
+    assert.equal(
+      replacementUrls[0],
+      'https://cepheus.test/?game=room-Spinward&user=discord%3A1234'
+    )
+    assert.equal(roomDialog.closeCount, 1)
+  })
+
+  it('creates room invites and stores the returned link', async () => {
+    const elements = createElements()
+
+    createRoomMenuController({
+      elements: elements as unknown as Parameters<
+        typeof createRoomMenuController
+      >[0]['elements'],
+      initialRoomId: 'demo-room',
+      initialActorId: 'local-user',
+      defaultRoomId: 'fallback-room',
+      defaultActorId: 'fallback-user',
+      locationLike: { href: 'https://cepheus.test/' } as Location,
+      historyLike: { replaceState: () => {} } as unknown as History,
+      createInvite: async ({ roomId, role }) => ({
+        inviteUrl: `https://cepheus.test/?invite=${roomId}-${role}`
+      }),
+      onOpenRoom: () => {}
+    })
+
+    elements.roomInput.value = 'room-1'
+    elements.betaInviteRoleSelect.value = 'SPECTATOR'
+    elements.betaCreateInviteButton.dispatch('click')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.equal(
+      elements.betaInviteLinkInput.value,
+      'https://cepheus.test/?invite=room-1-SPECTATOR'
+    )
+    assert.equal(elements.betaRoomStatus.textContent, 'Invite created')
+  })
+
+  it('accepts invite tokens from the URL and opens the joined room', async () => {
+    const roomDialog = new FakeDialog()
+    const opened: RoomIdentity[] = []
+    const elements = createElements({ roomDialog })
+
+    createRoomMenuController({
+      elements: elements as unknown as Parameters<
+        typeof createRoomMenuController
+      >[0]['elements'],
+      initialRoomId: 'demo-room',
+      initialActorId: 'local-user',
+      defaultRoomId: 'fallback-room',
+      defaultActorId: 'fallback-user',
+      locationLike: {
+        href: 'https://cepheus.test/?invite=token-1'
+      } as Location,
+      historyLike: { replaceState: () => {} } as unknown as History,
+      getCurrentActorId: () => 'discord:1234',
+      acceptInvite: async (token) => ({ roomId: `room-for-${token}` }),
+      onOpenRoom: (identity) => opened.push(identity)
+    })
+
+    assert.equal(elements.betaInviteTokenInput.value, 'token-1')
+
+    elements.betaAcceptInviteButton.dispatch('click')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.deepEqual(opened, [
+      { roomId: 'room-for-token-1', actorId: 'discord:1234' }
+    ])
+    assert.equal(elements.roomInput.value, 'room-for-token-1')
+    assert.equal(elements.betaRoomStatus.textContent, 'Invite accepted')
+    assert.equal(roomDialog.closeCount, 1)
   })
 })

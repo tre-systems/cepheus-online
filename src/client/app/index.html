@@ -181,9 +181,41 @@
             <span class="brand-mark small">CO</span>
             <div>
               <h2>Room</h2>
-              <p>Local development controls</p>
+              <p>Table controls</p>
             </div>
           </div>
+          <div class="private-beta-title">
+            <span>Private beta</span>
+            <a href="/auth/discord/start">Sign in</a>
+          </div>
+          <label>
+            <span>Room name</span>
+            <input id="betaRoomNameInput" name="betaRoomName" autocomplete="off" spellcheck="false" placeholder="Spinward Table">
+          </label>
+          <div class="private-beta-actions">
+            <button id="betaCreateRoomButton" type="button">Create room</button>
+            <label>
+              <span>Role</span>
+              <select id="betaInviteRoleSelect" name="betaInviteRole">
+                <option value="PLAYER">Player</option>
+                <option value="SPECTATOR">Spectator</option>
+                <option value="REFEREE">Referee</option>
+              </select>
+            </label>
+            <button id="betaCreateInviteButton" type="button">Create invite</button>
+          </div>
+          <label>
+            <span>Invite link</span>
+            <input id="betaInviteLinkInput" name="betaInviteLink" readonly autocomplete="off" spellcheck="false">
+          </label>
+          <div class="private-beta-actions">
+            <label>
+              <span>Invite token</span>
+              <input id="betaInviteTokenInput" name="betaInviteToken" autocomplete="off" spellcheck="false">
+            </label>
+            <button id="betaAcceptInviteButton" type="button">Accept invite</button>
+          </div>
+          <p id="betaRoomStatus" class="private-beta-status" role="status"></p>
           <label>
             <span>Room</span>
             <input id="roomInput" name="room" autocomplete="off" spellcheck="false">

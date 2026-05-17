@@ -60,8 +60,6 @@ The current application has the private-beta spine in place:
   smoke script can operate against configured private-beta credentials.
 - Review client role affordances after authenticated state hydration so player
   tabs do not display referee-only controls before the first room state arrives.
-- Add compact UI for room creation and invite creation; the API is present, but
-  the current browser shell still centers on existing room links.
 
 ## Post-MVP Product Work
 

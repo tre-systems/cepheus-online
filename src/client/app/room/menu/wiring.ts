@@ -13,6 +13,10 @@ export interface RoomMenuWiringOptions {
   initialActorId: string
   defaultRoomId: string
   defaultActorId: string
+  getCurrentActorId?: () => string
+  createRoom?: RoomMenuControllerOptions['createRoom']
+  createInvite?: RoomMenuControllerOptions['createInvite']
+  acceptInvite?: RoomMenuControllerOptions['acceptInvite']
   onOpenRoomIdentity: (identity: RoomIdentity) => void
   setAppSessionRoomIdentity: (identity: RoomIdentity) => void
   resetDiceRevealTracking: () => void
@@ -34,6 +38,10 @@ export const createRoomMenuWiring = ({
   initialActorId,
   defaultRoomId,
   defaultActorId,
+  getCurrentActorId,
+  createRoom,
+  createInvite,
+  acceptInvite,
   onOpenRoomIdentity,
   setAppSessionRoomIdentity,
   resetDiceRevealTracking,
@@ -53,6 +61,14 @@ export const createRoomMenuWiring = ({
       roomForm: elements.roomForm,
       roomInput: elements.roomInput,
       userInput: elements.userInput,
+      betaRoomNameInput: elements.betaRoomNameInput,
+      betaCreateRoomButton: elements.betaCreateRoom,
+      betaInviteRoleSelect: elements.betaInviteRole,
+      betaCreateInviteButton: elements.betaCreateInvite,
+      betaInviteLinkInput: elements.betaInviteLink,
+      betaInviteTokenInput: elements.betaInviteToken,
+      betaAcceptInviteButton: elements.betaAcceptInvite,
+      betaRoomStatus: elements.betaRoomStatus,
       menuButton: elements.menu,
       roomDialog: elements.roomDialog,
       roomCancelButton: elements.roomCancel
@@ -61,6 +77,11 @@ export const createRoomMenuWiring = ({
     initialActorId,
     defaultRoomId,
     defaultActorId,
+    getCurrentActorId,
+    createRoom,
+    createInvite,
+    acceptInvite,
+    reportError,
     onOpenRoom: (identity) => {
       onOpenRoomIdentity(identity)
       setAppSessionRoomIdentity(identity)

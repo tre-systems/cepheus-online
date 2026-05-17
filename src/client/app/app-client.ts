@@ -26,6 +26,9 @@ import {
 } from './character/creation/feature.js'
 import { createCharacterRailController } from './character/rail/controller.js'
 import {
+  acceptRoomInvite,
+  createAppRoom,
+  createRoomInvite,
   fetchAppSession,
   fetchRoomState,
   listRoomAssets,
@@ -575,6 +578,11 @@ export const createAppClient = ({
     initialActorId: actorId,
     defaultRoomId: DEFAULT_APP_LOCATION.roomId,
     defaultActorId: DEFAULT_APP_LOCATION.actorId,
+    getCurrentActorId: () => actorId,
+    createRoom: ({ name }) => createAppRoom({ name }),
+    createInvite: ({ roomId: nextRoomId, role }) =>
+      createRoomInvite({ roomId: nextRoomId, role }),
+    acceptInvite: (token) => acceptRoomInvite(token),
     onOpenRoomIdentity: (identity) => {
       roomId = identity.roomId
       actorId = identity.actorId
