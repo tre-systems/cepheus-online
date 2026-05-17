@@ -1083,6 +1083,34 @@ h1 {
   pointer-events: auto;
 }
 
+.notes-panel {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  right: max(8px, env(safe-area-inset-right));
+  bottom: max(8px, env(safe-area-inset-bottom));
+  z-index: 10;
+  width: min(360px, calc(100vw - 72px));
+  display: grid;
+  grid-template-rows: auto minmax(120px, 0.7fr) minmax(220px, 1fr);
+  border: 1px solid rgba(72, 255, 173, 0.72);
+  background: #000;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.9),
+    0 20px 50px rgba(0, 0, 0, 0.62),
+    0 0 28px rgba(72, 255, 173, 0.1);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 120ms ease, visibility 120ms ease;
+  overflow: hidden;
+}
+
+.notes-panel.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
 .sheet-header {
   display: flex;
   justify-content: space-between;
@@ -1139,6 +1167,64 @@ h1 {
   min-height: 0;
   padding: 10px;
   overflow: auto;
+}
+
+.notes-list {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  overflow: auto;
+}
+
+.note-list-button {
+  min-height: 42px;
+  padding: 7px 8px;
+  display: grid;
+  gap: 3px;
+  border-color: rgba(244, 255, 248, 0.18);
+  background: rgba(5, 17, 13, 0.82);
+  color: var(--text);
+  text-align: left;
+  box-shadow: none;
+}
+
+.note-list-button.active {
+  border-color: rgba(72, 255, 173, 0.82);
+}
+
+.note-list-title {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.note-list-meta,
+.notes-status {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.note-editor {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 8px;
+  padding: 10px;
+  overflow: auto;
+}
+
+.note-editor textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.note-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
 }
 
 .character-creator {
@@ -3034,7 +3120,8 @@ h1 {
   .creation-activity-feed,
   .creation-presence-dock,
   .character-sheet,
-  .character-creator {
+  .character-creator,
+  .notes-panel {
     left: 68px;
   }
 
@@ -3081,7 +3168,8 @@ h1 {
   .creation-activity-feed,
   .creation-presence-dock,
   .character-sheet,
-  .character-creator {
+  .character-creator,
+  .notes-panel {
     left: 51px;
   }
 
@@ -3092,6 +3180,14 @@ h1 {
 
   .character-sheet {
     width: min(306px, calc(100vw - 56px));
+  }
+
+  .notes-panel {
+    right: 0;
+    width: calc(100vw - 51px);
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
   }
 
   .character-creator {

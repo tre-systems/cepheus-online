@@ -1,7 +1,41 @@
 # Deployment
 
 Cepheus Online deploys as a Cloudflare Worker with a `GameRoomDO` Durable
-Object binding. The browser shell is embedded during the deploy build.
+Object binding, a D1 database, and an R2 asset bucket. The browser shell is
+embedded during the deploy build.
+
+## Cloudflare Bindings
+
+`wrangler.jsonc` defines these runtime bindings:
+
+| Binding | Purpose |
+| --- | --- |
+| `GAME_ROOM` | Durable Object namespace for live rooms. |
+| `CEPHEUS_DB` | D1 users, sessions, rooms, memberships, invites, and asset metadata. |
+| `ASSET_BUCKET` | R2 uploaded board and counter images. |
+| `APP_BASE_URL` | Public app origin used for OAuth redirects and invite URLs. |
+| `DISCORD_CLIENT_ID` | Discord OAuth client id. |
+
+Required secrets:
+
+- `DISCORD_CLIENT_SECRET`
+- `SESSION_SECRET`
+
+Set secrets with Wrangler:
+
+```bash
+wrangler secret put DISCORD_CLIENT_SECRET
+wrangler secret put SESSION_SECRET
+```
+
+Apply D1 migrations before a private-beta deploy:
+
+```bash
+wrangler d1 migrations apply cepheus-online-private-beta --remote
+```
+
+The local placeholder D1 `database_id` in `wrangler.jsonc` must be replaced
+with the Cloudflare-created database id before deploying outside local dev.
 
 ## Local Checks
 
@@ -47,15 +81,21 @@ The `Deploy` workflow runs on pull requests and pushes to `main`.
 Required repository or environment secrets:
 
 - `CLOUDFLARE_API_TOKEN`: Cloudflare API token with Workers Scripts edit,
-  Workers Routes edit if custom routes are added, and Durable Objects edit
-  permissions for the account.
+  Workers Routes edit if custom routes are added, Durable Objects edit, D1
+  edit, and R2 edit permissions for the account.
 - `CLOUDFLARE_ACCOUNT_ID`: Cloudflare account id.
+- `DISCORD_CLIENT_SECRET`: Discord OAuth client secret for the Worker
+  environment.
+- `SESSION_SECRET`: high-entropy app session signing secret for the Worker
+  environment.
 
 Set them with GitHub CLI:
 
 ```bash
 gh secret set CLOUDFLARE_ACCOUNT_ID --repo tre-systems/cepheus-online
 gh secret set CLOUDFLARE_API_TOKEN --repo tre-systems/cepheus-online
+gh secret set DISCORD_CLIENT_SECRET --repo tre-systems/cepheus-online
+gh secret set SESSION_SECRET --repo tre-systems/cepheus-online
 ```
 
 The initial deployment uses the default workers.dev host from

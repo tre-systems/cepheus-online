@@ -980,4 +980,21 @@ describe('GameRoomDO HTTP skeleton', () => {
       { code: 1003, reason: 'Unsupported message type' }
     ])
   })
+
+  it('rate-limits noisy WebSocket messages per socket', async () => {
+    const socket = createSocket()
+    const room = createRoom([socket])
+
+    for (let index = 0; index < 121; index += 1) {
+      await room.webSocketMessage(socket, JSON.stringify({ type: 'ping' }))
+    }
+
+    const messages = parseMessages(socket)
+    const lastMessage = messages.at(-1)
+    assert.equal(lastMessage?.type, 'error')
+    assert.equal(lastMessage?.error.code, 'not_allowed')
+    assert.deepEqual(socket.closeCalls, [
+      { code: 1008, reason: 'Too many messages' }
+    ])
+  })
 })

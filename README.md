@@ -28,11 +28,12 @@ This repository now has the first playable spine in place. It contains:
 - shared TypeScript commands, events, protocol validation, projections, dice,
   ruleset providers, and viewer filtering under `src/shared/`
 - Cloudflare Worker routes and Durable Object game rooms under `src/server/`,
-  with server-ordered command publication, event storage, checkpoints, and
+  with Discord OAuth sessions, D1 room metadata, R2 uploaded assets,
+  server-ordered command publication, event storage, checkpoints, and
   viewer-safe broadcasts
 - a dependency-free browser shell served by the Worker with Canvas board play,
-  local asset import, synced dice reveals, mobile-first PWA metadata, and
-  editable basic character sheets
+  local and uploaded asset setup, notes and handouts, synced dice reveals,
+  mobile-first PWA metadata, and guided character creation
 - small zero-dependency client command helpers under `src/client/`
 
 ## Architecture Direction
@@ -41,11 +42,11 @@ The active stack is:
 
 - Cloudflare Workers for HTTP routes and static assets.
 - Durable Objects for live game rooms and ordered command processing.
+- D1 for private-beta users, sessions, room ownership, memberships, invites,
+  and asset metadata.
+- R2 for uploaded board and counter images.
 - Browser client with plain TypeScript, Canvas, CSS, and a tiny local reactive
   layer.
-
-Planned storage additions remain R2 for uploaded images/archives and D1 for
-user, Discord link, game index, and operational metadata.
 
 See [docs/architecture/overview.md](docs/architecture/overview.md).
 

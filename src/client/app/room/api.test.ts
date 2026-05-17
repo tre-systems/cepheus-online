@@ -3,7 +3,14 @@ import { describe, it } from 'node:test'
 
 import type { Command } from '../../../shared/commands'
 import { asGameId, asUserId } from '../../../shared/ids'
-import { fetchRoomState, postRoomCommand, type CommandResponse } from './api'
+import {
+  fetchAppSession,
+  fetchRoomState,
+  listRoomAssets,
+  postRoomCommand,
+  type CommandResponse,
+  uploadRoomAsset
+} from './api'
 
 const createGameCommand = (): Command => ({
   type: 'CreateGame',
@@ -14,6 +21,26 @@ const createGameCommand = (): Command => ({
 })
 
 describe('room API helpers', () => {
+  it('loads the app session without exposing identity in query params', async () => {
+    const requests: Array<{ input: string; init?: RequestInit }> = []
+    const fetcher = async (input: string, init?: RequestInit) => {
+      requests.push({ input, init })
+      return {
+        ok: true,
+        json: async () => ({
+          authenticated: true,
+          user: { id: 'discord:1234', username: 'Scout', avatarUrl: null }
+        })
+      }
+    }
+
+    const session = await fetchAppSession(fetcher)
+
+    assert.equal(requests[0]?.input, '/api/session')
+    assert.equal(requests[0]?.init, undefined)
+    assert.equal(session.user?.id, 'discord:1234')
+  })
+
   it('constructs the viewer-scoped room state request', async () => {
     const requests: Array<{ input: string; init?: RequestInit }> = []
     const fetcher = async (input: string, init?: RequestInit) => {
@@ -98,5 +125,76 @@ describe('room API helpers', () => {
         command: createGameCommand()
       })
     })
+  })
+
+  it('lists protected room assets through the API room route', async () => {
+    const requests: Array<{ input: string; init?: RequestInit }> = []
+    const fetcher = async (input: string, init?: RequestInit) => {
+      requests.push({ input, init })
+      return {
+        ok: true,
+        json: async () => ({
+          assets: [
+            {
+              id: 'asset_board',
+              kind: 'geomorph',
+              url: '/api/assets/asset_board',
+              width: 100,
+              height: 80,
+              gridScale: 50,
+              losSidecar: null
+            }
+          ]
+        })
+      }
+    }
+
+    const assets = await listRoomAssets({
+      roomId: 'demo room',
+      fetch: fetcher
+    })
+
+    assert.equal(requests[0]?.input, '/api/rooms/demo%20room/assets')
+    assert.equal(requests[0]?.init, undefined)
+    assert.equal(assets[0]?.id, 'asset_board')
+  })
+
+  it('uploads room assets as multipart form data', async () => {
+    const requests: Array<{ input: string; init?: RequestInit }> = []
+    const file = new File(['image'], 'board.png', { type: 'image/png' })
+    const fetcher = async (input: string, init?: RequestInit) => {
+      requests.push({ input, init })
+      return {
+        ok: true,
+        json: async () => ({
+          asset: {
+            id: 'asset_board',
+            kind: 'geomorph',
+            url: '/api/assets/asset_board',
+            width: 100,
+            height: 80,
+            gridScale: 50,
+            losSidecar: null
+          }
+        })
+      }
+    }
+
+    const asset = await uploadRoomAsset({
+      roomId: 'demo-room',
+      kind: 'geomorph',
+      file,
+      gridScale: 50,
+      losSidecar: '{"occluders":[]}',
+      fetch: fetcher
+    })
+
+    assert.equal(requests[0]?.input, '/api/rooms/demo-room/assets')
+    assert.equal(requests[0]?.init?.method, 'POST')
+    assert.equal(requests[0]?.init?.body instanceof FormData, true)
+    assert.equal((requests[0]?.init?.body as FormData).get('file'), file)
+    assert.equal((requests[0]?.init?.body as FormData).get('kind'), 'geomorph')
+    assert.equal((requests[0]?.init?.body as FormData).get('gridScale'), '50')
+    assert.equal(asset.id, 'asset_board')
   })
 })

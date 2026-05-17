@@ -8,7 +8,8 @@ import type {
 import type { GameState } from '../../shared/state'
 import {
   filterGameStateForViewer,
-  filterLiveActivitiesForViewer
+  filterLiveActivitiesForViewer,
+  type GameViewer
 } from '../../shared/viewer'
 import type { DurableObjectStorage } from '../cloudflare'
 import { bindOrVerifyActorSession } from './actor-session'
@@ -57,6 +58,7 @@ export const handleRoomCommandMessage = async ({
   gameId,
   message,
   actorSessionSecret,
+  viewer,
   commandRateLimiter,
   telemetrySink
 }: {
@@ -64,6 +66,7 @@ export const handleRoomCommandMessage = async ({
   gameId: GameId
   message: Extract<ClientMessage, { type: 'command' }>
   actorSessionSecret: string | null
+  viewer?: GameViewer
   commandRateLimiter: CommandRateLimiter
   telemetrySink: PublicationTelemetrySink
 }): Promise<RoomCommandResult> => {
@@ -138,14 +141,18 @@ export const handleRoomCommandMessage = async ({
     }
   }
 
-  const viewer = viewerFromCommand(message)
-  const filtered = filterGameStateForViewer(publication.value.state, viewer, {
-    resolveRulesetById: resolveRoomRulesetData
-  })
+  const responseViewer = viewer ?? viewerFromCommand(message)
+  const filtered = filterGameStateForViewer(
+    publication.value.state,
+    responseViewer,
+    {
+      resolveRulesetById: resolveRoomRulesetData
+    }
+  )
   const liveActivities = filterLiveActivitiesForViewer(
     publication.value.liveActivities,
     publication.value.state,
-    viewer
+    responseViewer
   )
 
   return {

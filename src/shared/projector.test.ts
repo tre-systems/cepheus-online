@@ -15,6 +15,7 @@ import {
   asCharacterId,
   asEventId,
   asGameId,
+  asNoteId,
   asPieceId,
   asUserId
 } from './ids'
@@ -356,6 +357,65 @@ describe('game state projection', () => {
 
     assert.deepEqual(state?.boards[boardId]?.losSidecar, sidecar)
     assert.equal(state?.boards[boardId]?.losSidecar === sidecar, false)
+  })
+
+  it('projects note lifecycle events into room state', () => {
+    const noteId = asNoteId('note-1')
+    const state = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'NoteCreated',
+        noteId,
+        title: 'Patron Lead',
+        body: 'Meet at the downport.',
+        visibility: 'PLAYERS',
+        ownerId: actorId
+      }),
+      envelope(3, {
+        type: 'NoteUpdated',
+        noteId,
+        body: 'Meet at the highport.'
+      }),
+      envelope(4, {
+        type: 'NoteVisibilityChanged',
+        noteId,
+        visibility: 'PUBLIC'
+      })
+    ])
+
+    assert.equal(state?.notes?.[noteId]?.title, 'Patron Lead')
+    assert.equal(state?.notes?.[noteId]?.body, 'Meet at the highport.')
+    assert.equal(state?.notes?.[noteId]?.visibility, 'PUBLIC')
+    assert.equal(state?.notes?.[noteId]?.createdAt, '2026-05-03T00:00:02.000Z')
+    assert.equal(state?.notes?.[noteId]?.updatedAt, '2026-05-03T00:00:04.000Z')
+
+    const deleted = projectGameState([
+      envelope(1, {
+        type: 'GameCreated',
+        slug: 'game-1',
+        name: 'Spinward Test',
+        ownerId: actorId
+      }),
+      envelope(2, {
+        type: 'NoteCreated',
+        noteId,
+        title: 'Patron Lead',
+        body: '',
+        visibility: 'REFEREE',
+        ownerId: actorId
+      }),
+      envelope(3, {
+        type: 'NoteDeleted',
+        noteId
+      })
+    ])
+
+    assert.deepEqual(deleted?.notes, {})
   })
 
   it('keeps failed qualification details in the projection without starting a term', () => {

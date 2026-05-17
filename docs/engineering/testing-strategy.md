@@ -34,8 +34,12 @@ Use focused E2E scripts when debugging a branch:
 Use unit tests for:
 
 - command validation and typed error categories
+- Discord session cookie signing, D1 repositories, Worker auth middleware, and
+  protected private-beta routes
+- R2 asset upload validation and protected asset serving
 - event envelope versioning and protocol fixtures
 - projector replay, checkpoint-plus-tail recovery, and parity
+- note/handout projection, mutation authorization, and viewer filtering
 - viewer filtering and reveal-safe projections
 - ruleset JSON decoding and non-default ruleset fixtures
 - dice expressions, deterministic RNG, and rules-table helpers
@@ -88,3 +92,17 @@ Run these on a real phone against a deployed Worker URL or local HTTPS tunnel:
 - Shared rules, protocol, server, or projection: `npm run verify:full`.
 - Deployment-sensitive changes: `npm run verify:full && npm run deploy:dry-run`.
 - Release confidence after deploy: `npm run smoke:deployed -- <url>`.
+
+## Private-Beta Manual Checks
+
+Before inviting real tables:
+
+- Sign in through Discord on the deployed origin.
+- Create a room, create an invite, accept it in a second browser profile, and
+  confirm the member role controls the viewer projection.
+- Upload PNG, JPEG, and WebP assets below 10 MB and confirm non-members cannot
+  fetch them.
+- Create referee-only, player, and public notes; confirm only permitted viewers
+  receive each note.
+- Export a disposable room, then delete it and confirm later state, command,
+  socket, asset, and export requests fail closed.

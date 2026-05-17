@@ -5,6 +5,7 @@ export type GameId = Brand<string, 'GameId'>
 export type CharacterId = Brand<string, 'CharacterId'>
 export type BoardId = Brand<string, 'BoardId'>
 export type PieceId = Brand<string, 'PieceId'>
+export type NoteId = Brand<string, 'NoteId'>
 export type EventId = Brand<string, 'EventId'>
 
 const MAX_ID_LENGTH = 200
@@ -37,6 +38,9 @@ export const asBoardId = (value: string): BoardId =>
 
 export const asPieceId = (value: string): PieceId =>
   asNonEmptyString<'PieceId'>(value, 'Piece id')
+
+export const asNoteId = (value: string): NoteId =>
+  asNonEmptyString<'NoteId'>(value, 'Note id')
 
 export const asEventId = (value: string): EventId =>
   asNonEmptyString<'EventId'>(value, 'Event id')

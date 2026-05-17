@@ -25,7 +25,13 @@ import {
   type CharacterCreationFeature
 } from './character/creation/feature.js'
 import { createCharacterRailController } from './character/rail/controller.js'
-import { fetchRoomState, postRoomCommand } from './room/api.js'
+import {
+  fetchAppSession,
+  fetchRoomState,
+  listRoomAssets,
+  postRoomCommand,
+  uploadRoomAsset
+} from './room/api.js'
 import {
   applyServerMessage as applyClientServerMessage,
   type ClientDiceRollActivity,
@@ -61,6 +67,7 @@ import { createAppLifecycleWiring } from './core/lifecycle.js'
 import { createCharacterSheetControlsWiring } from './character/sheet/controls-wiring.js'
 import { createRoomBootstrapScene } from './room/bootstrap-scene.js'
 import { createBoardDoorActions } from './board/doors.js'
+import { createNotesPanelController } from './notes/controller.js'
 import { rulesetFromState } from './ruleset-provider.js'
 
 export interface AppClient {
@@ -115,9 +122,14 @@ export const createAppClient = ({
   let characterSheetControlsWiring: ReturnType<
     typeof createCharacterSheetControlsWiring
   > | null = null
+  let notesPanelController: ReturnType<
+    typeof createNotesPanelController
+  > | null = null
   let refreshWiring: ReturnType<typeof createAppRefreshWiring> | null = null
   let diceCommandWiring: ReturnType<typeof createDiceCommandWiring> | null =
     null
+  let startPending = false
+  let privateBetaSessionActive = false
   const diceRevealCoordinator = createDiceRevealCoordinator()
   const animatedDiceRollActivityIds = new Set<string>()
   let diceRevealRefetchTimer: number | null = null
@@ -367,6 +379,21 @@ export const createAppClient = ({
     roomConnectionController.connect()
   }
 
+  const hydrateAuthenticatedSession = async (): Promise<void> => {
+    const session = await fetchAppSession().catch(() => null)
+    if (!session?.authenticated || !session.user?.id) {
+      privateBetaSessionActive = false
+      return
+    }
+
+    privateBetaSessionActive = true
+    if (actorId === session.user.id) return
+
+    actorId = session.user.id
+    actorSessionSecret = resolveActorSessionSecret({ roomId, actorId })
+    appSession.setRoomIdentity({ actorId })
+  }
+
   const applyState = (
     nextState: GameState | null,
     {
@@ -499,6 +526,7 @@ export const createAppClient = ({
     boardController?.render()
     characterRailController.render()
     characterCreationFeature.renderPresence(state)
+    notesPanelController?.render()
   }
 
   const canvasContext = els.canvas.getContext('2d')
@@ -571,6 +599,7 @@ export const createAppClient = ({
     getSelectedBoard: selectedBoard,
     getSelectedBoardPieces: boardPieces,
     getClientIdentity: clientIdentity,
+    getRoomId: () => roomId,
     getBootstrapIdentity: bootstrapIdentity,
     createRequestId: requestId,
     postCommand,
@@ -580,7 +609,33 @@ export const createAppClient = ({
     requestRender: render,
     reportError: setError,
     getCanPickLocalAssets: () =>
-      !state || isActorRefereeOrOwner(state, asUserId(actorId))
+      !state || isActorRefereeOrOwner(state, asUserId(actorId)),
+    listUploadedAssets: async (nextRoomId) =>
+      listRoomAssets({ roomId: nextRoomId }),
+    uploadAsset: (input) => uploadRoomAsset(input),
+    canUseUploadedAssets: () => privateBetaSessionActive
+  })
+
+  notesPanelController = createNotesPanelController({
+    elements: {
+      openButton: els.notesButton,
+      panel: els.notesPanel,
+      closeButton: els.notesClose,
+      list: els.notesList,
+      titleInput: els.noteTitleInput,
+      bodyInput: els.noteBodyInput,
+      visibilitySelect: els.noteVisibilitySelect,
+      newButton: els.noteNew,
+      saveButton: els.noteSave,
+      deleteButton: els.noteDelete,
+      status: els.notesStatus
+    },
+    getState: () => state,
+    getIdentity: clientIdentity,
+    canEdit: () =>
+      Boolean(state && isActorRefereeOrOwner(state, asUserId(actorId))),
+    dispatchNotes: commandRouter.note.dispatchSequential,
+    reportError: setError
   })
 
   characterSheetControlsWiring = createCharacterSheetControlsWiring({
@@ -607,7 +662,7 @@ export const createAppClient = ({
     reportError: setError
   })
 
-  const start = (): void => {
+  const startLifecycle = (): void => {
     if (lifecycleWiring) return
 
     lifecycleWiring = createAppLifecycleWiring({
@@ -625,6 +680,17 @@ export const createAppClient = ({
         setError
       }
     })
+  }
+
+  const start = (): void => {
+    if (lifecycleWiring || startPending) return
+    startPending = true
+    hydrateAuthenticatedSession()
+      .catch((error: Error) => setError(error.message))
+      .finally(() => {
+        startPending = false
+        startLifecycle()
+      })
   }
 
   return {
@@ -656,6 +722,7 @@ export const createAppClient = ({
       boardControlsWiring?.dispose()
       roomMenuWiring?.dispose()
       roomAssetCreationWiring?.dispose()
+      notesPanelController?.dispose()
       characterSheetControlsWiring?.dispose()
       refreshWiring?.dispose()
       diceCommandWiring?.dispose()
@@ -669,6 +736,7 @@ export const createAppClient = ({
       boardControlsWiring = null
       roomMenuWiring = null
       roomAssetCreationWiring = null
+      notesPanelController = null
       characterSheetControlsWiring = null
       refreshWiring = null
       diceCommandWiring = null

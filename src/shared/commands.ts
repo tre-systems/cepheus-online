@@ -1,4 +1,11 @@
-import type { BoardId, CharacterId, GameId, PieceId, UserId } from './ids'
+import type {
+  BoardId,
+  CharacterId,
+  GameId,
+  NoteId,
+  PieceId,
+  UserId
+} from './ids'
 import type { MapLosSidecar } from './mapAssets'
 import type {
   BenefitKind,
@@ -15,6 +22,7 @@ import type {
   CharacteristicKey,
   CharacterSheetPatch,
   CharacterType,
+  NoteVisibility,
   PieceFreedom,
   PieceVisibility
 } from './state'
@@ -227,6 +235,40 @@ export type Command =
       expectedSeq?: number
       pieceId: PieceId
       freedom: PieceFreedom
+    }
+  | {
+      type: 'CreateNote'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      noteId: NoteId
+      title: string
+      body: string
+      visibility: NoteVisibility
+    }
+  | {
+      type: 'UpdateNote'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      noteId: NoteId
+      title?: string
+      body?: string
+    }
+  | {
+      type: 'DeleteNote'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      noteId: NoteId
+    }
+  | {
+      type: 'SetNoteVisibility'
+      gameId: GameId
+      actorId: UserId
+      expectedSeq?: number
+      noteId: NoteId
+      visibility: NoteVisibility
     }
   | {
       type: 'RollDice'

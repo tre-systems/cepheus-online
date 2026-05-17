@@ -26,6 +26,7 @@ import type {
   CharacteristicKey,
   CharacterState,
   GameState,
+  NoteState,
   PieceState,
   PlayerState
 } from './state'
@@ -765,6 +766,23 @@ const filterPiecesForViewer = (
   )
 }
 
+const isNoteVisibleToRole = (note: NoteState, role: ViewerRole): boolean => {
+  if (role === 'REFEREE') return true
+  if (note.visibility === 'PUBLIC') return true
+  return role === 'PLAYER' && note.visibility === 'PLAYERS'
+}
+
+const filterNotesForViewer = (
+  filtered: GameState,
+  resolvedViewer: GameViewer
+): void => {
+  filtered.notes = Object.fromEntries(
+    Object.entries(filtered.notes ?? {}).filter(([, note]) =>
+      isNoteVisibleToRole(note, resolvedViewer.role)
+    )
+  )
+}
+
 const filterUnrevealedDiceForViewer = (
   filtered: GameState,
   nowMs: number
@@ -801,6 +819,7 @@ export const toViewerGameState = (
   const filtered = structuredClone(state)
 
   filterPiecesForViewer(filtered, resolvedViewer)
+  filterNotesForViewer(filtered, resolvedViewer)
 
   if (!canViewerSeeUnrevealedDice(state, resolvedViewer)) {
     const unrevealedRollIds = filterUnrevealedDiceForViewer(filtered, nowMs)

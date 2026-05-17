@@ -719,6 +719,31 @@ describe('protocol validation', () => {
         freedom: 'UNLOCKED'
       },
       {
+        type: 'CreateNote',
+        ...base,
+        noteId: 'note-1',
+        title: 'Patron Lead',
+        body: '',
+        visibility: 'PLAYERS'
+      },
+      {
+        type: 'UpdateNote',
+        ...base,
+        noteId: 'note-1',
+        body: 'Meet at the downport.'
+      },
+      {
+        type: 'SetNoteVisibility',
+        ...base,
+        noteId: 'note-1',
+        visibility: 'PUBLIC'
+      },
+      {
+        type: 'DeleteNote',
+        ...base,
+        noteId: 'note-1'
+      },
+      {
         type: 'RollDice',
         ...base,
         expression: '2d6',
@@ -732,6 +757,39 @@ describe('protocol validation', () => {
       if (!decoded.ok) continue
       assert.equal(decoded.value.expectedSeq, 7)
     }
+  })
+
+  it('decodes note commands with plain text bodies', () => {
+    const decoded = decodeCommand({
+      type: 'CreateNote',
+      gameId: 'game-1',
+      actorId: 'player-1',
+      noteId: 'note-plain-text',
+      title: 'Referee note',
+      body: '',
+      visibility: 'REFEREE'
+    })
+
+    assert.equal(decoded.ok, true)
+    if (!decoded.ok) return
+    assert.equal(decoded.value.type, 'CreateNote')
+    if (decoded.value.type !== 'CreateNote') return
+    assert.equal(decoded.value.body, '')
+    assert.equal(decoded.value.visibility, 'REFEREE')
+  })
+
+  it('rejects note updates without a title or body change', () => {
+    const decoded = decodeCommand({
+      type: 'UpdateNote',
+      gameId: 'game-1',
+      actorId: 'player-1',
+      noteId: 'note-noop'
+    })
+
+    assert.equal(decoded.ok, false)
+    if (decoded.ok) return
+    assert.equal(decoded.error.code, 'invalid_command')
+    assert.equal(decoded.error.message, 'UpdateNote must include title or body')
   })
 
   it('rejects generic survival outcomes that must use semantic commands', () => {

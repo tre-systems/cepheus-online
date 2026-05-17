@@ -29,9 +29,10 @@ browser request.
 
 ## Discord Identity
 
-Discord OAuth should establish identity, but the app should still issue its own
-session. Store Discord user IDs and guild mappings server-side. Do not rely on
-client-provided Discord names, roles, or avatar URLs for authorization.
+Discord OAuth establishes private-beta identity. The app issues its own signed
+HTTP-only session cookie after OAuth completes and stores the session in D1.
+Store Discord user IDs server-side. Do not rely on client-provided Discord
+names, roles, or avatar URLs for authorization.
 
 Campaign Discord integration should be explicit:
 
@@ -46,12 +47,16 @@ Friendly campaign links can be short and human-shareable, but permissions
 should be account-backed. A user who has a link should still need a valid role
 for private campaigns.
 
-Until Discord/session auth is implemented, the browser creates a local actor
-session secret and sends it with commands. The room Durable Object binds the
-first secret it sees for a room actor ID and rejects later commands for that
-actor ID from a different secret. This is a development-phase anti-tampering
-guard, not a replacement for authenticated identity: a room actor ID can still
-be claimed by the first browser that uses it.
+Hosted room state, command, WebSocket, asset, export, and delete routes require
+an authenticated app session plus D1 room membership. The Worker resolves the
+member role and forwards trusted user and viewer-role headers to the Durable
+Object. Browser-supplied viewer query parameters are ignored on hosted
+requests.
+
+Local/test hosts may still use the actor-session secret path for development
+and E2E tests. The room Durable Object binds the first secret it sees for a
+room actor ID and rejects later commands for that actor ID from a different
+secret. This remains an anti-replay guard, not the hosted authorization model.
 
 Suggested role model:
 
@@ -93,22 +98,25 @@ sanitizer is deliberately installed inside the trusted HTML boundary.
 Initial Cloudflare controls should include:
 
 - body size limits on JSON routes
-- per-IP limits for create, invite, login callback, and WebSocket upgrade
-- per-socket message limits inside the Durable Object
+- per-IP/session in-memory limits for Discord OAuth start/callback, room
+  creation, invite creation/acceptance, asset upload, hosted room commands, and
+  WebSocket upgrades
+- per-socket message limits and per-actor command limits inside the Durable
+  Object
 - slow-path limits for imports, SRD parsing, and uploaded asset processing
-- R2 size/type validation for uploaded images
+- R2 size/type/dimension validation for uploaded images
 
 Add global Cloudflare rate-limit bindings or WAF rules when public usage makes
 per-isolate in-memory limits insufficient.
 
 ## Data Retention
 
-Decide retention before production:
+Private-beta retention is explicit owner control:
 
 - event streams for active campaigns
-- archived campaign exports
+- owner-triggered campaign exports
 - Discord account links
-- telemetry and error reports
+- telemetry and error reports when added
 - uploaded assets
 
 Campaign data will be more personal than Delta-V match data. Treat notes,

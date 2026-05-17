@@ -19,6 +19,7 @@ describe('command metadata', () => {
     assert.equal(commandMetadataByType.CreateBoard.handlerDomain, 'board')
     assert.equal(commandMetadataByType.MovePiece.handlerDomain, 'board')
     assert.equal(commandMetadataByType.SetDoorOpen.handlerDomain, 'board')
+    assert.equal(commandMetadataByType.CreateNote.handlerDomain, 'note')
     assert.equal(commandMetadataByType.RollDice.handlerDomain, 'dice')
     assert.equal(
       commandMetadataByType.CreateCharacter.handlerDomain,
@@ -83,9 +84,10 @@ describe('command metadata', () => {
         >
       >,
       Assert<IsAssignable<'SetDoorOpen', CommandTypeForHandlerDomain<'board'>>>,
+      Assert<IsAssignable<'CreateNote', CommandTypeForHandlerDomain<'note'>>>,
       Assert<IsAssignable<'RollDice', CommandTypeForHandlerDomain<'dice'>>>
-    ] = [true, true, true, true, true, true, true]
+    ] = [true, true, true, true, true, true, true, true]
 
-    assert.equal(assertions.length, 7)
+    assert.equal(assertions.length, 8)
   })
 })

@@ -22,6 +22,7 @@ export const gameEventHandlers = {
       characters: {},
       boards: {},
       pieces: {},
+      notes: {},
       diceLog: [],
       selectedBoardId: null,
       eventSeq: envelope.seq

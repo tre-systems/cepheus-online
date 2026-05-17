@@ -80,6 +80,17 @@ export interface AppElements {
   sheetName: HTMLElement | null
   sheetBody: HTMLElement | null
   sheetTabs: HTMLElement[]
+  notesButton: HTMLButtonElement | null
+  notesPanel: HTMLElement | null
+  notesClose: HTMLButtonElement | null
+  notesList: HTMLElement | null
+  noteTitleInput: HTMLInputElement | null
+  noteBodyInput: HTMLTextAreaElement | null
+  noteVisibilitySelect: HTMLSelectElement | null
+  noteNew: HTMLButtonElement | null
+  noteSave: HTMLButtonElement | null
+  noteDelete: HTMLButtonElement | null
+  notesStatus: HTMLElement | null
   menu: HTMLButtonElement | null
   roomDialog: HTMLDialogElement | null
   roomCancel: HTMLButtonElement | null
@@ -175,6 +186,17 @@ export const getAppElements = (document: AppElementsDocument): AppElements => ({
   sheetTabs: Array.from(
     document.querySelectorAll<HTMLElement>('[data-sheet-tab]')
   ),
+  notesButton: getElement(document, 'notesButton'),
+  notesPanel: getElement(document, 'notesPanel'),
+  notesClose: getElement(document, 'notesCloseButton'),
+  notesList: getElement(document, 'notesList'),
+  noteTitleInput: getElement(document, 'noteTitleInput'),
+  noteBodyInput: getElement(document, 'noteBodyInput'),
+  noteVisibilitySelect: getElement(document, 'noteVisibilitySelect'),
+  noteNew: getElement(document, 'noteNewButton'),
+  noteSave: getElement(document, 'noteSaveButton'),
+  noteDelete: getElement(document, 'noteDeleteButton'),
+  notesStatus: getElement(document, 'notesStatus'),
   menu: getElement(document, 'menuButton'),
   roomDialog: getElement(document, 'roomDialog'),
   roomCancel: getElement(document, 'roomCancelButton')

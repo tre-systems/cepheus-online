@@ -41,8 +41,10 @@ publication, broadcast, reveal-scheduling, storage, or query helpers rather than
 adding feature logic directly to `GameRoomDO`. Game rules live in `src/shared`,
 not in the Durable Object class.
 
-`DiscordInstallDO` or D1-backed routes may be added later for Discord
-install/session bookkeeping if needed.
+D1-backed Worker routes own private-beta Discord sessions, rooms,
+memberships, invites, and uploaded asset metadata. `GameRoomDO` trusts only the
+Worker-provided user and viewer-role headers on hosted requests; legacy query
+viewer parameters remain for local/test-host workflows.
 
 Ruleset selection is room state. `CreateGame` may carry a `rulesetId`,
 `GameCreated` persists it, and `GameState.rulesetId` is projected from the
@@ -54,10 +56,13 @@ hand-maintained TypeScript constants.
 
 ## Persistence
 
-- Durable Object storage: live event stream, checkpoints, active room metadata.
-- Future R2: uploaded board images, token images, final archived game bundles.
-- Future D1: user records, Discord account links, game index, public listings,
-  audit metadata.
+- Durable Object storage: live event stream, checkpoints, reveal scheduling
+  state, and active room metadata.
+- D1: users, app sessions, rooms, room memberships, room invites, and uploaded
+  asset metadata.
+- R2: uploaded board and counter images, addressed through protected asset ids.
+- Future D1/R2 additions: public listings, audit metadata, and final archived
+  game bundles.
 
 Event streams should be chunked in Durable Object storage rather than kept as
 one large array. Checkpoints should be saved at natural boundaries so reconnect
@@ -96,7 +101,8 @@ Separate state into:
 - authoritative game state projected from events
 - local UI state that can be discarded
 - ephemeral presence/awareness
-- optional collaborative document state for notes
+- server-ordered notes and handouts for MVP table play
+- optional future collaborative document state if notes need CRDT behavior
 
 These must not be blurred into one mutable object.
 

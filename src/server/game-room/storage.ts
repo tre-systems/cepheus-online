@@ -155,6 +155,23 @@ export const readCheckpoint = async (
 ): Promise<GameCheckpoint | null> =>
   (await storage.get<GameCheckpoint>(checkpointKey(gameId))) ?? null
 
+export const deleteGameStorage = async (
+  storage: DurableObjectStorage,
+  gameId: GameId
+): Promise<void> => {
+  const chunkCount = await getEventChunkCount(storage, gameId)
+  for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex += 1) {
+    await storage.delete(eventChunkKey(gameId, chunkIndex))
+  }
+
+  await Promise.all([
+    storage.delete(eventChunkCountKey(gameId)),
+    storage.delete(eventSeqKey(gameId)),
+    storage.delete(checkpointKey(gameId)),
+    storage.delete(gameSeedKey(gameId))
+  ])
+}
+
 const generateSeed = (): number => {
   const seed = new Uint32Array(1)
   crypto.getRandomValues(seed)

@@ -1,6 +1,9 @@
 import type { GameCommand } from '../../../../shared/commands'
 import type { CharacterId, PieceId } from '../../../../shared/ids'
 import {
+  deriveGeomorphTileKind,
+  type LocalMapAssetMetadata,
+  type MapAssetKind,
   validateMapLosSidecar,
   type MapLosSidecar
 } from '../../../../shared/mapAssets'
@@ -27,11 +30,14 @@ import {
   type ImageFileInput
 } from '../../assets/images.js'
 import {
+  deriveMapAssetDimensionsViewModel,
+  deriveMapAssetLosSidecarSummary,
   deriveMapAssetPickerViewModel,
   type MapAssetPickerItemViewModel,
   type MapAssetPickerViewModel
 } from '../../assets/map-picker-view.js'
 import { planCreatePieceCommands } from '../../piece/command-plan.js'
+import type { UploadedRoomAsset } from '../api.js'
 import {
   parseLocalAssetLosSidecarCandidates,
   parseLocalAssetMetadataCandidates
@@ -81,6 +87,15 @@ export interface RoomAssetCreationDependencies {
     input: ImageFileInput,
     crop: { x: number; y: number; width: number; height: number }
   ) => Promise<string | null>
+  listUploadedAssets?: (roomId: string) => Promise<UploadedRoomAsset[]>
+  uploadAsset?: (input: {
+    roomId: string
+    kind: MapAssetKind
+    file: File
+    gridScale: number
+    losSidecar?: string | null
+  }) => Promise<UploadedRoomAsset>
+  canUseUploadedAssets?: () => boolean
 }
 
 export interface RoomAssetCreationOptions {
@@ -89,6 +104,7 @@ export interface RoomAssetCreationOptions {
   getSelectedBoard: () => BoardState | null
   getSelectedBoardPieces: () => readonly PieceState[]
   getClientIdentity: () => ClientIdentity
+  getRoomId?: () => string
   getBootstrapIdentity: () => BootstrapCommandContext
   getCommandIdentity: () => ClientIdentity
   createRequestId: (scope: string) => string
@@ -162,13 +178,16 @@ const characterOptionLabel = ({
 
 const selectedAssetItem = (
   viewModel: MapAssetPickerViewModel | null,
-  assetRef: string
+  assetRef: string,
+  uploadedItems: readonly MapAssetPickerItemViewModel[] = []
 ): MapAssetPickerItemViewModel | null => {
   if (!assetRef) return null
   return (
+    uploadedItems.find((item) => item.assetRef === assetRef) ??
     viewModel?.sections
       .flatMap((section) => section.items)
-      .find((item) => item.assetRef === assetRef) ?? null
+      .find((item) => item.assetRef === assetRef) ??
+    null
   )
 }
 
@@ -198,12 +217,77 @@ const applyPieceDimensions = (
   elements.pieceHeightInput.value = '50'
 }
 
+const uploadedAssetLabel = (asset: UploadedRoomAsset): string =>
+  asset.kind === 'geomorph'
+    ? `uploaded board ${asset.id}`
+    : `uploaded counter ${asset.id}`
+
+const validateUploadedLosSidecar = (sidecar: unknown): MapLosSidecar | null => {
+  if (!sidecar) return null
+  const result = validateMapLosSidecar(sidecar)
+  return result.ok ? result.value : null
+}
+
+const uploadedAssetItem = (
+  asset: UploadedRoomAsset
+): MapAssetPickerItemViewModel => {
+  const root = asset.kind === 'counter' ? 'Counters' : 'Geomorphs'
+  const metadata: LocalMapAssetMetadata = {
+    root,
+    relativePath: asset.id,
+    kind: asset.kind,
+    width: asset.width,
+    height: asset.height,
+    gridScale: asset.gridScale,
+    tileKind:
+      asset.kind === 'geomorph'
+        ? deriveGeomorphTileKind(asset.width, asset.height)
+        : null
+  }
+  const losSidecar = validateUploadedLosSidecar(asset.losSidecar)
+  const label = uploadedAssetLabel(asset)
+
+  return {
+    asset: metadata,
+    assetRef: asset.id,
+    root,
+    relativePath: asset.id,
+    kind: asset.kind,
+    label,
+    dimensions: deriveMapAssetDimensionsViewModel(metadata),
+    tileKind: metadata.tileKind,
+    losSidecar,
+    losSummary: deriveMapAssetLosSidecarSummary(losSidecar),
+    boardDefaults:
+      asset.kind === 'geomorph'
+        ? {
+            name: label,
+            imageAssetId: asset.id,
+            width: asset.width,
+            height: asset.height,
+            scale: asset.gridScale
+          }
+        : null,
+    pieceDefaults:
+      asset.kind === 'counter'
+        ? {
+            name: label,
+            imageAssetId: asset.id,
+            width: asset.width,
+            height: asset.height,
+            scale: asset.gridScale / Math.max(asset.width, asset.height)
+          }
+        : null
+  }
+}
+
 export const createRoomAssetCreationController = ({
   elements,
   getState,
   getSelectedBoard,
   getSelectedBoardPieces,
   getClientIdentity,
+  getRoomId,
   getBootstrapIdentity,
   getCommandIdentity,
   createRequestId,
@@ -226,6 +310,7 @@ export const createRoomAssetCreationController = ({
   const listeners: Array<() => void> = []
   let assetPickerViewModel: MapAssetPickerViewModel | null = null
   let selectedBoardAssetId: string | null = null
+  let uploadedAssetItems: MapAssetPickerItemViewModel[] = []
 
   const addListener = (
     target: Pick<EventTarget, 'addEventListener' | 'removeEventListener'>,
@@ -236,9 +321,42 @@ export const createRoomAssetCreationController = ({
     listeners.push(() => target.removeEventListener(type, listener))
   }
 
-  const selectedPieceImageDataUrl = async (): Promise<string | null> => {
+  const currentRoomId = (): string =>
+    getRoomId?.() ?? getClientIdentity().gameId
+
+  const canUseUploadedAssets = (): boolean =>
+    dependencies.canUseUploadedAssets?.() ?? Boolean(dependencies.uploadAsset)
+
+  const addUploadedAssetItem = (
+    asset: UploadedRoomAsset
+  ): MapAssetPickerItemViewModel => {
+    const item = uploadedAssetItem(asset)
+    uploadedAssetItems = [
+      item,
+      ...uploadedAssetItems.filter(
+        (candidate) => candidate.assetRef !== item.assetRef
+      )
+    ]
+    renderLocalAssetPicker(assetPickerViewModel)
+    return item
+  }
+
+  const selectedPieceImageRef = async (): Promise<string | null> => {
     const file = elements.pieceImageFileInput.files?.[0]
     if (!file) return elements.pieceImageInput.value.trim() || null
+    if (
+      !elements.pieceCropInput.checked &&
+      dependencies.uploadAsset &&
+      canUseUploadedAssets()
+    ) {
+      const asset = await dependencies.uploadAsset({
+        roomId: currentRoomId(),
+        kind: 'counter',
+        file,
+        gridScale: 50
+      })
+      return addUploadedAssetItem(asset).assetRef
+    }
     if (!elements.pieceCropInput.checked) {
       return await readImageDataUrl(elements.pieceImageFileInput)
     }
@@ -307,14 +425,14 @@ export const createRoomAssetCreationController = ({
     viewModel: MapAssetPickerViewModel | null
   ): void => {
     const canPick = getCanPickLocalAssets()
-    const boardItems =
-      viewModel?.sections.flatMap((section) =>
-        section.items.filter((item) => item.boardDefaults)
-      ) ?? []
-    const counterItems =
-      viewModel?.sections.flatMap((section) =>
-        section.items.filter((item) => item.pieceDefaults)
-      ) ?? []
+    const localItems =
+      viewModel?.sections.flatMap((section) => section.items) ?? []
+    const boardItems = [...uploadedAssetItems, ...localItems].filter(
+      (item) => item.boardDefaults
+    )
+    const counterItems = [...uploadedAssetItems, ...localItems].filter(
+      (item) => item.pieceDefaults
+    )
 
     renderAssetOptions(
       elements.boardAssetSelect,
@@ -337,13 +455,13 @@ export const createRoomAssetCreationController = ({
       elements.localAssetStatus.textContent = 'Referee only'
       return
     }
-    if (!viewModel) {
+    if (!viewModel && uploadedAssetItems.length === 0) {
       elements.localAssetStatus.textContent = ''
       return
     }
 
-    const validation = viewModel.validationSummary
-    if (validation.hasErrors) {
+    const validation = viewModel?.validationSummary
+    if (validation?.hasErrors) {
       elements.localAssetStatus.textContent = [
         validation.title,
         ...validation.messages
@@ -353,12 +471,18 @@ export const createRoomAssetCreationController = ({
       return
     }
 
-    if (viewModel.emptyState) {
+    if (viewModel?.emptyState && uploadedAssetItems.length === 0) {
       elements.localAssetStatus.textContent = viewModel.emptyState.message
       return
     }
 
     elements.localAssetStatus.textContent = `${boardItems.length} board asset(s), ${counterItems.length} counter asset(s)`
+  }
+
+  const refreshUploadedAssets = async (): Promise<void> => {
+    if (!dependencies.listUploadedAssets) return
+    const assets = await dependencies.listUploadedAssets(currentRoomId())
+    uploadedAssetItems = assets.map(uploadedAssetItem)
   }
 
   const loadLocalAssetMetadata = (): void => {
@@ -372,12 +496,16 @@ export const createRoomAssetCreationController = ({
       )
     )
     renderLocalAssetPicker(assetPickerViewModel)
+    refreshUploadedAssets()
+      .then(() => renderLocalAssetPicker(assetPickerViewModel))
+      .catch(() => undefined)
   }
 
   const applySelectedBoardAsset = (): void => {
     const item = selectedAssetItem(
       assetPickerViewModel,
-      elements.boardAssetSelect.value
+      elements.boardAssetSelect.value,
+      uploadedAssetItems
     )
     const defaults = item?.boardDefaults
     if (!defaults) {
@@ -402,8 +530,11 @@ export const createRoomAssetCreationController = ({
 
   const selectedBoardLosSidecar = (imageAssetId: string | null) =>
     imageAssetId
-      ? (selectedAssetItem(assetPickerViewModel, imageAssetId)?.losSidecar ??
-        null)
+      ? (selectedAssetItem(
+          assetPickerViewModel,
+          imageAssetId,
+          uploadedAssetItems
+        )?.losSidecar ?? null)
       : null
 
   const reviewedBoardLosSidecar = (
@@ -449,7 +580,8 @@ export const createRoomAssetCreationController = ({
   const applySelectedCounterAsset = (): void => {
     const item = selectedAssetItem(
       assetPickerViewModel,
-      elements.counterAssetSelect.value
+      elements.counterAssetSelect.value,
+      uploadedAssetItems
     )
     const defaults = item?.pieceDefaults
     if (!defaults) {
@@ -492,19 +624,43 @@ export const createRoomAssetCreationController = ({
     const name =
       elements.boardNameInput.value.trim() ||
       `Board ${Object.keys(state?.boards || {}).length + 1}`
+    const boardFile = elements.boardImageFileInput.files?.[0]
+    const uploadedBoardAsset =
+      boardFile && dependencies.uploadAsset && canUseUploadedAssets()
+        ? addUploadedAssetItem(
+            await dependencies.uploadAsset({
+              roomId: currentRoomId(),
+              kind: 'geomorph',
+              file: boardFile,
+              gridScale: parsePositiveIntegerInput(
+                elements.boardScaleInput,
+                50
+              ),
+              losSidecar: elements.boardLosSidecarInput.value.trim() || null
+            })
+          )
+        : null
     const imageRef =
+      uploadedBoardAsset?.assetRef ||
       (await readImageDataUrl(elements.boardImageFileInput)) ||
       elements.boardImageInput.value.trim() ||
       null
-    const imageUrl = browserImageUrl(imageRef) ? imageRef : null
-    const hasBoardFile = Boolean(elements.boardImageFileInput.files?.[0])
+    const imageUrl = uploadedBoardAsset
+      ? null
+      : browserImageUrl(imageRef)
+        ? imageRef
+        : null
+    const hasBoardFile = Boolean(boardFile)
     const imageAssetId =
-      imageRef && !imageUrl
+      uploadedBoardAsset?.assetRef ??
+      (imageRef && !imageUrl
         ? imageRef
         : hasBoardFile
           ? selectedBoardAssetId
-          : null
-    const losSidecar = reviewedBoardLosSidecar(imageAssetId)
+          : null)
+    const losSidecar = uploadedBoardAsset
+      ? { ok: true as const, value: uploadedBoardAsset.losSidecar }
+      : reviewedBoardLosSidecar(imageAssetId)
     if (!losSidecar.ok) {
       reportError(losSidecar.error)
       elements.boardLosSidecarInput.focus()
@@ -560,7 +716,7 @@ export const createRoomAssetCreationController = ({
       board,
       name,
       linkedCharacterId,
-      imageAssetId: await selectedPieceImageDataUrl(),
+      imageAssetId: await selectedPieceImageRef(),
       width: parsePositiveIntegerInput(elements.pieceWidthInput, 50),
       height: parsePositiveIntegerInput(elements.pieceHeightInput, 50),
       scale: parsePositiveNumberInput(elements.pieceScaleInput, 1),

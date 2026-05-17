@@ -17,6 +17,23 @@
       }
     ]
   },
+  "d1_databases": [
+    {
+      "binding": "CEPHEUS_DB",
+      "database_name": "cepheus-online-private-beta",
+      "database_id": "set-in-cloudflare"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ASSET_BUCKET",
+      "bucket_name": "cepheus-online-assets"
+    }
+  ],
+  "vars": {
+    "APP_BASE_URL": "http://localhost:8787",
+    "DISCORD_CLIENT_ID": "set-with-wrangler-secret-or-env"
+  },
   "migrations": [
     {
       "tag": "v1",

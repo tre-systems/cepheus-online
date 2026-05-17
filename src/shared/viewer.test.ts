@@ -6,6 +6,7 @@ import {
   asCharacterId,
   asEventId,
   asGameId,
+  asNoteId,
   asPieceId,
   asUserId
 } from './ids'
@@ -65,6 +66,38 @@ const buildState = (): GameState => ({
       scale: 1,
       visibility: 'VISIBLE',
       freedom: 'LOCKED'
+    }
+  },
+  notes: {
+    [asNoteId('ref-note')]: {
+      id: asNoteId('ref-note'),
+      title: 'Referee clue',
+      body: 'The patron is lying.',
+      visibility: 'REFEREE',
+      ownerId: asUserId('referee'),
+      createdAt: '2026-05-03T00:00:00.000Z',
+      updatedAt: '2026-05-03T00:00:00.000Z',
+      updatedBy: asUserId('referee')
+    },
+    [asNoteId('player-note')]: {
+      id: asNoteId('player-note'),
+      title: 'Handout',
+      body: 'Docking bay 17.',
+      visibility: 'PLAYERS',
+      ownerId: asUserId('referee'),
+      createdAt: '2026-05-03T00:00:00.000Z',
+      updatedAt: '2026-05-03T00:00:00.000Z',
+      updatedBy: asUserId('referee')
+    },
+    [asNoteId('public-note')]: {
+      id: asNoteId('public-note'),
+      title: 'Public notice',
+      body: 'A ship is missing.',
+      visibility: 'PUBLIC',
+      ownerId: asUserId('referee'),
+      createdAt: '2026-05-03T00:00:00.000Z',
+      updatedAt: '2026-05-03T00:00:00.000Z',
+      updatedBy: asUserId('referee')
     }
   },
   diceLog: [],
@@ -148,6 +181,38 @@ describe('viewer filtering', () => {
 
     assert.deepEqual(Object.keys(filtered.pieces), ['visible'])
     assert.deepEqual(Object.keys(state.pieces).sort(), ['hidden', 'visible'])
+  })
+
+  it('filters notes and handouts by viewer role', () => {
+    const state = buildState()
+
+    const referee = filterGameStateForViewer(state, {
+      userId: asUserId('referee'),
+      role: 'PLAYER'
+    })
+    const player = filterGameStateForViewer(state, {
+      userId: asUserId('player'),
+      role: 'PLAYER'
+    })
+    const spectator = filterGameStateForViewer(state, {
+      userId: asUserId('spectator'),
+      role: 'SPECTATOR'
+    })
+
+    assert.deepEqual(Object.keys(referee.notes ?? {}).sort(), [
+      'player-note',
+      'public-note',
+      'ref-note'
+    ])
+    assert.deepEqual(Object.keys(player.notes ?? {}).sort(), [
+      'player-note',
+      'public-note'
+    ])
+    assert.deepEqual(Object.keys(spectator.notes ?? {}), ['public-note'])
+    assert.equal(
+      state.notes?.[asNoteId('ref-note')]?.body,
+      'The patron is lying.'
+    )
   })
 
   it('hides pre-reveal dice rolls and totals from referees', () => {

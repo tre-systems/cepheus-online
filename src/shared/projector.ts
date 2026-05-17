@@ -6,6 +6,7 @@ import {
 } from './projection/character-creation'
 import { diceEventHandlers } from './projection/dice'
 import { gameEventHandlers } from './projection/game'
+import { noteEventHandlers } from './projection/notes'
 import type {
   EventEnvelopeFor,
   EventHandler,
@@ -20,6 +21,7 @@ const createEventHandlers = (options: ProjectGameStateOptions = {}) =>
     ...gameEventHandlers,
     ...createCharacterEventHandlers(options),
     ...boardEventHandlers,
+    ...noteEventHandlers,
     ...diceEventHandlers
   }) satisfies EventHandlerRegistry
 

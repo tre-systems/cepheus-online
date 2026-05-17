@@ -8,7 +8,13 @@ import {
   type CareerTerm
 } from '../../shared/characterCreation'
 import { CEPHEUS_SRD_RULESET } from '../../shared/character-creation/cepheus-srd-ruleset'
-import { asCharacterId, asEventId, asGameId, asUserId } from '../../shared/ids'
+import {
+  asCharacterId,
+  asEventId,
+  asGameId,
+  asNoteId,
+  asUserId
+} from '../../shared/ids'
 import type {
   CharacterCreationHomeworld,
   CharacterCreationProjection,
@@ -82,6 +88,7 @@ const createState = (
   },
   boards: {},
   pieces: {},
+  notes: {},
   diceLog: [],
   selectedBoardId: null,
   eventSeq: 1
@@ -164,6 +171,101 @@ const finalizeCommand = () => ({
 })
 
 describe('deriveEventsForCommand error categories', () => {
+  it('derives referee-owned note lifecycle events', () => {
+    const noteId = asNoteId('note-1')
+    const create = runCommand(
+      {
+        type: 'CreateNote',
+        gameId,
+        actorId,
+        noteId,
+        title: 'Patron Lead',
+        body: '',
+        visibility: 'PLAYERS'
+      },
+      null
+    )
+
+    assert.equal(create.ok, true)
+    if (!create.ok) return
+    assert.deepEqual(create.value, [
+      {
+        type: 'NoteCreated',
+        noteId,
+        title: 'Patron Lead',
+        body: '',
+        visibility: 'PLAYERS',
+        ownerId: actorId
+      }
+    ])
+
+    const state = createState(null)
+    state.notes = {
+      [noteId]: {
+        id: noteId,
+        title: 'Patron Lead',
+        body: '',
+        visibility: 'PLAYERS',
+        ownerId: actorId,
+        createdAt: '2026-05-03T00:00:00.000Z',
+        updatedAt: '2026-05-03T00:00:00.000Z',
+        updatedBy: actorId
+      }
+    }
+
+    const update = deriveEventsForCommand(
+      {
+        type: 'UpdateNote',
+        gameId,
+        actorId,
+        noteId,
+        body: 'Meet at the downport.'
+      },
+      {
+        state,
+        currentSeq: 1,
+        nextSeq: 2,
+        gameSeed: 1234,
+        ruleset: CEPHEUS_SRD_RULESET
+      }
+    )
+
+    assert.equal(update.ok, true)
+    if (!update.ok) return
+    assert.deepEqual(update.value, [
+      {
+        type: 'NoteUpdated',
+        noteId,
+        body: 'Meet at the downport.'
+      }
+    ])
+  })
+
+  it('rejects note changes from non-referee actors', () => {
+    const result = deriveEventsForCommand(
+      {
+        type: 'CreateNote',
+        gameId,
+        actorId: asUserId('player-1'),
+        noteId: asNoteId('note-denied'),
+        title: 'Hidden clue',
+        body: '',
+        visibility: 'REFEREE'
+      },
+      {
+        state: createState(null),
+        currentSeq: 1,
+        nextSeq: 2,
+        gameSeed: 1234,
+        ruleset: CEPHEUS_SRD_RULESET
+      }
+    )
+
+    assert.equal(result.ok, false)
+    if (result.ok) return
+    assert.equal(result.error.code, 'not_allowed')
+  })
+
   it('emits semantic characteristic completion after the final stat roll', () => {
     const creation = createCreation('CHARACTERISTICS')
     const state = createState(creation)

@@ -15,11 +15,11 @@ the system. They are intentionally short: context, decision, and consequences.
 
 ## Open Decision Points
 
-- Whether the first implementation uses Durable Object storage only or adds D1
-  indexes immediately.
-- Whether collaborative notes start as server-ordered blocks or a CRDT document.
 - Whether Preact is worth adding later for complex forms.
-- Exact Discord OAuth/session storage design.
 - How much SRD text should be vendored versus imported at build time.
+- Whether uploaded custom rulesets use D1 metadata plus R2 JSON blobs, D1-only
+  storage, or another source boundary.
+- When plain server-ordered notes are no longer enough and a CRDT document
+  model is justified.
 
 When one of these is resolved, add a new ADR and remove the item from this list.

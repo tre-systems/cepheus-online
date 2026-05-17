@@ -18,6 +18,7 @@ import {
 } from './command-helpers'
 import { deriveDiceCommandEvents } from './dice-command-handlers'
 import { deriveGameCommandEvents } from './game-command-handlers'
+import { deriveNoteCommandEvents } from './note-command-handlers'
 
 export type { CommandContext } from './command-helpers'
 
@@ -28,6 +29,7 @@ type CharacterCreationCommand = Parameters<
 >[0]
 type DiceCommand = Parameters<typeof deriveDiceCommandEvents>[0]
 type GameOnlyCommand = Parameters<typeof deriveGameCommandEvents>[0]
+type NoteCommand = Parameters<typeof deriveNoteCommandEvents>[0]
 
 export const deriveEventsForCommand = (
   command: GameCommand,
@@ -71,6 +73,8 @@ export const deriveEventsForCommand = (
       )
     case 'board':
       return deriveBoardCommandEvents(command as BoardCommand, context)
+    case 'note':
+      return deriveNoteCommandEvents(command as NoteCommand, context)
     case 'dice':
       return deriveDiceCommandEvents(command as DiceCommand, context)
     default: {

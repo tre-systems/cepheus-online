@@ -129,6 +129,9 @@ export const readImageDimensions = (file: File) =>
 
 export const browserImageUrl = (value: string | null | undefined) => {
   const imageRef = value || ''
+  if (/^asset_[A-Za-z0-9_-]+$/.test(imageRef)) {
+    return `/api/assets/${encodeURIComponent(imageRef)}`
+  }
   if (
     imageRef.startsWith('/') ||
     imageRef.startsWith('http://') ||

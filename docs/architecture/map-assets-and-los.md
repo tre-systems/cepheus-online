@@ -11,7 +11,7 @@ repository.
 - Published product images and PDFs stay out of source control.
 - Runtime board images should be user-provided assets. Local development may
   bridge browser-selected files into the event stream as `data:` URLs, but
-  production should upload the images to R2 and reference them by asset id.
+  private-beta production uploads images to R2 and references them by asset id.
 - Runtime piece counters use the same policy. The event stream stores only an
   image asset reference, not bundled product art.
 - Derived per-game map metadata should be stored as game data, not as bundled
@@ -42,8 +42,8 @@ The first map-building flow should be:
 4. The app stores board composition as asset references plus transforms.
 5. Local development may encode selected files as `data:` URLs for immediate
    board/piece creation.
-6. Production uploads the selected images to R2 and stores asset ids instead of
-   embedding image bytes in events.
+6. Hosted production uploads the selected images to R2 and stores asset ids
+   instead of embedding image bytes in events.
 
 The app must never depend on checked-in copies of the published assets.
 
@@ -73,11 +73,9 @@ git.
 
 The current referee room dialog can load pasted metadata JSON and apply
 validated geomorph or counter defaults to board and piece creation fields. This
-is a setup aid: selected local references are stored as image asset ids, while
-actual browser rendering still needs a URL-like reference such as a selected
-`data:` file, a future R2 URL, or a reviewed uploaded asset id that the client
-can resolve. Production asset upload remains the bridge from local product files
-to durable game-ready image references.
+is a setup aid for local files. Hosted play should upload image files to R2,
+then store the returned `asset_*` id on boards and pieces. The client resolves
+those ids through `/api/assets/:assetId`, which requires room membership.
 
 The same boundary owns dependency-free LOS sidecar checks. Importers should call
 `validateMapLosSidecar` after referee review and before creating board data.
@@ -117,10 +115,10 @@ Test notes:
 
 ## Piece Counters
 
-Pieces can carry an optional `imageAssetId`. The current browser renderer treats
-URL-like references and `data:image/` references as image sources for Canvas
-pieces and rail avatars. This is enough for local file-input previews and future
-R2 URLs while keeping the published counter source folder outside git.
+Pieces can carry an optional `imageAssetId`. The current browser renderer
+treats URL-like references, `data:image/` references, and uploaded `asset_*`
+ids as image sources for Canvas pieces and rail avatars while keeping the
+published counter source folder outside git.
 
 For development, local counter spritesheets may be cropped in the browser into a
 final `data:image/png` piece image before the piece is created. Production should

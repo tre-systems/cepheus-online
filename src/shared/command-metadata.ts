@@ -5,6 +5,7 @@ export type CommandRoute =
   | 'board'
   | 'dice'
   | 'door'
+  | 'note'
   | 'sheet'
   | 'characterCreation'
 
@@ -12,6 +13,7 @@ export type CommandHandlerDomain =
   | 'game'
   | 'board'
   | 'dice'
+  | 'note'
   | 'character'
   | 'characterCreation'
 
@@ -295,6 +297,26 @@ const commandMetadataDefinitions = {
   },
   SetPieceFreedom: {
     route: 'board',
+    usesSeededDice: false,
+    autoAddExpectedSeq: true
+  },
+  CreateNote: {
+    route: 'note',
+    usesSeededDice: false,
+    autoAddExpectedSeq: true
+  },
+  UpdateNote: {
+    route: 'note',
+    usesSeededDice: false,
+    autoAddExpectedSeq: true
+  },
+  DeleteNote: {
+    route: 'note',
+    usesSeededDice: false,
+    autoAddExpectedSeq: true
+  },
+  SetNoteVisibility: {
+    route: 'note',
     usesSeededDice: false,
     autoAddExpectedSeq: true
   },

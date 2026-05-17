@@ -2,95 +2,79 @@
 
 Last reviewed: 2026-05-17.
 
-This is the active engineering backlog. It contains work that still needs a
-named home. Shipped work belongs in `git log`; historical review notes belong
-under `docs/provenance/` or `legacy/`.
+This is the active engineering backlog. Completed work belongs in `git log`;
+historical review notes belong under `docs/provenance/` or `legacy/`.
 
-## MVP Baseline
+## Private-Beta MVP Baseline
 
-The current application has a playable spine:
+The current application has the private-beta spine in place:
 
 - Cloudflare Worker routes with one `GameRoomDO` per live room.
-- Server-ordered commands, event storage, checkpoints, replay projection, and
-  viewer-safe state responses.
-- Dependency-free browser shell with Canvas board play, room switching, PWA
-  shell assets, WebSocket updates, synced dice reveal timing, and disposal-safe
-  client wiring.
-- Guided character creation through the SRD procedure, including semantic
-  server commands/events, legal-action projection, live follower activity,
-  reveal-safe dice, mustering, finalization, and completed-sheet display.
-- Local map/counter asset metadata paths, board/piece creation, door state, LOS
-  sidecar validation, and hidden-piece viewer filtering.
+- Discord OAuth sign-in, signed HTTP-only app sessions, D1 users/sessions,
+  rooms, memberships, invites, and membership-backed hosted room access.
+- Server-ordered commands, event storage, checkpoints, replay projection,
+  synced dice reveal timing, and viewer-safe state responses.
+- Dependency-free browser shell with Canvas board play, WebSocket updates,
+  room switching, PWA shell assets, and disposal-safe client wiring.
+- Guided SRD character creation through semantic server commands/events,
+  legal-action projection, reveal-safe dice, mustering, finalization, and
+  completed-sheet display.
+- R2-backed uploaded board/counter image assets with D1 metadata, protected
+  asset serving, asset picker integration, board/piece creation, door state,
+  LOS sidecar validation, and hidden-piece viewer filtering.
+- Server-ordered plain-text notes and handouts with referee mutation controls
+  and viewer filtering.
+- Owner room export/delete paths covering D1 metadata, Durable Object room
+  data, note state, asset manifests, and R2 cleanup.
 - Rulesets loaded as JSON data through the provider boundary. The bundled SRD
   ruleset is `data/rulesets/cepheus-engine-srd.json`.
-- CI and local verification for generated assets, lint, docs, boundaries,
-  diagrams, TypeScript, unit tests, character-creation E2E, tactical-board E2E,
-  and Cloudflare deploy dry runs.
+- Local verification for generated assets, lint, docs, boundaries, diagrams,
+  TypeScript, unit tests, character-creation E2E, tactical-board E2E, and
+  Cloudflare deploy dry runs.
 
-## Active Priorities
+## Active Release Checklist
 
-### 1. Release Hardening
-
-- Run `npm run smoke:deployed` after the next deployed candidate.
-- Run `npm run deploy:dry-run` before release publishing.
+- Replace the placeholder D1 `database_id` in `wrangler.jsonc` with the real
+  Cloudflare D1 database id.
+- Create or confirm the `cepheus-online-private-beta` D1 database and
+  `cepheus-online-assets` R2 bucket.
+- Apply `migrations/0001_private_beta.sql` in Cloudflare.
+- Configure `APP_BASE_URL`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and
+  `SESSION_SECRET` for the target environment.
+- Add the Discord redirect URL `${APP_BASE_URL}/auth/discord/callback`.
+- Run `npm run verify:full`.
+- Run `npm run deploy:dry-run`.
+- Deploy a candidate and run `npm run smoke:deployed -- <candidate-url>`.
 - Complete the mobile PWA manual checklist on a real phone: install, reload,
   offline shell fallback, update activation, and reconnect recovery.
-- Confirm `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` are present in
-  GitHub/Cloudflare settings.
-- Decide when to add a custom domain or route in `wrangler.jsonc`; the
-  workers.dev host is acceptable until then.
-- Decide retention/export/delete policy before real campaign data is stored.
+- Run the private-beta manual checks in
+  [testing strategy](../engineering/testing-strategy.md#private-beta-manual-checks).
 
-### 2. Character Creation Polish
+## MVP Follow-Up Before Invites
 
-- Keep reducing legacy compatibility adapters. Historical
-  `CharacterCreationTransitioned` replay must continue to project, but new UI,
-  activity cards, and provenance should read semantic facts.
-- Keep expanding the projection-fed creator view model until each step consumes
-  one shape for phase, prompt, legal actions, pending choices, progress, roll
-  facts, button state, and sheet preview.
-- Polish injury, anagathics, reenlistment, mustering, and completed-sheet copy
-  so the rules outcome is clear on phone-sized screens.
-- Extend final sheet/export provenance only where it improves table use:
-  careers, ranks, benefits, aging effects, credits, equipment, UPP, and notes.
-- Keep reveal/filtering tests current for every new roll-bearing semantic
-  event, including future replay/activity history and Discord logging.
+- Add a test-stubbed private-beta E2E covering sign-in, room creation, invite
+  acceptance, and two authenticated tabs.
+- Add a private-beta E2E for owner export/delete after a disposable uploaded
+  asset and note are created.
+- Add deployed smoke coverage for protected auth/session failures once the
+  smoke script can operate against configured private-beta credentials.
+- Review client role affordances after authenticated state hydration so player
+  tabs do not display referee-only controls before the first room state arrives.
+- Add compact UI for room creation and invite creation; the API is present, but
+  the current browser shell still centers on existing room links.
 
-### 3. Tactical Table And Referee Tools
+## Post-MVP Product Work
 
-- Build the production asset path from local file metadata to durable uploaded
-  asset ids without committing licensed product files.
-- Add board composition and richer board-management controls for referee prep.
-- Expand LOS sidecar support from validation/persistence into extraction,
-  review, manual correction, and editing.
-- Add referee controls for visibility, prep/admin mode, and direct scene
-  management while preserving viewer filtering.
-- Keep tactical E2E coverage focused on board creation, piece creation,
-  movement, door state, refresh recovery, and hidden-piece filtering.
-
-### 4. Public Play, Security, And Identity
-
-- Implement Discord OAuth, internal app sessions, room authorization, and
-  invite flow.
-- Add public-room rate limits for commands, WebSocket upgrades/messages,
-  imports, and uploaded assets.
-- Expand viewer-filtering coverage for notes, handouts, secret map layers, and
-  future Discord-linked identity.
-- Add diagnostics that summarize failures without logging secrets, tokens, raw
-  IPs, or hidden game state.
-- Add export/delete paths once retention policy is decided.
-
-### 5. Broader Cepheus Rules
-
-- Add action-sheet skill rolls using the same server dice and reveal path.
-- Add combat, damage, healing, armor, initiative, range, cover, fatigue, and
-  status helpers as pure shared rules.
-- Continue equipment and credit-ledger work through event-backed item/ledger
+- Broader tactical play: board composition, richer prep/admin mode, visibility
+  controls, extraction/review/editing for LOS sidecars, initiative, combat,
+  damage, healing, armor, range, cover, fatigue, and status helpers.
+- Player economy and equipment: continue event-backed item and credit-ledger
   commands rather than whole-list replacement.
-- Add notes and handouts as server-ordered blocks. Use CRDTs only if a concrete
-  document-collaboration need appears.
-- Add custom ruleset upload/storage only after validation, moderation limits,
-  storage source, and ruleset id/version/hash migration policy are defined.
+- Ruleset storage: custom ruleset upload/storage after validation, moderation
+  limits, source identity, and id/version/hash migration policy are defined.
+- Discord bot/slash commands for game links, rolls, and summaries after the
+  OAuth/invite MVP is stable.
+- Collaborative documents only when plain server-ordered notes are not enough.
 
 ## Guardrails
 
@@ -110,6 +94,6 @@ The current application has a playable spine:
 - In-app chat. Discord remains the chat and narrative layer.
 - CRDTs for notes before a concrete collaborative editing need exists.
 - React, Material UI, Amplify, DataStore, XState, Zustand, or schema-form UI.
-- Public Discord room authorization before viewer filtering and rate limits are
-  ready for real campaign data.
+- Public-room launch hardening before private-beta access, export/delete,
+  viewer filtering, and rate limits have been tested against real tables.
 - Large combat UI before character creation and tactical scene flows are stable.

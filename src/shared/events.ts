@@ -3,6 +3,7 @@ import type {
   CharacterId,
   EventId,
   GameId,
+  NoteId,
   PieceId,
   UserId
 } from './ids'
@@ -34,6 +35,7 @@ import type {
   CharacterCreationProjection,
   CharacterSheetPatch,
   CharacterType,
+  NoteVisibility,
   PieceFreedom,
   PieceVisibility
 } from './state'
@@ -438,6 +440,29 @@ export type GameEvent =
       type: 'PieceFreedomChanged'
       pieceId: PieceId
       freedom: PieceFreedom
+    }
+  | {
+      type: 'NoteCreated'
+      noteId: NoteId
+      title: string
+      body: string
+      visibility: NoteVisibility
+      ownerId: UserId
+    }
+  | {
+      type: 'NoteUpdated'
+      noteId: NoteId
+      title?: string
+      body?: string
+    }
+  | {
+      type: 'NoteDeleted'
+      noteId: NoteId
+    }
+  | {
+      type: 'NoteVisibilityChanged'
+      noteId: NoteId
+      visibility: NoteVisibility
     }
   | {
       type: 'DiceRolled'

@@ -7,6 +7,10 @@ describe('image asset helpers', () => {
   it('allows browser-loadable image references', () => {
     assert.equal(browserImageUrl('/assets/board.png'), '/assets/board.png')
     assert.equal(
+      browserImageUrl('asset_uploaded_1'),
+      '/api/assets/asset_uploaded_1'
+    )
+    assert.equal(
       browserImageUrl('http://example.test/piece.png'),
       'http://example.test/piece.png'
     )

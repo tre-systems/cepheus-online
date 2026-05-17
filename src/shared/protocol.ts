@@ -14,7 +14,7 @@ import type {
   InjurySecondaryChoice
 } from './characterCreation'
 import type { GameCommand } from './commands'
-import { asBoardId, asCharacterId, asPieceId } from './ids'
+import { asBoardId, asCharacterId, asNoteId, asPieceId } from './ids'
 import type { LiveActivityDescriptor } from './live-activity'
 import { validateMapLosSidecar } from './mapAssets.js'
 import type { MapLosSidecar } from './mapAssets'
@@ -27,6 +27,7 @@ import type {
   CharacterSheetPatch,
   CharacterType,
   GameState,
+  NoteVisibility,
   PieceFreedom,
   PieceVisibility
 } from './state'
@@ -102,6 +103,7 @@ const invalidCommand = (message: string): CommandError => ({
 const MAX_STRING_ARRAY_LENGTH = 100
 const MAX_STRING_ARRAY_ITEM_LENGTH = 200
 const MAX_STRING_LENGTH = 1000
+const MAX_TEXT_LENGTH = 20_000
 
 const parseId = <T>(
   raw: unknown,
@@ -175,6 +177,29 @@ const parseOptionalString = (
   if (!value) return ok(null)
 
   return ok(value)
+}
+
+const parseText = (
+  raw: unknown,
+  label: string,
+  maxLength = MAX_TEXT_LENGTH
+): Result<string, CommandError> => {
+  if (!isString(raw)) return err(invalidCommand(`${label} must be a string`))
+  if (raw.length > maxLength) {
+    return err(invalidCommand(`${label} cannot exceed ${maxLength} characters`))
+  }
+
+  return ok(raw)
+}
+
+const parseOptionalText = (
+  raw: unknown,
+  label: string,
+  maxLength = MAX_TEXT_LENGTH
+): Result<string | undefined, CommandError> => {
+  if (raw === undefined) return ok(undefined)
+
+  return parseText(raw, label, maxLength)
 }
 
 const parseOptionalMapLosSidecar = (
@@ -526,6 +551,16 @@ const parsePieceFreedom = (
   }
 
   return err(invalidCommand('freedom is not supported'))
+}
+
+const parseNoteVisibility = (
+  raw: unknown
+): Result<NoteVisibility, CommandError> => {
+  if (raw === 'REFEREE' || raw === 'PLAYERS' || raw === 'PUBLIC') {
+    return ok(raw)
+  }
+
+  return err(invalidCommand('visibility is not supported'))
 }
 
 const parseBoolean = (
@@ -1873,6 +1908,72 @@ export const decodeCommand = (
         ...base.value,
         pieceId: pieceId.value,
         freedom: freedom.value
+      })
+    }
+
+    case 'CreateNote': {
+      const noteId = parseId(raw.noteId, 'noteId', asNoteId)
+      if (!noteId.ok) return noteId
+      const title = parseString(raw.title, 'title')
+      if (!title.ok) return title
+      const body = parseText(raw.body, 'body')
+      if (!body.ok) return body
+      const visibility = parseNoteVisibility(raw.visibility)
+      if (!visibility.ok) return visibility
+
+      return ok({
+        type: 'CreateNote',
+        ...base.value,
+        noteId: noteId.value,
+        title: title.value,
+        body: body.value,
+        visibility: visibility.value
+      })
+    }
+
+    case 'UpdateNote': {
+      const noteId = parseId(raw.noteId, 'noteId', asNoteId)
+      if (!noteId.ok) return noteId
+      const title = parseOptionalString(raw.title, 'title')
+      if (!title.ok) return title
+      const body = parseOptionalText(raw.body, 'body')
+      if (!body.ok) return body
+
+      if (title.value === null && body.value === undefined) {
+        return err(invalidCommand('UpdateNote must include title or body'))
+      }
+
+      return ok({
+        type: 'UpdateNote',
+        ...base.value,
+        noteId: noteId.value,
+        ...(title.value === null ? {} : { title: title.value }),
+        ...(body.value === undefined ? {} : { body: body.value })
+      })
+    }
+
+    case 'DeleteNote': {
+      const noteId = parseId(raw.noteId, 'noteId', asNoteId)
+      if (!noteId.ok) return noteId
+
+      return ok({
+        type: 'DeleteNote',
+        ...base.value,
+        noteId: noteId.value
+      })
+    }
+
+    case 'SetNoteVisibility': {
+      const noteId = parseId(raw.noteId, 'noteId', asNoteId)
+      if (!noteId.ok) return noteId
+      const visibility = parseNoteVisibility(raw.visibility)
+      if (!visibility.ok) return visibility
+
+      return ok({
+        type: 'SetNoteVisibility',
+        ...base.value,
+        noteId: noteId.value,
+        visibility: visibility.value
       })
     }
 

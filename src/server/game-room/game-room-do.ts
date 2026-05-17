@@ -11,12 +11,20 @@ import type { DurableObjectState, WebSocketResponseInit } from '../cloudflare'
 import type { Env } from '../env'
 import { jsonResponse } from '../http'
 import {
+  INTERNAL_ROOM_ADMIN_HEADER,
+  parseTrustedViewerHeaders
+} from '../trusted-room-headers'
+import {
   ACTOR_SESSION_HEADER,
   actorSessionSecretFromTags,
   actorSessionTag,
   normalizeActorSessionSecret
 } from './actor-session'
-import { broadcastRoomState, serializeMessage } from './broadcast'
+import {
+  broadcastRoomState,
+  serializeMessage,
+  viewerFromSocketTags
+} from './broadcast'
 import { commandError } from './command-helpers'
 import { createCommandRateLimiter } from './command-rate-limit'
 import {
@@ -27,12 +35,18 @@ import {
   noopPublicationTelemetrySink,
   type PublicationTelemetrySink
 } from './publication-telemetry'
-import { buildRoomStateMessage, parseViewerFromUrl } from './queries'
+import { buildRoomStateMessage, parseViewerFromRequest } from './queries'
 import {
   createRevealBroadcastScheduler,
   type RevealBroadcastScheduler
 } from './reveal-scheduler'
-import { gameSeedKey } from './storage'
+import {
+  deleteGameStorage,
+  gameSeedKey,
+  getEventSeq,
+  readCheckpoint,
+  readEventStream
+} from './storage'
 
 declare const WebSocketPair: {
   new (): {
@@ -63,6 +77,8 @@ const parseRoomRoute = (url: URL): RoomRoute | null => {
 const MAX_COMMAND_BODY_BYTES = 64 * 1024
 const MAX_TEST_SEED_BODY_BYTES = 1024
 const MAX_WEBSOCKET_MESSAGE_BYTES = 64 * 1024
+const WEBSOCKET_MESSAGE_RATE_LIMIT_WINDOW_MS = 10_000
+const MAX_WEBSOCKET_MESSAGES_PER_WINDOW = 120
 const RATE_LIMIT_WINDOW_MS = 10_000
 const MAX_COMMANDS_PER_WINDOW = 40
 const encoder = new TextEncoder()
@@ -76,11 +92,18 @@ const isLocalTestHost = (hostname: string): boolean =>
   hostname === '[::1]' ||
   hostname.endsWith('.test')
 
+const hasInternalAdminHeader = (request: Request, action: string): boolean =>
+  request.headers.get(INTERNAL_ROOM_ADMIN_HEADER) === action
+
 export class GameRoomDO {
   private readonly commandRateLimiter = createCommandRateLimiter({
     windowMs: RATE_LIMIT_WINDOW_MS,
     maxCommandsPerWindow: MAX_COMMANDS_PER_WINDOW
   })
+  private readonly webSocketMessageWindows = new WeakMap<
+    WebSocket,
+    { count: number; resetAt: number }
+  >()
   private readonly revealScheduler: RevealBroadcastScheduler
 
   constructor(
@@ -122,6 +145,24 @@ export class GameRoomDO {
     return actorSessionSecretFromTags(this.getTags(socket))
   }
 
+  private checkWebSocketMessageRate(socket: WebSocket): boolean {
+    const now = Date.now()
+    const current = this.webSocketMessageWindows.get(socket)
+
+    if (!current || current.resetAt <= now) {
+      this.webSocketMessageWindows.set(socket, {
+        count: 1,
+        resetAt: now + WEBSOCKET_MESSAGE_RATE_LIMIT_WINDOW_MS
+      })
+      return true
+    }
+
+    if (current.count >= MAX_WEBSOCKET_MESSAGES_PER_WINDOW) return false
+
+    current.count += 1
+    return true
+  }
+
   private async buildRoomStateMessage(
     gameId: GameId,
     viewer: GameViewer
@@ -151,13 +192,15 @@ export class GameRoomDO {
   private async handleCommandMessage(
     gameId: GameId,
     message: Extract<ClientMessage, { type: 'command' }>,
-    actorSessionSecret: string | null
+    actorSessionSecret: string | null,
+    viewer?: GameViewer
   ): ReturnType<typeof handleRoomCommandMessage> {
     return handleRoomCommandMessage({
       storage: this.state.storage,
       gameId,
       message,
       actorSessionSecret,
+      viewer,
       commandRateLimiter: this.commandRateLimiter,
       telemetrySink: this.publicationTelemetrySink
     })
@@ -166,7 +209,8 @@ export class GameRoomDO {
   private async handleJsonMessage(
     raw: unknown,
     gameId: GameId,
-    actorSessionSecret: string | null
+    actorSessionSecret: string | null,
+    viewer?: GameViewer
   ): Promise<
     | {
         ok: true
@@ -205,10 +249,27 @@ export class GameRoomDO {
       }
     }
 
+    if (viewer?.userId && decoded.value.command.actorId !== viewer.userId) {
+      return {
+        ok: false,
+        status: 403,
+        message: {
+          type: 'commandRejected',
+          requestId: decoded.value.requestId,
+          error: commandError(
+            'not_allowed',
+            'Command actor does not match authenticated session'
+          ),
+          eventSeq: await getEventSeq(this.state.storage, gameId)
+        }
+      }
+    }
+
     const result = await this.handleCommandMessage(
       gameId,
       decoded.value,
-      actorSessionSecret
+      actorSessionSecret,
+      viewer
     )
     return result.ok
       ? {
@@ -293,6 +354,50 @@ export class GameRoomDO {
     })
   }
 
+  private async handleAdminExport(
+    request: Request,
+    gameId: GameId
+  ): Promise<Response> {
+    if (!hasInternalAdminHeader(request, 'export')) {
+      return jsonResponse({ error: 'Not found' }, { status: 404 })
+    }
+
+    const [eventStream, checkpoint] = await Promise.all([
+      readEventStream(this.state.storage, gameId),
+      readCheckpoint(this.state.storage, gameId)
+    ])
+
+    return jsonResponse({
+      eventStream,
+      checkpoint: checkpoint
+        ? {
+            gameId: checkpoint.gameId,
+            seq: checkpoint.seq,
+            savedAt: checkpoint.savedAt,
+            stateEventSeq: checkpoint.state.eventSeq
+          }
+        : null,
+      state: checkpoint?.state ?? null,
+      notes: checkpoint?.state.notes ?? {}
+    })
+  }
+
+  private async handleAdminDelete(
+    request: Request,
+    gameId: GameId
+  ): Promise<Response> {
+    if (!hasInternalAdminHeader(request, 'delete')) {
+      return jsonResponse({ error: 'Not found' }, { status: 404 })
+    }
+
+    await deleteGameStorage(this.state.storage, gameId)
+    for (const socket of this.getWebSockets()) {
+      socket.close(1001, 'Room deleted')
+    }
+
+    return jsonResponse({ ok: true })
+  }
+
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
     const route = parseRoomRoute(url)
@@ -319,7 +424,7 @@ export class GameRoomDO {
         )
       }
 
-      const viewer = parseViewerFromUrl(url)
+      const viewer = parseViewerFromRequest(request, url)
       const pair = new WebSocketPair()
       const client = pair[0]
       const server = pair[1]
@@ -343,10 +448,18 @@ export class GameRoomDO {
     }
 
     if (request.method === 'GET' && route.action === 'state') {
-      const viewer = parseViewerFromUrl(url)
+      const viewer = parseViewerFromRequest(request, url)
       return jsonResponse(
         await this.buildRoomStateMessage(route.gameId, viewer)
       )
+    }
+
+    if (request.method === 'POST' && route.action === 'admin/export') {
+      return this.handleAdminExport(request, route.gameId)
+    }
+
+    if (request.method === 'POST' && route.action === 'admin/delete') {
+      return this.handleAdminDelete(request, route.gameId)
     }
 
     if (request.method === 'POST' && route.action === 'test/seed') {
@@ -389,7 +502,8 @@ export class GameRoomDO {
       const result = await this.handleJsonMessage(
         raw,
         route.gameId,
-        normalizeActorSessionSecret(request.headers.get(ACTOR_SESSION_HEADER))
+        normalizeActorSessionSecret(request.headers.get(ACTOR_SESSION_HEADER)),
+        parseTrustedViewerHeaders(request.headers) ?? undefined
       )
 
       if (result.ok && result.state) {
@@ -436,6 +550,15 @@ export class GameRoomDO {
       return
     }
 
+    if (!this.checkWebSocketMessageRate(socket)) {
+      this.send(socket, {
+        type: 'error',
+        error: commandError('not_allowed', 'Too many WebSocket messages')
+      })
+      socket.close(1008, 'Too many messages')
+      return
+    }
+
     try {
       raw = JSON.parse(message)
     } catch {
@@ -479,10 +602,12 @@ export class GameRoomDO {
       return
     }
 
+    const socketViewer = viewerFromSocketTags(this.getTags(socket))
     const result = await this.handleCommandMessage(
       gameId,
       decoded.value,
-      this.actorSessionFromSocket(socket)
+      this.actorSessionFromSocket(socket),
+      socketViewer.userId ? socketViewer : undefined
     )
 
     if (!result.ok) {

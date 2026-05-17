@@ -7,6 +7,7 @@ import {
   type ViewerRole
 } from '../../shared/viewer'
 import type { DurableObjectStorage } from '../cloudflare'
+import { parseTrustedViewerHeaders } from '../trusted-room-headers'
 import { getProjectedGameState } from './projection'
 import { resolveRoomRulesetData } from './ruleset-provider'
 import { getEventSeq } from './storage'
@@ -49,6 +50,12 @@ export const parseViewerFromUrl = (url: URL): GameViewer => ({
     allowReferee: isLocalDevHost(url)
   })
 })
+
+export const parseViewerFromRequest = (
+  request: Request,
+  url: URL
+): GameViewer =>
+  parseTrustedViewerHeaders(request.headers) ?? parseViewerFromUrl(url)
 
 export const viewerFromCommand = (
   message: Extract<ClientMessage, { type: 'command' }>

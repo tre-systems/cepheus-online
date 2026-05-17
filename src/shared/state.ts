@@ -3,6 +3,7 @@ import type {
   CharacterId,
   EventId,
   GameId,
+  NoteId,
   PieceId,
   UserId
 } from './ids'
@@ -24,6 +25,7 @@ export type CharacterType = 'PLAYER' | 'NPC' | 'ANIMAL' | 'ROBOT'
 
 export type PieceVisibility = 'HIDDEN' | 'PREVIEW' | 'VISIBLE'
 export type PieceFreedom = 'LOCKED' | 'UNLOCKED' | 'SHARE'
+export type NoteVisibility = 'REFEREE' | 'PLAYERS' | 'PUBLIC'
 
 export type CharacteristicKey = 'str' | 'dex' | 'end' | 'int' | 'edu' | 'soc'
 
@@ -110,6 +112,7 @@ export interface GameState {
   characters: Record<CharacterId, CharacterState>
   boards: Record<BoardId, BoardState>
   pieces: Record<PieceId, PieceState>
+  notes?: Record<NoteId, NoteState>
   diceLog: DiceRollState[]
   selectedBoardId: BoardId | null
   eventSeq: number
@@ -167,6 +170,17 @@ export interface PieceState {
   scale: number
   visibility: PieceVisibility
   freedom: PieceFreedom
+}
+
+export interface NoteState {
+  id: NoteId
+  title: string
+  body: string
+  visibility: NoteVisibility
+  ownerId: UserId
+  createdAt: string
+  updatedAt: string
+  updatedBy: UserId | null
 }
 
 export interface DiceRollState {

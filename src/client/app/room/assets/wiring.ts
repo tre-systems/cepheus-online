@@ -8,6 +8,7 @@ import type {
 import type { ClientIdentity } from '../../../game-commands.js'
 import type { BoardCommand } from '../../core/command-router.js'
 import type { RequiredAppElements } from '../../core/elements.js'
+import type { UploadedRoomAsset } from '../api.js'
 import type { BootstrapCommandContext } from '../bootstrap-flow.js'
 import {
   createRoomAssetCreationController,
@@ -21,6 +22,7 @@ export interface RoomAssetCreationWiringOptions {
   getSelectedBoard: () => BoardState | null
   getSelectedBoardPieces: () => readonly PieceState[]
   getClientIdentity: () => ClientIdentity
+  getRoomId?: () => string
   getBootstrapIdentity: () => BootstrapCommandContext
   createRequestId: (scope: string) => string
   postCommand: (command: GameCommand, requestId?: string) => Promise<unknown>
@@ -32,6 +34,13 @@ export interface RoomAssetCreationWiringOptions {
   requestRender: () => void
   reportError: (message: string) => void
   getCanPickLocalAssets?: () => boolean
+  listUploadedAssets?: (roomId: string) => Promise<UploadedRoomAsset[]>
+  uploadAsset?: NonNullable<
+    RoomAssetCreationOptions['dependencies']
+  >['uploadAsset']
+  canUseUploadedAssets?: NonNullable<
+    RoomAssetCreationOptions['dependencies']
+  >['canUseUploadedAssets']
   createController?: (
     options: RoomAssetCreationOptions
   ) => RoomAssetCreationController
@@ -43,6 +52,7 @@ export const createRoomAssetCreationWiring = ({
   getSelectedBoard,
   getSelectedBoardPieces,
   getClientIdentity,
+  getRoomId,
   getBootstrapIdentity,
   createRequestId,
   postCommand,
@@ -52,6 +62,9 @@ export const createRoomAssetCreationWiring = ({
   requestRender,
   reportError,
   getCanPickLocalAssets,
+  listUploadedAssets,
+  uploadAsset,
+  canUseUploadedAssets,
   createController = createRoomAssetCreationController
 }: RoomAssetCreationWiringOptions): RoomAssetCreationController => {
   return createController({
@@ -91,6 +104,7 @@ export const createRoomAssetCreationWiring = ({
     getSelectedBoard,
     getSelectedBoardPieces,
     getClientIdentity,
+    getRoomId,
     getBootstrapIdentity,
     getCommandIdentity: getClientIdentity,
     createRequestId,
@@ -100,6 +114,11 @@ export const createRoomAssetCreationWiring = ({
     selectPiece,
     requestRender,
     reportError,
-    getCanPickLocalAssets
+    getCanPickLocalAssets,
+    dependencies: {
+      listUploadedAssets,
+      uploadAsset,
+      canUseUploadedAssets
+    }
   })
 }

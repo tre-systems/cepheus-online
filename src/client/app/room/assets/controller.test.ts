@@ -13,7 +13,10 @@ import type {
   CharacterState,
   GameState
 } from '../../../../shared/state'
-import { createRoomAssetCreationController } from './controller'
+import {
+  createRoomAssetCreationController,
+  type RoomAssetCreationDependencies
+} from './controller'
 
 class FakeTarget {
   listeners: Record<string, EventListener[]> = {}
@@ -127,7 +130,10 @@ const gameState = (): GameState => ({
 const flushAsyncListeners = (): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, 0))
 
-const createHarness = (initialState: GameState | null = gameState()) => {
+const createHarness = (
+  initialState: GameState | null = gameState(),
+  dependencyOverrides: RoomAssetCreationDependencies = {}
+) => {
   let state = initialState
   const errors: string[] = []
   const postedCommands: GameCommand[] = []
@@ -187,6 +193,7 @@ const createHarness = (initialState: GameState | null = gameState()) => {
     getSelectedBoard: () => state?.boards[boardId] ?? null,
     getSelectedBoardPieces: () => [],
     getClientIdentity: () => ({ gameId, actorId }),
+    getRoomId: () => gameId,
     getBootstrapIdentity: () => ({ roomId: gameId, actorId }),
     getCommandIdentity: () => ({ gameId, actorId }),
     createRequestId: (scope) => scope,
@@ -219,7 +226,8 @@ const createHarness = (initialState: GameState | null = gameState()) => {
       readImageDimensions: async () => ({ width: 200, height: 100 }),
       readImageDataUrl: async (input) =>
         input.files?.[0] ? 'data:image/png;base64,test' : null,
-      readCroppedImageDataUrl: async () => 'data:image/png;base64,crop'
+      readCroppedImageDataUrl: async () => 'data:image/png;base64,crop',
+      ...dependencyOverrides
     }
   })
 
@@ -597,6 +605,137 @@ describe('room asset creation controller', () => {
     assert.equal(command.imageAssetId, 'Geomorphs/standard/deck-01.jpg')
     assert.equal(command.url, 'data:image/png;base64,test')
     assert.equal(command.losSidecar?.occluders[0]?.id, 'iris-1')
+  })
+
+  it('uploads selected board files and uses the protected asset id', async () => {
+    const uploads: Array<{
+      roomId: string
+      file: File
+      losSidecar?: string | null
+    }> = []
+    const imageFile = { type: 'image/png' } as File
+    const harness = createHarness(gameState(), {
+      uploadAsset: async (input) => {
+        uploads.push(input)
+        return {
+          id: 'asset_uploaded_board',
+          kind: 'geomorph',
+          url: '/api/assets/asset_uploaded_board',
+          width: 1200,
+          height: 800,
+          gridScale: 50,
+          losSidecar: {
+            assetRef: 'asset_uploaded_board',
+            width: 1200,
+            height: 800,
+            gridScale: 50,
+            occluders: []
+          }
+        }
+      }
+    })
+    harness.elements.boardNameInput.value = 'Uploaded Board'
+    harness.elements.boardImageFileInput.files = [
+      imageFile
+    ] as unknown as FileList
+    harness.elements.boardLosSidecarInput.value = JSON.stringify({
+      assetRef: 'client-placeholder',
+      width: 1200,
+      height: 800,
+      gridScale: 50,
+      occluders: []
+    })
+
+    harness.elements.createBoard.dispatch('click')
+    await flushAsyncListeners()
+
+    assert.equal(uploads[0]?.roomId, 'room-1')
+    assert.equal(uploads[0]?.file, imageFile)
+    const command = harness.boardCommands[0]
+    assert.equal(command?.type, 'CreateBoard')
+    if (command?.type !== 'CreateBoard') return
+    assert.equal(command.imageAssetId, 'asset_uploaded_board')
+    assert.equal(command.url, null)
+    assert.equal(command.losSidecar?.assetRef, 'asset_uploaded_board')
+  })
+
+  it('uses local data URLs for board files when uploaded assets are unavailable', async () => {
+    let uploadCalled = false
+    const imageFile = { type: 'image/png' } as File
+    const harness = createHarness(gameState(), {
+      canUseUploadedAssets: () => false,
+      uploadAsset: async () => {
+        uploadCalled = true
+        throw new Error('should not upload')
+      }
+    })
+    harness.elements.boardNameInput.value = 'Local Board'
+    harness.elements.boardImageFileInput.files = [
+      imageFile
+    ] as unknown as FileList
+
+    harness.elements.createBoard.dispatch('click')
+    await flushAsyncListeners()
+
+    assert.equal(uploadCalled, false)
+    const command = harness.boardCommands[0]
+    assert.equal(command?.type, 'CreateBoard')
+    if (command?.type !== 'CreateBoard') return
+    assert.equal(command.imageAssetId, null)
+    assert.equal(command.url, 'data:image/png;base64,test')
+  })
+
+  it('uploads uncropped piece files and creates pieces with the protected asset id', async () => {
+    const imageFile = { type: 'image/png' } as File
+    const harness = createHarness(gameState(), {
+      uploadAsset: async () => ({
+        id: 'asset_uploaded_counter',
+        kind: 'counter',
+        url: '/api/assets/asset_uploaded_counter',
+        width: 100,
+        height: 100,
+        gridScale: 50,
+        losSidecar: null
+      })
+    })
+    harness.elements.pieceNameInput.value = 'Drone'
+    harness.elements.pieceImageFileInput.files = [
+      imageFile
+    ] as unknown as FileList
+
+    harness.elements.createPiece.dispatch('click')
+    await flushAsyncListeners()
+
+    const batch = harness.commandBatches[0]
+    const command = batch?.[0]
+    assert.equal(command?.type, 'CreatePiece')
+    if (command?.type !== 'CreatePiece') return
+    assert.equal(command.imageAssetId, 'asset_uploaded_counter')
+  })
+
+  it('uses local data URLs for piece files when uploaded assets are unavailable', async () => {
+    let uploadCalled = false
+    const imageFile = { type: 'image/png' } as File
+    const harness = createHarness(gameState(), {
+      canUseUploadedAssets: () => false,
+      uploadAsset: async () => {
+        uploadCalled = true
+        throw new Error('should not upload')
+      }
+    })
+    harness.elements.pieceNameInput.value = 'Local Drone'
+    harness.elements.pieceImageFileInput.files = [
+      imageFile
+    ] as unknown as FileList
+
+    harness.elements.createPiece.dispatch('click')
+    await flushAsyncListeners()
+
+    assert.equal(uploadCalled, false)
+    const command = harness.commandBatches[0]?.[0]
+    assert.equal(command?.type, 'CreatePiece')
+    if (command?.type !== 'CreatePiece') return
+    assert.equal(command.imageAssetId, 'data:image/png;base64,test')
   })
 
   it('applies validated local counter metadata to piece fields', () => {

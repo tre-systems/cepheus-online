@@ -7,6 +7,7 @@ import {
   asBoardId,
   asCharacterId,
   asGameId,
+  asNoteId,
   asPieceId,
   asUserId
 } from '../../../shared/ids'
@@ -27,6 +28,7 @@ type MovePieceCommand = Extract<Command, { type: 'MovePiece' }>
 type CreateBoardCommand = Extract<Command, { type: 'CreateBoard' }>
 type RollDiceCommand = Extract<Command, { type: 'RollDice' }>
 type SetDoorOpenCommand = Extract<Command, { type: 'SetDoorOpen' }>
+type CreateNoteCommand = Extract<Command, { type: 'CreateNote' }>
 type UpdateCharacterSheetCommand = Extract<
   Command,
   { type: 'UpdateCharacterSheet' }
@@ -72,6 +74,16 @@ const doorCommand = (): SetDoorOpenCommand => ({
   boardId: asBoardId('main'),
   doorId: 'iris',
   open: true
+})
+
+const noteCommand = (): CreateNoteCommand => ({
+  type: 'CreateNote',
+  gameId: identity.gameId,
+  actorId: identity.actorId,
+  noteId: asNoteId('note-1'),
+  title: 'Patron Lead',
+  body: '',
+  visibility: 'PLAYERS'
 })
 
 const sheetCommand = (): UpdateCharacterSheetCommand => ({
@@ -281,11 +293,15 @@ describe('app command router dispatch', () => {
       MovePiece: 'board',
       SetPieceVisibility: 'board',
       SetPieceFreedom: 'board',
+      CreateNote: 'note',
+      UpdateNote: 'note',
+      DeleteNote: 'note',
+      SetNoteVisibility: 'note',
       RollDice: 'dice'
     })
   })
 
-  it('submits board, dice, door, sheet, and character creation commands through typed domain APIs', async () => {
+  it('submits board, dice, door, note, sheet, and character creation commands through typed domain APIs', async () => {
     const submissions: AppCommandSubmitInput[] = []
     const router = createAppCommandRouter({
       getEventSeq: () => 40,
@@ -299,6 +315,7 @@ describe('app command router dispatch', () => {
       router.board.dispatch(createBoardCommand()),
       router.dice.dispatch(rollDiceCommand()),
       router.door.dispatch(doorCommand()),
+      router.note.dispatch(noteCommand()),
       router.sheet.dispatch(sheetCommand()),
       router.characterCreation.dispatch(characterCreationCommand()),
       router.characterCreation.dispatch(anagathicsCommand()),
@@ -309,6 +326,7 @@ describe('app command router dispatch', () => {
       'CreateBoard',
       'RollDice',
       'SetDoorOpen',
+      'CreateNote',
       'UpdateCharacterSheet',
       'CompleteCharacterCreationBasicTraining',
       'DecideCharacterCreationAnagathics',
@@ -320,6 +338,7 @@ describe('app command router dispatch', () => {
         'board',
         'dice',
         'door',
+        'note',
         'sheet',
         'characterCreation',
         'characterCreation',
@@ -328,7 +347,7 @@ describe('app command router dispatch', () => {
     )
     assert.deepEqual(
       submissions.map((submission) => submission.command.expectedSeq),
-      [40, 40, 40, 40, 40, 40, 40]
+      [40, 40, 40, 40, 40, 40, 40, 40]
     )
   })
 

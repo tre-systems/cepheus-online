@@ -19,6 +19,8 @@ export type DiceCommand = CommandForRoute<'dice'>
 
 export type DoorCommand = CommandForRoute<'door'>
 
+export type NoteCommand = CommandForRoute<'note'>
+
 type SheetAuxiliaryCommandType =
   | Extract<
       CommandTypeForRoute<'board'>,
@@ -97,6 +99,7 @@ export interface AppCommandRouter<TResult = unknown>
   board: AppCommandDomainRouter<BoardCommand, TResult>
   dice: AppCommandDomainRouter<DiceCommand, TResult>
   door: AppCommandDomainRouter<DoorCommand, TResult>
+  note: AppCommandDomainRouter<NoteCommand, TResult>
   sheet: AppCommandDomainRouter<SheetCommand, TResult>
   characterCreation: AppCommandDomainRouter<CharacterCreationCommand, TResult>
 }
@@ -189,6 +192,7 @@ export const createAppCommandRouter = <TResult = unknown>({
     board: domainRouter<BoardCommand>(),
     dice: domainRouter<DiceCommand>(),
     door: domainRouter<DoorCommand>(),
+    note: domainRouter<NoteCommand>(),
     sheet: domainRouter<SheetCommand>(),
     characterCreation: domainRouter<CharacterCreationCommand>()
   }

@@ -25,6 +25,35 @@ export interface CommandResponse {
   message: ServerMessage
 }
 
+export interface AppSessionResponse {
+  authenticated: boolean
+  user: {
+    id: string
+    username: string
+    avatarUrl: string | null
+  } | null
+  expiresAt?: string
+}
+
+export type UploadedRoomAssetKind = 'geomorph' | 'counter'
+
+export interface UploadedRoomAsset {
+  id: string
+  kind: UploadedRoomAssetKind
+  url: string
+  width: number
+  height: number
+  gridScale: number
+  losSidecar: unknown | null
+}
+
+export interface UploadRoomAssetOptions extends RoomRequestOptions {
+  kind: UploadedRoomAssetKind
+  file: File
+  gridScale: number
+  losSidecar?: string | null
+}
+
 const resolveFetch = (fetcher?: Fetcher): Fetcher => fetcher ?? fetch
 
 export const buildRoomPath = (roomId: string): string =>
@@ -90,4 +119,56 @@ export const postRoomCommand = async ({
     ok: response.ok,
     message
   }
+}
+
+export const fetchAppSession = async (
+  fetcher?: Fetcher
+): Promise<AppSessionResponse> => {
+  const response = await resolveFetch(fetcher)('/api/session')
+  return response.json() as Promise<AppSessionResponse>
+}
+
+export const listRoomAssets = async ({
+  roomId,
+  fetch: fetcher
+}: RoomRequestOptions): Promise<UploadedRoomAsset[]> => {
+  const response = await resolveFetch(fetcher)(
+    `${buildRoomPath(roomId).replace('/rooms/', '/api/rooms/')}/assets`
+  )
+  const body = (await response.json()) as { assets?: UploadedRoomAsset[] }
+  if (!response.ok) throw new Error('Could not load room assets')
+
+  return body.assets ?? []
+}
+
+export const uploadRoomAsset = async ({
+  roomId,
+  kind,
+  file,
+  gridScale,
+  losSidecar,
+  fetch: fetcher
+}: UploadRoomAssetOptions): Promise<UploadedRoomAsset> => {
+  const form = new FormData()
+  form.set('file', file)
+  form.set('kind', kind)
+  form.set('gridScale', String(gridScale))
+  if (losSidecar?.trim()) form.set('losSidecar', losSidecar)
+
+  const response = await resolveFetch(fetcher)(
+    `${buildRoomPath(roomId).replace('/rooms/', '/api/rooms/')}/assets`,
+    {
+      method: 'POST',
+      body: form
+    }
+  )
+  const body = (await response.json()) as {
+    asset?: UploadedRoomAsset
+    error?: string
+  }
+  if (!response.ok || !body.asset) {
+    throw new Error(body.error ?? 'Could not upload asset')
+  }
+
+  return body.asset
 }
