@@ -43,7 +43,7 @@ jobs:
         run: |
           npm run build:client
           npx wrangler deploy --dry-run \
-            --domain cepheus.tre.systems \
+            --route 'cepheus.tre.systems/*' \
             --var APP_BASE_URL:https://cepheus.tre.systems \
             --var DISCORD_CLIENT_ID:set-with-wrangler-secret-or-env
 
@@ -98,6 +98,6 @@ jobs:
         run: |
           npm run build:client
           npx wrangler deploy \
-            --domain cepheus.tre.systems \
+            --route 'cepheus.tre.systems/*' \
             --var APP_BASE_URL:https://cepheus.tre.systems \
             --var DISCORD_CLIENT_ID:set-with-wrangler-secret-or-env

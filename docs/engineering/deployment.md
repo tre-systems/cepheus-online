@@ -107,7 +107,7 @@ The workflow deploys with:
 
 ```bash
 wrangler deploy \
-  --domain cepheus.tre.systems \
+  --route 'cepheus.tre.systems/*' \
   --var APP_BASE_URL:https://cepheus.tre.systems \
   --var DISCORD_CLIENT_ID:set-with-wrangler-secret-or-env
 ```
@@ -124,6 +124,6 @@ gh secret set DISCORD_CLIENT_SECRET --repo tre-systems/cepheus-online
 gh secret set SESSION_SECRET --repo tre-systems/cepheus-online
 ```
 
-The production hostname is managed as a Worker custom domain in the deploy
-workflow. Keep the deployed `APP_BASE_URL` aligned with that hostname so OAuth
-redirects and invite URLs use the public origin.
+The production hostname is managed as a Worker route in the deploy workflow.
+Keep the deployed `APP_BASE_URL` aligned with that hostname so OAuth redirects
+and invite URLs use the public origin.
