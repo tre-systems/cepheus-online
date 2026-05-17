@@ -6,8 +6,7 @@ bucket. The browser shell is embedded during the deploy build.
 
 ## Cloudflare Bindings
 
-`wrangler.jsonc` defines the `cepheus.tre.systems` custom domain and these
-runtime bindings:
+`wrangler.jsonc` defines local defaults and these runtime bindings:
 
 | Binding | Purpose |
 | --- | --- |
@@ -104,6 +103,18 @@ The deploy workflow creates or resolves a Cloudflare D1 database named
 `cepheus-online-private-beta`; it resolves the database UUID from that name at
 deploy time.
 
+The workflow deploys with:
+
+```bash
+wrangler deploy \
+  --domain cepheus.tre.systems \
+  --var APP_BASE_URL:https://cepheus.tre.systems \
+  --var DISCORD_CLIENT_ID:set-with-wrangler-secret-or-env
+```
+
+Keeping the production URL in the workflow avoids breaking local `wrangler dev`
+and Playwright runs, which rely on localhost-only test routes.
+
 Set them with GitHub CLI:
 
 ```bash
@@ -113,6 +124,6 @@ gh secret set DISCORD_CLIENT_SECRET --repo tre-systems/cepheus-online
 gh secret set SESSION_SECRET --repo tre-systems/cepheus-online
 ```
 
-The production hostname is managed as a Worker custom domain in
-`wrangler.jsonc`. Keep `APP_BASE_URL` aligned with that hostname so OAuth
+The production hostname is managed as a Worker custom domain in the deploy
+workflow. Keep the deployed `APP_BASE_URL` aligned with that hostname so OAuth
 redirects and invite URLs use the public origin.

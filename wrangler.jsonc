@@ -2,12 +2,6 @@
   "name": "cepheus-online",
   "main": "src/server/index.ts",
   "compatibility_date": "2026-05-03",
-  "routes": [
-    {
-      "pattern": "cepheus.tre.systems",
-      "custom_domain": true
-    }
-  ],
   "observability": {
     "enabled": true,
     "logs": {
@@ -37,7 +31,7 @@
     }
   ],
   "vars": {
-    "APP_BASE_URL": "https://cepheus.tre.systems",
+    "APP_BASE_URL": "http://localhost:8787",
     "DISCORD_CLIENT_ID": "set-with-wrangler-secret-or-env"
   },
   "migrations": [

@@ -39,6 +39,14 @@ jobs:
       - name: Validate Cloudflare deploy bundle
         run: npm run deploy:dry-run
 
+      - name: Validate production Cloudflare deploy bundle
+        run: |
+          npm run build:client
+          npx wrangler deploy --dry-run \
+            --domain cepheus.tre.systems \
+            --var APP_BASE_URL:https://cepheus.tre.systems \
+            --var DISCORD_CLIENT_ID:set-with-wrangler-secret-or-env
+
   deploy:
     needs: verify
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -87,4 +95,9 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npm run deploy
+        run: |
+          npm run build:client
+          npx wrangler deploy \
+            --domain cepheus.tre.systems \
+            --var APP_BASE_URL:https://cepheus.tre.systems \
+            --var DISCORD_CLIENT_ID:set-with-wrangler-secret-or-env
