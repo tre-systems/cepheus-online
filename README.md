@@ -87,7 +87,7 @@ The most important starting points are:
 
 The old app had useful domain work. This repo currently salvages:
 
-- `data/rulesets/**`
+- canonical runtime ruleset data in `data/rulesets/cepheus-engine-srd.json`
 - `docs/provenance/data-salvage/**`
 - `legacy/cepheus-amplify/schema-salvage/**`
 - legacy review notes in `legacy/`

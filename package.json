@@ -36,7 +36,7 @@
     "verify": "npm run verify:full",
     "verify:quick": "npm run check:generated-client && npm run build:client && npm run lint && npm run check:docs && npm run check:boundaries && npm run check:diagrams && npm run check",
     "verify:full": "npm run verify:quick && npm test && npm run test:e2e:character-creation && npm run test:e2e:tactical",
-    "list:salvage": "find data docs legacy -maxdepth 3 -type f | sort"
+    "list:salvage": "find data docs legacy -maxdepth 5 -type f | sort"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.14",

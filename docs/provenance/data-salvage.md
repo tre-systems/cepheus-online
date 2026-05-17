@@ -12,10 +12,12 @@ layout and the intended normalization target.
 - `src/types/json.ts` -> `legacy/cepheus-amplify/schema-salvage/types/`
 - `src/data/ruleset/cepheus-engine-srd.json` ->
   `docs/provenance/data-salvage/cepheus-engine-srd-legacy-import.json`
-- `data/rulesets/**` -> `data/rulesets/`
-- historical Central Supply Catalogue parser scripts ->
-  `docs/provenance/data-salvage/parse-armour.js` and
-  `docs/provenance/data-salvage/parse-weapons.ts`
+- canonical bundled runtime ruleset ->
+  `data/rulesets/cepheus-engine-srd.json`
+- historical Central Supply Catalogue parser inputs, outputs, and scripts ->
+  `docs/provenance/data-salvage/csc/`
+- non-runtime SRD ruleset experiments and WIP generation files ->
+  `docs/provenance/data-salvage/srd-experiments/`
 - `docs/project-review.md` -> `legacy/cepheus-amplify-project-review.md`
 - `amplify/backend/api/cepheus/schema.graphql` ->
   `legacy/cepheus-amplify/schema.graphql`
@@ -53,9 +55,10 @@ layout and the intended normalization target.
 - Added the first event-backed character creation persistence slice: explicit
   room commands/events now start creation, advance the creation state machine,
   and record career term starts in the server-ordered event stream.
-- Promoted `data/rulesets/cepheus-engine-srd.json` as the only canonical
-  bundled runtime ruleset, removed the exact duplicate SRD copy, and moved
-  non-runtime salvage copies/scripts under `docs/provenance/data-salvage/`.
+- Promoted `data/rulesets/cepheus-engine-srd.json` as the only file under the
+  runtime ruleset directory, removed the exact duplicate SRD copy, and moved
+  non-runtime salvage copies, parser inputs/outputs, and experiments under
+  `docs/provenance/data-salvage/`.
 - Moved inactive entity JSON schema salvage out of `src/shared` and into
   `legacy/cepheus-amplify/schema-salvage/`; these files are provenance only and
   are no longer part of the active shared domain or unit-test surface.

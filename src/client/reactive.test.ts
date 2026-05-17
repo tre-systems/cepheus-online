@@ -6,6 +6,7 @@ import {
   createDisposalScope,
   effect,
   registerDisposer,
+  setReactiveErrorReporter,
   signal
 } from './reactive'
 
@@ -82,5 +83,34 @@ describe('reactive primitives', () => {
       'run:beta',
       'cleanup:beta'
     ])
+  })
+
+  it('reports effect errors without stopping later effects', () => {
+    const count = signal(0)
+    const errors: unknown[] = []
+    const observed: number[] = []
+    setReactiveErrorReporter((error) => {
+      errors.push(error)
+    })
+
+    try {
+      const disposeThrowing = effect(() => {
+        if (count.value === 1) throw new Error('boom')
+      })
+      const disposeObserver = effect(() => {
+        observed.push(count.value)
+      })
+
+      count.value = 1
+
+      assert.equal(errors.length, 1)
+      assert.equal(errors[0] instanceof Error, true)
+      assert.deepEqual(observed, [0, 1])
+
+      disposeThrowing()
+      disposeObserver()
+    } finally {
+      setReactiveErrorReporter(null)
+    }
   })
 })

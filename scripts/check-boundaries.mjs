@@ -145,11 +145,14 @@ for (const path of sourceFiles) {
       pattern: /\bMath\.random\b/,
       message: 'shared code must use injected or server-derived RNG'
     })
+  }
+
+  if (path.startsWith('src/') && !isTestFile(path)) {
     checkLinePattern({
       path,
       lines,
       pattern: /\bconsole\.(log|warn|error)\b/,
-      message: 'shared code must not log as a side effect'
+      message: 'source code must not log as a side effect'
     })
   }
 

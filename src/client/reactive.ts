@@ -39,31 +39,20 @@ let batchDepth = 0
 
 const pending = new Set<() => void>()
 
-let reactiveErrorReporter: ReactiveErrorReporter = (err) => {
-  console.error('[reactive] effect threw; subsequent effects preserved', err)
-}
+const defaultReactiveErrorReporter: ReactiveErrorReporter = () => {}
+
+let reactiveErrorReporter: ReactiveErrorReporter = defaultReactiveErrorReporter
 
 export const setReactiveErrorReporter = (
   reporter: ReactiveErrorReporter | null
 ): void => {
-  reactiveErrorReporter =
-    reporter ??
-    ((err) => {
-      console.error(
-        '[reactive] effect threw; subsequent effects preserved',
-        err
-      )
-    })
+  reactiveErrorReporter = reporter ?? defaultReactiveErrorReporter
 }
 
 const reportReactiveError = (err: unknown): void => {
   try {
     reactiveErrorReporter(err)
-  } catch {
-    try {
-      console.error('[reactive] error reporter threw', err)
-    } catch {}
-  }
+  } catch {}
 }
 
 export const withScope = <T>(scope: DisposalScope, fn: () => T): T => {

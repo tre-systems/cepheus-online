@@ -9,6 +9,7 @@ import type {
   PieceState
 } from '../../shared/state'
 import { isActorRefereeOrOwner } from '../../shared/viewer.js'
+import { setReactiveErrorReporter } from '../reactive.js'
 import {
   selectedBoard as selectSelectedBoard,
   selectedBoardId as selectSelectedBoardId,
@@ -128,6 +129,9 @@ export const createAppClient = ({
   const setError = (text: string): void => {
     els.error.textContent = text || ''
   }
+  setReactiveErrorReporter((error) => {
+    setError(error instanceof Error ? error.message : String(error))
+  })
 
   const requestId = createRequestIdFactory()
 
@@ -655,6 +659,7 @@ export const createAppClient = ({
       characterSheetControlsWiring?.dispose()
       refreshWiring?.dispose()
       diceCommandWiring?.dispose()
+      setReactiveErrorReporter(null)
       if (diceRevealRefetchTimer !== null) {
         window.clearTimeout(diceRevealRefetchTimer)
         diceRevealRefetchTimer = null
