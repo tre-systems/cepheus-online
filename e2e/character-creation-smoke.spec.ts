@@ -67,6 +67,46 @@ const resolveVisibleCascadeChoices = async (page: Page): Promise<void> => {
   }
 }
 
+const careerSkillSelectionPattern =
+  /Skills and training|Personal development|Specialist skills/
+
+const careerTermCheckActions = ['Roll commission', 'Roll advancement'] as const
+
+const resolveVisibleCareerTermChecks = async (
+  page: Page,
+  options: {
+    beforeClick?: (
+      action: ReturnType<Page['getByRole']>,
+      actionName: (typeof careerTermCheckActions)[number]
+    ) => Promise<void>
+  } = {}
+): Promise<void> => {
+  const fields = page.locator('#characterCreationFields')
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    const text = (await fields.textContent().catch(() => '')) ?? ''
+    if (careerSkillSelectionPattern.test(text)) return
+
+    let clicked = false
+    for (const actionName of careerTermCheckActions) {
+      const action = page.getByRole('button', { name: actionName })
+      if (!(await action.isVisible().catch(() => false))) continue
+
+      await options.beforeClick?.(action, actionName)
+      await action.click()
+      await waitForDiceReveal(page)
+      clicked = true
+      break
+    }
+
+    if (!clicked) await page.waitForTimeout(100)
+  }
+
+  await expect(fields).toContainText(careerSkillSelectionPattern, {
+    timeout: 5_000
+  })
+}
+
 const cascadeSelectionFor = (cascadeSkill: string): string => {
   const normalized = cascadeSkill.replace(/\*$/, '')
   switch (normalized) {
@@ -3486,13 +3526,7 @@ test.describe('character creation smoke', () => {
     await rollSurvival.click()
     await waitForDiceReveal(page)
 
-    for (const actionName of ['Roll commission', 'Roll advancement']) {
-      const action = page.getByRole('button', { name: actionName })
-      if (await action.isVisible().catch(() => false)) {
-        await action.click()
-        await waitForDiceReveal(page)
-      }
-    }
+    await resolveVisibleCareerTermChecks(page)
 
     const fields = page.locator('#characterCreationFields')
     await expect(fields).toContainText('Skills and training', {
@@ -4018,13 +4052,7 @@ test.describe('character creation smoke', () => {
     await rollSurvival.click()
     await waitForDiceReveal(page)
 
-    for (const actionName of ['Roll commission', 'Roll advancement']) {
-      const action = page.getByRole('button', { name: actionName })
-      if (await action.isVisible().catch(() => false)) {
-        await action.click()
-        await waitForDiceReveal(page)
-      }
-    }
+    await resolveVisibleCareerTermChecks(page)
 
     const ownerFields = page.locator('#characterCreationFields')
     await expect(ownerFields).toContainText('Skills and training', {
@@ -4338,17 +4366,7 @@ test.describe('character creation smoke', () => {
     await expect(rollSurvival).toBeVisible({ timeout: 5_000 })
     await rollSurvival.click()
     await waitForDiceReveal(page)
-    for (const actionName of ['Roll commission', 'Roll advancement']) {
-      const action = page.getByRole('button', { name: actionName })
-      if (await action.isVisible().catch(() => false)) {
-        await action.click()
-        await waitForDiceReveal(page)
-      }
-    }
-    await expect(page.locator('#characterCreationFields')).toContainText(
-      /Skills and training|Personal development|Specialist skills/,
-      { timeout: 5_000 }
-    )
+    await resolveVisibleCareerTermChecks(page)
 
     let termSkillSpectator = await browser.newPage()
     try {
@@ -5384,14 +5402,9 @@ test.describe('character creation smoke', () => {
     await rollSurvival.click()
     await waitForDiceReveal(page)
 
-    for (const actionName of ['Roll commission', 'Roll advancement']) {
-      const action = page.getByRole('button', { name: actionName })
-      if (await action.isVisible().catch(() => false)) {
-        await expectMobileControlUsable(action, actionName)
-        await action.click()
-        await waitForDiceReveal(page)
-      }
-    }
+    await resolveVisibleCareerTermChecks(page, {
+      beforeClick: expectMobileControlUsable
+    })
 
     const fields = page.locator('#characterCreationFields')
     await expect(fields).toContainText('Skills and training', {
@@ -5768,14 +5781,9 @@ test.describe('character creation smoke', () => {
     await rollSurvival.click()
     await waitForDiceReveal(page)
 
-    for (const actionName of ['Roll commission', 'Roll advancement']) {
-      const action = page.getByRole('button', { name: actionName })
-      if (await action.isVisible().catch(() => false)) {
-        await expectMobileControlUsable(action, actionName)
-        await action.click()
-        await waitForDiceReveal(page)
-      }
-    }
+    await resolveVisibleCareerTermChecks(page, {
+      beforeClick: expectMobileControlUsable
+    })
 
     await expect(fields).toContainText('Skills and training', {
       timeout: 5_000
