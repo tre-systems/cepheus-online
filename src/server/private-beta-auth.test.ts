@@ -482,6 +482,74 @@ describe('private beta auth', () => {
     assert.equal(response.status, 401)
   })
 
+  it('keeps local unauthenticated room requests on the direct development path', async () => {
+    const { env, roomNamespace } = await createAuthenticatedEnv()
+    const response = await worker.fetch(
+      new Request('http://localhost:8787/rooms/room-1/state'),
+      env
+    )
+
+    assert.equal(response.status, 200)
+    assert.equal(roomNamespace.lastRequest?.url.includes('/rooms/room-1'), true)
+  })
+
+  it('creates local-only test sessions for private-beta browser tests', async () => {
+    const db = new FakeD1()
+    const env: Env = {
+      GAME_ROOM: new CapturingRoomNamespace(),
+      CEPHEUS_DB: db,
+      SESSION_SECRET: 'test-session-secret'
+    }
+
+    const response = await worker.fetch(
+      new Request('http://localhost:8787/api/test/session', {
+        method: 'POST',
+        body: JSON.stringify({
+          discordId: 'local-owner',
+          username: 'Local Owner'
+        })
+      }),
+      env
+    )
+    const body = (await response.json()) as {
+      authenticated?: boolean
+      user?: { id?: string; username?: string }
+    }
+    const cookie = cookiePair(response.headers.get('set-cookie') ?? '')
+
+    assert.equal(response.status, 200)
+    assert.equal(body.authenticated, true)
+    assert.equal(body.user?.id, 'discord:local-owner')
+    assert.equal(body.user?.username, 'Local Owner')
+    assert.match(cookie, /^cepheus_session=/)
+
+    const sessionResponse = await worker.fetch(
+      new Request('http://localhost:8787/api/session', {
+        headers: { cookie }
+      }),
+      env
+    )
+    const sessionBody = (await sessionResponse.json()) as {
+      authenticated?: boolean
+      user?: { id?: string }
+    }
+    assert.equal(sessionBody.authenticated, true)
+    assert.equal(sessionBody.user?.id, 'discord:local-owner')
+  })
+
+  it('does not expose local test session creation on hosted origins', async () => {
+    const { env } = await createAuthenticatedEnv()
+    const response = await worker.fetch(
+      new Request('https://cepheus.example/api/test/session', {
+        method: 'POST',
+        body: JSON.stringify({ discordId: 'hosted-test' })
+      }),
+      env
+    )
+
+    assert.equal(response.status, 404)
+  })
+
   it('forwards trusted membership headers and ignores forged viewer query roles', async () => {
     const { env, roomNamespace, cookie } = await createAuthenticatedEnv({
       roomRole: 'PLAYER'

@@ -5,12 +5,21 @@ const BASE_URL = `http://127.0.0.1:${PORT}`
 const forceFreshServer = process.env.CEPHEUS_E2E_FRESH_SERVER === '1'
 const reuseExistingServer =
   process.env.CEPHEUS_E2E_REUSE_EXISTING_SERVER === '1'
+const persistDir = '.tmp/wrangler-e2e'
 const devServerCommand = [
+  'npx wrangler d1 migrations apply cepheus-online-private-beta',
+  '--local',
+  `--persist-to ${persistDir}`,
+  '&&',
   'npm run build:client &&',
   'wrangler dev',
   `--port ${PORT}`,
   '--local',
-  '--persist-to .tmp/wrangler-e2e',
+  `--persist-to ${persistDir}`,
+  '--var SESSION_SECRET:e2e-session-secret',
+  '--var DISCORD_CLIENT_ID:e2e-discord-client',
+  '--var DISCORD_CLIENT_SECRET:e2e-discord-secret',
+  `--var APP_BASE_URL:${BASE_URL}`,
   '--log-level error',
   '--show-interactive-dev-session=false'
 ].join(' ')

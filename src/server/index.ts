@@ -35,6 +35,7 @@ import {
   parseCookies,
   randomId,
   randomToken,
+  SESSION_COOKIE,
   sessionAuthConfigured,
   userIdFromDiscordProfile,
   verifyOAuthStateCookie
@@ -348,6 +349,64 @@ const routeSession = async (request: Request, env: Env): Promise<Response> => {
     },
     expiresAt: session.expiresAt
   })
+}
+
+const routeLocalTestSession = async (
+  request: Request,
+  env: Env
+): Promise<Response> => {
+  const url = new URL(request.url)
+  if (
+    request.method !== 'POST' ||
+    !isLocalOrTestHost(url.hostname) ||
+    !env.CEPHEUS_DB ||
+    !env.SESSION_SECRET
+  ) {
+    return jsonResponse({ error: 'Not found' }, { status: 404 })
+  }
+
+  const body = await readJsonObject(request)
+  const discordId =
+    isString(body.discordId) && body.discordId.trim()
+      ? body.discordId.trim()
+      : randomId('discord')
+  const username =
+    isString(body.username) && body.username.trim()
+      ? body.username.trim()
+      : 'Local Test User'
+  const now = new Date().toISOString()
+  const store = new PrivateBetaStore(env.CEPHEUS_DB)
+  const user = await store.upsertDiscordUser({
+    id: userIdFromDiscordProfile({ id: discordId, username, avatar: null }),
+    discordId,
+    username,
+    avatarUrl: null,
+    now
+  })
+  const session = await store.createSession({
+    id: randomId('sess'),
+    userId: user.id,
+    expiresAt: createSessionExpiry(),
+    now
+  })
+  const sessionCookie = await createSessionCookie({
+    secret: env.SESSION_SECRET,
+    sessionId: session.id,
+    expiresAt: session.expiresAt
+  })
+
+  return jsonResponse(
+    {
+      authenticated: true,
+      user,
+      expiresAt: session.expiresAt
+    },
+    {
+      headers: {
+        'set-cookie': sessionCookie
+      }
+    }
+  )
 }
 
 const routeLogout = async (request: Request, env: Env): Promise<Response> => {
@@ -696,6 +755,12 @@ const routeGameRoom = async (request: Request, env: Env): Promise<Response> => {
   if (!sessionAuthConfigured(env) && isLocalOrTestHost(url.hostname)) {
     return routeGameRoomDirect(request, env)
   }
+  if (
+    isLocalOrTestHost(url.hostname) &&
+    !parseCookies(request)[SESSION_COOKIE]
+  ) {
+    return routeGameRoomDirect(request, env)
+  }
   if (!sessionAuthConfigured(env) || !env.CEPHEUS_DB) return notConfigured()
 
   const parts = url.pathname.split('/').filter(Boolean)
@@ -760,6 +825,9 @@ export default {
       return routeDiscordCallback(request, env)
     }
     if (url.pathname === '/api/session') return routeSession(request, env)
+    if (url.pathname === '/api/test/session') {
+      return routeLocalTestSession(request, env)
+    }
     if (url.pathname === '/api/logout' && request.method === 'POST') {
       return routeLogout(request, env)
     }

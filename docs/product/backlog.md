@@ -52,8 +52,6 @@ The current application has the private-beta spine in place:
 
 ## MVP Follow-Up Before Invites
 
-- Add a test-stubbed private-beta E2E covering sign-in, room creation, invite
-  acceptance, and two authenticated tabs.
 - Add a private-beta E2E for owner export/delete after a disposable uploaded
   asset and note are created.
 - Add deployed smoke coverage for protected auth/session failures once the

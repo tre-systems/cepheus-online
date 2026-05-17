@@ -15,8 +15,9 @@ timing.
 | `npm test` | Co-located `*.test.ts` files through Node's built-in test runner. |
 | `npm run test:e2e:character-creation` | Playwright coverage for deterministic character creation flows, owner/spectator follow, reveal timing, mobile controls, refresh recovery, and finalization. |
 | `npm run test:e2e:tactical` | Playwright coverage for board creation, linked pieces, movement, doors, refresh recovery, and hidden-piece filtering. |
+| `npm run test:e2e:private-beta` | Playwright coverage for local-stubbed sign-in, room creation, invite acceptance, protected room access, and two authenticated tabs. |
 | `npm run verify:quick` | Generated client freshness, client rebuild, lint, docs, boundaries, diagrams, and TypeScript. |
-| `npm run verify:full` | `verify:quick`, unit tests, character-creation E2E, and tactical-board E2E. |
+| `npm run verify:full` | `verify:quick`, unit tests, character-creation E2E, tactical-board E2E, and private-beta E2E. |
 | `npm run verify` | Alias for `verify:full`; CI uses this. |
 | `npm run smoke:deployed -- <url>` | Deployed Worker smoke for health, shell/PWA assets, commands, stale rejection, viewer filtering, and WebSocket broadcasts. |
 
@@ -28,6 +29,7 @@ Use focused E2E scripts when debugging a branch:
 - `npm run test:e2e:character-creation:repeat`
 - `npm run test:e2e:character-creation:mobile`
 - `npm run test:e2e:character-creation:finalization`
+- `npm run test:e2e:private-beta`
 
 ## What To Test Where
 

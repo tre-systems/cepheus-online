@@ -126,6 +126,8 @@ export const createRoomMenuController = ({
   elements.betaInviteTokenInput.value = inviteTokenFromUrl(locationLike)
 
   const openRoom = (identity: RoomIdentity): void => {
+    elements.roomInput.value = identity.roomId
+    elements.userInput.value = identity.actorId
     updateRoomUrl(
       identity,
       locationLike ?? globalThis.location,
