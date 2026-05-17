@@ -598,7 +598,7 @@ export const openOrExpectFollowedCreation = async (
       )
       if (hasProjectedCreation) {
         reloadedAfterProjection = true
-        await page.reload({ waitUntil: 'domcontentloaded' })
+        await page.reload({ waitUntil: 'commit' })
         await expect(page.locator('#boardCanvas')).toBeVisible()
       }
     }
