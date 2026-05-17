@@ -19,7 +19,7 @@ timing.
 | `npm run verify:quick` | Generated client freshness, client rebuild, lint, docs, boundaries, diagrams, and TypeScript. |
 | `npm run verify:full` | `verify:quick`, unit tests, character-creation E2E, tactical-board E2E, and private-beta E2E. |
 | `npm run verify` | Alias for `verify:full`; use for local release-level confidence. |
-| `npm run smoke:deployed -- <url>` | Public deployed Worker smoke for health, shell/PWA assets, and unauthenticated auth failures. Add `CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...'` for protected room creation, commands, stale rejection, and viewer filtering. |
+| `npm run smoke:deployed -- <url>` | Public deployed Worker smoke for health, shell/PWA assets, and unauthenticated auth failures. Add `CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...'` for protected room creation, commands, and stale rejection. Add distinct `CEPHEUS_SMOKE_PLAYER_SESSION_COOKIE` and `CEPHEUS_SMOKE_SPECTATOR_SESSION_COOKIE` values for automated cross-role viewer filtering. |
 
 GitHub Actions runs the same coverage as `verify:full`, but splits it across
 parallel jobs. The long character-creation E2E file is sharded so deploys are
@@ -98,7 +98,7 @@ Run these on a real phone against a deployed Worker URL or local HTTPS tunnel:
 - Shared rules, protocol, server, or projection: `npm run verify:full`.
 - Deployment-sensitive changes: `npm run verify:full && npm run deploy:dry-run`.
 - Public smoke after deploy: `npm run smoke:deployed -- <url>`.
-- Release confidence after Discord sign-in is configured: `CEPHEUS_SMOKE_REQUIRE_AUTH=1 CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- <url>`.
+- Release confidence after Discord sign-in is configured: `CEPHEUS_SMOKE_REQUIRE_AUTH=1 CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- <url>`. For automated player/spectator projection checks, include distinct `CEPHEUS_SMOKE_PLAYER_SESSION_COOKIE` and `CEPHEUS_SMOKE_SPECTATOR_SESSION_COOKIE` values; otherwise cover those checks manually in two browsers.
 
 ## Private-Beta Manual Checks
 

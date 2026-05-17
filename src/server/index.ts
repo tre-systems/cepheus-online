@@ -526,6 +526,18 @@ const routeAcceptInvite = async (
     return jsonResponse({ error: 'Invite has expired' }, { status: 410 })
   }
 
+  const existingMembership = await store.getMembership(
+    invite.roomId,
+    session.user.id
+  )
+  if (existingMembership) {
+    return jsonResponse({
+      ok: true,
+      roomId: invite.roomId,
+      role: existingMembership.role
+    })
+  }
+
   await store.createMembership({
     roomId: invite.roomId,
     userId: session.user.id,

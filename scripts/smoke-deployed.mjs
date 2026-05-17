@@ -11,15 +11,21 @@ const TARGET_URL =
 const REQUEST_TIMEOUT_MS = Number(process.env.CEPHEUS_SMOKE_TIMEOUT_MS ?? 15000)
 const SMOKE_SESSION_COOKIE =
   process.env.CEPHEUS_SMOKE_SESSION_COOKIE ?? process.env.CEPHEUS_SMOKE_COOKIE
+const SMOKE_PLAYER_SESSION_COOKIE =
+  process.env.CEPHEUS_SMOKE_PLAYER_SESSION_COOKIE
+const SMOKE_SPECTATOR_SESSION_COOKIE =
+  process.env.CEPHEUS_SMOKE_SPECTATOR_SESSION_COOKIE
 const AUTHENTICATED_SMOKE = Boolean(SMOKE_SESSION_COOKIE)
 const REQUIRE_AUTHENTICATED_SMOKE =
   process.env.CEPHEUS_SMOKE_REQUIRE_AUTH === '1' ||
   process.env.CEPHEUS_SMOKE_REQUIRE_AUTH === 'true'
-const AUTH_COOKIE_HEADER = SMOKE_SESSION_COOKIE?.includes('=')
-  ? SMOKE_SESSION_COOKIE
-  : SMOKE_SESSION_COOKIE
-    ? `cepheus_session=${SMOKE_SESSION_COOKIE}`
-    : ''
+const normalizeCookieHeader = (cookie) =>
+  cookie?.includes('=') ? cookie : cookie ? `cepheus_session=${cookie}` : ''
+const AUTH_COOKIE_HEADER = normalizeCookieHeader(SMOKE_SESSION_COOKIE)
+const PLAYER_COOKIE_HEADER = normalizeCookieHeader(SMOKE_PLAYER_SESSION_COOKIE)
+const SPECTATOR_COOKIE_HEADER = normalizeCookieHeader(
+  SMOKE_SPECTATOR_SESSION_COOKIE
+)
 const RUN_ID = randomUUID().slice(0, 8)
 const GAME_ID = `smoke-${Date.now().toString(36)}-${RUN_ID}`
 let actorId = `smoke-ref-${RUN_ID}`
@@ -39,6 +45,10 @@ Environment:
   CEPHEUS_SMOKE_TIMEOUT_MS   per-request timeout (default: ${REQUEST_TIMEOUT_MS})
   CEPHEUS_SMOKE_SESSION_COOKIE
                              optional cepheus_session cookie for private-beta room smoke
+  CEPHEUS_SMOKE_PLAYER_SESSION_COOKIE
+                             optional second user cookie for player viewer checks
+  CEPHEUS_SMOKE_SPECTATOR_SESSION_COOKIE
+                             optional third user cookie for spectator viewer checks
   CEPHEUS_SMOKE_REQUIRE_AUTH require an authenticated room smoke; use 1 or true
 `
 
@@ -72,12 +82,17 @@ const delay = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds))
 
 const fetchText = async (pathname, init = {}) => {
-  const { auth = true, headers: rawHeaders = {}, ...fetchInit } = init
+  const {
+    auth = true,
+    authCookie = AUTH_COOKIE_HEADER,
+    headers: rawHeaders = {},
+    ...fetchInit
+  } = init
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   const headers = {
     ...rawHeaders,
-    ...(auth && AUTH_COOKIE_HEADER ? { cookie: AUTH_COOKIE_HEADER } : {})
+    ...(auth && authCookie ? { cookie: authCookie } : {})
   }
 
   try {
@@ -176,6 +191,47 @@ const requireAccepted = async (command, requestId) => {
     `${requestId} did not return eventSeq`
   )
   return json
+}
+
+const createAndAcceptInvite = async ({ role, cookieHeader, label }) => {
+  if (!cookieHeader) return false
+  if (cookieHeader === AUTH_COOKIE_HEADER) {
+    fail(
+      `CEPHEUS_SMOKE_${role}_SESSION_COOKIE must be a different user from CEPHEUS_SMOKE_SESSION_COOKIE`
+    )
+  }
+
+  const { response: inviteResponse, json: inviteBody } = await fetchJson(
+    `/api/rooms/${GAME_ID}/invites`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ role })
+    }
+  )
+  assert(
+    inviteResponse.status === 201,
+    `${label} invite returned HTTP ${inviteResponse.status}: ${JSON.stringify(inviteBody)}`
+  )
+  assert(inviteBody?.invite?.token, `${label} invite did not return a token`)
+
+  const { response: acceptResponse, json: acceptBody } = await fetchJson(
+    `/api/invites/${inviteBody.invite.token}/accept`,
+    {
+      method: 'POST',
+      authCookie: cookieHeader
+    }
+  )
+  assert(
+    acceptResponse.ok,
+    `${label} invite accept returned HTTP ${acceptResponse.status}: ${JSON.stringify(acceptBody)}`
+  )
+  assert(
+    acceptBody?.role === role,
+    `${label} invite accepted as ${JSON.stringify(acceptBody?.role)}`
+  )
+
+  return true
 }
 
 const commandBase = (type, extra = {}) => ({
@@ -423,6 +479,17 @@ if (AUTHENTICATED_SMOKE) {
       `/api/rooms returned HTTP ${createRoomResponse.status}: ${JSON.stringify(createRoom)}`
     )
     assert(createRoom?.room?.id === GAME_ID, 'created room id mismatch')
+
+    await createAndAcceptInvite({
+      role: 'PLAYER',
+      cookieHeader: PLAYER_COOKIE_HEADER,
+      label: 'player'
+    })
+    await createAndAcceptInvite({
+      role: 'SPECTATOR',
+      cookieHeader: SPECTATOR_COOKIE_HEADER,
+      label: 'spectator'
+    })
   })
 }
 
@@ -566,25 +633,57 @@ await step('hidden-piece viewer filtering', async () => {
   const { json: refereeState } = await fetchJson(
     `/rooms/${GAME_ID}/state?viewer=referee&user=${actorId}`
   )
-  const { json: playerState } = await fetchJson(
-    `/rooms/${GAME_ID}/state?viewer=player&user=smoke-player-${RUN_ID}`
-  )
-  const { json: spectatorState } = await fetchJson(
-    `/rooms/${GAME_ID}/state?viewer=spectator`
-  )
-
   assert(
     refereeState?.state?.pieces?.[PIECE_ID]?.visibility === 'HIDDEN',
     'referee cannot see hidden piece'
   )
-  assert(
-    !playerState?.state?.pieces?.[PIECE_ID],
-    'player projection leaked hidden piece'
-  )
-  assert(
-    !spectatorState?.state?.pieces?.[PIECE_ID],
-    'spectator projection leaked hidden piece'
-  )
+
+  if (PLAYER_COOKIE_HEADER) {
+    const { json: playerState } = await fetchJson(`/rooms/${GAME_ID}/state`, {
+      authCookie: PLAYER_COOKIE_HEADER
+    })
+    assert(
+      !playerState?.state?.pieces?.[PIECE_ID],
+      'player projection leaked hidden piece'
+    )
+  } else if (!AUTHENTICATED_SMOKE) {
+    const { json: playerState } = await fetchJson(
+      `/rooms/${GAME_ID}/state?viewer=player&user=smoke-player-${RUN_ID}`
+    )
+    assert(
+      !playerState?.state?.pieces?.[PIECE_ID],
+      'player projection leaked hidden piece'
+    )
+  } else {
+    process.stdout.write(
+      'skipped player assertion; set CEPHEUS_SMOKE_PLAYER_SESSION_COOKIE '
+    )
+  }
+
+  if (SPECTATOR_COOKIE_HEADER) {
+    const { json: spectatorState } = await fetchJson(
+      `/rooms/${GAME_ID}/state`,
+      {
+        authCookie: SPECTATOR_COOKIE_HEADER
+      }
+    )
+    assert(
+      !spectatorState?.state?.pieces?.[PIECE_ID],
+      'spectator projection leaked hidden piece'
+    )
+  } else if (!AUTHENTICATED_SMOKE) {
+    const { json: spectatorState } = await fetchJson(
+      `/rooms/${GAME_ID}/state?viewer=spectator`
+    )
+    assert(
+      !spectatorState?.state?.pieces?.[PIECE_ID],
+      'spectator projection leaked hidden piece'
+    )
+  } else {
+    process.stdout.write(
+      'skipped spectator assertion; set CEPHEUS_SMOKE_SPECTATOR_SESSION_COOKIE '
+    )
+  }
 })
 
 await step('WebSocket broadcast', async () => {

@@ -86,11 +86,23 @@ CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed
 
 Either the full `cepheus_session=...` pair or only the cookie value is accepted.
 The authenticated smoke also checks protected room creation, a disposable room
-command flow, stale `expectedSeq` rejection, and viewer filtering for hidden
-pieces. Set `CEPHEUS_SMOKE_REQUIRE_AUTH=1` when a release gate must fail instead
-of skipping the authenticated room flow. The WebSocket broadcast check runs only
-when the smoke can use unauthenticated local room access; browser-managed cookies
-are required for protected deployed WebSockets.
+command flow, and stale `expectedSeq` rejection. Production room requests derive
+viewer role from the session cookie, not query parameters, so automated
+player/spectator projection checks require distinct signed-in users:
+
+```bash
+CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=owner...' \
+CEPHEUS_SMOKE_PLAYER_SESSION_COOKIE='cepheus_session=player...' \
+CEPHEUS_SMOKE_SPECTATOR_SESSION_COOKIE='cepheus_session=spectator...' \
+npm run smoke:deployed
+```
+
+With only the owner cookie, cross-role projection assertions are skipped and
+must be covered by the two-browser manual check. Set
+`CEPHEUS_SMOKE_REQUIRE_AUTH=1` when a release gate must fail instead of skipping
+the authenticated room flow. The WebSocket broadcast check runs only when the
+smoke can use unauthenticated local room access; browser-managed cookies are
+required for protected deployed WebSockets.
 
 ## GitHub Actions
 

@@ -573,6 +573,48 @@ describe('private beta auth', () => {
     )
   })
 
+  it('does not let invite acceptance overwrite an existing membership', async () => {
+    const { env, cookie, store, userId } = await createAuthenticatedEnv({
+      roomRole: 'OWNER'
+    })
+
+    const inviteResponse = await worker.fetch(
+      new Request('https://cepheus.example/api/rooms/room-1/invites', {
+        method: 'POST',
+        headers: { cookie, 'content-type': 'application/json' },
+        body: JSON.stringify({ role: 'PLAYER' })
+      }),
+      env
+    )
+    const inviteBody = (await inviteResponse.json()) as {
+      invite?: { token?: string }
+    }
+    assert.equal(inviteResponse.status, 201)
+
+    const acceptResponse = await worker.fetch(
+      new Request(
+        `https://cepheus.example/api/invites/${inviteBody.invite?.token}/accept`,
+        {
+          method: 'POST',
+          headers: { cookie }
+        }
+      ),
+      env
+    )
+    const acceptBody = (await acceptResponse.json()) as { role?: string }
+
+    assert.equal(acceptResponse.status, 200)
+    assert.equal(acceptBody.role, 'OWNER')
+    assert.equal(
+      (await store.getMembership(asGameId('room-1'), userId))?.role,
+      'OWNER'
+    )
+    assert.equal(
+      (await store.getInvite(inviteBody.invite?.token ?? ''))?.acceptedAt,
+      null
+    )
+  })
+
   it('stores uploaded room assets in R2 with D1 metadata and serves them to members', async () => {
     const { env, cookie } = await createAuthenticatedEnv({
       roomRole: 'REFEREE'

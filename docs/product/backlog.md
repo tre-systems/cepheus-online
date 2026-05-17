@@ -34,14 +34,12 @@ The current application has the private-beta spine in place:
 
 ## Current MVP Blockers
 
-- Configure `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` when the Discord app
-  is ready.
-- Add the Discord redirect URL
-  `https://cepheus.tre.systems/auth/discord/callback`.
-- Run a real Discord sign-in/logout check on `https://cepheus.tre.systems` and
-  confirm `/api/session` reports the signed-in user.
 - Run authenticated deployed smoke:
   `CEPHEUS_SMOKE_REQUIRE_AUTH=1 CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- https://cepheus.tre.systems`.
+- For automated hidden-piece player/spectator filtering in deployed smoke, add
+  distinct signed-in user cookies with `CEPHEUS_SMOKE_PLAYER_SESSION_COOKIE` and
+  `CEPHEUS_SMOKE_SPECTATOR_SESSION_COOKIE`; otherwise cover this in the
+  two-browser manual check.
 - Complete the mobile PWA manual checklist on a real phone: install, reload,
   offline shell fallback, update activation, and reconnect recovery.
 - Run the private-beta manual checks in
@@ -56,6 +54,9 @@ The current application has the private-beta spine in place:
   `npm run smoke:deployed -- https://cepheus.tre.systems`.
 - After Discord credentials are configured, run authenticated deployed smoke:
   `CEPHEUS_SMOKE_REQUIRE_AUTH=1 CEPHEUS_SMOKE_SESSION_COOKIE='cepheus_session=...' npm run smoke:deployed -- https://cepheus.tre.systems`.
+- Include distinct player and spectator smoke cookies when possible:
+  `CEPHEUS_SMOKE_PLAYER_SESSION_COOKIE='cepheus_session=...'` and
+  `CEPHEUS_SMOKE_SPECTATOR_SESSION_COOKIE='cepheus_session=...'`.
 
 ## Post-MVP Product Work
 
